@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  # 前端服务
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: unisearch-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - unisearch-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      - NODE_ENV=production
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`localhost`)"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+
+  # 后端服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: unisearch-backend
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      - PORT=8888
+      - CHANNELS=tgsearchers3,SharePanBaidu,yunpanxunlei,tianyifc,BaiduCloudDisk
+      - CACHE_ENABLED=true
+      - CACHE_PATH=/app/cache
+      - CACHE_MAX_SIZE=100
+      - CACHE_TTL=60
+      - ASYNC_PLUGIN_ENABLED=true
+      - ASYNC_RESPONSE_TIMEOUT=4
+      - ASYNC_MAX_BACKGROUND_WORKERS=20
+      - ASYNC_MAX_BACKGROUND_TASKS=100
+      - ASYNC_CACHE_TTL_HOURS=1
+      - TZ=Asia/Shanghai
+    volumes:
+      - backend-cache:/app/cache
+    networks:
+      - unisearch-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8888/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`localhost`) && PathPrefix(`/api`)"
+      - "traefik.http.services.backend.loadbalancer.server.port=8888"
+
+  # 可选：Nginx反向代理（如果需要更复杂的路由配置）
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: unisearch-nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./nginx/ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - frontend
+  #     - backend
+  #   networks:
+  #     - unisearch-network
+
+volumes:
+  backend-cache:
+    name: unisearch-backend-cache
+
+networks:
+  unisearch-network:
+    name: unisearch-network
+    driver: bridge
