@@ -267,3 +267,40 @@ demo/
 .venv
 
 cache/
+
+# ===== 新增：Docker和Railway相关忽略规则 =====
+
+# Docker构建缓存和临时文件
+.docker/
+docker-compose.override.yml
+docker-compose.*.yml
+!docker-compose.yml
+
+# Docker镜像标签
+unisearch:*
+!unisearch:latest
+
+# Railway部署相关
+.railway/
+railway.toml
+railway.json
+
+# 本地测试文件
+test-*.sh
+local-test-*
+temp-*
+
+# 构建产物
+build/
+dist/
+*.tar.gz
+*.zip
+
+# 临时Dockerfile
+Dockerfile.*.cn
+Dockerfile.test
+Dockerfile.local
+
+# 环境变量模板（保留railway-env.txt）
+.env.*
+!.env.example
