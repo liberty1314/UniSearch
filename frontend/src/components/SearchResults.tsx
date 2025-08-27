@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Grid, 
   List, 
@@ -8,6 +8,7 @@ import {
 import { useSearchStore } from '@/stores/searchStore';
 import { CloudType, CloudTypeValue } from '@/types/api';
 import { cn } from '@/lib/utils';
+import PasswordModal from './PasswordModal';
 
 interface SearchResultsProps {
   className?: string;
@@ -57,15 +58,25 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   } = useSearchStore();
 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  // 移除了handleCopyLink函数，因为不再需要复制功能
+  const [passwordModal, setPasswordModal] = useState<{
+    isOpen: boolean;
+    password: string;
+    url: string;
+    cloudType: string;
+  }>({
+    isOpen: false,
+    password: '',
+    url: '',
+    cloudType: ''
+  });
 
   /**
    * 获取网盘类型优先级
-   * 优先级：热门网盘 > 其他网盘 > 种子资源
+   * 优先级：热门网盘（夸克、百度、阿里、天翼） > 其他网盘 > 种子资源
    */
   const getCloudTypePriority = (cloudType: CloudTypeValue): number => {
-    // 第一优先级：热门网盘（夸克、阿里云盘、百度网盘）
-    const hotCloudTypes = [CloudType.QUARK, CloudType.ALIYUN, CloudType.BAIDU];
+    // 第一优先级：热门网盘（夸克、百度、阿里、天翼）
+    const hotCloudTypes = [CloudType.QUARK, CloudType.BAIDU, CloudType.ALIYUN, CloudType.TIANYI];
     if (hotCloudTypes.includes(cloudType as CloudType)) {
       return 1;
     }
@@ -85,44 +96,101 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       [CloudType.BAIDU]: { name: '百度网盘', color: 'bg-blue-500', textColor: 'text-blue-700' },
       [CloudType.ALIYUN]: { name: '阿里云盘', color: 'bg-orange-500', textColor: 'text-orange-700' },
       [CloudType.QUARK]: { name: '夸克网盘', color: 'bg-purple-500', textColor: 'text-purple-700' },
-      [CloudType.UC]: { name: 'UC网盘', color: 'bg-green-500', textColor: 'text-green-700' },
-      [CloudType.XUNLEI]: { name: '迅雷网盘', color: 'bg-red-500', textColor: 'text-red-700' },
-      [CloudType.LANZOU]: { name: '蓝奏云', color: 'bg-indigo-500', textColor: 'text-indigo-700' },
       [CloudType.TIANYI]: { name: '天翼云盘', color: 'bg-cyan-500', textColor: 'text-cyan-700' },
+      [CloudType.UC]: { name: 'UC网盘', color: 'bg-green-500', textColor: 'text-green-700' },
+      [CloudType.MOBILE]: { name: '移动云盘', color: 'bg-indigo-500', textColor: 'text-indigo-700' },
+      [CloudType.ONE_ONE_FIVE]: { name: '115网盘', color: 'bg-red-500', textColor: 'text-red-700' },
+      [CloudType.XUNLEI]: { name: '迅雷网盘', color: 'bg-yellow-500', textColor: 'text-yellow-700' },
+      [CloudType.ONE_TWO_THREE]: { name: '123网盘', color: 'bg-teal-500', textColor: 'text-teal-700' },
+      [CloudType.LANZOU]: { name: '蓝奏云', color: 'bg-blue-600', textColor: 'text-blue-700' },
       [CloudType.PIKPAK]: { name: 'PikPak', color: 'bg-pink-500', textColor: 'text-pink-700' },
-      [CloudType.ONEDRIVE]: { name: 'OneDrive', color: 'bg-blue-600', textColor: 'text-blue-700' },
-      [CloudType.GOOGLEDRIVE]: { name: 'Google Drive', color: 'bg-yellow-500', textColor: 'text-yellow-700' },
+      [CloudType.ONEDRIVE]: { name: 'OneDrive', color: 'bg-blue-700', textColor: 'text-blue-700' },
+      [CloudType.GOOGLEDRIVE]: { name: 'Google Drive', color: 'bg-yellow-600', textColor: 'text-yellow-700' },
       [CloudType.MAGNET]: { name: '磁力链接', color: 'bg-gray-600', textColor: 'text-gray-700' },
       [CloudType.ED2K]: { name: 'ED2K链接', color: 'bg-slate-500', textColor: 'text-slate-700' },
     };
-    return cloudTypeMap[cloudType] || { name: '种子', color: 'bg-gray-500', textColor: 'text-gray-700' };
+    return cloudTypeMap[cloudType] || { name: '未知类型', color: 'bg-gray-500', textColor: 'text-gray-700' };
   };
 
-  const renderMergedLinkItem = (link: any, cloudType: string, index: number) => {
+  // 处理并排序所有搜索结果
+  const sortedResults = useMemo(() => {
+    if (!searchResults?.merged_by_type) return [];
+    
+    const allResults: Array<{ link: any; cloudType: string; priority: number; datetime: number }> = [];
+    
+    // 收集所有结果并添加优先级和时间信息
+    Object.entries(searchResults.merged_by_type).forEach(([cloudType, links]) => {
+      const priority = getCloudTypePriority(cloudType as CloudTypeValue);
+      
+      links.forEach((link: any) => {
+        const datetime = link.datetime ? new Date(link.datetime).getTime() : 0;
+        allResults.push({ link, cloudType, priority, datetime });
+      });
+    });
+    
+    // 按优先级和时间排序
+    return allResults.sort((a, b) => {
+      // 首先按网盘类型优先级排序
+      if (a.priority !== b.priority) {
+        return a.priority - b.priority;
+      }
+      // 同优先级内按时间降序排列（最新优先）
+      return b.datetime - a.datetime;
+    });
+  }, [searchResults]);
+
+  const renderResultItem = (item: { link: any; cloudType: string }, index: number) => {
+    const { link, cloudType } = item;
     const linkId = `${cloudType}-${link.url}`;
     const cloudInfo = getCloudTypeInfo(cloudType as CloudTypeValue);
+    const hasPassword = link.password && link.password.trim() !== '';
 
+    // 处理链接点击
+    const handleLinkClick = () => {
+      if (hasPassword) {
+        // 如果有密码，显示密码弹窗
+        setPasswordModal({
+          isOpen: true,
+          password: link.password,
+          url: link.url,
+          cloudType: cloudInfo.name
+        });
+      } else {
+        // 如果没有密码，直接打开链接
+        window.open(link.url, '_blank');
+      }
+    };
 
     if (viewMode === 'grid') {
       return (
         <div
           key={linkId}
-          className="group relative p-6 bg-white/95 dark:bg-gray-800/95 backdrop-blur-apple rounded-3xl border border-gray-200/60 dark:border-gray-700/60 hover:shadow-xl hover:shadow-blue-200/50 dark:hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 animate-fade-in cursor-pointer"
+          className="group relative p-6 bg-white/95 dark:bg-gray-800/95 backdrop-blur-apple rounded-3xl border border-gray-200/60 dark:border-gray-700/60 hover:shadow-xl hover:shadow-blue-200/50 dark:hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 animate-fade-in cursor-pointer h-35"
           style={{ animationDelay: `${index * 50}ms` }}
-          onClick={() => window.open(link.url, '_blank')}
+          onClick={handleLinkClick}
         >
-
-          {/* 文件信息 */}
-          <div className="space-y-4">
-            <h3 className="font-bold text-gray-900 dark:text-white text-lg line-clamp-2 leading-tight group-hover:text-apple-blue transition-colors duration-300">
-              {link.note || '网盘资源'}
-            </h3>
+          {/* 卡片内容布局 */}
+          <div className="flex flex-col h-full">
+            {/* 标题区域 - 占75%高度 */}
+            <div className="flex-1 mb-3 min-h-0">
+              <h3 className="font-bold text-gray-900 dark:text-white text-lg line-clamp-2 leading-tight group-hover:text-apple-blue transition-colors duration-300 h-full">
+                {link.note || '网盘资源'}
+              </h3>
+            </div>
             
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">网盘资源</span>
-              <div className={cn('px-4 py-2 rounded-full text-white text-sm font-bold shadow-md', cloudInfo.color)}>
+            {/* 底部信息区域 - 占25%高度 */}
+            <div className="flex items-center justify-between flex-shrink-0">
+              {/* 左下角：网盘类别 */}
+              <div className={cn('px-3 py-1.5 rounded-full text-white text-sm font-bold shadow-sm', cloudInfo.color)}>
                 {cloudInfo.name}
               </div>
+              
+              {/* 右下角：访问码提示 */}
+              {hasPassword && (
+                <div className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-medium rounded-full">
+                  有访问码
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -135,19 +203,26 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         key={linkId}
         className="group relative p-5 bg-white/95 dark:bg-gray-800/95 backdrop-blur-apple rounded-2xl border border-gray-200/60 dark:border-gray-700/60 hover:shadow-lg hover:shadow-blue-200/50 dark:hover:shadow-blue-500/20 hover:border-apple-blue/30 transition-all duration-300 animate-fade-in cursor-pointer"
         style={{ animationDelay: `${index * 30}ms` }}
-        onClick={() => window.open(link.url, '_blank')}
+        onClick={handleLinkClick}
       >
         <div className="flex items-center gap-5">
-
           {/* 文件信息 */}
           <div className="flex-1 min-w-0 space-y-2">
             <h3 className="font-bold text-gray-900 dark:text-white text-lg line-clamp-1 group-hover:text-apple-blue transition-colors duration-300 leading-tight">
               {link.note || '网盘资源'}
             </h3>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              {/* 左下角：网盘类别 */}
               <div className={cn('px-3 py-1.5 rounded-full text-white text-sm font-bold shadow-sm', cloudInfo.color)}>
                 {cloudInfo.name}
               </div>
+              
+              {/* 网盘类别右边：访问码提示 */}
+              {hasPassword && (
+                <div className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-medium rounded-full">
+                  有访问码
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -176,7 +251,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     );
   }
 
-  if (!isLoading && (!searchResults?.merged_by_type || Object.keys(searchResults.merged_by_type).length === 0) && searchParams.keyword) {
+  if (!isLoading && sortedResults.length === 0 && searchParams.keyword) {
     return (
       <div className={cn('text-center py-20', className)}>
         <div className="relative mb-8">
@@ -219,19 +294,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     );
   }
 
-  const totalResults = searchResults?.merged_by_type ? 
-    Object.values(searchResults.merged_by_type).reduce((sum, links) => sum + links.length, 0) : 0;
-
   return (
     <div className={cn('space-y-4', className)}>
       {/* 结果头部 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="text-sm text-gray-600 dark:text-gray-400">
-            找到 <span className="font-medium text-gray-900 dark:text-white">{totalResults}</span> 个结果
+            找到 <span className="font-medium text-gray-900 dark:text-white">{sortedResults.length}</span> 个结果
           </div>
-          
-
         </div>
 
         <div className="flex items-center gap-2">
@@ -263,47 +333,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       </div>
 
       {/* 搜索结果 */}
-      <div className="space-y-6">
-        {searchResults?.merged_by_type && Object.entries(searchResults.merged_by_type)
-          .sort(([cloudTypeA], [cloudTypeB]) => {
-            // 按网盘类型优先级排序：热门网盘 > 其他网盘 > 种子资源
-            const priorityA = getCloudTypePriority(cloudTypeA as CloudTypeValue);
-            const priorityB = getCloudTypePriority(cloudTypeB as CloudTypeValue);
-            return priorityA - priorityB;
-          })
-          .map(([cloudType, links]) => {
-          // 按发布时间降序排列（最新资源优先显示）
-          const sortedLinks = [...links].sort((a, b) => {
-            const dateA = a.datetime ? new Date(a.datetime).getTime() : 0;
-            const dateB = b.datetime ? new Date(b.datetime).getTime() : 0;
-            return dateB - dateA; // 降序排列
-          });
-          
-          return (
-          <div key={cloudType} className="space-y-3">
-            {/* 网盘类型标题 */}
-            <div className="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {getCloudTypeInfo(cloudType as CloudTypeValue).name}
-              </h2>
-              <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
-                {sortedLinks.length} 个结果
-              </span>
-            </div>
-
-            {/* 文件列表 */}
-            <div className={cn(
-              viewMode === 'grid'
-                ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8'
-                : 'space-y-6'
-            )}>
-              {sortedLinks.map((link, linkIndex) => 
-                renderMergedLinkItem(link, cloudType, linkIndex)
-              )}
-            </div>
-          </div>
-          );
-        })}
+      <div className={cn(
+        viewMode === 'grid'
+          ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
+          : 'space-y-6'
+      )}>
+        {sortedResults.map((item, index) => 
+          renderResultItem(item, index)
+        )}
       </div>
 
       {/* 加载更多 */}
@@ -320,7 +357,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       )}
 
       {/* 加载状态 */}
-      {isLoading && (!searchResults?.merged_by_type || Object.keys(searchResults.merged_by_type).length === 0) && (
+      {isLoading && sortedResults.length === 0 && (
         <div className="space-y-4">
           {Array.from({ length: 5 }).map((_, index) => (
             <SkeletonCard key={index} index={index} />
@@ -328,7 +365,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         </div>
       )}
 
-
+      {/* 密码弹窗 */}
+      <PasswordModal
+        isOpen={passwordModal.isOpen}
+        onClose={() => setPasswordModal(prev => ({ ...prev, isOpen: false }))}
+        password={passwordModal.password}
+        url={passwordModal.url}
+        cloudType={passwordModal.cloudType}
+      />
     </div>
   );
 };
