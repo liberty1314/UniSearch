@@ -41,6 +41,7 @@ interface SearchState {
   setError: (error: string | null) => void;
   addToHistory: (keyword: string) => void;
   clearHistory: () => void;
+  removeFromHistory: (keyword: string) => void;
   loadAvailableOptions: () => Promise<void>;
   loadMore: () => Promise<void>;
   reset: () => void;
@@ -168,6 +169,20 @@ export const useSearchStore = create<SearchState>()(devtools(
       clearHistory: () => {
         set({ searchHistory: [] });
         localStorage.removeItem('unisearch_search_history');
+      },
+
+      /**
+       * 从搜索历史中删除单条记录
+       */
+      removeFromHistory: (keyword) => {
+        const state = get();
+        const newHistory = state.searchHistory.filter(item => item !== keyword);
+        set({ searchHistory: newHistory });
+        if (newHistory.length > 0) {
+          localStorage.setItem('unisearch_search_history', JSON.stringify(newHistory));
+        } else {
+          localStorage.removeItem('unisearch_search_history');
+        }
       },
 
 

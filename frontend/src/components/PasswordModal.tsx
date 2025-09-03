@@ -1,6 +1,7 @@
 import React from 'react';
-import { X, Copy, ExternalLink } from 'lucide-react';
+import { IoCloseOutline, IoCopyOutline, IoOpenOutline } from 'react-icons/io5';
 import { cn } from '@/lib/utils';
+import { Copy } from 'lucide-react';
 
 interface PasswordModalProps {
   isOpen: boolean;
@@ -47,9 +48,9 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
         {/* 关闭按钮 */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-800 rounded-lg no-tap-highlight"
         >
-          <X className="w-5 h-5" />
+          <IoCloseOutline className="w-5 h-5" />
         </button>
 
         {/* 标题 */}
@@ -87,7 +88,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
               className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
               title="复制访问码"
             >
-              <Copy className="w-4 h-4" />
+              <IoCopyOutline className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -118,14 +119,14 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
         <div className="flex gap-3">
           <button
             onClick={handleOpenUrl}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-800 no-tap-highlight"
           >
-            <ExternalLink className="w-4 h-4" />
+            <IoOpenOutline className="w-4 h-4" />
             打开链接
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition-colors"
+            className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-800 no-tap-highlight"
           >
             关闭
           </button>

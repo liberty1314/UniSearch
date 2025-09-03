@@ -5,7 +5,7 @@
 ✅ **Docker镜像已推送到Docker Hub！**
 
 - **最新版本**: `liberty159/unisearch:latest`
-- **稳定版本**: `liberty159/unisearch:1.0` (推荐生产环境)
+- **稳定版本**: `liberty159/unisearch:1.2` (推荐生产环境)
 - **镜像大小**: 126MB
 - **架构**: linux/amd64 (Railway兼容)
 
@@ -19,7 +19,7 @@
 - 选择 **"Deploy from Docker Image"**
 
 ### 3. 配置Docker镜像
-- **Image Name**: `liberty159/unisearch:1.0` (推荐)
+- **Image Name**: `liberty159/unisearch:1.2` (推荐)
 - **Service Name**: `UniSearch`
 - **Port**: `3000`
 

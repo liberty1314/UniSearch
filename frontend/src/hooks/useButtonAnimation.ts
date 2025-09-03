@@ -7,6 +7,8 @@ interface UseButtonAnimationOptions {
   rippleDuration?: number;
   pressScale?: number;
   hoverScale?: number;
+  enableHaptics?: boolean;
+  hapticDurationMs?: number;
 }
 
 interface UseButtonAnimationReturn {
@@ -28,18 +30,34 @@ export const useButtonAnimation = ({
   rippleDuration = 600,
   pressScale = 0.95,
   hoverScale = 1.05,
+  enableHaptics = true,
+  hapticDurationMs = 10,
 }: UseButtonAnimationOptions = {}): UseButtonAnimationReturn => {
   const [isPressed, setIsPressed] = useState(false);
   const [rippleEffect, setRippleEffect] = useState<{ x: number; y: number; id: number } | null>(null);
   const [rippleId, setRippleId] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout>();
+  const hapticTimeoutRef = useRef<NodeJS.Timeout>();
+
+  const triggerHaptic = useCallback(() => {
+    if (!enableHaptics) return;
+    try {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        // @ts-ignore - optional vibrate API
+        navigator.vibrate?.(hapticDurationMs);
+      }
+    } catch {}
+  }, [enableHaptics, hapticDurationMs]);
 
   // 清理定时器
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
+      }
+      if (hapticTimeoutRef.current) {
+        clearTimeout(hapticTimeoutRef.current);
       }
     };
   }, []);
@@ -48,8 +66,9 @@ export const useButtonAnimation = ({
   const handleMouseDown = useCallback(() => {
     if (!disabled && !loading) {
       setIsPressed(true);
+      triggerHaptic();
     }
-  }, [disabled, loading]);
+  }, [disabled, loading, triggerHaptic]);
 
   const handleMouseUp = useCallback(() => {
     setIsPressed(false);
@@ -63,8 +82,9 @@ export const useButtonAnimation = ({
   const handleTouchStart = useCallback(() => {
     if (!disabled && !loading) {
       setIsPressed(true);
+      triggerHaptic();
     }
-  }, [disabled, loading]);
+  }, [disabled, loading, triggerHaptic]);
 
   const handleTouchEnd = useCallback(() => {
     setIsPressed(false);

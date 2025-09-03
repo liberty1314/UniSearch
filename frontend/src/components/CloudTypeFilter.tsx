@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { CloudType, CloudTypeValue } from '@/types/api';
 import { useSearchStore } from '@/stores/searchStore';
 import { cn } from '@/lib/utils';
+import IconButton from './IconButton';
+import TagButton from './TagButton';
 
 /**
  * 网盘类型筛选器组件
@@ -98,8 +100,9 @@ const CloudTypeFilter: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               网盘类型筛选
             </h3>
-            <button
+            <IconButton
               onClick={handleSelectAll}
+              aria-label={isAllSelected ? '取消全选' : '全选'}
               className={cn(
                 'px-4 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105',
                 isAllSelected
@@ -108,30 +111,22 @@ const CloudTypeFilter: React.FC = () => {
               )}
             >
               {isAllSelected ? '取消全选' : '全选'}
-            </button>
+            </IconButton>
           </div>
           
           {/* 网盘类型标签 */}
           <div className="flex flex-wrap gap-3">
             {cloudTypeConfigs.map((config) => {
               const isSelected = isTypeSelected(config.type as CloudTypeValue);
-              
               return (
-                <button
+                <TagButton
                   key={config.type}
+                  active={isSelected}
+                  colorActive={`${config.color} text-white`}
                   onClick={() => handleTypeToggle(config.type as CloudTypeValue)}
-                  className={`
-                    px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
-                    border border-gray-200 dark:border-gray-600
-                    ${isSelected 
-                      ? `${config.color} text-white border-transparent shadow-sm` 
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                    }
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
-                  `}
                 >
                   {config.name}
-                </button>
+                </TagButton>
               );
             })}
           </div>

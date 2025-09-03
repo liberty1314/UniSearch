@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Clock } from 'lucide-react';
+import { IoCloseOutline, IoTimeOutline } from 'react-icons/io5';
 import { useSearchStore, useSearchHistory } from '@/stores/searchStore';
 import { cn } from '@/lib/utils';
 import { SearchButton } from './SearchButton';
@@ -21,7 +21,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   const [isFocused, setIsFocused] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   
-  const { searchParams, setSearchParams, performSearch, clearHistory, isLoading } = useSearchStore();
+  const { searchParams, setSearchParams, performSearch, clearHistory, removeFromHistory, isLoading } = useSearchStore();
   const searchHistory = useSearchHistory();
   
   const [inputValue, setInputValue] = useState(searchParams.keyword || '');
@@ -102,6 +102,12 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     setShowHistory(false);
   };
 
+  // 删除单条历史记录
+  const handleDeleteHistoryItem = (e: React.MouseEvent, keyword: string) => {
+    e.stopPropagation();
+    removeFromHistory(keyword);
+  };
+
   return (
     <div className={cn('relative w-full max-w-2xl mx-auto group', className)}>
       {/* 搜索框容器 */}
@@ -127,7 +133,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
             onClick={handleClear}
             className="absolute right-20 top-1/2 transform -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-300 transform hover:scale-110 active:scale-95"
           >
-            <X className="w-5 h-5" />
+            <IoCloseOutline className="w-5 h-5" />
           </button>
         )}
         
@@ -151,7 +157,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50 bg-gradient-to-r from-gray-50/50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-700/50">
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
-                <Clock className="w-4 h-4 mr-2 text-gray-500" />
+                <IoTimeOutline className="w-4 h-4 mr-2 text-gray-500" />
                 搜索历史
               </span>
               <button
@@ -164,16 +170,26 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           </div>
           <div className="py-2 max-h-64 overflow-y-auto">
             {searchHistory.map((keyword, index) => (
-              <button
+              <div
                 key={index}
+                role="button"
+                tabIndex={0}
                 onClick={() => handleSelectHistory(keyword)}
-                className="w-full px-5 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-apple-blue/10 hover:to-purple-500/10 transition-all duration-300 flex items-center justify-between group border-l-2 border-transparent hover:border-apple-blue/50"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSelectHistory(keyword); }}
+                className="w-full px-5 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-apple-blue/10 hover:to-purple-500/10 transition-all duration-300 flex items-center justify-between group border-l-2 border-transparent hover:border-apple-blue/50 cursor-pointer"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className="flex items-center">
                   <span className="group-hover:text-apple-blue transition-colors duration-300 font-medium truncate">{keyword}</span>
                 </div>
-              </button>
+                <button
+                  className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  aria-label={`删除历史记录 ${keyword}`}
+                  onClick={(e) => handleDeleteHistoryItem(e, keyword)}
+                >
+                  <IoCloseOutline className="w-4 h-4" />
+                </button>
+              </div>
             ))}
           </div>
         </div>

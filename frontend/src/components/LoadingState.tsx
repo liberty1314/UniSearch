@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, Search, Wifi, AlertCircle } from 'lucide-react';
+import { IoReloadOutline, IoSearchOutline, IoWifiOutline, IoAlertCircleOutline } from 'react-icons/io5';
 import { cn } from '@/lib/utils';
 
 interface LoadingStateProps {
@@ -40,27 +40,27 @@ const LoadingState: React.FC<LoadingStateProps> = ({
       case 'search':
         return (
           <div className="relative">
-            <Search className={cn(currentSize.icon, 'text-apple-blue')} />
+            <IoSearchOutline className={cn(currentSize.icon, 'text-apple-blue')} />
             <div className="absolute -top-1 -right-1">
-              <Loader2 className="w-3 h-3 text-apple-blue animate-spin" />
+              <IoReloadOutline className="w-3 h-3 text-apple-blue animate-spin" />
             </div>
           </div>
         );
       case 'network':
         return (
           <div className="relative">
-            <Wifi className={cn(currentSize.icon, 'text-blue-500')} />
+            <IoWifiOutline className={cn(currentSize.icon, 'text-blue-500')} />
             <div className="absolute -top-1 -right-1">
-              <Loader2 className="w-3 h-3 text-blue-500 animate-spin" />
+              <IoReloadOutline className="w-3 h-3 text-blue-500 animate-spin" />
             </div>
           </div>
         );
       case 'error':
-        return <AlertCircle className={cn(currentSize.icon, 'text-red-500')} />;
+        return <IoAlertCircleOutline className={cn(currentSize.icon, 'text-red-500')} />;
       case 'inline':
-        return <Loader2 className={cn(currentSize.icon, 'text-apple-blue animate-spin')} />;
+        return <IoReloadOutline className={cn(currentSize.icon, 'text-apple-blue animate-spin')} />;
       default:
-        return <Loader2 className={cn(currentSize.icon, 'text-apple-blue animate-spin')} />;
+        return <IoReloadOutline className={cn(currentSize.icon, 'text-apple-blue animate-spin')} />;
     }
   };
 

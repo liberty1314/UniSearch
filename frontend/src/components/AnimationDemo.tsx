@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Download, Heart, Star, Settings } from 'lucide-react';
+import { IoSearchOutline, IoDownloadOutline, IoHeartOutline, IoStarOutline, IoSettingsOutline } from 'react-icons/io5';
 import { AnimatedButton } from './AnimatedButton';
 import { SearchButton } from './SearchButton';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -122,7 +122,7 @@ export const AnimationDemo: React.FC = () => {
                 loadingText="处理中..."
                 variant="primary"
                 size="lg"
-                icon={<Search className="w-5 h-5" />}
+                icon={<IoSearchOutline className="w-5 h-5" />}
               >
                 大号按钮
               </AnimatedButton>
@@ -139,7 +139,7 @@ export const AnimationDemo: React.FC = () => {
                 loadingText="保存中..."
                 variant="secondary"
                 size="md"
-                icon={<Download className="w-4 h-4" />}
+                icon={<IoDownloadOutline className="w-4 h-4" />}
               >
                 保存
               </AnimatedButton>
@@ -166,7 +166,7 @@ export const AnimationDemo: React.FC = () => {
                 loadingText="设置中..."
                 variant="ghost"
                 size="md"
-                icon={<Settings className="w-4 h-4" />}
+                icon={<IoSettingsOutline className="w-4 h-4" />}
               >
                 设置
               </AnimatedButton>
@@ -177,7 +177,7 @@ export const AnimationDemo: React.FC = () => {
                 loadingText="收藏中..."
                 variant="ghost"
                 size="lg"
-                icon={<Heart className="w-5 h-5" />}
+                icon={<IoHeartOutline className="w-5 h-5" />}
               >
                 收藏
               </AnimatedButton>
@@ -273,7 +273,7 @@ export const AnimationDemo: React.FC = () => {
                 loadingText="点赞中..."
                 variant="ghost"
                 size="sm"
-                icon={<Heart className="w-4 h-4" />}
+                icon={<IoHeartOutline className="w-4 h-4" />}
               >
                 点赞
               </AnimatedButton>
@@ -284,7 +284,7 @@ export const AnimationDemo: React.FC = () => {
                 loadingText="收藏中..."
                 variant="ghost"
                 size="sm"
-                icon={<Star className="w-4 h-4" />}
+                icon={<IoStarOutline className="w-4 h-4" />}
               >
                 收藏
               </AnimatedButton>
@@ -295,7 +295,7 @@ export const AnimationDemo: React.FC = () => {
                 loadingText="分享中..."
                 variant="ghost"
                 size="sm"
-                icon={<Download className="w-4 h-4" />}
+                icon={<IoDownloadOutline className="w-4 h-4" />}
               >
                 分享
               </AnimatedButton>

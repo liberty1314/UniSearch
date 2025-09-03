@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Grid, 
-  List, 
-  AlertCircle,
-  Search
-} from 'lucide-react';
+import {
+  IoGridOutline,
+  IoListOutline,
+  IoAlertCircleOutline,
+  IoSearchOutline
+} from 'react-icons/io5';
 import { useSearchStore } from '@/stores/searchStore';
 import { CloudType, CloudTypeValue } from '@/types/api';
 import { cn } from '@/lib/utils';
@@ -236,7 +236,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         <div className="relative mb-6">
           <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-pink-500/20 rounded-full blur-xl"></div>
           <div className="relative text-red-500 bg-red-50 dark:bg-red-900/20 rounded-full p-6 w-24 h-24 mx-auto flex items-center justify-center">
-            <AlertCircle className="w-12 h-12" />
+            <IoAlertCircleOutline className="w-12 h-12" />
           </div>
         </div>
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">搜索出错</h3>
@@ -257,7 +257,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         <div className="relative mb-8">
           <div className="absolute inset-0 bg-gradient-to-r from-gray-400/20 to-gray-500/20 rounded-full blur-xl"></div>
           <div className="relative text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-full p-8 w-32 h-32 mx-auto flex items-center justify-center">
-            <Search className="w-16 h-16" />
+            <IoSearchOutline className="w-16 h-16" />
           </div>
         </div>
         <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">未找到相关资源</h3>
@@ -315,7 +315,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
                   : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
               )}
             >
-              <List className="w-4 h-4" />
+              <IoListOutline className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('grid')}
@@ -326,7 +326,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
                   : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
               )}
             >
-              <Grid className="w-4 h-4" />
+              <IoGridOutline className="w-4 h-4" />
             </button>
           </div>
         </div>

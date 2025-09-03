@@ -23,9 +23,34 @@
   className="flex items-center gap-3 text-xl font-bold hover:text-apple-blue transition-all duration-300"
   title="点击返回首页"
 >
-  <img src="/111.png" alt="UniSearch Logo" className="w-8 h-8" />
+  <img src="/Uni.png" alt="UniSearch Logo" className="w-8 h-8" />
   <span>UniSearch</span>
 </Link>
+
+### 使用 IconButton 的导航操作示例（主题切换/移动菜单）
+```tsx
+import IconButton from '@/components/IconButton';
+import { IoMoonOutline, IoSunnyOutline, IoMenuOutline, IoCloseOutline } from 'react-icons/io5';
+
+// 主题切换
+<IconButton
+  onClick={toggleTheme}
+  aria-label={`切换到${isDark ? '浅色' : '深色'}主题`}
+  title={`切换到${isDark ? '浅色' : '深色'}主题`}
+>
+  {isDark ? <IoMoonOutline className="w-5 h-5" /> : <IoSunnyOutline className="w-5 h-5" />}
+  
+</IconButton>
+
+// 移动端菜单
+<IconButton
+  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+  aria-label={isMobileMenuOpen ? '关闭菜单' : '打开菜单'}
+  className="md:hidden"
+>
+  {isMobileMenuOpen ? <IoCloseOutline className="w-5 h-5" /> : <IoMenuOutline className="w-5 h-5" />}
+</IconButton>
+```
 ```
 
 ### 路由配置

@@ -161,7 +161,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
       onTouchEnd={handleTouchEnd}
       disabled={disabled || loading}
       className={cn(
-        'relative overflow-hidden font-medium transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:hover:scale-100 disabled:active:scale-100 flex items-center justify-center gap-2',
+        'relative overflow-hidden font-medium transition-all duration-300 ease-smooth transform will-change-transform hover:scale-105 active:scale-95 disabled:hover:scale-100 disabled:active:scale-100 flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 no-tap-highlight',
         getVariantStyles(),
         getSizeStyles(),
         getDisabledStyles(),

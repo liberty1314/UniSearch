@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  Moon, 
-  Sun, 
-  Menu, 
-  X,
-  Github,
-  Heart
-} from 'lucide-react';
+  IoMoonOutline,
+  IoSunnyOutline,
+  IoMenuOutline,
+  IoCloseOutline,
+  IoLogoGithub,
+  IoHeartOutline
+} from 'react-icons/io5';
 import { cn } from '@/lib/utils';
+import IconButton from './IconButton';
 
 interface NavbarProps {
   className?: string;
@@ -39,7 +40,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
   };
 
   const getThemeIcon = () => {
-    return isDark ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />;
+    return isDark ? <IoMoonOutline className="w-5 h-5" /> : <IoSunnyOutline className="w-5 h-5" />;
   };
 
   const navItems = [
@@ -55,7 +56,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
 
   return (
     <nav className={cn(
-      'sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700',
+      'sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-apple',
       className
     )}>
       <div className="container mx-auto px-4">
@@ -68,7 +69,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
           >
             <div className="relative">
               <img 
-                src="/111.png" 
+                src="/Uni.png" 
                 alt="UniSearch Logo" 
                 className="w-8 h-8 transition-transform duration-300 group-hover:rotate-12" 
               />
@@ -108,25 +109,26 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
           {/* 右侧操作 */}
           <div className="flex items-center gap-2">
             {/* 主题切换 */}
-            <button
+            <IconButton
               onClick={toggleTheme}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              aria-label={`切换到${isDark ? '浅色' : '深色'}主题`}
               title={`切换到${isDark ? '浅色' : '深色'}主题`}
             >
               {getThemeIcon()}
-            </button>
+            </IconButton>
 
             {/* 移动端菜单按钮 */}
-            <button
+            <IconButton
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              aria-label={isMobileMenuOpen ? '关闭菜单' : '打开菜单'}
+              className="md:hidden"
             >
               {isMobileMenuOpen ? (
-                <X className="w-5 h-5" />
+                <IoCloseOutline className="w-5 h-5" />
               ) : (
-                <Menu className="w-5 h-5" />
+                <IoMenuOutline className="w-5 h-5" />
               )}
-            </button>
+            </IconButton>
           </div>
         </div>
 
@@ -167,7 +169,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
-                  <Github className="w-5 h-5" />
+                  <IoLogoGithub className="w-5 h-5" />
                   <div>
                     <div>GitHub</div>
                     <div className="text-xs opacity-75">查看源代码</div>
@@ -180,7 +182,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
-                  <Heart className="w-5 h-5" />
+                  <IoHeartOutline className="w-5 h-5" />
                   <div>
                     <div>赞助</div>
                     <div className="text-xs opacity-75">支持项目发展</div>

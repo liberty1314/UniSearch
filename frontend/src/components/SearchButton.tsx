@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search } from 'lucide-react';
+import { IoSearchOutline } from 'react-icons/io5';
 import { cn } from '@/lib/utils';
 import { LoadingSpinner } from './LoadingSpinner';
 import { useButtonAnimation } from '@/hooks/useButtonAnimation';
@@ -116,7 +116,7 @@ export const SearchButton: React.FC<SearchButtonProps> = ({
       onTouchEnd={handleTouchEnd}
       disabled={disabled || loading}
       className={cn(
-        'relative overflow-hidden font-medium transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:hover:scale-100 disabled:active:scale-100 flex items-center justify-center gap-2',
+        'relative overflow-hidden font-medium transition-all duration-300 ease-smooth transform will-change-transform hover:scale-105 active:scale-95 disabled:hover:scale-100 disabled:active:scale-100 flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 no-tap-highlight',
         getButtonStyles(),
         getSizeStyles(),
         getPressStyles(),
@@ -146,8 +146,8 @@ export const SearchButton: React.FC<SearchButtonProps> = ({
 
       {/* 搜索图标 */}
       {!loading && (
-        <Search className={cn(
-          "transition-all duration-200",
+        <IoSearchOutline className={cn(
+          'transition-all duration-200',
           size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-5 h-5' : 'w-6 h-6'
         )} />
       )}

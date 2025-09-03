@@ -49,6 +49,11 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+/* 轻触高亮禁用（用于可点击元素，避免 iOS 蓝色高亮）*/
+.no-tap-highlight {
+  -webkit-tap-highlight-color: transparent;
+}
+
 .dark body {
   background-color: #111827;
   color: #F9FAFB;
