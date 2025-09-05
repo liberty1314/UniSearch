@@ -50,26 +50,12 @@ const Home: React.FC = () => {
 
         {/* 搜索区域 - 增强设计 */}
         <div className="w-full flex flex-col items-center mb-16 space-y-6">
-          <div className="relative animate-slide-up max-w-4xl w-full">
+          <div className="relative animate-slide-up max-w-4xl w-full py-6 md:py-6">
             {/* 搜索框背景装饰 */}
             <div className="absolute inset-0 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl shadow-apple blur-sm transform scale-105"></div>
             
             <SearchBox className="w-full" />
-            
-            {/* 搜索提示 */}
-            <div className="flex items-center justify-center mt-4 space-x-6 text-sm text-gray-500 dark:text-gray-400">
-              <div className="flex items-center space-x-1">
-                <span>实时搜索</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-apple-blue rounded-full"></div>
-                <span>多平台支持</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-apple-purple rounded-full"></div>
-                <span>智能匹配</span>
-              </div>
-            </div>
+
           </div>
           
           {/* 网盘类型筛选器 - 只在搜索后显示 */}
@@ -84,7 +70,7 @@ const Home: React.FC = () => {
         <div className="max-w-6xl mx-auto">
           {!hasSearched ? (
             /* 首页内容 */
-            <div className="space-y-8">
+            <div className="space-y-8 pb-40">
 
 
 
