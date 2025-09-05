@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  IoMoonOutline,
-  IoSunnyOutline,
   IoMenuOutline,
   IoCloseOutline,
   IoLogoGithub,
@@ -10,6 +8,7 @@ import {
 } from 'react-icons/io5';
 import { cn } from '@/lib/utils';
 import IconButton from './IconButton';
+import { AnimatedThemeToggler } from '@/components/magicui/animated-theme-toggler';
 
 interface NavbarProps {
   className?: string;
@@ -18,30 +17,7 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ className }) => {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDark, setIsDark] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      return savedTheme === 'dark';
-    }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-
-  const toggleTheme = () => {
-    const root = document.documentElement;
-    if (isDark) {
-      root.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-      setIsDark(false);
-    } else {
-      root.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-      setIsDark(true);
-    }
-  };
-
-  const getThemeIcon = () => {
-    return isDark ? <IoMoonOutline className="w-5 h-5" /> : <IoSunnyOutline className="w-5 h-5" />;
-  };
+  // Theme toggling moved to AnimatedThemeToggler component
 
   const navItems = [
     // 导航菜单项（当前为空）
@@ -109,14 +85,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
           {/* 右侧操作 */}
           <div className="flex items-center gap-2">
             {/* 主题切换 */}
-            <IconButton
-              onClick={toggleTheme}
-              aria-label={`切换到${isDark ? '浅色' : '深色'}主题`}
-              title={`切换到${isDark ? '浅色' : '深色'}主题`}
-            >
-              {getThemeIcon()}
-            </IconButton>
-
+            <AnimatedThemeToggler />
             {/* 移动端菜单按钮 */}
             <IconButton
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

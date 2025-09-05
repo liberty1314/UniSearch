@@ -4,6 +4,7 @@ import { useSearchStore } from '@/stores/searchStore';
 import { cn } from '@/lib/utils';
 import IconButton from './IconButton';
 import TagButton from './TagButton';
+import { CoolMode } from '@/components/magicui/cool-mode';
 
 /**
  * 网盘类型筛选器组件
@@ -100,18 +101,20 @@ const CloudTypeFilter: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               网盘类型筛选
             </h3>
-            <IconButton
-              onClick={handleSelectAll}
-              aria-label={isAllSelected ? '取消全选' : '全选'}
-              className={cn(
-                'px-4 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105',
-                isAllSelected
-                  ? 'bg-apple-blue text-white hover:bg-apple-blue/90'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              )}
-            >
-              {isAllSelected ? '取消全选' : '全选'}
-            </IconButton>
+            <CoolMode options={{ particleCount: 18, speedHorz: 8, speedUp: 18 }}>
+              <IconButton
+                onClick={handleSelectAll}
+                aria-label={isAllSelected ? '取消全选' : '全选'}
+                className={cn(
+                  'px-4 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105',
+                  isAllSelected
+                    ? 'bg-apple-blue text-white hover:bg-apple-blue/90'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                )}
+              >
+                {isAllSelected ? '取消全选' : '全选'}
+              </IconButton>
+            </CoolMode>
           </div>
           
           {/* 网盘类型标签 */}
@@ -119,14 +122,16 @@ const CloudTypeFilter: React.FC = () => {
             {cloudTypeConfigs.map((config) => {
               const isSelected = isTypeSelected(config.type as CloudTypeValue);
               return (
-                <TagButton
-                  key={config.type}
-                  active={isSelected}
-                  colorActive={`${config.color} text-white`}
-                  onClick={() => handleTypeToggle(config.type as CloudTypeValue)}
-                >
-                  {config.name}
-                </TagButton>
+                <CoolMode options={{ particleCount: 14, speedHorz: 8, speedUp: 18 }}>
+                  <TagButton
+                    key={config.type}
+                    active={isSelected}
+                    colorActive={`${config.color} text-white`}
+                    onClick={() => handleTypeToggle(config.type as CloudTypeValue)}
+                  >
+                    {config.name}
+                  </TagButton>
+                </CoolMode>
               );
             })}
           </div>

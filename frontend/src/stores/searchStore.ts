@@ -136,12 +136,14 @@ export const useSearchStore = create<SearchState>()(devtools(
        * 清空搜索结果
        */
       clearResults: () => {
-        set({ 
+        set((state) => ({ 
           searchResults: null, 
           error: null,
           currentPage: 1,
           hasMore: false,
-        });
+          // 回到首页视图的关键：清空关键词
+          searchParams: { ...state.searchParams, keyword: '' },
+        }));
       },
 
       /**

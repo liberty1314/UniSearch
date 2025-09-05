@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { IoCloseOutline, IoTimeOutline } from 'react-icons/io5';
 import { useSearchStore, useSearchHistory } from '@/stores/searchStore';
 import { cn } from '@/lib/utils';
-import { SearchButton } from './SearchButton';
+import { Button as StatefulButton, StatefulButtonHandle } from '@/components/ui/stateful-button';
+import { twMerge } from "tailwind-merge";
 
 interface SearchBoxProps {
   className?: string;
@@ -18,6 +19,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   onSearch,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const buttonRef = useRef<StatefulButtonHandle>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   
@@ -44,7 +46,8 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     if (!keyword) return;
 
     setSearchParams({ keyword });
-    await performSearch({ keyword });
+    // 触发按钮动画并执行搜索
+    await buttonRef.current?.run(() => performSearch({ keyword }));
     onSearch?.(keyword);
     setShowHistory(false);
   };
@@ -87,10 +90,10 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   };
 
   // 选择历史记录
-  const handleSelectHistory = (keyword: string) => {
+  const handleSelectHistory = async (keyword: string) => {
     setInputValue(keyword);
     setSearchParams({ keyword });
-    performSearch({ keyword });
+    await buttonRef.current?.run(() => performSearch({ keyword }));
     onSearch?.(keyword);
     setShowHistory(false);
   };
@@ -137,17 +140,16 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           </button>
         )}
         
-        {/* 搜索按钮 */}
+        {/* 搜索按钮：StatefulButton */}
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-          <SearchButton
+          <StatefulButton
+            ref={buttonRef}
             onClick={handleSearch}
-            disabled={!inputValue.trim()}
-            loading={isLoading}
-            loadingText="搜索中..."
-            size="md"
+            disabled={!inputValue.trim() || isLoading}
+            className="min-w-[100px]"
           >
             搜索
-          </SearchButton>
+          </StatefulButton>
         </div>
       </div>
 

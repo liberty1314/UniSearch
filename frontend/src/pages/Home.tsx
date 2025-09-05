@@ -2,9 +2,11 @@ import React from 'react';
 import SearchBox from '@/components/SearchBox';
 import CloudTypeFilter from '@/components/CloudTypeFilter';
 import SearchResults from '@/components/SearchResults';
-import LoadingState from '@/components/LoadingState';
+import { SparklesText } from "@/components/magicui/sparkles-text";
 import GradientText from '@/components/GradientText';
 import { useSearchStore } from '@/stores/searchStore';
+// import { AnimatedThemeToggler } from "@/components/magicui/animated-theme-toggler";
+
 
 const Home: React.FC = () => {
   const {
@@ -31,6 +33,7 @@ const Home: React.FC = () => {
           </div>
           
           <div className="animate-fade-in">
+          <SparklesText>
             <GradientText 
               className="text-5xl md:text-7xl font-bold mb-6 tracking-tight"
               colors={["#3b82f6", "#8b5cf6", "#3b82f6"]}
@@ -39,6 +42,7 @@ const Home: React.FC = () => {
             >
               UniSearch
             </GradientText>
+            </SparklesText>
             <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed font-medium">
               智能网盘资源搜索引擎
             </p>
@@ -71,8 +75,6 @@ const Home: React.FC = () => {
           {!hasSearched ? (
             /* 首页内容 */
             <div className="space-y-8 pb-40">
-
-
 
 
               {/* 功能特色 - 增强视觉设计 */}
@@ -166,7 +168,7 @@ const Home: React.FC = () => {
                 </div>
                 
                 <button
-                  onClick={clearResults}
+                  onClick={() => { clearResults(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 >
                   清空结果
@@ -174,22 +176,7 @@ const Home: React.FC = () => {
               </div>
 
               {/* 搜索结果内容 */}
-              {isLoading && (!searchResults?.results || searchResults.results.length === 0) ? (
-                <LoadingState type="search" message="正在搜索网盘资源..." />
-              ) : error ? (
-                <div className="text-center py-12">
-                  <div className="text-red-500 dark:text-red-400 mb-2">搜索失败</div>
-                  <div className="text-gray-600 dark:text-gray-400 text-sm mb-4">{error}</div>
-                  <button
-                    onClick={() => performSearch(searchParams)}
-                    className="px-4 py-2 bg-apple-blue text-white rounded-lg hover:bg-apple-blue/90 transition-colors"
-                  >
-                    重试
-                  </button>
-                </div>
-              ) : (
-                <SearchResults />
-              )}
+              <SearchResults />
             </div>
           )}
         </div>

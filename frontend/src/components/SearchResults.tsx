@@ -9,6 +9,8 @@ import { useSearchStore } from '@/stores/searchStore';
 import { CloudType, CloudTypeValue } from '@/types/api';
 import { cn } from '@/lib/utils';
 import PasswordModal from './PasswordModal';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import LoadingState from '@/components/LoadingState';
 
 interface SearchResultsProps {
   className?: string;
@@ -54,8 +56,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     error, 
     hasMore, 
     loadMore,
-    searchParams 
+    searchParams,
+    performSearch
   } = useSearchStore();
+
+  const debouncedIsLoading = useDebouncedValue(isLoading, 200);
 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [passwordModal, setPasswordModal] = useState<{
@@ -242,7 +247,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">搜索出错</h3>
         <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto leading-relaxed">{error}</p>
         <button 
-          onClick={() => window.location.reload()} 
+          onClick={() => performSearch(searchParams)} 
           className="mt-6 inline-flex items-center px-4 py-2 bg-gradient-to-r from-apple-blue to-apple-blue/90 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105"
         >
           重新尝试
@@ -302,6 +307,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           <div className="text-sm text-gray-600 dark:text-gray-400">
             找到 <span className="font-medium text-gray-900 dark:text-white">{sortedResults.length}</span> 个结果
           </div>
+          {debouncedIsLoading && (
+            <LoadingState type="inline" size="sm" message="正在更新..." />
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -348,16 +356,16 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         <div className="text-center py-6">
           <button
             onClick={loadMore}
-            disabled={isLoading}
+            disabled={debouncedIsLoading}
             className="px-6 py-3 bg-apple-blue text-white rounded-lg hover:bg-apple-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isLoading ? '加载中...' : '加载更多'}
+            {debouncedIsLoading ? '加载中...' : '加载更多'}
           </button>
         </div>
       )}
 
       {/* 加载状态 */}
-      {isLoading && sortedResults.length === 0 && (
+      {debouncedIsLoading && sortedResults.length === 0 && (
         <div className="space-y-4">
           {Array.from({ length: 5 }).map((_, index) => (
             <SkeletonCard key={index} index={index} />

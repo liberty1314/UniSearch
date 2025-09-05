@@ -146,7 +146,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   height,
   animation = 'pulse',
 }) => {
-  const baseClasses = 'bg-gray-200 dark:bg-gray-700';
+  const baseClasses = 'bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700';
   
   const variantClasses = {
     text: 'rounded',
@@ -156,7 +156,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   
   const animationClasses = {
     pulse: 'animate-pulse',
-    wave: 'animate-pulse',
+    wave: 'animate-shimmer',
     none: '',
   };
   

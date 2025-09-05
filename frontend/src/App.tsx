@@ -5,23 +5,25 @@ import Navbar from '@/components/Navbar';
 import Home from '@/pages/Home';
 
 const App: React.FC = () => {
-  // 简化的主题管理，默认使用系统主题
+  // 主题初始化：优先使用保存的偏好，其次使用系统设置
   React.useEffect(() => {
     const root = document.documentElement;
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
-    const updateTheme = () => {
-      if (mediaQuery.matches) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
+    const saved = localStorage.getItem('theme');
+
+    const apply = () => {
+      const shouldDark = saved ? saved === 'dark' : mediaQuery.matches;
+      root.classList.toggle('dark', shouldDark);
+    };
+
+    apply();
+    const handler = () => {
+      if (!saved) {
+        apply();
       }
     };
-    
-    updateTheme();
-    mediaQuery.addEventListener('change', updateTheme);
-    
-    return () => mediaQuery.removeEventListener('change', updateTheme);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
   }, []);
 
   return (
