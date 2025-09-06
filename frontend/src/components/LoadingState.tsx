@@ -1,6 +1,7 @@
 import React from 'react';
 import { IoReloadOutline, IoSearchOutline, IoWifiOutline, IoAlertCircleOutline } from 'react-icons/io5';
 import { cn } from '@/lib/utils';
+import PyramidLoader from '@/components/PyramidLoader';
 
 interface LoadingStateProps {
   type?: 'search' | 'page' | 'inline' | 'network' | 'error';
@@ -39,11 +40,8 @@ const LoadingState: React.FC<LoadingStateProps> = ({
     switch (type) {
       case 'search':
         return (
-          <div className="relative">
-            <IoSearchOutline className={cn(currentSize.icon, 'text-apple-blue')} />
-            <div className="absolute -top-1 -right-1">
-              <IoReloadOutline className="w-3 h-3 text-apple-blue animate-spin" />
-            </div>
+          <div className="relative flex items-center justify-center">
+            <PyramidLoader size={currentSize.icon === 'w-4 h-4' ? 80 : currentSize.icon === 'w-6 h-6' ? 120 : 160} />
           </div>
         );
       case 'network':

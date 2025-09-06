@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import PasswordModal from './PasswordModal';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import LoadingState from '@/components/LoadingState';
+import PyramidLoader from '@/components/PyramidLoader';
 
 interface SearchResultsProps {
   className?: string;
@@ -307,9 +308,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           <div className="text-sm text-gray-600 dark:text-gray-400">
             找到 <span className="font-medium text-gray-900 dark:text-white">{sortedResults.length}</span> 个结果
           </div>
-          {debouncedIsLoading && (
-            <LoadingState type="inline" size="sm" message="正在更新..." />
-          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -366,10 +364,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
 
       {/* 加载状态 */}
       {debouncedIsLoading && sortedResults.length === 0 && (
-        <div className="space-y-4">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <SkeletonCard key={index} index={index} />
-          ))}
+        <div className="py-12 flex flex-col items-center justify-center">
+          <PyramidLoader size={160} />
+          <div className="mt-4 text-gray-600 dark:text-gray-400">正在从多个网盘搜索资源...</div>
         </div>
       )}
 

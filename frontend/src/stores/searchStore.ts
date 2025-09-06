@@ -106,6 +106,9 @@ export const useSearchStore = create<SearchState>()(devtools(
         set({ 
           isLoading: true, 
           error: null,
+          // 清空旧结果，切换为主加载态而非“正在更新”
+          searchResults: null,
+          hasMore: false,
           searchParams: finalParams,
           currentPage: 1,
         });

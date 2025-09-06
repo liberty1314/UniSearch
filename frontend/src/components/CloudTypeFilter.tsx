@@ -90,12 +90,12 @@ const CloudTypeFilter: React.FC = () => {
   return (
     <div className="w-full max-w-4xl mx-auto mt-4">
       {/* 筛选器容器 */}
-      <div className="relative">
+      <div className="relative hover-tilt">
         {/* 背景装饰 */}
         <div className="absolute inset-0 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl shadow-apple blur-sm transform scale-105"></div>
         
         {/* 筛选器内容 */}
-        <div className="relative bg-white/95 dark:bg-gray-800/95 backdrop-blur-apple rounded-2xl p-6 border border-gray-200/60 dark:border-gray-700/60">
+        <div className="relative bg-white/95 dark:bg-gray-800/95 backdrop-blur-apple rounded-2xl p-6 border-3d shadow-3d-soft">
           {/* 标题和全选按钮 */}
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -126,7 +126,7 @@ const CloudTypeFilter: React.FC = () => {
                   <TagButton
                     key={config.type}
                     active={isSelected}
-                    colorActive={`${config.color} text-white`}
+                    colorActive={`${config.color} text-white shadow-apple`}
                     onClick={() => handleTypeToggle(config.type as CloudTypeValue)}
                   >
                     {config.name}
