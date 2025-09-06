@@ -112,9 +112,9 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   };
 
   return (
-    <div className={cn('relative w-full max-w-2xl mx-auto group hover-tilt', className)}>
+    <div className={cn('relative w-full max-w-2xl mx-auto group', className)}>
       {/* 搜索框容器 */}
-      <div className="relative bg-white/85 dark:bg-gray-800/90 backdrop-blur-apple border-3d rounded-2xl shadow-3d-soft group-focus-within:shadow-apple group-focus-within:border-apple-blue/50 transition-all duration-300">
+      <div className="relative glass-card-3d rounded-2xl group-focus-within:border-apple-blue/60 group-focus-within:focus-glow-apple hover-lift">
         <svg className="absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-apple-blue w-6 h-6 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
@@ -146,7 +146,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
             ref={buttonRef}
             onClick={handleSearch}
             disabled={!inputValue.trim() || isLoading}
-            className="min-w-[100px]"
+            className="min-w-[100px] hover-lift"
           >
             搜索
           </StatefulButton>

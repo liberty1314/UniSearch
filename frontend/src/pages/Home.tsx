@@ -53,7 +53,7 @@ const Home: React.FC = () => {
         </div>
 
         {/* 搜索区域 - 增强设计 */}
-        <div className="w-full flex flex-col items-center mb-16 space-y-6">
+        <div className="w-full flex flex-col items-center mb-24 space-y-8">
           <div className="relative animate-slide-up max-w-4xl w-full py-6 md:py-6">
             {/* 搜索框背景装饰 */}
             <div className="absolute inset-0 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl shadow-apple blur-sm transform scale-105"></div>
@@ -79,7 +79,7 @@ const Home: React.FC = () => {
 
               {/* 功能特色 - 增强视觉设计 */}
               <div>
-                <div className="text-center mb-12 animate-fade-in">
+                <div className="text-center mb-20 animate-fade-in">
                   <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
                     为什么选择UniSearch？
                   </h2>

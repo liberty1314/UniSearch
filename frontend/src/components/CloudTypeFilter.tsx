@@ -90,12 +90,12 @@ const CloudTypeFilter: React.FC = () => {
   return (
     <div className="w-full max-w-4xl mx-auto mt-4">
       {/* 筛选器容器 */}
-      <div className="relative hover-tilt">
+      <div className="relative">
         {/* 背景装饰 */}
-        <div className="absolute inset-0 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl shadow-apple blur-sm transform scale-105"></div>
+        <div className="absolute inset-x-0 -inset-y-3 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl shadow-apple blur-sm transform scale-105"></div>
         
         {/* 筛选器内容 */}
-        <div className="relative bg-white/95 dark:bg-gray-800/95 backdrop-blur-apple rounded-2xl p-6 border-3d shadow-3d-soft">
+        <div className="relative glass-card-3d rounded-2xl p-6 hover-lift">
           {/* 标题和全选按钮 */}
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -106,7 +106,7 @@ const CloudTypeFilter: React.FC = () => {
                 onClick={handleSelectAll}
                 aria-label={isAllSelected ? '取消全选' : '全选'}
                 className={cn(
-                  'px-4 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105',
+                  'px-4 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 hover-lift',
                   isAllSelected
                     ? 'bg-apple-blue text-white hover:bg-apple-blue/90'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -126,8 +126,9 @@ const CloudTypeFilter: React.FC = () => {
                   <TagButton
                     key={config.type}
                     active={isSelected}
-                    colorActive={`${config.color} text-white shadow-apple`}
+                    colorActive={`${config.color} text-white`}
                     onClick={() => handleTypeToggle(config.type as CloudTypeValue)}
+                    className="hover-lift"
                   >
                     {config.name}
                   </TagButton>

@@ -19,10 +19,10 @@ export const TagButton = React.forwardRef<HTMLButtonElement, TagButtonProps>(
       <button
         ref={ref}
         className={cn(
-          'px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border focus:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue focus-visible:ring-offset-1 no-tap-highlight hover-tilt',
+          'px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 border focus:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue focus-visible:ring-offset-1 no-tap-highlight',
           active
-            ? cn(colorActive, 'border-transparent shadow-3d-soft')
-            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-3d-soft',
+            ? cn(colorActive, 'border-transparent shadow-sm')
+            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700',
           disabled && 'opacity-50 cursor-not-allowed',
           className
         )}

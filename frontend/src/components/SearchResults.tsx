@@ -305,9 +305,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       {/* 结果头部 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            找到 <span className="font-medium text-gray-900 dark:text-white">{sortedResults.length}</span> 个结果
-          </div>
+          {sortedResults.length > 0 && (
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              找到 <span className="font-medium text-gray-900 dark:text-white">{sortedResults.length}</span> 个结果
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
