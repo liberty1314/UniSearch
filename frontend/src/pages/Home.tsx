@@ -167,12 +167,14 @@ const Home: React.FC = () => {
                   )}
                 </div>
                 
-                <button
-                  onClick={() => { clearResults(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                >
-                  清空结果
-                </button>
+                {(!isLoading && searchResults) && (
+                  <button
+                    onClick={() => { clearResults(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                  >
+                    清空结果
+                  </button>
+                )}
               </div>
 
               {/* 搜索结果内容 */}
