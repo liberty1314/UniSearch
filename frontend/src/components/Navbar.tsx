@@ -45,7 +45,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
           >
             <div className="relative">
               <img 
-                src="/Uni.png" 
+                src="/Uni.png?v=20250908" 
                 alt="UniSearch Logo" 
                 className="w-8 h-8 transition-transform duration-300 group-hover:rotate-12" 
               />
