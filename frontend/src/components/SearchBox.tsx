@@ -92,6 +92,8 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     setInputValue('');
     setSearchParams({ keyword: '' });
     inputRef.current?.focus();
+    // 如果按钮处于“搜索中”动画状态，立即复位
+    buttonRef.current?.reset?.();
   };
 
   // 选择历史记录
@@ -183,9 +185,9 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
               </button>
             </div>
           </div>
-          {/* 横向单行滚动的 chips */}
-          <div className="px-4 py-3 overflow-x-auto overflow-y-hidden">
-            <div className="flex items-center gap-3 flex-nowrap">
+          {/* 历史记录 chips：支持自动换行，多行纵向滚动 */}
+          <div className="px-4 py-3 overflow-y-auto overflow-x-hidden max-h-48">
+            <div className="flex items-center gap-3 flex-wrap">
               {searchHistory.map((keyword, index) => (
                 <button
                   key={index}

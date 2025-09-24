@@ -10,10 +10,12 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 export interface StatefulButtonHandle {
   run: (fn?: () => void | Promise<void>) => Promise<void>;
+  reset: () => void;
 }
 
 export const Button = React.forwardRef<StatefulButtonHandle, ButtonProps>(({ className, children, ...props }, ref) => {
   const [scope, animate] = useAnimate();
+  const cancelledRef = React.useRef(false);
 
   const animateLoading = async () => {
     await animate(
@@ -68,14 +70,36 @@ export const Button = React.forwardRef<StatefulButtonHandle, ButtonProps>(({ cla
   };
 
   const run = async (fn?: () => void | Promise<void>) => {
+    cancelledRef.current = false;
     await animateLoading();
     if (fn) {
       await fn();
     }
+    if (cancelledRef.current) {
+      // 如果在执行期间被重置，确保视觉状态回到初始
+      await animate(
+        [
+          [".loader", { width: "0px", scale: 0, display: "none" }, { duration: 0.01 }],
+          [".check", { width: "0px", scale: 0, display: "none" }, { duration: 0.01 }],
+        ]
+      );
+      return;
+    }
     await animateSuccess();
   };
 
-  useImperativeHandle(ref, () => ({ run }), []);
+  const reset = () => {
+    cancelledRef.current = true;
+    // 立即复位到初始状态
+    animate(
+      [
+        [".loader", { width: "0px", scale: 0, display: "none" }, { duration: 0.01 }],
+        [".check", { width: "0px", scale: 0, display: "none" }, { duration: 0.01 }],
+      ]
+    );
+  };
+
+  useImperativeHandle(ref, () => ({ run, reset }), [animate]);
 
   const handleClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
     await run(() => props.onClick?.(event));
