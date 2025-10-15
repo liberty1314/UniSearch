@@ -72,6 +72,10 @@ UniSearch 云服务器部署和管理脚本
   $0 logs         # 查看实时日志
   $0 backup       # 备份数据
 
+其他脚本:
+  ./scripts/monitor.sh    # 监控服务管理
+  ./scripts/ssl.sh        # SSL证书管理
+
 配置文件位置:
   ${DEPLOY_DIR}/docker-compose.prod.yml
   ${DEPLOY_DIR}/env.prod
@@ -204,6 +208,7 @@ configure_firewall() {
     ufw allow 80/tcp comment 'HTTP'
     ufw allow 443/tcp comment 'HTTPS'
     ufw allow 8080/tcp comment 'HTTP-Alt'
+    ufw allow 3001/tcp comment 'Monitoring'
     ufw --force enable
     
     log_success "UFW防火墙配置完成"
@@ -437,18 +442,17 @@ show_logs() {
 
 # 清理旧日志
 cleanup_logs() {
-    log_info "=== 清理7天前的日志 ==="
+    log_info "=== 清理旧日志 ==="
     echo
     
     check_root "cleanup"
     check_docker
     
-    # 清理Docker容器日志
-    log_info "清理Docker容器日志..."
-    docker system prune -f --filter "until=168h"
+    log_info "注意: Docker 容器日志已自动管理（保留7个文件，每个最大50MB）"
+    echo
     
     # 清理应用日志卷中的旧文件
-    log_info "清理应用日志卷..."
+    log_info "清理应用日志卷中的旧文件..."
     docker run --rm \
         -v unisearch-logs:/logs \
         alpine sh -c 'find /logs -name "*.log*" -type f -mtime +7 -delete && echo "已清理7天前的日志文件"'
@@ -456,6 +460,10 @@ cleanup_logs() {
     # 清理系统日志
     log_info "清理系统日志..."
     journalctl --vacuum-time=7d
+    
+    # 清理 Docker 系统缓存
+    log_info "清理 Docker 系统缓存..."
+    docker system prune -f --filter "until=168h"
     
     log_success "日志清理完成"
 }

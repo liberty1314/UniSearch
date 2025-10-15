@@ -1,10 +1,10 @@
 # UniSearch 脚本使用指南
 
-> 💡 **项目已完成脚本整合**: 从22个脚本精简为4个核心脚本，提升可维护性和易用性。
+> 💡 **项目已完成脚本整合**: 从22个脚本精简为6个核心脚本，提升可维护性和易用性。
 
 ## 概述
 
-UniSearch 项目提供了4个核心脚本，简化了从本地开发到生产部署的整个流程。
+UniSearch 项目提供了6个核心脚本，简化了从本地开发到生产部署的整个流程。
 
 ## 脚本列表
 
@@ -15,8 +15,10 @@ UniSearch 项目提供了4个核心脚本，简化了从本地开发到生产部
 
 ### 云服务器脚本
 
-3. **deploy.sh** - 服务器部署和管理
-4. **ssl.sh** - SSL证书管理
+3. **build.sh** - 构建和发布Docker镜像
+4. **deploy.sh** - 服务器部署和管理
+5. **ssl.sh** - SSL证书管理
+6. **monitor.sh** - 监控服务管理
 
 ---
 
@@ -145,11 +147,13 @@ sudo ./scripts/deploy.sh cleanup
 ```
 
 **功能：**
-- 清理7天前的Docker容器日志
-- 清理应用日志卷中的旧文件
-- 清理系统日志（journalctl）
+- 清理应用日志卷中的旧文件（7天前）
+- 清理系统日志（journalctl，7天前）
+- 清理Docker系统缓存
 
-**适用场景：** 手动清理日志，释放磁盘空间
+**适用场景：** 手动清理日志和缓存，释放磁盘空间
+
+**注意：** Docker 容器日志已自动管理，无需手动清理
 
 #### setup-log-rotation - 设置定时日志清理
 
@@ -285,6 +289,124 @@ sudo ./scripts/ssl.sh renew
 
 ---
 
+### 6. monitor.sh - 监控服务管理
+
+**功能：** Uptime Kuma 可视化监控面板管理
+
+**用法：**
+```bash
+sudo ./scripts/monitor.sh <command>
+```
+
+**命令列表：**
+
+#### install - 安装监控服务
+
+```bash
+sudo ./scripts/monitor.sh install
+```
+
+**功能：**
+- 配置防火墙开放监控端口（3001、8080）
+- 配置Nginx反向代理
+- 创建监控数据卷
+- 启动Uptime Kuma容器
+- 显示访问地址
+
+**首次部署后运行！**
+
+#### start - 启动监控服务
+
+```bash
+sudo ./scripts/monitor.sh start
+```
+
+**功能：**
+- 启动Uptime Kuma容器
+- 显示访问地址
+
+#### stop - 停止监控服务
+
+```bash
+sudo ./scripts/monitor.sh stop
+```
+
+#### restart - 重启监控服务
+
+```bash
+sudo ./scripts/monitor.sh restart
+```
+
+#### status - 查看监控状态
+
+```bash
+sudo ./scripts/monitor.sh status
+```
+
+**显示信息：**
+- 容器运行状态
+- 端口监听情况
+- 数据卷状态
+- 访问地址
+
+#### remove - 完全移除监控服务
+
+```bash
+sudo ./scripts/monitor.sh remove
+```
+
+**功能：**
+- 停止并删除容器
+- 删除数据卷（所有监控数据）
+- 移除Nginx配置
+- 关闭防火墙端口
+
+**注意：** 此操作会删除所有监控数据！
+
+---
+
+### 监控面板配置
+
+#### 访问地址
+
+- **直接访问**：`http://服务器IP:3001`
+- **Nginx代理**：`http://服务器IP:8080` 或 `http://域名:8080`
+
+#### 首次配置步骤
+
+1. **创建管理员账号**
+   - 访问监控面板
+   - 设置用户名和密码
+
+2. **添加监控项目**
+
+   **主应用健康检查：**
+   - 类型：HTTP(s)
+   - URL：`http://unisearch:3000/health`
+   - 间隔：60秒
+
+   **API健康检查：**
+   - 类型：HTTP(s)
+   - URL：`http://unisearch:8888/api/health`
+   - 间隔：60秒
+
+   **前端页面监控：**
+   - 类型：HTTP(s)
+   - URL：`http://unisearch:3000/`
+   - 间隔：60秒
+
+   **容器监控（可选）：**
+   - 类型：Docker Container
+   - 容器名：unisearch
+
+3. **配置告警通知（可选）**
+   - 邮件通知
+   - Telegram通知
+   - Webhook通知
+   - 其他通知方式
+
+---
+
 ## 部署流程示例
 
 ### 场景1：国内服务器 + 已备案域名
@@ -299,10 +421,14 @@ sudo ./scripts/deploy.sh start
 # 步骤3：设置定时日志清理（推荐）
 sudo ./scripts/deploy.sh setup-log-rotation
 
-# 步骤4：申请SSL证书
+# 步骤4：安装监控服务（推荐）
+sudo ./scripts/monitor.sh install
+
+# 步骤5：申请SSL证书
 sudo ./scripts/ssl.sh apply
 
 # 完成！访问 https://your-domain.com
+# 监控面板：http://your-domain:8080
 ```
 
 ### 场景2：国内服务器 + 未备案域名
@@ -317,17 +443,22 @@ sudo ./scripts/deploy.sh start
 # 步骤3：设置定时日志清理（推荐）
 sudo ./scripts/deploy.sh setup-log-rotation
 
-# 步骤4：临时8080部署
+# 步骤4：安装监控服务（推荐）
+sudo ./scripts/monitor.sh install
+
+# 步骤5：临时8080部署
 sudo ./scripts/ssl.sh temp
 
 # 临时访问：http://your-ip:8080
+# 监控面板：http://your-ip:3001
 
-# 步骤5：提交ICP备案申请
+# 步骤6：提交ICP备案申请
 
-# 步骤6：备案完成后申请SSL
+# 步骤7：备案完成后申请SSL
 sudo ./scripts/ssl.sh apply
 
 # 完成！访问 https://your-domain.com
+# 监控面板：http://your-domain:8080
 ```
 
 ### 场景3：海外服务器（无需备案）
@@ -339,10 +470,17 @@ sudo ./scripts/deploy.sh init
 # 步骤2：启动服务
 sudo ./scripts/deploy.sh start
 
-# 步骤3：申请SSL证书
+# 步骤3：设置定时日志清理（推荐）
+sudo ./scripts/deploy.sh setup-log-rotation
+
+# 步骤4：安装监控服务（推荐）
+sudo ./scripts/monitor.sh install
+
+# 步骤5：申请SSL证书
 sudo ./scripts/ssl.sh apply
 
 # 完成！访问 https://your-domain.com
+# 监控面板：http://your-domain:8080
 ```
 
 ---
@@ -381,18 +519,60 @@ sudo ./scripts/deploy.sh cleanup
 sudo ./scripts/deploy.sh setup-log-rotation
 ```
 
-### Q6: 如何查看日志收集状态？
+### Q6: 如何查看容器日志？
 
 **A:** 
 ```bash
-# 查看 logspout 容器状态
-docker ps | grep logspout
+# 查看主应用日志（实时）
+sudo docker logs unisearch -f --tail 100
 
-# 查看收集的日志
-docker exec unisearch-logspout ls -la /logs/
+# 查看监控服务日志
+sudo docker logs unisearch-watchtower --tail 50
 
 # 查看日志清理记录
 sudo tail -f /var/log/unisearch-cleanup.log
+
+# 查看所有容器状态
+sudo docker ps
+```
+
+### Q7: 如何访问监控面板？
+
+**A:** 
+```bash
+# 查看监控服务状态
+sudo ./scripts/monitor.sh status
+
+# 访问地址：
+# 直接访问：http://服务器IP:3001
+# Nginx代理：http://服务器IP:8080 或 http://域名:8080
+```
+
+### Q8: 如何配置监控项目？
+
+**A:** 首次访问监控面板需要创建管理员账号，然后添加监控项目：
+
+1. **主应用**：HTTP(s) - `http://unisearch:3000/health`
+2. **API接口**：HTTP(s) - `http://unisearch:8888/api/health`
+3. **前端页面**：HTTP(s) - `http://unisearch:3000/`
+
+可配置邮件、Telegram等告警通知。
+
+### Q9: Docker 日志会占用多少磁盘空间？
+
+**A:** Docker 日志已配置自动管理：
+- 每个容器最多保留 7 个日志文件
+- 每个文件最大 50MB
+- 总计每个容器最多 350MB
+- 旧日志自动压缩和删除
+
+如需查看当前日志大小：
+```bash
+# 查看所有容器日志大小
+sudo du -sh /var/lib/docker/containers/*/
+
+# 查看特定容器日志大小
+sudo docker inspect --format='{{.LogPath}}' unisearch | xargs sudo du -h
 ```
 
 ---
@@ -424,11 +604,25 @@ deploy/
 - `docker logs unisearch` - 容器日志
 - `/var/log/unisearch-cleanup.log` - 日志清理记录
 
-### 日志收集和轮转
-- **logspout 服务**：自动收集所有容器日志
-- **日志轮转**：每个文件最大1MB，保留7个文件
-- **定时清理**：每天凌晨2点自动清理7天前的日志
+### Docker 日志管理
+- **日志驱动**：json-file（Docker 内置）
+- **自动轮转**：每个文件最大 50MB，保留 7 个文件
+- **自动压缩**：旧日志文件自动压缩
+- **存储位置**：`/var/lib/docker/containers/<container-id>/`
+- **定时清理**：每天凌晨2点自动清理应用日志和系统日志
 - **手动清理**：`sudo ./scripts/deploy.sh cleanup`
+
+### 查看日志
+```bash
+# 查看实时日志
+sudo docker logs unisearch -f --tail 100
+
+# 查看历史日志
+sudo docker logs unisearch --tail 500
+
+# 查看特定时间段日志
+sudo docker logs unisearch --since 2024-01-01 --until 2024-01-02
+```
 
 ---
 
@@ -466,10 +660,10 @@ nslookup your-domain.com
 
 ### 整合优势
 
-本项目已完成脚本整合，从原来的22个脚本精简为4个核心脚本：
+本项目已完成脚本整合，从原来的22个脚本精简为6个核心脚本：
 
 **1. 简化维护**
-- 从22个脚本减少到4个
+- 从22个脚本减少到6个
 - 相关功能集中管理
 - 减少代码重复
 
@@ -498,6 +692,12 @@ nslookup your-domain.com
 - fix-port-conflict.sh（端口冲突修复）
 - log-cleanup.sh（日志清理）
 - log-rotation-setup.sh（日志轮转设置）
+
+**monitor.sh（新增）：**
+- 独立的监控服务管理脚本
+- 基于 Uptime Kuma 实现可视化监控
+- 支持容器、API、网页监控
+- 可配置多种告警通知方式
 
 **ssl.sh 整合了：**
 - enable-ssl-after-beian.sh（备案后SSL）

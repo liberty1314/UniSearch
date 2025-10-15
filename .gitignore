@@ -193,7 +193,6 @@ temp/
 # Docker
 .dockerignore
 Dockerfile.prod
-docker-compose.prod.yml
 
 # Docker开发环境数据目录
 docker/mysql/data/
@@ -275,6 +274,7 @@ cache/
 docker-compose.override.yml
 docker-compose.*.yml
 !docker-compose.yml
+!docker-compose.prod.yml
 
 # Docker镜像标签
 unisearch:*

@@ -1,0 +1,157 @@
+version: '3.8'
+
+# UniSearch 生产环境Docker Compose配置
+# 域名: unisearchso.xyz
+# 镜像: liberty159/unisearch:1.0.0
+
+services:
+  unisearch:
+    image: liberty159/unisearch:1.0.0
+    container_name: unisearch
+    restart: always
+    ports:
+      - "3000:3000"  # 前端端口
+      - "8888:8888"  # 后端API端口
+    environment:
+      # 基础配置
+      - TZ=Asia/Shanghai
+      - PORT=8888
+      
+      # 缓存配置
+      - CACHE_ENABLED=true
+      - CACHE_PATH=/app/cache
+      - CACHE_MAX_SIZE=100
+      - CACHE_TTL=60
+      
+      # 异步插件配置
+      - ASYNC_PLUGIN_ENABLED=true
+      - ASYNC_RESPONSE_TIMEOUT=4
+      - ASYNC_MAX_BACKGROUND_WORKERS=20
+      - ASYNC_MAX_BACKGROUND_TASKS=100
+      - ASYNC_CACHE_TTL_HOURS=1
+      - ASYNC_LOG_ENABLED=true
+      
+      # 插件配置
+      - PLUGIN_TIMEOUT=30
+      - CHANNELS=tgsearchers3,SharePanBaidu,yunpanxunlei,tianyifc,BaiduCloudDisk
+      
+      # HTTP服务器配置
+      - HTTP_READ_TIMEOUT=90
+      - HTTP_WRITE_TIMEOUT=90
+      - HTTP_IDLE_TIMEOUT=120
+      - HTTP_MAX_CONNS=2000
+      
+      # 性能优化配置
+      - GC_PERCENT=100
+      - OPTIMIZE_MEMORY=true
+      - ENABLE_COMPRESSION=false
+      - MIN_SIZE_TO_COMPRESS=1024
+      
+      # 并发配置（自动计算）
+      - CONCURRENCY=50
+      - PLUGIN_COUNT=21
+    volumes:
+      # 缓存数据持久化
+      - unisearch-cache:/app/cache
+      # 日志持久化
+      - unisearch-logs:/var/log/supervisor
+    networks:
+      - unisearch-network
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -f http://localhost:3000/health && curl -f http://localhost:8888/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "7"
+        compress: "true"
+    labels:
+      - "traefik.enable=false"  # 禁用traefik，使用Nginx
+      - "com.unisearch.service=main"
+      - "com.unisearch.version=1.0.0"
+
+  # 监控服务
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: unisearch-watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - unisearch-network
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=3600
+      - WATCHTOWER_INCLUDE_STOPPED=true
+      - WATCHTOWER_REVIVE_STOPPED=false
+    command: unisearch
+    labels:
+      - "com.unisearch.service=monitoring"
+
+  # 监控服务
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: unisearch-uptime-kuma
+    restart: always
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+    networks:
+      - unisearch-network
+    depends_on:
+      - unisearch
+    labels:
+      - "com.unisearch.service=monitoring"
+
+volumes:
+  # 缓存数据卷（使用Docker管理的volume）
+  unisearch-cache:
+    name: unisearch-cache
+    driver: local
+  
+  # 日志数据卷（使用Docker管理的volume）
+  unisearch-logs:
+    name: unisearch-logs
+    driver: local
+  
+  # 监控数据卷（使用Docker管理的volume）
+  uptime-kuma-data:
+    name: unisearch-uptime-kuma-data
+    driver: local
+
+networks:
+  # 应用网络
+  unisearch-network:
+    name: unisearch-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+    labels:
+      - "com.unisearch.network=main"
+
+# 扩展配置（用于docker-compose.override.yml）
+x-common-variables: &common-variables
+  TZ: Asia/Shanghai
+  CACHE_ENABLED: true
+  ASYNC_PLUGIN_ENABLED: true
+
+x-common-volumes: &common-volumes
+  - unisearch-cache:/app/cache
+  - unisearch-logs:/var/log/supervisor
+
+x-common-networks: &common-networks
+  - unisearch-network
