@@ -304,3 +304,5 @@ Dockerfile.local
 # 环境变量模板（保留railway-env.txt）
 .env.*
 !.env.example
+
+logs/
