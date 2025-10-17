@@ -54,6 +54,7 @@ UniSearch SSL证书管理脚本
   temp      临时8080端口部署（备案期间使用）
   apply     申请SSL证书（HTTP验证，需已备案）
   dns       使用DNS验证申请证书（无需80端口）
+  manual    手动部署SSL证书（1Panel等第三方证书）
   renew     手动续期证书
   help      显示此帮助信息
 
@@ -62,12 +63,14 @@ UniSearch SSL证书管理脚本
   $0 temp         # 备案期间使用8080端口
   $0 apply        # 备案完成后申请证书
   $0 dns          # 使用DNS验证申请证书
+  $0 manual       # 部署1Panel等第三方证书
 
 说明:
   - 中国大陆服务器需要ICP备案才能使用80/443端口
   - 备案期间可使用临时8080端口访问
   - 备案完成后使用HTTP验证申请证书
   - DNS验证方式不需要80端口，但续期需手动操作
+  - manual命令用于部署从1Panel等平台获取的证书
 
 EOF
 }
@@ -459,6 +462,122 @@ EOF
     fi
 }
 
+# ===== 手动部署SSL证书（1Panel等第三方证书） =====
+
+deploy_manual_certificate() {
+    log_info "=== 手动部署SSL证书 ==="
+    echo
+    
+    check_root "manual"
+    
+    NGINX_DIR="${DEPLOY_DIR}/nginx"
+    SSL_DIR="/etc/nginx/ssl/${DOMAIN}"
+    
+    # 检查证书文件是否存在
+    log_info "检查证书文件..."
+    
+    if [ ! -f "${NGINX_DIR}/fullchain.pem" ]; then
+        log_error "证书文件不存在: ${NGINX_DIR}/fullchain.pem"
+        echo
+        log_info "请确保证书文件已放置在以下位置："
+        log_info "  ${NGINX_DIR}/fullchain.pem"
+        log_info "  ${NGINX_DIR}/privkey.pem"
+        echo
+        log_info "如果是压缩包，请先解压："
+        log_info "  cd ${NGINX_DIR}"
+        log_info "  unzip your-certificate.zip"
+        exit 1
+    fi
+    
+    if [ ! -f "${NGINX_DIR}/privkey.pem" ]; then
+        log_error "私钥文件不存在: ${NGINX_DIR}/privkey.pem"
+        exit 1
+    fi
+    
+    log_success "证书文件检查完成"
+    
+    # 创建SSL目录
+    log_info "创建SSL证书目录..."
+    mkdir -p "$SSL_DIR"
+    chmod 755 "$SSL_DIR"
+    
+    # 安装证书文件
+    log_info "安装SSL证书..."
+    cp "${NGINX_DIR}/fullchain.pem" "${SSL_DIR}/fullchain.pem"
+    cp "${NGINX_DIR}/privkey.pem" "${SSL_DIR}/privkey.pem"
+    
+    # 设置权限
+    chmod 644 "${SSL_DIR}/fullchain.pem"
+    chmod 600 "${SSL_DIR}/privkey.pem"
+    
+    log_success "证书文件已安装到: $SSL_DIR"
+    
+    # 更新Nginx配置
+    log_info "更新Nginx配置..."
+    
+    # 检查HTTPS配置文件
+    if [ ! -f "${DEPLOY_DIR}/nginx/https.conf" ]; then
+        log_error "HTTPS配置文件不存在: ${DEPLOY_DIR}/nginx/https.conf"
+        exit 1
+    fi
+    
+    # 备份当前配置
+    if [ -f "$NGINX_CONFIG" ]; then
+        cp "$NGINX_CONFIG" "${NGINX_CONFIG}.backup.$(date +%Y%m%d_%H%M%S)"
+        log_info "已备份当前配置"
+    fi
+    
+    # 复制HTTPS配置
+    cp "${DEPLOY_DIR}/nginx/https.conf" "$NGINX_CONFIG"
+    
+    # 创建或更新软链接
+    ln -sf "$NGINX_CONFIG" "$NGINX_ENABLED"
+    
+    log_success "Nginx配置已更新"
+    
+    # 测试Nginx配置
+    log_info "测试Nginx配置..."
+    
+    if nginx -t; then
+        log_success "Nginx配置测试通过"
+    else
+        log_error "Nginx配置测试失败"
+        log_info "请检查配置文件: $NGINX_CONFIG"
+        exit 1
+    fi
+    
+    # 重载Nginx
+    log_info "重载Nginx服务..."
+    systemctl reload nginx
+    
+    if systemctl is-active --quiet nginx; then
+        log_success "Nginx服务已重载"
+    else
+        log_error "Nginx服务重载失败"
+        exit 1
+    fi
+    
+    # 验证SSL证书
+    log_info "验证SSL证书..."
+    echo
+    
+    # 显示证书信息
+    echo "证书信息："
+    openssl x509 -in "${SSL_DIR}/fullchain.pem" -noout -subject -dates
+    echo
+    
+    log_success "=== SSL证书部署完成！ ==="
+    echo
+    log_info "访问地址："
+    log_info "  https://${DOMAIN}"
+    log_info "  https://www.${DOMAIN}"
+    echo
+    log_info "监控面板："
+    log_info "  http://${DOMAIN}:8080 或 https://${DOMAIN}:8080"
+    echo
+    log_warning "注意：第三方证书需要手动续期，请在证书过期前重新部署新证书"
+}
+
 # ===== 手动续期证书 =====
 
 renew_certificate() {
@@ -503,6 +622,9 @@ main() {
             ;;
         dns)
             apply_ssl_dns
+            ;;
+        manual)
+            deploy_manual_certificate
             ;;
         renew)
             renew_certificate

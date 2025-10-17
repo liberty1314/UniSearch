@@ -276,6 +276,57 @@ sudo ./scripts/ssl.sh dns
 - 续期需要手动操作
 - 需要再次添加DNS TXT记录
 
+#### manual - 手动部署SSL证书
+
+```bash
+sudo ./scripts/ssl.sh manual
+```
+
+**功能：**
+- 部署从1Panel等平台获取的SSL证书
+- 自动安装证书文件到系统目录
+- 更新Nginx配置为HTTPS
+- 验证证书有效性
+
+**适用场景：** 已从1Panel、阿里云、腾讯云等平台获取SSL证书
+
+**使用步骤：**
+
+1. **准备证书文件**
+   ```bash
+   # 将证书文件放到 deploy/nginx/ 目录
+   cd /path/to/UniSearch/deploy/nginx/
+   
+   # 如果是压缩包，先解压
+   unzip your-certificate.zip
+   
+   # 确保有以下文件：
+   # - fullchain.pem（完整证书链）
+   # - privkey.pem（私钥文件）
+   ```
+
+2. **上传到服务器**
+   ```bash
+   # 上传证书文件到服务器
+   scp deploy/nginx/fullchain.pem root@your-server:/root/UniSearch/deploy/nginx/
+   scp deploy/nginx/privkey.pem root@your-server:/root/UniSearch/deploy/nginx/
+   ```
+
+3. **部署证书**
+   ```bash
+   # SSH登录到服务器
+   ssh root@your-server
+   
+   # 运行部署命令
+   cd /root/UniSearch
+   sudo ./scripts/ssl.sh manual
+   ```
+
+**证书信息：**
+- 存储位置：`/etc/nginx/ssl/unisearchso.xyz/`
+- 自动续期：不支持，需要手动重新部署
+- 续期方法：证书过期前重新运行 `sudo ./scripts/ssl.sh manual`
+
 #### renew - 手动续期证书
 
 ```bash
@@ -283,9 +334,11 @@ sudo ./scripts/ssl.sh renew
 ```
 
 **功能：**
-- 强制续期证书
+- 强制续期Let's Encrypt证书
 - 重载Nginx配置
 - 显示证书信息
+
+**注意：** 仅适用于通过 `apply` 命令申请的证书
 
 ---
 
@@ -483,6 +536,39 @@ sudo ./scripts/ssl.sh apply
 # 监控面板：http://your-domain:8080
 ```
 
+### 场景4：使用第三方SSL证书（1Panel等）
+
+```bash
+# 步骤1：服务器初始化
+sudo ./scripts/deploy.sh init
+
+# 步骤2：启动服务
+sudo ./scripts/deploy.sh start
+
+# 步骤3：设置定时日志清理（推荐）
+sudo ./scripts/deploy.sh setup-log-rotation
+
+# 步骤4：安装监控服务（推荐）
+sudo ./scripts/monitor.sh install
+
+# 步骤5：准备证书文件（在本地）
+# - 从1Panel/阿里云/腾讯云下载证书
+# - 解压到 deploy/nginx/ 目录
+cd deploy/nginx/
+unzip unisearchso.xyz.zip
+
+# 步骤6：上传证书到服务器
+scp fullchain.pem privkey.pem root@your-server:/root/UniSearch/deploy/nginx/
+
+# 步骤7：部署SSL证书
+ssh root@your-server
+cd /root/UniSearch
+sudo ./scripts/ssl.sh manual
+
+# 完成！访问 https://your-domain.com
+# 监控面板：http://your-domain:8080
+```
+
 ---
 
 ## 常见问题
@@ -574,6 +660,31 @@ sudo du -sh /var/lib/docker/containers/*/
 # 查看特定容器日志大小
 sudo docker inspect --format='{{.LogPath}}' unisearch | xargs sudo du -h
 ```
+
+### Q10: 如何使用1Panel等平台的SSL证书？
+
+**A:** 使用 `ssl.sh manual` 命令：
+
+1. **获取证书文件**
+   - 从1Panel/阿里云/腾讯云等平台下载证书
+   - 解压后得到 `fullchain.pem` 和 `privkey.pem`
+
+2. **部署证书**
+   ```bash
+   # 将证书文件放到 deploy/nginx/ 目录
+   cd deploy/nginx/
+   unzip your-certificate.zip
+   
+   # 上传到服务器并部署
+   scp fullchain.pem privkey.pem root@your-server:/root/UniSearch/deploy/nginx/
+   ssh root@your-server
+   cd /root/UniSearch
+   sudo ./scripts/ssl.sh manual
+   ```
+
+3. **续期证书**
+   - 证书过期前重新获取新证书
+   - 重复上述部署步骤
 
 ---
 

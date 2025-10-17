@@ -113,26 +113,39 @@ install_docker() {
         return 0
     fi
     
+    # 更新软件包索引
+    log_info "更新软件包索引..."
+    sudo apt update
+
+    # 更新软件包
+    log_info "更新软件包..."
+    sudo apt upgrade -y
+
+    # 安装ca-certificates和curl
+    sudo apt-get install ca-certificates curl
+
     # 创建密钥目录
-    install -m 0755 -d /etc/apt/keyrings
+    sudo install -m 0755 -d /etc/apt/keyrings
     
     # 添加Docker官方GPG密钥（使用清华镜像源）
     log_info "添加Docker GPG密钥..."
-    curl -fsSL https://mirrors.tuna.tsinghua.edu.cn/docker-ce/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    chmod a+r /etc/apt/keyrings/docker.gpg
+    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    sudo chmod a+r /etc/apt/keyrings/docker.asc
     
     # 添加Docker仓库（使用清华镜像源）
     log_info "添加Docker软件源..."
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://mirrors.tuna.tsinghua.edu.cn/docker-ce/linux/ubuntu \
-$(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+    echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+    $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     
     # 更新软件包索引
     log_info "更新软件包索引..."
-    apt update
+    sudo apt update
     
     # 安装Docker和相关插件
     log_info "安装Docker CE及相关插件..."
-    apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     
     # 启动并启用Docker服务
     systemctl start docker
