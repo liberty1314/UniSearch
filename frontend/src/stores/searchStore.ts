@@ -3,7 +3,6 @@ import { devtools } from 'zustand/middleware';
 import type {
   SearchParams,
   SearchResponse,
-  CloudTypeValue,
 } from '@/types/api';
 import { SearchService } from '@/services/searchService';
 
@@ -13,27 +12,28 @@ import { SearchService } from '@/services/searchService';
 interface SearchState {
   // 搜索参数
   searchParams: SearchParams;
-  
-  // 搜索结果
+
+  // 搜索结果（全量数据）
   searchResults: SearchResponse | null;
-  
+
   // 加载状态
   isLoading: boolean;
-  
+
   // 错误信息
   error: string | null;
-  
+
   // 搜索历史
   searchHistory: string[];
-  
+
   // 可用选项
   availableChannels: string[];
   availablePlugins: string[];
-  
-  // 分页状态
-  currentPage: number;
-  hasMore: boolean;
-  
+
+  // 懒加载状态
+  displayedCount: number; // 当前显示的结果数量
+  pageSize: number; // 每页显示数量（固定48）
+  hasMore: boolean; // 是否还有更多数据
+
   // 操作方法
   setSearchParams: (params: Partial<SearchParams>) => void;
   performSearch: (params?: Partial<SearchParams>) => Promise<void>;
@@ -43,7 +43,7 @@ interface SearchState {
   clearHistory: () => void;
   removeFromHistory: (keyword: string) => void;
   loadAvailableOptions: () => Promise<void>;
-  loadMore: () => Promise<void>;
+  loadMore: () => void; // 前端懒加载，不再是异步
   reset: () => void;
 }
 
@@ -68,222 +68,192 @@ const defaultSearchParams: SearchParams = {
  * 搜索状态管理
  */
 export const useSearchStore = create<SearchState>()(devtools(
-    (set, get) => ({
-      // 初始状态
-      searchParams: defaultSearchParams,
-      searchResults: null,
-      isLoading: false,
-      error: null,
-      searchHistory: JSON.parse(localStorage.getItem('unisearch_search_history') || '[]'),
-      availableChannels: [],
-      availablePlugins: [],
-      currentPage: 1,
-      hasMore: false,
+  (set, get) => ({
+    // 初始状态
+    searchParams: defaultSearchParams,
+    searchResults: null,
+    isLoading: false,
+    error: null,
+    searchHistory: JSON.parse(localStorage.getItem('unisearch_search_history') || '[]'),
+    availableChannels: [],
+    availablePlugins: [],
+    displayedCount: 48, // 初始显示48条
+    pageSize: 48, // 每页48条
+    hasMore: false,
 
-      /**
-       * 设置搜索参数
-       */
-      setSearchParams: (params) => {
-        set((state) => ({
-          searchParams: { ...state.searchParams, ...params },
-        }));
-      },
+    /**
+     * 设置搜索参数
+     */
+    setSearchParams: (params) => {
+      set((state) => ({
+        searchParams: { ...state.searchParams, ...params },
+      }));
+    },
 
-      /**
-       * 执行搜索
-       */
-      performSearch: async (params) => {
-        const state = get();
-        const finalParams = { ...state.searchParams, ...params };
-        
-        // 验证搜索参数
-        const validation = SearchService.validateSearchParams(finalParams);
-        if (!validation.valid) {
-          set({ error: validation.error });
-          return;
-        }
+    /**
+     * 执行搜索
+     */
+    performSearch: async (params) => {
+      const state = get();
+      const finalParams = { ...state.searchParams, ...params };
 
-        set({ 
-          isLoading: true, 
-          error: null,
-          // 清空旧结果，切换为主加载态而非“正在更新”
-          searchResults: null,
-          hasMore: false,
-          searchParams: finalParams,
-          currentPage: 1,
-        });
+      // 验证搜索参数
+      const validation = SearchService.validateSearchParams(finalParams);
+      if (!validation.valid) {
+        set({ error: validation.error });
+        return;
+      }
 
-        try {
-          const results = await SearchService.search(finalParams);
-          
-          set({ 
-            searchResults: results,
-            isLoading: false,
-            hasMore: Object.values(results.merged_by_type || {}).some(links => links.length >= 20), // 假设每页20条
-          });
+      set({
+        isLoading: true,
+        error: null,
+        searchResults: null,
+        searchParams: finalParams,
+        displayedCount: state.pageSize, // 重置为初始显示数量
+        hasMore: false,
+      });
 
-          // 添加到搜索历史
-          if (finalParams.keyword) {
-            get().addToHistory(finalParams.keyword);
-          }
-        } catch (error: any) {
-          set({ 
-            error: error.message || '搜索失败',
-            isLoading: false,
-            searchResults: null,
-          });
-        }
-      },
+      try {
+        const results = await SearchService.search(finalParams);
 
-      /**
-       * 清空搜索结果
-       */
-      clearResults: () => {
-        set((state) => ({ 
-          searchResults: null, 
-          error: null,
-          currentPage: 1,
-          hasMore: false,
-          // 回到首页视图的关键：清空关键词
-          searchParams: { ...state.searchParams, keyword: '' },
-        }));
-      },
+        // 计算总结果数量
+        const totalCount = Object.values(results.merged_by_type || {})
+          .reduce((sum, links) => sum + links.length, 0);
 
-      /**
-       * 设置错误信息
-       */
-      setError: (error) => {
-        set({ error });
-      },
-
-      /**
-       * 添加到搜索历史
-       */
-      addToHistory: (keyword) => {
-        const state = get();
-        const history = state.searchHistory.filter(item => item !== keyword);
-        const newHistory = [keyword, ...history].slice(0, 10); // 保留最近10条
-        
-        set({ searchHistory: newHistory });
-        localStorage.setItem('unisearch_search_history', JSON.stringify(newHistory));
-      },
-
-      /**
-       * 清空搜索历史
-       */
-      clearHistory: () => {
-        set({ searchHistory: [] });
-        localStorage.removeItem('unisearch_search_history');
-      },
-
-      /**
-       * 从搜索历史中删除单条记录
-       */
-      removeFromHistory: (keyword) => {
-        const state = get();
-        const newHistory = state.searchHistory.filter(item => item !== keyword);
-        set({ searchHistory: newHistory });
-        if (newHistory.length > 0) {
-          localStorage.setItem('unisearch_search_history', JSON.stringify(newHistory));
-        } else {
-          localStorage.removeItem('unisearch_search_history');
-        }
-      },
-
-
-
-      /**
-       * 加载可用选项
-       */
-      loadAvailableOptions: async () => {
-        try {
-          const [channels, plugins] = await Promise.all([
-            SearchService.getChannels(),
-            SearchService.getPlugins(),
-          ]);
-          
-          set({ 
-            availableChannels: channels,
-            availablePlugins: plugins,
-          });
-        } catch (error) {
-          console.error('Failed to load available options:', error);
-        }
-      },
-
-      /**
-       * 加载更多结果（懒加载）
-       */
-      loadMore: async () => {
-        const state = get();
-        if (state.isLoading || !state.hasMore || !state.searchResults) {
-          return;
-        }
-
-        set({ isLoading: true });
-
-        try {
-          // 这里需要根据后端API实际支持的分页方式来实现
-          // 目前假设通过修改搜索参数来获取更多结果
-          const nextPage = state.currentPage + 1;
-          const params = {
-            ...state.searchParams,
-            // 如果后端支持分页，可以添加 page 参数
-            ext: {
-              ...state.searchParams.ext,
-              page: nextPage,
-            },
-          };
-
-          const results = await SearchService.search(params);
-          
-          // 合并结果
-          const mergedResults: SearchResponse = {
-            ...results,
-            merged_by_type: {
-              ...state.searchResults.merged_by_type,
-              ...Object.entries(results.merged_by_type || {}).reduce((acc, [cloudType, links]) => {
-                acc[cloudType as keyof typeof acc] = [
-                  ...(state.searchResults.merged_by_type?.[cloudType as keyof typeof state.searchResults.merged_by_type] || []),
-                  ...links,
-                ];
-                return acc;
-              }, {} as typeof results.merged_by_type),
-            },
-          };
-
-          set({ 
-            searchResults: mergedResults,
-            currentPage: nextPage,
-            hasMore: Object.values(results.merged_by_type || {}).some(links => links.length >= 20),
-            isLoading: false,
-          });
-        } catch (error: any) {
-          set({ 
-            error: error.message || '加载更多失败',
-            isLoading: false,
-          });
-        }
-      },
-
-      /**
-       * 重置状态
-       */
-      reset: () => {
         set({
-          searchParams: defaultSearchParams,
-          searchResults: null,
+          searchResults: results,
           isLoading: false,
-          error: null,
-          currentPage: 1,
-          hasMore: false,
+          hasMore: totalCount > state.pageSize, // 判断是否有更多数据
         });
-      },
-    }),
-    {
-      name: 'search-store',
-    }
-  ));
+
+        // 添加到搜索历史
+        if (finalParams.keyword) {
+          get().addToHistory(finalParams.keyword);
+        }
+      } catch (error: any) {
+        set({
+          error: error.message || '搜索失败',
+          isLoading: false,
+          searchResults: null,
+        });
+      }
+    },
+
+    /**
+     * 清空搜索结果
+     */
+    clearResults: () => {
+      set((state) => ({
+        searchResults: null,
+        error: null,
+        displayedCount: state.pageSize,
+        hasMore: false,
+        searchParams: { ...state.searchParams, keyword: '' },
+      }));
+    },
+
+    /**
+     * 设置错误信息
+     */
+    setError: (error) => {
+      set({ error });
+    },
+
+    /**
+     * 添加到搜索历史
+     */
+    addToHistory: (keyword) => {
+      const state = get();
+      const history = state.searchHistory.filter(item => item !== keyword);
+      const newHistory = [keyword, ...history].slice(0, 10); // 保留最近10条
+
+      set({ searchHistory: newHistory });
+      localStorage.setItem('unisearch_search_history', JSON.stringify(newHistory));
+    },
+
+    /**
+     * 清空搜索历史
+     */
+    clearHistory: () => {
+      set({ searchHistory: [] });
+      localStorage.removeItem('unisearch_search_history');
+    },
+
+    /**
+     * 从搜索历史中删除单条记录
+     */
+    removeFromHistory: (keyword) => {
+      const state = get();
+      const newHistory = state.searchHistory.filter(item => item !== keyword);
+      set({ searchHistory: newHistory });
+      if (newHistory.length > 0) {
+        localStorage.setItem('unisearch_search_history', JSON.stringify(newHistory));
+      } else {
+        localStorage.removeItem('unisearch_search_history');
+      }
+    },
+
+
+
+    /**
+     * 加载可用选项
+     */
+    loadAvailableOptions: async () => {
+      try {
+        const [channels, plugins] = await Promise.all([
+          SearchService.getChannels(),
+          SearchService.getPlugins(),
+        ]);
+
+        set({
+          availableChannels: channels,
+          availablePlugins: plugins,
+        });
+      } catch (error) {
+        console.error('Failed to load available options:', error);
+      }
+    },
+
+    /**
+     * 加载更多结果（前端分批渲染）
+     */
+    loadMore: () => {
+      const state = get();
+      if (!state.hasMore || !state.searchResults) {
+        return;
+      }
+
+      // 计算总结果数量
+      const totalCount = Object.values(state.searchResults.merged_by_type || {})
+        .reduce((sum, links) => sum + links.length, 0);
+
+      // 增加显示数量
+      const newDisplayedCount = state.displayedCount + state.pageSize;
+
+      set({
+        displayedCount: newDisplayedCount,
+        hasMore: newDisplayedCount < totalCount,
+      });
+    },
+
+    /**
+     * 重置状态
+     */
+    reset: () => {
+      set((state) => ({
+        searchParams: defaultSearchParams,
+        searchResults: null,
+        isLoading: false,
+        error: null,
+        displayedCount: state.pageSize,
+        hasMore: false,
+      }));
+    },
+  }),
+  {
+    name: 'search-store',
+  }
+));
 
 // 导出便捷的选择器
 export const useSearchParams = () => useSearchStore(state => state.searchParams);

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   IoGridOutline,
   IoListOutline,
@@ -26,7 +26,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     hasMore,
     loadMore,
     searchParams,
-    performSearch
+    performSearch,
+    displayedCount,
   } = useSearchStore();
 
   const debouncedIsLoading = useDebouncedValue(isLoading, 200);
@@ -43,6 +44,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     url: '',
     cloudType: ''
   });
+
+  // 无限滚动观察器
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   /**
    * 获取网盘类型优先级
@@ -82,8 +86,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     return cloudTypeMap[cloudType] || { name: '未知类型', color: 'bg-gray-500', textColor: 'text-gray-700' };
   };
 
-  // 处理并排序所有搜索结果
-  const sortedResults = useMemo(() => {
+  // 处理并排序所有搜索结果（全量数据）
+  const allSortedResults = useMemo(() => {
     if (!searchResults?.merged_by_type) return [];
 
     const allResults: Array<{ link: any; cloudType: string; priority: number; datetime: number }> = [];
@@ -108,6 +112,39 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       return b.datetime - a.datetime;
     });
   }, [searchResults]);
+
+  // 根据 displayedCount 切片显示的结果
+  const displayedResults = useMemo(() => {
+    return allSortedResults.slice(0, displayedCount);
+  }, [allSortedResults, displayedCount]);
+
+  // 设置 IntersectionObserver 实现无限滚动
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // 当观察目标进入视口且还有更多数据时，加载更多
+        if (entries[0].isIntersecting && hasMore && !isLoading) {
+          loadMore();
+        }
+      },
+      {
+        root: null, // 使用视口作为根
+        rootMargin: '200px', // 提前200px触发加载
+        threshold: 0.1,
+      }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [hasMore, isLoading, loadMore]);
 
   const renderResultItem = (item: { link: any; cloudType: string }, index: number) => {
     const { link, cloudType } = item;
@@ -136,7 +173,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         <div
           key={linkId}
           className="group relative p-6 bg-white/95 dark:bg-gray-800/95 backdrop-blur-apple rounded-3xl border border-gray-200/60 dark:border-gray-700/60 hover:shadow-xl hover:shadow-blue-200/50 dark:hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 animate-fade-in cursor-pointer h-35"
-          style={{ animationDelay: `${index * 50}ms` }}
+          style={{ animationDelay: `${(index % 48) * 50}ms` }}
           onClick={handleLinkClick}
         >
           {/* 卡片内容布局 */}
@@ -172,7 +209,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       <div
         key={linkId}
         className="group relative p-5 bg-white/95 dark:bg-gray-800/95 backdrop-blur-apple rounded-2xl border border-gray-200/60 dark:border-gray-700/60 hover:shadow-lg hover:shadow-blue-200/50 dark:hover:shadow-blue-500/20 hover:border-apple-blue/30 transition-all duration-300 animate-fade-in cursor-pointer"
-        style={{ animationDelay: `${index * 30}ms` }}
+        style={{ animationDelay: `${(index % 48) * 30}ms` }}
         onClick={handleLinkClick}
       >
         <div className="flex items-center gap-5">
@@ -221,7 +258,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     );
   }
 
-  if (!isLoading && sortedResults.length === 0 && searchParams.keyword) {
+  if (!isLoading && allSortedResults.length === 0 && searchParams.keyword) {
     return (
       <div className={cn('text-center py-20', className)}>
         <div className="relative mb-8">
@@ -269,9 +306,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       {/* 结果头部 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          {sortedResults.length > 0 && (
+          {allSortedResults.length > 0 && (
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              找到 <span className="font-medium text-gray-900 dark:text-white">{sortedResults.length}</span> 个结果
+              找到 <span className="font-medium text-gray-900 dark:text-white">{allSortedResults.length}</span> 个结果
+              {displayedResults.length < allSortedResults.length && (
+                <span className="ml-2">
+                  (已显示 {displayedResults.length} 个)
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -310,26 +352,30 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
           : 'space-y-6'
       )}>
-        {sortedResults.map((item, index) =>
+        {displayedResults.map((item, index) =>
           renderResultItem(item, index)
         )}
       </div>
 
-      {/* 加载更多 */}
+      {/* 无限滚动触发器 */}
       {hasMore && (
-        <div className="text-center py-6">
-          <button
-            onClick={loadMore}
-            disabled={debouncedIsLoading}
-            className="px-6 py-3 bg-apple-blue text-white rounded-lg hover:bg-apple-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {debouncedIsLoading ? '加载中...' : '加载更多'}
-          </button>
+        <div
+          ref={observerTarget}
+          className="flex justify-center items-center py-8"
+        >
+          <LoadingState type="inline" size="sm" message="正在加载更多..." />
         </div>
       )}
 
-      {/* 加载状态 */}
-      {debouncedIsLoading && sortedResults.length === 0 && (
+      {/* 已加载全部提示 */}
+      {!hasMore && displayedResults.length > 0 && (
+        <div className="text-center py-6 text-sm text-gray-500 dark:text-gray-400">
+          已加载全部 {allSortedResults.length} 条结果
+        </div>
+      )}
+
+      {/* 初次加载状态 */}
+      {debouncedIsLoading && displayedResults.length === 0 && (
         <LoadingState type="search" size="lg" />
       )}
 

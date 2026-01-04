@@ -107,12 +107,6 @@ const LoadingState: React.FC<LoadingStateProps> = ({
         {displayMessage}
       </div>
 
-      {type === 'search' && (
-        <div className="mt-2 text-sm text-gray-500 dark:text-gray-500">
-          正在从多个网盘搜索资源...
-        </div>
-      )}
-
       {type === 'network' && (
         <div className="mt-2 text-sm text-gray-500 dark:text-gray-500">
           正在连接到服务器...
