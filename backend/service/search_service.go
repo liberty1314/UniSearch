@@ -866,9 +866,43 @@ func cleanTitle(title string) string {
 	title = strings.TrimPrefix(title, "标题:")
 	title = strings.TrimPrefix(title, "片名:")
 	
+	// 移除 HTML 标签
+	// 先替换常见的特定标签
+	htmlReplacements := map[string]string{
+		"<span class='highlight-keyword'>": "",
+		"<span class=\"highlight-keyword\">": "",
+		"</span>": "",
+		"<em>": "",
+		"</em>": "",
+		"<b>": "",
+		"</b>": "",
+		"<strong>": "",
+		"</strong>": "",
+		"<i>": "",
+		"</i>": "",
+		"<br>": " ",
+		"<br/>": " ",
+		"<p>": "",
+		"</p>": " ",
+		"<div>": "",
+		"</div>": " ",
+	}
+	
+	for tag, replacement := range htmlReplacements {
+		title = strings.Replace(title, tag, replacement, -1)
+	}
+	
+	// 使用正则表达式移除所有剩余的 HTML 标签
+	htmlTagRegex := regexp.MustCompile(`<[^>]+>`)
+	title = htmlTagRegex.ReplaceAllString(title, "")
+	
 	// 移除表情符号和特殊字符
 	emojiRegex := regexp.MustCompile(`[\p{So}\p{Sk}]`)
 	title = emojiRegex.ReplaceAllString(title, "")
+	
+	// 清理多余的空格
+	spaceRegex := regexp.MustCompile(`\s+`)
+	title = spaceRegex.ReplaceAllString(title, " ")
 	
 	return strings.TrimSpace(title)
 }
@@ -1027,10 +1061,20 @@ func mergeResultsByType(results []model.SearchResult, keyword string, cloudTypes
 				}
 				if !found {
 					orderedLinks = append(orderedLinks, mergedLink)
-					linkTypeMap[link.URL] = link.Type
+					// 重新根据 URL 判断链接类型，而不是信任传入的 Type 字段
+					// 这样可以避免数据源错误导致的分类问题
+					linkTypeMap[link.URL] = util.GetLinkType(link.URL)
 				}
 			}
 		}
+	}
+	
+	// 定义需要过滤掉的网盘类型
+	excludedTypes := map[string]bool{
+		"pikpak":      true,
+		"onedrive":    true,
+		"googledrive": true,
+		"ed2k":        true,
 	}
 	
 	// 将有序链接按类型分组
@@ -1039,6 +1083,11 @@ func mergeResultsByType(results []model.SearchResult, keyword string, cloudTypes
 		linkType := linkTypeMap[mergedLink.URL]
 		if linkType == "" {
 			linkType = "unknown"
+		}
+
+		// 过滤掉不需要的网盘类型
+		if excludedTypes[strings.ToLower(linkType)] {
+			continue
 		}
 
 		// 添加到对应类型的列表中

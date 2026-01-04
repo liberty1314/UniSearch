@@ -1,7 +1,7 @@
 import React from 'react';
 import { IoReloadOutline, IoSearchOutline, IoWifiOutline, IoAlertCircleOutline } from 'react-icons/io5';
 import { cn } from '@/lib/utils';
-import PyramidLoader from '@/components/PyramidLoader';
+import BubbleLoader from '@/components/BubbleLoader';
 
 interface LoadingStateProps {
   type?: 'search' | 'page' | 'inline' | 'network' | 'error';
@@ -41,7 +41,7 @@ const LoadingState: React.FC<LoadingStateProps> = ({
       case 'search':
         return (
           <div className="relative flex items-center justify-center">
-            <PyramidLoader size={currentSize.icon === 'w-4 h-4' ? 80 : currentSize.icon === 'w-6 h-6' ? 120 : 160} />
+            <BubbleLoader size={currentSize.icon === 'w-4 h-4' ? 80 : currentSize.icon === 'w-6 h-6' ? 120 : 160} />
           </div>
         );
       case 'network':
@@ -99,26 +99,26 @@ const LoadingState: React.FC<LoadingStateProps> = ({
       <div className="mb-4">
         {renderIcon()}
       </div>
-      
+
       <div className={cn(
         'text-gray-600 dark:text-gray-400 font-medium',
         currentSize.text
       )}>
         {displayMessage}
       </div>
-      
+
       {type === 'search' && (
         <div className="mt-2 text-sm text-gray-500 dark:text-gray-500">
           正在从多个网盘搜索资源...
         </div>
       )}
-      
+
       {type === 'network' && (
         <div className="mt-2 text-sm text-gray-500 dark:text-gray-500">
           正在连接到服务器...
         </div>
       )}
-      
+
       {type === 'error' && (
         <div className="mt-2 text-sm text-gray-500 dark:text-gray-500">
           请检查网络连接或稍后重试
@@ -145,23 +145,23 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   animation = 'pulse',
 }) => {
   const baseClasses = 'bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700';
-  
+
   const variantClasses = {
     text: 'rounded',
     rectangular: 'rounded-md',
     circular: 'rounded-full',
   };
-  
+
   const animationClasses = {
     pulse: 'animate-pulse',
     wave: 'animate-shimmer',
     none: '',
   };
-  
+
   const style: React.CSSProperties = {};
   if (width) style.width = typeof width === 'number' ? `${width}px` : width;
   if (height) style.height = typeof height === 'number' ? `${height}px` : height;
-  
+
   return (
     <div
       className={cn(

@@ -20,17 +20,13 @@ export enum CloudType {
   UC = 'uc',
   MOBILE = 'mobile',
   ONE_ONE_FIVE = '115',
-  PIKPAK = 'pikpak',
   XUNLEI = 'xunlei',
   ONE_TWO_THREE = '123',
   MAGNET = 'magnet',
-  ED2K = 'ed2k',
   LANZOU = 'lanzou',
-  ONEDRIVE = 'onedrive',
-  GOOGLEDRIVE = 'googledrive'
 }
 
-export type CloudTypeValue = 
+export type CloudTypeValue =
   | 'baidu'
   | 'aliyun'
   | 'quark'
@@ -38,14 +34,18 @@ export type CloudTypeValue =
   | 'uc'
   | 'mobile'
   | '115'
-  | 'pikpak'
   | 'xunlei'
   | '123'
   | 'magnet'
-  | 'ed2k'
-  | 'lanzou'
-  | 'onedrive'
-  | 'googledrive';
+  | 'lanzou';
+
+/**
+ * 过滤配置
+ */
+export interface FilterConfig {
+  include?: string[]; // 包含关键词列表（OR关系）
+  exclude?: string[]; // 排除关键词列表（AND关系）
+}
 
 /**
  * 搜索请求参数
@@ -60,6 +60,7 @@ export interface SearchRequest {
   conc?: number;
   refresh?: boolean;
   ext?: Record<string, any>;
+  filter?: FilterConfig; // 过滤配置
 }
 
 /**
@@ -75,6 +76,7 @@ export interface SearchParams {
   concurrency?: number;
   refresh?: boolean;
   ext?: Record<string, any>;
+  filter?: FilterConfig; // 过滤配置
 }
 
 /**
@@ -85,6 +87,8 @@ export interface Link {
   cloudType?: CloudTypeValue;
   url: string;
   password: string;
+  datetime?: string; // 链接更新时间（可选）
+  work_title?: string; // 作品标题（用于区分同一消息中多个作品的链接）
   size?: number;
   updateTime?: string;
   title?: string;
@@ -136,16 +140,38 @@ export interface SearchResponse {
  */
 export interface HealthResponse {
   status: string;
-  plugins: {
-    count: number;
-    names: string[];
-    info?: Record<string, {
-      version?: string;
-      description?: string;
-      status?: string;
-    }>;
-  };
-  channels: string[];
+  auth_enabled?: boolean; // 是否启用认证
+  plugins_enabled?: boolean; // 是否启用插件
+  plugin_count?: number;
+  plugins?: string[];
+  channels_count?: number;
+  channels?: string[];
+}
+
+/**
+ * 登录请求
+ */
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+/**
+ * 登录响应
+ */
+export interface LoginResponse {
+  token: string;
+  expires_at: number;
+  username: string;
+}
+
+/**
+ * Token 验证响应
+ */
+export interface VerifyResponse {
+  valid: boolean;
+  username?: string;
+  message?: string;
 }
 
 

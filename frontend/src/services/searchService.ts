@@ -42,7 +42,7 @@ export class SearchService {
 
     try {
       const response = await apiClient.post<SearchResponse>('/search', cleanedData);
-      
+
       if (response.code === 0 && response.data) {
         return response.data;
       } else {
@@ -61,7 +61,7 @@ export class SearchService {
   static async getHealth(): Promise<HealthResponse> {
     try {
       const response = await apiClient.get<HealthResponse>('/health');
-      
+
       if (response.code === 0 && response.data) {
         return response.data;
       } else {
@@ -80,7 +80,7 @@ export class SearchService {
   static async getPlugins(): Promise<string[]> {
     try {
       const healthData = await this.getHealth();
-      return healthData.plugins.names || [];
+      return healthData.plugins || [];
     } catch (error: any) {
       console.error('Get plugins error:', error);
       return [];
@@ -129,27 +129,27 @@ export class SearchService {
    */
   static buildSearchUrl(params: SearchParams): string {
     const searchParams = new URLSearchParams();
-    
+
     if (params.keyword) {
       searchParams.set('q', params.keyword);
     }
-    
+
     if (params.source && params.source !== 'all') {
       searchParams.set('src', params.source);
     }
-    
+
     if (params.resultType && params.resultType !== 'merge') {
       searchParams.set('res', params.resultType);
     }
-    
+
     if (params.cloudTypes && params.cloudTypes.length > 0) {
       searchParams.set('types', params.cloudTypes.join(','));
     }
-    
+
     if (params.channels && params.channels.length > 0) {
       searchParams.set('channels', params.channels.join(','));
     }
-    
+
     if (params.plugins && params.plugins.length > 0) {
       searchParams.set('plugins', params.plugins.join(','));
     }
@@ -164,42 +164,42 @@ export class SearchService {
    * @returns 搜索参数
    */
   static parseSearchUrl(url: string | URLSearchParams): Partial<SearchParams> {
-    const searchParams = typeof url === 'string' 
-      ? new URLSearchParams(url.split('?')[1] || '') 
+    const searchParams = typeof url === 'string'
+      ? new URLSearchParams(url.split('?')[1] || '')
       : url;
-    
+
     const params: Partial<SearchParams> = {};
-    
+
     const keyword = searchParams.get('q');
     if (keyword) {
       params.keyword = keyword;
     }
-    
+
     const source = searchParams.get('src') as 'all' | 'tg' | 'plugin';
     if (source && ['all', 'tg', 'plugin'].includes(source)) {
       params.source = source;
     }
-    
+
     const resultType = searchParams.get('res') as 'all' | 'results' | 'merge';
     if (resultType && ['all', 'results', 'merge'].includes(resultType)) {
       params.resultType = resultType;
     }
-    
+
     const cloudTypes = searchParams.get('types');
     if (cloudTypes) {
       params.cloudTypes = cloudTypes.split(',').filter(Boolean) as any;
     }
-    
+
     const channels = searchParams.get('channels');
     if (channels) {
       params.channels = channels.split(',').filter(Boolean);
     }
-    
+
     const plugins = searchParams.get('plugins');
     if (plugins) {
       params.plugins = plugins.split(',').filter(Boolean);
     }
-    
+
     return params;
   }
 }

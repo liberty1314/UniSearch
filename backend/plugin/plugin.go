@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/gin-gonic/gin"
 	"pansou/model"
 )
 
@@ -37,6 +38,13 @@ type AsyncSearchPlugin interface {
 	// SkipServiceFilter 返回是否跳过Service层的关键词过滤
 	// 对于磁力搜索等需要宽泛结果的插件，应返回true
 	SkipServiceFilter() bool
+}
+
+// PluginWithWebHandler 插件Web路由接口
+// 插件可以选择实现此接口来注册自定义的Web路由
+type PluginWithWebHandler interface {
+	// RegisterWebRoutes 注册Web路由
+	RegisterWebRoutes(group *gin.RouterGroup)
 }
 
 // RegisterGlobalPlugin 注册异步插件到全局注册表

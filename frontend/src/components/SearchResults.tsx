@@ -11,7 +11,6 @@ import { cn } from '@/lib/utils';
 import PasswordModal from './PasswordModal';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import LoadingState from '@/components/LoadingState';
-import PyramidLoader from '@/components/PyramidLoader';
 
 interface SearchResultsProps {
   className?: string;
@@ -19,43 +18,12 @@ interface SearchResultsProps {
 
 type ViewMode = 'list' | 'grid';
 
-// Skeleton Card Component
-const SkeletonCard = ({ index }: { index: number }) => (
-  <div 
-    className="group bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 animate-pulse shadow-sm hover:shadow-lg transition-all duration-500"
-    style={{ animationDelay: `${index * 100}ms` }}
-  >
-    <div className="flex items-start space-x-4">
-      <div className="w-12 h-12 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-xl animate-pulse"></div>
-      <div className="flex-1 space-y-3">
-        <div className="space-y-2">
-          <div className="h-5 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 rounded-lg w-4/5 animate-shimmer"></div>
-          <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 rounded-lg w-3/5 animate-shimmer"></div>
-        </div>
-        <div className="flex items-center space-x-3">
-          <div className="h-6 bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 dark:from-blue-800 dark:via-blue-700 dark:to-blue-800 rounded-full w-20 animate-shimmer"></div>
-          <div className="h-5 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 rounded-md w-16 animate-shimmer"></div>
-        </div>
-      </div>
-    </div>
-    <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
-      <div className="flex items-center justify-between">
-        <div className="flex space-x-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-xl animate-pulse"></div>
-          <div className="w-8 h-8 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-xl animate-pulse"></div>
-        </div>
-        <div className="h-9 bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 dark:from-blue-800 dark:via-blue-700 dark:to-blue-800 rounded-xl w-24 animate-shimmer"></div>
-      </div>
-    </div>
-  </div>
-);
-
 const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
-  const { 
-    searchResults, 
-    isLoading, 
-    error, 
-    hasMore, 
+  const {
+    searchResults,
+    isLoading,
+    error,
+    hasMore,
     loadMore,
     searchParams,
     performSearch
@@ -86,13 +54,13 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     if (hotCloudTypes.includes(cloudType as CloudType)) {
       return 1;
     }
-    
+
     // 最低优先级：种子资源
-    const seedTypes = [CloudType.MAGNET, CloudType.ED2K];
+    const seedTypes = [CloudType.MAGNET];
     if (seedTypes.includes(cloudType as CloudType)) {
       return 3;
     }
-    
+
     // 第二优先级：其他网盘类型
     return 2;
   };
@@ -109,11 +77,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       [CloudType.XUNLEI]: { name: '迅雷网盘', color: 'bg-yellow-500', textColor: 'text-yellow-700' },
       [CloudType.ONE_TWO_THREE]: { name: '123网盘', color: 'bg-teal-500', textColor: 'text-teal-700' },
       [CloudType.LANZOU]: { name: '蓝奏云', color: 'bg-blue-600', textColor: 'text-blue-700' },
-      [CloudType.PIKPAK]: { name: 'PikPak', color: 'bg-pink-500', textColor: 'text-pink-700' },
-      [CloudType.ONEDRIVE]: { name: 'OneDrive', color: 'bg-blue-700', textColor: 'text-blue-700' },
-      [CloudType.GOOGLEDRIVE]: { name: 'Google Drive', color: 'bg-yellow-600', textColor: 'text-yellow-700' },
       [CloudType.MAGNET]: { name: '磁力链接', color: 'bg-gray-600', textColor: 'text-gray-700' },
-      [CloudType.ED2K]: { name: 'ED2K链接', color: 'bg-slate-500', textColor: 'text-slate-700' },
     };
     return cloudTypeMap[cloudType] || { name: '未知类型', color: 'bg-gray-500', textColor: 'text-gray-700' };
   };
@@ -121,19 +85,19 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   // 处理并排序所有搜索结果
   const sortedResults = useMemo(() => {
     if (!searchResults?.merged_by_type) return [];
-    
+
     const allResults: Array<{ link: any; cloudType: string; priority: number; datetime: number }> = [];
-    
+
     // 收集所有结果并添加优先级和时间信息
     Object.entries(searchResults.merged_by_type).forEach(([cloudType, links]) => {
       const priority = getCloudTypePriority(cloudType as CloudTypeValue);
-      
+
       links.forEach((link: any) => {
         const datetime = link.datetime ? new Date(link.datetime).getTime() : 0;
         allResults.push({ link, cloudType, priority, datetime });
       });
     });
-    
+
     // 按优先级和时间排序
     return allResults.sort((a, b) => {
       // 首先按网盘类型优先级排序
@@ -183,14 +147,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
                 {link.note || '网盘资源'}
               </h3>
             </div>
-            
+
             {/* 底部信息区域 - 占25%高度 */}
             <div className="flex items-center justify-between flex-shrink-0">
               {/* 左下角：网盘类别 */}
               <div className={cn('px-3 py-1.5 rounded-full text-white text-sm font-bold shadow-sm', cloudInfo.color)}>
                 {cloudInfo.name}
               </div>
-              
+
               {/* 右下角：访问码提示 */}
               {hasPassword && (
                 <div className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-medium rounded-full">
@@ -222,7 +186,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
               <div className={cn('px-3 py-1.5 rounded-full text-white text-sm font-bold shadow-sm', cloudInfo.color)}>
                 {cloudInfo.name}
               </div>
-              
+
               {/* 网盘类别右边：访问码提示 */}
               {hasPassword && (
                 <div className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-medium rounded-full">
@@ -247,8 +211,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         </div>
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">搜索出错</h3>
         <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto leading-relaxed">{error}</p>
-        <button 
-          onClick={() => performSearch(searchParams)} 
+        <button
+          onClick={() => performSearch(searchParams)}
           className="mt-6 inline-flex items-center px-4 py-2 bg-gradient-to-r from-apple-blue to-apple-blue/90 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105"
         >
           重新尝试
@@ -346,7 +310,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
           : 'space-y-6'
       )}>
-        {sortedResults.map((item, index) => 
+        {sortedResults.map((item, index) =>
           renderResultItem(item, index)
         )}
       </div>
@@ -366,10 +330,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
 
       {/* 加载状态 */}
       {debouncedIsLoading && sortedResults.length === 0 && (
-        <div className="py-12 flex flex-col items-center justify-center">
-          <PyramidLoader size={160} />
-          <div className="mt-4 text-gray-600 dark:text-gray-400">正在从多个网盘搜索资源...</div>
-        </div>
+        <LoadingState type="search" size="lg" />
       )}
 
       {/* 密码弹窗 */}
