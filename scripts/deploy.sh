@@ -392,27 +392,23 @@ start_container() {
         exit 1
     fi
     
-    # 检查 ADMIN_PASSWORD_HASH 配置
-    if ! grep -q "^ADMIN_PASSWORD_HASH=.\+" .env.local; then
-        log_error "ADMIN_PASSWORD_HASH 未在 .env.local 中正确配置"
-        log_info "当前配置："
-        grep "ADMIN_PASSWORD_HASH" .env.local || echo "  (未找到配置)"
-        log_info ""
+    # 验证 ADMIN_PASSWORD_HASH 配置
+    if grep -q "^ADMIN_PASSWORD_HASH=.\+" .env.local; then
+        local password_hash=$(grep "^ADMIN_PASSWORD_HASH=" .env.local | cut -d'=' -f2-)
+        if [ -n "$password_hash" ]; then
+            log_success "密码哈希配置验证通过"
+        else
+            log_error "ADMIN_PASSWORD_HASH 值为空"
+            exit 1
+        fi
+    else
+        log_error "ADMIN_PASSWORD_HASH 未在 .env.local 中配置"
         log_info "请执行以下步骤："
         log_info "  1. 生成密码哈希: ../scripts/gen_admin_password.sh '你的密码'"
-        log_info "  2. 编辑 .env.local 文件"
-        log_info "  3. 确保格式为: ADMIN_PASSWORD_HASH=\$2a\$10\$..."
+        log_info "  2. 编辑 .env.local: vi .env.local"
+        log_info "  3. 添加配置: ADMIN_PASSWORD_HASH=\$2a\$10\$..."
         exit 1
     fi
-    
-    # 验证密码哈希格式
-    local password_hash=$(grep "^ADMIN_PASSWORD_HASH=" .env.local | cut -d'=' -f2-)
-    if [ -z "$password_hash" ]; then
-        log_error "ADMIN_PASSWORD_HASH 值为空"
-        exit 1
-    fi
-    
-    log_info "密码哈希验证通过: ${password_hash:0:20}..."
     
     # 检查文件权限
     local perms=$(stat -c "%a" .env.local 2>/dev/null || stat -f "%A" .env.local 2>/dev/null)
