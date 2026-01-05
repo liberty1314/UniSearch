@@ -380,11 +380,55 @@ start_container() {
         exit 1
     fi
     
+    # 检查环境变量文件
+    local env_files=""
+    
+    # 优先使用 .env.local（包含敏感信息，不提交到 Git）
+    if [ -f ".env.local" ]; then
+        log_info "使用本地环境变量文件: .env.local"
+        env_files="--env-file .env.local"
+        
+        # 检查文件权限
+        local perms=$(stat -c "%a" .env.local 2>/dev/null || stat -f "%A" .env.local 2>/dev/null)
+        if [ "$perms" != "600" ] && [ "$perms" != "0600" ]; then
+            log_warning ".env.local 文件权限不安全，建议设置为 600"
+            log_info "执行: chmod 600 ${DEPLOY_DIR}/.env.local"
+        fi
+    fi
+    
+    # 加载通用配置文件
+    if [ -f "env.prod" ]; then
+        log_info "加载通用配置文件: env.prod"
+        env_files="${env_files} --env-file env.prod"
+    else
+        log_warning "环境变量文件不存在: ${DEPLOY_DIR}/env.prod"
+    fi
+    
+    # 检查关键环境变量
+    if [ -f ".env.local" ]; then
+        if ! grep -q "ADMIN_PASSWORD_HASH=" .env.local || grep -q "^ADMIN_PASSWORD_HASH=$" .env.local; then
+            log_error "ADMIN_PASSWORD_HASH 未在 .env.local 中配置"
+            log_info "请执行以下步骤："
+            log_info "  1. 生成密码哈希: ./scripts/gen_admin_password.sh '你的密码'"
+            log_info "  2. 编辑文件: vi ${DEPLOY_DIR}/.env.local"
+            log_info "  3. 添加配置: ADMIN_PASSWORD_HASH=<生成的哈希值>"
+            log_info "  4. 设置权限: chmod 600 ${DEPLOY_DIR}/.env.local"
+            exit 1
+        fi
+    else
+        log_warning "未找到 .env.local 文件，管理员登录可能无法使用"
+        log_info "建议创建 .env.local 文件并配置 ADMIN_PASSWORD_HASH"
+    fi
+    
     # 创建数据卷
     create_volumes
     
     # 使用docker compose启动
-    docker compose -f docker-compose.prod.yml up -d
+    if [ -n "$env_files" ]; then
+        docker compose -f docker-compose.prod.yml $env_files up -d
+    else
+        docker compose -f docker-compose.prod.yml up -d
+    fi
     
     log_success "容器启动完成"
 }

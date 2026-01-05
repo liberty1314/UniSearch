@@ -305,4 +305,27 @@ Dockerfile.local
 .env.*
 !.env.example
 
+# ===== 安全：敏感配置文件 =====
+# 本地环境变量文件（包含密码等敏感信息）
+deploy/.env.local
+deploy/.env.*.local
+.env.local
+.env.*.local
+
+# 备份文件可能包含敏感信息
+backups/
+*.backup
+*.bak
+
+# API密钥和证书
+api_keys.json
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# 配置更新标记文件
+.config_updated
+
 logs/
