@@ -174,6 +174,206 @@ func (s *APIKeyService) load() error {
 	return nil
 }
 
+// UpdateKeyExpiry 更新API密钥的过期时间
+// key: 要更新的密钥
+// newExpiresAt: 新的过期时间（如果不为nil）
+// extendHours: 延长的小时数（如果大于0）
+// 注意：newExpiresAt 和 extendHours 至少要提供一个
+func (s *APIKeyService) UpdateKeyExpiry(key string, newExpiresAt *time.Time, extendHours int) (*model.APIKey, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	
+	// 检查密钥是否存在
+	apiKey, exists := s.keys[key]
+	if !exists {
+		return nil, errors.New("密钥不存在")
+	}
+	
+	// 验证参数：至少要提供一个更新方式
+	if newExpiresAt == nil && extendHours <= 0 {
+		return nil, errors.New("必须提供 newExpiresAt 或 extendHours")
+	}
+	
+	// 更新过期时间
+	if newExpiresAt != nil {
+		apiKey.ExpiresAt = *newExpiresAt
+	} else if extendHours > 0 {
+		apiKey.ExpiresAt = apiKey.ExpiresAt.Add(time.Duration(extendHours) * time.Hour)
+	}
+	
+	// 持久化到文件
+	if err := s.save(); err != nil {
+		return nil, fmt.Errorf("保存密钥失败: %w", err)
+	}
+	
+	return apiKey, nil
+}
+
+// BatchExtendKeysResult 批量延长操作的单项结果
+type BatchExtendKeysResult struct {
+	Key          string     `json:"key"`
+	Success      bool       `json:"success"`
+	Error        string     `json:"error,omitempty"`
+	NewExpiresAt *time.Time `json:"new_expires_at,omitempty"`
+}
+
+// BatchExtendKeys 批量延长API密钥的有效期
+// keys: 要延长的密钥列表
+// extendHours: 延长的小时数
+// 返回每个密钥的操作结果
+// 使用并发处理提高性能，限制并发数为10
+func (s *APIKeyService) BatchExtendKeys(keys []string, extendHours int) ([]BatchExtendKeysResult, error) {
+	if extendHours <= 0 {
+		return nil, errors.New("延长小时数必须大于0")
+	}
+	
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	
+	results := make([]BatchExtendKeysResult, len(keys))
+	
+	// 使用并发处理，限制并发数为10
+	const maxConcurrency = 10
+	semaphore := make(chan struct{}, maxConcurrency)
+	var wg sync.WaitGroup
+	
+	// 处理每个密钥
+	for i, key := range keys {
+		wg.Add(1)
+		go func(index int, k string) {
+			defer wg.Done()
+			
+			// 获取信号量
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			
+			result := BatchExtendKeysResult{
+				Key: k,
+			}
+			
+			// 检查密钥是否存在
+			apiKey, exists := s.keys[k]
+			if !exists {
+				result.Success = false
+				result.Error = "密钥不存在"
+				results[index] = result
+				return
+			}
+			
+			// 延长过期时间
+			apiKey.ExpiresAt = apiKey.ExpiresAt.Add(time.Duration(extendHours) * time.Hour)
+			result.Success = true
+			result.NewExpiresAt = &apiKey.ExpiresAt
+			results[index] = result
+		}(i, key)
+	}
+	
+	// 等待所有 goroutine 完成
+	wg.Wait()
+	
+	// 持久化到文件
+	if err := s.save(); err != nil {
+		return nil, fmt.Errorf("保存密钥失败: %w", err)
+	}
+	
+	return results, nil
+}
+
+// BatchGenerateKeysResult 批量生成操作的结果
+type BatchGenerateKeysResult struct {
+	SuccessCount int               `json:"success_count"`
+	FailedCount  int               `json:"failed_count"`
+	Keys         []*model.APIKey   `json:"keys"`
+}
+
+// BatchGenerateKeys 批量生成API密钥
+// count: 生成数量（1-100）
+// ttl: 密钥有效期
+// descriptionPrefix: 描述前缀（可选）
+// 使用并发处理提高性能，限制并发数为10
+func (s *APIKeyService) BatchGenerateKeys(count int, ttl time.Duration, descriptionPrefix string) (*BatchGenerateKeysResult, error) {
+	// 验证参数
+	if count < 1 || count > 100 {
+		return nil, errors.New("生成数量必须在1-100之间")
+	}
+	
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	
+	result := &BatchGenerateKeysResult{
+		Keys: make([]*model.APIKey, count),
+	}
+	
+	// 使用并发处理，限制并发数为10
+	const maxConcurrency = 10
+	semaphore := make(chan struct{}, maxConcurrency)
+	var wg sync.WaitGroup
+	var mu sync.Mutex // 保护 result 的并发访问
+	
+	// 生成密钥
+	for i := 0; i < count; i++ {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+			
+			// 获取信号量
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			
+			// 使用 crypto/rand 生成 20 字节随机数
+			randomBytes := make([]byte, 20)
+			if _, err := rand.Read(randomBytes); err != nil {
+				mu.Lock()
+				result.FailedCount++
+				mu.Unlock()
+				return
+			}
+			
+			// 转换为 40 位十六进制字符串并添加 sk- 前缀
+			key := "sk-" + hex.EncodeToString(randomBytes)
+			
+			// 生成描述
+			description := descriptionPrefix
+			if description != "" {
+				description = fmt.Sprintf("%s%d", descriptionPrefix, index+1)
+			}
+			
+			// 创建 API Key 对象
+			now := time.Now()
+			apiKey := &model.APIKey{
+				Key:         key,
+				CreatedAt:   now,
+				ExpiresAt:   now.Add(ttl),
+				IsEnabled:   true,
+				Description: description,
+			}
+			
+			// 存储到内存映射（需要加锁）
+			mu.Lock()
+			s.keys[key] = apiKey
+			result.Keys[index] = apiKey
+			result.SuccessCount++
+			mu.Unlock()
+		}(i)
+	}
+	
+	// 等待所有 goroutine 完成
+	wg.Wait()
+	
+	// 持久化到文件
+	if err := s.save(); err != nil {
+		// 如果保存失败，回滚内存操作
+		for _, key := range result.Keys {
+			if key != nil {
+				delete(s.keys, key.Key)
+			}
+		}
+		return nil, fmt.Errorf("保存密钥失败: %w", err)
+	}
+	
+	return result, nil
+}
+
 // save 保存密钥数据到文件
 // 注意：调用此方法前必须已经持有写锁
 func (s *APIKeyService) save() error {
@@ -195,4 +395,71 @@ func (s *APIKeyService) save() error {
 	}
 	
 	return nil
+}
+
+// BatchDeleteKeysResult 批量删除操作的单项结果
+type BatchDeleteKeysResult struct {
+	Key     string `json:"key"`
+	Success bool   `json:"success"`
+	Error   string `json:"error,omitempty"`
+}
+
+// BatchDeleteKeys 批量删除API密钥
+// keys: 要删除的密钥列表
+// 返回每个密钥的操作结果
+// 使用并发处理提高性能，限制并发数为10
+func (s *APIKeyService) BatchDeleteKeys(keys []string) ([]BatchDeleteKeysResult, error) {
+	if len(keys) == 0 {
+		return nil, errors.New("密钥列表不能为空")
+	}
+	
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	
+	results := make([]BatchDeleteKeysResult, len(keys))
+	
+	// 使用并发处理，限制并发数为10
+	const maxConcurrency = 10
+	semaphore := make(chan struct{}, maxConcurrency)
+	var wg sync.WaitGroup
+	
+	// 处理每个密钥
+	for i, key := range keys {
+		wg.Add(1)
+		go func(index int, k string) {
+			defer wg.Done()
+			
+			// 获取信号量
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			
+			result := BatchDeleteKeysResult{
+				Key: k,
+			}
+			
+			// 检查密钥是否存在
+			_, exists := s.keys[k]
+			if !exists {
+				result.Success = false
+				result.Error = "密钥不存在"
+				results[index] = result
+				return
+			}
+			
+			// 从内存中删除
+			delete(s.keys, k)
+			result.Success = true
+			results[index] = result
+		}(i, key)
+	}
+	
+	// 等待所有 goroutine 完成
+	wg.Wait()
+	
+	// 持久化到文件
+	if err := s.save(); err != nil {
+		return nil, fmt.Errorf("保存密钥失败: %w", err)
+	}
+	
+	return results, nil
 }

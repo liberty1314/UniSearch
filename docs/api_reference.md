@@ -447,6 +447,382 @@ curl -X GET http://localhost:8888/api/admin/plugins \
 
 ---
 
+### 6. 更新 API Key 有效期
+
+更新指定 API Key 的过期时间。
+
+**接口地址**: `/api/admin/keys/:key`  
+**请求方法**: `PATCH`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| key | string | 是 | 要更新的 API Key |
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| expires_at | string | 否 | 新的过期时间（ISO 8601 格式），与 extend_hours 二选一 |
+| extend_hours | number | 否 | 延长的小时数（正整数），与 expires_at 二选一 |
+
+**注意**: `expires_at` 和 `extend_hours` 必须至少提供一个。
+
+**请求示例**:
+
+```bash
+# 方式1：直接设置新的过期时间
+curl -X PATCH http://localhost:8888/api/admin/keys/sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0 \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "expires_at": "2026-03-05T10:30:00Z"
+  }'
+
+# 方式2：延长指定小时数
+curl -X PATCH http://localhost:8888/api/admin/keys/sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0 \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "extend_hours": 168
+  }'
+```
+
+**成功响应**:
+
+```json
+{
+  "key": {
+    "key": "sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+    "created_at": "2026-01-05T10:30:00Z",
+    "expires_at": "2026-03-05T10:30:00Z",
+    "is_enabled": true,
+    "description": "测试用密钥"
+  }
+}
+```
+
+**错误响应**:
+
+```json
+{
+  "error": "参数错误：必须提供 expires_at 或 extend_hours",
+  "code": "INVALID_REQUEST"
+}
+```
+
+```json
+{
+  "error": "更新密钥失败: 密钥不存在",
+  "code": "APIKEY_UPDATE_FAILED"
+}
+```
+
+**状态码**:
+- `200`: 更新成功
+- `400`: 参数错误
+- `401`: 未授权
+- `403`: 禁止访问
+- `500`: 服务器内部错误
+
+---
+
+### 7. 批量延长 API Key 有效期
+
+批量延长多个 API Key 的有效期。
+
+**接口地址**: `/api/admin/keys/batch-extend`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| keys | string[] | 是 | 要延长的 API Key 列表 |
+| extend_hours | number | 是 | 延长的小时数（正整数，最小值为 1） |
+
+**请求示例**:
+
+```bash
+curl -X POST http://localhost:8888/api/admin/keys/batch-extend \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "keys": [
+      "sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+      "sk-x1y2z3a4b5c6d7e8f9g0h1i2j3k4l5m6n7o8p9q0"
+    ],
+    "extend_hours": 720
+  }'
+```
+
+**成功响应**:
+
+```json
+{
+  "success_count": 2,
+  "failed_count": 0,
+  "results": [
+    {
+      "key": "sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+      "success": true,
+      "new_expires_at": "2026-03-05T10:30:00Z"
+    },
+    {
+      "key": "sk-x1y2z3a4b5c6d7e8f9g0h1i2j3k4l5m6n7o8p9q0",
+      "success": true,
+      "new_expires_at": "2026-03-04T15:20:00Z"
+    }
+  ]
+}
+```
+
+**部分失败响应**:
+
+```json
+{
+  "success_count": 1,
+  "failed_count": 1,
+  "results": [
+    {
+      "key": "sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+      "success": true,
+      "new_expires_at": "2026-03-05T10:30:00Z"
+    },
+    {
+      "key": "sk-invalid-key",
+      "success": false,
+      "error": "密钥不存在"
+    }
+  ]
+}
+```
+
+**字段说明**:
+- `success_count`: 成功更新的密钥数量
+- `failed_count`: 失败的密钥数量
+- `results`: 每个密钥的操作结果
+  - `key`: API Key
+  - `success`: 是否成功
+  - `new_expires_at`: 新的过期时间（成功时返回）
+  - `error`: 错误信息（失败时返回）
+
+**错误响应**:
+
+```json
+{
+  "error": "请求参数错误",
+  "code": "INVALID_REQUEST"
+}
+```
+
+```json
+{
+  "error": "密钥列表不能为空",
+  "code": "INVALID_REQUEST"
+}
+```
+
+**状态码**:
+- `200`: 操作完成（可能部分成功）
+- `400`: 参数错误
+- `401`: 未授权
+- `403`: 禁止访问
+- `500`: 服务器内部错误
+
+---
+
+### 8. 批量创建 API Key
+
+批量生成多个 API Key。
+
+**接口地址**: `/api/admin/keys/batch-create`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| count | number | 是 | 生成数量（1-100） |
+| ttl_hours | number | 是 | 有效期（小时），最小值为 1 |
+| description_prefix | string | 否 | 描述前缀，生成的密钥描述为"前缀+序号" |
+
+**请求示例**:
+
+```bash
+curl -X POST http://localhost:8888/api/admin/keys/batch-create \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "count": 10,
+    "ttl_hours": 720,
+    "description_prefix": "批量生成-"
+  }'
+```
+
+**成功响应**:
+
+```json
+{
+  "success_count": 10,
+  "failed_count": 0,
+  "keys": [
+    {
+      "key": "sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+      "created_at": "2026-01-05T10:30:00Z",
+      "expires_at": "2026-02-05T10:30:00Z",
+      "is_enabled": true,
+      "description": "批量生成-1"
+    },
+    {
+      "key": "sk-x1y2z3a4b5c6d7e8f9g0h1i2j3k4l5m6n7o8p9q0",
+      "created_at": "2026-01-05T10:30:01Z",
+      "expires_at": "2026-02-05T10:30:01Z",
+      "is_enabled": true,
+      "description": "批量生成-2"
+    }
+  ]
+}
+```
+
+**字段说明**:
+- `success_count`: 成功创建的密钥数量
+- `failed_count`: 失败的密钥数量
+- `keys`: 成功创建的 API Key 列表
+
+**错误响应**:
+
+```json
+{
+  "error": "请求参数错误",
+  "code": "INVALID_REQUEST"
+}
+```
+
+```json
+{
+  "error": "批量创建失败: 生成数量必须在1-100之间",
+  "code": "BATCH_CREATE_FAILED"
+}
+```
+
+**状态码**:
+- `200`: 创建成功
+- `400`: 参数错误
+- `401`: 未授权
+- `403`: 禁止访问
+- `500`: 服务器内部错误
+
+---
+
+### 9. 批量删除 API Key
+
+批量删除多个 API Key。
+
+**接口地址**: `/api/admin/keys/batch-delete`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| keys | string[] | 是 | 要删除的 API Key 列表 |
+
+**请求示例**:
+
+```bash
+curl -X POST http://localhost:8888/api/admin/keys/batch-delete \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "keys": [
+      "sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+      "sk-x1y2z3a4b5c6d7e8f9g0h1i2j3k4l5m6n7o8p9q0"
+    ]
+  }'
+```
+
+**成功响应**:
+
+```json
+{
+  "success_count": 2,
+  "failed_count": 0,
+  "results": [
+    {
+      "key": "sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+      "success": true
+    },
+    {
+      "key": "sk-x1y2z3a4b5c6d7e8f9g0h1i2j3k4l5m6n7o8p9q0",
+      "success": true
+    }
+  ]
+}
+```
+
+**部分失败响应**:
+
+```json
+{
+  "success_count": 1,
+  "failed_count": 1,
+  "results": [
+    {
+      "key": "sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+      "success": true
+    },
+    {
+      "key": "sk-invalid-key",
+      "success": false,
+      "error": "密钥不存在"
+    }
+  ]
+}
+```
+
+**字段说明**:
+- `success_count`: 成功删除的密钥数量
+- `failed_count`: 失败的密钥数量
+- `results`: 每个密钥的操作结果
+  - `key`: API Key
+  - `success`: 是否成功
+  - `error`: 错误信息（失败时返回）
+
+**错误响应**:
+
+```json
+{
+  "error": "请求参数错误",
+  "code": "INVALID_REQUEST"
+}
+```
+
+```json
+{
+  "error": "密钥列表不能为空",
+  "code": "INVALID_REQUEST"
+}
+```
+
+**状态码**:
+- `200`: 操作完成（可能部分成功）
+- `400`: 参数错误
+- `401`: 未授权
+- `403`: 禁止访问
+- `500`: 服务器内部错误
+
+---
+
 ## 搜索 API
 
 ### 搜索网盘资源
@@ -741,6 +1117,9 @@ curl http://localhost:8888/api/health
 | RATE_LIMIT_EXCEEDED | 请求过于频繁 |
 | APIKEY_GENERATION_FAILED | 密钥生成失败 |
 | APIKEY_STORAGE_ERROR | 存储错误 |
+| APIKEY_UPDATE_FAILED | 密钥更新失败 |
+| BATCH_EXTEND_FAILED | 批量延长失败 |
+| BATCH_CREATE_FAILED | 批量创建失败 |
 
 ---
 
@@ -771,6 +1150,31 @@ curl http://localhost:8888/api/health
 ---
 
 ## 更新日志
+
+### v2.2.0 (2026-01-05)
+
+**新增功能**:
+- ✅ API Key 管理增强
+- ✅ 单个 API Key 有效期更新
+- ✅ 批量延长 API Key 有效期
+- ✅ 批量创建 API Key
+- ✅ 批量删除 API Key
+
+**新增接口**:
+- `PATCH /api/admin/keys/:key` - 更新 API Key 有效期
+- `POST /api/admin/keys/batch-extend` - 批量延长 API Key 有效期
+- `POST /api/admin/keys/batch-create` - 批量创建 API Key
+- `POST /api/admin/keys/batch-delete` - 批量删除 API Key
+
+**功能改进**:
+- 支持两种方式更新有效期：直接设置过期时间或延长指定小时数
+- 批量操作支持部分成功，返回详细的操作结果
+- 批量创建支持自定义描述前缀
+- 批量删除支持一次性删除多个密钥
+
+**兼容性说明**:
+- 所有新增功能需要管理员权限
+- 向后兼容现有 API Key 管理功能
 
 ### v2.1.0 (2026-01-05)
 

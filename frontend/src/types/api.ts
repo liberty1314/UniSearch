@@ -209,6 +209,59 @@ export interface CreateAPIKeyRequest {
 }
 
 /**
+ * 更新 API Key 请求
+ */
+export interface UpdateAPIKeyRequest {
+  expires_at?: string; // 可选：直接设置过期时间（ISO 8601 格式）
+  extend_hours?: number; // 可选：延长小时数
+}
+
+/**
+ * 批量延长请求
+ */
+export interface BatchExtendRequest {
+  keys: string[];
+  extend_hours: number;
+}
+
+/**
+ * 批量操作单项结果
+ */
+export interface BatchOperationItem {
+  key: string;
+  success: boolean;
+  error?: string;
+  new_expires_at?: string;
+}
+
+/**
+ * 批量操作结果
+ */
+export interface BatchOperationResult {
+  success_count: number;
+  failed_count: number;
+  results: BatchOperationItem[];
+}
+
+/**
+ * 批量创建请求
+ */
+export interface BatchCreateRequest {
+  count: number;
+  ttl_hours: number;
+  description_prefix?: string;
+}
+
+/**
+ * 批量创建结果
+ */
+export interface BatchCreateResult {
+  success_count: number;
+  failed_count: number;
+  keys: APIKeyInfo[];
+}
+
+/**
  * 网盘类型配置
  */
 export interface CloudTypeConfig {

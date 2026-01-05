@@ -46,6 +46,10 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			admin.GET("/keys", ListAPIKeysHandler(apiKeyService))
 			admin.POST("/keys", CreateAPIKeyHandler(apiKeyService))
 			admin.DELETE("/keys/:key", DeleteAPIKeyHandler(apiKeyService))
+			admin.PATCH("/keys/:key", UpdateAPIKeyHandler(apiKeyService))           // 新增：更新API Key
+			admin.POST("/keys/batch-extend", BatchExtendAPIKeysHandler(apiKeyService)) // 新增：批量延长
+			admin.POST("/keys/batch-create", BatchCreateAPIKeysHandler(apiKeyService)) // 新增：批量创建
+			admin.POST("/keys/batch-delete", BatchDeleteAPIKeysHandler(apiKeyService)) // 新增：批量删除
 			admin.GET("/plugins", GetPluginsStatusHandler)
 		}
 		

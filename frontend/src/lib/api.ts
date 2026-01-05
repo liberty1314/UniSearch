@@ -132,7 +132,7 @@ class ApiClient {
     if (response.data && typeof response.data === 'object') {
       // 检查是否已经是 ApiResponse 格式
       if ('code' in response.data || 'message' in response.data) {
-        return response.data as ApiResponse<T>;
+        return response.data as unknown as ApiResponse<T>;
       }
 
       // 否则包装成 ApiResponse 格式
@@ -143,7 +143,7 @@ class ApiClient {
       } as ApiResponse<T>;
     }
 
-    return response.data as ApiResponse<T>;
+    return response.data as unknown as ApiResponse<T>;
   }
 
   /**
@@ -157,7 +157,7 @@ class ApiClient {
     if (response.data && typeof response.data === 'object') {
       // 检查是否已经是 ApiResponse 格式
       if ('code' in response.data || 'message' in response.data) {
-        return response.data as ApiResponse<T>;
+        return response.data as unknown as ApiResponse<T>;
       }
 
       // 否则包装成 ApiResponse 格式
@@ -168,7 +168,7 @@ class ApiClient {
       } as ApiResponse<T>;
     }
 
-    return response.data as ApiResponse<T>;
+    return response.data as unknown as ApiResponse<T>;
   }
 
   /**
@@ -177,6 +177,30 @@ class ApiClient {
   async put<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
     const response = await this.instance.put<ApiResponse<T>>(url, data);
     return response.data;
+  }
+
+  /**
+   * PATCH 请求
+   */
+  async patch<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
+    const response = await this.instance.patch<T>(url, data);
+
+    // 如果响应已经是目标类型，则包装成 ApiResponse 格式
+    if (response.data && typeof response.data === 'object') {
+      // 检查是否已经是 ApiResponse 格式
+      if ('code' in response.data || 'message' in response.data) {
+        return response.data as unknown as ApiResponse<T>;
+      }
+
+      // 否则包装成 ApiResponse 格式
+      return {
+        code: 200,
+        message: 'success',
+        data: response.data as T,
+      } as ApiResponse<T>;
+    }
+
+    return response.data as unknown as ApiResponse<T>;
   }
 
   /**
@@ -189,7 +213,7 @@ class ApiClient {
     if (response.data && typeof response.data === 'object') {
       // 检查是否已经是 ApiResponse 格式
       if ('code' in response.data || 'message' in response.data) {
-        return response.data as ApiResponse<T>;
+        return response.data as unknown as ApiResponse<T>;
       }
 
       // 否则包装成 ApiResponse 格式
@@ -200,7 +224,7 @@ class ApiClient {
       } as ApiResponse<T>;
     }
 
-    return response.data as ApiResponse<T>;
+    return response.data as unknown as ApiResponse<T>;
   }
 
   /**

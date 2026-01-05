@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
 	"golang.org/x/net/netutil"
 
 	"pansou/api"
@@ -60,6 +61,13 @@ func main() {
 
 // initApp 初始化应用程序
 func initApp() {
+	// 加载 .env 文件
+	if err := godotenv.Load(); err != nil {
+		log.Println("警告: 未找到 .env 文件，将使用系统环境变量")
+	} else {
+		log.Println("成功加载 .env 文件")
+	}
+
 	// 初始化配置
 	config.Init()
 
@@ -107,16 +115,18 @@ func startServer() {
 	// 初始化搜索服务
 	searchService := service.NewSearchService(pluginManager)
 
-	// 初始化 API Key 服务（如果启用）
+	// 初始化 API Key 服务（管理后台需要，必须始终初始化）
 	var apiKeyService *service.APIKeyService
-	if config.AppConfig.APIKeyEnabled {
-		var err error
-		apiKeyService, err = service.NewAPIKeyService(config.AppConfig.APIKeyStorePath)
-		if err != nil {
-			log.Printf("警告: API Key 服务初始化失败: %v", err)
-			log.Println("API Key 认证功能将不可用")
+	var err error
+	apiKeyService, err = service.NewAPIKeyService(config.AppConfig.APIKeyStorePath)
+	if err != nil {
+		log.Printf("警告: API Key 服务初始化失败: %v", err)
+		log.Println("API Key 管理功能将不可用")
+	} else {
+		if config.AppConfig.APIKeyEnabled {
+			fmt.Println("API Key 服务已启动（认证已启用）")
 		} else {
-			fmt.Println("API Key 服务已启动")
+			fmt.Println("API Key 服务已启动（仅用于管理，认证未启用）")
 		}
 	}
 

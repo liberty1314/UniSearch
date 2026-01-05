@@ -4,6 +4,11 @@ import type {
     AdminLoginResponse,
     APIKeyInfo,
     CreateAPIKeyRequest,
+    UpdateAPIKeyRequest,
+    BatchExtendRequest,
+    BatchOperationResult,
+    BatchCreateRequest,
+    BatchCreateResult,
 } from '@/types/api';
 
 /**
@@ -88,5 +93,114 @@ export class AuthService {
      */
     static async deleteApiKey(key: string): Promise<void> {
         await apiClient.delete(`/admin/keys/${key}`);
+    }
+
+    /**
+     * 更新 API Key 有效期（管理员权限）
+     * @param key API Key 字符串
+     * @param expiresAt 新的过期时间（ISO 8601 格式，可选）
+     * @param extendHours 延长小时数（可选）
+     * @returns 更新后的 API Key 信息
+     */
+    static async updateApiKey(
+        key: string,
+        expiresAt?: string,
+        extendHours?: number
+    ): Promise<APIKeyInfo> {
+        const request: UpdateAPIKeyRequest = {};
+
+        if (expiresAt) {
+            request.expires_at = expiresAt;
+        }
+
+        if (extendHours !== undefined) {
+            request.extend_hours = extendHours;
+        }
+
+        const response = await apiClient.patch<{ key: APIKeyInfo }>(`/admin/keys/${key}`, request);
+
+        if (!response.data) {
+            throw new Error('更新 API Key 失败：服务器未返回有效数据');
+        }
+
+        // 后端返回的是 {key: {...}}，需要提取 key 字段
+        return (response.data as any).key;
+    }
+
+    /**
+     * 批量延长 API Key 有效期（管理员权限）
+     * @param keys API Key 字符串数组
+     * @param extendHours 延长小时数
+     * @returns 批量操作结果
+     */
+    static async batchExtendApiKeys(
+        keys: string[],
+        extendHours: number
+    ): Promise<BatchOperationResult> {
+        const request: BatchExtendRequest = {
+            keys,
+            extend_hours: extendHours,
+        };
+
+        const response = await apiClient.post<BatchOperationResult>(
+            '/admin/keys/batch-extend',
+            request
+        );
+
+        if (!response.data) {
+            throw new Error('批量延长失败：服务器未返回有效数据');
+        }
+
+        return response.data;
+    }
+
+    /**
+     * 批量创建 API Key（管理员权限）
+     * @param count 创建数量
+     * @param ttlHours 有效期（小时）
+     * @param descriptionPrefix 描述前缀（可选）
+     * @returns 批量创建结果
+     */
+    static async batchCreateApiKeys(
+        count: number,
+        ttlHours: number,
+        descriptionPrefix?: string
+    ): Promise<BatchCreateResult> {
+        const request: BatchCreateRequest = {
+            count,
+            ttl_hours: ttlHours,
+            description_prefix: descriptionPrefix,
+        };
+
+        const response = await apiClient.post<BatchCreateResult>(
+            '/admin/keys/batch-create',
+            request
+        );
+
+        if (!response.data) {
+            throw new Error('批量创建失败：服务器未返回有效数据');
+        }
+
+        return response.data;
+    }
+
+    /**
+     * 批量删除 API Key（管理员权限）
+     * @param keys API Key 字符串数组
+     * @returns 批量操作结果
+     */
+    static async batchDeleteApiKeys(keys: string[]): Promise<BatchOperationResult> {
+        const request = { keys };
+
+        const response = await apiClient.post<BatchOperationResult>(
+            '/admin/keys/batch-delete',
+            request
+        );
+
+        if (!response.data) {
+            throw new Error('批量删除失败：服务器未返回有效数据');
+        }
+
+        return response.data;
     }
 }

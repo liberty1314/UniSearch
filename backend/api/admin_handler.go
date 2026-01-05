@@ -239,3 +239,211 @@ func GetPluginsStatusHandler(c *gin.Context) {
 		},
 	})
 }
+
+// UpdateAPIKeyRequest 更新API Key请求
+type UpdateAPIKeyRequest struct {
+	ExpiresAt   *time.Time `json:"expires_at"`   // 可选：直接设置过期时间
+	ExtendHours *int       `json:"extend_hours"` // 可选：延长小时数
+}
+
+// UpdateAPIKeyHandler 更新API Key有效期
+func UpdateAPIKeyHandler(apiKeyService *service.APIKeyService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		key := c.Param("key")
+		if key == "" {
+			c.JSON(400, gin.H{
+				"error": "密钥参数缺失",
+				"code":  "INVALID_REQUEST",
+			})
+			return
+		}
+
+		var req UpdateAPIKeyRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{
+				"error": "请求参数错误",
+				"code":  "INVALID_REQUEST",
+			})
+			return
+		}
+
+		// 验证参数：至少要提供一个更新方式
+		if req.ExpiresAt == nil && (req.ExtendHours == nil || *req.ExtendHours <= 0) {
+			c.JSON(400, gin.H{
+				"error": "参数错误：必须提供 expires_at 或 extend_hours",
+				"code":  "INVALID_REQUEST",
+			})
+			return
+		}
+
+		// 调用服务层更新密钥
+		extendHours := 0
+		if req.ExtendHours != nil {
+			extendHours = *req.ExtendHours
+		}
+		
+		updatedKey, err := apiKeyService.UpdateKeyExpiry(key, req.ExpiresAt, extendHours)
+		if err != nil {
+			c.JSON(500, gin.H{
+				"error": "更新密钥失败: " + err.Error(),
+				"code":  "APIKEY_UPDATE_FAILED",
+			})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"key": updatedKey,
+		})
+	}
+}
+
+// BatchExtendAPIKeysRequest 批量延长API Key请求
+type BatchExtendAPIKeysRequest struct {
+	Keys        []string `json:"keys" binding:"required"`
+	ExtendHours int      `json:"extend_hours" binding:"required,min=1"`
+}
+
+// BatchExtendAPIKeysHandler 批量延长API Key有效期
+func BatchExtendAPIKeysHandler(apiKeyService *service.APIKeyService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req BatchExtendAPIKeysRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{
+				"error": "请求参数错误",
+				"code":  "INVALID_REQUEST",
+			})
+			return
+		}
+
+		// 验证密钥列表不为空
+		if len(req.Keys) == 0 {
+			c.JSON(400, gin.H{
+				"error": "密钥列表不能为空",
+				"code":  "INVALID_REQUEST",
+			})
+			return
+		}
+
+		// 调用服务层批量延长
+		results, err := apiKeyService.BatchExtendKeys(req.Keys, req.ExtendHours)
+		if err != nil {
+			c.JSON(500, gin.H{
+				"error": "批量延长失败: " + err.Error(),
+				"code":  "BATCH_EXTEND_FAILED",
+			})
+			return
+		}
+
+		// 统计成功和失败数量
+		successCount := 0
+		failedCount := 0
+		for _, result := range results {
+			if result.Success {
+				successCount++
+			} else {
+				failedCount++
+			}
+		}
+
+		c.JSON(200, gin.H{
+			"success_count": successCount,
+			"failed_count":  failedCount,
+			"results":       results,
+		})
+	}
+}
+
+// BatchCreateAPIKeysRequest 批量创建API Key请求
+type BatchCreateAPIKeysRequest struct {
+	Count             int    `json:"count" binding:"required,min=1,max=100"`
+	TTLHours          int    `json:"ttl_hours" binding:"required,min=1"`
+	DescriptionPrefix string `json:"description_prefix"`
+}
+
+// BatchCreateAPIKeysHandler 批量创建API Key
+func BatchCreateAPIKeysHandler(apiKeyService *service.APIKeyService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req BatchCreateAPIKeysRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{
+				"error": "请求参数错误",
+				"code":  "INVALID_REQUEST",
+			})
+			return
+		}
+
+		// 转换 TTL 为 Duration
+		ttl := time.Duration(req.TTLHours) * time.Hour
+
+		// 调用服务层批量生成
+		result, err := apiKeyService.BatchGenerateKeys(req.Count, ttl, req.DescriptionPrefix)
+		if err != nil {
+			c.JSON(500, gin.H{
+				"error": "批量创建失败: " + err.Error(),
+				"code":  "BATCH_CREATE_FAILED",
+			})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"success_count": result.SuccessCount,
+			"failed_count":  result.FailedCount,
+			"keys":          result.Keys,
+		})
+	}
+}
+
+// BatchDeleteAPIKeysRequest 批量删除API Key请求
+type BatchDeleteAPIKeysRequest struct {
+	Keys []string `json:"keys" binding:"required"`
+}
+
+// BatchDeleteAPIKeysHandler 批量删除API Key
+func BatchDeleteAPIKeysHandler(apiKeyService *service.APIKeyService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req BatchDeleteAPIKeysRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{
+				"error": "请求参数错误",
+				"code":  "INVALID_REQUEST",
+			})
+			return
+		}
+
+		// 验证密钥列表不为空
+		if len(req.Keys) == 0 {
+			c.JSON(400, gin.H{
+				"error": "密钥列表不能为空",
+				"code":  "INVALID_REQUEST",
+			})
+			return
+		}
+
+		// 调用服务层批量删除
+		results, err := apiKeyService.BatchDeleteKeys(req.Keys)
+		if err != nil {
+			c.JSON(500, gin.H{
+				"error": "批量删除失败: " + err.Error(),
+				"code":  "BATCH_DELETE_FAILED",
+			})
+			return
+		}
+
+		// 统计成功和失败数量
+		successCount := 0
+		failedCount := 0
+		for _, result := range results {
+			if result.Success {
+				successCount++
+			} else {
+				failedCount++
+			}
+		}
+
+		c.JSON(200, gin.H{
+			"success_count": successCount,
+			"failed_count":  failedCount,
+			"results":       results,
+		})
+	}
+}
