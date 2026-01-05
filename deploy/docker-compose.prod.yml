@@ -35,6 +35,14 @@ services:
       - PLUGIN_TIMEOUT=30
       - CHANNELS=tgsearchers3,SharePanBaidu,yunpanxunlei,tianyifc,BaiduCloudDisk
       
+      # 启用的插件列表（已禁用 pansearch 插件）
+      - ENABLED_PLUGINS=labi,zhizhen,shandian,duoduo,muou,ouge,huban,cyg,fox4k,hdr4k,hunhepan,jikepan,pan666,panta,panyq,qupansou,susu,thepiratebay,wanou,xuexizhinan
+      
+      # 代理配置（可选，如果服务器需要代理访问外网）
+      # - PROXY=socks5://127.0.0.1:1080
+      # - HTTP_PROXY=http://127.0.0.1:1080
+      # - HTTPS_PROXY=http://127.0.0.1:1080
+      
       # HTTP服务器配置
       - HTTP_READ_TIMEOUT=90
       - HTTP_WRITE_TIMEOUT=90
@@ -49,7 +57,7 @@ services:
       
       # 并发配置（自动计算）
       - CONCURRENCY=50
-      - PLUGIN_COUNT=21
+      - PLUGIN_COUNT=20
     volumes:
       # 缓存数据持久化
       - unisearch-cache:/app/cache
