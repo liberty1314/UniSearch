@@ -229,12 +229,37 @@ docker run -d \
 #### 1️⃣ 构建 Docker 镜像（可选）
 
 ```bash
-# 在本地构建并推送到 Docker Hub
+# 构建、推送并在本地运行（默认）
+./scripts/build.sh
+
+# 仅构建和推送，不在本地运行
+./scripts/build.sh --no-run
+
+# 自定义配置
 ./scripts/build.sh <username> <image> <version>
 
-# 使用默认配置
-./scripts/build.sh
+# 自定义配置且不在本地运行
+./scripts/build.sh --no-run <username> <image> <version>
 ```
+
+**构建脚本功能：**
+- ✅ 多架构构建（linux/amd64, linux/arm64）
+- ✅ 自动推送到 Docker Hub
+- ✅ 验证镜像可用性（带重试机制）
+- ✅ 自动拉取并在本地运行 latest 镜像
+- ✅ 自动配置管理员密码
+
+**本地运行信息：**
+- 容器名称：`unisearch-local`
+- 前端地址：http://localhost:3000
+- 后端地址：http://localhost:8888
+- 管理后台：http://localhost:3000/admin/login
+- 默认密码：`admin123.com`
+
+**注意事项：**
+- 构建完成后，Docker Hub 可能需要 1-2 分钟同步镜像
+- 如果验证失败，请等待片刻后使用验证脚本检查
+- 即使验证失败，镜像通常已成功推送
 
 #### 2️⃣ 服务器初始化
 

@@ -17,8 +17,25 @@ NC='\033[0m'
 DEFAULT_USERNAME="liberty159"
 DEFAULT_IMAGE="unisearch"
 DEFAULT_VERSION="1.0.2"
+RUN_LOCAL=true  # 默认在本地运行
 
 # 解析命令行参数
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --no-run)
+            RUN_LOCAL=false
+            shift
+            ;;
+        -h|--help)
+            show_usage
+            exit 0
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
 DOCKER_USERNAME="${1:-$DEFAULT_USERNAME}"
 IMAGE_NAME="${2:-$DEFAULT_IMAGE}"
 VERSION="${3:-$DEFAULT_VERSION}"
@@ -46,17 +63,23 @@ show_usage() {
     echo "UniSearch Docker镜像构建和推送脚本"
     echo
     echo "用法:"
-    echo "  $0                                    # 使用默认配置"
-    echo "  $0 [username] [image] [version]       # 自定义配置"
+    echo "  $0 [选项] [username] [image] [version]"
+    echo
+    echo "选项:"
+    echo "  --no-run              构建后不在本地运行容器"
+    echo "  -h, --help            显示帮助信息"
     echo
     echo "默认配置:"
     echo "  Docker Hub用户名: $DEFAULT_USERNAME"
     echo "  镜像名称: $DEFAULT_IMAGE"
     echo "  版本号: $DEFAULT_VERSION"
+    echo "  本地运行: 是"
     echo
     echo "示例:"
-    echo "  $0                                    # liberty159/unisearch:1.0.0"
-    echo "  $0 myuser myapp 2.0.0                 # myuser/myapp:2.0.0"
+    echo "  $0                                    # 使用默认配置并在本地运行"
+    echo "  $0 --no-run                           # 构建但不在本地运行"
+    echo "  $0 myuser myapp 2.0.0                 # 自定义配置"
+    echo "  $0 --no-run myuser myapp 2.0.0        # 自定义配置且不在本地运行"
     echo
 }
 
@@ -141,24 +164,148 @@ build_multiarch_image() {
     fi
 }
 
-# 验证镜像
+# 验证镜像（带重试机制）
 verify_image() {
     log_info "验证推送的镜像..."
+    log_warning "Docker Hub 同步可能需要几秒钟，正在等待..."
     
-    # 检查版本标签
-    if docker manifest inspect "${FULL_IMAGE_NAME}:${VERSION}" &> /dev/null; then
-        log_success "镜像 ${FULL_IMAGE_NAME}:${VERSION} 推送成功"
-    else
-        log_error "镜像 ${FULL_IMAGE_NAME}:${VERSION} 推送失败"
-        exit 1
+    local max_retries=5
+    local retry_delay=3
+    
+    # 验证版本标签
+    local version_success=false
+    for i in $(seq 1 $max_retries); do
+        if docker manifest inspect "${FULL_IMAGE_NAME}:${VERSION}" &> /dev/null; then
+            log_success "镜像 ${FULL_IMAGE_NAME}:${VERSION} 验证成功"
+            version_success=true
+            break
+        else
+            if [ $i -lt $max_retries ]; then
+                log_info "第 $i 次验证失败，${retry_delay}秒后重试..."
+                sleep $retry_delay
+            fi
+        fi
+    done
+    
+    if [ "$version_success" = false ]; then
+        log_warning "镜像 ${FULL_IMAGE_NAME}:${VERSION} 验证失败"
+        log_info "这可能是由于 Docker Hub 同步延迟导致的"
+        log_info "请稍后手动验证: docker pull ${FULL_IMAGE_NAME}:${VERSION}"
     fi
     
-    # 检查latest标签
-    if docker manifest inspect "${FULL_IMAGE_NAME}:latest" &> /dev/null; then
-        log_success "镜像 ${FULL_IMAGE_NAME}:latest 推送成功"
+    # 验证latest标签
+    local latest_success=false
+    for i in $(seq 1 $max_retries); do
+        if docker manifest inspect "${FULL_IMAGE_NAME}:latest" &> /dev/null; then
+            log_success "镜像 ${FULL_IMAGE_NAME}:latest 验证成功"
+            latest_success=true
+            break
+        else
+            if [ $i -lt $max_retries ]; then
+                log_info "第 $i 次验证失败，${retry_delay}秒后重试..."
+                sleep $retry_delay
+            fi
+        fi
+    done
+    
+    if [ "$latest_success" = false ]; then
+        log_warning "镜像 ${FULL_IMAGE_NAME}:latest 验证失败"
+        log_info "这可能是由于 Docker Hub 同步延迟导致的"
+        log_info "请稍后手动验证: docker pull ${FULL_IMAGE_NAME}:latest"
+    fi
+    
+    # 如果两个标签都验证失败，给出警告但不退出
+    if [ "$version_success" = false ] && [ "$latest_success" = false ]; then
+        log_warning "镜像验证未通过，但构建和推送过程已完成"
+        log_info "建议等待 1-2 分钟后手动验证镜像是否可用"
+        return 0
+    fi
+}
+
+# 拉取并运行本地镜像
+run_local_container() {
+    echo
+    log_info "=== 启动本地容器 ==="
+    echo
+    
+    # 停止并删除旧容器（如果存在）
+    if docker ps -a | grep -q "${IMAGE_NAME}-local"; then
+        log_info "停止并删除旧容器..."
+        docker stop "${IMAGE_NAME}-local" &> /dev/null || true
+        docker rm "${IMAGE_NAME}-local" &> /dev/null || true
+    fi
+    
+    # 拉取最新镜像
+    log_info "拉取最新镜像: ${FULL_IMAGE_NAME}:latest"
+    if docker pull "${FULL_IMAGE_NAME}:latest"; then
+        log_success "镜像拉取成功"
     else
-        log_error "镜像 ${FULL_IMAGE_NAME}:latest 推送失败"
-        exit 1
+        log_error "镜像拉取失败，请检查网络连接或稍后重试"
+        return 1
+    fi
+    
+    # 启动容器
+    log_info "启动本地容器..."
+    docker run -d \
+        --name "${IMAGE_NAME}-local" \
+        -p 3000:80 \
+        -p 8888:8888 \
+        -e TZ=Asia/Shanghai \
+        -e PORT=8888 \
+        -e CACHE_ENABLED=true \
+        -e CACHE_PATH=/app/cache \
+        -e ASYNC_PLUGIN_ENABLED=true \
+        -e ADMIN_PASSWORD_HASH='$2a$10$ZBSWuVQONjalBEe.NziFdOLFg0NMji43X9JiBzu2iLuBCZwHL7WEy' \
+        "${FULL_IMAGE_NAME}:latest"
+    
+    if [ $? -eq 0 ]; then
+        log_success "容器启动成功！"
+        echo
+        log_info "容器信息:"
+        echo "  容器名称: ${IMAGE_NAME}-local"
+        echo "  前端地址: http://localhost:3000"
+        echo "  后端地址: http://localhost:8888"
+        echo "  管理后台: http://localhost:3000/admin/login"
+        echo
+        log_info "管理员登录凭证:"
+        echo "  用户名: admin"
+        echo "  密码: admin123.com"
+        echo
+        log_info "容器管理命令:"
+        echo "  查看日志: docker logs -f ${IMAGE_NAME}-local"
+        echo "  停止容器: docker stop ${IMAGE_NAME}-local"
+        echo "  重启容器: docker restart ${IMAGE_NAME}-local"
+        echo "  删除容器: docker rm -f ${IMAGE_NAME}-local"
+        echo
+        
+        # 等待容器启动
+        log_info "等待容器启动..."
+        sleep 5
+        
+        # 检查容器状态
+        if docker ps | grep -q "${IMAGE_NAME}-local"; then
+            log_success "容器运行正常"
+            
+            # 检查健康状态
+            log_info "检查服务健康状态..."
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+                log_success "前端服务正常"
+            else
+                log_warning "前端服务可能还在启动中，请稍后访问"
+            fi
+            
+            if curl -s http://localhost:8888/api/health > /dev/null 2>&1; then
+                log_success "后端服务正常"
+            else
+                log_warning "后端服务可能还在启动中，请稍后访问"
+            fi
+        else
+            log_error "容器启动失败，请查看日志: docker logs ${IMAGE_NAME}-local"
+            return 1
+        fi
+    else
+        log_error "容器启动失败"
+        return 1
     fi
 }
 
@@ -180,10 +327,20 @@ show_image_info() {
     echo "  docker pull ${FULL_IMAGE_NAME}:${VERSION}"
     echo "  docker pull ${FULL_IMAGE_NAME}:latest"
     echo
+    echo "✅ 手动验证镜像:"
+    echo "  docker manifest inspect ${FULL_IMAGE_NAME}:${VERSION}"
+    echo "  docker manifest inspect ${FULL_IMAGE_NAME}:latest"
+    echo
     echo "🚀 在服务器上部署:"
     echo "  docker run -d --name ${IMAGE_NAME} \\"
-    echo "    -p 3000:3000 -p 8888:8888 \\"
+    echo "    -p 3000:80 -p 8888:8888 \\"
+    echo "    -e ADMIN_PASSWORD_HASH=\$2a\$10\$... \\"
     echo "    ${FULL_IMAGE_NAME}:${VERSION}"
+    echo
+    echo "💡 提示:"
+    echo "  - 如果验证失败，请等待 1-2 分钟后重试"
+    echo "  - Docker Hub 同步可能需要一些时间"
+    echo "  - 可以直接在服务器上尝试拉取镜像"
     echo
 }
 
@@ -198,12 +355,6 @@ trap cleanup SIGINT SIGTERM
 
 # 主函数
 main() {
-    # 显示帮助信息
-    if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
-        show_usage
-        exit 0
-    fi
-    
     echo
     log_info "=== UniSearch Docker镜像构建和推送脚本 ==="
     echo
@@ -211,6 +362,7 @@ main() {
     echo "  Docker Hub用户名: ${DOCKER_USERNAME}"
     echo "  镜像名称: ${IMAGE_NAME}"
     echo "  版本号: ${VERSION}"
+    echo "  本地运行: $([ "$RUN_LOCAL" = true ] && echo "是" || echo "否")"
     echo
     
     # 检查环境
@@ -225,6 +377,13 @@ main() {
     
     # 验证镜像
     verify_image
+    
+    # 拉取并运行本地容器（如果启用）
+    if [ "$RUN_LOCAL" = true ]; then
+        run_local_container
+    else
+        log_info "跳过本地容器启动（使用 --no-run 选项）"
+    fi
     
     # 显示信息
     show_image_info
