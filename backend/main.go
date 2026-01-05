@@ -107,8 +107,21 @@ func startServer() {
 	// 初始化搜索服务
 	searchService := service.NewSearchService(pluginManager)
 
+	// 初始化 API Key 服务（如果启用）
+	var apiKeyService *service.APIKeyService
+	if config.AppConfig.APIKeyEnabled {
+		var err error
+		apiKeyService, err = service.NewAPIKeyService(config.AppConfig.APIKeyStorePath)
+		if err != nil {
+			log.Printf("警告: API Key 服务初始化失败: %v", err)
+			log.Println("API Key 认证功能将不可用")
+		} else {
+			fmt.Println("API Key 服务已启动")
+		}
+	}
+
 	// 设置路由
-	router := api.SetupRouter(searchService)
+	router := api.SetupRouter(searchService, apiKeyService)
 
 	// 获取端口配置
 	port := config.AppConfig.Port

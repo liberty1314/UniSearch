@@ -51,6 +51,7 @@ func LoginHandler(c *gin.Context) {
 	// 生成JWT token
 	token, err := util.GenerateToken(
 		req.Username,
+		false, // 普通用户登录，非管理员
 		config.AppConfig.AuthJWTSecret,
 		config.AppConfig.AuthTokenExpiry,
 	)

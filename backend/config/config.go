@@ -52,7 +52,11 @@ type Config struct {
 	AuthUsers       map[string]string // 用户名:密码映射
 	AuthTokenExpiry time.Duration     // Token有效期
 	AuthJWTSecret   string            // JWT签名密钥
-
+	// API Key 相关配置
+	APIKeyEnabled      bool          // 是否启用 API Key 认证
+	APIKeyDefaultTTL   time.Duration // API Key 默认有效期
+	APIKeyStorePath    string        // API Key 存储路径
+	AdminPasswordHash  string        // 管理员密码哈希（bcrypt）
 }
 
 // 全局配置实例
@@ -105,7 +109,11 @@ func Init() {
 		AuthUsers:       getAuthUsers(),
 		AuthTokenExpiry: getAuthTokenExpiry(),
 		AuthJWTSecret:   getAuthJWTSecret(),
-
+		// API Key 相关配置
+		APIKeyEnabled:     getAPIKeyEnabled(),
+		APIKeyDefaultTTL:  getAPIKeyDefaultTTL(),
+		APIKeyStorePath:   getAPIKeyStorePath(),
+		AdminPasswordHash: getAdminPasswordHash(),
 	}
 	
 	// 应用GC配置
@@ -583,6 +591,50 @@ func getAuthJWTSecret() string {
 		secret = "pansou-default-secret-" + strconv.FormatInt(time.Now().Unix(), 10)
 	}
 	return secret
+}
+
+// 从环境变量获取是否启用 API Key 认证，如果未设置则默认关闭
+func getAPIKeyEnabled() bool {
+	enabled := os.Getenv("API_KEY_ENABLED")
+	return enabled == "true" || enabled == "1"
+}
+
+// 从环境变量获取 API Key 默认有效期（小时），如果未设置则使用默认值
+func getAPIKeyDefaultTTL() time.Duration {
+	ttlEnv := os.Getenv("API_KEY_DEFAULT_TTL")
+	if ttlEnv == "" {
+		return 720 * time.Hour // 默认 30 天
+	}
+	ttl, err := strconv.Atoi(ttlEnv)
+	if err != nil || ttl <= 0 {
+		return 720 * time.Hour
+	}
+	return time.Duration(ttl) * time.Hour
+}
+
+// 从环境变量获取 API Key 存储路径，如果未设置则使用默认路径
+func getAPIKeyStorePath() string {
+	path := os.Getenv("API_KEY_STORE_PATH")
+	if path == "" {
+		// 默认在当前目录下创建 api_keys.json 文件
+		defaultPath, err := filepath.Abs("./api_keys.json")
+		if err != nil {
+			return "./api_keys.json"
+		}
+		return defaultPath
+	}
+	return path
+}
+
+// 从环境变量获取管理员密码哈希，如果未设置则返回空字符串并打印警告
+func getAdminPasswordHash() string {
+	hash := os.Getenv("ADMIN_PASSWORD_HASH")
+	if hash == "" {
+		// 打印警告信息
+		println("警告: ADMIN_PASSWORD_HASH 环境变量未设置，管理员登录功能将不可用")
+		println("提示: 使用 bcrypt 生成密码哈希并设置到环境变量中")
+	}
+	return hash
 }
 
 // 应用GC设置

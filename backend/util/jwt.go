@@ -10,11 +10,12 @@ import (
 // Claims JWT载荷结构
 type Claims struct {
 	Username string `json:"username"`
+	IsAdmin  bool   `json:"is_admin"` // 是否为管理员
 	jwt.RegisteredClaims
 }
 
 // GenerateToken 生成JWT token
-func GenerateToken(username string, secret string, expiry time.Duration) (string, error) {
+func GenerateToken(username string, isAdmin bool, secret string, expiry time.Duration) (string, error) {
 	if username == "" {
 		return "", errors.New("username cannot be empty")
 	}
@@ -25,6 +26,7 @@ func GenerateToken(username string, secret string, expiry time.Duration) (string
 	expirationTime := time.Now().Add(expiry)
 	claims := &Claims{
 		Username: username,
+		IsAdmin:  isAdmin,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

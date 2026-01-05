@@ -9,7 +9,7 @@ import (
 )
 
 // SetupRouter 设置路由
-func SetupRouter(searchService *service.SearchService) *gin.Engine {
+func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService) *gin.Engine {
 	// 设置搜索服务
 	SetSearchService(searchService)
 	
@@ -22,8 +22,8 @@ func SetupRouter(searchService *service.SearchService) *gin.Engine {
 	// 添加中间件
 	r.Use(CORSMiddleware())
 	r.Use(LoggerMiddleware())
-	r.Use(util.GzipMiddleware()) // 添加压缩中间件
-	r.Use(AuthMiddleware())      // 添加认证中间件
+	r.Use(util.GzipMiddleware())           // 添加压缩中间件
+	r.Use(AuthMiddleware(apiKeyService))   // 添加认证中间件（支持 JWT 和 API Key）
 	
 	// 定义API路由组
 	api := r.Group("/api")
@@ -34,6 +34,17 @@ func SetupRouter(searchService *service.SearchService) *gin.Engine {
 			auth.POST("/login", LoginHandler)
 			auth.POST("/verify", VerifyHandler)
 			auth.POST("/logout", LogoutHandler)
+		}
+		
+		// 管理员路由组（需要管理员权限）
+		admin := api.Group("/admin")
+		admin.Use(AdminMiddleware()) // 应用管理员中间件
+		{
+			admin.POST("/login", AdminLoginHandler)
+			admin.GET("/keys", ListAPIKeysHandler(apiKeyService))
+			admin.POST("/keys", CreateAPIKeyHandler(apiKeyService))
+			admin.DELETE("/keys/:key", DeleteAPIKeyHandler(apiKeyService))
+			admin.GET("/plugins", GetPluginsStatusHandler)
 		}
 		
 		// 搜索接口 - 支持POST和GET两种方式
@@ -61,7 +72,7 @@ func SetupRouter(searchService *service.SearchService) *gin.Engine {
 			
 			response := gin.H{
 				"status":         "ok",
-				"auth_enabled":   config.AppConfig.AuthEnabled, // 添加认证状态
+				"auth_enabled":   config.AppConfig.AuthEnabled || config.AppConfig.APIKeyEnabled, // 更新认证状态判断
 				"plugins_enabled": pluginsEnabled,
 				"channels":        channels,
 				"channels_count":  channelsCount,

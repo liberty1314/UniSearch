@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"pansou/config"
+	"pansou/service"
 	"pansou/util"
 )
 
@@ -15,8 +16,8 @@ import (
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-API-Key")
 		
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
@@ -74,68 +75,134 @@ func LoggerMiddleware() gin.HandlerFunc {
 	}
 }
 
-// AuthMiddleware JWT认证中间件
-func AuthMiddleware() gin.HandlerFunc {
+// AuthMiddleware JWT和API Key双层认证中间件
+func AuthMiddleware(apiKeyService *service.APIKeyService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 如果未启用认证，直接放行
-		if !config.AppConfig.AuthEnabled {
+		// 1. 检查是否启用认证
+		if !config.AppConfig.AuthEnabled && !config.AppConfig.APIKeyEnabled {
 			c.Next()
 			return
 		}
 
-		// 定义公开接口（不需要认证）
-		publicPaths := []string{
-			"/api/auth/login",
-			"/api/auth/logout",
-			"/api/health", // 健康检查接口可选择是否需要认证
+		// 2. 检查公开路径
+		if isPublicPath(c.Request.URL.Path) {
+			c.Next()
+			return
 		}
 
-		// 检查当前路径是否是公开接口
-		path := c.Request.URL.Path
-		for _, p := range publicPaths {
-			if strings.HasPrefix(path, p) {
+		// 3. 优先检查 JWT
+		if token := extractBearerToken(c); token != "" {
+			if claims, err := util.ValidateToken(token, config.AppConfig.AuthJWTSecret); err == nil {
+				c.Set("username", claims.Username)
+				c.Set("is_admin", claims.IsAdmin)
+				c.Set("auth_type", "jwt")
 				c.Next()
 				return
 			}
 		}
 
-		// 获取Authorization头
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		// 4. 降级检查 API Key
+		if config.AppConfig.APIKeyEnabled && apiKeyService != nil {
+			if apiKey := extractAPIKey(c); apiKey != "" {
+				if valid, err := apiKeyService.ValidateKey(apiKey); err == nil && valid {
+					c.Set("auth_type", "apikey")
+					c.Next()
+					return
+				}
+			}
+		}
+
+		// 5. 认证失败
+		c.JSON(401, gin.H{
+			"error": "未授权：缺少有效的认证凭据",
+			"code":  "AUTH_REQUIRED",
+		})
+		c.Abort()
+	}
+}
+
+// AdminMiddleware 管理员专用中间件（仅允许JWT）
+func AdminMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 1. 必须包含 JWT
+		token := extractBearerToken(c)
+		if token == "" {
 			c.JSON(401, gin.H{
-				"error": "未授权：缺少认证令牌",
-				"code":  "AUTH_TOKEN_MISSING",
+				"error": "未授权：需要管理员令牌",
+				"code":  "ADMIN_TOKEN_REQUIRED",
 			})
 			c.Abort()
 			return
 		}
 
-		// 解析Bearer token
-		const bearerPrefix = "Bearer "
-		if !strings.HasPrefix(authHeader, bearerPrefix) {
-			c.JSON(401, gin.H{
-				"error": "未授权：令牌格式错误",
-				"code":  "AUTH_TOKEN_INVALID_FORMAT",
-			})
-			c.Abort()
-			return
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, bearerPrefix)
-
-		// 验证token
-		claims, err := util.ValidateToken(tokenString, config.AppConfig.AuthJWTSecret)
+		// 2. 验证 JWT
+		claims, err := util.ValidateToken(token, config.AppConfig.AuthJWTSecret)
 		if err != nil {
 			c.JSON(401, gin.H{
 				"error": "未授权：令牌无效或已过期",
-				"code":  "AUTH_TOKEN_INVALID",
+				"code":  "ADMIN_TOKEN_INVALID",
 			})
 			c.Abort()
 			return
 		}
 
-		// 将用户信息存入上下文，供后续处理使用
+		// 3. 检查管理员权限
+		if !claims.IsAdmin {
+			c.JSON(403, gin.H{
+				"error": "禁止访问：需要管理员权限",
+				"code":  "ADMIN_PERMISSION_REQUIRED",
+			})
+			c.Abort()
+			return
+		}
+
 		c.Set("username", claims.Username)
+		c.Set("is_admin", true)
 		c.Next()
 	}
+}
+
+// extractBearerToken 从请求头提取 Bearer Token
+func extractBearerToken(c *gin.Context) string {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return ""
+	}
+
+	const bearerPrefix = "Bearer "
+	if !strings.HasPrefix(authHeader, bearerPrefix) {
+		return ""
+	}
+
+	return strings.TrimPrefix(authHeader, bearerPrefix)
+}
+
+// extractAPIKey 从请求头或查询参数提取 API Key
+func extractAPIKey(c *gin.Context) string {
+	// 优先从请求头获取
+	apiKey := c.GetHeader("X-API-Key")
+	if apiKey != "" {
+		return apiKey
+	}
+
+	// 降级从查询参数获取
+	return c.Query("key")
+}
+
+// isPublicPath 检查是否为公开路径
+func isPublicPath(path string) bool {
+	publicPaths := []string{
+		"/api/auth/login",
+		"/api/auth/logout",
+		"/api/health",
+		"/api/admin/login", // 管理员登录接口无需认证
+	}
+
+	for _, p := range publicPaths {
+		if strings.HasPrefix(path, p) {
+			return true
+		}
+	}
+
+	return false
 }
