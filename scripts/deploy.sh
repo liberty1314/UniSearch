@@ -23,7 +23,9 @@ DOMAIN="unisearchso.xyz"
 DOCKER_USERNAME="liberty159"
 IMAGE_NAME="unisearch"
 VERSION="1.0.0"
-FULL_IMAGE_NAME="${DOCKER_USERNAME}/${IMAGE_NAME}:${VERSION}"
+USE_LATEST="${USE_LATEST:-true}"  # 默认使用 latest 标签
+FULL_IMAGE_NAME="${DOCKER_USERNAME}/${IMAGE_NAME}:${USE_LATEST:+latest}"
+FULL_IMAGE_NAME="${FULL_IMAGE_NAME:-${DOCKER_USERNAME}/${IMAGE_NAME}:${VERSION}}"
 CONTAINER_NAME="unisearch"
 NGINX_CONFIG="/etc/nginx/sites-available/unisearch"
 NGINX_ENABLED="/etc/nginx/sites-enabled/unisearch"
@@ -50,13 +52,14 @@ show_help() {
     cat << EOF
 UniSearch 云服务器部署和管理脚本
 
-用法: $0 <command>
+用法: $0 <command> [options]
 
 命令:
   init      初始化服务器环境（Docker、Nginx、UFW等）
   start     启动应用服务
   stop      停止应用服务
   restart   重启应用服务
+  update    更新到最新版本（拉取 latest 镜像并重启）
   status    查看服务状态
   logs      查看应用日志
   cleanup   清理7天前的日志
@@ -65,12 +68,18 @@ UniSearch 云服务器部署和管理脚本
   restore   从备份恢复
   help      显示此帮助信息
 
+环境变量:
+  USE_LATEST=true|false   是否使用 latest 标签（默认: true）
+  VERSION=x.x.x           指定版本号（当 USE_LATEST=false 时）
+
 示例:
-  $0 init         # 首次部署时初始化服务器
-  $0 start        # 启动服务
-  $0 status       # 查看服务状态
-  $0 logs         # 查看实时日志
-  $0 backup       # 备份数据
+  $0 init                    # 首次部署时初始化服务器
+  $0 start                   # 启动服务（使用 latest）
+  USE_LATEST=false VERSION=1.0.1 $0 start  # 启动指定版本
+  $0 update                  # 更新到最新版本
+  $0 status                  # 查看服务状态
+  $0 logs                    # 查看实时日志
+  $0 backup                  # 备份数据
 
 其他脚本:
   ./scripts/monitor.sh    # 监控服务管理
@@ -289,9 +298,43 @@ check_docker() {
 
 # 拉取最新镜像
 pull_image() {
-    log_info "拉取Docker镜像: $FULL_IMAGE_NAME"
-    docker pull "$FULL_IMAGE_NAME"
-    log_success "镜像拉取完成"
+    local image_tag="${1:-$FULL_IMAGE_NAME}"
+    log_info "拉取Docker镜像: $image_tag"
+    
+    # 尝试拉取镜像
+    if docker pull "$image_tag"; then
+        log_success "镜像拉取完成"
+        return 0
+    else
+        log_error "镜像拉取失败"
+        return 1
+    fi
+}
+
+# 检查镜像是否有更新
+check_image_update() {
+    local image_tag="${1:-$FULL_IMAGE_NAME}"
+    
+    log_info "检查镜像更新..."
+    
+    # 获取本地镜像的 digest
+    local local_digest=$(docker images --digests --format "{{.Digest}}" "$image_tag" 2>/dev/null | head -1)
+    
+    # 获取远程镜像的 digest
+    local remote_digest=$(docker manifest inspect "$image_tag" 2>/dev/null | grep -o '"digest": "[^"]*"' | head -1 | cut -d'"' -f4)
+    
+    if [ -z "$local_digest" ]; then
+        log_info "本地无此镜像，需要拉取"
+        return 0
+    fi
+    
+    if [ "$local_digest" != "$remote_digest" ]; then
+        log_info "发现新版本"
+        return 0
+    else
+        log_info "已是最新版本"
+        return 1
+    fi
 }
 
 # 停止并删除旧容器
@@ -349,7 +392,15 @@ start_service() {
     
     check_root "start"
     check_docker
-    pull_image
+    
+    # 显示使用的镜像信息
+    log_info "使用镜像: $FULL_IMAGE_NAME"
+    
+    if ! pull_image; then
+        log_error "镜像拉取失败，无法启动服务"
+        exit 1
+    fi
+    
     stop_old_container
     start_container
     
@@ -361,6 +412,7 @@ start_service() {
         echo
         log_success "=== 服务启动成功 ==="
         log_info "容器名称: $CONTAINER_NAME"
+        log_info "镜像版本: $FULL_IMAGE_NAME"
         log_info "访问地址: http://$(curl -s ifconfig.me):3000"
         echo
         log_info "查看日志: $0 logs"
@@ -369,6 +421,69 @@ start_service() {
         log_error "服务启动失败"
         log_info "查看日志: docker logs $CONTAINER_NAME"
         exit 1
+    fi
+}
+
+# 更新服务到最新版本
+update_service() {
+    log_info "=== 更新应用到最新版本 ==="
+    echo
+    
+    check_root "update"
+    check_docker
+    
+    # 强制使用 latest 标签
+    local update_image="${DOCKER_USERNAME}/${IMAGE_NAME}:latest"
+    log_info "目标镜像: $update_image"
+    
+    # 检查是否有更新
+    if check_image_update "$update_image"; then
+        log_info "开始更新..."
+        
+        # 备份当前配置
+        log_info "创建自动备份..."
+        TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+        BACKUP_DIR="${PROJECT_ROOT}/backups"
+        mkdir -p "$BACKUP_DIR"
+        
+        # 简单备份配置文件
+        tar czf "${BACKUP_DIR}/auto_backup_${TIMESTAMP}.tar.gz" -C "$PROJECT_ROOT" deploy 2>/dev/null || true
+        
+        # 拉取新镜像
+        if ! pull_image "$update_image"; then
+            log_error "更新失败：无法拉取新镜像"
+            exit 1
+        fi
+        
+        # 停止旧容器
+        stop_old_container
+        
+        # 使用新镜像启动
+        FULL_IMAGE_NAME="$update_image" start_container
+        
+        # 等待服务启动
+        sleep 5
+        
+        # 检查容器状态
+        if docker ps | grep -q "$CONTAINER_NAME"; then
+            echo
+            log_success "=== 更新成功 ==="
+            log_info "新版本: $update_image"
+            log_info "备份位置: ${BACKUP_DIR}/auto_backup_${TIMESTAMP}.tar.gz"
+            echo
+            log_info "查看日志: $0 logs"
+            
+            # 清理旧镜像
+            log_info "清理旧镜像..."
+            docker image prune -f
+        else
+            log_error "更新失败：服务启动异常"
+            log_info "查看日志: docker logs $CONTAINER_NAME"
+            log_info "回滚备份: $0 restore ${BACKUP_DIR}/auto_backup_${TIMESTAMP}.tar.gz"
+            exit 1
+        fi
+    else
+        log_info "当前已是最新版本，无需更新"
     fi
 }
 
@@ -633,6 +748,9 @@ main() {
             ;;
         restart)
             restart_service
+            ;;
+        update)
+            update_service
             ;;
         status)
             show_status

@@ -2,15 +2,15 @@ version: '3.8'
 
 # UniSearch 生产环境Docker Compose配置
 # 域名: unisearchso.xyz
-# 镜像: liberty159/unisearch:1.0.0
+# 镜像: liberty159/unisearch:latest (自动更新到最新版本)
 
 services:
   unisearch:
-    image: liberty159/unisearch:1.0.0
+    image: ${UNISEARCH_IMAGE:-liberty159/unisearch:latest}
     container_name: unisearch
     restart: always
     ports:
-      - "3000:3000"  # 前端端口
+      - "3000:80"    # 前端端口（Nginx）
       - "8888:8888"  # 后端API端口
     environment:
       # 基础配置
@@ -58,7 +58,7 @@ services:
     networks:
       - unisearch-network
     healthcheck:
-      test: ["CMD", "sh", "-c", "curl -f http://localhost:3000/health && curl -f http://localhost:8888/api/health"]
+      test: ["CMD", "sh", "-c", "curl -f http://localhost:80/health && curl -f http://localhost:8888/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -80,11 +80,12 @@ services:
     labels:
       - "traefik.enable=false"  # 禁用traefik，使用Nginx
       - "com.unisearch.service=main"
-      - "com.unisearch.version=1.0.0"
+      - "com.unisearch.version=latest"
+      - "com.centurylinklabs.watchtower.enable=true"  # 启用 Watchtower 自动更新
 
   # 监控服务
   watchtower:
-    image: containrrr/watchtower:latest
+    image: containrrr/watchtower:1.7.1  # 使用明确的新版本，支持 Docker API 1.44+
     container_name: unisearch-watchtower
     restart: always
     volumes:
@@ -96,6 +97,7 @@ services:
       - WATCHTOWER_POLL_INTERVAL=3600
       - WATCHTOWER_INCLUDE_STOPPED=true
       - WATCHTOWER_REVIVE_STOPPED=false
+      - DOCKER_API_VERSION=1.44  # 明确指定 API 版本
     command: unisearch
     labels:
       - "com.unisearch.service=monitoring"

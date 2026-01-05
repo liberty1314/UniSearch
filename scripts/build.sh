@@ -16,7 +16,7 @@ NC='\033[0m'
 # 默认配置（可通过命令行参数覆盖）
 DEFAULT_USERNAME="liberty159"
 DEFAULT_IMAGE="unisearch"
-DEFAULT_VERSION="1.0.0"
+DEFAULT_VERSION="1.0.1"
 
 # 解析命令行参数
 DOCKER_USERNAME="${1:-$DEFAULT_USERNAME}"
@@ -85,16 +85,17 @@ check_dockerhub_login() {
     if ! docker info 2>/dev/null | grep -q "Username: ${DOCKER_USERNAME}"; then
         log_warning "未检测到Docker Hub登录或用户名不匹配"
         log_info "尝试登录到 ${DOCKER_USERNAME}..."
-        docker login
         
-        # 再次检查登录状态
-        if ! docker info 2>/dev/null | grep -q "Username:"; then
+        # 执行登录并检查返回码
+        if docker login; then
+            log_success "Docker Hub登录成功"
+        else
             log_error "Docker Hub登录失败"
             exit 1
         fi
+    else
+        log_success "Docker Hub已登录"
     fi
-    
-    log_success "Docker Hub已登录"
 }
 
 # 创建并配置buildx构建器
@@ -126,7 +127,7 @@ build_multiarch_image() {
     # 构建并推送多架构镜像
     docker buildx build \
         --platform linux/amd64,linux/arm64 \
-        --file Dockerfile.railway \
+        --file Dockerfile \
         --tag "${FULL_IMAGE_NAME}:${VERSION}" \
         --tag "${FULL_IMAGE_NAME}:latest" \
         --push \
