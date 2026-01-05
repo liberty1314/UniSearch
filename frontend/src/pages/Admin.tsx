@@ -48,8 +48,17 @@ const Admin: React.FC = () => {
     const navigate = useNavigate();
     const { isAdmin, logout } = useAuthStore();
 
-    // 当前视图状态
-    const [currentView, setCurrentView] = useState<AdminView>('api-keys');
+    // 从 URL 参数读取初始视图
+    const [searchParams] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        return params;
+    });
+
+    // 当前视图状态 - 从 URL 参数获取初始值
+    const [currentView, setCurrentView] = useState<AdminView>(() => {
+        const viewParam = searchParams.get('view');
+        return (viewParam === 'system-info' || viewParam === 'api-keys') ? viewParam : 'system-info';
+    });
 
     // 移动端侧边栏状态
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);

@@ -230,6 +230,10 @@ curl -X POST http://localhost:8888/api/auth/verify \
 - 用户名：`admin`
 - 密码：`admin123.com`（首次部署时请修改）
 
+**登录后行为**:
+- 登录成功后自动跳转到系统监控页面（`/admin?view=system-info`）
+- 可通过侧边栏切换到 API Key 管理页面
+
 ---
 
 ### 2. 列出所有 API Keys

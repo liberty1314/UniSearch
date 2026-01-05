@@ -70,8 +70,8 @@ const AdminLogin: React.FC = () => {
             setToken(response.token, 'admin');
             toast.success('管理员登录成功！');
 
-            // 跳转到后台管理页面
-            navigate('/admin');
+            // 跳转到后台管理页面的系统监控视图
+            navigate('/admin?view=system-info');
         } catch (error: any) {
             console.error('管理员登录失败:', error);
 
