@@ -59,8 +59,8 @@ UniSearch 云服务器部署和管理脚本
   start     启动应用服务
   stop      停止应用服务
   restart   重启应用服务
-  update    更新到最新版本（拉取 latest 镜像并同步配置）
-  sync      仅同步配置文件（从 Git 仓库）
+  update    更新到最新版本（仅拉取 latest 镜像）
+  sync      同步配置文件（从 Git 仓库）
   setup-auto-sync  设置定时自动同步配置（每小时）
   status    查看服务状态
   logs      查看应用日志
@@ -78,8 +78,8 @@ UniSearch 云服务器部署和管理脚本
   $0 init                    # 首次部署时初始化服务器
   $0 start                   # 启动服务（使用 latest）
   USE_LATEST=false VERSION=1.0.1 $0 start  # 启动指定版本
-  $0 update                  # 更新到最新版本（镜像+配置）
-  $0 sync                    # 仅同步配置文件
+  $0 update                  # 更新到最新版本（仅镜像）
+  $0 sync                    # 同步配置文件
   $0 setup-auto-sync         # 设置定时自动同步
   $0 status                  # 查看服务状态
   $0 logs                    # 查看实时日志
@@ -476,13 +476,9 @@ update_service() {
     check_root "update"
     check_docker
     
-    # 1. 同步配置文件（从 Git 仓库）
-    log_info "步骤 1/4: 同步配置文件..."
-    sync_config_files
-    
-    # 2. 强制使用 latest 标签
+    # 强制使用 latest 标签
     local update_image="${DOCKER_USERNAME}/${IMAGE_NAME}:latest"
-    log_info "步骤 2/4: 检查镜像更新..."
+    log_info "步骤 1/3: 检查镜像更新..."
     log_info "目标镜像: $update_image"
     
     # 检查是否有更新
@@ -494,15 +490,8 @@ update_service() {
         log_info "镜像已是最新版本"
     fi
     
-    # 检查配置文件是否有变化
-    if [ -f "${PROJECT_ROOT}/.config_updated" ]; then
-        need_update=true
-        log_info "配置文件已更新"
-        rm -f "${PROJECT_ROOT}/.config_updated"
-    fi
-    
     if [ "$need_update" = true ]; then
-        log_info "步骤 3/4: 开始更新..."
+        log_info "步骤 2/3: 开始更新..."
         
         # 备份当前配置
         log_info "创建自动备份..."
@@ -522,8 +511,8 @@ update_service() {
         # 停止旧容器
         stop_old_container
         
-        # 使用新镜像和新配置启动
-        log_info "步骤 4/4: 启动服务..."
+        # 使用新镜像启动
+        log_info "步骤 3/3: 启动服务..."
         FULL_IMAGE_NAME="$update_image" start_container
         
         # 等待服务启动
@@ -548,7 +537,7 @@ update_service() {
             exit 1
         fi
     else
-        log_info "当前已是最新版本（镜像和配置），无需更新"
+        log_info "当前已是最新版本，无需更新"
     fi
 }
 
