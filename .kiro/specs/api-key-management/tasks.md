@@ -154,8 +154,8 @@
   - 设置认证状态，模拟页面刷新
   - 验证能够从 localStorage 恢复相同状态
 
-- [ ] 9. 改造 API 拦截器
-  - [ ] 9.1 修改 frontend/src/lib/api.ts
+- [x] 9. 改造 API 拦截器
+  - [x] 9.1 修改 frontend/src/lib/api.ts
     - 在请求拦截器中注入认证信息（优先 JWT，降级 API Key）
     - 在响应拦截器中处理 401 错误（清除状态，跳转登录）
     - _需求: 9.1, 9.2, 9.3, 9.4, 9.5_
@@ -166,18 +166,18 @@
   - 模拟 401 响应
   - 验证认证状态被清除且跳转到登录页
 
-- [ ] 10. 创建认证服务和类型定义
-  - [ ] 10.1 扩展 frontend/src/types/api.ts
+- [x] 10. 创建认证服务和类型定义
+  - [x] 10.1 扩展 frontend/src/types/api.ts
     - 添加 AdminLoginRequest, AdminLoginResponse, APIKeyInfo, CreateAPIKeyRequest 类型
     - _需求: 6.1, 6.2, 6.3_
   
-  - [ ] 10.2 创建 frontend/src/services/authService.ts
+  - [x] 10.2 创建 frontend/src/services/authService.ts
     - 实现 adminLogin(password) 方法
     - 实现 validateApiKey(apiKey) 方法
     - 实现 listApiKeys(), createApiKey(), deleteApiKey() 方法
     - _需求: 5.1, 6.2, 6.3, 6.4_
 
-- [ ] 11. 检查点 - 前端架构层完成
+- [x] 11. 检查点 - 前端架构层完成
   - 确保所有功能正常工作
 
 ### 阶段 4: 前端 UI 层

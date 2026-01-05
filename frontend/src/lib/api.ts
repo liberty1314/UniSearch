@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import type { ApiResponse } from '@/types/api';
+import { useAuthStore } from '@/stores/authStore';
 
 /**
  * API 客户端类
@@ -23,9 +24,21 @@ class ApiClient {
    * 设置请求和响应拦截器
    */
   private setupInterceptors(): void {
-    // 请求拦截器
+    // 请求拦截器 - 注入认证信息
     this.instance.interceptors.request.use(
       (config) => {
+        // 从 authStore 获取认证信息
+        const authStore = useAuthStore.getState();
+
+        // 优先使用 JWT Token
+        if (authStore.token) {
+          config.headers.Authorization = `Bearer ${authStore.token}`;
+        }
+        // 降级使用 API Key
+        else if (authStore.apiKey) {
+          config.headers['X-API-Key'] = authStore.apiKey;
+        }
+
         // 添加请求日志（仅在开发环境）
         if (import.meta.env.DEV) {
           console.log('🚀 API Request:', config.method?.toUpperCase(), config.url, config.data);
@@ -38,7 +51,7 @@ class ApiClient {
       }
     );
 
-    // 响应拦截器
+    // 响应拦截器 - 处理 401 错误
     this.instance.interceptors.response.use(
       (response: AxiosResponse<ApiResponse>) => {
         // 添加响应日志（仅在开发环境）
@@ -48,10 +61,22 @@ class ApiClient {
         return response;
       },
       (error: AxiosError<ApiResponse>) => {
+        // 处理 401 未授权错误
+        if (error.response?.status === 401) {
+          // 清除认证状态
+          const authStore = useAuthStore.getState();
+          authStore.logout();
+
+          // 跳转到登录页（避免在登录页重复跳转）
+          if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login';
+          }
+        }
+
         // 统一错误处理
         const errorMessage = this.handleError(error);
         console.error('❌ API Error:', errorMessage);
-        
+
         // 返回标准化的错误响应
         return Promise.reject({
           code: error.response?.status || -1,
@@ -69,7 +94,7 @@ class ApiClient {
     if (error.response) {
       // 服务器响应错误
       const { status, data } = error.response;
-      
+
       switch (status) {
         case 400:
           return data?.message || '请求参数错误';

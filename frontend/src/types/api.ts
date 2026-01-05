@@ -174,7 +174,39 @@ export interface VerifyResponse {
   message?: string;
 }
 
+/**
+ * 管理员登录请求
+ */
+export interface AdminLoginRequest {
+  password: string;
+}
 
+/**
+ * 管理员登录响应
+ */
+export interface AdminLoginResponse {
+  token: string;
+  expires_at: number;
+}
+
+/**
+ * API Key 信息
+ */
+export interface APIKeyInfo {
+  key: string;
+  created_at: string;
+  expires_at: string;
+  is_enabled: boolean;
+  description: string;
+}
+
+/**
+ * 创建 API Key 请求
+ */
+export interface CreateAPIKeyRequest {
+  ttl_hours: number;
+  description: string;
+}
 
 /**
  * 网盘类型配置
