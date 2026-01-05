@@ -249,7 +249,34 @@ sudo ./scripts/deploy.sh init
 - 配置 UFW 防火墙
 - 创建必要的目录和配置文件
 
-#### 3️⃣ 启动服务
+#### 3️⃣ 配置管理员密码
+
+**生成密码哈希：**
+```bash
+# 使用脚本生成密码哈希
+./scripts/gen_admin_password.sh "你的密码"
+
+# 示例输出：
+# ✓ 密码哈希生成成功！
+# ADMIN_PASSWORD_HASH=$2a$10$RGtHe7PyEsFfnffZ9JaxJeQ9LwoiSOGpJaxeo1kqtwfpHcVRPiFTS
+```
+
+**配置环境变量：**
+```bash
+# 编辑生产环境配置文件
+vim deploy/env.prod
+
+# 找到 ADMIN_PASSWORD_HASH 配置项，替换为生成的哈希值
+ADMIN_PASSWORD_HASH=$2a$10$RGtHe7PyEsFfnffZ9JaxJeQ9LwoiSOGpJaxeo1kqtwfpHcVRPiFTS
+```
+
+**默认管理员账号：**
+- 用户名：`admin`
+- 密码：`admin123`（建议修改）
+
+⚠️ **安全提示**：生产环境部署前，请务必修改默认密码！
+
+#### 4️⃣ 启动服务
 
 ```bash
 # 启动应用

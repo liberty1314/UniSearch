@@ -16,7 +16,7 @@ NC='\033[0m'
 # 默认配置（可通过命令行参数覆盖）
 DEFAULT_USERNAME="liberty159"
 DEFAULT_IMAGE="unisearch"
-DEFAULT_VERSION="1.0.1"
+DEFAULT_VERSION="1.0.2"
 
 # 解析命令行参数
 DOCKER_USERNAME="${1:-$DEFAULT_USERNAME}"
