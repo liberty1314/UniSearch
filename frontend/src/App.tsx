@@ -1,8 +1,29 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import Navbar from '@/components/Navbar';
 import Home from '@/pages/Home';
+import Login from '@/pages/Login';
+import Admin from '@/pages/Admin';
+import { useAuthStore } from '@/stores/authStore';
+
+/**
+ * 管理员路由保护组件
+ * 只有管理员才能访问被保护的路由
+ */
+interface AdminRouteProps {
+  children: React.ReactNode;
+}
+
+const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
+  const { isAdmin } = useAuthStore();
+
+  if (!isAdmin) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
 
 const App: React.FC = () => {
   // 主题初始化：优先使用保存的偏好，其次使用系统设置
@@ -30,10 +51,19 @@ const App: React.FC = () => {
     <Router>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
         <Navbar />
-        
+
         <main className="pt-16">
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <Admin />
+                </AdminRoute>
+              }
+            />
             {/* 404 页面 */}
             <Route path="*" element={
               <div className="min-h-screen flex items-center justify-center">
@@ -56,7 +86,7 @@ const App: React.FC = () => {
             } />
           </Routes>
         </main>
-        
+
         {/* Toast 通知 */}
         <Toaster
           position="top-right"

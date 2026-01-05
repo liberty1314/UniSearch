@@ -36,11 +36,13 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			auth.POST("/logout", LogoutHandler)
 		}
 		
+		// 管理员登录接口（不需要认证）
+		api.POST("/admin/login", AdminLoginHandler)
+		
 		// 管理员路由组（需要管理员权限）
 		admin := api.Group("/admin")
 		admin.Use(AdminMiddleware()) // 应用管理员中间件
 		{
-			admin.POST("/login", AdminLoginHandler)
 			admin.GET("/keys", ListAPIKeysHandler(apiKeyService))
 			admin.POST("/keys", CreateAPIKeyHandler(apiKeyService))
 			admin.DELETE("/keys/:key", DeleteAPIKeyHandler(apiKeyService))

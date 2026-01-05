@@ -94,6 +94,8 @@ export const useAuthStore = create<AuthState>()(
                 token: state.token,
                 apiKey: state.apiKey,
                 username: state.username,
+                isAuthenticated: state.isAuthenticated,
+                isAdmin: state.isAdmin,
             }),
         }
     )

@@ -182,8 +182,8 @@
 
 ### 阶段 4: 前端 UI 层
 
-- [ ] 12. 实现登录页面
-  - [ ] 12.1 创建 frontend/src/pages/Login.tsx
+- [x] 12. 实现登录页面
+  - [x] 12.1 创建 frontend/src/pages/Login.tsx
     - 使用 Shadcn/UI Tabs 组件实现双模态切换
     - 实现用户登录 Tab（API Key 输入）
     - 实现管理员登录 Tab（密码输入）
@@ -192,23 +192,23 @@
     - 登录成功后根据角色跳转
     - _需求: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-- [ ] 13. 实现后台管理页面
-  - [ ] 13.1 创建 frontend/src/pages/Admin.tsx
+- [x] 13. 实现后台管理页面
+  - [x] 13.1 创建 frontend/src/pages/Admin.tsx
     - 实现 Key 管理面板（使用 Shadcn/UI Table）
     - 显示 Key 列表（Key、描述、过期时间、状态）
     - 实现删除功能（使用 AlertDialog 二次确认）
     - 实现插件状态面板
     - _需求: 11.1, 11.2, 11.4, 11.5, 11.6_
   
-  - [ ] 13.2 创建生成 Key 对话框组件
+  - [x] 13.2 创建生成 Key 对话框组件
     - 实现 CreateKeyDialog 组件
     - 选择有效期（7天、30天、90天、1年）
     - 输入描述信息
     - 调用 AuthService.createApiKey
     - _需求: 11.3_
 
-- [ ] 14. 增强导航栏和路由保护
-  - [ ] 14.1 修改 frontend/src/components/Navbar.tsx
+- [x] 14. 增强导航栏和路由保护
+  - [x] 14.1 修改 frontend/src/components/Navbar.tsx
     - 根据 authStore 状态显示不同入口
     - 管理员显示"后台管理"
     - 普通用户显示"API Key 设置"
@@ -216,13 +216,13 @@
     - 实现登出功能
     - _需求: 12.1, 12.2, 12.3, 12.4_
   
-  - [ ] 14.2 修改 frontend/src/App.tsx
+  - [x] 14.2 修改 frontend/src/App.tsx
     - 创建 AdminRoute 保护组件
     - 添加 /login 和 /admin 路由
     - 应用路由保护
     - _需求: 11.1_
 
-- [ ] 15. 最终检查点
+- [x] 15. 最终检查点
   - 测试完整的管理员工作流（登录→创建Key→删除Key→登出）
   - 测试完整的用户工作流（输入Key→搜索→查看结果）
   - 确保所有功能正常工作

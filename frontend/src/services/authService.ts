@@ -50,13 +50,14 @@ export class AuthService {
      * @returns API Keys 数组
      */
     static async listApiKeys(): Promise<APIKeyInfo[]> {
-        const response = await apiClient.get<APIKeyInfo[]>('/admin/keys');
+        const response = await apiClient.get<{ keys: APIKeyInfo[] }>('/admin/keys');
 
         if (!response.data) {
             throw new Error('获取 API Keys 失败：服务器未返回有效数据');
         }
 
-        return response.data;
+        // 后端返回的是 {keys: [...]}，需要提取 keys 字段
+        return (response.data as any).keys || [];
     }
 
     /**
@@ -71,13 +72,14 @@ export class AuthService {
             description,
         };
 
-        const response = await apiClient.post<APIKeyInfo>('/admin/keys', request);
+        const response = await apiClient.post<{ key: APIKeyInfo }>('/admin/keys', request);
 
         if (!response.data) {
             throw new Error('创建 API Key 失败：服务器未返回有效数据');
         }
 
-        return response.data;
+        // 后端返回的是 {key: {...}}，需要提取 key 字段
+        return (response.data as any).key;
     }
 
     /**

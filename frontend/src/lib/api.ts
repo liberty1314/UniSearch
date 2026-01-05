@@ -126,16 +126,49 @@ class ApiClient {
    * GET 请求
    */
   async get<T = any>(url: string, params?: any): Promise<ApiResponse<T>> {
-    const response = await this.instance.get<ApiResponse<T>>(url, { params });
-    return response.data;
+    const response = await this.instance.get<T>(url, { params });
+
+    // 如果响应已经是目标类型，则包装成 ApiResponse 格式
+    if (response.data && typeof response.data === 'object') {
+      // 检查是否已经是 ApiResponse 格式
+      if ('code' in response.data || 'message' in response.data) {
+        return response.data as ApiResponse<T>;
+      }
+
+      // 否则包装成 ApiResponse 格式
+      return {
+        code: 200,
+        message: 'success',
+        data: response.data as T,
+      } as ApiResponse<T>;
+    }
+
+    return response.data as ApiResponse<T>;
   }
 
   /**
    * POST 请求
    */
   async post<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
-    const response = await this.instance.post<ApiResponse<T>>(url, data);
-    return response.data;
+    const response = await this.instance.post<T>(url, data);
+
+    // 如果响应已经是目标类型（例如管理员登录直接返回 {token, expires_at}）
+    // 则包装成 ApiResponse 格式
+    if (response.data && typeof response.data === 'object') {
+      // 检查是否已经是 ApiResponse 格式
+      if ('code' in response.data || 'message' in response.data) {
+        return response.data as ApiResponse<T>;
+      }
+
+      // 否则包装成 ApiResponse 格式
+      return {
+        code: 200,
+        message: 'success',
+        data: response.data as T,
+      } as ApiResponse<T>;
+    }
+
+    return response.data as ApiResponse<T>;
   }
 
   /**
@@ -150,8 +183,24 @@ class ApiClient {
    * DELETE 请求
    */
   async delete<T = any>(url: string): Promise<ApiResponse<T>> {
-    const response = await this.instance.delete<ApiResponse<T>>(url);
-    return response.data;
+    const response = await this.instance.delete<T>(url);
+
+    // 如果响应已经是目标类型，则包装成 ApiResponse 格式
+    if (response.data && typeof response.data === 'object') {
+      // 检查是否已经是 ApiResponse 格式
+      if ('code' in response.data || 'message' in response.data) {
+        return response.data as ApiResponse<T>;
+      }
+
+      // 否则包装成 ApiResponse 格式
+      return {
+        code: 200,
+        message: 'success',
+        data: response.data as T,
+      } as ApiResponse<T>;
+    }
+
+    return response.data as ApiResponse<T>;
   }
 
   /**
