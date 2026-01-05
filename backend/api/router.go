@@ -50,7 +50,7 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			admin.POST("/keys/batch-extend", BatchExtendAPIKeysHandler(apiKeyService)) // 新增：批量延长
 			admin.POST("/keys/batch-create", BatchCreateAPIKeysHandler(apiKeyService)) // 新增：批量创建
 			admin.POST("/keys/batch-delete", BatchDeleteAPIKeysHandler(apiKeyService)) // 新增：批量删除
-			admin.GET("/plugins", GetPluginsStatusHandler)
+			admin.GET("/system-info", GetSystemInfoHandler(searchService)) // 更新：获取系统信息（包含插件状态）
 		}
 		
 		// 搜索接口 - 支持POST和GET两种方式

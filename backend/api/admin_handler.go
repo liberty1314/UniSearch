@@ -13,6 +13,7 @@ import (
 
 // AdminLoginRequest 管理员登录请求
 type AdminLoginRequest struct {
+	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
@@ -105,6 +106,15 @@ func AdminLoginHandler(c *gin.Context) {
 		return
 	}
 
+	// 验证用户名（默认为 admin）
+	if req.Username != "admin" {
+		c.JSON(401, gin.H{
+			"error": "用户名或密码错误",
+			"code":  "ADMIN_LOGIN_FAILED",
+		})
+		return
+	}
+
 	// 验证密码
 	err := bcrypt.CompareHashAndPassword(
 		[]byte(config.AppConfig.AdminPasswordHash),
@@ -112,7 +122,7 @@ func AdminLoginHandler(c *gin.Context) {
 	)
 	if err != nil {
 		c.JSON(401, gin.H{
-			"error": "密码错误",
+			"error": "用户名或密码错误",
 			"code":  "ADMIN_LOGIN_FAILED",
 		})
 		return
@@ -215,29 +225,153 @@ func DeleteAPIKeyHandler(apiKeyService *service.APIKeyService) gin.HandlerFunc {
 	}
 }
 
-// GetPluginsStatusHandler 获取插件状态
-func GetPluginsStatusHandler(c *gin.Context) {
-	// TODO: 实现插件状态获取逻辑
-	// 这里暂时返回一个示例响应
-	c.JSON(200, gin.H{
-		"plugins": []gin.H{
-			{
-				"name":        "duoduo",
-				"status":      "active",
-				"last_update": time.Now().Add(-2 * time.Minute).Unix(),
-			},
-			{
-				"name":        "hdr4k",
-				"status":      "active",
-				"last_update": time.Now().Add(-5 * time.Minute).Unix(),
-			},
-			{
-				"name":        "panta",
-				"status":      "inactive",
-				"last_update": time.Now().Add(-1 * time.Hour).Unix(),
-			},
-		},
-	})
+// SystemInfoResponse 系统信息响应
+type SystemInfoResponse struct {
+	// 插件信息
+	Plugins []PluginInfoResponse `json:"plugins"`
+	
+	// 系统统计
+	Stats SystemStatsResponse `json:"stats"`
+	
+	// 系统配置
+	Config SystemConfigResponse `json:"config"`
+}
+
+// PluginInfoResponse 插件信息响应
+type PluginInfoResponse struct {
+	Name        string `json:"name"`
+	Priority    int    `json:"priority"`
+	Status      string `json:"status"`
+	Description string `json:"description"`
+}
+
+// SystemStatsResponse 系统统计响应
+type SystemStatsResponse struct {
+	PluginCount       int  `json:"plugin_count"`
+	ActivePluginCount int  `json:"active_plugin_count"`
+	ChannelCount      int  `json:"channel_count"`
+	CacheEnabled      bool `json:"cache_enabled"`
+	ProxyEnabled      bool `json:"proxy_enabled"`
+}
+
+// SystemConfigResponse 系统配置响应
+type SystemConfigResponse struct {
+	// 缓存配置
+	CachePath       string `json:"cache_path"`
+	CacheMaxSizeMB  int    `json:"cache_max_size_mb"`
+	CacheTTLMinutes int    `json:"cache_ttl_minutes"`
+	
+	// 并发配置
+	DefaultConcurrency int `json:"default_concurrency"`
+	
+	// 代理配置
+	ProxyURL string `json:"proxy_url"`
+	
+	// 异步插件配置
+	AsyncPluginEnabled         bool `json:"async_plugin_enabled"`
+	AsyncResponseTimeout       int  `json:"async_response_timeout"`
+	AsyncMaxBackgroundWorkers  int  `json:"async_max_background_workers"`
+	AsyncMaxBackgroundTasks    int  `json:"async_max_background_tasks"`
+	
+	// HTTP服务器配置
+	HTTPMaxConns int `json:"http_max_conns"`
+	
+	// 频道列表
+	Channels []string `json:"channels"`
+}
+
+// GetSystemInfoHandler 获取系统信息（插件状态 + 系统配置）
+func GetSystemInfoHandler(searchService *service.SearchService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 获取插件管理器
+		pluginManager := searchService.GetPluginManager()
+		if pluginManager == nil {
+			c.JSON(500, gin.H{
+				"error": "插件管理器未初始化",
+				"code":  "PLUGIN_MANAGER_NOT_INITIALIZED",
+			})
+			return
+		}
+		
+		// 获取所有插件
+		plugins := pluginManager.GetPlugins()
+		
+		// 构建插件信息列表
+		pluginInfos := make([]PluginInfoResponse, 0, len(plugins))
+		for _, p := range plugins {
+			pluginInfos = append(pluginInfos, PluginInfoResponse{
+				Name:        p.Name(),
+				Priority:    p.Priority(),
+				Status:      "active", // 所有已注册的插件都是活跃状态
+				Description: getPluginDescription(p.Name()),
+			})
+		}
+		
+		// 构建系统统计信息
+		stats := SystemStatsResponse{
+			PluginCount:       len(plugins),
+			ActivePluginCount: len(plugins), // 所有已注册的插件都是活跃的
+			ChannelCount:      len(config.AppConfig.DefaultChannels),
+			CacheEnabled:      config.AppConfig.CacheEnabled,
+			ProxyEnabled:      config.AppConfig.UseProxy,
+		}
+		
+		// 构建系统配置信息
+		systemConfig := SystemConfigResponse{
+			CachePath:                  config.AppConfig.CachePath,
+			CacheMaxSizeMB:             config.AppConfig.CacheMaxSizeMB,
+			CacheTTLMinutes:            config.AppConfig.CacheTTLMinutes,
+			DefaultConcurrency:         config.AppConfig.DefaultConcurrency,
+			ProxyURL:                   config.AppConfig.ProxyURL,
+			AsyncPluginEnabled:         config.AppConfig.AsyncPluginEnabled,
+			AsyncResponseTimeout:       config.AppConfig.AsyncResponseTimeout,
+			AsyncMaxBackgroundWorkers:  config.AppConfig.AsyncMaxBackgroundWorkers,
+			AsyncMaxBackgroundTasks:    config.AppConfig.AsyncMaxBackgroundTasks,
+			HTTPMaxConns:               config.AppConfig.HTTPMaxConns,
+			Channels:                   config.AppConfig.DefaultChannels,
+		}
+		
+		// 构建完整响应
+		response := SystemInfoResponse{
+			Plugins: pluginInfos,
+			Stats:   stats,
+			Config:  systemConfig,
+		}
+		
+		c.JSON(200, response)
+	}
+}
+
+// getPluginDescription 获取插件描述（根据插件名称返回中文描述）
+func getPluginDescription(name string) string {
+	descriptions := map[string]string{
+		"duoduo":       "多多搜索 - 综合网盘资源搜索",
+		"hdr4k":        "HDR4K - 高清4K影视资源",
+		"hunhepan":     "混合盘 - 多源网盘聚合",
+		"jikepan":      "极客盘 - 技术资源分享",
+		"pan666":       "盘666 - 网盘资源搜索",
+		"pansearch":    "盘搜 - 百度网盘搜索",
+		"panta":        "盘他 - 网盘资源搜索",
+		"qupansou":     "趣盘搜 - 趣味资源搜索",
+		"susu":         "素素 - 学习资源搜索",
+		"thepiratebay": "海盗湾 - 磁力链接搜索",
+		"wanou":        "玩偶 - 影视资源搜索",
+		"xuexizhinan":  "学习指南 - 教育资源搜索",
+		"panyq":        "盘友圈 - 网盘资源分享",
+		"zhizhen":      "纸镇 - 文档资源搜索",
+		"labi":         "拉比 - 综合资源搜索",
+		"muou":         "木偶 - 影视资源搜索",
+		"ouge":         "欧歌 - 音乐资源搜索",
+		"shandian":     "闪电 - 快速资源搜索",
+		"huban":        "虎斑 - 综合资源搜索",
+		"fox4k":        "Fox4K - 4K影视资源",
+		"cyg":          "CYG - 综合资源搜索",
+	}
+	
+	if desc, ok := descriptions[name]; ok {
+		return desc
+	}
+	return "网盘资源搜索插件"
 }
 
 // UpdateAPIKeyRequest 更新API Key请求

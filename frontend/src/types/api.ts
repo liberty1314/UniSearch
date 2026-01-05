@@ -178,6 +178,7 @@ export interface VerifyResponse {
  * 管理员登录请求
  */
 export interface AdminLoginRequest {
+  username: string;
   password: string;
 }
 
@@ -195,7 +196,9 @@ export interface AdminLoginResponse {
 export interface APIKeyInfo {
   key: string;
   created_at: string;
+  first_used_at: string | null; // 首次使用时间，null 表示未使用
   expires_at: string;
+  ttl_hours: number; // 有效期（小时）
   is_enabled: boolean;
   description: string;
 }
@@ -276,7 +279,55 @@ export interface CloudTypeConfig {
  */
 export interface PluginInfo {
   name: string;
-  enabled: boolean;
-  status?: 'active' | 'inactive' | 'error';
-  description?: string;
+  priority: number;
+  status: 'active' | 'inactive' | 'error';
+  description: string;
+}
+
+/**
+ * 系统统计信息
+ */
+export interface SystemStats {
+  plugin_count: number;
+  active_plugin_count: number;
+  channel_count: number;
+  cache_enabled: boolean;
+  proxy_enabled: boolean;
+}
+
+/**
+ * 系统配置信息
+ */
+export interface SystemConfig {
+  // 缓存配置
+  cache_path: string;
+  cache_max_size_mb: number;
+  cache_ttl_minutes: number;
+
+  // 并发配置
+  default_concurrency: number;
+
+  // 代理配置
+  proxy_url: string;
+
+  // 异步插件配置
+  async_plugin_enabled: boolean;
+  async_response_timeout: number;
+  async_max_background_workers: number;
+  async_max_background_tasks: number;
+
+  // HTTP服务器配置
+  http_max_conns: number;
+
+  // 频道列表
+  channels: string[];
+}
+
+/**
+ * 系统信息响应
+ */
+export interface SystemInfoResponse {
+  plugins: PluginInfo[];
+  stats: SystemStats;
+  config: SystemConfig;
 }

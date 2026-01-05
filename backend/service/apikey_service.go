@@ -52,10 +52,13 @@ func (s *APIKeyService) GenerateKey(ttl time.Duration, description string) (*mod
 	
 	// 创建 API Key 对象
 	now := time.Now()
+	ttlHours := int(ttl.Hours())
 	apiKey := &model.APIKey{
 		Key:         key,
 		CreatedAt:   now,
-		ExpiresAt:   now.Add(ttl),
+		FirstUsedAt: nil, // 初始为 nil，表示未使用
+		ExpiresAt:   now.Add(ttl), // 临时设置，实际会在首次使用时重新计算
+		TTLHours:    ttlHours,
 		IsEnabled:   true,
 		Description: description,
 	}
@@ -75,9 +78,10 @@ func (s *APIKeyService) GenerateKey(ttl time.Duration, description string) (*mod
 
 // ValidateKey 验证API密钥
 // 检查密钥是否存在、已启用且未过期
+// 如果是首次使用，会自动激活密钥并从当前时间开始计算有效期
 func (s *APIKeyService) ValidateKey(key string) (bool, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	
 	// 检查密钥是否存在
 	apiKey, exists := s.keys[key]
@@ -85,8 +89,20 @@ func (s *APIKeyService) ValidateKey(key string) (bool, error) {
 		return false, nil
 	}
 	
-	// 使用 APIKey 的 IsValid 方法检查是否有效（已启用且未过期）
-	return apiKey.IsValid(), nil
+	// 检查密钥是否有效
+	if !apiKey.IsValid() {
+		return false, nil
+	}
+	
+	// 如果是首次使用，激活密钥
+	if apiKey.ActivateIfNeeded() {
+		// 持久化到文件
+		if err := s.save(); err != nil {
+			return false, fmt.Errorf("保存密钥失败: %w", err)
+		}
+	}
+	
+	return true, nil
 }
 
 // RevokeKey 撤销API密钥
@@ -221,55 +237,38 @@ type BatchExtendKeysResult struct {
 // keys: 要延长的密钥列表
 // extendHours: 延长的小时数
 // 返回每个密钥的操作结果
-// 使用并发处理提高性能，限制并发数为10
 func (s *APIKeyService) BatchExtendKeys(keys []string, extendHours int) ([]BatchExtendKeysResult, error) {
 	if extendHours <= 0 {
 		return nil, errors.New("延长小时数必须大于0")
 	}
 	
+	// 加锁保护整个操作
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	
 	results := make([]BatchExtendKeysResult, len(keys))
 	
-	// 使用并发处理，限制并发数为10
-	const maxConcurrency = 10
-	semaphore := make(chan struct{}, maxConcurrency)
-	var wg sync.WaitGroup
-	
-	// 处理每个密钥
+	// 顺序处理每个密钥（不使用并发，避免竞争条件）
 	for i, key := range keys {
-		wg.Add(1)
-		go func(index int, k string) {
-			defer wg.Done()
-			
-			// 获取信号量
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-			
-			result := BatchExtendKeysResult{
-				Key: k,
-			}
-			
-			// 检查密钥是否存在
-			apiKey, exists := s.keys[k]
-			if !exists {
-				result.Success = false
-				result.Error = "密钥不存在"
-				results[index] = result
-				return
-			}
-			
-			// 延长过期时间
-			apiKey.ExpiresAt = apiKey.ExpiresAt.Add(time.Duration(extendHours) * time.Hour)
-			result.Success = true
-			result.NewExpiresAt = &apiKey.ExpiresAt
-			results[index] = result
-		}(i, key)
+		result := BatchExtendKeysResult{
+			Key: key,
+		}
+		
+		// 检查密钥是否存在
+		apiKey, exists := s.keys[key]
+		if !exists {
+			result.Success = false
+			result.Error = "密钥不存在"
+			results[i] = result
+			continue
+		}
+		
+		// 延长过期时间
+		apiKey.ExpiresAt = apiKey.ExpiresAt.Add(time.Duration(extendHours) * time.Hour)
+		result.Success = true
+		result.NewExpiresAt = &apiKey.ExpiresAt
+		results[i] = result
 	}
-	
-	// 等待所有 goroutine 完成
-	wg.Wait()
 	
 	// 持久化到文件
 	if err := s.save(); err != nil {
@@ -340,10 +339,13 @@ func (s *APIKeyService) BatchGenerateKeys(count int, ttl time.Duration, descript
 			
 			// 创建 API Key 对象
 			now := time.Now()
+			ttlHours := int(ttl.Hours())
 			apiKey := &model.APIKey{
 				Key:         key,
 				CreatedAt:   now,
-				ExpiresAt:   now.Add(ttl),
+				FirstUsedAt: nil, // 初始为 nil，表示未使用
+				ExpiresAt:   now.Add(ttl), // 临时设置，实际会在首次使用时重新计算
+				TTLHours:    ttlHours,
 				IsEnabled:   true,
 				Description: description,
 			}
@@ -407,54 +409,37 @@ type BatchDeleteKeysResult struct {
 // BatchDeleteKeys 批量删除API密钥
 // keys: 要删除的密钥列表
 // 返回每个密钥的操作结果
-// 使用并发处理提高性能，限制并发数为10
 func (s *APIKeyService) BatchDeleteKeys(keys []string) ([]BatchDeleteKeysResult, error) {
 	if len(keys) == 0 {
 		return nil, errors.New("密钥列表不能为空")
 	}
 	
+	// 加锁保护整个操作
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	
 	results := make([]BatchDeleteKeysResult, len(keys))
 	
-	// 使用并发处理，限制并发数为10
-	const maxConcurrency = 10
-	semaphore := make(chan struct{}, maxConcurrency)
-	var wg sync.WaitGroup
-	
-	// 处理每个密钥
+	// 顺序处理每个密钥（不使用并发，避免竞争条件）
 	for i, key := range keys {
-		wg.Add(1)
-		go func(index int, k string) {
-			defer wg.Done()
-			
-			// 获取信号量
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-			
-			result := BatchDeleteKeysResult{
-				Key: k,
-			}
-			
-			// 检查密钥是否存在
-			_, exists := s.keys[k]
-			if !exists {
-				result.Success = false
-				result.Error = "密钥不存在"
-				results[index] = result
-				return
-			}
-			
-			// 从内存中删除
-			delete(s.keys, k)
-			result.Success = true
-			results[index] = result
-		}(i, key)
+		result := BatchDeleteKeysResult{
+			Key: key,
+		}
+		
+		// 检查密钥是否存在
+		_, exists := s.keys[key]
+		if !exists {
+			result.Success = false
+			result.Error = "密钥不存在"
+			results[i] = result
+			continue
+		}
+		
+		// 从内存中删除
+		delete(s.keys, key)
+		result.Success = true
+		results[i] = result
 	}
-	
-	// 等待所有 goroutine 完成
-	wg.Wait()
 	
 	// 持久化到文件
 	if err := s.save(); err != nil {

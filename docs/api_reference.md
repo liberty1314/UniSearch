@@ -176,7 +176,7 @@ curl -X POST http://localhost:8888/api/auth/verify \
 
 ### 1. 管理员登录
 
-管理员通过密码登录获取管理员 JWT Token。
+管理员通过用户名和密码登录获取管理员 JWT Token。
 
 **接口地址**: `/api/admin/login`  
 **请求方法**: `POST`  
@@ -187,13 +187,15 @@ curl -X POST http://localhost:8888/api/auth/verify \
 
 | 参数名 | 类型 | 必填 | 描述 |
 |--------|------|------|------|
+| username | string | 是 | 管理员用户名（默认：admin） |
 | password | string | 是 | 管理员密码 |
 
 **请求示例**:
 
 ```json
 {
-  "password": "your_admin_password"
+  "username": "admin",
+  "password": "admin123.com"
 }
 ```
 
@@ -210,7 +212,7 @@ curl -X POST http://localhost:8888/api/auth/verify \
 
 ```json
 {
-  "error": "密码错误",
+  "error": "用户名或密码错误",
   "code": "ADMIN_LOGIN_FAILED"
 }
 ```
@@ -218,11 +220,15 @@ curl -X POST http://localhost:8888/api/auth/verify \
 **状态码**:
 - `200`: 登录成功
 - `400`: 参数错误
-- `401`: 密码错误
+- `401`: 用户名或密码错误
 - `429`: 请求过于频繁（速率限制）
 - `500`: 服务器内部错误
 
 **速率限制**: 每个 IP 地址每分钟最多尝试 5 次登录
+
+**默认账号**: 
+- 用户名：`admin`
+- 密码：`admin123.com`（首次部署时请修改）
 
 ---
 
@@ -249,16 +255,20 @@ curl -X GET http://localhost:8888/api/admin/keys \
     {
       "key": "sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
       "created_at": "2026-01-05T10:30:00Z",
-      "expires_at": "2026-02-05T10:30:00Z",
+      "first_used_at": "2026-01-05T11:00:00Z",
+      "expires_at": "2026-02-05T11:00:00Z",
+      "ttl_hours": 720,
       "is_enabled": true,
       "description": "测试用密钥"
     },
     {
       "key": "sk-x1y2z3a4b5c6d7e8f9g0h1i2j3k4l5m6n7o8p9q0",
       "created_at": "2026-01-04T15:20:00Z",
+      "first_used_at": null,
       "expires_at": "2026-01-11T15:20:00Z",
+      "ttl_hours": 168,
       "is_enabled": false,
-      "description": "已禁用的密钥"
+      "description": "未使用的密钥"
     }
   ]
 }
@@ -267,9 +277,16 @@ curl -X GET http://localhost:8888/api/admin/keys \
 **字段说明**:
 - `key`: API Key 字符串（格式：`sk-` + 40位十六进制）
 - `created_at`: 创建时间（ISO 8601 格式）
-- `expires_at`: 过期时间（ISO 8601 格式）
+- `first_used_at`: 首次使用时间（ISO 8601 格式，null 表示未使用）
+- `expires_at`: 过期时间（ISO 8601 格式，从首次使用时间开始计算）
+- `ttl_hours`: 有效期（小时）
 - `is_enabled`: 是否启用
 - `description`: 密钥描述信息
+
+**重要说明**:
+- API Key 的有效期从**首次使用时**开始计算，而不是创建时
+- 创建后未使用的 Key 不会过期，直到首次使用
+- 首次使用时，系统会自动记录使用时间并重新计算过期时间
 
 **错误响应**:
 
@@ -323,12 +340,16 @@ curl -X POST http://localhost:8888/api/admin/keys \
   "key": {
     "key": "sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
     "created_at": "2026-01-05T10:30:00Z",
+    "first_used_at": null,
     "expires_at": "2026-02-05T10:30:00Z",
+    "ttl_hours": 720,
     "is_enabled": true,
     "description": "生产环境密钥"
   }
 }
 ```
+
+**注意**: 新创建的 Key 的 `first_used_at` 为 `null`，表示尚未使用。有效期将从首次使用时开始计算。
 
 **错误响应**:
 
@@ -395,18 +416,18 @@ curl -X DELETE http://localhost:8888/api/admin/keys/sk-a1b2c3d4e5f6g7h8i9j0k1l2m
 
 ---
 
-### 5. 获取插件状态
+### 5. 获取系统信息
 
-获取所有插件的运行状态。
+获取系统完整信息，包括插件状态、系统统计和配置信息。
 
-**接口地址**: `/api/admin/plugins`  
+**接口地址**: `/api/admin/system-info`  
 **请求方法**: `GET`  
 **是否需要认证**: 是（需要管理员 Token）
 
 **请求示例**:
 
 ```bash
-curl -X GET http://localhost:8888/api/admin/plugins \
+curl -X GET http://localhost:8888/api/admin/system-info \
   -H "Authorization: Bearer <admin_token>"
 ```
 
@@ -417,27 +438,73 @@ curl -X GET http://localhost:8888/api/admin/plugins \
   "plugins": [
     {
       "name": "duoduo",
+      "priority": 10,
       "status": "active",
-      "last_update": 1704451680
+      "description": "多多搜索 - 综合网盘资源搜索"
     },
     {
       "name": "hdr4k",
+      "priority": 20,
       "status": "active",
-      "last_update": 1704451500
-    },
-    {
-      "name": "panta",
-      "status": "inactive",
-      "last_update": 1704448080
+      "description": "HDR4K - 高清4K影视资源"
     }
-  ]
+  ],
+  "stats": {
+    "plugin_count": 21,
+    "active_plugin_count": 21,
+    "channel_count": 5,
+    "cache_enabled": true,
+    "proxy_enabled": false
+  },
+  "config": {
+    "cache_path": "./cache",
+    "cache_max_size_mb": 500,
+    "cache_ttl_minutes": 60,
+    "default_concurrency": 36,
+    "proxy_url": "",
+    "async_plugin_enabled": true,
+    "async_response_timeout": 5,
+    "async_max_background_workers": 40,
+    "async_max_background_tasks": 200,
+    "http_max_conns": 1600,
+    "channels": [
+      "aliyunpanso",
+      "yunpanshare",
+      "alipan_search",
+      "yunpanziyuan",
+      "alipan_share"
+    ]
+  }
 }
 ```
 
 **字段说明**:
+
+**plugins** (插件列表):
 - `name`: 插件名称
-- `status`: 运行状态（`active` 活跃、`inactive` 不活跃）
-- `last_update`: 最后更新时间（Unix 时间戳）
+- `priority`: 插件优先级（数字越小优先级越高）
+- `status`: 运行状态（`active` 活跃）
+- `description`: 插件描述
+
+**stats** (系统统计):
+- `plugin_count`: 插件总数
+- `active_plugin_count`: 活跃插件数
+- `channel_count`: Telegram 频道数量
+- `cache_enabled`: 缓存是否启用
+- `proxy_enabled`: 代理是否启用
+
+**config** (系统配置):
+- `cache_path`: 缓存路径
+- `cache_max_size_mb`: 缓存最大大小（MB）
+- `cache_ttl_minutes`: 缓存 TTL（分钟）
+- `default_concurrency`: 默认并发数
+- `proxy_url`: 代理地址
+- `async_plugin_enabled`: 异步插件是否启用
+- `async_response_timeout`: 异步响应超时（秒）
+- `async_max_background_workers`: 最大后台工作者数
+- `async_max_background_tasks`: 最大后台任务数
+- `http_max_conns`: HTTP 最大连接数
+- `channels`: Telegram 频道列表
 
 **状态码**:
 - `200`: 获取成功
@@ -498,7 +565,9 @@ curl -X PATCH http://localhost:8888/api/admin/keys/sk-a1b2c3d4e5f6g7h8i9j0k1l2m3
   "key": {
     "key": "sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
     "created_at": "2026-01-05T10:30:00Z",
-    "expires_at": "2026-03-05T10:30:00Z",
+    "first_used_at": "2026-01-05T11:00:00Z",
+    "expires_at": "2026-03-05T11:00:00Z",
+    "ttl_hours": 720,
     "is_enabled": true,
     "description": "测试用密钥"
   }

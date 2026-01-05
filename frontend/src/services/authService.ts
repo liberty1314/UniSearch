@@ -18,11 +18,12 @@ import type {
 export class AuthService {
     /**
      * 管理员登录
+     * @param username 用户名
      * @param password 管理员密码
      * @returns 登录响应，包含 token 和过期时间
      */
-    static async adminLogin(password: string): Promise<AdminLoginResponse> {
-        const request: AdminLoginRequest = { password };
+    static async adminLogin(username: string, password: string): Promise<AdminLoginResponse> {
+        const request: AdminLoginRequest = { username, password };
         const response = await apiClient.post<AdminLoginResponse>('/admin/login', request);
 
         if (!response.data) {

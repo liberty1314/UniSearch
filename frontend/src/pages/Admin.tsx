@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AuthService } from '@/services/authService';
 import { useAuthStore } from '@/stores/authStore';
-import type { APIKeyInfo, PluginInfo } from '@/types/api';
+import type { APIKeyInfo } from '@/types/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Table,
     TableBody,
-    TableCell,
     TableHead,
     TableHeader,
     TableRow,
@@ -31,7 +31,9 @@ import { BatchCreateDialog } from '@/components/admin/BatchCreateDialog';
 import { BatchDeleteDialog } from '@/components/admin/BatchDeleteDialog';
 import { Sidebar, type AdminView } from '@/components/admin/Sidebar';
 import { BatchActionsBar } from '@/components/admin/BatchActionsBar';
-import { Plus, Trash2, Copy, RefreshCw, Key, Activity, Edit } from 'lucide-react';
+import { StatsCard } from '@/components/admin/StatsCard';
+import { SystemInfoView } from '@/components/admin/SystemInfoView';
+import { Plus, RefreshCw, Key, AlertCircle, CheckCircle2, Activity } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import ApiKeyTableRow from '@/components/admin/ApiKeyTableRow';
 
@@ -40,7 +42,7 @@ import ApiKeyTableRow from '@/components/admin/ApiKeyTableRow';
  * 
  * 提供以下功能：
  * 1. API Key 管理（列表、创建、删除）
- * 2. 插件状态查看
+ * 2. 系统监控（插件状态、系统配置）
  */
 const Admin: React.FC = () => {
     const navigate = useNavigate();
@@ -58,10 +60,6 @@ const Admin: React.FC = () => {
 
     // 选中的 API Keys
     const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
-
-    // 插件状态列表
-    const [plugins, setPlugins] = useState<PluginInfo[]>([]);
-    const [isLoadingPlugins, setIsLoadingPlugins] = useState<boolean>(true);
 
     // 创建 Key 对话框状态
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<boolean>(false);
@@ -138,40 +136,11 @@ const Admin: React.FC = () => {
     }, [logout, navigate]);
 
     /**
-     * 加载插件状态
-     */
-    const loadPlugins = async () => {
-        setIsLoadingPlugins(true);
-        try {
-            // 调用插件状态接口
-            const response = await fetch('/api/admin/plugins', {
-                headers: {
-                    'Authorization': `Bearer ${useAuthStore.getState().token}`,
-                },
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setPlugins(data.plugins || []);
-            } else {
-                throw new Error('获取插件状态失败');
-            }
-        } catch (error: unknown) {
-            console.error('加载插件状态失败:', error);
-            // 插件状态加载失败不影响主要功能，只记录错误
-            setPlugins([]);
-        } finally {
-            setIsLoadingPlugins(false);
-        }
-    };
-
-    /**
      * 初始加载数据
      */
     useEffect(() => {
         if (isAdmin) {
             loadApiKeys();
-            loadPlugins();
         }
     }, [isAdmin, loadApiKeys]);
 
@@ -286,7 +255,7 @@ const Admin: React.FC = () => {
     }, []);
 
     /**
-     * 处理批量延长（占位符）
+     * 处理批量延长
      */
     const handleBatchExtend = () => {
         setIsBatchOperating(true);
@@ -297,11 +266,8 @@ const Admin: React.FC = () => {
      * 处理批量延长成功
      */
     const handleBatchExtendSuccess = () => {
-        // 刷新列表
         loadApiKeys();
-        // 清除选择
         setSelectedKeys(new Set());
-        // 重置批量操作状态
         setIsBatchOperating(false);
     };
 
@@ -309,9 +275,7 @@ const Admin: React.FC = () => {
      * 处理批量创建成功
      */
     const handleBatchCreateSuccess = () => {
-        // 刷新列表
         loadApiKeys();
-        // 重置批量操作状态
         setIsBatchOperating(false);
     };
 
@@ -327,11 +291,8 @@ const Admin: React.FC = () => {
      * 处理批量删除成功
      */
     const handleBatchDeleteSuccess = () => {
-        // 刷新列表
         loadApiKeys();
-        // 清除选择
         setSelectedKeys(new Set());
-        // 重置批量操作状态
         setIsBatchOperating(false);
     };
 
@@ -359,7 +320,10 @@ const Admin: React.FC = () => {
     };
 
     return (
-        <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="fixed inset-0 top-16 flex w-full bg-gradient-to-br from-gray-50 via-gray-50 to-blue-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-blue-950/20">
+            {/* 侧边栏占位容器 - 桌面端 */}
+            <div className="hidden lg:block flex-shrink-0 w-[288px]" />
+
             {/* 侧边栏 */}
             <Sidebar
                 currentView={currentView}
@@ -369,206 +333,211 @@ const Admin: React.FC = () => {
             />
 
             {/* 主内容区域 */}
-            <div className="flex-1 overflow-auto">
-                <div className="container mx-auto px-4 pt-6 pb-6 space-y-6 lg:pt-6">
+            <div className="flex-1 h-full overflow-y-auto">
+                <div className="container mx-auto px-4 py-6 space-y-6 lg:px-8 lg:py-8">
                     {/* API Key 管理视图 */}
                     {currentView === 'api-keys' && (
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <Key className="w-5 h-5" />
-                                            API Key 管理
-                                        </CardTitle>
-                                        <CardDescription>
-                                            管理系统的 API Keys，控制用户访问权限
-                                        </CardDescription>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={loadApiKeys}
-                                            disabled={isLoadingKeys || isBatchOperating}
-                                        >
-                                            <RefreshCw className={`w-4 h-4 ${isLoadingKeys ? 'animate-spin' : ''}`} />
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => {
-                                                setIsBatchOperating(true);
-                                                setIsBatchCreateDialogOpen(true);
-                                            }}
-                                            className="flex items-center gap-2"
-                                            disabled={isLoadingKeys || isBatchOperating}
-                                        >
-                                            <Plus className="w-4 h-4" />
-                                            批量生成
-                                        </Button>
-                                        <Button
-                                            onClick={() => setIsCreateDialogOpen(true)}
-                                            className="flex items-center gap-2"
-                                            disabled={isLoadingKeys || isBatchOperating}
-                                        >
-                                            <Plus className="w-4 h-4" />
-                                            生成新 Key
-                                        </Button>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                {isLoadingKeys ? (
-                                    <div className="text-center py-8 text-gray-500">
-                                        加载中...
-                                    </div>
-                                ) : apiKeys.length === 0 ? (
-                                    <div className="text-center py-8 text-gray-500">
-                                        暂无 API Keys，点击"生成新 Key"创建
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {/* 批量操作工具栏 */}
-                                        <BatchActionsBar
-                                            selectedCount={selectedKeys.size}
-                                            onBatchExtend={handleBatchExtend}
-                                            onBatchDelete={handleBatchDelete}
-                                            onClearSelection={handleClearSelection}
-                                            disabled={isLoadingKeys || isBatchOperating || isDeleting}
-                                        />
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="space-y-6"
+                        >
+                            {/* 统计卡片 */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <StatsCard
+                                    title="总密钥数"
+                                    value={apiKeys.length}
+                                    icon={Key}
+                                    color="blue"
+                                    index={0}
+                                />
+                                <StatsCard
+                                    title="活跃密钥"
+                                    value={apiKeys.filter(k => k.is_enabled && !isKeyExpired(k.expires_at)).length}
+                                    icon={CheckCircle2}
+                                    color="emerald"
+                                    index={1}
+                                />
+                                <StatsCard
+                                    title="即将过期"
+                                    value={apiKeys.filter(k => {
+                                        const daysLeft = Math.floor((new Date(k.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                                        return daysLeft >= 0 && daysLeft <= 7;
+                                    }).length}
+                                    icon={AlertCircle}
+                                    color="amber"
+                                    index={2}
+                                />
+                                <StatsCard
+                                    title="已过期"
+                                    value={apiKeys.filter(k => isKeyExpired(k.expires_at)).length}
+                                    icon={Activity}
+                                    color="purple"
+                                    index={3}
+                                />
+                            </div>
 
-                                        {/* API Keys 表格 */}
-                                        <div className="rounded-md border">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead className="w-12">
-                                                            <Checkbox
-                                                                checked={isAllSelected()}
-                                                                onCheckedChange={handleSelectAll}
-                                                                aria-label="全选"
-                                                                disabled={isLoadingKeys || isBatchOperating || isDeleting}
-                                                            />
-                                                        </TableHead>
-                                                        <TableHead>API Key</TableHead>
-                                                        <TableHead>描述</TableHead>
-                                                        <TableHead>创建时间</TableHead>
-                                                        <TableHead>过期时间</TableHead>
-                                                        <TableHead>剩余时间</TableHead>
-                                                        <TableHead>状态</TableHead>
-                                                        <TableHead className="text-right">操作</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {apiKeys.map((key) => {
-                                                        const expired = isKeyExpired(key.expires_at);
-                                                        const canSelect = key.is_enabled && !expired;
-                                                        const isSelected = selectedKeys.has(key.key);
-
-                                                        return (
-                                                            <ApiKeyTableRow
-                                                                key={key.key}
-                                                                apiKey={key}
-                                                                isSelected={isSelected}
-                                                                canSelect={canSelect}
-                                                                isDeleting={isDeleting}
-                                                                isBatchOperating={isBatchOperating}
-                                                                onSelectChange={handleSelectKey}
-                                                                onCopyKey={handleCopyKey}
-                                                                onEditClick={handleEditClick}
-                                                                onDeleteClick={handleDeleteClick}
-                                                            />
-                                                        );
-                                                    })}
-                                                </TableBody>
-                                            </Table>
+                            {/* API Key 管理卡片 */}
+                            <Card className="border-gray-100 dark:border-gray-700/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+                                <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
+                                                <Key className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                                API Key 管理
+                                            </CardTitle>
+                                            <CardDescription className="text-slate-500 dark:text-slate-400">
+                                                管理系统的 API Keys，控制用户访问权限
+                                            </CardDescription>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={loadApiKeys}
+                                                    disabled={isLoadingKeys || isBatchOperating}
+                                                    className="border-slate-200 dark:border-slate-700"
+                                                >
+                                                    <RefreshCw className={`w-4 h-4 ${isLoadingKeys ? 'animate-spin' : ''}`} />
+                                                </Button>
+                                            </motion.div>
+                                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={() => {
+                                                        setIsBatchOperating(true);
+                                                        setIsBatchCreateDialogOpen(true);
+                                                    }}
+                                                    className="flex items-center gap-2 border-slate-200 dark:border-slate-700"
+                                                    disabled={isLoadingKeys || isBatchOperating}
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                    批量生成
+                                                </Button>
+                                            </motion.div>
+                                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                                <Button
+                                                    onClick={() => setIsCreateDialogOpen(true)}
+                                                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/30"
+                                                    disabled={isLoadingKeys || isBatchOperating}
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                    生成新 Key
+                                                </Button>
+                                            </motion.div>
                                         </div>
                                     </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                                </CardHeader>
+                                <CardContent className="p-6">
+                                    {isLoadingKeys ? (
+                                        <div className="text-center py-12">
+                                            <motion.div
+                                                animate={{ rotate: 360 }}
+                                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                className="inline-block"
+                                            >
+                                                <RefreshCw className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                                            </motion.div>
+                                            <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
+                                        </div>
+                                    ) : apiKeys.length === 0 ? (
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            className="text-center py-12"
+                                        >
+                                            <div className="inline-flex p-4 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
+                                                <Key className="w-8 h-8 text-slate-400" />
+                                            </div>
+                                            <p className="text-slate-500 dark:text-slate-400 mb-4">
+                                                暂无 API Keys
+                                            </p>
+                                            <Button
+                                                onClick={() => setIsCreateDialogOpen(true)}
+                                                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                                            >
+                                                <Plus className="w-4 h-4 mr-2" />
+                                                创建第一个 Key
+                                            </Button>
+                                        </motion.div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {/* 批量操作工具栏 */}
+                                            <AnimatePresence>
+                                                {selectedKeys.size > 0 && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: -10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0, y: -10 }}
+                                                    >
+                                                        <BatchActionsBar
+                                                            selectedCount={selectedKeys.size}
+                                                            onBatchExtend={handleBatchExtend}
+                                                            onBatchDelete={handleBatchDelete}
+                                                            onClearSelection={handleClearSelection}
+                                                            disabled={isLoadingKeys || isBatchOperating || isDeleting}
+                                                        />
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+
+                                            {/* API Keys 表格 */}
+                                            <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                                            <TableHead className="w-12">
+                                                                <Checkbox
+                                                                    checked={isAllSelected()}
+                                                                    onCheckedChange={handleSelectAll}
+                                                                    aria-label="全选"
+                                                                    disabled={isLoadingKeys || isBatchOperating || isDeleting}
+                                                                />
+                                                            </TableHead>
+                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">API Key</TableHead>
+                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">描述</TableHead>
+                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">创建时间</TableHead>
+                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">过期时间</TableHead>
+                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">剩余时间</TableHead>
+                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">状态</TableHead>
+                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 text-right">操作</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {apiKeys.map((key) => {
+                                                            const expired = isKeyExpired(key.expires_at);
+                                                            const canSelect = key.is_enabled && !expired;
+                                                            const isSelected = selectedKeys.has(key.key);
+
+                                                            return (
+                                                                <ApiKeyTableRow
+                                                                    key={key.key}
+                                                                    apiKey={key}
+                                                                    isSelected={isSelected}
+                                                                    canSelect={canSelect}
+                                                                    isDeleting={isDeleting}
+                                                                    isBatchOperating={isBatchOperating}
+                                                                    onSelectChange={handleSelectKey}
+                                                                    onCopyKey={handleCopyKey}
+                                                                    onEditClick={handleEditClick}
+                                                                    onDeleteClick={handleDeleteClick}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </motion.div>
                     )}
 
-                    {/* 插件状态视图 */}
-                    {currentView === 'plugins' && (
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <Activity className="w-5 h-5" />
-                                            插件状态
-                                        </CardTitle>
-                                        <CardDescription>
-                                            查看各个搜索插件的运行状态
-                                        </CardDescription>
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={loadPlugins}
-                                        disabled={isLoadingPlugins}
-                                    >
-                                        <RefreshCw className={`w-4 h-4 ${isLoadingPlugins ? 'animate-spin' : ''}`} />
-                                    </Button>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                {isLoadingPlugins ? (
-                                    <div className="text-center py-8 text-gray-500">
-                                        加载中...
-                                    </div>
-                                ) : plugins.length === 0 ? (
-                                    <div className="text-center py-8 text-gray-500">
-                                        暂无插件信息
-                                    </div>
-                                ) : (
-                                    <div className="rounded-md border">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>插件名称</TableHead>
-                                                    <TableHead>状态</TableHead>
-                                                    <TableHead>描述</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {plugins.map((plugin) => (
-                                                    <TableRow key={plugin.name}>
-                                                        <TableCell className="font-medium">
-                                                            {plugin.name}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="flex items-center gap-2">
-                                                                <div
-                                                                    className={`w-2 h-2 rounded-full ${plugin.status === 'active'
-                                                                        ? 'bg-green-500'
-                                                                        : plugin.status === 'error'
-                                                                            ? 'bg-red-500'
-                                                                            : 'bg-gray-400'
-                                                                        }`}
-                                                                />
-                                                                <span>
-                                                                    {plugin.status === 'active'
-                                                                        ? '活跃'
-                                                                        : plugin.status === 'error'
-                                                                            ? '错误'
-                                                                            : '不活跃'}
-                                                                </span>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-gray-500">
-                                                            {plugin.description || '无描述'}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    )}
+                    {/* 系统监控视图 */}
+                    {currentView === 'system-info' && <SystemInfoView />}
                 </div>
             </div>
 
