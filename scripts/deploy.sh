@@ -59,7 +59,9 @@ UniSearch 云服务器部署和管理脚本
   start     启动应用服务
   stop      停止应用服务
   restart   重启应用服务
-  update    更新到最新版本（拉取 latest 镜像并重启）
+  update    更新到最新版本（拉取 latest 镜像并同步配置）
+  sync      仅同步配置文件（从 Git 仓库）
+  setup-auto-sync  设置定时自动同步配置（每小时）
   status    查看服务状态
   logs      查看应用日志
   cleanup   清理7天前的日志
@@ -76,7 +78,9 @@ UniSearch 云服务器部署和管理脚本
   $0 init                    # 首次部署时初始化服务器
   $0 start                   # 启动服务（使用 latest）
   USE_LATEST=false VERSION=1.0.1 $0 start  # 启动指定版本
-  $0 update                  # 更新到最新版本
+  $0 update                  # 更新到最新版本（镜像+配置）
+  $0 sync                    # 仅同步配置文件
+  $0 setup-auto-sync         # 设置定时自动同步
   $0 status                  # 查看服务状态
   $0 logs                    # 查看实时日志
   $0 backup                  # 备份数据
@@ -432,13 +436,33 @@ update_service() {
     check_root "update"
     check_docker
     
-    # 强制使用 latest 标签
+    # 1. 同步配置文件（从 Git 仓库）
+    log_info "步骤 1/4: 同步配置文件..."
+    sync_config_files
+    
+    # 2. 强制使用 latest 标签
     local update_image="${DOCKER_USERNAME}/${IMAGE_NAME}:latest"
+    log_info "步骤 2/4: 检查镜像更新..."
     log_info "目标镜像: $update_image"
     
     # 检查是否有更新
+    local need_update=false
     if check_image_update "$update_image"; then
-        log_info "开始更新..."
+        need_update=true
+        log_info "发现新版本镜像"
+    else
+        log_info "镜像已是最新版本"
+    fi
+    
+    # 检查配置文件是否有变化
+    if [ -f "${PROJECT_ROOT}/.config_updated" ]; then
+        need_update=true
+        log_info "配置文件已更新"
+        rm -f "${PROJECT_ROOT}/.config_updated"
+    fi
+    
+    if [ "$need_update" = true ]; then
+        log_info "步骤 3/4: 开始更新..."
         
         # 备份当前配置
         log_info "创建自动备份..."
@@ -458,7 +482,8 @@ update_service() {
         # 停止旧容器
         stop_old_container
         
-        # 使用新镜像启动
+        # 使用新镜像和新配置启动
+        log_info "步骤 4/4: 启动服务..."
         FULL_IMAGE_NAME="$update_image" start_container
         
         # 等待服务启动
@@ -483,7 +508,48 @@ update_service() {
             exit 1
         fi
     else
-        log_info "当前已是最新版本，无需更新"
+        log_info "当前已是最新版本（镜像和配置），无需更新"
+    fi
+}
+
+# 同步配置文件（从 Git 仓库）
+sync_config_files() {
+    log_info "同步配置文件..."
+    
+    # 检查是否在 Git 仓库中
+    if [ ! -d "${PROJECT_ROOT}/.git" ]; then
+        log_warning "不在 Git 仓库中，跳过配置同步"
+        log_info "建议：使用 git clone 部署项目以支持自动配置同步"
+        return 0
+    fi
+    
+    # 保存当前分支
+    local current_branch=$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    
+    # 检查是否有本地修改
+    if ! git -C "$PROJECT_ROOT" diff-index --quiet HEAD -- 2>/dev/null; then
+        log_warning "检测到本地修改，创建备份..."
+        local backup_branch="backup-$(date +%Y%m%d_%H%M%S)"
+        git -C "$PROJECT_ROOT" stash save "Auto backup before update" 2>/dev/null || true
+    fi
+    
+    # 拉取最新代码
+    log_info "从远程仓库拉取最新配置..."
+    if git -C "$PROJECT_ROOT" pull origin "$current_branch" 2>/dev/null; then
+        log_success "配置文件同步成功"
+        
+        # 检查关键配置文件是否有变化
+        if git -C "$PROJECT_ROOT" diff HEAD@{1} HEAD -- deploy/ > /dev/null 2>&1; then
+            if [ $? -eq 0 ]; then
+                # 标记配置已更新
+                touch "${PROJECT_ROOT}/.config_updated"
+                log_info "检测到配置文件变更"
+            fi
+        fi
+    else
+        log_warning "配置同步失败，将使用现有配置"
+        log_info "可能原因：网络问题或本地修改冲突"
+        log_info "手动同步：cd ${PROJECT_ROOT} && git pull"
     fi
 }
 
@@ -634,6 +700,70 @@ EOF
     log_info "清理日志位置: /var/log/unisearch-cleanup.log"
 }
 
+# 设置定时自动同步配置
+setup_auto_sync() {
+    log_info "=== 设置定时自动同步配置 ==="
+    echo
+    
+    check_root "setup-auto-sync"
+    
+    # 检查同步脚本是否存在
+    if [ ! -f "${SCRIPT_DIR}/sync-config.sh" ]; then
+        log_error "同步脚本不存在: ${SCRIPT_DIR}/sync-config.sh"
+        exit 1
+    fi
+    
+    # 复制同步脚本到系统目录
+    cp "${SCRIPT_DIR}/sync-config.sh" /usr/local/bin/unisearch-sync-config.sh
+    chmod +x /usr/local/bin/unisearch-sync-config.sh
+    
+    # 创建包装脚本（设置正确的工作目录）
+    cat > /usr/local/bin/unisearch-auto-sync.sh << EOF
+#!/bin/bash
+# UniSearch 自动同步包装脚本
+cd ${PROJECT_ROOT}
+/usr/local/bin/unisearch-sync-config.sh
+EOF
+    
+    chmod +x /usr/local/bin/unisearch-auto-sync.sh
+    
+    # 添加定时任务（每小时执行一次）
+    # 移除旧的定时任务
+    crontab -l 2>/dev/null | grep -v "unisearch-auto-sync.sh" | crontab - 2>/dev/null || true
+    
+    # 添加新的定时任务
+    (crontab -l 2>/dev/null; echo "0 * * * * /usr/local/bin/unisearch-auto-sync.sh >> /var/log/unisearch-sync.log 2>&1") | crontab -
+    
+    log_success "定时自动同步已设置（每小时执行一次）"
+    log_info "同步脚本位置: /usr/local/bin/unisearch-sync-config.sh"
+    log_info "同步日志位置: /var/log/unisearch-sync.log"
+    echo
+    log_info "工作原理："
+    log_info "  1. Watchtower 每小时检查并更新 Docker 镜像"
+    log_info "  2. 定时任务每小时从 Git 仓库同步配置文件"
+    log_info "  3. 如果配置有变化，自动重启服务应用新配置"
+    echo
+    log_warning "注意事项："
+    log_info "  - 确保项目是通过 git clone 部署的"
+    log_info "  - 确保服务器可以访问 Git 仓库"
+    log_info "  - 本地修改可能会被覆盖，请提前备份"
+}
+
+# 手动同步配置
+sync_config() {
+    log_info "=== 手动同步配置 ==="
+    echo
+    
+    check_root "sync"
+    
+    if [ -f "${SCRIPT_DIR}/sync-config.sh" ]; then
+        "${SCRIPT_DIR}/sync-config.sh"
+    else
+        log_error "同步脚本不存在: ${SCRIPT_DIR}/sync-config.sh"
+        exit 1
+    fi
+}
+
 # ===== 备份相关函数 =====
 
 # 备份数据
@@ -751,6 +881,12 @@ main() {
             ;;
         update)
             update_service
+            ;;
+        sync)
+            sync_config
+            ;;
+        setup-auto-sync)
+            setup_auto_sync
             ;;
         status)
             show_status
