@@ -94,24 +94,29 @@ services:
       - "com.unisearch.version=latest"
       - "com.centurylinklabs.watchtower.enable=true"  # 启用 Watchtower 自动更新
 
-  # 监控服务
+  # 监控服务 - Watchtower（自动更新镜像）
   watchtower:
     image: containrrr/watchtower:1.7.1  # 使用明确的新版本，支持 Docker API 1.44+
     container_name: unisearch-watchtower
     restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /opt/unisearch:/opt/unisearch:ro  # 挂载项目目录（只读）
     networks:
       - unisearch-network
     environment:
       - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_POLL_INTERVAL=3600
+      - WATCHTOWER_POLL_INTERVAL=3600  # 每小时检查一次
       - WATCHTOWER_INCLUDE_STOPPED=true
       - WATCHTOWER_REVIVE_STOPPED=false
       - DOCKER_API_VERSION=1.44  # 明确指定 API 版本
+      - WATCHTOWER_LIFECYCLE_HOOKS=true  # 启用生命周期钩子
+      - WATCHTOWER_HTTP_API_UPDATE=true  # 启用 HTTP API
+      - WATCHTOWER_HTTP_API_TOKEN=${WATCHTOWER_TOKEN:-unisearch-update-token}
     command: unisearch
     labels:
       - "com.unisearch.service=monitoring"
+      - "com.unisearch.auto-update=true"
 
   # 监控服务
   uptime-kuma:

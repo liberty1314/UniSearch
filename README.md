@@ -274,6 +274,10 @@ sudo ./scripts/deploy.sh init
 - 配置 UFW 防火墙
 - 创建必要的目录和配置文件
 
+**重要提示：**
+- 建议使用 `git clone` 方式部署项目，以支持自动配置同步
+- 如果使用其他方式部署，需要手动同步配置文件
+
 #### 3️⃣ 配置管理员密码
 
 **生成密码哈希：**
@@ -314,7 +318,31 @@ sudo ./scripts/deploy.sh status
 sudo ./scripts/deploy.sh logs
 ```
 
-#### 4️⃣ SSL 证书配置
+#### 5️⃣ 设置自动更新（推荐）
+
+```bash
+# 设置定时自动同步配置文件
+sudo ./scripts/deploy.sh setup-auto-sync
+```
+
+**自动更新机制：**
+- ✅ Watchtower 每小时自动检查并更新 Docker 镜像
+- ✅ 定时任务每小时从 Git 仓库同步配置文件
+- ✅ 配置变更时自动重启服务应用新配置
+- ✅ 完全自动化，无需手动干预
+
+**工作流程：**
+1. 本地修改代码并推送到 Git 仓库
+2. 本地构建并推送 Docker 镜像到 Docker Hub
+3. 服务器自动检测并更新镜像和配置
+4. 自动重启服务应用最新版本
+
+**注意事项：**
+- 确保项目是通过 `git clone` 部署的
+- 确保服务器可以访问 Git 仓库
+- 服务器上的本地修改可能会被覆盖
+
+#### 6️⃣ SSL 证书配置
 
 **备案期间（临时访问）：**
 ```bash
@@ -349,6 +377,15 @@ sudo ./scripts/deploy.sh stop
 
 # 重启服务
 sudo ./scripts/deploy.sh restart
+
+# 手动更新（镜像+配置）
+sudo ./scripts/deploy.sh update
+
+# 仅同步配置文件
+sudo ./scripts/deploy.sh sync
+
+# 设置自动同步
+sudo ./scripts/deploy.sh setup-auto-sync
 
 # 查看状态
 sudo ./scripts/deploy.sh status
