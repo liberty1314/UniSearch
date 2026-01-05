@@ -12,10 +12,16 @@ services:
     ports:
       - "3000:80"    # 前端端口（Nginx）
       - "8888:8888"  # 后端API端口
+    env_file:
+      - env.prod           # 通用配置
+      - .env.local         # 敏感配置（如果存在）
     environment:
       # 基础配置
       - TZ=Asia/Shanghai
       - PORT=8888
+      
+      # 管理员认证（从 .env.local 读取）
+      - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
       
       # 缓存配置
       - CACHE_ENABLED=true
@@ -58,9 +64,6 @@ services:
       # 并发配置（自动计算）
       - CONCURRENCY=50
       - PLUGIN_COUNT=20
-      
-      # 管理员认证配置
-      - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
     volumes:
       # 缓存数据持久化
       - unisearch-cache:/app/cache

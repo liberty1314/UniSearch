@@ -292,18 +292,28 @@ sudo ./scripts/deploy.sh init
 
 **配置环境变量：**
 ```bash
-# 编辑生产环境配置文件
-vim deploy/env.prod
+# 1. 复制配置模板
+cp deploy/.env.local.example deploy/.env.local
 
-# 找到 ADMIN_PASSWORD_HASH 配置项，替换为生成的哈希值
-ADMIN_PASSWORD_HASH=$2a$10$RGtHe7PyEsFfnffZ9JaxJeQ9LwoiSOGpJaxeo1kqtwfpHcVRPiFTS
+# 2. 编辑配置文件
+vim deploy/.env.local
+
+# 3. 添加密码哈希（替换为生成的哈希值）
+ADMIN_PASSWORD_HASH=$2a$10$RGtHe7PyEsFfnffZ9JaxJeQ9LwoiSOGpJaxeo1kqtwfpHcadPiFTS
+
+# 4. 设置文件权限（重要！）
+chmod 600 deploy/.env.local
 ```
 
 **默认管理员账号：**
 - 用户名：`admin`
-- 密码：`admin123`（建议修改）
+- 密码：`admin123.com`（建议修改）
 
-⚠️ **安全提示**：生产环境部署前，请务必修改默认密码！
+⚠️ **安全提示**：
+- 生产环境部署前，请务必修改默认密码
+- 密码哈希必须配置在 `deploy/.env.local` 文件中
+- 不要将 `.env.local` 文件提交到 Git 仓库
+- 详细安全指南请参考：[安全部署指南](docs/SECURITY_GUIDE.md)
 
 #### 4️⃣ 启动服务
 
@@ -625,7 +635,41 @@ sudo ./scripts/ssl.sh temp
 ```
 备案完成后再申请 SSL 证书。
 
-**Q: SSL 证书自动续期吗？**
+**Q: 管理员登录失败怎么办？**
+
+A: 请按以下步骤排查：
+
+1. **检查配置文件是否存在：**
+```bash
+ls -la deploy/.env.local
+```
+
+2. **验证密码哈希配置：**
+```bash
+grep ADMIN_PASSWORD_HASH deploy/.env.local
+```
+
+3. **使用测试脚本验证配置：**
+```bash
+./scripts/test-env.sh
+```
+
+4. **检查容器环境变量：**
+```bash
+docker exec unisearch env | grep ADMIN_PASSWORD_HASH
+```
+
+5. **如果配置正确但仍然失败，重启服务：**
+```bash
+sudo ./scripts/deploy.sh restart
+```
+
+常见问题：
+- `.env.local` 文件不存在 → 复制 `.env.local.example` 并配置
+- 密码哈希为空 → 使用 `gen_admin_password.sh` 生成
+- 容器中没有环境变量 → 检查 `docker-compose.prod.yml` 配置
+
+**Q: SS
 
 A: 是的。使用 HTTP 验证方式申请的证书会自动续期（每天凌晨 3 点检查）。
 
