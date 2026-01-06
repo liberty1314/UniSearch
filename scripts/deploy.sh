@@ -6,6 +6,18 @@
 
 set -e
 
+# 配置 Go 环境（处理 sudo 环境变量丢失问题）
+if ! command -v go &> /dev/null; then
+    # 尝试常见的 Go 安装路径
+    if [ -f "/usr/local/go/bin/go" ]; then
+        export PATH="/usr/local/go/bin:$PATH"
+        export GOPATH="$HOME/go"
+        export PATH="$PATH:$GOPATH/bin"
+    elif [ -f "$HOME/.local/bin/go" ]; then
+        export PATH="$HOME/.local/bin:$PATH"
+    fi
+fi
+
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -368,6 +380,222 @@ create_volumes() {
     fi
 }
 
+# 检查并配置 .env.local
+check_and_configure_env() {
+    local env_local="${DEPLOY_DIR}/.env.local"
+    local env_prod="${DEPLOY_DIR}/env.prod"
+    
+    # 检查 .env.local 是否存在
+    if [ ! -f "$env_local" ]; then
+        log_warning ".env.local 文件不存在"
+        
+        # 检查 env.prod 是否存在
+        if [ ! -f "$env_prod" ]; then
+            log_error "env.prod 文件不存在: $env_prod"
+            exit 1
+        fi
+        
+        log_info "从 env.prod 创建 .env.local..."
+        cp "$env_prod" "$env_local"
+        chmod 600 "$env_local"
+        log_success ".env.local 创建成功"
+        
+        # 直接提示配置密码（不再询问是否配置）
+        echo ""
+        log_warning "检测到首次部署，需要配置管理员密码"
+        echo ""
+        
+        # 提示用户输入密码
+        read -p "请输入管理员密码（至少6个字符）: " -s admin_password
+        echo ""
+        
+        if [ -z "$admin_password" ]; then
+            log_error "密码不能为空"
+            exit 1
+        fi
+        
+        if [ ${#admin_password} -lt 6 ]; then
+            log_error "密码长度至少为 6 个字符"
+            exit 1
+        fi
+        
+        # 生成密码哈希
+        log_info "正在生成密码哈希..."
+        
+        # 临时禁用 set -e，手动处理错误
+        set +e
+        
+        # 创建临时目录
+        TEMP_DIR="/tmp/gen_hash_$$"
+        log_info "创建临时目录: $TEMP_DIR"
+        mkdir -p "$TEMP_DIR"
+        if [ $? -ne 0 ]; then
+            log_error "无法创建临时目录: $TEMP_DIR"
+            set -e
+            exit 1
+        fi
+        
+        log_info "进入临时目录..."
+        cd "$TEMP_DIR"
+        if [ $? -ne 0 ]; then
+            log_error "无法进入临时目录: $TEMP_DIR"
+            set -e
+            exit 1
+        fi
+        
+        # 配置 Go 代理
+        export GOPROXY=https://goproxy.cn,https://goproxy.io,direct
+        export GOSUMDB=sum.golang.google.cn
+        
+        # 创建 Go 模块
+        log_info "创建 Go 模块文件..."
+        cat > go.mod << 'EOF'
+module gen_hash
+go 1.22
+EOF
+        
+        # 创建主程序
+        cat > main.go << 'EOF'
+package main
+import (
+	"fmt"
+	"os"
+	"golang.org/x/crypto/bcrypt"
+)
+func main() {
+	if len(os.Args) < 2 {
+		os.Exit(1)
+	}
+	password := os.Args[1]
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		os.Exit(1)
+	}
+	fmt.Println(string(hash))
+}
+EOF
+        
+        # 下载依赖并生成哈希
+        log_info "下载 Go 依赖包..."
+        go mod tidy 2>&1 | grep -v "finding module" | grep -v "go: downloading" | grep -v "^$" || true
+        
+        log_info "执行密码哈希生成..."
+        HASH=$(go run main.go "$admin_password" 2>&1 | tail -1)
+        local hash_exit_code=$?
+        
+        # 清理
+        cd /tmp 2>/dev/null || cd /
+        rm -rf "$TEMP_DIR"
+        
+        # 恢复 set -e
+        set -e
+        
+        # 检查执行结果
+        if [ $hash_exit_code -ne 0 ]; then
+            log_error "密码哈希生成命令执行失败（退出码: $hash_exit_code）"
+            log_info "请手动运行: ./scripts/gen_admin_password.sh '你的密码'"
+            exit 1
+        fi
+        
+        # 验证哈希格式
+        if [ -z "$HASH" ]; then
+            log_error "密码哈希为空"
+            log_info "请手动运行: ./scripts/gen_admin_password.sh '你的密码'"
+            exit 1
+        fi
+        
+        if [[ ! "$HASH" =~ ^\$2[ab]\$ ]]; then
+            log_error "密码哈希格式无效: $HASH"
+            log_info "请手动运行: ./scripts/gen_admin_password.sh '你的密码'"
+            exit 1
+        fi
+        
+        # 配置到 .env.local（使用 grep -v 删除旧行，避免 sed 转义问题）
+        if grep -q "^ADMIN_PASSWORD_HASH=" "$env_local"; then
+            grep -v "^ADMIN_PASSWORD_HASH=" "$env_local" > "${env_local}.tmp"
+            mv "${env_local}.tmp" "$env_local"
+        fi
+        echo "ADMIN_PASSWORD_HASH='${HASH}'" >> "$env_local"
+        
+        log_success "管理员密码配置完成"
+        echo ""
+    else
+        # 检查密码是否已配置
+        if ! grep -q "^ADMIN_PASSWORD_HASH=.\+" "$env_local"; then
+            log_warning "检测到 .env.local 存在但未配置管理员密码"
+            echo ""
+            
+            read -p "是否现在配置管理员密码? (y/N): " -n 1 -r
+            echo ""
+            
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                read -p "请输入管理员密码（至少6个字符）: " -s admin_password
+                echo ""
+                
+                if [ -z "$admin_password" ] || [ ${#admin_password} -lt 6 ]; then
+                    log_error "密码无效"
+                    log_info "请手动运行: ./scripts/gen_admin_password.sh '你的密码'"
+                    exit 1
+                fi
+                
+                # 生成并配置密码
+                log_info "正在生成密码哈希..."
+                TEMP_DIR="/tmp/gen_hash_$$"
+                mkdir -p "$TEMP_DIR"
+                cd "$TEMP_DIR"
+                export GOPROXY=https://goproxy.cn,https://goproxy.io,direct
+                export GOSUMDB=sum.golang.google.cn
+                cat > go.mod << 'EOF'
+module gen_hash
+go 1.22
+EOF
+                cat > main.go << 'EOF'
+package main
+import (
+	"fmt"
+	"os"
+	"golang.org/x/crypto/bcrypt"
+)
+func main() {
+	if len(os.Args) < 2 {
+		os.Exit(1)
+	}
+	password := os.Args[1]
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		os.Exit(1)
+	}
+	fmt.Println(string(hash))
+}
+EOF
+                go mod tidy > /dev/null 2>&1
+                HASH=$(go run main.go "$admin_password" 2>&1 | tail -1)
+                cd /tmp
+                rm -rf "$TEMP_DIR"
+                
+                if [[ ! "$HASH" =~ ^\$2[ab]\$ ]]; then
+                    log_error "密码哈希生成失败"
+                    exit 1
+                fi
+                
+                # 配置到 .env.local（使用 grep -v 删除旧行）
+                if grep -q "^ADMIN_PASSWORD_HASH=" "$env_local"; then
+                    grep -v "^ADMIN_PASSWORD_HASH=" "$env_local" > "${env_local}.tmp"
+                    mv "${env_local}.tmp" "$env_local"
+                fi
+                echo "ADMIN_PASSWORD_HASH='${HASH}'" >> "$env_local"
+                
+                log_success "管理员密码配置完成"
+                echo ""
+            else
+                log_warning "已跳过密码配置"
+                log_info "请稍后运行: ./scripts/gen_admin_password.sh '你的密码'"
+                exit 1
+            fi
+        fi
+    fi
+}
+
 # 启动新容器
 start_container() {
     log_info "启动容器..."
@@ -437,6 +665,9 @@ start_service() {
     check_root "start"
     check_docker
     
+    # 检查并配置 .env.local
+    check_and_configure_env
+    
     # 显示使用的镜像信息
     log_info "使用镜像: $FULL_IMAGE_NAME"
     
@@ -475,6 +706,9 @@ update_service() {
     
     check_root "update"
     check_docker
+    
+    # 检查并配置 .env.local
+    check_and_configure_env
     
     # 强制使用 latest 标签
     local update_image="${DOCKER_USERNAME}/${IMAGE_NAME}:latest"

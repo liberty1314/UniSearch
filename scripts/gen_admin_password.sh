@@ -233,15 +233,28 @@ prompt_install_go() {
 generate_hash() {
     local password="$1"
     
-    log_info "正在生成密码哈希..."
+    # 所有日志输出到 stderr，避免污染返回值
+    log_info "正在生成密码哈希..." >&2
     
-    # 进入 backend 目录
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    cd "$SCRIPT_DIR/../backend"
+    # 创建临时工作目录
+    TEMP_DIR="/tmp/gen_hash_$$"
+    mkdir -p "$TEMP_DIR"
+    cd "$TEMP_DIR"
     
-    # 创建临时 Go 文件
-    TEMP_GO_FILE="/tmp/gen_hash_temp_$$.go"
-    cat > "$TEMP_GO_FILE" << 'EOF'
+    # 配置 Go 代理（使用国内镜像）
+    export GOPROXY=https://goproxy.cn,https://goproxy.io,direct
+    export GOSUMDB=sum.golang.google.cn
+    
+    # 创建 Go 模块
+    log_info "初始化 Go 模块..." >&2
+    cat > go.mod << 'EOF'
+module gen_hash
+
+go 1.22
+EOF
+    
+    # 创建主程序文件
+    cat > main.go << 'EOF'
 package main
 
 import (
@@ -252,14 +265,14 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("用法: go run gen_hash.go <密码>")
+		fmt.Fprintf(os.Stderr, "用法: go run main.go <密码>\n")
 		os.Exit(1)
 	}
 	
 	password := os.Args[1]
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		fmt.Println("生成哈希失败:", err)
+		fmt.Fprintf(os.Stderr, "生成哈希失败: %v\n", err)
 		os.Exit(1)
 	}
 	
@@ -267,19 +280,65 @@ func main() {
 }
 EOF
     
-    # 生成哈希
-    HASH=$(go run "$TEMP_GO_FILE" "$password" 2>&1)
+    # 初始化依赖（自动生成 go.sum）
+    log_info "下载依赖包（使用国内镜像）..." >&2
+    go mod tidy 2>&1 | grep -v "finding module" | grep -v "go: downloading" >&2 || true
+    
+    # 生成哈希（只捕获标准输出）
+    log_info "生成密码哈希..." >&2
+    HASH=$(go run main.go "$password" 2>&1 | grep '^\$2[ab]\$' | head -1)
     local exit_code=$?
     
-    # 清理临时文件
-    rm -f "$TEMP_GO_FILE"
+    # 清理临时目录
+    cd /tmp
+    rm -rf "$TEMP_DIR"
     
-    if [ $exit_code -ne 0 ]; then
-        log_error "密码哈希生成失败"
-        echo "$HASH"
+    # 验证哈希值格式（bcrypt 哈希以 $2a$ 或 $2b$ 开头）
+    if [ $exit_code -ne 0 ] || [ -z "$HASH" ] || [[ ! "$HASH" =~ ^\$2[ab]\$ ]]; then
+        log_error "密码哈希生成失败" >&2
+        
+        # 重新运行以显示错误信息
+        mkdir -p "$TEMP_DIR"
+        cd "$TEMP_DIR"
+        
+        export GOPROXY=https://goproxy.cn,https://goproxy.io,direct
+        export GOSUMDB=sum.golang.google.cn
+        
+        cat > go.mod << 'EOF'
+module gen_hash
+go 1.22
+EOF
+        cat > main.go << 'EOF'
+package main
+import (
+	"fmt"
+	"os"
+	"golang.org/x/crypto/bcrypt"
+)
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, "用法: go run main.go <密码>\n")
+		os.Exit(1)
+	}
+	password := os.Args[1]
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "生成哈希失败: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(string(hash))
+}
+EOF
+        echo "" >&2
+        log_error "详细错误信息：" >&2
+        go mod tidy >&2
+        go run main.go "$password" >&2
+        cd /tmp
+        rm -rf "$TEMP_DIR"
         exit 1
     fi
     
+    # 只输出哈希值到 stdout
     echo "$HASH"
 }
 
@@ -290,19 +349,85 @@ show_result() {
     echo ""
     log_success "密码哈希生成成功！"
     echo ""
-    log_warning "请将以下内容添加到 deploy/.env.local 文件中："
-    echo ""
     echo -e "${GREEN}ADMIN_PASSWORD_HASH='$hash'${NC}"
     echo ""
-    log_error "⚠️  重要提示：必须使用单引号包裹密码哈希！"
-    log_warning "   这样可以防止 \$ 符号被 Shell 转义"
+}
+
+# 自动配置密码到 .env.local
+auto_configure_password() {
+    local hash="$1"
+    
     echo ""
-    log_info "部署步骤："
-    echo "1. 编辑配置文件: vi deploy/.env.local"
-    echo "2. 添加配置（注意单引号）:"
-    echo -e "   ${GREEN}ADMIN_PASSWORD_HASH='$hash'${NC}"
-    echo "3. 设置文件权限: chmod 600 deploy/.env.local"
-    echo "4. 重启服务: sudo ./scripts/deploy.sh restart"
+    read -p "是否自动配置密码到 deploy/.env.local? (y/N): " -n 1 -r
+    echo ""
+    
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        log_info "已跳过自动配置"
+        echo ""
+        log_warning "手动配置步骤："
+        echo "1. 编辑配置文件: vi deploy/.env.local"
+        echo "2. 添加配置（注意单引号）:"
+        echo -e "   ${GREEN}ADMIN_PASSWORD_HASH='$hash'${NC}"
+        echo "3. 设置文件权限: chmod 600 deploy/.env.local"
+        echo "4. 重启服务: sudo ./scripts/deploy.sh restart"
+        echo ""
+        return 0
+    fi
+    
+    # 获取项目根目录
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+    DEPLOY_DIR="${PROJECT_ROOT}/deploy"
+    ENV_LOCAL="${DEPLOY_DIR}/.env.local"
+    ENV_PROD="${DEPLOY_DIR}/env.prod"
+    
+    # 检查 deploy 目录是否存在
+    if [ ! -d "$DEPLOY_DIR" ]; then
+        log_error "deploy 目录不存在: $DEPLOY_DIR"
+        return 1
+    fi
+    
+    # 检查 .env.local 是否存在
+    if [ ! -f "$ENV_LOCAL" ]; then
+        log_info ".env.local 不存在，从 env.prod 创建..."
+        
+        if [ ! -f "$ENV_PROD" ]; then
+            log_error "env.prod 文件不存在: $ENV_PROD"
+            return 1
+        fi
+        
+        cp "$ENV_PROD" "$ENV_LOCAL"
+        log_success ".env.local 创建成功"
+    fi
+    
+    # 配置密码哈希
+    log_info "配置密码哈希到 .env.local..."
+    
+    # 检查是否已存在 ADMIN_PASSWORD_HASH 配置
+    if grep -q "^ADMIN_PASSWORD_HASH=" "$ENV_LOCAL"; then
+        # 删除旧配置行，添加新配置
+        grep -v "^ADMIN_PASSWORD_HASH=" "$ENV_LOCAL" > "${ENV_LOCAL}.tmp"
+        mv "${ENV_LOCAL}.tmp" "$ENV_LOCAL"
+        echo "ADMIN_PASSWORD_HASH='${hash}'" >> "$ENV_LOCAL"
+        log_success "密码哈希已更新"
+    else
+        # 添加新配置
+        echo "" >> "$ENV_LOCAL"
+        echo "# 管理员密码哈希（自动配置）" >> "$ENV_LOCAL"
+        echo "ADMIN_PASSWORD_HASH='${hash}'" >> "$ENV_LOCAL"
+        log_success "密码哈希已添加"
+    fi
+    
+    # 设置文件权限
+    chmod 600 "$ENV_LOCAL"
+    log_success "文件权限已设置为 600"
+    
+    echo ""
+    log_success "密码配置完成！"
+    log_info "配置文件: $ENV_LOCAL"
+    echo ""
+    log_warning "下一步："
+    echo "  重启服务: sudo ./scripts/deploy.sh restart"
     echo ""
 }
 
@@ -346,6 +471,9 @@ main() {
     
     # 显示结果
     show_result "$HASH"
+    
+    # 自动配置密码
+    auto_configure_password "$HASH"
 }
 
 # 执行主函数
