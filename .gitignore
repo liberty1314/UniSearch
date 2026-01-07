@@ -266,6 +266,8 @@ demo/
 .venv
 
 cache/
+# 但保留后端代码中的cache包
+!backend/util/cache/
 
 # ===== 新增：Docker和Railway相关忽略规则 =====
 
