@@ -172,124 +172,131 @@ const AdminLogin: React.FC = () => {
                     </CardHeader>
 
                     <CardContent className="space-y-6">
-                        <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-                            <Label htmlFor="username" className="flex items-center gap-2 text-sm font-medium">
-                                <User className="w-4 h-4 text-orange-500 animate-bounce" style={{ animationDuration: '2s' }} />
-                                用户名
-                            </Label>
-                            <div className="relative group">
-                                <Input
-                                    id="username"
-                                    type="text"
-                                    placeholder="请输入用户名"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    onKeyDown={handleKeyPress}
-                                    disabled={isAdminLoading}
-                                    className="h-12 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all duration-200"
-                                />
-                                <div className="absolute inset-0 rounded-md bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-red-500/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                                {/* 输入框光标效果 */}
-                                {username && (
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.35s' }}>
-                            <Label htmlFor="password" className="flex items-center gap-2 text-sm font-medium">
-                                <Lock className="w-4 h-4 text-orange-500 animate-bounce" style={{ animationDuration: '2s', animationDelay: '0.1s' }} />
-                                管理员密码
-                            </Label>
-                            <div className="relative group">
-                                <Input
-                                    id="password"
-                                    type={showPassword ? 'text' : 'password'}
-                                    placeholder="请输入管理员密码"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    onKeyDown={handleKeyPress}
-                                    disabled={isAdminLoading}
-                                    className="h-12 pr-12 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all duration-200"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-400 transition-colors duration-200 z-10"
-                                    tabIndex={-1}
-                                >
-                                    {showPassword ? (
-                                        <EyeOff className="w-5 h-5" />
-                                    ) : (
-                                        <Eye className="w-5 h-5" />
-                                    )}
-                                </button>
-                                <div className="absolute inset-0 rounded-md bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-red-500/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                                {/* 输入框光标效果 */}
-                                {password && (
-                                    <div className="absolute right-12 top-1/2 -translate-y-1/2">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="animate-fade-in" style={{ animationDelay: '0.4s' }}>
-                            <Button
-                                onClick={handleButtonClick}
-                                disabled={isAdminLoading || !username.trim() || !password.trim()}
-                                className="w-full h-12 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white font-medium shadow-lg hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden group"
-                            >
-                                {/* 按钮光泽效果 */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
-
-                                {/* 涟漪效果 */}
-                                {buttonRipples.map((ripple) => (
-                                    <span
-                                        key={ripple.id}
-                                        className="absolute bg-white/30 rounded-full animate-ripple pointer-events-none"
-                                        style={{
-                                            left: ripple.x,
-                                            top: ripple.y,
-                                            width: 0,
-                                            height: 0,
-                                        }}
+                        <form onSubmit={(e) => { e.preventDefault(); handleAdminLogin(); }} className="space-y-6">
+                            <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+                                <Label htmlFor="username" className="flex items-center gap-2 text-sm font-medium">
+                                    <User className="w-4 h-4 text-orange-500 animate-bounce" style={{ animationDuration: '2s' }} />
+                                    用户名
+                                </Label>
+                                <div className="relative group">
+                                    <Input
+                                        id="username"
+                                        name="username"
+                                        type="text"
+                                        autoComplete="username"
+                                        placeholder="请输入用户名"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        onKeyDown={handleKeyPress}
+                                        disabled={isAdminLoading}
+                                        className="h-12 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all duration-200"
                                     />
-                                ))}
-
-                                {/* 脉冲波效果 */}
-                                <div className="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    <div className="absolute inset-0 rounded-md bg-white/10 animate-ping" style={{ animationDuration: '1.5s' }}></div>
-                                </div>
-
-                                {/* 边框光效 */}
-                                <div className="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-white to-transparent animate-border-flow"></div>
-                                    <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-white to-transparent animate-border-flow" style={{ animationDelay: '0.5s' }}></div>
-                                </div>
-
-                                <span className="relative z-10">
-                                    {isAdminLoading ? (
-                                        <span className="flex items-center gap-2">
-                                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            登录中...
-                                        </span>
-                                    ) : (
-                                        <span className="flex items-center gap-2">
-                                            登录后台
-                                            <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                            </svg>
-                                        </span>
+                                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-red-500/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                                    {/* 输入框光标效果 */}
+                                    {username && (
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                        </div>
                                     )}
-                                </span>
-                            </Button>
-                        </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.35s' }}>
+                                <Label htmlFor="password" className="flex items-center gap-2 text-sm font-medium">
+                                    <Lock className="w-4 h-4 text-orange-500 animate-bounce" style={{ animationDuration: '2s', animationDelay: '0.1s' }} />
+                                    管理员密码
+                                </Label>
+                                <div className="relative group">
+                                    <Input
+                                        id="password"
+                                        name="password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        autoComplete="current-password"
+                                        placeholder="请输入管理员密码"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        onKeyDown={handleKeyPress}
+                                        disabled={isAdminLoading}
+                                        className="h-12 pr-12 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all duration-200"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-400 transition-colors duration-200 z-10"
+                                        tabIndex={-1}
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="w-5 h-5" />
+                                        ) : (
+                                            <Eye className="w-5 h-5" />
+                                        )}
+                                    </button>
+                                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-red-500/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                                    {/* 输入框光标效果 */}
+                                    {password && (
+                                        <div className="absolute right-12 top-1/2 -translate-y-1/2">
+                                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="animate-fade-in" style={{ animationDelay: '0.4s' }}>
+                                <Button
+                                    type="submit"
+                                    onClick={handleButtonClick}
+                                    disabled={isAdminLoading || !username.trim() || !password.trim()}
+                                    className="w-full h-12 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white font-medium shadow-lg hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden group"
+                                >
+                                    {/* 按钮光泽效果 */}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
+
+                                    {/* 涟漪效果 */}
+                                    {buttonRipples.map((ripple) => (
+                                        <span
+                                            key={ripple.id}
+                                            className="absolute bg-white/30 rounded-full animate-ripple pointer-events-none"
+                                            style={{
+                                                left: ripple.x,
+                                                top: ripple.y,
+                                                width: 0,
+                                                height: 0,
+                                            }}
+                                        />
+                                    ))}
+
+                                    {/* 脉冲波效果 */}
+                                    <div className="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        <div className="absolute inset-0 rounded-md bg-white/10 animate-ping" style={{ animationDuration: '1.5s' }}></div>
+                                    </div>
+
+                                    {/* 边框光效 */}
+                                    <div className="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-white to-transparent animate-border-flow"></div>
+                                        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-white to-transparent animate-border-flow" style={{ animationDelay: '0.5s' }}></div>
+                                    </div>
+
+                                    <span className="relative z-10">
+                                        {isAdminLoading ? (
+                                            <span className="flex items-center gap-2">
+                                                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                登录中...
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-2">
+                                                登录后台
+                                                <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                                </svg>
+                                            </span>
+                                        )}
+                                    </span>
+                                </Button>
+                            </div>
+                        </form>
                     </CardContent>
                 </Card>
             </div>

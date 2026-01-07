@@ -38,19 +38,8 @@ services:
     restart: unless-stopped
     ports:
       - "8888:8888"
-    environment:
-      - PORT=8888
-      - CHANNELS=tgsearchers3,SharePanBaidu,yunpanxunlei,tianyifc,BaiduCloudDisk
-      - CACHE_ENABLED=true
-      - CACHE_PATH=/app/cache
-      - CACHE_MAX_SIZE=100
-      - CACHE_TTL=60
-      - ASYNC_PLUGIN_ENABLED=true
-      - ASYNC_RESPONSE_TIMEOUT=4
-      - ASYNC_MAX_BACKGROUND_WORKERS=20
-      - ASYNC_MAX_BACKGROUND_TASKS=100
-      - ASYNC_CACHE_TTL_HOURS=1
-      - TZ=Asia/Shanghai
+    env_file:
+      - .env
     volumes:
       - backend-cache:/app/cache
     networks:

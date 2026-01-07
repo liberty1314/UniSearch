@@ -123,7 +123,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                 {/* 普通用户：显示 API Key 设置入口 */}
                 {!isAdmin && (
                   <Link
-                    to="/api-key-settings"
+                    to="/settings/apikey"
                     className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
                     title="API Key 设置"
                   >
@@ -222,7 +222,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                     {/* 普通用户：API Key 设置 */}
                     {!isAdmin && (
                       <Link
-                        to="/api-key-settings"
+                        to="/settings/apikey"
                         onClick={() => setIsMobileMenuOpen(false)}
                         className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                       >

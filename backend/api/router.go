@@ -31,9 +31,16 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 		// 认证接口（不需要认证，由中间件公开路径处理）
 		auth := api.Group("/auth")
 		{
-			auth.POST("/login", LoginHandler)
+			auth.POST("/login", LoginHandler(apiKeyService))
 			auth.POST("/verify", VerifyHandler)
 			auth.POST("/logout", LogoutHandler)
+		}
+		
+		// 用户路由组（需要 JWT 认证）
+		user := api.Group("/user")
+		user.Use(JWTMiddleware()) // 应用 JWT 中间件
+		{
+			user.GET("/apikey-info", GetUserAPIKeyInfoHandler(apiKeyService))
 		}
 		
 		// 管理员登录接口（不需要认证）

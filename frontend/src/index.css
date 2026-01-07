@@ -427,3 +427,13 @@ body {
     0 0 0 8px rgba(0, 122, 255, 0.18),
     0 16px 40px rgba(0, 0, 0, 0.55);
 }
+
+/* Toast 关闭按钮样式 - 默认隐藏，悬停时显示 */
+[data-sonner-toast] [data-close-button] {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+[data-sonner-toast]:hover [data-close-button] {
+  opacity: 1;
+}

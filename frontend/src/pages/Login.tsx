@@ -19,7 +19,7 @@ const Login: React.FC = () => {
     const navigate = useNavigate();
 
     // 认证状态管理
-    const { setApiKey } = useAuthStore();
+    const { setToken } = useAuthStore();
 
     // 用户登录表单状态
     const [apiKey, setApiKeyInput] = useState('');
@@ -73,18 +73,18 @@ const Login: React.FC = () => {
         setIsUserLoading(true);
 
         try {
-            // 验证 API Key 是否有效
-            const isValid = await AuthService.validateApiKey(apiKey.trim());
+            // 使用 API Key 登录（调用登录接口获取 JWT Token）
+            const response = await AuthService.loginWithApiKey(apiKey.trim());
 
-            if (isValid) {
-                // 保存到状态管理
-                setApiKey(apiKey.trim());
+            if (response && response.token) {
+                // 保存 Token 和 API Key 到状态管理（API Key 登录为普通用户）
+                setToken(response.token, response.username || 'user', false, apiKey.trim());
                 toast.success('登录成功！');
 
                 // 跳转到首页
                 navigate('/');
             } else {
-                toast.error('API Key 无效或已过期');
+                toast.error('登录失败：服务器未返回有效令牌');
             }
         } catch (error: any) {
             console.error('用户登录失败:', error);

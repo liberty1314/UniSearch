@@ -67,7 +67,7 @@ X-API-Key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ### 1. 用户登录
 
-获取 JWT Token 用于后续 API 调用。
+获取 JWT Token 用于后续 API 调用。支持普通用户登录和 API Key 登录。
 
 **接口地址**: `/api/auth/login`  
 **请求方法**: `POST`  
@@ -78,15 +78,22 @@ X-API-Key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 | 参数名 | 类型 | 必填 | 描述 |
 |--------|------|------|------|
-| username | string | 是 | 用户名 |
-| password | string | 是 | 密码 |
+| username | string | 是 | 用户名（API Key 登录时固定为 "user"） |
+| password | string | 是 | 密码（API Key 登录时为 API Key 字符串） |
 
 **请求示例**:
 
 ```json
+// 普通用户登录
 {
   "username": "admin",
   "password": "password123"
+}
+
+// API Key 登录
+{
+  "username": "user",
+  "password": "sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0"
 }
 ```
 
@@ -108,12 +115,23 @@ X-API-Key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 }
 ```
 
+```json
+{
+  "error": "API Key 无效或已过期"
+}
+```
+
 **状态码**:
 - `200`: 登录成功
 - `400`: 参数错误
-- `401`: 用户名或密码错误
+- `401`: 用户名或密码错误 / API Key 无效
 - `403`: 认证功能未启用
 - `500`: 服务器内部错误
+
+**重要说明**:
+- API Key 登录时，用户名必须为 "user"，密码为完整的 API Key（格式：`sk-` + 40位十六进制）
+- API Key 登录成功后会返回 JWT Token，后续请求使用该 Token 进行认证
+- JWT Token 有效期默认为 24 小时
 
 ---
 
@@ -167,6 +185,98 @@ curl -X POST http://localhost:8888/api/auth/verify \
   "message": "退出成功"
 }
 ```
+
+---
+
+## 用户 API
+
+用户 API 用于普通用户查看自己的 API Key 信息，需要 JWT Token 认证。
+
+### 1. 获取用户 API Key 详情
+
+获取当前登录用户的 API Key 详细信息，包括有效期、使用状态等。
+
+**接口地址**: `/api/user/apikey-info`  
+**请求方法**: `GET`  
+**是否需要认证**: 是（需要 JWT Token）
+
+**请求头**:
+```
+Authorization: Bearer <jwt_token>
+X-API-Key: <api_key>
+```
+
+**注意**: 
+- 必须同时提供 JWT Token（通过 API Key 登录获得）和 API Key
+- JWT Token 用于身份认证
+- API Key 用于查询具体信息
+
+**请求示例**:
+
+```bash
+curl -X GET http://localhost:8888/api/user/apikey-info \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "X-API-Key: sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0"
+```
+
+**成功响应**:
+
+```json
+{
+  "key": "sk-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+  "status": "active",
+  "first_used_at": "2026-01-05 19:00:00",
+  "expires_at": "2026-02-04 19:00:00",
+  "validity_period": "30天",
+  "remaining_days": 25,
+  "description": "测试用密钥"
+}
+```
+
+**字段说明**:
+- `key`: API Key 字符串
+- `status`: 状态（`active` 活跃 / `expired` 已过期）
+- `first_used_at`: 首次使用时间（北京时间，格式：YYYY-MM-DD HH:mm:ss）
+  - 如果为 `null`，表示该 Key 尚未使用
+- `expires_at`: 到期时间（北京时间，格式：YYYY-MM-DD HH:mm:ss）
+- `validity_period`: 有效期描述（如"30天"）
+- `remaining_days`: 剩余天数（整数）
+- `description`: 密钥描述信息
+
+**错误响应**:
+
+```json
+{
+  "error": "缺少 API Key",
+  "code": "APIKEY_MISSING"
+}
+```
+
+```json
+{
+  "error": "API Key 不存在",
+  "code": "APIKEY_NOT_FOUND"
+}
+```
+
+```json
+{
+  "error": "未授权：需要 JWT 令牌",
+  "code": "JWT_TOKEN_REQUIRED"
+}
+```
+
+**状态码**:
+- `200`: 获取成功
+- `400`: 缺少 API Key
+- `401`: 未授权（缺少或无效的 JWT Token）
+- `404`: API Key 不存在
+- `500`: 服务器内部错误
+
+**重要说明**:
+- 所有时间字段均已转换为北京时间（UTC+8）
+- 有效期从首次使用时开始计算
+- 未使用的 Key 不会过期，`first_used_at` 为 `null`
 
 ---
 

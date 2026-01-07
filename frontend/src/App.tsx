@@ -6,6 +6,7 @@ import Home from '@/pages/Home';
 import Login from '@/pages/Login';
 import AdminLogin from '@/pages/AdminLogin';
 import Admin from '@/pages/Admin';
+import UserApiKeySettings from '@/pages/UserApiKeySettings';
 import { useAuthStore } from '@/stores/authStore';
 import PageLoader from '@/components/PageLoader';
 
@@ -105,6 +106,14 @@ const App: React.FC = () => {
                   </AdminRoute>
                 }
               />
+              <Route
+                path="/settings/apikey"
+                element={
+                  <ProtectedRoute>
+                    <UserApiKeySettings />
+                  </ProtectedRoute>
+                }
+              />
               {/* 404 页面 */}
               <Route path="*" element={
                 <div className="min-h-screen flex items-center justify-center pt-16">
@@ -132,8 +141,9 @@ const App: React.FC = () => {
           <Toaster
             position="top-right"
             toastOptions={{
-              duration: 4000,
+              duration: 2000,
             }}
+            closeButton
           />
         </div>
       </Router>

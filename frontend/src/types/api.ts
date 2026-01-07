@@ -188,6 +188,7 @@ export interface AdminLoginRequest {
 export interface AdminLoginResponse {
   token: string;
   expires_at: number;
+  username?: string; // 可选字段，用于 API Key 登录
 }
 
 /**

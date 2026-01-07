@@ -162,6 +162,37 @@ func AdminMiddleware() gin.HandlerFunc {
 	}
 }
 
+// JWTMiddleware JWT 专用中间件（仅验证 JWT Token）
+func JWTMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 1. 提取 JWT Token
+		token := extractBearerToken(c)
+		if token == "" {
+			c.JSON(401, gin.H{
+				"error": "未授权：需要 JWT 令牌",
+				"code":  "JWT_TOKEN_REQUIRED",
+			})
+			c.Abort()
+			return
+		}
+
+		// 2. 验证 JWT
+		claims, err := util.ValidateToken(token, config.AppConfig.AuthJWTSecret)
+		if err != nil {
+			c.JSON(401, gin.H{
+				"error": "未授权：令牌无效或已过期",
+				"code":  "JWT_TOKEN_INVALID",
+			})
+			c.Abort()
+			return
+		}
+
+		c.Set("username", claims.Username)
+		c.Set("is_admin", claims.IsAdmin)
+		c.Next()
+	}
+}
+
 // extractBearerToken 从请求头提取 Bearer Token
 func extractBearerToken(c *gin.Context) string {
 	authHeader := c.GetHeader("Authorization")

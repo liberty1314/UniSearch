@@ -34,6 +34,25 @@ export class AuthService {
     }
 
     /**
+     * 使用 API Key 登录（获取 JWT Token）
+     * @param apiKey API Key 字符串
+     * @returns 登录响应，包含 token 和过期时间
+     */
+    static async loginWithApiKey(apiKey: string): Promise<AdminLoginResponse> {
+        const request: AdminLoginRequest = {
+            username: 'user',
+            password: apiKey,
+        };
+        const response = await apiClient.post<AdminLoginResponse>('/auth/login', request);
+
+        if (!response.data) {
+            throw new Error('登录失败：服务器未返回有效数据');
+        }
+
+        return response.data;
+    }
+
+    /**
      * 验证 API Key 是否有效
      * @param apiKey API Key 字符串
      * @returns 是否有效
@@ -49,6 +68,21 @@ export class AuthService {
             // 如果请求失败，说明 API Key 无效
             return false;
         }
+    }
+
+    /**
+     * 获取用户 API Key 详情
+     * @param apiKey API Key 字符串（可选，拦截器会自动从 authStore 获取）
+     * @returns API Key 详细信息
+     */
+    static async getUserApiKeyInfo(apiKey?: string): Promise<any> {
+        const response = await apiClient.get('/user/apikey-info');
+
+        if (!response.data) {
+            throw new Error('获取 API Key 信息失败：服务器未返回有效数据');
+        }
+
+        return response.data;
     }
 
     /**

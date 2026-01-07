@@ -40,6 +40,7 @@ DOCKER_USERNAME="${1:-$DEFAULT_USERNAME}"
 IMAGE_NAME="${2:-$DEFAULT_IMAGE}"
 VERSION="${3:-$DEFAULT_VERSION}"
 FULL_IMAGE_NAME="${DOCKER_USERNAME}/${IMAGE_NAME}"
+TEST_IMAGE_TAG="${IMAGE_NAME}:local-test"
 
 # 日志函数
 log_info() {
@@ -66,20 +67,17 @@ show_usage() {
     echo "  $0 [选项] [username] [image] [version]"
     echo
     echo "选项:"
-    echo "  --no-run              构建后不在本地运行容器"
+    echo "  --no-run              构建后不在本地运行容器测试"
     echo "  -h, --help            显示帮助信息"
+    echo
+    echo "流程:"
+    echo "  1. 构建本地架构镜像 -> 2. 本地运行测试 -> 3. 询问是否推送 -> 4. 多架构构建并推送"
     echo
     echo "默认配置:"
     echo "  Docker Hub用户名: $DEFAULT_USERNAME"
     echo "  镜像名称: $DEFAULT_IMAGE"
     echo "  版本号: $DEFAULT_VERSION"
     echo "  本地运行: 是"
-    echo
-    echo "示例:"
-    echo "  $0                                    # 使用默认配置并在本地运行"
-    echo "  $0 --no-run                           # 构建但不在本地运行"
-    echo "  $0 myuser myapp 2.0.0                 # 自定义配置"
-    echo "  $0 --no-run myuser myapp 2.0.0        # 自定义配置且不在本地运行"
     echo
 }
 
@@ -140,14 +138,151 @@ setup_buildx() {
     log_success "buildx构建器配置完成"
 }
 
-# 构建多架构镜像
-build_multiarch_image() {
-    log_info "开始构建多架构镜像..."
+# 构建本地测试镜像
+build_local_test_image() {
+    log_info "Step 1: 构建本地测试镜像..."
+    log_info "注意：为了进行本地功能测试，将仅构建适配当前机器架构的镜像并加载到本地 Docker。"
+    
+    # 构建并加载到本地 Docker Daemon (--load)
+    # 不指定 --platform，让 Docker 自动选择当前机器架构
+    docker buildx build \
+        --load \
+        --file Dockerfile \
+        --tag "${TEST_IMAGE_TAG}" \
+        .
+    
+    if [ $? -eq 0 ]; then
+        log_success "本地测试镜像构建成功: ${TEST_IMAGE_TAG}"
+    else
+        log_error "本地测试镜像构建失败"
+        exit 1
+    fi
+}
+
+# 运行本地容器进行测试
+run_local_container_test() {
+    echo
+    log_info "Step 2: 启动本地容器进行测试..."
+    echo
+    
+    # 停止并删除旧容器（如果存在）
+    if docker ps -a | grep -q "${IMAGE_NAME}-local"; then
+        log_info "停止并删除旧容器..."
+        docker stop "${IMAGE_NAME}-local" &> /dev/null || true
+        docker rm "${IMAGE_NAME}-local" &> /dev/null || true
+    fi
+    
+    # 启动容器 (使用本地测试 tag)
+    log_info "启动本地容器: ${TEST_IMAGE_TAG}"
+    docker run -d \
+        --name "${IMAGE_NAME}-local" \
+        -p 3000:80 \
+        -p 8888:8888 \
+        -e TZ=Asia/Shanghai \
+        -e PORT=8888 \
+        -e CACHE_ENABLED=true \
+        -e CACHE_PATH=/app/cache \
+        -e ASYNC_PLUGIN_ENABLED=true \
+        -e API_KEY_ENABLED=true \
+        -e ADMIN_PASSWORD_HASH='$2a$10$ZBSWuVQONjalBEe.NziFdOLFg0NMji43X9JiBzu2iLuBCZwHL7WEy' \
+        "${TEST_IMAGE_TAG}"
+    
+    if [ $? -eq 0 ]; then
+        log_success "容器启动成功！"
+        echo
+        log_info "容器信息:"
+        echo "  容器名称: ${IMAGE_NAME}-local"
+        echo "  前端地址: http://localhost:3000"
+        echo "  后端地址: http://localhost:8888"
+        echo
+        
+        # 等待容器启动
+        log_info "等待容器启动 (5秒)..."
+        sleep 5
+        
+        # 检查服务健康状态
+        log_info "自动检查服务健康状态..."
+        local all_good=true
+        
+        if curl -s http://localhost:3000 > /dev/null 2>&1; then
+            log_success "✅ 前端服务 (Port 3000): 正常"
+        else
+            log_warning "⚠️  前端服务 (Port 3000): 无法连接/响应慢"
+            all_good=false
+        fi
+        
+        if curl -s http://localhost:8888/api/health > /dev/null 2>&1; then
+            log_success "✅ 后端服务 (Port 8888): 正常"
+        else
+            log_warning "⚠️  后端服务 (Port 8888): 无法连接/响应慢"
+            all_good=false
+        fi
+        
+        if [ "$all_good" = true ]; then
+            log_success "本地测试验证通过！"
+        else
+            log_warning "自动检测发现潜在问题，请手动验证。"
+        fi
+    else
+        log_error "容器启动失败"
+        return 1
+    fi
+}
+
+# 询问用户是否推送
+confirm_push_and_cleanup() {
+    echo
+    log_info "Step 3: 人工确认"
+    echo -e "${YELLOW}请手动验证功能: http://localhost:3000${NC}"
+    echo
+    
+    # 默认 N
+    read -p "是否推送到 Docker Hub? [y/N] " choice
+    choice=${choice:-N} # Set default to N
+    
+    if [[ "$choice" =~ ^[Yy]$ ]]; then
+        return 0 # 继续推送
+    else
+        echo
+        log_info "已取消推送。"
+        
+        # 询问是否删除本地构建的测试镜像，默认 Y
+        read -p "是否删除刚才构建的本地测试镜像 (${TEST_IMAGE_TAG})? [Y/n] " clean_choice
+        clean_choice=${clean_choice:-Y}
+        
+        if [[ "$clean_choice" =~ ^[Yy]$ ]]; then
+            log_info "正在清理本地测试镜像..."
+            
+            # 先停止容器确保没有进程占用
+            if docker ps -a | grep -q "${IMAGE_NAME}-local"; then
+                log_info "停止并删除测试容器..."
+                docker stop "${IMAGE_NAME}-local" &> /dev/null || true
+                docker rm "${IMAGE_NAME}-local" &> /dev/null || true
+            fi
+            
+            # 删除镜像
+            log_info "删除本地测试镜像..."
+            docker rmi "${TEST_IMAGE_TAG}" &> /dev/null || true
+            
+            log_success "清理完成。"
+        else
+            log_info "保留本地测试镜像。"
+        fi
+        
+        exit 0 # 结束脚本
+    fi
+}
+
+# 推送多架构镜像
+push_multiarch_image() {
+    echo
+    log_info "Step 4: 构建并推送多架构镜像..."
     log_info "目标架构: linux/amd64, linux/arm64"
     log_info "镜像标签: ${FULL_IMAGE_NAME}:${VERSION}, ${FULL_IMAGE_NAME}:latest"
     echo
     
     # 构建并推送多架构镜像
+    # 由于之前 buildx 已构建过缓存，这一步会非常快
     docker buildx build \
         --platform linux/amd64,linux/arm64 \
         --file Dockerfile \
@@ -159,7 +294,7 @@ build_multiarch_image() {
     if [ $? -eq 0 ]; then
         log_success "多架构镜像构建并推送完成"
     else
-        log_error "镜像构建失败"
+        log_error "镜像推送失败"
         exit 1
     fi
 }
@@ -169,189 +304,15 @@ verify_image() {
     log_info "验证推送的镜像..."
     log_warning "Docker Hub 同步可能需要几秒钟，正在等待..."
     
-    local max_retries=5
-    local retry_delay=3
-    
-    # 验证版本标签
-    local version_success=false
-    for i in $(seq 1 $max_retries); do
-        if docker manifest inspect "${FULL_IMAGE_NAME}:${VERSION}" &> /dev/null; then
-            log_success "镜像 ${FULL_IMAGE_NAME}:${VERSION} 验证成功"
-            version_success=true
-            break
-        else
-            if [ $i -lt $max_retries ]; then
-                log_info "第 $i 次验证失败，${retry_delay}秒后重试..."
-                sleep $retry_delay
-            fi
-        fi
-    done
-    
-    if [ "$version_success" = false ]; then
-        log_warning "镜像 ${FULL_IMAGE_NAME}:${VERSION} 验证失败"
-        log_info "这可能是由于 Docker Hub 同步延迟导致的"
-        log_info "请稍后手动验证: docker pull ${FULL_IMAGE_NAME}:${VERSION}"
-    fi
-    
-    # 验证latest标签
-    local latest_success=false
-    for i in $(seq 1 $max_retries); do
-        if docker manifest inspect "${FULL_IMAGE_NAME}:latest" &> /dev/null; then
-            log_success "镜像 ${FULL_IMAGE_NAME}:latest 验证成功"
-            latest_success=true
-            break
-        else
-            if [ $i -lt $max_retries ]; then
-                log_info "第 $i 次验证失败，${retry_delay}秒后重试..."
-                sleep $retry_delay
-            fi
-        fi
-    done
-    
-    if [ "$latest_success" = false ]; then
-        log_warning "镜像 ${FULL_IMAGE_NAME}:latest 验证失败"
-        log_info "这可能是由于 Docker Hub 同步延迟导致的"
-        log_info "请稍后手动验证: docker pull ${FULL_IMAGE_NAME}:latest"
-    fi
-    
-    # 如果两个标签都验证失败，给出警告但不退出
-    if [ "$version_success" = false ] && [ "$latest_success" = false ]; then
-        log_warning "镜像验证未通过，但构建和推送过程已完成"
-        log_info "建议等待 1-2 分钟后手动验证镜像是否可用"
-        return 0
-    fi
-}
-
-# 拉取并运行本地镜像
-run_local_container() {
-    echo
-    log_info "=== 启动本地容器 ==="
-    echo
-    
-    # 停止并删除旧容器（如果存在）
-    if docker ps -a | grep -q "${IMAGE_NAME}-local"; then
-        log_info "停止并删除旧容器..."
-        docker stop "${IMAGE_NAME}-local" &> /dev/null || true
-        docker rm "${IMAGE_NAME}-local" &> /dev/null || true
-    fi
-    
-    # 拉取最新镜像
-    log_info "拉取最新镜像: ${FULL_IMAGE_NAME}:latest"
-    if docker pull "${FULL_IMAGE_NAME}:latest"; then
-        log_success "镜像拉取成功"
-    else
-        log_error "镜像拉取失败，请检查网络连接或稍后重试"
-        return 1
-    fi
-    
-    # 启动容器
-    log_info "启动本地容器..."
-    docker run -d \
-        --name "${IMAGE_NAME}-local" \
-        -p 3000:80 \
-        -p 8888:8888 \
-        -e TZ=Asia/Shanghai \
-        -e PORT=8888 \
-        -e CACHE_ENABLED=true \
-        -e CACHE_PATH=/app/cache \
-        -e ASYNC_PLUGIN_ENABLED=true \
-        -e ADMIN_PASSWORD_HASH='$2a$10$ZBSWuVQONjalBEe.NziFdOLFg0NMji43X9JiBzu2iLuBCZwHL7WEy' \
-        "${FULL_IMAGE_NAME}:latest"
+    sleep 3
+    docker manifest inspect "${FULL_IMAGE_NAME}:${VERSION}" &> /dev/null
     
     if [ $? -eq 0 ]; then
-        log_success "容器启动成功！"
-        echo
-        log_info "容器信息:"
-        echo "  容器名称: ${IMAGE_NAME}-local"
-        echo "  前端地址: http://localhost:3000"
-        echo "  后端地址: http://localhost:8888"
-        echo "  管理后台: http://localhost:3000/admin/login"
-        echo
-        log_info "管理员登录凭证:"
-        echo "  用户名: admin"
-        echo "  密码: admin123.com"
-        echo
-        log_info "容器管理命令:"
-        echo "  查看日志: docker logs -f ${IMAGE_NAME}-local"
-        echo "  停止容器: docker stop ${IMAGE_NAME}-local"
-        echo "  重启容器: docker restart ${IMAGE_NAME}-local"
-        echo "  删除容器: docker rm -f ${IMAGE_NAME}-local"
-        echo
-        
-        # 等待容器启动
-        log_info "等待容器启动..."
-        sleep 5
-        
-        # 检查容器状态
-        if docker ps | grep -q "${IMAGE_NAME}-local"; then
-            log_success "容器运行正常"
-            
-            # 检查健康状态
-            log_info "检查服务健康状态..."
-            if curl -s http://localhost:3000 > /dev/null 2>&1; then
-                log_success "前端服务正常"
-            else
-                log_warning "前端服务可能还在启动中，请稍后访问"
-            fi
-            
-            if curl -s http://localhost:8888/api/health > /dev/null 2>&1; then
-                log_success "后端服务正常"
-            else
-                log_warning "后端服务可能还在启动中，请稍后访问"
-            fi
-        else
-            log_error "容器启动失败，请查看日志: docker logs ${IMAGE_NAME}-local"
-            return 1
-        fi
+        log_success "镜像 ${FULL_IMAGE_NAME}:${VERSION} 验证成功"
     else
-        log_error "容器启动失败"
-        return 1
+        log_warning "镜像验证需等待 Docker Hub 同步，请稍后使用: docker manifest inspect ${FULL_IMAGE_NAME}:${VERSION}"
     fi
 }
-
-# 显示镜像信息
-show_image_info() {
-    echo
-    log_success "=== 镜像构建完成 ==="
-    echo
-    echo "📦 镜像信息:"
-    echo "  仓库: ${FULL_IMAGE_NAME}"
-    echo "  版本: ${VERSION}"
-    echo "  标签: latest"
-    echo "  架构: linux/amd64, linux/arm64"
-    echo
-    echo "🔗 Docker Hub链接:"
-    echo "  https://hub.docker.com/r/${DOCKER_USERNAME}/${IMAGE_NAME}"
-    echo
-    echo "📥 拉取命令:"
-    echo "  docker pull ${FULL_IMAGE_NAME}:${VERSION}"
-    echo "  docker pull ${FULL_IMAGE_NAME}:latest"
-    echo
-    echo "✅ 手动验证镜像:"
-    echo "  docker manifest inspect ${FULL_IMAGE_NAME}:${VERSION}"
-    echo "  docker manifest inspect ${FULL_IMAGE_NAME}:latest"
-    echo
-    echo "🚀 在服务器上部署:"
-    echo "  docker run -d --name ${IMAGE_NAME} \\"
-    echo "    -p 3000:80 -p 8888:8888 \\"
-    echo "    -e ADMIN_PASSWORD_HASH=\$2a\$10\$... \\"
-    echo "    ${FULL_IMAGE_NAME}:${VERSION}"
-    echo
-    echo "💡 提示:"
-    echo "  - 如果验证失败，请等待 1-2 分钟后重试"
-    echo "  - Docker Hub 同步可能需要一些时间"
-    echo "  - 可以直接在服务器上尝试拉取镜像"
-    echo
-}
-
-# 清理函数
-cleanup() {
-    log_warning "接收到中断信号，正在清理..."
-    exit 1
-}
-
-# 设置信号处理
-trap cleanup SIGINT SIGTERM
 
 # 主函数
 main() {
@@ -362,35 +323,36 @@ main() {
     echo "  Docker Hub用户名: ${DOCKER_USERNAME}"
     echo "  镜像名称: ${IMAGE_NAME}"
     echo "  版本号: ${VERSION}"
-    echo "  本地运行: $([ "$RUN_LOCAL" = true ] && echo "是" || echo "否")"
     echo
     
-    # 检查环境
+    # 1. 检查环境
     check_docker
     check_dockerhub_login
-    
-    # 配置构建器
     setup_buildx
     
-    # 构建镜像
-    build_multiarch_image
+    # 2. 本地构建 (Load)
+    build_local_test_image
     
-    # 验证镜像
-    verify_image
-    
-    # 拉取并运行本地容器（如果启用）
+    # 3. 本地测试 (Run)
     if [ "$RUN_LOCAL" = true ]; then
-        run_local_container
+        run_local_container_test
     else
         log_info "跳过本地容器启动（使用 --no-run 选项）"
     fi
     
-    # 显示信息
-    show_image_info
+    # 4. 询问确认 (Prompt)
+    confirm_push_and_cleanup
     
-    log_success "所有操作完成！"
+    # 5. 推送正式镜像 (Push Multi-Arch)
+    push_multiarch_image
+    
+    # 6. 验证
+    verify_image
+    
+    log_success "=== 所有操作完成 ==="
+    echo "🔗 Docker Hub: https://hub.docker.com/r/${DOCKER_USERNAME}/${IMAGE_NAME}"
+    echo
 }
 
 # 执行主函数
 main "$@"
-

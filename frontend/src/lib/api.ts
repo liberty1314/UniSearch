@@ -30,12 +30,13 @@ class ApiClient {
         // 从 authStore 获取认证信息
         const authStore = useAuthStore.getState();
 
-        // 优先使用 JWT Token
+        // 添加 JWT Token（如果存在）
         if (authStore.token) {
           config.headers.Authorization = `Bearer ${authStore.token}`;
         }
-        // 降级使用 API Key
-        else if (authStore.apiKey) {
+
+        // 添加 API Key（如果存在）
+        if (authStore.apiKey) {
           config.headers['X-API-Key'] = authStore.apiKey;
         }
 
@@ -125,8 +126,8 @@ class ApiClient {
   /**
    * GET 请求
    */
-  async get<T = any>(url: string, params?: any): Promise<ApiResponse<T>> {
-    const response = await this.instance.get<T>(url, { params });
+  async get<T = any>(url: string, config?: any): Promise<ApiResponse<T>> {
+    const response = await this.instance.get<T>(url, config);
 
     // 如果响应已经是目标类型，则包装成 ApiResponse 格式
     if (response.data && typeof response.data === 'object') {

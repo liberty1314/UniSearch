@@ -13,7 +13,7 @@ interface AuthState {
     username: string | null;
 
     // 操作方法
-    setToken: (token: string, username: string) => void;
+    setToken: (token: string, username: string, isAdmin?: boolean, apiKey?: string | null) => void;
     setApiKey: (apiKey: string) => void;
     logout: () => void;
     checkAuth: () => boolean;
@@ -36,17 +36,19 @@ export const useAuthStore = create<AuthState>()(
             username: null,
 
             /**
-             * 设置 JWT Token（管理员登录）
+             * 设置 JWT Token
              * @param token - JWT Token
              * @param username - 用户名
+             * @param isAdmin - 是否为管理员（可选，默认为 true）
+             * @param apiKey - 关联的 API Key（可选，用于普通用户）
              */
-            setToken: (token, username) => {
+            setToken: (token, username, isAdmin = true, apiKey = null) => {
                 set({
                     token,
                     username,
                     isAuthenticated: true,
-                    isAdmin: true,
-                    apiKey: null, // 清除 API Key
+                    isAdmin,
+                    apiKey, // 保存关联的 API Key
                 });
             },
 
@@ -60,7 +62,7 @@ export const useAuthStore = create<AuthState>()(
                     isAuthenticated: true,
                     isAdmin: false,
                     token: null, // 清除 Token
-                    username: null,
+                    username: 'user',
                 });
             },
 
