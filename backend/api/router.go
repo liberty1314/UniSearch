@@ -1,0 +1,116 @@
+package api
+
+import (
+	"github.com/gin-gonic/gin"
+	"pansou/config"
+	"pansou/plugin"
+	"pansou/service"
+	"pansou/util"
+)
+
+// SetupRouter 设置路由
+func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService) *gin.Engine {
+	// 设置搜索服务
+	SetSearchService(searchService)
+	
+	// 设置为生产模式
+	gin.SetMode(gin.ReleaseMode)
+	
+	// 创建默认路由
+	r := gin.Default()
+	
+	// 添加中间件
+	r.Use(CORSMiddleware())
+	r.Use(LoggerMiddleware())
+	r.Use(util.GzipMiddleware())           // 添加压缩中间件
+	r.Use(AuthMiddleware(apiKeyService))   // 添加认证中间件（支持 JWT 和 API Key）
+	
+	// 定义API路由组
+	api := r.Group("/api")
+	{
+		// 认证接口（不需要认证，由中间件公开路径处理）
+		auth := api.Group("/auth")
+		{
+			auth.POST("/login", LoginHandler(apiKeyService))
+			auth.POST("/verify", VerifyHandler)
+			auth.POST("/logout", LogoutHandler)
+		}
+		
+		// 用户路由组（需要 JWT 认证）
+		user := api.Group("/user")
+		user.Use(JWTMiddleware()) // 应用 JWT 中间件
+		{
+			user.GET("/apikey-info", GetUserAPIKeyInfoHandler(apiKeyService))
+		}
+		
+		// 管理员登录接口（不需要认证）
+		api.POST("/admin/login", AdminLoginHandler)
+		
+		// 管理员路由组（需要管理员权限）
+		admin := api.Group("/admin")
+		admin.Use(AdminMiddleware()) // 应用管理员中间件
+		{
+			admin.GET("/keys", ListAPIKeysHandler(apiKeyService))
+			admin.POST("/keys", CreateAPIKeyHandler(apiKeyService))
+			admin.DELETE("/keys/:key", DeleteAPIKeyHandler(apiKeyService))
+			admin.PATCH("/keys/:key", UpdateAPIKeyHandler(apiKeyService))           // 新增：更新API Key
+			admin.POST("/keys/batch-extend", BatchExtendAPIKeysHandler(apiKeyService)) // 新增：批量延长
+			admin.POST("/keys/batch-create", BatchCreateAPIKeysHandler(apiKeyService)) // 新增：批量创建
+			admin.POST("/keys/batch-delete", BatchDeleteAPIKeysHandler(apiKeyService)) // 新增：批量删除
+			admin.GET("/system-info", GetSystemInfoHandler(searchService)) // 更新：获取系统信息（包含插件状态）
+		}
+		
+		// 搜索接口 - 支持POST和GET两种方式
+		api.POST("/search", SearchHandler)
+		api.GET("/search", SearchHandler) // 添加GET方式支持
+		
+		// 健康检查接口
+		api.GET("/health", func(c *gin.Context) {
+			// 根据配置决定是否返回插件信息
+			pluginCount := 0
+			pluginNames := []string{}
+			pluginsEnabled := config.AppConfig.AsyncPluginEnabled
+			
+			if pluginsEnabled && searchService != nil && searchService.GetPluginManager() != nil {
+				plugins := searchService.GetPluginManager().GetPlugins()
+				pluginCount = len(plugins)
+				for _, p := range plugins {
+					pluginNames = append(pluginNames, p.Name())
+				}
+			}
+			
+			// 获取频道信息
+			channels := config.AppConfig.DefaultChannels
+			channelsCount := len(channels)
+			
+			response := gin.H{
+				"status":         "ok",
+				"auth_enabled":   config.AppConfig.AuthEnabled || config.AppConfig.APIKeyEnabled, // 更新认证状态判断
+				"plugins_enabled": pluginsEnabled,
+				"channels":        channels,
+				"channels_count":  channelsCount,
+			}
+			
+			// 只有当插件启用时才返回插件相关信息
+			if pluginsEnabled {
+				response["plugin_count"] = pluginCount
+				response["plugins"] = pluginNames
+			}
+			
+			c.JSON(200, response)
+		})
+	}
+	
+	// 注册插件的Web路由（如果插件实现了PluginWithWebHandler接口）
+	// 只有当插件功能启用且插件在启用列表中时才注册路由
+	if config.AppConfig.AsyncPluginEnabled && searchService != nil && searchService.GetPluginManager() != nil {
+		enabledPlugins := searchService.GetPluginManager().GetPlugins()
+		for _, p := range enabledPlugins {
+			if webPlugin, ok := p.(plugin.PluginWithWebHandler); ok {
+				webPlugin.RegisterWebRoutes(r.Group(""))
+			}
+		}
+	}
+	
+	return r
+} 
