@@ -145,33 +145,83 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
 
                         {/* 导航列表 */}
-                        <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
-                            {navItems.map((item) => {
+                        <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto relative">
+                            {navItems.map((item, index) => {
                                 const isActive = currentView === item.id;
 
                                 return (
                                     <motion.button
                                         key={item.id}
                                         onClick={() => handleNavClick(item.id)}
-                                        whileHover={{ scale: isActive ? 1 : 1.02, x: isActive ? 0 : 4 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        transition={{ type: "spring", stiffness: 400, damping: 17 }}
                                         className={`
-                                            w-full flex items-center gap-3 px-4 py-3.5 rounded-xl
-                                            transition-all duration-200
+                                            relative w-full flex items-center gap-3 px-4 py-3.5 rounded-xl
+                                            transition-colors duration-300
                                             ${isActive
-                                                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 font-medium'
-                                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-700/50'
+                                                ? 'text-white font-medium'
+                                                : 'text-gray-700 dark:text-gray-300'
                                             }
                                         `}
+                                        initial={false}
+                                        whileHover={!isActive ? { x: 6 } : {}}
+                                        whileTap={{ scale: 0.97 }}
+                                        transition={{
+                                            type: "spring",
+                                            stiffness: 300,
+                                            damping: 20
+                                        }}
                                     >
+                                        {/* 激活状态背景 - 使用 layoutId 实现流畅过渡 */}
+                                        {isActive && (
+                                            <motion.div
+                                                layoutId="activeTab"
+                                                className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg shadow-blue-500/30"
+                                                transition={{
+                                                    type: "spring",
+                                                    stiffness: 350,
+                                                    damping: 30
+                                                }}
+                                            />
+                                        )}
+
+                                        {/* 非激活状态悬停背景 */}
+                                        {!isActive && (
+                                            <motion.div
+                                                className="absolute inset-0 bg-gray-100/80 dark:bg-gray-700/50 rounded-xl"
+                                                initial={{ opacity: 0 }}
+                                                whileHover={{ opacity: 1 }}
+                                                transition={{ duration: 0.2 }}
+                                            />
+                                        )}
+
+                                        {/* 图标 */}
                                         <motion.div
-                                            animate={{ rotate: isActive ? 360 : 0 }}
-                                            transition={{ duration: 0.5 }}
+                                            className="relative z-10"
+                                            animate={{
+                                                scale: isActive ? 1.1 : 1,
+                                            }}
+                                            transition={{
+                                                type: "spring",
+                                                stiffness: 400,
+                                                damping: 25
+                                            }}
                                         >
                                             {item.icon}
                                         </motion.div>
-                                        <span className="text-sm">{item.label}</span>
+
+                                        {/* 文字 */}
+                                        <motion.span
+                                            className="relative z-10 text-sm"
+                                            animate={{
+                                                x: isActive ? 2 : 0,
+                                            }}
+                                            transition={{
+                                                type: "spring",
+                                                stiffness: 400,
+                                                damping: 25
+                                            }}
+                                        >
+                                            {item.label}
+                                        </motion.span>
                                     </motion.button>
                                 );
                             })}
@@ -233,26 +283,78 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
 
                     {/* 导航列表 */}
-                    <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-                        {navItems.map((item) => {
+                    <nav className="flex-1 p-4 space-y-2 overflow-y-auto relative">
+                        {navItems.map((item, index) => {
                             const isActive = currentView === item.id;
 
                             return (
-                                <button
+                                <motion.button
                                     key={item.id}
                                     onClick={() => handleNavClick(item.id)}
                                     className={`
-                                        w-full flex items-center gap-3 px-4 py-3 rounded-xl
-                                        transition-all duration-200
+                                        relative w-full flex items-center gap-3 px-4 py-3 rounded-xl
+                                        transition-colors duration-300
                                         ${isActive
-                                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 font-medium'
-                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                                            ? 'text-white font-medium'
+                                            : 'text-gray-700 dark:text-gray-300'
                                         }
                                     `}
+                                    initial={false}
+                                    whileTap={{ scale: 0.97 }}
+                                    transition={{
+                                        type: "spring",
+                                        stiffness: 300,
+                                        damping: 20
+                                    }}
                                 >
-                                    {item.icon}
-                                    <span>{item.label}</span>
-                                </button>
+                                    {/* 激活状态背景 */}
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="mobileActiveTab"
+                                            className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg shadow-blue-500/30"
+                                            transition={{
+                                                type: "spring",
+                                                stiffness: 350,
+                                                damping: 30
+                                            }}
+                                        />
+                                    )}
+
+                                    {/* 非激活状态悬停背景 */}
+                                    {!isActive && (
+                                        <div className="absolute inset-0 bg-gray-100 dark:bg-gray-700/50 rounded-xl opacity-0 hover:opacity-100 transition-opacity duration-200" />
+                                    )}
+
+                                    {/* 图标 */}
+                                    <motion.div
+                                        className="relative z-10"
+                                        animate={{
+                                            scale: isActive ? 1.1 : 1,
+                                        }}
+                                        transition={{
+                                            type: "spring",
+                                            stiffness: 400,
+                                            damping: 25
+                                        }}
+                                    >
+                                        {item.icon}
+                                    </motion.div>
+
+                                    {/* 文字 */}
+                                    <motion.span
+                                        className="relative z-10"
+                                        animate={{
+                                            x: isActive ? 2 : 0,
+                                        }}
+                                        transition={{
+                                            type: "spring",
+                                            stiffness: 400,
+                                            damping: 25
+                                        }}
+                                    >
+                                        {item.label}
+                                    </motion.span>
+                                </motion.button>
                             );
                         })}
                     </nav>

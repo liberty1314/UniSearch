@@ -329,5 +329,14 @@ api_keys.json
 
 # 配置更新标记文件
 .config_updated
+AGENTS.md
+
+# ui
+.shared/
 
 logs/
+#  IDE 配置文件
+.kiro/
+.clouder/
+.cursor/
+.claude/

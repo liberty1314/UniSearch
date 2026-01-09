@@ -8,43 +8,103 @@ interface PageLoaderProps {
 
 /**
  * 高级页面加载组件
- * 提供流畅的页面加载动画效果
+ * 提供流畅的页面加载动画效果，进度条与实际加载同步
  */
 const PageLoader: React.FC<PageLoaderProps> = ({ isLoading, onComplete }) => {
     const [progress, setProgress] = useState(0);
+    const [shouldShow, setShouldShow] = useState(true);
 
     useEffect(() => {
         if (isLoading) {
             setProgress(0);
-            // 模拟加载进度
-            const interval = setInterval(() => {
-                setProgress((prev) => {
-                    if (prev >= 90) {
-                        clearInterval(interval);
-                        return 90;
-                    }
-                    return prev + Math.random() * 10;
-                });
-            }, 200);
+            setShouldShow(true);
+
+            // 使用更真实的进度模拟算法
+            // 阶段1: 0-60% 快速增长 (前800ms)
+            // 阶段2: 60-85% 中速增长 (800-1200ms)
+            // 阶段3: 85-95% 慢速增长 (1200-1400ms)
+            // 阶段4: 等待实际加载完成才到100%
+
+            const startTime = Date.now();
+
+            const updateProgress = () => {
+                const elapsed = Date.now() - startTime;
+                let newProgress = 0;
+
+                if (elapsed < 800) {
+                    // 阶段1: 快速到60%
+                    newProgress = (elapsed / 800) * 60;
+                } else if (elapsed < 1200) {
+                    // 阶段2: 60% -> 85%
+                    newProgress = 60 + ((elapsed - 800) / 400) * 25;
+                } else if (elapsed < 1400) {
+                    // 阶段3: 85% -> 95%
+                    newProgress = 85 + ((elapsed - 1200) / 200) * 10;
+                } else {
+                    // 阶段4: 保持在95%，等待实际加载完成
+                    newProgress = 95;
+                }
+
+                setProgress(Math.min(newProgress, 95));
+            };
+
+            const interval = setInterval(updateProgress, 50);
 
             return () => clearInterval(interval);
         } else {
-            // 加载完成，快速到100%
-            setProgress(100);
-            const timeout = setTimeout(() => {
-                onComplete?.();
-            }, 500);
-            return () => clearTimeout(timeout);
+            // 实际加载完成，快速完成剩余进度
+            const completeProgress = () => {
+                setProgress((prev) => {
+                    if (prev >= 100) return 100;
+                    const remaining = 100 - prev;
+                    return prev + remaining * 0.3; // 每次完成剩余的30%
+                });
+            };
+
+            const interval = setInterval(completeProgress, 50);
+
+            // 确保到达100%后再开始退出动画
+            const checkComplete = setInterval(() => {
+                setProgress((prev) => {
+                    if (prev >= 99.5) {
+                        clearInterval(interval);
+                        clearInterval(checkComplete);
+                        setProgress(100);
+
+                        // 在100%停留100ms，然后触发退出
+                        setTimeout(() => {
+                            setShouldShow(false);
+                        }, 100);
+                    }
+                    return prev;
+                });
+            }, 50);
+
+            return () => {
+                clearInterval(interval);
+                clearInterval(checkComplete);
+            };
         }
-    }, [isLoading, onComplete]);
+    }, [isLoading]);
+
+    // 监听退出动画完成
+    useEffect(() => {
+        if (!shouldShow && !isLoading) {
+            // 等待退出动画完成后调用 onComplete
+            const timer = setTimeout(() => {
+                onComplete?.();
+            }, 800); // 0.5s 动画 + 0.3s 延迟
+            return () => clearTimeout(timer);
+        }
+    }, [shouldShow, isLoading, onComplete]);
 
     return (
         <AnimatePresence>
-            {(isLoading || progress < 100) && (
+            {shouldShow && (
                 <motion.div
                     initial={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
                     className="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900"
                 >
                     {/* 背景装饰 */}
@@ -181,15 +241,17 @@ const PageLoader: React.FC<PageLoaderProps> = ({ isLoading, onComplete }) => {
                             transition={{ delay: 0.5, duration: 0.5 }}
                             className="text-gray-600 dark:text-gray-400 text-lg mb-8"
                         >
-                            正在加载...
+                            {progress >= 100 ? '加载完成' : '正在加载...'}
                         </motion.p>
 
                         {/* 进度条 */}
                         <div className="w-64 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                             <motion.div
-                                initial={{ width: 0 }}
                                 animate={{ width: `${progress}%` }}
-                                transition={{ duration: 0.3, ease: "easeOut" }}
+                                transition={{
+                                    duration: 0.3,
+                                    ease: "easeOut"
+                                }}
                                 className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full relative"
                             >
                                 {/* 进度条光效 */}
