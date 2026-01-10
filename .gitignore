@@ -330,6 +330,7 @@ api_keys.json
 # 配置更新标记文件
 .config_updated
 AGENTS.md
+backend/cache/refresh_tokens.dat
 
 # ui
 .shared/

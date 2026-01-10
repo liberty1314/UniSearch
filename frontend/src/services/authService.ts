@@ -9,7 +9,13 @@ import type {
     BatchOperationResult,
     BatchCreateRequest,
     BatchCreateResult,
+    LoginWithRememberRequest,
+    LoginWithRememberResponse,
+    RefreshTokenRequest,
+    RefreshTokenResponse,
+    RevokeRefreshTokenRequest,
 } from '@/types/api';
+import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 
 /**
  * 认证服务类
@@ -17,7 +23,39 @@ import type {
  */
 export class AuthService {
     /**
-     * 管理员登录
+     * 管理员登录（支持"记住我"）
+     * @param username 用户名
+     * @param password 管理员密码
+     * @param rememberMe 是否记住密码
+     * @returns 登录响应，包含 token 和可选的 refresh_token
+     */
+    static async adminLoginWithRemember(
+        username: string,
+        password: string,
+        rememberMe: boolean
+    ): Promise<LoginWithRememberResponse> {
+        const deviceFingerprint = await getDeviceFingerprint();
+        const request: LoginWithRememberRequest = {
+            username,
+            password,
+            remember_me: rememberMe,
+            device_fingerprint: deviceFingerprint,
+        };
+
+        const response = await apiClient.post<LoginWithRememberResponse>(
+            '/admin/login-remember',
+            request
+        );
+
+        if (!response.data) {
+            throw new Error('登录失败：服务器未返回有效数据');
+        }
+
+        return response.data;
+    }
+
+    /**
+     * 管理员登录（原有方法，保持向后兼容）
      * @param username 用户名
      * @param password 管理员密码
      * @returns 登录响应，包含 token 和过期时间
@@ -34,7 +72,37 @@ export class AuthService {
     }
 
     /**
-     * 使用 API Key 登录（获取 JWT Token）
+     * 使用 API Key 登录（支持"记住我"）
+     * @param apiKey API Key 字符串
+     * @param rememberMe 是否记住密码
+     * @returns 登录响应，包含 token 和可选的 refresh_token
+     */
+    static async loginWithApiKeyAndRemember(
+        apiKey: string,
+        rememberMe: boolean
+    ): Promise<LoginWithRememberResponse> {
+        const deviceFingerprint = await getDeviceFingerprint();
+        const request: LoginWithRememberRequest = {
+            username: 'user',
+            password: apiKey,
+            remember_me: rememberMe,
+            device_fingerprint: deviceFingerprint,
+        };
+
+        const response = await apiClient.post<LoginWithRememberResponse>(
+            '/auth/login-remember',
+            request
+        );
+
+        if (!response.data) {
+            throw new Error('登录失败：服务器未返回有效数据');
+        }
+
+        return response.data;
+    }
+
+    /**
+     * 使用 API Key 登录（获取 JWT Token）（原有方法，保持向后兼容）
      * @param apiKey API Key 字符串
      * @returns 登录响应，包含 token 和过期时间
      */
@@ -237,5 +305,38 @@ export class AuthService {
         }
 
         return response.data;
+    }
+
+    /**
+     * 使用刷新令牌获取新的访问令牌
+     * @param refreshToken 刷新令牌
+     * @returns 新的访问令牌和刷新令牌
+     */
+    static async refreshAccessToken(refreshToken: string): Promise<RefreshTokenResponse> {
+        const deviceFingerprint = await getDeviceFingerprint();
+        const request: RefreshTokenRequest = {
+            refresh_token: refreshToken,
+            device_fingerprint: deviceFingerprint,
+        };
+
+        const response = await apiClient.post<RefreshTokenResponse>('/auth/refresh', request);
+
+        if (!response.data) {
+            throw new Error('刷新令牌失败：服务器未返回有效数据');
+        }
+
+        return response.data;
+    }
+
+    /**
+     * 撤销刷新令牌（用户登出）
+     * @param refreshToken 刷新令牌
+     */
+    static async revokeRefreshToken(refreshToken: string): Promise<void> {
+        const request: RevokeRefreshTokenRequest = {
+            refresh_token: refreshToken,
+        };
+
+        await apiClient.post('/auth/revoke', request);
     }
 }

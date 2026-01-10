@@ -23,6 +23,7 @@ const Login: React.FC = () => {
 
     // 用户登录表单状态
     const [apiKey, setApiKeyInput] = useState('');
+    const [rememberMe, setRememberMe] = useState(false); // 新增：记住我
     const [isUserLoading, setIsUserLoading] = useState(false);
 
     // 动态效果状态
@@ -73,13 +74,24 @@ const Login: React.FC = () => {
         setIsUserLoading(true);
 
         try {
-            // 使用 API Key 登录（调用登录接口获取 JWT Token）
-            const response = await AuthService.loginWithApiKey(apiKey.trim());
+            // 使用 API Key 登录（支持"记住我"）
+            const response = await AuthService.loginWithApiKeyAndRemember(apiKey.trim(), rememberMe);
 
-            if (response && response.token) {
-                // 保存 Token 和 API Key 到状态管理（API Key 登录为普通用户）
-                setToken(response.token, response.username || 'user', false, apiKey.trim());
-                toast.success('登录成功！');
+            if (response && response.access_token) {
+                // 保存 Token、API Key 和可选的 Refresh Token 到状态管理
+                setToken(
+                    response.access_token,
+                    response.username || 'user',
+                    false,
+                    apiKey.trim(),
+                    response.refresh_token || null
+                );
+
+                if (rememberMe && response.refresh_token) {
+                    toast.success('登录成功！已启用自动登录');
+                } else {
+                    toast.success('登录成功！');
+                }
 
                 // 跳转到首页
                 navigate('/');
@@ -210,6 +222,23 @@ const Login: React.FC = () => {
                                     </div>
                                 )}
                             </div>
+                        </div>
+
+                        {/* 记住我复选框 */}
+                        <div className="flex items-center space-x-2 animate-fade-in" style={{ animationDelay: '0.38s' }}>
+                            <input
+                                type="checkbox"
+                                id="rememberMe"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                                className="w-4 h-4 text-blue-500 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
+                            />
+                            <Label
+                                htmlFor="rememberMe"
+                                className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+                            >
+                                记住我（30天内自动登录）
+                            </Label>
                         </div>
 
                         <div className="animate-fade-in" style={{ animationDelay: '0.4s' }}>

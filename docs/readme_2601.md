@@ -25,3 +25,40 @@
 - frontend/src/components/admin/Sidebar.tsx
 
 ---
+
+---
+
+## [2026-01-10 23:51] feat(auth): 实现刷新令牌自动续期和"记住我"功能
+
+**Body**: 新增刷新令牌机制,支持用户勾选"记住我"后 30 天内自动登录。后端实现 Token 轮转和设备指纹验证,前端实现自动刷新 hook 和设备指纹生成。更新部署脚本以自动生成加密密钥。
+
+**Footer**: 
+- 破坏性变更: 登录接口响应字段从 token 改为 access_token
+- Migration: 前端需更新登录响应解析逻辑,使用 access_token 字段
+
+**Files**:
+- .env.example
+- .gitignore
+- backend/api/middleware.go
+- backend/api/refresh_token_handler.go
+- backend/api/router.go
+- backend/config/config.go
+- backend/main.go
+- backend/model/refresh_token.go
+- backend/refresh_tokens.dat
+- backend/service/refresh_token_service.go
+- deploy/docker-compose.prod.yml
+- deploy/env.prod
+- docker-compose.yml
+- docs/api_reference.md
+- frontend/src/App.tsx
+- frontend/src/components/Navbar.tsx
+- frontend/src/hooks/useAutoRefreshToken.ts
+- frontend/src/index.css
+- frontend/src/pages/AdminLogin.tsx
+- frontend/src/pages/Login.tsx
+- frontend/src/services/authService.ts
+- frontend/src/stores/authStore.ts
+- frontend/src/types/api.ts
+- frontend/src/utils/deviceFingerprint.ts
+- scripts/deploy.sh

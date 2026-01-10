@@ -22,6 +22,8 @@ services:
       - unisearch-cache:/app/cache
       # 日志持久化
       - unisearch-logs:/var/log/supervisor
+      # 刷新令牌数据持久化（记住密码功能）
+      - unisearch-refresh-tokens:/app/data
     networks:
       - unisearch-network
     healthcheck:
@@ -99,6 +101,11 @@ volumes:
   # 日志数据卷（使用Docker管理的volume）
   unisearch-logs:
     name: unisearch-logs
+    driver: local
+  
+  # 刷新令牌数据卷（记住密码功能）
+  unisearch-refresh-tokens:
+    name: unisearch-refresh-tokens
     driver: local
   
   # 监控数据卷（使用Docker管理的volume）

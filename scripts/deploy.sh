@@ -402,7 +402,7 @@ check_and_configure_env() {
         
         # 直接提示配置密码（不再询问是否配置）
         echo ""
-        log_warning "检测到首次部署，需要配置管理员密码"
+        log_warning "检测到首次部署，需要配置管理员密码和刷新令牌加密密钥"
         echo ""
         
         # 提示用户输入密码
@@ -519,6 +519,44 @@ EOF
         
         log_success "管理员密码配置完成"
         echo ""
+        
+        # 配置刷新令牌加密密钥
+        log_info "正在生成刷新令牌加密密钥（32字节）..."
+        
+        # 检查 openssl 是否可用
+        if ! command -v openssl &> /dev/null; then
+            log_warning "openssl 未安装，跳过刷新令牌加密密钥配置"
+            log_info "记住密码功能将不可用"
+            log_info "请稍后手动安装 openssl 并配置: openssl rand -base64 32"
+        else
+            # 生成 32 字节随机密钥
+            local refresh_key=$(openssl rand -base64 32)
+            
+            if [ -z "$refresh_key" ]; then
+                log_warning "加密密钥生成失败，跳过配置"
+                log_info "请稍后手动配置: openssl rand -base64 32"
+            else
+                # 验证密钥长度
+                local key_length=${#refresh_key}
+                
+                # 配置到 .env.local
+                if grep -q "^REFRESH_TOKEN_ENCRYPT_KEY=" "$env_local"; then
+                    grep -v "^REFRESH_TOKEN_ENCRYPT_KEY=" "$env_local" > "${env_local}.tmp"
+                    mv "${env_local}.tmp" "$env_local"
+                fi
+                echo "REFRESH_TOKEN_ENCRYPT_KEY='${refresh_key}'" >> "$env_local"
+                
+                log_success "刷新令牌加密密钥配置完成"
+                log_info "密钥长度: $key_length 字符"
+                echo ""
+                log_warning "⚠️  重要提示："
+                log_info "  1. 此密钥用于加密用户的'记住密码'令牌"
+                log_info "  2. 请妥善保管 .env.local 文件（权限已设置为 600）"
+                log_info "  3. 如果密钥丢失或更改，所有用户需要重新登录"
+                log_info "  4. 建议每 3-6 个月轮换一次密钥"
+                echo ""
+            fi
+        fi
     else
         # 检查密码是否已配置
         if ! grep -q "^ADMIN_PASSWORD_HASH=.\+" "$env_local"; then
@@ -592,6 +630,66 @@ EOF
                 log_info "请稍后运行: ./scripts/gen_admin_password.sh '你的密码'"
                 exit 1
             fi
+        fi
+    fi
+    
+    # 检查刷新令牌加密密钥是否已配置
+    if ! grep -q "^REFRESH_TOKEN_ENCRYPT_KEY=.\+" "$env_local"; then
+        log_warning "检测到刷新令牌加密密钥未配置"
+        echo ""
+        
+        read -p "是否现在配置刷新令牌加密密钥（记住密码功能）? (Y/n): " -n 1 -r
+        echo ""
+        
+        # 默认为 Yes
+        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            log_info "正在生成刷新令牌加密密钥（32字节）..."
+            
+            # 检查 openssl 是否可用
+            if ! command -v openssl &> /dev/null; then
+                log_error "openssl 未安装，无法生成加密密钥"
+                log_info "请手动安装: apt install openssl"
+                log_info "或手动运行: openssl rand -base64 32"
+                exit 1
+            fi
+            
+            # 生成 32 字节随机密钥
+            local refresh_key=$(openssl rand -base64 32)
+            
+            if [ -z "$refresh_key" ]; then
+                log_error "加密密钥生成失败"
+                log_info "请手动运行: openssl rand -base64 32"
+                exit 1
+            fi
+            
+            # 验证密钥长度
+            local key_length=${#refresh_key}
+            if [ $key_length -lt 32 ]; then
+                log_error "生成的密钥长度不足: $key_length 字符"
+                exit 1
+            fi
+            
+            # 配置到 .env.local
+            if grep -q "^REFRESH_TOKEN_ENCRYPT_KEY=" "$env_local"; then
+                grep -v "^REFRESH_TOKEN_ENCRYPT_KEY=" "$env_local" > "${env_local}.tmp"
+                mv "${env_local}.tmp" "$env_local"
+            fi
+            echo "REFRESH_TOKEN_ENCRYPT_KEY='${refresh_key}'" >> "$env_local"
+            
+            log_success "刷新令牌加密密钥配置完成"
+            log_info "密钥长度: $key_length 字符"
+            echo ""
+            log_warning "⚠️  重要提示："
+            log_info "  1. 此密钥用于加密用户的'记住密码'令牌"
+            log_info "  2. 请妥善保管 .env.local 文件（权限已设置为 600）"
+            log_info "  3. 如果密钥丢失或更改，所有用户需要重新登录"
+            log_info "  4. 建议每 3-6 个月轮换一次密钥"
+            echo ""
+        else
+            log_warning "已跳过刷新令牌加密密钥配置"
+            log_info "记住密码功能将不可用"
+            log_info "请稍后手动配置: openssl rand -base64 32"
+            echo ""
         fi
     fi
 }

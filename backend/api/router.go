@@ -9,7 +9,7 @@ import (
 )
 
 // SetupRouter 设置路由
-func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService) *gin.Engine {
+func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, refreshTokenService *service.RefreshTokenService) *gin.Engine {
 	// 设置搜索服务
 	SetSearchService(searchService)
 	
@@ -31,7 +31,14 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 		// 认证接口（不需要认证，由中间件公开路径处理）
 		auth := api.Group("/auth")
 		{
+			// 原有登录接口（保持向后兼容）
 			auth.POST("/login", LoginHandler(apiKeyService))
+			// 新增：支持"记住我"的登录接口
+			auth.POST("/login-remember", UserLoginWithRememberHandler(apiKeyService, refreshTokenService))
+			// 新增：刷新访问令牌
+			auth.POST("/refresh", RefreshAccessTokenHandler(refreshTokenService))
+			// 新增：撤销刷新令牌（登出）
+			auth.POST("/revoke", RevokeRefreshTokenHandler(refreshTokenService))
 			auth.POST("/verify", VerifyHandler)
 			auth.POST("/logout", LogoutHandler)
 		}
@@ -45,6 +52,8 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 		
 		// 管理员登录接口（不需要认证）
 		api.POST("/admin/login", AdminLoginHandler)
+		// 新增：支持"记住我"的管理员登录接口
+		api.POST("/admin/login-remember", AdminLoginWithRememberHandler(refreshTokenService))
 		
 		// 管理员路由组（需要管理员权限）
 		admin := api.Group("/admin")

@@ -1408,3 +1408,464 @@ curl http://localhost:8888/api/health
 如有问题或建议，请通过以下方式联系：
 - GitHub Issues: https://github.com/fish2018/UniSearch
 - 项目主页: https://so.252035.xyz/
+
+
+---
+
+## 记住密码功能 API
+
+UniSearch 支持安全的"记住密码"功能，通过刷新令牌（Refresh Token）实现 30 天内自动登录。
+
+### 安全机制
+
+1. **加密存储**: 刷新令牌使用 AES-256-GCM 加密后存储在客户端
+2. **设备绑定**: 刷新令牌与设备指纹绑定，防止跨设备滥用
+3. **Token 轮转**: 每次使用刷新令牌获取新访问令牌时，会同时生成新的刷新令牌
+4. **自动失效**: 刷新令牌 30 天后自动过期
+5. **主动撤销**: 用户登出时立即撤销刷新令牌
+
+---
+
+### 1. 管理员登录（支持记住我）
+
+管理员登录接口，支持"记住我"功能。
+
+**接口地址**: `/api/admin/login-remember`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 否
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| username | string | 是 | 用户名（固定为 "admin"） |
+| password | string | 是 | 管理员密码 |
+| remember_me | boolean | 是 | 是否记住密码（true/false） |
+| device_fingerprint | string | 否 | 设备指纹（可选，前端生成） |
+
+**请求示例**:
+
+```json
+{
+  "username": "admin",
+  "password": "your_admin_password",
+  "remember_me": true,
+  "device_fingerprint": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+}
+```
+
+**成功响应**:
+
+```json
+{
+  "access_token": "<AUTH_TOKEN>",
+  "expires_at": 1704067200,
+  "refresh_token": "encrypted_refresh_token_base64_string",
+  "username": "admin"
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 描述 |
+|--------|------|------|
+| access_token | string | 访问令牌（JWT），有效期 24 小时 |
+| expires_at | number | 访问令牌过期时间（Unix 时间戳） |
+| refresh_token | string | 刷新令牌（加密后的 Base64 字符串），仅在 remember_me=true 时返回 |
+| username | string | 用户名 |
+
+**错误响应**:
+
+```json
+{
+  "error": "用户名或密码错误",
+  "code": "ADMIN_LOGIN_FAILED"
+}
+```
+
+**错误码说明**:
+
+| 错误码 | HTTP 状态码 | 描述 |
+|--------|-------------|------|
+| INVALID_REQUEST | 400 | 请求参数错误 |
+| ADMIN_LOGIN_FAILED | 401 | 用户名或密码错误 |
+| RATE_LIMIT_EXCEEDED | 429 | 请求过于频繁 |
+| ADMIN_NOT_CONFIGURED | 500 | 管理员功能未配置 |
+
+---
+
+### 2. 普通用户登录（支持记住我）
+
+普通用户登录接口，支持 API Key 登录和"记住我"功能。
+
+**接口地址**: `/api/auth/login-remember`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 否
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| username | string | 是 | 用户名（API Key 登录时固定为 "user"） |
+| password | string | 是 | 密码或 API Key |
+| remember_me | boolean | 是 | 是否记住密码（true/false） |
+| device_fingerprint | string | 否 | 设备指纹（可选，前端生成） |
+
+**请求示例**:
+
+```json
+// API Key 登录
+{
+  "username": "user",
+  "password": "<AUTH_TOKEN>",
+  "remember_me": true,
+  "device_fingerprint": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+}
+```
+
+**成功响应**:
+
+```json
+{
+  "access_token": "<AUTH_TOKEN>",
+  "expires_at": 1704067200,
+  "refresh_token": "encrypted_refresh_token_base64_string",
+  "username": "user"
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 描述 |
+|--------|------|------|
+| access_token | string | 访问令牌（JWT），有效期 24 小时 |
+| expires_at | number | 访问令牌过期时间（Unix 时间戳） |
+| refresh_token | string | 刷新令牌（加密后的 Base64 字符串），仅在 remember_me=true 时返回 |
+| username | string | 用户名 |
+
+**错误响应**:
+
+```json
+{
+  "error": "API Key 无效或已过期"
+}
+```
+
+---
+
+### 3. 刷新访问令牌
+
+使用刷新令牌获取新的访问令牌，实现自动登录。
+
+**接口地址**: `/api/auth/refresh`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 否
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| refresh_token | string | 是 | 刷新令牌（加密后的 Base64 字符串） |
+| device_fingerprint | string | 是 | 设备指纹（必须与登录时一致） |
+
+**请求示例**:
+
+```json
+{
+  "refresh_token": "encrypted_refresh_token_base64_string",
+  "device_fingerprint": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+}
+```
+
+**成功响应**:
+
+```json
+{
+  "access_token": "<AUTH_TOKEN>",
+  "expires_at": 1704067200,
+  "refresh_token": "new_encrypted_refresh_token_base64_string"
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 描述 |
+|--------|------|------|
+| access_token | string | 新的访问令牌（JWT），有效期 24 小时 |
+| expires_at | number | 访问令牌过期时间（Unix 时间戳） |
+| refresh_token | string | 新的刷新令牌（Token 轮转机制） |
+
+**错误响应**:
+
+```json
+{
+  "error": "刷新令牌验证失败: 设备指纹不匹配",
+  "code": "REFRESH_TOKEN_VALIDATION_FAILED"
+}
+```
+
+**错误码说明**:
+
+| 错误码 | HTTP 状态码 | 描述 |
+|--------|-------------|------|
+| INVALID_REQUEST | 400 | 请求参数错误 |
+| INVALID_REFRESH_TOKEN | 401 | 刷新令牌无效 |
+| REFRESH_TOKEN_VALIDATION_FAILED | 401 | 刷新令牌验证失败（令牌过期、已撤销或设备指纹不匹配） |
+| REFRESH_TOKEN_DISABLED | 403 | 刷新令牌功能未启用 |
+| TOKEN_GENERATION_FAILED | 500 | 生成令牌失败 |
+| REFRESH_TOKEN_GENERATION_FAILED | 500 | 生成新刷新令牌失败 |
+| REFRESH_TOKEN_ENCRYPTION_FAILED | 500 | 加密刷新令牌失败 |
+
+**使用说明**:
+
+1. 前端在访问令牌即将过期前（建议提前 5 分钟）自动调用此接口
+2. 使用返回的新访问令牌和新刷新令牌替换旧的令牌
+3. 如果刷新失败，清除本地存储的令牌并跳转到登录页
+
+---
+
+### 4. 撤销刷新令牌（登出）
+
+撤销刷新令牌，用户登出时调用。
+
+**接口地址**: `/api/auth/revoke`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 否
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| refresh_token | string | 是 | 刷新令牌（加密后的 Base64 字符串） |
+
+**请求示例**:
+
+```json
+{
+  "refresh_token": "encrypted_refresh_token_base64_string"
+}
+```
+
+**成功响应**:
+
+```json
+{
+  "message": "退出成功"
+}
+```
+
+**错误响应**:
+
+```json
+{
+  "error": "请求参数错误",
+  "code": "INVALID_REQUEST"
+}
+```
+
+**使用说明**:
+
+1. 用户点击"退出登录"时调用此接口
+2. 即使撤销失败，前端也应清除本地存储的所有令牌
+3. 撤销后的刷新令牌将无法再次使用
+
+---
+
+## 环境变量配置
+
+### 刷新令牌相关配置
+
+在 `.env` 文件中添加以下配置：
+
+```bash
+# 刷新令牌功能开关（默认启用）
+REFRESH_TOKEN_ENABLED=true
+
+# 刷新令牌有效期（小时，默认 720 小时 = 30 天）
+REFRESH_TOKEN_TTL=720
+
+# 刷新令牌存储路径（默认 ./cache/refresh_tokens.dat）
+REFRESH_TOKEN_STORE_PATH=./cache/refresh_tokens.dat
+
+# 刷新令牌加密密钥（32 字节，生产环境必须设置）
+REFRESH_TOKEN_ENCRYPT_KEY=your-32-byte-secret-key-here-change-in-production
+```
+
+**安全建议**:
+
+1. `REFRESH_TOKEN_ENCRYPT_KEY` 必须设置为 32 字节的随机字符串
+2. 生产环境中不要使用默认密钥
+3. 定期轮换加密密钥（需要重新登录所有用户）
+4. 刷新令牌存储文件权限设置为 600（仅所有者可读写）
+
+---
+
+## 前端集成示例
+
+### 1. 设备指纹生成
+
+```typescript
+// 使用 Web Crypto API 生成设备指纹
+async function generateDeviceFingerprint(): Promise<string> {
+    const components = [
+        navigator.userAgent,
+        screen.width + 'x' + screen.height,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        navigator.language,
+        // ... 更多浏览器特征
+    ];
+    
+    const fingerprint = components.join('|');
+    const encoder = new TextEncoder();
+    const data = encoder.encode(fingerprint);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+```
+
+### 2. 登录流程
+
+```typescript
+// 管理员登录（支持记住我）
+async function adminLogin(username: string, password: string, rememberMe: boolean) {
+    const deviceFingerprint = await generateDeviceFingerprint();
+    
+    const response = await fetch('/api/admin/login-remember', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username,
+            password,
+            remember_me: rememberMe,
+            device_fingerprint: deviceFingerprint
+        })
+    });
+    
+    const data = await response.json();
+    
+    // 保存访问令牌
+    localStorage.setItem('access_token', data.access_token);
+    
+    // 如果勾选"记住我"，保存刷新令牌
+    if (data.refresh_token) {
+        localStorage.setItem('refresh_token', data.refresh_token);
+    }
+}
+```
+
+### 3. 自动刷新令牌
+
+```typescript
+// 在访问令牌即将过期前自动刷新
+async function autoRefreshToken() {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) return;
+    
+    const deviceFingerprint = await generateDeviceFingerprint();
+    
+    try {
+        const response = await fetch('/api/auth/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                refresh_token: refreshToken,
+                device_fingerprint: deviceFingerprint
+            })
+        });
+        
+        const data = await response.json();
+        
+        // 更新令牌
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('refresh_token', data.refresh_token);
+    } catch (error) {
+        // 刷新失败，清除令牌并跳转到登录页
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        window.location.href = '/login';
+    }
+}
+```
+
+### 4. 登出流程
+
+```typescript
+// 登出时撤销刷新令牌
+async function logout() {
+    const refreshToken = localStorage.getItem('refresh_token');
+    
+    if (refreshToken) {
+        try {
+            await fetch('/api/auth/revoke', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: refreshToken })
+            });
+        } catch (error) {
+            console.error('撤销刷新令牌失败:', error);
+        }
+    }
+    
+    // 清除本地存储
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    
+    // 跳转到登录页
+    window.location.href = '/login';
+}
+```
+
+---
+
+## 安全日志
+
+系统会记录以下安全相关事件：
+
+1. **刷新令牌创建**: 记录用户名、设备指纹、创建时间
+2. **刷新令牌使用**: 记录使用时间、设备指纹验证结果
+3. **刷新令牌撤销**: 记录撤销时间、撤销原因（用户登出/管理员撤销）
+4. **刷新令牌验证失败**: 记录失败原因（过期/已撤销/设备指纹不匹配）
+
+日志位置：后端控制台输出
+
+---
+
+## 常见问题
+
+### Q1: 刷新令牌和访问令牌有什么区别？
+
+**访问令牌（Access Token）**:
+- 有效期短（24 小时）
+- 用于日常 API 调用
+- 存储在内存或 localStorage
+
+**刷新令牌（Refresh Token）**:
+- 有效期长（30 天）
+- 仅用于获取新的访问令牌
+- 加密后存储在 localStorage
+- 与设备指纹绑定
+
+### Q2: 为什么需要设备指纹？
+
+设备指纹用于防止刷新令牌被盗用。即使攻击者获取了加密的刷新令牌，由于设备指纹不匹配，也无法使用该令牌获取访问令牌。
+
+### Q3: Token 轮转是什么？
+
+每次使用刷新令牌获取新访问令牌时，系统会同时生成新的刷新令牌并撤销旧的刷新令牌。这样可以限制刷新令牌的使用次数，提高安全性。
+
+### Q4: 如果用户更换设备怎么办？
+
+用户更换设备后，设备指纹会改变，旧的刷新令牌将无法使用。用户需要重新登录并勾选"记住我"以在新设备上启用自动登录。
+
+### Q5: 如何强制用户重新登录？
+
+管理员可以通过以下方式强制用户重新登录：
+1. 撤销用户的所有刷新令牌（后端提供 `RevokeUserTokens` 方法）
+2. 更改 `REFRESH_TOKEN_ENCRYPT_KEY` 环境变量（会使所有刷新令牌失效）
+
+---

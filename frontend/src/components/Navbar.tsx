@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import IconButton from './IconButton';
 import { AnimatedThemeToggler } from '@/components/magicui/animated-theme-toggler';
 import { useAuthStore } from '@/stores/authStore';
+import { AuthService } from '@/services/authService'; // 新增
 import { toast } from 'sonner';
 
 interface NavbarProps {
@@ -44,7 +45,17 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
   /**
    * 处理登出
    */
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // 如果有刷新令牌，先撤销
+    const { refreshToken } = useAuthStore.getState();
+    if (refreshToken) {
+      try {
+        await AuthService.revokeRefreshToken(refreshToken);
+      } catch (error) {
+        console.error('撤销刷新令牌失败:', error);
+      }
+    }
+
     logout();
     toast.success('已退出登录');
     navigate('/');

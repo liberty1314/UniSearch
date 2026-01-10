@@ -25,6 +25,7 @@ const AdminLogin: React.FC = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false); // 新增：记住我
     const [isAdminLoading, setIsAdminLoading] = useState(false);
 
     // 动态效果状态
@@ -63,12 +64,23 @@ const AdminLogin: React.FC = () => {
         setIsAdminLoading(true);
 
         try {
-            // 调用管理员登录接口
-            const response = await AuthService.adminLogin(username, password);
+            // 调用管理员登录接口（支持"记住我"）
+            const response = await AuthService.adminLoginWithRemember(username, password, rememberMe);
 
-            // 保存 Token 到状态管理
-            setToken(response.token, 'admin');
-            toast.success('管理员登录成功！');
+            // 保存 Token 和可选的 Refresh Token 到状态管理
+            setToken(
+                response.access_token,
+                'admin',
+                true,
+                null,
+                response.refresh_token || null
+            );
+
+            if (rememberMe && response.refresh_token) {
+                toast.success('管理员登录成功！已启用自动登录');
+            } else {
+                toast.success('管理员登录成功！');
+            }
 
             // 跳转到后台管理页面的系统监控视图
             navigate('/admin?view=system-info');
@@ -239,6 +251,23 @@ const AdminLogin: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
+                            </div>
+
+                            {/* 记住我复选框 */}
+                            <div className="flex items-center space-x-2 animate-fade-in" style={{ animationDelay: '0.38s' }}>
+                                <input
+                                    type="checkbox"
+                                    id="rememberMe"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    className="w-4 h-4 text-orange-500 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-orange-500/20 transition-all duration-200"
+                                />
+                                <Label
+                                    htmlFor="rememberMe"
+                                    className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+                                >
+                                    记住我（30天内自动登录）
+                                </Label>
                             </div>
 
                             <div className="animate-fade-in" style={{ animationDelay: '0.4s' }}>

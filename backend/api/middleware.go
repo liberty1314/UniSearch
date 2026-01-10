@@ -224,9 +224,13 @@ func extractAPIKey(c *gin.Context) string {
 func isPublicPath(path string) bool {
 	publicPaths := []string{
 		"/api/auth/login",
+		"/api/auth/login-remember",  // 新增：支持记住我的登录
+		"/api/auth/refresh",          // 新增：刷新令牌
+		"/api/auth/revoke",           // 新增：撤销令牌
 		"/api/auth/logout",
 		"/api/health",
-		"/api/admin/login", // 管理员登录接口无需认证
+		"/api/admin/login",           // 管理员登录接口无需认证
+		"/api/admin/login-remember",  // 新增：支持记住我的管理员登录
 	}
 
 	for _, p := range publicPaths {

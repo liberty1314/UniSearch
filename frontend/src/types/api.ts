@@ -192,6 +192,50 @@ export interface AdminLoginResponse {
 }
 
 /**
+ * 支持"记住我"的登录请求
+ */
+export interface LoginWithRememberRequest {
+  username: string;
+  password: string;
+  remember_me: boolean;
+  device_fingerprint?: string;
+}
+
+/**
+ * 支持"记住我"的登录响应
+ */
+export interface LoginWithRememberResponse {
+  access_token: string;
+  expires_at: number;
+  refresh_token?: string; // 仅在 remember_me=true 时返回
+  username: string;
+}
+
+/**
+ * 刷新令牌请求
+ */
+export interface RefreshTokenRequest {
+  refresh_token: string;
+  device_fingerprint: string;
+}
+
+/**
+ * 刷新令牌响应
+ */
+export interface RefreshTokenResponse {
+  access_token: string;
+  expires_at: number;
+  refresh_token: string; // 新的刷新令牌（Token 轮转）
+}
+
+/**
+ * 撤销刷新令牌请求
+ */
+export interface RevokeRefreshTokenRequest {
+  refresh_token: string;
+}
+
+/**
  * API Key 信息
  */
 export interface APIKeyInfo {

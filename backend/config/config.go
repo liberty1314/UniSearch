@@ -57,6 +57,11 @@ type Config struct {
 	APIKeyDefaultTTL   time.Duration // API Key 默认有效期
 	APIKeyStorePath    string        // API Key 存储路径
 	AdminPasswordHash  string        // 管理员密码哈希（bcrypt）
+	// Refresh Token 相关配置
+	RefreshTokenEnabled bool          // 是否启用刷新令牌（记住密码）
+	RefreshTokenTTL     time.Duration // 刷新令牌有效期
+	RefreshTokenStorePath string      // 刷新令牌存储路径
+	RefreshTokenEncryptKey string     // 刷新令牌加密密钥
 }
 
 // 全局配置实例
@@ -114,6 +119,11 @@ func Init() {
 		APIKeyDefaultTTL:  getAPIKeyDefaultTTL(),
 		APIKeyStorePath:   getAPIKeyStorePath(),
 		AdminPasswordHash: getAdminPasswordHash(),
+		// Refresh Token 相关配置
+		RefreshTokenEnabled:    getRefreshTokenEnabled(),
+		RefreshTokenTTL:        getRefreshTokenTTL(),
+		RefreshTokenStorePath:  getRefreshTokenStorePath(),
+		RefreshTokenEncryptKey: getRefreshTokenEncryptKey(),
 	}
 	
 	// 应用GC配置
@@ -650,3 +660,51 @@ func applyGCSettings() {
 }
 
  
+
+// 从环境变量获取是否启用刷新令牌，如果未设置则默认启用
+func getRefreshTokenEnabled() bool {
+	enabled := os.Getenv("REFRESH_TOKEN_ENABLED")
+	if enabled == "" {
+		return true // 默认启用
+	}
+	return enabled != "false" && enabled != "0"
+}
+
+// 从环境变量获取刷新令牌有效期（小时），如果未设置则使用默认值
+func getRefreshTokenTTL() time.Duration {
+	ttlEnv := os.Getenv("REFRESH_TOKEN_TTL")
+	if ttlEnv == "" {
+		return 720 * time.Hour // 默认 30 天
+	}
+	ttl, err := strconv.Atoi(ttlEnv)
+	if err != nil || ttl <= 0 {
+		return 720 * time.Hour
+	}
+	return time.Duration(ttl) * time.Hour
+}
+
+// 从环境变量获取刷新令牌存储路径，如果未设置则使用默认路径
+func getRefreshTokenStorePath() string {
+	path := os.Getenv("REFRESH_TOKEN_STORE_PATH")
+	if path == "" {
+		// 默认在当前目录下创建 refresh_tokens.dat 文件
+		defaultPath, err := filepath.Abs("./cache/refresh_tokens.dat")
+		if err != nil {
+			return "./cache/refresh_tokens.dat"
+		}
+		return defaultPath
+	}
+	return path
+}
+
+// 从环境变量获取刷新令牌加密密钥，如果未设置则生成随机密钥
+func getRefreshTokenEncryptKey() string {
+	key := os.Getenv("REFRESH_TOKEN_ENCRYPT_KEY")
+	if key == "" {
+		// 生成随机密钥（建议在生产环境中设置固定密钥）
+		key = "pansou-refresh-token-secret-" + strconv.FormatInt(time.Now().Unix(), 10)
+		println("警告: REFRESH_TOKEN_ENCRYPT_KEY 环境变量未设置，使用临时密钥")
+		println("提示: 在生产环境中请设置固定的 32 字节加密密钥")
+	}
+	return key
+}

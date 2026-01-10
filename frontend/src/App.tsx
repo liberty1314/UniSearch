@@ -9,6 +9,7 @@ import Admin from '@/pages/Admin';
 import UserApiKeySettings from '@/pages/UserApiKeySettings';
 import { useAuthStore } from '@/stores/authStore';
 import PageLoader from '@/components/PageLoader';
+import { useAutoRefreshToken } from '@/hooks/useAutoRefreshToken'; // 新增：自动刷新令牌
 
 /**
  * 管理员路由保护组件
@@ -48,6 +49,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
 const App: React.FC = () => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // 启用自动刷新令牌功能
+  useAutoRefreshToken();
 
   // 主题初始化：优先使用保存的偏好，其次使用系统设置
   React.useEffect(() => {
@@ -140,6 +144,7 @@ const App: React.FC = () => {
           {/* Toast 通知 */}
           <Toaster
             position="top-right"
+            offset="72px"
             toastOptions={{
               duration: 2000,
             }}

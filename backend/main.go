@@ -130,8 +130,23 @@ func startServer() {
 		}
 	}
 
+	// 初始化 Refresh Token 服务（记住密码功能）
+	var refreshTokenService *service.RefreshTokenService
+	if config.AppConfig.RefreshTokenEnabled {
+		refreshTokenService, err = service.NewRefreshTokenService(
+			config.AppConfig.RefreshTokenStorePath,
+			config.AppConfig.RefreshTokenEncryptKey,
+		)
+		if err != nil {
+			log.Printf("警告: Refresh Token 服务初始化失败: %v", err)
+			log.Println("记住密码功能将不可用")
+		} else {
+			fmt.Println("Refresh Token 服务已启动（记住密码功能已启用）")
+		}
+	}
+
 	// 设置路由
-	router := api.SetupRouter(searchService, apiKeyService)
+	router := api.SetupRouter(searchService, apiKeyService, refreshTokenService)
 
 	// 获取端口配置
 	port := config.AppConfig.Port
