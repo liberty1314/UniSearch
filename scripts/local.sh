@@ -8,6 +8,11 @@
 
 set -e  # 遇到错误立即退出
 
+# 切换到项目根目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
+
 # ==============================================================================
 # 配置与常量
 # ==============================================================================
@@ -22,7 +27,8 @@ NC='\033[0m' # No Color
 
 # 端口配置
 BACKEND_PORT=8888
-FRONTEND_PORT=5173
+FRONTEND_PORT_LOCAL=5173  # 本地开发端口（Vite 默认）
+FRONTEND_PORT_DOCKER=3000 # Docker 部署端口
 
 # 目录配置
 LOG_DIR="logs"
@@ -155,7 +161,7 @@ do_start() {
     # 3. 冲突检查
     local conflict=false
     if check_port $BACKEND_PORT; then log_warning "端口 $BACKEND_PORT 被占用"; conflict=true; fi
-    if check_port $FRONTEND_PORT; then log_warning "端口 $FRONTEND_PORT 被占用"; conflict=true; fi
+    if check_port $FRONTEND_PORT_LOCAL; then log_warning "端口 $FRONTEND_PORT_LOCAL 被占用"; conflict=true; fi
 
     if [ "$conflict" = true ]; then
         read -p "发现端口冲突，是否先停止现有服务？[Y/n] " choice
@@ -171,15 +177,24 @@ do_start() {
 
     # 4. 启动后端
     log_step "启动后端服务..."
+    
+    # 加载根目录的 .env 文件并导出环境变量
+    if [ -f ".env" ]; then
+        log_info "加载环境变量..."
+        # 使用 set -a 自动导出，source 读取文件
+        set -a
+        source .env
+        set +a
+        log_success "环境变量已加载"
+    else
+        log_warning "未找到 .env 文件，使用默认配置"
+    fi
+    
     cd backend
     if [ ! -f "go.mod" ]; then log_error "backend/go.mod 不存在"; exit 1; fi
     
-    # 检查依赖 (可选: go mod download) - 为了速度，如果已存在则跳过显式下载? 
-    # 还是一直下载比较稳妥? local_start.sh 里有 download. 我们保持一致.
-    # log_info "检查 Go 依赖..."
-    # go mod download 
-
     log_info "运行 Go 后端..."
+    # 直接运行，环境变量已经在当前 shell 中导出
     nohup go run main.go > "../$BACKEND_LOG" 2>&1 &
     BACKEND_PID=$!
     echo $BACKEND_PID > "../$BACKEND_PID_FILE"
@@ -203,22 +218,30 @@ do_start() {
     cd frontend
     if [ ! -f "package.json" ]; then log_error "frontend/package.json 不存在"; exit 1; fi
     
-    # log_info "安装前端依赖..."
-    # pnpm install --silent
-
     log_info "运行 Vite 开发服务器..."
     nohup pnpm run dev > "../$FRONTEND_LOG" 2>&1 &
     FRONTEND_PID=$!
     echo $FRONTEND_PID > "../$FRONTEND_PID_FILE"
     cd ..
 
-    if wait_for_port $FRONTEND_PORT "前端服务" 30; then
+    # Vite 需要更多时间来编译和启动，增加等待时间
+    log_info "等待 Vite 编译完成..."
+    sleep 3
+    
+    if wait_for_port $FRONTEND_PORT_LOCAL "前端服务" 45; then
         log_success "前端服务已启动"
     else
-        log_error "前端启动失败，请检查日志: $FRONTEND_LOG"
-        # 尝试清理后端
-        kill $BACKEND_PID 2>/dev/null
-        exit 1
+        # 检查进程是否还在运行
+        if check_process $FRONTEND_PID; then
+            log_warning "前端进程正在运行，但端口检测超时"
+            log_warning "这可能是正常的，Vite 可能需要更多时间启动"
+            log_info "请手动检查: http://localhost:$FRONTEND_PORT_LOCAL"
+        else
+            log_error "前端启动失败，请检查日志: $FRONTEND_LOG"
+            # 尝试清理后端
+            kill $BACKEND_PID 2>/dev/null
+            exit 1
+        fi
     fi
 
     # 6. 显示状态
@@ -253,9 +276,9 @@ do_stop() {
     fi
 
     # 前端
-    local fpids=$(lsof -ti:$FRONTEND_PORT 2>/dev/null || true)
+    local fpids=$(lsof -ti:$FRONTEND_PORT_LOCAL 2>/dev/null || true)
     if [ -n "$fpids" ]; then
-        for p in $fpids; do graceful_stop_process $p "残留前端进程 (Port $FRONTEND_PORT)"; done
+        for p in $fpids; do graceful_stop_process $p "残留前端进程 (Port $FRONTEND_PORT_LOCAL)"; done
     fi
 
     log_success "所有服务已停止"
@@ -297,8 +320,8 @@ do_status() {
     fi
 
     # 前端状态
-    if check_port $FRONTEND_PORT; then
-        echo -e "   ${GREEN}●${NC} 前端服务: ${GREEN}运行中${NC} (http://localhost:$FRONTEND_PORT)"
+    if check_port $FRONTEND_PORT_LOCAL; then
+        echo -e "   ${GREEN}●${NC} 前端服务: ${GREEN}运行中${NC} (http://localhost:$FRONTEND_PORT_LOCAL)"
         if [ -f "$FRONTEND_PID_FILE" ]; then
             echo -e "     PID: $(cat $FRONTEND_PID_FILE)"
         fi

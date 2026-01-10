@@ -62,3 +62,17 @@
 - frontend/src/types/api.ts
 - frontend/src/utils/deviceFingerprint.ts
 - scripts/deploy.sh
+
+## [2026-01-11 23:45] chore(config): 统一环境配置并清理冗余文档
+
+**Body**: 将环境变量配置统一到根目录 .env 文件,删除后端重复的配置文件;移除前端冗余的动画和导航文档;优化本地启动脚本的环境变量加载逻辑和端口配置说明,提升开发体验。
+
+**Footer**: 
+
+**Files**:
+- .env.example
+- backend/.env.example (deleted)
+- docs/SCRIPTS_GUIDE.md
+- frontend/ANIMATION_README.md (deleted)
+- frontend/NAVIGATION_FEATURES.md (deleted)
+- scripts/local.sh

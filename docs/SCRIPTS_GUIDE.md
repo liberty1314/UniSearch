@@ -45,6 +45,11 @@ UniSearch 项目提供了6个核心脚本，简化了从本地开发到生产部
 - 前端：http://localhost:5173
 - 后端：http://localhost:8888
 
+**端口说明：**
+- 本地开发使用 Vite 默认端口 5173
+- Docker 部署使用 `.env` 中配置的 `FRONTEND_PORT=3000`
+- 脚本会自动处理端口差异，无需手动修改
+
 ---
 
 ### 2. stop.sh - 停止本地开发环境
