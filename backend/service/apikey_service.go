@@ -194,12 +194,13 @@ func (s *APIKeyService) load() error {
 	return nil
 }
 
-// UpdateKeyExpiry 更新API密钥的过期时间
+// UpdateKeyExpiry 更新API密钥的过期时间和每日搜索限制
 // key: 要更新的密钥
 // newExpiresAt: 新的过期时间（如果不为nil）
 // extendHours: 延长的小时数（如果大于0）
+// dailySearchLimit: 每日搜索次数限制（如果不为nil，-1表示不更新此字段）
 // 注意：newExpiresAt 和 extendHours 至少要提供一个
-func (s *APIKeyService) UpdateKeyExpiry(key string, newExpiresAt *time.Time, extendHours int) (*model.APIKey, error) {
+func (s *APIKeyService) UpdateKeyExpiry(key string, newExpiresAt *time.Time, extendHours int, dailySearchLimit *int) (*model.APIKey, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	
@@ -210,8 +211,8 @@ func (s *APIKeyService) UpdateKeyExpiry(key string, newExpiresAt *time.Time, ext
 	}
 	
 	// 验证参数：至少要提供一个更新方式
-	if newExpiresAt == nil && extendHours <= 0 {
-		return nil, errors.New("必须提供 newExpiresAt 或 extendHours")
+	if newExpiresAt == nil && extendHours <= 0 && dailySearchLimit == nil {
+		return nil, errors.New("必须提供 newExpiresAt、extendHours 或 dailySearchLimit")
 	}
 	
 	// 更新过期时间
@@ -219,6 +220,11 @@ func (s *APIKeyService) UpdateKeyExpiry(key string, newExpiresAt *time.Time, ext
 		apiKey.ExpiresAt = *newExpiresAt
 	} else if extendHours > 0 {
 		apiKey.ExpiresAt = apiKey.ExpiresAt.Add(time.Duration(extendHours) * time.Hour)
+	}
+	
+	// 更新每日搜索限制
+	if dailySearchLimit != nil && *dailySearchLimit >= 0 {
+		apiKey.DailySearchLimit = *dailySearchLimit
 	}
 	
 	// 持久化到文件

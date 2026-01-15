@@ -42,6 +42,9 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
     // 延长小时数（延长模式）
     const [extendHours, setExtendHours] = useState<string>('');
 
+    // 每日搜索次数限制
+    const [dailySearchLimit, setDailySearchLimit] = useState<string>('');
+
     // 加载状态
     const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -57,6 +60,7 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
                 .slice(0, 16);
             setNewExpiresAt(localDateTime);
             setExtendHours('720'); // 默认延长 30 天
+            setDailySearchLimit(apiKey.daily_search_limit.toString()); // 初始化为当前值
             setEditMode('extend'); // 默认使用延长模式
         }
     }, [open, apiKey]);
@@ -96,6 +100,13 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
                 return false;
             }
         }
+
+        // 验证每日搜索次数限制
+        if (dailySearchLimit !== '' && (isNaN(Number(dailySearchLimit)) || Number(dailySearchLimit) < 0)) {
+            toast.error('每日搜索次数限制必须是大于等于 0 的整数');
+            return false;
+        }
+
         return true;
     };
 
@@ -110,18 +121,21 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
         setIsLoading(true);
 
         try {
+            // 准备更新参数
+            const limit = dailySearchLimit !== '' ? Number(dailySearchLimit) : undefined;
+
             // 根据编辑模式调用不同的 API
             if (editMode === 'datetime') {
                 // 设置新时间模式：将本地时间转换为 ISO 8601 格式
                 const newDate = new Date(newExpiresAt);
                 const isoString = newDate.toISOString();
-                await AuthService.updateApiKey(apiKey.key, isoString, undefined);
+                await AuthService.updateApiKey(apiKey.key, isoString, undefined, limit);
             } else {
                 // 延长模式
-                await AuthService.updateApiKey(apiKey.key, undefined, Number(extendHours));
+                await AuthService.updateApiKey(apiKey.key, undefined, Number(extendHours), limit);
             }
 
-            toast.success('API Key 有效期已更新');
+            toast.success('API Key 已更新');
 
             // 通知父组件刷新列表
             onSuccess();
@@ -159,9 +173,9 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
         <Dialog open={open} onOpenChange={handleClose}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>编辑 API Key 有效期</DialogTitle>
+                    <DialogTitle>编辑 API Key</DialogTitle>
                     <DialogDescription>
-                        修改 API Key 的过期时间，可以设置新的日期或延长有效期
+                        修改 API Key 的过期时间和每日搜索次数限制
                     </DialogDescription>
                 </DialogHeader>
 
@@ -178,6 +192,29 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
                             <span className="text-gray-600 dark:text-gray-400">当前过期时间: </span>
                             <span className="font-medium">{formatDateTime(apiKey.expires_at)}</span>
                         </div>
+                        <div className="text-sm">
+                            <span className="text-gray-600 dark:text-gray-400">当前每日限额: </span>
+                            <span className="font-medium">
+                                {apiKey.daily_search_limit > 0 ? apiKey.daily_search_limit : '无限制'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* 每日搜索次数限制 */}
+                    <div className="space-y-2">
+                        <Label htmlFor="daily-search-limit">每日搜索次数限制</Label>
+                        <Input
+                            id="daily-search-limit"
+                            type="number"
+                            min="0"
+                            placeholder="0 表示不限制"
+                            value={dailySearchLimit}
+                            onChange={(e) => setDailySearchLimit(e.target.value)}
+                            disabled={isLoading}
+                        />
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                            0 表示不限制
+                        </p>
                     </div>
 
                     {/* 编辑方式选择 */}

@@ -114,3 +114,13 @@
 - frontend/src/services/authService.ts
 - frontend/src/types/api.ts
 - gen_hash.go
+
+[2026-01-15 13:07] feat(admin): 支持编辑 API Key 时修改每日搜索次数限制
+  - Body: 在编辑 API Key 对话框中新增每日搜索次数限制字段，支持单独更新或与过期时间一起更新。后端接口和服务层同步支持该参数，前端显示当前限额并提供输入框修改。
+  - Files:
+    - backend/api/admin_handler.go
+    - backend/service/apikey_service.go
+    - docs/api_reference.md
+    - frontend/src/components/admin/EditKeyDialog.tsx
+    - frontend/src/services/authService.ts
+    - frontend/src/types/api.ts

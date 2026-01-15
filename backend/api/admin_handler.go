@@ -407,8 +407,9 @@ func getPluginDescription(name string) string {
 
 // UpdateAPIKeyRequest 更新API Key请求
 type UpdateAPIKeyRequest struct {
-	ExpiresAt   *time.Time `json:"expires_at"`   // 可选：直接设置过期时间
-	ExtendHours *int       `json:"extend_hours"` // 可选：延长小时数
+	ExpiresAt        *time.Time `json:"expires_at"`         // 可选：直接设置过期时间
+	ExtendHours      *int       `json:"extend_hours"`       // 可选：延长小时数
+	DailySearchLimit *int       `json:"daily_search_limit"` // 可选：每日搜索次数限制
 }
 
 // UpdateAPIKeyHandler 更新API Key有效期
@@ -433,9 +434,9 @@ func UpdateAPIKeyHandler(apiKeyService *service.APIKeyService) gin.HandlerFunc {
 		}
 
 		// 验证参数：至少要提供一个更新方式
-		if req.ExpiresAt == nil && (req.ExtendHours == nil || *req.ExtendHours <= 0) {
+		if req.ExpiresAt == nil && (req.ExtendHours == nil || *req.ExtendHours <= 0) && req.DailySearchLimit == nil {
 			c.JSON(400, gin.H{
-				"error": "参数错误：必须提供 expires_at 或 extend_hours",
+				"error": "参数错误：必须提供 expires_at、extend_hours 或 daily_search_limit",
 				"code":  "INVALID_REQUEST",
 			})
 			return
@@ -447,7 +448,7 @@ func UpdateAPIKeyHandler(apiKeyService *service.APIKeyService) gin.HandlerFunc {
 			extendHours = *req.ExtendHours
 		}
 		
-		updatedKey, err := apiKeyService.UpdateKeyExpiry(key, req.ExpiresAt, extendHours)
+		updatedKey, err := apiKeyService.UpdateKeyExpiry(key, req.ExpiresAt, extendHours, req.DailySearchLimit)
 		if err != nil {
 			c.JSON(500, gin.H{
 				"error": "更新密钥失败: " + err.Error(),

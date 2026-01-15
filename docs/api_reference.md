@@ -628,9 +628,9 @@ curl -X GET http://localhost:8888/api/admin/system-info \
 
 ---
 
-### 6. 更新 API Key 有效期
+### 6. 更新 API Key
 
-更新指定 API Key 的过期时间。
+更新指定 API Key 的过期时间和每日搜索次数限制。
 
 **接口地址**: `/api/admin/keys/:key`  
 **请求方法**: `PATCH`  
@@ -647,10 +647,11 @@ curl -X GET http://localhost:8888/api/admin/system-info \
 
 | 参数名 | 类型 | 必填 | 描述 |
 |--------|------|------|------|
-| expires_at | string | 否 | 新的过期时间（ISO 8601 格式），与 extend_hours 二选一 |
-| extend_hours | number | 否 | 延长的小时数（正整数），与 expires_at 二选一 |
+| expires_at | string | 否 | 新的过期时间（ISO 8601 格式） |
+| extend_hours | number | 否 | 延长的小时数（正整数） |
+| daily_search_limit | number | 否 | 每日搜索次数限制（0表示不限制） |
 
-**注意**: `expires_at` 和 `extend_hours` 必须至少提供一个。
+**注意**: `expires_at`、`extend_hours` 和 `daily_search_limit` 至少要提供一个。
 
 **请求示例**:
 
@@ -670,6 +671,23 @@ curl -X PATCH http://localhost:8888/api/admin/keys/<AUTH_TOKEN> \
   -d '{
     "extend_hours": 168
   }'
+
+# 方式3：更新每日搜索次数限制
+curl -X PATCH http://localhost:8888/api/admin/keys/<AUTH_TOKEN> \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "daily_search_limit": 100
+  }'
+
+# 方式4：同时更新过期时间和每日搜索限制
+curl -X PATCH http://localhost:8888/api/admin/keys/<AUTH_TOKEN> \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "extend_hours": 720,
+    "daily_search_limit": 50
+  }'
 ```
 
 **成功响应**:
@@ -683,7 +701,10 @@ curl -X PATCH http://localhost:8888/api/admin/keys/<AUTH_TOKEN> \
     "expires_at": "2026-03-05T11:00:00Z",
     "ttl_hours": 720,
     "is_enabled": true,
-    "description": "测试用密钥"
+    "description": "测试用密钥",
+    "daily_search_limit": 50,
+    "today_search_count": 10,
+    "last_search_date": "2026-01-15"
   }
 }
 ```
@@ -692,7 +713,7 @@ curl -X PATCH http://localhost:8888/api/admin/keys/<AUTH_TOKEN> \
 
 ```json
 {
-  "error": "参数错误：必须提供 expires_at 或 extend_hours",
+  "error": "参数错误：必须提供 expires_at、extend_hours 或 daily_search_limit",
   "code": "INVALID_REQUEST"
 }
 ```

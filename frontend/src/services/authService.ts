@@ -201,16 +201,18 @@ export class AuthService {
     }
 
     /**
-     * 更新 API Key 有效期（管理员权限）
+     * 更新 API Key 有效期和每日搜索限制（管理员权限）
      * @param key API Key 字符串
      * @param expiresAt 新的过期时间（ISO 8601 格式，可选）
      * @param extendHours 延长小时数（可选）
+     * @param dailySearchLimit 每日搜索次数限制（可选）
      * @returns 更新后的 API Key 信息
      */
     static async updateApiKey(
         key: string,
         expiresAt?: string,
-        extendHours?: number
+        extendHours?: number,
+        dailySearchLimit?: number
     ): Promise<APIKeyInfo> {
         const request: UpdateAPIKeyRequest = {};
 
@@ -220,6 +222,10 @@ export class AuthService {
 
         if (extendHours !== undefined) {
             request.extend_hours = extendHours;
+        }
+
+        if (dailySearchLimit !== undefined) {
+            request.daily_search_limit = dailySearchLimit;
         }
 
         const response = await apiClient.patch<{ key: APIKeyInfo }>(`/admin/keys/${key}`, request);

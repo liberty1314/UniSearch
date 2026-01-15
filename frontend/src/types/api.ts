@@ -265,6 +265,7 @@ export interface CreateAPIKeyRequest {
 export interface UpdateAPIKeyRequest {
   expires_at?: string; // 可选：直接设置过期时间（ISO 8601 格式）
   extend_hours?: number; // 可选：延长小时数
+  daily_search_limit?: number; // 可选：每日搜索次数限制
 }
 
 /**
