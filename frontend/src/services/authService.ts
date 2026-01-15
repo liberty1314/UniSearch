@@ -172,12 +172,14 @@ export class AuthService {
      * 创建新的 API Key（管理员权限）
      * @param ttlHours 有效期（小时）
      * @param description 描述信息
+     * @param dailySearchLimit 每日搜索次数限制（0表示不限制）
      * @returns 新创建的 API Key 信息
      */
-    static async createApiKey(ttlHours: number, description: string): Promise<APIKeyInfo> {
-        const request: CreateAPIKeyRequest = {
+    static async createApiKey(ttlHours: number, description: string, dailySearchLimit: number = 0): Promise<APIKeyInfo> {
+        const request = {
             ttl_hours: ttlHours,
             description,
+            daily_search_limit: dailySearchLimit,
         };
 
         const response = await apiClient.post<{ key: APIKeyInfo }>('/admin/keys', request);
@@ -262,17 +264,20 @@ export class AuthService {
      * @param count 创建数量
      * @param ttlHours 有效期（小时）
      * @param descriptionPrefix 描述前缀（可选）
+     * @param dailySearchLimit 每日搜索次数限制（0表示不限制）
      * @returns 批量创建结果
      */
     static async batchCreateApiKeys(
         count: number,
         ttlHours: number,
-        descriptionPrefix?: string
+        descriptionPrefix?: string,
+        dailySearchLimit: number = 0
     ): Promise<BatchCreateResult> {
-        const request: BatchCreateRequest = {
+        const request = {
             count,
             ttl_hours: ttlHours,
             description_prefix: descriptionPrefix,
+            daily_search_limit: dailySearchLimit,
         };
 
         const response = await apiClient.post<BatchCreateResult>(

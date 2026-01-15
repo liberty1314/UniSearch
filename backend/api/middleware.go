@@ -96,6 +96,10 @@ func AuthMiddleware(apiKeyService *service.APIKeyService) gin.HandlerFunc {
 				c.Set("username", claims.Username)
 				c.Set("is_admin", claims.IsAdmin)
 				c.Set("auth_type", "jwt")
+				// 如果JWT中包含API Key信息，也保存下来
+				if claims.APIKey != "" {
+					c.Set("api_key", claims.APIKey)
+				}
 				c.Next()
 				return
 			}
@@ -106,6 +110,7 @@ func AuthMiddleware(apiKeyService *service.APIKeyService) gin.HandlerFunc {
 			if apiKey := extractAPIKey(c); apiKey != "" {
 				if valid, err := apiKeyService.ValidateKey(apiKey); err == nil && valid {
 					c.Set("auth_type", "apikey")
+					c.Set("api_key", apiKey)
 					c.Next()
 					return
 				}

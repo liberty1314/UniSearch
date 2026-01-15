@@ -54,6 +54,7 @@ export function BatchCreateDialog({
     const [count, setCount] = useState<string>('10'); // 默认创建 10 个
     const [ttlHours, setTtlHours] = useState<string>('720'); // 默认 30 天
     const [descriptionPrefix, setDescriptionPrefix] = useState<string>('批量生成-');
+    const [dailySearchLimit, setDailySearchLimit] = useState<string>('10'); // 默认每日10次
 
     // 加载状态
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -73,6 +74,7 @@ export function BatchCreateDialog({
             setCount('10');
             setTtlHours('720');
             setDescriptionPrefix('批量生成-');
+            setDailySearchLimit('10');
             setCreatedKeys([]);
             setShowResults(false);
             setShowConfirm(false);
@@ -122,7 +124,8 @@ export function BatchCreateDialog({
             const result = await AuthService.batchCreateApiKeys(
                 Number(count),
                 Number(ttlHours),
-                descriptionPrefix
+                descriptionPrefix,
+                Number(dailySearchLimit) || 0
             );
 
             // 保存创建结果
@@ -317,6 +320,23 @@ export function BatchCreateDialog({
                                 />
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
                                     每个密钥的描述将为：前缀 + 序号（如"批量生成-1"）
+                                </p>
+                            </div>
+
+                            {/* 每日搜索限制输入 */}
+                            <div className="space-y-2">
+                                <Label htmlFor="daily-search-limit">每日搜索次数限制</Label>
+                                <Input
+                                    id="daily-search-limit"
+                                    type="number"
+                                    min="0"
+                                    placeholder="例如：10（0表示不限制）"
+                                    value={dailySearchLimit}
+                                    onChange={(e) => setDailySearchLimit(e.target.value)}
+                                    disabled={isLoading}
+                                />
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    设置为 0 表示不限制每日搜索次数
                                 </p>
                             </div>
 

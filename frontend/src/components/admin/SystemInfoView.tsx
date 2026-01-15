@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { StatsCard } from './StatsCard';
+import { PluginManageDialog } from './PluginManageDialog';
 import {
     Activity,
     RefreshCw,
@@ -14,7 +15,8 @@ import {
     Globe,
     CheckCircle2,
     Layers,
-    Radio
+    Radio,
+    Edit
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import type { SystemInfoResponse } from '@/types/api';
@@ -32,6 +34,7 @@ export const SystemInfoView: React.FC = () => {
     const { token } = useAuthStore();
     const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [isManageDialogOpen, setIsManageDialogOpen] = useState<boolean>(false);
 
     /**
      * 加载系统信息
@@ -73,6 +76,20 @@ export const SystemInfoView: React.FC = () => {
         if (!url) return '未配置';
         // 隐藏密码部分
         return url.replace(/(:\/\/)([^:]+):([^@]+)@/, '$1***:***@');
+    };
+
+    /**
+     * 打开插件管理对话框
+     */
+    const handleOpenManageDialog = () => {
+        setIsManageDialogOpen(true);
+    };
+
+    /**
+     * 插件管理成功后的回调
+     */
+    const handleManageSuccess = () => {
+        loadSystemInfo(); // 重新加载系统信息
     };
 
     if (isLoading) {
@@ -150,17 +167,32 @@ export const SystemInfoView: React.FC = () => {
                                 查看所有已注册插件的详细信息
                             </CardDescription>
                         </div>
-                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={loadSystemInfo}
-                                disabled={isLoading}
-                                className="border-slate-200 dark:border-slate-700"
-                            >
-                                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                            </Button>
-                        </motion.div>
+                        <div className="flex items-center gap-2">
+                            {/* 编辑按钮 */}
+                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={handleOpenManageDialog}
+                                    className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+                                >
+                                    <Edit className="w-4 h-4 mr-1" />
+                                    编辑
+                                </Button>
+                            </motion.div>
+                            {/* 刷新按钮 */}
+                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={loadSystemInfo}
+                                    disabled={isLoading}
+                                    className="border-slate-200 dark:border-slate-700 cursor-pointer"
+                                >
+                                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                </Button>
+                            </motion.div>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -192,15 +224,18 @@ export const SystemInfoView: React.FC = () => {
                                             </TableCell>
                                             <TableCell>
                                                 <Badge
-                                                    variant={plugin.status === 'active' ? 'success' : 'outline'}
+                                                    variant={plugin.status === 'active' ? 'success' : plugin.status === 'custom' ? 'default' : 'outline'}
                                                     className="font-medium"
                                                 >
                                                     <div className="flex items-center gap-1.5">
-                                                        <div className={`w-1.5 h-1.5 rounded-full ${plugin.status === 'active'
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${
+                                                            plugin.status === 'active'
                                                                 ? 'bg-green-500'
-                                                                : 'bg-gray-400'
+                                                                : plugin.status === 'custom'
+                                                                    ? 'bg-blue-500'
+                                                                    : 'bg-gray-400'
                                                             }`} />
-                                                        {plugin.status === 'active' ? '活跃' : '不活跃'}
+                                                        {plugin.status === 'active' ? '内置' : plugin.status === 'custom' ? '自定义' : '不活跃'}
                                                     </div>
                                                 </Badge>
                                             </TableCell>
@@ -361,6 +396,15 @@ export const SystemInfoView: React.FC = () => {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* 插件管理对话框 */}
+            <PluginManageDialog
+                isOpen={isManageDialogOpen}
+                onClose={() => setIsManageDialogOpen(false)}
+                onSuccess={handleManageSuccess}
+                token={token || ''}
+                plugins={systemInfo.plugins}
+            />
         </motion.div>
     );
 };

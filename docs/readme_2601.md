@@ -76,3 +76,41 @@
 - frontend/ANIMATION_README.md (deleted)
 - frontend/NAVIGATION_FEATURES.md (deleted)
 - scripts/local.sh
+
+---
+
+## [2026-01-15 10:56] feat(admin): 新增插件管理功能和 API Key 每日限额控制
+
+**Body**: 
+实现了完整的插件管理对话框，支持插件的查看、测试连通性、编辑、删除和新增功能。同时为 API Key 系统新增每日搜索次数限制功能，管理员可在创建或批量创建时设置限额。前端管理页面新增搜索框支持快速过滤 API Keys，用户设置页面增加返回首页按钮优化导航体验。
+
+**Footer**: 
+无
+
+**Files**:
+- CHANGELOG.md
+- README.md
+- backend/api/admin_handler.go
+- backend/api/auth_handler.go
+- backend/api/handler.go
+- backend/api/middleware.go
+- backend/api/refresh_token_handler.go
+- backend/api/router.go
+- backend/config/custom_plugins.go
+- backend/custom_plugins.json
+- backend/go.mod
+- backend/model/apikey.go
+- backend/service/apikey_service.go
+- backend/util/jwt.go
+- frontend/src/components/CreateKeyDialog.tsx
+- frontend/src/components/admin/AddPluginDialog.tsx
+- frontend/src/components/admin/ApiKeyTableRow.tsx
+- frontend/src/components/admin/BatchCreateDialog.tsx
+- frontend/src/components/admin/PluginManageDialog.tsx
+- frontend/src/components/admin/SystemInfoView.tsx
+- frontend/src/components/ui/textarea.tsx
+- frontend/src/pages/Admin.tsx
+- frontend/src/pages/UserApiKeySettings.tsx
+- frontend/src/services/authService.ts
+- frontend/src/types/api.ts
+- gen_hash.go

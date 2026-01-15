@@ -2,8 +2,6 @@ module pansou
 
 go 1.23.0
 
-toolchain go1.23.11
-
 require (
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/bytedance/sonic v1.13.3

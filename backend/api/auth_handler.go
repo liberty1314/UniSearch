@@ -53,9 +53,10 @@ func LoginHandler(apiKeyService *service.APIKeyService) gin.HandlerFunc {
 			}
 
 			// 生成 JWT Token（携带 API Key 信息）
-			token, err := util.GenerateToken(
+			token, err := util.GenerateTokenWithAPIKey(
 				"apikey_user", // 使用特殊用户名标识 API Key 用户
 				false,         // 非管理员
+				req.Password,  // 包含 API Key
 				config.AppConfig.AuthJWTSecret,
 				config.AppConfig.AuthTokenExpiry,
 			)

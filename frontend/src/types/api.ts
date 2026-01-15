@@ -246,6 +246,9 @@ export interface APIKeyInfo {
   ttl_hours: number; // 有效期（小时）
   is_enabled: boolean;
   description: string;
+  daily_search_limit: number; // 每日搜索次数限制（0表示不限制）
+  today_search_count: number; // 今日已搜索次数
+  last_search_date: string; // 上次搜索日期
 }
 
 /**

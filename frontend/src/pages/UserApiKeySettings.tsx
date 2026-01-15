@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
 import { AuthService } from '@/services/authService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Key, Copy, Clock, Calendar, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
+import { Key, Copy, Clock, Calendar, CheckCircle2, XCircle, Sparkles, Home, ArrowLeft } from 'lucide-react';
 
 /**
  * 用户 API Key 设置页面
@@ -13,6 +14,7 @@ import { Key, Copy, Clock, Calendar, CheckCircle2, XCircle, Sparkles } from 'luc
  * 展示当前用户的 API Key 详细信息
  */
 const UserApiKeySettings: React.FC = () => {
+    const navigate = useNavigate();
     const { apiKey, token } = useAuthStore();
     const [keyInfo, setKeyInfo] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -129,6 +131,16 @@ const UserApiKeySettings: React.FC = () => {
                     transition={{ duration: 0.5 }}
                     className="mb-8"
                 >
+                    <div className="flex items-center justify-between mb-4">
+                        <Button
+                            onClick={() => navigate('/')}
+                            variant="outline"
+                            className="flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                            返回首页
+                        </Button>
+                    </div>
                     <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
                         API Key 设置
                     </h1>

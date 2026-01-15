@@ -33,8 +33,9 @@ import { Sidebar, type AdminView } from '@/components/admin/Sidebar';
 import { BatchActionsBar } from '@/components/admin/BatchActionsBar';
 import { StatsCard } from '@/components/admin/StatsCard';
 import { SystemInfoView } from '@/components/admin/SystemInfoView';
-import { Plus, RefreshCw, Key, AlertCircle, CheckCircle2, Activity } from 'lucide-react';
+import { Plus, RefreshCw, Key, AlertCircle, CheckCircle2, Activity, Search } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import ApiKeyTableRow from '@/components/admin/ApiKeyTableRow';
 
 /**
@@ -93,6 +94,21 @@ const Admin: React.FC = () => {
 
     // 批量操作加载状态
     const [isBatchOperating, setIsBatchOperating] = useState<boolean>(false);
+
+    // 搜索关键词
+    const [searchKeyword, setSearchKeyword] = useState<string>('');
+
+    // 过滤后的 API Keys
+    const filteredApiKeys = React.useMemo(() => {
+        if (!searchKeyword.trim()) {
+            return apiKeys;
+        }
+        const keyword = searchKeyword.toLowerCase().trim();
+        return apiKeys.filter(key => 
+            key.key.toLowerCase().includes(keyword) ||
+            (key.description && key.description.toLowerCase().includes(keyword))
+        );
+    }, [apiKeys, searchKeyword]);
 
     /**
      * 检查管理员权限
@@ -401,6 +417,17 @@ const Admin: React.FC = () => {
                                             </CardDescription>
                                         </div>
                                         <div className="flex items-center gap-2">
+                                            {/* 搜索框 */}
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                                <Input
+                                                    type="text"
+                                                    placeholder="搜索 API Key..."
+                                                    value={searchKeyword}
+                                                    onChange={(e) => setSearchKeyword(e.target.value)}
+                                                    className="pl-9 w-48 h-9 text-sm border-slate-200 dark:border-slate-700"
+                                                />
+                                            </div>
                                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                                 <Button
                                                     variant="outline"
@@ -510,12 +537,13 @@ const Admin: React.FC = () => {
                                                             <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">创建时间</TableHead>
                                                             <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">过期时间</TableHead>
                                                             <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">剩余时间</TableHead>
+                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 text-center">今日用量</TableHead>
                                                             <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">状态</TableHead>
                                                             <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 text-right">操作</TableHead>
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
-                                                        {apiKeys.map((key) => {
+                                                        {filteredApiKeys.map((key) => {
                                                             const expired = isKeyExpired(key.expires_at);
                                                             const canSelect = key.is_enabled && !expired;
                                                             const isSelected = selectedKeys.has(key.key);

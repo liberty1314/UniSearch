@@ -11,11 +11,17 @@ import (
 type Claims struct {
 	Username string `json:"username"`
 	IsAdmin  bool   `json:"is_admin"` // 是否为管理员
+	APIKey   string `json:"api_key"`  // 关联的API Key
 	jwt.RegisteredClaims
 }
 
 // GenerateToken 生成JWT token
 func GenerateToken(username string, isAdmin bool, secret string, expiry time.Duration) (string, error) {
+	return GenerateTokenWithAPIKey(username, isAdmin, "", secret, expiry)
+}
+
+// GenerateTokenWithAPIKey 生成带API Key的JWT token
+func GenerateTokenWithAPIKey(username string, isAdmin bool, apiKey string, secret string, expiry time.Duration) (string, error) {
 	if username == "" {
 		return "", errors.New("username cannot be empty")
 	}
@@ -27,6 +33,7 @@ func GenerateToken(username string, isAdmin bool, secret string, expiry time.Dur
 	claims := &Claims{
 		Username: username,
 		IsAdmin:  isAdmin,
+		APIKey:   apiKey,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

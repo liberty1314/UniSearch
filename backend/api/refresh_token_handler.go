@@ -181,10 +181,11 @@ func UserLoginWithRememberHandler(apiKeyService *service.APIKeyService, refreshT
 				return
 			}
 
-			// 生成 Access Token
-			accessToken, err := util.GenerateToken(
+			// 生成 Access Token（携带 API Key 信息，用于搜索计数）
+			accessToken, err := util.GenerateTokenWithAPIKey(
 				"apikey_user",
 				false,
+				req.Password, // 包含 API Key
 				config.AppConfig.AuthJWTSecret,
 				config.AppConfig.AuthTokenExpiry,
 			)

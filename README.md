@@ -15,6 +15,25 @@
 
 ---
 
+## 🎉 最新更新 (v2.3.0)
+
+<div align="center">
+
+### 🔐 刷新令牌与"记住我"功能
+30天自动登录 • 设备指纹验证 • AES-256-GCM加密 • Token轮转机制
+
+### 🔌 插件管理系统
+可视化管理 • 动态添加/编辑/删除 • 优先级设置 • 状态监控
+
+### 📊 API使用次数限制
+每日搜索限制 • 实时统计 • 批量管理 • 自动检查
+
+[查看完整更新日志](CHANGELOG.md)
+
+</div>
+
+---
+
 ## 📖 目录
 
 - [功能特性](#-功能特性)
@@ -254,7 +273,6 @@ docker run -d \
 - 前端地址：http://localhost:3000
 - 后端地址：http://localhost:8888
 - 管理后台：http://localhost:3000/admin/login
-- 默认密码：`admin123.com`
 
 **注意事项：**
 - 构建完成后，Docker Hub 可能需要 1-2 分钟同步镜像
@@ -305,12 +323,7 @@ ADMIN_PASSWORD_HASH=$2a$10$RGtHe7PyEsFfnffZ9JaxJeQ9LwoiSOGpJaxeo1kqtwfpHcadPiFTS
 chmod 600 deploy/.env.local
 ```
 
-**默认管理员账号：**
-- 用户名：`admin`
-- 密码：`admin123.com`（建议修改）
-
 ⚠️ **安全提示**：
-- 生产环境部署前，请务必修改默认密码
 - 密码哈希必须配置在 `deploy/.env.local` 文件中
 - 不要将 `.env.local` 文件提交到 Git 仓库
 - 详细安全指南请参考：[安全部署指南](docs/SECURITY_GUIDE.md)
@@ -727,15 +740,7 @@ rm -rf backend/cache/*
 
 ---
 
-## 🙏 致谢
-
-感谢所有贡献者和开源社区的支持！
-
----
-
 <div align="center">
-
-**如果这个项目对您有帮助，请给我们一个 ⭐️ Star！**
 
 [返回顶部](#unisearch---网盘资源搜索系统)
 

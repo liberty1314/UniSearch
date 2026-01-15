@@ -17,15 +17,40 @@ import (
 // 保存搜索服务的实例
 var searchService *service.SearchService
 
+// 保存API Key服务的实例
+var apiKeyService *service.APIKeyService
+
 // SetSearchService 设置搜索服务实例
 func SetSearchService(service *service.SearchService) {
 	searchService = service
+}
+
+// SetAPIKeyService 设置API Key服务实例
+func SetAPIKeyService(service *service.APIKeyService) {
+	apiKeyService = service
 }
 
 // SearchHandler 搜索处理函数
 func SearchHandler(c *gin.Context) {
 	var req model.SearchRequest
 	var err error
+
+	// 获取当前用户的 API Key（从 context 中获取，由中间件设置）
+	currentAPIKey, _ := c.Get("api_key")
+	apiKeyStr, _ := currentAPIKey.(string)
+	
+	// 如果有 API Key，检查搜索次数限制
+	if apiKeyStr != "" && apiKeyService != nil {
+		canSearch, err := apiKeyService.CanSearch(apiKeyStr)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.NewErrorResponse(500, "检查搜索限制失败: "+err.Error()))
+			return
+		}
+		if !canSearch {
+			c.JSON(http.StatusTooManyRequests, model.NewErrorResponse(429, "今日搜索次数已用完"))
+			return
+		}
+	}
 
 	// 根据请求方法不同处理参数
 	if c.Request.Method == http.MethodGet {
@@ -215,6 +240,11 @@ func SearchHandler(c *gin.Context) {
 	// 应用过滤器
 	if req.Filter != nil {
 		result = applyResultFilter(result, req.Filter, req.ResultType)
+	}
+
+	// 搜索成功后，增加搜索计数
+	if apiKeyStr != "" && apiKeyService != nil {
+		apiKeyService.IncrementSearchCount(apiKeyStr)
 	}
 
 	// 包装SearchResponse到标准响应格式中

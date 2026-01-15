@@ -169,6 +169,29 @@ const ApiKeyTableRow: React.FC<ApiKeyTableRowProps> = memo(({
                     {calculateRemainingTime(apiKey.expires_at)}
                 </span>
             </TableCell>
+            <TableCell className="text-sm text-center">
+                {apiKey.daily_search_limit > 0 ? (
+                    <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-slate-700 dark:text-slate-300 font-medium">
+                            {apiKey.today_search_count} / {apiKey.daily_search_limit}
+                        </span>
+                        <div className="w-16 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div 
+                                className={`h-full rounded-full transition-all ${
+                                    apiKey.today_search_count >= apiKey.daily_search_limit 
+                                        ? 'bg-red-500' 
+                                        : apiKey.today_search_count >= apiKey.daily_search_limit * 0.8 
+                                            ? 'bg-amber-500' 
+                                            : 'bg-emerald-500'
+                                }`}
+                                style={{ width: `${Math.min(100, (apiKey.today_search_count / apiKey.daily_search_limit) * 100)}%` }}
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <span className="text-slate-400 dark:text-slate-500 italic">无限制</span>
+                )}
+            </TableCell>
             <TableCell>
                 <Badge
                     variant={

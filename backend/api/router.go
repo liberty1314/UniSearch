@@ -12,6 +12,8 @@ import (
 func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, refreshTokenService *service.RefreshTokenService) *gin.Engine {
 	// 设置搜索服务
 	SetSearchService(searchService)
+	// 设置API Key服务
+	SetAPIKeyService(apiKeyService)
 	
 	// 设置为生产模式
 	gin.SetMode(gin.ReleaseMode)
@@ -67,6 +69,11 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			admin.POST("/keys/batch-create", BatchCreateAPIKeysHandler(apiKeyService)) // 新增：批量创建
 			admin.POST("/keys/batch-delete", BatchDeleteAPIKeysHandler(apiKeyService)) // 新增：批量删除
 			admin.GET("/system-info", GetSystemInfoHandler(searchService)) // 更新：获取系统信息（包含插件状态）
+			admin.POST("/plugins/:pluginName/test", TestPluginHandler(searchService)) // 新增：测试插件
+			admin.POST("/plugins", CreatePluginHandler()) // 新增：创建插件
+			admin.PUT("/plugins/:pluginName", UpdatePluginHandler()) // 新增：更新插件
+			admin.DELETE("/plugins/:pluginName", DeletePluginHandler()) // 新增：删除插件
+			admin.POST("/test-url", TestURLHandler()) // 新增：测试URL连通性
 		}
 		
 		// 搜索接口 - 支持POST和GET两种方式

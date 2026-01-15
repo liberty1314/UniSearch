@@ -37,7 +37,8 @@ func NewAPIKeyService(storePath string) (*APIKeyService, error) {
 // GenerateKey 生成新的API密钥
 // ttl: 密钥有效期
 // description: 密钥描述信息
-func (s *APIKeyService) GenerateKey(ttl time.Duration, description string) (*model.APIKey, error) {
+// dailySearchLimit: 每日搜索次数限制（0表示不限制）
+func (s *APIKeyService) GenerateKey(ttl time.Duration, description string, dailySearchLimit int) (*model.APIKey, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	
@@ -54,13 +55,16 @@ func (s *APIKeyService) GenerateKey(ttl time.Duration, description string) (*mod
 	now := time.Now()
 	ttlHours := int(ttl.Hours())
 	apiKey := &model.APIKey{
-		Key:         key,
-		CreatedAt:   now,
-		FirstUsedAt: nil, // 初始为 nil，表示未使用
-		ExpiresAt:   now.Add(ttl), // 临时设置，实际会在首次使用时重新计算
-		TTLHours:    ttlHours,
-		IsEnabled:   true,
-		Description: description,
+		Key:              key,
+		CreatedAt:        now,
+		FirstUsedAt:      nil, // 初始为 nil，表示未使用
+		ExpiresAt:        now.Add(ttl), // 临时设置，实际会在首次使用时重新计算
+		TTLHours:         ttlHours,
+		IsEnabled:        true,
+		Description:      description,
+		DailySearchLimit: dailySearchLimit,
+		TodaySearchCount: 0,
+		LastSearchDate:   "",
 	}
 	
 	// 存储到内存映射
@@ -289,8 +293,9 @@ type BatchGenerateKeysResult struct {
 // count: 生成数量（1-100）
 // ttl: 密钥有效期
 // descriptionPrefix: 描述前缀（可选）
+// dailySearchLimit: 每日搜索次数限制
 // 使用并发处理提高性能，限制并发数为10
-func (s *APIKeyService) BatchGenerateKeys(count int, ttl time.Duration, descriptionPrefix string) (*BatchGenerateKeysResult, error) {
+func (s *APIKeyService) BatchGenerateKeys(count int, ttl time.Duration, descriptionPrefix string, dailySearchLimit int) (*BatchGenerateKeysResult, error) {
 	// 验证参数
 	if count < 1 || count > 100 {
 		return nil, errors.New("生成数量必须在1-100之间")
@@ -341,13 +346,16 @@ func (s *APIKeyService) BatchGenerateKeys(count int, ttl time.Duration, descript
 			now := time.Now()
 			ttlHours := int(ttl.Hours())
 			apiKey := &model.APIKey{
-				Key:         key,
-				CreatedAt:   now,
-				FirstUsedAt: nil, // 初始为 nil，表示未使用
-				ExpiresAt:   now.Add(ttl), // 临时设置，实际会在首次使用时重新计算
-				TTLHours:    ttlHours,
-				IsEnabled:   true,
-				Description: description,
+				Key:              key,
+				CreatedAt:        now,
+				FirstUsedAt:      nil, // 初始为 nil，表示未使用
+				ExpiresAt:        now.Add(ttl), // 临时设置，实际会在首次使用时重新计算
+				TTLHours:         ttlHours,
+				IsEnabled:        true,
+				Description:      description,
+				DailySearchLimit: dailySearchLimit,
+				TodaySearchCount: 0,
+				LastSearchDate:   "",
 			}
 			
 			// 存储到内存映射（需要加锁）
@@ -447,4 +455,54 @@ func (s *APIKeyService) BatchDeleteKeys(keys []string) ([]BatchDeleteKeysResult,
 	}
 	
 	return results, nil
+}
+
+
+// IncrementSearchCount 增加搜索计数
+// 返回是否成功（如果超过限制则返回false）
+func (s *APIKeyService) IncrementSearchCount(key string) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	
+	apiKey, exists := s.keys[key]
+	if !exists {
+		return false, errors.New("密钥不存在")
+	}
+	
+	if !apiKey.IncrementSearchCount() {
+		return false, nil
+	}
+	
+	// 持久化到文件
+	if err := s.save(); err != nil {
+		return false, fmt.Errorf("保存密钥失败: %w", err)
+	}
+	
+	return true, nil
+}
+
+// GetRemainingSearches 获取剩余搜索次数
+func (s *APIKeyService) GetRemainingSearches(key string) (int, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	
+	apiKey, exists := s.keys[key]
+	if !exists {
+		return 0, errors.New("密钥不存在")
+	}
+	
+	return apiKey.GetRemainingSearches(), nil
+}
+
+// CanSearch 检查是否可以搜索
+func (s *APIKeyService) CanSearch(key string) (bool, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	
+	apiKey, exists := s.keys[key]
+	if !exists {
+		return false, errors.New("密钥不存在")
+	}
+	
+	return apiKey.CanSearch(), nil
 }

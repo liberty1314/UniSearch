@@ -1,0 +1,23 @@
+[
+  {
+    "name": "kanjuba",
+    "url": "http://app.ishen520.com/api.php/v1.vod?wd=考研",
+    "priority": 3,
+    "description": "看剧吧-考研",
+    "enabled": true
+  },
+  {
+    "name": "52API",
+    "url": "https://www.52api.cn/api/pan_sou",
+    "priority": 3,
+    "description": "支持游戏、影视等资源搜索",
+    "enabled": true
+  },
+  {
+    "name": "kule",
+    "url": "https://api.kuleu.com/api/ziyuan?q=雅思",
+    "priority": 3,
+    "description": "酷乐资源API-返回书籍",
+    "enabled": true
+  }
+]
