@@ -1027,6 +1027,373 @@ curl -X POST http://localhost:8888/api/admin/keys/batch-delete \
 
 ---
 
+## 插件管理 API
+
+插件管理 API 用于管理系统中的搜索插件，包括内置插件和自定义插件。所有接口都需要管理员 JWT Token 认证。
+
+### 1. 创建自定义插件
+
+添加新的自定义搜索插件到系统。
+
+**接口地址**: `/api/admin/plugins`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| name | string | 是 | 插件名称（唯一标识符，建议小写字母和数字） |
+| url | string | 是 | 插件的 API 地址 |
+| priority | number | 否 | 优先级（数字越小优先级越高，默认 100） |
+| description | string | 否 | 插件功能描述 |
+
+**请求示例**:
+
+```bash
+curl -X POST http://localhost:8888/api/admin/plugins \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "custom_plugin",
+    "url": "https://example.com/api/search",
+    "priority": 50,
+    "description": "自定义搜索插件"
+  }'
+```
+
+**成功响应**:
+
+```json
+{
+  "success": true,
+  "message": "插件添加成功",
+  "plugin": {
+    "name": "custom_plugin",
+    "url": "https://example.com/api/search",
+    "priority": 50,
+    "description": "自定义搜索插件"
+  }
+}
+```
+
+**错误响应**:
+
+```json
+{
+  "error": "请求参数错误",
+  "code": "INVALID_REQUEST"
+}
+```
+
+```json
+{
+  "error": "保存插件配置失败",
+  "code": "SAVE_FAILED"
+}
+```
+
+**状态码**:
+- `200`: 创建成功
+- `400`: 参数错误
+- `401`: 未授权
+- `403`: 禁止访问
+- `500`: 服务器内部错误
+
+---
+
+### 2. 更新自定义插件
+
+更新指定自定义插件的配置信息。
+
+**接口地址**: `/api/admin/plugins/:pluginName`  
+**请求方法**: `PUT`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| pluginName | string | 是 | 要更新的插件名称 |
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| url | string | 是 | 插件的 API 地址 |
+| priority | number | 否 | 优先级 |
+| description | string | 否 | 插件功能描述 |
+
+**请求示例**:
+
+```bash
+curl -X PUT http://localhost:8888/api/admin/plugins/custom_plugin \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/api/v2/search",
+    "priority": 30,
+    "description": "更新后的自定义搜索插件"
+  }'
+```
+
+**成功响应**:
+
+```json
+{
+  "success": true,
+  "message": "插件更新成功",
+  "plugin": {
+    "name": "custom_plugin",
+    "url": "https://example.com/api/v2/search",
+    "priority": 30,
+    "description": "更新后的自定义搜索插件"
+  }
+}
+```
+
+**错误响应**:
+
+```json
+{
+  "error": "插件名称不能为空",
+  "code": "INVALID_REQUEST"
+}
+```
+
+```json
+{
+  "error": "更新插件配置失败",
+  "code": "UPDATE_FAILED"
+}
+```
+
+**状态码**:
+- `200`: 更新成功
+- `400`: 参数错误
+- `401`: 未授权
+- `403`: 禁止访问
+- `404`: 插件不存在
+- `500`: 服务器内部错误
+
+**重要说明**:
+- 只能更新自定义插件，内置插件不支持更新
+- 插件名称（pluginName）不可修改
+
+---
+
+### 3. 删除自定义插件
+
+删除指定的自定义插件。
+
+**接口地址**: `/api/admin/plugins/:pluginName`  
+**请求方法**: `DELETE`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| pluginName | string | 是 | 要删除的插件名称 |
+
+**请求示例**:
+
+```bash
+curl -X DELETE http://localhost:8888/api/admin/plugins/custom_plugin \
+  -H "Authorization: Bearer <admin_token>"
+```
+
+**成功响应**:
+
+```json
+{
+  "success": true,
+  "message": "插件已删除",
+  "plugin_name": "custom_plugin"
+}
+```
+
+**错误响应**:
+
+```json
+{
+  "error": "插件名称不能为空",
+  "code": "INVALID_REQUEST"
+}
+```
+
+```json
+{
+  "error": "删除插件配置失败",
+  "code": "DELETE_FAILED"
+}
+```
+
+**状态码**:
+- `200`: 删除成功
+- `400`: 参数错误
+- `401`: 未授权
+- `403`: 禁止访问
+- `404`: 插件不存在
+- `500`: 服务器内部错误
+
+**重要说明**:
+- 只能删除自定义插件，内置插件不支持删除
+- 删除后需要重启服务才能完全生效
+
+---
+
+### 4. 测试插件连通性
+
+测试指定插件的连通性和功能是否正常。
+
+**接口地址**: `/api/admin/plugins/:pluginName/test`  
+**请求方法**: `POST`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| pluginName | string | 是 | 要测试的插件名称 |
+
+**请求示例**:
+
+```bash
+curl -X POST http://localhost:8888/api/admin/plugins/duoduo/test \
+  -H "Authorization: Bearer <admin_token>"
+```
+
+**成功响应（内置插件）**:
+
+```json
+{
+  "message": "插件测试成功",
+  "plugin_name": "duoduo",
+  "result_count": 10,
+  "status": "ok"
+}
+```
+
+**成功响应（自定义插件）**:
+
+```json
+{
+  "message": "插件测试成功",
+  "plugin_name": "custom_plugin",
+  "status_code": 200,
+  "status": "ok"
+}
+```
+
+**错误响应**:
+
+```json
+{
+  "error": "插件名称不能为空",
+  "code": "INVALID_REQUEST"
+}
+```
+
+```json
+{
+  "error": "插件不存在",
+  "code": "PLUGIN_NOT_FOUND"
+}
+```
+
+```json
+{
+  "error": "插件测试失败",
+  "code": "PLUGIN_TEST_FAILED",
+  "message": "无法连接到插件URL: connection timeout"
+}
+```
+
+**状态码**:
+- `200`: 测试成功
+- `400`: 参数错误
+- `401`: 未授权
+- `403`: 禁止访问
+- `404`: 插件不存在
+- `500`: 测试失败或服务器内部错误
+
+**测试说明**:
+- **内置插件**: 执行实际的搜索测试（使用关键词 "test"），返回搜索结果数量
+- **自定义插件**: 执行 URL 连通性测试（HEAD 或 GET 请求），返回 HTTP 状态码
+
+---
+
+### 5. 测试 URL 连通性
+
+测试指定 URL 的连通性，用于在添加插件前验证 URL 是否可访问。
+
+**接口地址**: `/api/admin/test-url`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| url | string | 是 | 要测试的 URL 地址 |
+
+**请求示例**:
+
+```bash
+curl -X POST http://localhost:8888/api/admin/test-url \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/api/search"
+  }'
+```
+
+**成功响应**:
+
+```json
+{
+  "success": true,
+  "message": "URL连通性测试成功",
+  "status_code": 200
+}
+```
+
+**失败响应**:
+
+```json
+{
+  "success": false,
+  "message": "无法连接到该URL",
+  "error": "dial tcp: lookup example.com: no such host"
+}
+```
+
+```json
+{
+  "success": false,
+  "message": "URL返回错误状态码",
+  "status_code": 404
+}
+```
+
+**状态码**:
+- `200`: 请求成功（无论 URL 是否可访问，都返回 200，通过 `success` 字段判断）
+- `400`: 参数错误
+- `401`: 未授权
+- `403`: 禁止访问
+
+**测试逻辑**:
+1. 首先尝试 HEAD 请求（减少数据传输）
+2. 如果 HEAD 失败，尝试 GET 请求
+3. 检查 HTTP 状态码是否在 200-399 范围内
+4. 超时时间为 10 秒
+
+---
+
 ## 搜索 API
 
 ### 搜索网盘资源

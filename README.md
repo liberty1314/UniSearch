@@ -614,6 +614,18 @@ GET /api/health
 }
 ```
 
+#### 插件管理接口
+
+管理员可通过以下接口管理搜索插件：
+
+- `POST /api/admin/plugins` - 创建自定义插件
+- `PUT /api/admin/plugins/:pluginName` - 更新插件配置
+- `DELETE /api/admin/plugins/:pluginName` - 删除插件
+- `POST /api/admin/plugins/:pluginName/test` - 测试插件连通性
+- `POST /api/admin/test-url` - 测试 URL 连通性
+
+详细文档请参考：[插件管理 API](docs/api_reference.md#插件管理-api)
+
 ---
 
 ## ❓ 常见问题

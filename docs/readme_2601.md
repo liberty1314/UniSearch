@@ -130,3 +130,9 @@
   Files:
     - frontend/src/components/admin/AddPluginDialog.tsx
     - frontend/src/components/admin/SystemInfoView.tsx
+
+[2026-01-16 23:45] docs(api): 新增插件管理 API 文档
+  - Body: 在 API 参考文档中新增插件管理相关接口的完整说明，包括创建、更新、删除、测试插件以及 URL 连通性测试等 5 个接口的详细文档。同时在 README 中添加插件管理接口的快速导航链接。
+  - Files:
+    - README.md
+    - docs/api_reference.md
