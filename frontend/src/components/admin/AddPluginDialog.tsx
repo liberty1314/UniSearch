@@ -12,6 +12,8 @@ interface AddPluginDialogProps {
     onClose: () => void;
     onSuccess: () => void;
     token: string;
+    editMode?: boolean;
+    initialData?: PluginFormData;
 }
 
 interface PluginFormData {
@@ -26,13 +28,17 @@ export const AddPluginDialog: React.FC<AddPluginDialogProps> = ({
     onClose,
     onSuccess,
     token,
+    editMode = false,
+    initialData,
 }) => {
-    const [formData, setFormData] = useState<PluginFormData>({
-        name: '',
-        url: '',
-        priority: 100,
-        description: '',
-    });
+    const [formData, setFormData] = useState<PluginFormData>(
+        initialData || {
+            name: '',
+            url: '',
+            priority: 100,
+            description: '',
+        }
+    );
     const [isTestingUrl, setIsTestingUrl] = useState(false);
     const [urlTestResult, setUrlTestResult] = useState<'success' | 'error' | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,7 +58,7 @@ export const AddPluginDialog: React.FC<AddPluginDialogProps> = ({
         try {
             // 简单的URL格式验证
             const url = new URL(formData.url);
-            
+
             // 尝试访问URL（使用HEAD请求减少数据传输）
             const response = await fetch(formData.url, {
                 method: 'HEAD',
@@ -88,10 +94,10 @@ export const AddPluginDialog: React.FC<AddPluginDialogProps> = ({
         setIsSubmitting(true);
 
         try {
-            const url = editMode 
-                ? `/api/admin/plugins/${formData.name}` 
+            const url = editMode
+                ? `/api/admin/plugins/${formData.name}`
                 : '/api/admin/plugins';
-            
+
             const method = editMode ? 'PUT' : 'POST';
 
             const response = await fetch(url, {
@@ -250,11 +256,10 @@ export const AddPluginDialog: React.FC<AddPluginDialogProps> = ({
                                         <motion.div
                                             initial={{ opacity: 0, y: -10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className={`flex items-center gap-2 text-sm p-3 rounded-lg ${
-                                                urlTestResult === 'success'
-                                                    ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                                                    : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
-                                            }`}
+                                            className={`flex items-center gap-2 text-sm p-3 rounded-lg ${urlTestResult === 'success'
+                                                ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                                                : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                                                }`}
                                         >
                                             {urlTestResult === 'success' ? (
                                                 <CheckCircle2 className="w-4 h-4" />

@@ -224,18 +224,17 @@ export const SystemInfoView: React.FC = () => {
                                             </TableCell>
                                             <TableCell>
                                                 <Badge
-                                                    variant={plugin.status === 'active' ? 'success' : plugin.status === 'custom' ? 'default' : 'outline'}
+                                                    variant={plugin.status === 'active' ? 'success' : 'outline'}
                                                     className="font-medium"
                                                 >
                                                     <div className="flex items-center gap-1.5">
-                                                        <div className={`w-1.5 h-1.5 rounded-full ${
-                                                            plugin.status === 'active'
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${plugin.status === 'active'
                                                                 ? 'bg-green-500'
-                                                                : plugin.status === 'custom'
-                                                                    ? 'bg-blue-500'
-                                                                    : 'bg-gray-400'
+                                                                : plugin.status === 'inactive'
+                                                                    ? 'bg-gray-400'
+                                                                    : 'bg-red-500'
                                                             }`} />
-                                                        {plugin.status === 'active' ? '内置' : plugin.status === 'custom' ? '自定义' : '不活跃'}
+                                                        {plugin.status === 'active' ? '活跃' : plugin.status === 'inactive' ? '不活跃' : '错误'}
                                                     </div>
                                                 </Badge>
                                             </TableCell>

@@ -124,3 +124,9 @@
     - frontend/src/components/admin/EditKeyDialog.tsx
     - frontend/src/services/authService.ts
     - frontend/src/types/api.ts
+
+[2026-01-16 21:01] refactor(admin): 优化插件管理对话框和系统信息视图的状态显示逻辑
+  Body: 为 AddPluginDialog 组件添加编辑模式支持，支持初始数据填充；优化 SystemInfoView 中插件状态的显示逻辑，简化状态判断并调整状态标签文案。
+  Files:
+    - frontend/src/components/admin/AddPluginDialog.tsx
+    - frontend/src/components/admin/SystemInfoView.tsx
