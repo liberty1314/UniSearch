@@ -18,6 +18,7 @@ import (
 
 	"pansou/api"
 	"pansou/config"
+	"pansou/database"
 	"pansou/plugin"
 	"pansou/service"
 	"pansou/util"
@@ -25,27 +26,27 @@ import (
 
 	// 以下是插件的空导入，用于触发各插件的init函数，实现自动注册
 	// 添加新插件时，只需在此处添加对应的导入语句即可
+	_ "pansou/plugin/cyg"
+	_ "pansou/plugin/duoduo"
+	_ "pansou/plugin/fox4k"
 	_ "pansou/plugin/hdr4k"
+	_ "pansou/plugin/huban"
 	_ "pansou/plugin/hunhepan"
 	_ "pansou/plugin/jikepan"
+	_ "pansou/plugin/labi"
+	_ "pansou/plugin/muou"
+	_ "pansou/plugin/ouge"
 	_ "pansou/plugin/pan666"
 	_ "pansou/plugin/pansearch"
 	_ "pansou/plugin/panta"
+	_ "pansou/plugin/panyq"
 	_ "pansou/plugin/qupansou"
+	_ "pansou/plugin/shandian"
 	_ "pansou/plugin/susu"
 	_ "pansou/plugin/thepiratebay"
 	_ "pansou/plugin/wanou"
 	_ "pansou/plugin/xuexizhinan"
-	_ "pansou/plugin/panyq"
 	_ "pansou/plugin/zhizhen"
-	_ "pansou/plugin/labi"
-	_ "pansou/plugin/muou"
-	_ "pansou/plugin/ouge"
-	_ "pansou/plugin/shandian"
-	_ "pansou/plugin/duoduo"
-	_ "pansou/plugin/huban"
-	_ "pansou/plugin/fox4k"
-	_ "pansou/plugin/cyg"
 )
 
 // 全局缓存写入管理器
@@ -70,6 +71,37 @@ func initApp() {
 
 	// 初始化配置
 	config.Init()
+
+	// ========== 数据库初始化 ==========
+	// 验证需求：2.1-2.6, 11.1-11.7
+	
+	// 1. 连接数据库
+	log.Println("正在连接数据库...")
+	if err := database.InitDB(); err != nil {
+		log.Fatalf("❌ 数据库连接失败: %v", err)
+	}
+	
+	// 2. 执行数据库迁移
+	log.Println("正在执行数据库迁移...")
+	if err := database.AutoMigrate(); err != nil {
+		log.Fatalf("❌ 数据库迁移失败: %v", err)
+	}
+	
+	// 3. 创建默认管理员
+	log.Println("正在检查默认管理员账户...")
+	if err := database.SeedDefaultAdmin(); err != nil {
+		log.Fatalf("❌ 创建默认管理员失败: %v", err)
+	}
+	
+	// 4. 执行 JSON 数据迁移（如果需要）
+	log.Println("正在检查 JSON 数据迁移...")
+	if err := database.MigrateFromDefaultJSONFile(); err != nil {
+		// 数据迁移失败不应该导致系统无法启动，只记录警告
+		log.Printf("⚠️  JSON 数据迁移失败: %v", err)
+	}
+	
+	log.Println("✓ 数据库初始化完成")
+	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	// 初始化HTTP客户端
 	util.InitHTTPClient()
@@ -117,21 +149,16 @@ func startServer() {
 
 	// 初始化 API Key 服务（管理后台需要，必须始终初始化）
 	var apiKeyService *service.APIKeyService
-	var err error
-	apiKeyService, err = service.NewAPIKeyService(config.AppConfig.APIKeyStorePath)
-	if err != nil {
-		log.Printf("警告: API Key 服务初始化失败: %v", err)
-		log.Println("API Key 管理功能将不可用")
+	apiKeyService = service.NewAPIKeyService()
+	if config.AppConfig.APIKeyEnabled {
+		fmt.Println("API Key 服务已启动（认证已启用）")
 	} else {
-		if config.AppConfig.APIKeyEnabled {
-			fmt.Println("API Key 服务已启动（认证已启用）")
-		} else {
-			fmt.Println("API Key 服务已启动（仅用于管理，认证未启用）")
-		}
+		fmt.Println("API Key 服务已启动（仅用于管理，认证未启用）")
 	}
 
 	// 初始化 Refresh Token 服务（记住密码功能）
 	var refreshTokenService *service.RefreshTokenService
+	var err error
 	if config.AppConfig.RefreshTokenEnabled {
 		refreshTokenService, err = service.NewRefreshTokenService(
 			config.AppConfig.RefreshTokenStorePath,
@@ -145,8 +172,12 @@ func startServer() {
 		}
 	}
 
+	// 初始化 Auth 服务（用户认证服务）
+	authService := service.NewAuthService()
+	fmt.Println("Auth 服务已启动（用户认证功能已启用）")
+
 	// 设置路由
-	router := api.SetupRouter(searchService, apiKeyService, refreshTokenService)
+	router := api.SetupRouter(searchService, apiKeyService, authService, refreshTokenService)
 
 	// 获取端口配置
 	port := config.AppConfig.Port
@@ -198,16 +229,16 @@ func startServer() {
 
 	// 🔥 优先保存缓存数据到磁盘（数据安全第一）
 	fmt.Println("💾 正在保存所有缓存数据...")
-	
+
 	// 增加关闭超时时间，确保数据有足够时间保存
 	shutdownTimeout := 10 * time.Second
-	
+
 	if globalCacheWriteManager != nil {
 		if err := globalCacheWriteManager.Shutdown(shutdownTimeout); err != nil {
 			log.Printf("❌ 缓存数据保存失败: %v", err)
 		}
 	}
-	
+
 	// 额外确保内存缓存也被保存（双重保障）
 	if mainCache := service.GetEnhancedTwoLevelCache(); mainCache != nil {
 		fmt.Println("💾 正在强制同步内存缓存到磁盘...")
@@ -225,6 +256,11 @@ func startServer() {
 	// 优雅关闭服务器
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("服务器关闭异常: %v", err)
+	}
+
+	// 关闭数据库连接
+	if err := database.CloseDB(); err != nil {
+		log.Printf("⚠️  关闭数据库连接失败: %v", err)
 	}
 
 	fmt.Println("🎉 服务器已安全关闭")

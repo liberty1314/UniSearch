@@ -14,14 +14,84 @@ import type {
     RefreshTokenRequest,
     RefreshTokenResponse,
     RevokeRefreshTokenRequest,
+    RegisterRequest,
+    RegisterResponse,
+    LoginRequest,
+    LoginResponse,
 } from '@/types/api';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 
 /**
  * 认证服务类
- * 提供管理员登录、API Key 验证和管理功能
+ * 提供用户注册、登录、管理员登录、API Key 验证和管理功能
  */
 export class AuthService {
+    /**
+     * 用户注册
+     * @param username 用户名
+     * @param password 密码
+     * @returns 注册响应
+     */
+    static async register(username: string, password: string): Promise<RegisterResponse> {
+        const request: RegisterRequest = { username, password };
+        const response = await apiClient.post<RegisterResponse>('/auth/register', request);
+
+        if (!response.data) {
+            throw new Error('注册失败：服务器未返回有效数据');
+        }
+
+        return response.data;
+    }
+
+    /**
+     * 用户登录（支持"记住我"）
+     * @param username 用户名
+     * @param password 密码
+     * @param rememberMe 是否记住密码
+     * @returns 登录响应，包含 token 和可选的 refresh_token
+     */
+    static async userLogin(
+        username: string,
+        password: string,
+        rememberMe: boolean
+    ): Promise<LoginWithRememberResponse> {
+        const deviceFingerprint = await getDeviceFingerprint();
+        const request: LoginWithRememberRequest = {
+            username,
+            password,
+            remember_me: rememberMe,
+            device_fingerprint: deviceFingerprint,
+        };
+
+        // 统一使用 /api/auth/login 接口
+        const response = await apiClient.post<LoginWithRememberResponse>(
+            '/auth/login',
+            request
+        );
+
+        if (!response.data) {
+            throw new Error('登录失败：服务器未返回有效数据');
+        }
+
+        return response.data;
+    }
+
+    /**
+     * 用户登录（原有方法，保持向后兼容）
+     * @param username 用户名
+     * @param password 密码
+     * @returns 登录响应，包含 token 和过期时间
+     */
+    static async login(username: string, password: string): Promise<LoginResponse> {
+        const request: LoginRequest = { username, password };
+        const response = await apiClient.post<LoginResponse>('/auth/login', request);
+
+        if (!response.data) {
+            throw new Error('登录失败：服务器未返回有效数据');
+        }
+
+        return response.data;
+    }
     /**
      * 管理员登录（支持"记住我"）
      * @param username 用户名
@@ -89,8 +159,9 @@ export class AuthService {
             device_fingerprint: deviceFingerprint,
         };
 
+        // 统一使用 /api/auth/login 接口
         const response = await apiClient.post<LoginWithRememberResponse>(
-            '/auth/login-remember',
+            '/auth/login',
             request
         );
 

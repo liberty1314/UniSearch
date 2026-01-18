@@ -8,14 +8,14 @@ import (
 
 // RefreshToken 刷新令牌模型
 type RefreshToken struct {
-	Token          string    `json:"token"`            // 刷新令牌（加密存储）
-	Username       string    `json:"username"`         // 用户名
-	IsAdmin        bool      `json:"is_admin"`         // 是否为管理员
-	DeviceFingerprint string `json:"device_fingerprint"` // 设备指纹
-	CreatedAt      time.Time `json:"created_at"`       // 创建时间
-	ExpiresAt      time.Time `json:"expires_at"`       // 过期时间
-	LastUsedAt     *time.Time `json:"last_used_at"`    // 最后使用时间
-	IsRevoked      bool      `json:"is_revoked"`       // 是否已撤销
+	Token             string     `json:"token"`              // 刷新令牌（加密存储）
+	Username          string     `json:"username"`           // 用户名
+	IsAdmin           bool       `json:"is_admin"`           // 是否为管理员
+	DeviceFingerprint string     `json:"device_fingerprint"` // 设备指纹
+	CreatedAt         time.Time  `json:"created_at"`         // 创建时间
+	ExpiresAt         time.Time  `json:"expires_at"`         // 过期时间
+	LastUsedAt        *time.Time `json:"last_used_at"`       // 最后使用时间
+	IsRevoked         bool       `json:"is_revoked"`         // 是否已撤销
 }
 
 // GenerateRefreshToken 生成安全的刷新令牌

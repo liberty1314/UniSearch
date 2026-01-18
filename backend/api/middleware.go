@@ -18,12 +18,12 @@ func CORSMiddleware() gin.HandlerFunc {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-API-Key")
-		
+
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
 		}
-		
+
 		c.Next()
 	}
 }
@@ -33,22 +33,22 @@ func LoggerMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 开始时间
 		startTime := time.Now()
-		
+
 		// 处理请求
 		c.Next()
-		
+
 		// 结束时间
 		endTime := time.Now()
-		
+
 		// 执行时间
 		latencyTime := endTime.Sub(startTime)
-		
+
 		// 请求方式
 		reqMethod := c.Request.Method
-		
+
 		// 请求路由
 		reqURI := c.Request.RequestURI
-		
+
 		// 对于搜索API，尝试解码关键词以便更好地显示
 		displayURI := reqURI
 		if strings.Contains(reqURI, "/api/search") && strings.Contains(reqURI, "kw=") {
@@ -61,16 +61,16 @@ func LoggerMiddleware() gin.HandlerFunc {
 				}
 			}
 		}
-		
+
 		// 状态码
 		statusCode := c.Writer.Status()
-		
+
 		// 请求IP
 		clientIP := c.ClientIP()
-		
+
 		// 日志格式
 		gin.DefaultWriter.Write([]byte(
-			fmt.Sprintf("| %s | %s | %s | %d | %s\n", 
+			fmt.Sprintf("| %s | %s | %s | %d | %s\n",
 				clientIP, reqMethod, displayURI, statusCode, latencyTime.String())))
 	}
 }
@@ -127,6 +127,7 @@ func AuthMiddleware(apiKeyService *service.APIKeyService) gin.HandlerFunc {
 }
 
 // AdminMiddleware 管理员专用中间件（仅允许JWT）
+// AdminMiddleware 管理员专用中间件（仅允许JWT）
 func AdminMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 1. 必须包含 JWT
@@ -140,8 +141,8 @@ func AdminMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 2. 验证 JWT
-		claims, err := util.ValidateToken(token, config.AppConfig.AuthJWTSecret)
+		// 2. 验证 JWT（使用新版本的 ValidateJWTToken）
+		claims, err := util.ValidateJWTToken(token, config.AppConfig.AuthJWTSecret)
 		if err != nil {
 			c.JSON(401, gin.H{
 				"error": "未授权：令牌无效或已过期",
@@ -151,8 +152,8 @@ func AdminMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 3. 检查管理员权限
-		if !claims.IsAdmin {
+		// 3. 检查管理员权限（使用 Role 字段）
+		if claims.Role != "admin" {
 			c.JSON(403, gin.H{
 				"error": "禁止访问：需要管理员权限",
 				"code":  "ADMIN_PERMISSION_REQUIRED",
@@ -161,8 +162,9 @@ func AdminMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
-		c.Set("is_admin", true)
+		c.Set("role", claims.Role)
 		c.Next()
 	}
 }
@@ -181,8 +183,8 @@ func JWTMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 2. 验证 JWT
-		claims, err := util.ValidateToken(token, config.AppConfig.AuthJWTSecret)
+		// 2. 验证 JWT（使用新版本的 ValidateJWTToken）
+		claims, err := util.ValidateJWTToken(token, config.AppConfig.AuthJWTSecret)
 		if err != nil {
 			c.JSON(401, gin.H{
 				"error": "未授权：令牌无效或已过期",
@@ -192,10 +194,22 @@ func JWTMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
-		c.Set("is_admin", claims.IsAdmin)
+		c.Set("role", claims.Role)
+		if claims.APIKey != "" {
+			c.Set("api_key", claims.APIKey)
+		}
 		c.Next()
 	}
+}
+
+// min 返回两个整数中的较小值
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // extractBearerToken 从请求头提取 Bearer Token
@@ -228,14 +242,18 @@ func extractAPIKey(c *gin.Context) string {
 // isPublicPath 检查是否为公开路径
 func isPublicPath(path string) bool {
 	publicPaths := []string{
+		"/api/auth/register",        // 新增：用户注册接口
 		"/api/auth/login",
+		"/api/auth/login-legacy",    // 原有登录接口
 		"/api/auth/login-remember",  // 新增：支持记住我的登录
-		"/api/auth/refresh",          // 新增：刷新令牌
-		"/api/auth/revoke",           // 新增：撤销令牌
+		"/api/auth/refresh",         // 新增：刷新令牌
+		"/api/auth/revoke",          // 新增：撤销令牌
+		"/api/auth/validate",        // 新增：Token 验证接口
 		"/api/auth/logout",
 		"/api/health",
-		"/api/admin/login",           // 管理员登录接口无需认证
-		"/api/admin/login-remember",  // 新增：支持记住我的管理员登录
+		"/api/search",               // 搜索接口支持混合访问模式
+		"/api/admin/login",          // 管理员登录接口无需认证
+		"/api/admin/login-remember", // 新增：支持记住我的管理员登录
 	}
 
 	for _, p := range publicPaths {

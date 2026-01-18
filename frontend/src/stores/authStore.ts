@@ -42,11 +42,11 @@ export const useAuthStore = create<AuthState>()(
              * 设置 JWT Token
              * @param token - JWT Token
              * @param username - 用户名
-             * @param isAdmin - 是否为管理员（可选，默认为 true）
+             * @param isAdmin - 是否为管理员（可选，默认为 false）
              * @param apiKey - 关联的 API Key（可选，用于普通用户）
              * @param refreshToken - 刷新令牌（可选，用于"记住我"功能）
              */
-            setToken: (token, username, isAdmin = true, apiKey = null, refreshToken = null) => {
+            setToken: (token, username, isAdmin = false, apiKey = null, refreshToken = null) => {
                 set({
                     token,
                     username,

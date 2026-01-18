@@ -122,7 +122,7 @@ func VerifyHandler(c *gin.Context) {
 	// 如果未启用认证，直接返回有效
 	if !config.AppConfig.AuthEnabled {
 		c.JSON(200, gin.H{
-			"valid": true,
+			"valid":   true,
 			"message": "认证功能未启用",
 		})
 		return
@@ -150,13 +150,13 @@ func LogoutHandler(c *gin.Context) {
 
 // APIKeyInfoResponse 用户 API Key 详情响应
 type APIKeyInfoResponse struct {
-	Key            string  `json:"key"`              // API Key 字符串
-	Status         string  `json:"status"`           // 状态：active/expired
-	FirstUsedAt    *string `json:"first_used_at"`    // 首次使用时间（北京时间）
-	ExpiresAt      string  `json:"expires_at"`       // 到期时间（北京时间）
-	ValidityPeriod string  `json:"validity_period"`  // 有效期描述（如"30天"）
-	RemainingDays  int     `json:"remaining_days"`   // 剩余天数
-	Description    string  `json:"description"`      // 描述信息
+	Key            string  `json:"key"`             // API Key 字符串
+	Status         string  `json:"status"`          // 状态：active/expired
+	FirstUsedAt    *string `json:"first_used_at"`   // 首次使用时间（北京时间）
+	ExpiresAt      string  `json:"expires_at"`      // 到期时间（北京时间）
+	ValidityPeriod string  `json:"validity_period"` // 有效期描述（如"30天"）
+	RemainingDays  int     `json:"remaining_days"`  // 剩余天数
+	Description    string  `json:"description"`     // 描述信息
 }
 
 // GetUserAPIKeyInfoHandler 获取当前用户的 API Key 详情
@@ -189,15 +189,15 @@ func GetUserAPIKeyInfoHandler(apiKeyService *service.APIKeyService) gin.HandlerF
 
 		// 转换为北京时间（UTC+8）
 		beijingLocation := time.FixedZone("CST", 8*3600)
-		
+
 		// 计算有效期（小时转天数）
 		validityDays := keyInfo.TTLHours / 24
 		validityPeriod := fmt.Sprintf("%d天", validityDays)
-		
+
 		// 计算剩余天数
 		remainingDays := 0
-		if keyInfo.FirstUsedAt != nil {
-			remainingDuration := time.Until(keyInfo.ExpiresAt)
+		if keyInfo.FirstUsedAt != nil && keyInfo.ExpiresAt != nil {
+			remainingDuration := time.Until(*keyInfo.ExpiresAt)
 			remainingDays = int(remainingDuration.Hours() / 24)
 			if remainingDays < 0 {
 				remainingDays = 0
@@ -219,7 +219,7 @@ func GetUserAPIKeyInfoHandler(apiKeyService *service.APIKeyService) gin.HandlerF
 			formatted := keyInfo.FirstUsedAt.In(beijingLocation).Format("2006-01-02 15:04:05")
 			firstUsedAtStr = &formatted
 		}
-		
+
 		expiresAtStr := keyInfo.ExpiresAt.In(beijingLocation).Format("2006-01-02 15:04:05")
 
 		// 构建响应

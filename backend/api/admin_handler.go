@@ -6,11 +6,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 	"pansou/config"
 	"pansou/plugin"
 	"pansou/service"
-	"pansou/util"
 )
 
 // AdminLoginRequest 管理员登录请求
@@ -100,22 +98,10 @@ func AdminLoginHandler(c *gin.Context) {
 		return
 	}
 
-	// 检查是否配置了管理员密码
-	if config.AppConfig.AdminPasswordHash == "" {
-		println("[DEBUG] 管理员密码哈希未配置")
-		c.JSON(500, gin.H{
-			"error": "管理员功能未配置",
-			"code":  "ADMIN_NOT_CONFIGURED",
-		})
-		return
-	}
-
-	println("[DEBUG] 登录尝试 - 用户名:", req.Username, "密码长度:", len(req.Password))
-	println("[DEBUG] 配置的哈希值:", config.AppConfig.AdminPasswordHash)
-
-	// 验证用户名（默认为 admin）
-	if req.Username != "admin" {
-		println("[DEBUG] 用户名验证失败")
+	// 使用认证服务进行登录验证
+	authService := service.NewAuthService()
+	token, user, err := authService.Login(req.Username, req.Password)
+	if err != nil {
 		c.JSON(401, gin.H{
 			"error": "用户名或密码错误",
 			"code":  "ADMIN_LOGIN_FAILED",
@@ -123,40 +109,11 @@ func AdminLoginHandler(c *gin.Context) {
 		return
 	}
 
-	// 临时方案：同时支持 bcrypt 验证和明文密码验证
-	err := bcrypt.CompareHashAndPassword(
-		[]byte(config.AppConfig.AdminPasswordHash),
-		[]byte(req.Password),
-	)
-	
-	// 如果 bcrypt 验证失败，尝试明文密码（仅用于开发环境）
-	if err != nil {
-		// 临时允许明文密码 "admin123" 用于开发测试
-		if req.Password == "admin123" {
-			println("[DEBUG] 使用临时明文密码登录成功")
-		} else {
-			println("[DEBUG] 密码验证失败:", err.Error())
-			c.JSON(401, gin.H{
-				"error": "用户名或密码错误",
-				"code":  "ADMIN_LOGIN_FAILED",
-			})
-			return
-		}
-	} else {
-		println("[DEBUG] bcrypt 验证成功！")
-	}
-
-	// 生成 JWT
-	token, err := util.GenerateToken(
-		"admin",
-		true,
-		config.AppConfig.AuthJWTSecret,
-		config.AppConfig.AuthTokenExpiry,
-	)
-	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "令牌生成失败",
-			"code":  "TOKEN_GENERATION_FAILED",
+	// 验证用户是否为管理员
+	if !user.IsAdmin() {
+		c.JSON(403, gin.H{
+			"error": "权限不足，需要管理员权限",
+			"code":  "ADMIN_PERMISSION_REQUIRED",
 		})
 		return
 	}
@@ -197,11 +154,8 @@ func CreateAPIKeyHandler(apiKeyService *service.APIKeyService) gin.HandlerFunc {
 			return
 		}
 
-		// 转换 TTL 为 Duration
-		ttl := time.Duration(req.TTLHours) * time.Hour
-
-		// 生成密钥
-		key, err := apiKeyService.GenerateKey(ttl, req.Description, req.DailySearchLimit)
+		// 生成密钥（直接使用小时数）
+		key, err := apiKeyService.GenerateKey(req.TTLHours, req.Description, req.DailySearchLimit)
 		if err != nil {
 			c.JSON(500, gin.H{
 				"error": "密钥生成失败: " + err.Error(),
@@ -247,10 +201,10 @@ func DeleteAPIKeyHandler(apiKeyService *service.APIKeyService) gin.HandlerFunc {
 type SystemInfoResponse struct {
 	// 插件信息
 	Plugins []PluginInfoResponse `json:"plugins"`
-	
+
 	// 系统统计
 	Stats SystemStatsResponse `json:"stats"`
-	
+
 	// 系统配置
 	Config SystemConfigResponse `json:"config"`
 }
@@ -279,22 +233,22 @@ type SystemConfigResponse struct {
 	CachePath       string `json:"cache_path"`
 	CacheMaxSizeMB  int    `json:"cache_max_size_mb"`
 	CacheTTLMinutes int    `json:"cache_ttl_minutes"`
-	
+
 	// 并发配置
 	DefaultConcurrency int `json:"default_concurrency"`
-	
+
 	// 代理配置
 	ProxyURL string `json:"proxy_url"`
-	
+
 	// 异步插件配置
-	AsyncPluginEnabled         bool `json:"async_plugin_enabled"`
-	AsyncResponseTimeout       int  `json:"async_response_timeout"`
-	AsyncMaxBackgroundWorkers  int  `json:"async_max_background_workers"`
-	AsyncMaxBackgroundTasks    int  `json:"async_max_background_tasks"`
-	
+	AsyncPluginEnabled        bool `json:"async_plugin_enabled"`
+	AsyncResponseTimeout      int  `json:"async_response_timeout"`
+	AsyncMaxBackgroundWorkers int  `json:"async_max_background_workers"`
+	AsyncMaxBackgroundTasks   int  `json:"async_max_background_tasks"`
+
 	// HTTP服务器配置
 	HTTPMaxConns int `json:"http_max_conns"`
-	
+
 	// 频道列表
 	Channels []string `json:"channels"`
 }
@@ -311,10 +265,10 @@ func GetSystemInfoHandler(searchService *service.SearchService) gin.HandlerFunc 
 			})
 			return
 		}
-		
+
 		// 获取所有内置插件
 		plugins := pluginManager.GetPlugins()
-		
+
 		// 构建插件信息列表
 		pluginInfos := make([]PluginInfoResponse, 0, len(plugins))
 		for _, p := range plugins {
@@ -337,7 +291,7 @@ func GetSystemInfoHandler(searchService *service.SearchService) gin.HandlerFunc 
 				URL:         cp.URL,
 			})
 		}
-		
+
 		// 构建系统统计信息
 		stats := SystemStatsResponse{
 			PluginCount:       len(pluginInfos),
@@ -346,29 +300,29 @@ func GetSystemInfoHandler(searchService *service.SearchService) gin.HandlerFunc 
 			CacheEnabled:      config.AppConfig.CacheEnabled,
 			ProxyEnabled:      config.AppConfig.UseProxy,
 		}
-		
+
 		// 构建系统配置信息
 		systemConfig := SystemConfigResponse{
-			CachePath:                  config.AppConfig.CachePath,
-			CacheMaxSizeMB:             config.AppConfig.CacheMaxSizeMB,
-			CacheTTLMinutes:            config.AppConfig.CacheTTLMinutes,
-			DefaultConcurrency:         config.AppConfig.DefaultConcurrency,
-			ProxyURL:                   config.AppConfig.ProxyURL,
-			AsyncPluginEnabled:         config.AppConfig.AsyncPluginEnabled,
-			AsyncResponseTimeout:       config.AppConfig.AsyncResponseTimeout,
-			AsyncMaxBackgroundWorkers:  config.AppConfig.AsyncMaxBackgroundWorkers,
-			AsyncMaxBackgroundTasks:    config.AppConfig.AsyncMaxBackgroundTasks,
-			HTTPMaxConns:               config.AppConfig.HTTPMaxConns,
-			Channels:                   config.AppConfig.DefaultChannels,
+			CachePath:                 config.AppConfig.CachePath,
+			CacheMaxSizeMB:            config.AppConfig.CacheMaxSizeMB,
+			CacheTTLMinutes:           config.AppConfig.CacheTTLMinutes,
+			DefaultConcurrency:        config.AppConfig.DefaultConcurrency,
+			ProxyURL:                  config.AppConfig.ProxyURL,
+			AsyncPluginEnabled:        config.AppConfig.AsyncPluginEnabled,
+			AsyncResponseTimeout:      config.AppConfig.AsyncResponseTimeout,
+			AsyncMaxBackgroundWorkers: config.AppConfig.AsyncMaxBackgroundWorkers,
+			AsyncMaxBackgroundTasks:   config.AppConfig.AsyncMaxBackgroundTasks,
+			HTTPMaxConns:              config.AppConfig.HTTPMaxConns,
+			Channels:                  config.AppConfig.DefaultChannels,
 		}
-		
+
 		// 构建完整响应
 		response := SystemInfoResponse{
 			Plugins: pluginInfos,
 			Stats:   stats,
 			Config:  systemConfig,
 		}
-		
+
 		c.JSON(200, response)
 	}
 }
@@ -398,7 +352,7 @@ func getPluginDescription(name string) string {
 		"fox4k":        "Fox4K - 4K影视资源",
 		"cyg":          "CYG - 综合资源搜索",
 	}
-	
+
 	if desc, ok := descriptions[name]; ok {
 		return desc
 	}
@@ -447,8 +401,13 @@ func UpdateAPIKeyHandler(apiKeyService *service.APIKeyService) gin.HandlerFunc {
 		if req.ExtendHours != nil {
 			extendHours = *req.ExtendHours
 		}
-		
-		updatedKey, err := apiKeyService.UpdateKeyExpiry(key, req.ExpiresAt, extendHours, req.DailySearchLimit)
+
+		dailyLimit := -1 // 默认不更新
+		if req.DailySearchLimit != nil {
+			dailyLimit = *req.DailySearchLimit
+		}
+
+		updatedKey, err := apiKeyService.UpdateKeyExpiry(key, req.ExpiresAt, extendHours, dailyLimit)
 		if err != nil {
 			c.JSON(500, gin.H{
 				"error": "更新密钥失败: " + err.Error(),
@@ -491,7 +450,7 @@ func BatchExtendAPIKeysHandler(apiKeyService *service.APIKeyService) gin.Handler
 		}
 
 		// 调用服务层批量延长
-		results, err := apiKeyService.BatchExtendKeys(req.Keys, req.ExtendHours)
+		result, err := apiKeyService.BatchExtendKeys(req.Keys, req.ExtendHours)
 		if err != nil {
 			c.JSON(500, gin.H{
 				"error": "批量延长失败: " + err.Error(),
@@ -500,21 +459,11 @@ func BatchExtendAPIKeysHandler(apiKeyService *service.APIKeyService) gin.Handler
 			return
 		}
 
-		// 统计成功和失败数量
-		successCount := 0
-		failedCount := 0
-		for _, result := range results {
-			if result.Success {
-				successCount++
-			} else {
-				failedCount++
-			}
-		}
-
 		c.JSON(200, gin.H{
-			"success_count": successCount,
-			"failed_count":  failedCount,
-			"results":       results,
+			"success_count": len(result.Success),
+			"failed_count":  len(result.Failed),
+			"success":       result.Success,
+			"failed":        result.Failed,
 		})
 	}
 }
@@ -539,11 +488,8 @@ func BatchCreateAPIKeysHandler(apiKeyService *service.APIKeyService) gin.Handler
 			return
 		}
 
-		// 转换 TTL 为 Duration
-		ttl := time.Duration(req.TTLHours) * time.Hour
-
 		// 调用服务层批量生成
-		result, err := apiKeyService.BatchGenerateKeys(req.Count, ttl, req.DescriptionPrefix, req.DailySearchLimit)
+		result, err := apiKeyService.BatchGenerateKeys(req.Count, req.TTLHours, req.DescriptionPrefix, req.DailySearchLimit)
 		if err != nil {
 			c.JSON(500, gin.H{
 				"error": "批量创建失败: " + err.Error(),
@@ -553,9 +499,8 @@ func BatchCreateAPIKeysHandler(apiKeyService *service.APIKeyService) gin.Handler
 		}
 
 		c.JSON(200, gin.H{
-			"success_count": result.SuccessCount,
-			"failed_count":  result.FailedCount,
-			"keys":          result.Keys,
+			"count": result.Count,
+			"keys":  result.Keys,
 		})
 	}
 }
@@ -587,7 +532,7 @@ func BatchDeleteAPIKeysHandler(apiKeyService *service.APIKeyService) gin.Handler
 		}
 
 		// 调用服务层批量删除
-		results, err := apiKeyService.BatchDeleteKeys(req.Keys)
+		result, err := apiKeyService.BatchDeleteKeys(req.Keys)
 		if err != nil {
 			c.JSON(500, gin.H{
 				"error": "批量删除失败: " + err.Error(),
@@ -596,21 +541,11 @@ func BatchDeleteAPIKeysHandler(apiKeyService *service.APIKeyService) gin.Handler
 			return
 		}
 
-		// 统计成功和失败数量
-		successCount := 0
-		failedCount := 0
-		for _, result := range results {
-			if result.Success {
-				successCount++
-			} else {
-				failedCount++
-			}
-		}
-
 		c.JSON(200, gin.H{
-			"success_count": successCount,
-			"failed_count":  failedCount,
-			"results":       results,
+			"success_count": len(result.Success),
+			"failed_count":  len(result.Failed),
+			"success":       result.Success,
+			"failed":        result.Failed,
 		})
 	}
 }
@@ -653,7 +588,7 @@ func TestPluginHandler(searchService *service.SearchService) gin.HandlerFunc {
 		if found {
 			testQuery := "test"
 			results, err := targetPlugin.Search(testQuery, nil)
-			
+
 			if err != nil {
 				c.JSON(500, gin.H{
 					"error":   "插件测试失败",
@@ -698,10 +633,10 @@ func TestPluginHandler(searchService *service.SearchService) gin.HandlerFunc {
 
 				if resp.StatusCode >= 200 && resp.StatusCode < 400 {
 					c.JSON(200, gin.H{
-						"message":      "插件测试成功",
-						"plugin_name":  pluginName,
-						"status_code":  resp.StatusCode,
-						"status":       "ok",
+						"message":     "插件测试成功",
+						"plugin_name": pluginName,
+						"status_code": resp.StatusCode,
+						"status":      "ok",
 					})
 				} else {
 					c.JSON(500, gin.H{
@@ -854,8 +789,8 @@ func DeletePluginHandler() gin.HandlerFunc {
 		}
 
 		c.JSON(200, gin.H{
-			"success": true,
-			"message": "插件已删除",
+			"success":     true,
+			"message":     "插件已删除",
 			"plugin_name": pluginName,
 		})
 	}

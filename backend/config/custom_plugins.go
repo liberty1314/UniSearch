@@ -105,7 +105,7 @@ func (c *CustomPluginsConfig) RemovePlugin(name string) error {
 func (c *CustomPluginsConfig) GetPlugins() []CustomPlugin {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	result := make([]CustomPlugin, len(c.Plugins))
 	copy(result, c.Plugins)
 	return result

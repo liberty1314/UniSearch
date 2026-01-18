@@ -29,6 +29,34 @@ services:
       - "traefik.http.routers.frontend.rule=Host(`localhost`)"
       - "traefik.http.services.frontend.loadbalancer.server.port=80"
 
+  # MySQL 数据库服务
+  mysql:
+    image: mysql:8.0
+    container_name: unisearch-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: unisearch
+      TZ: Asia/Shanghai
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - unisearch-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: 
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+    labels:
+      - "com.unisearch.service=database"
+
   # 后端服务
   backend:
     build:
@@ -39,12 +67,15 @@ services:
     ports:
       - "8888:8888"
     env_file:
-      - .env
+      - .env.docker
     volumes:
       - backend-cache:/app/cache
       - backend-refresh-tokens:/app/data
     networks:
       - unisearch-network
+    depends_on:
+      mysql:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8888/api/health"]
       interval: 30s
@@ -74,6 +105,8 @@ services:
   #     - unisearch-network
 
 volumes:
+  mysql-data:
+    name: unisearch-mysql-data
   backend-cache:
     name: unisearch-backend-cache
   backend-refresh-tokens:

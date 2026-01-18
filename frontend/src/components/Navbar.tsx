@@ -154,14 +154,14 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                 </button>
               </>
             ) : (
-              /* 未登录：显示登录入口 */
+              /* 未登录：显示登录/注册入口 */
               <Link
                 to="/login"
                 className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-apple-blue hover:text-apple-blue/80 hover:bg-apple-blue/10 transition-all duration-200"
-                title="登录"
+                title="登录/注册"
               >
                 <IoLogInOutline className="w-4 h-4" />
-                <span>登录</span>
+                <span>登录/注册</span>
               </Link>
             )}
 
@@ -258,16 +258,15 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                     </button>
                   </>
                 ) : (
-                  /* 未登录：登录入口 */
+                  /* 未登录：登录/注册入口 */
                   <Link
                     to="/login"
-                    onClick={() => setIsMobileMenuOpen(false)}
                     className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-apple-blue hover:text-apple-blue/80 hover:bg-apple-blue/10 transition-colors"
                   >
                     <IoLogInOutline className="w-5 h-5" />
                     <div>
-                      <div>登录</div>
-                      <div className="text-xs opacity-75">使用 API Key 或管理员密码</div>
+                      <div>登录/注册</div>
+                      <div className="text-xs opacity-75">创建账户或使用 API Key</div>
                     </div>
                   </Link>
                 )}

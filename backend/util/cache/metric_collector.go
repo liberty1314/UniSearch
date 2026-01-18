@@ -23,7 +23,7 @@ func (m *MetricCollector) Start(interval time.Duration) error {
 	if !atomic.CompareAndSwapInt32(&m.isCollecting, 0, 1) {
 		return nil // 已经在收集中
 	}
-	
+
 	go m.collectionLoop(interval)
 	return nil
 }
@@ -39,12 +39,12 @@ func (m *MetricCollector) Stop() {
 func (m *MetricCollector) collectionLoop(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
 			m.collectMetrics()
-			
+
 		case <-m.collectionChan:
 			return
 		}
@@ -54,16 +54,16 @@ func (m *MetricCollector) collectionLoop(interval time.Duration) {
 // collectMetrics 收集指标
 func (m *MetricCollector) collectMetrics() {
 	now := time.Now()
-	
+
 	// 收集系统指标
 	systemMetrics := m.collectSystemMetrics(now)
-	
+
 	// 收集应用指标
 	applicationMetrics := m.collectApplicationMetrics(now)
-	
+
 	// 收集缓存指标
 	cacheMetrics := m.collectCacheMetrics(now)
-	
+
 	// 创建快照
 	snapshot := MetricSnapshot{
 		Timestamp:   now,
@@ -71,12 +71,12 @@ func (m *MetricCollector) collectMetrics() {
 		Application: *applicationMetrics,
 		Cache:       *cacheMetrics,
 	}
-	
+
 	// 计算综合指标
 	snapshot.OverallPerformance = m.calculateOverallPerformance(&snapshot)
 	snapshot.Efficiency = m.calculateEfficiency(&snapshot)
 	snapshot.Stability = m.calculateStability(&snapshot)
-	
+
 	// 保存快照
 	m.saveSnapshot(snapshot)
 }
@@ -85,7 +85,7 @@ func (m *MetricCollector) collectMetrics() {
 func (m *MetricCollector) collectSystemMetrics(timestamp time.Time) *SystemMetrics {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
-	
+
 	return &SystemMetrics{
 		Timestamp:       timestamp,
 		CPUUsage:        float64(memStats.GCCPUFraction),
@@ -138,7 +138,7 @@ func (m *MetricCollector) calculateOverallPerformance(snapshot *MetricSnapshot) 
 	memoryScore := (1.0 - float64(snapshot.System.MemoryUsage)/float64(snapshot.System.MemoryTotal)) * 25
 	responseScore := (1.0 - float64(snapshot.Application.ResponseTime)/float64(time.Second)) * 25
 	cacheScore := snapshot.Cache.HitRate * 20
-	
+
 	return cpuScore + memoryScore + responseScore + cacheScore
 }
 
@@ -148,7 +148,7 @@ func (m *MetricCollector) calculateEfficiency(snapshot *MetricSnapshot) float64 
 	cacheEfficiency := snapshot.Cache.HitRate * 0.4
 	batchEfficiency := snapshot.Cache.BatchEfficiency * 0.3
 	compressionEfficiency := snapshot.Cache.CompressionRatio * 0.3
-	
+
 	return cacheEfficiency + batchEfficiency + compressionEfficiency
 }
 
@@ -161,7 +161,7 @@ func (m *MetricCollector) calculateStability(snapshot *MetricSnapshot) float64 {
 		responseTimeStability = 0
 	}
 	responseTimeStability *= 0.5
-	
+
 	return errorRateStability + responseTimeStability
 }
 
@@ -169,9 +169,9 @@ func (m *MetricCollector) calculateStability(snapshot *MetricSnapshot) float64 {
 func (m *MetricCollector) saveSnapshot(snapshot MetricSnapshot) {
 	m.historyMutex.Lock()
 	defer m.historyMutex.Unlock()
-	
+
 	m.metricsHistory = append(m.metricsHistory, snapshot)
-	
+
 	// 限制历史记录大小
 	if len(m.metricsHistory) > m.maxHistorySize {
 		m.metricsHistory = m.metricsHistory[1:]
@@ -182,11 +182,11 @@ func (m *MetricCollector) saveSnapshot(snapshot MetricSnapshot) {
 func (m *MetricCollector) GetLatestMetrics() *MetricSnapshot {
 	m.historyMutex.RLock()
 	defer m.historyMutex.RUnlock()
-	
+
 	if len(m.metricsHistory) == 0 {
 		return nil
 	}
-	
+
 	latest := m.metricsHistory[len(m.metricsHistory)-1]
 	return &latest
 }
@@ -195,14 +195,14 @@ func (m *MetricCollector) GetLatestMetrics() *MetricSnapshot {
 func (m *MetricCollector) GetMetricsHistory(limit int) []MetricSnapshot {
 	m.historyMutex.RLock()
 	defer m.historyMutex.RUnlock()
-	
+
 	if limit <= 0 || limit > len(m.metricsHistory) {
 		limit = len(m.metricsHistory)
 	}
-	
+
 	history := make([]MetricSnapshot, limit)
 	startIndex := len(m.metricsHistory) - limit
 	copy(history, m.metricsHistory[startIndex:])
-	
+
 	return history
 }

@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import Navbar from '@/components/Navbar';
 import Home from '@/pages/Home';
 import Login from '@/pages/Login';
+import UserAuth from '@/pages/UserAuth';
 import AdminLogin from '@/pages/AdminLogin';
 import Admin from '@/pages/Admin';
 import UserApiKeySettings from '@/pages/UserApiKeySettings';
@@ -100,7 +101,8 @@ const App: React.FC = () => {
                   <Home />
                 </ProtectedRoute>
               } />
-              <Route path="/login" element={<Login />} />
+              <Route path="/login" element={<UserAuth />} />
+              <Route path="/auth" element={<Navigate to="/login" replace />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route
                 path="/admin"

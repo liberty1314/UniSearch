@@ -33,7 +33,8 @@ import { Sidebar, type AdminView } from '@/components/admin/Sidebar';
 import { BatchActionsBar } from '@/components/admin/BatchActionsBar';
 import { StatsCard } from '@/components/admin/StatsCard';
 import { SystemInfoView } from '@/components/admin/SystemInfoView';
-import { Plus, RefreshCw, Key, AlertCircle, CheckCircle2, Activity, Search } from 'lucide-react';
+import { TableFilterDropdown } from '@/components/admin/TableFilterDropdown';
+import { Plus, RefreshCw, Key, AlertCircle, CheckCircle2, Activity, Search, Filter, X, Clock } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import ApiKeyTableRow from '@/components/admin/ApiKeyTableRow';
@@ -98,17 +99,75 @@ const Admin: React.FC = () => {
     // 搜索关键词
     const [searchKeyword, setSearchKeyword] = useState<string>('');
 
+    // 筛选状态
+    const [statusFilter, setStatusFilter] = useState<string[]>([]);
+    const [remainingTimeFilter, setRemainingTimeFilter] = useState<string[]>([]);
+
+    /**
+     * 判断 Key 是否已过期
+     */
+    const isKeyExpired = (expiresAt: string): boolean => {
+        return new Date(expiresAt) < new Date();
+    };
+
     // 过滤后的 API Keys
     const filteredApiKeys = React.useMemo(() => {
-        if (!searchKeyword.trim()) {
-            return apiKeys;
+        let filtered = apiKeys;
+
+        // 关键词搜索
+        if (searchKeyword.trim()) {
+            const keyword = searchKeyword.toLowerCase().trim();
+            filtered = filtered.filter(key =>
+                key.key.toLowerCase().includes(keyword) ||
+                (key.description && key.description.toLowerCase().includes(keyword))
+            );
         }
-        const keyword = searchKeyword.toLowerCase().trim();
-        return apiKeys.filter(key => 
-            key.key.toLowerCase().includes(keyword) ||
-            (key.description && key.description.toLowerCase().includes(keyword))
-        );
-    }, [apiKeys, searchKeyword]);
+
+        // 状态筛选
+        if (statusFilter.length > 0) {
+            filtered = filtered.filter(key => {
+                if (statusFilter.includes('enabled') && key.is_enabled && !isKeyExpired(key.expires_at)) {
+                    return true;
+                }
+                if (statusFilter.includes('disabled') && !key.is_enabled) {
+                    return true;
+                }
+                if (statusFilter.includes('expired') && isKeyExpired(key.expires_at)) {
+                    return true;
+                }
+                return false;
+            });
+        }
+
+        // 剩余时间筛选
+        if (remainingTimeFilter.length > 0) {
+            filtered = filtered.filter(key => {
+                const now = new Date();
+                const expiry = new Date(key.expires_at);
+                const diffMs = expiry.getTime() - now.getTime();
+                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+                if (remainingTimeFilter.includes('expired') && diffDays < 0) {
+                    return true;
+                }
+                if (remainingTimeFilter.includes('1day') && diffDays >= 0 && diffDays <= 1) {
+                    return true;
+                }
+                if (remainingTimeFilter.includes('7days') && diffDays > 1 && diffDays <= 7) {
+                    return true;
+                }
+                if (remainingTimeFilter.includes('30days') && diffDays > 7 && diffDays <= 30) {
+                    return true;
+                }
+                if (remainingTimeFilter.includes('more') && diffDays > 30) {
+                    return true;
+                }
+                return false;
+            });
+        }
+
+        return filtered;
+    }, [apiKeys, searchKeyword, statusFilter, remainingTimeFilter]);
 
     /**
      * 检查管理员权限
@@ -235,22 +294,13 @@ const Admin: React.FC = () => {
     };
 
     /**
-     * 判断 Key 是否已过期
-     */
-    const isKeyExpired = (expiresAt: string): boolean => {
-        return new Date(expiresAt) < new Date();
-    };
-
-    /**
      * 处理全选/取消全选
      */
     const handleSelectAll = useCallback((checked: boolean) => {
         if (checked) {
-            // 全选：选中所有未过期且启用的 API Keys
-            const validKeys = apiKeys
-                .filter(key => key.is_enabled && !isKeyExpired(key.expires_at))
-                .map(key => key.key);
-            setSelectedKeys(new Set(validKeys));
+            // 全选：选中所有 API Keys（包括已过期的）
+            const allKeys = apiKeys.map(key => key.key);
+            setSelectedKeys(new Set(allKeys));
         } else {
             // 取消全选
             setSelectedKeys(new Set());
@@ -337,11 +387,25 @@ const Admin: React.FC = () => {
     };
 
     /**
+     * 判断是否有任何筛选条件
+     */
+    const hasAnyFilter = (): boolean => {
+        return statusFilter.length > 0 || remainingTimeFilter.length > 0;
+    };
+
+    /**
+     * 清除所有筛选
+     */
+    const handleClearAllFilters = () => {
+        setStatusFilter([]);
+        setRemainingTimeFilter([]);
+    };
+
+    /**
      * 判断是否全选
      */
     const isAllSelected = (): boolean => {
-        const validKeys = apiKeys.filter(key => key.is_enabled && !isKeyExpired(key.expires_at));
-        return validKeys.length > 0 && validKeys.every(key => selectedKeys.has(key.key));
+        return apiKeys.length > 0 && apiKeys.every(key => selectedKeys.has(key.key));
     };
 
     return (
@@ -405,65 +469,157 @@ const Admin: React.FC = () => {
 
                             {/* API Key 管理卡片 */}
                             <Card className="border-gray-100 dark:border-gray-700/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-                                <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50">
-                                    <div className="flex items-center justify-between">
-                                        <div>
+                                <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50 min-h-[88px]">
+                                    <div className="flex items-center justify-between h-full">
+                                        <div className="flex-shrink-0">
                                             <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
                                                 <Key className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                                                 API Key 管理
                                             </CardTitle>
-                                            <CardDescription className="text-slate-500 dark:text-slate-400">
-                                                管理系统的 API Keys，控制用户访问权限
+                                            <CardDescription className="text-slate-500 dark:text-slate-400 mt-1">
+                                                {hasAnyFilter() ? (
+                                                    <span className="flex items-center gap-2">
+                                                        <Filter className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                                        <span className="text-blue-700 dark:text-blue-300 font-medium">
+                                                            已应用 {statusFilter.length + remainingTimeFilter.length} 个筛选条件
+                                                        </span>
+                                                        <span className="text-slate-500 dark:text-slate-400">
+                                                            · 显示 {filteredApiKeys.length} / {apiKeys.length} 条记录
+                                                        </span>
+                                                    </span>
+                                                ) : (
+                                                    '管理系统的 API Keys，控制用户访问权限'
+                                                )}
                                             </CardDescription>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            {/* 搜索框 */}
-                                            <div className="relative">
-                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                                <Input
-                                                    type="text"
-                                                    placeholder="搜索 API Key..."
-                                                    value={searchKeyword}
-                                                    onChange={(e) => setSearchKeyword(e.target.value)}
-                                                    className="pl-9 w-48 h-9 text-sm border-slate-200 dark:border-slate-700"
-                                                />
-                                            </div>
-                                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={loadApiKeys}
-                                                    disabled={isLoadingKeys || isBatchOperating}
-                                                    className="border-slate-200 dark:border-slate-700"
+
+                                        {/* 批量操作工具栏（选中时显示）、筛选工具栏（筛选时显示）或常规按钮组 */}
+                                        <AnimatePresence mode="wait">
+                                            {selectedKeys.size > 0 ? (
+                                                <motion.div
+                                                    key="batch-actions"
+                                                    initial={{ opacity: 0, x: 20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    exit={{ opacity: 0, x: 20 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    className="flex items-center"
                                                 >
-                                                    <RefreshCw className={`w-4 h-4 ${isLoadingKeys ? 'animate-spin' : ''}`} />
-                                                </Button>
-                                            </motion.div>
-                                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                                <Button
-                                                    variant="outline"
-                                                    onClick={() => {
-                                                        setIsBatchOperating(true);
-                                                        setIsBatchCreateDialogOpen(true);
-                                                    }}
-                                                    className="flex items-center gap-2 border-slate-200 dark:border-slate-700"
-                                                    disabled={isLoadingKeys || isBatchOperating}
+                                                    <BatchActionsBar
+                                                        selectedCount={selectedKeys.size}
+                                                        onBatchExtend={handleBatchExtend}
+                                                        onBatchDelete={handleBatchDelete}
+                                                        onClearSelection={handleClearSelection}
+                                                        disabled={isLoadingKeys || isBatchOperating || isDeleting}
+                                                    />
+                                                </motion.div>
+                                            ) : hasAnyFilter() ? (
+                                                <motion.div
+                                                    key="filter-actions"
+                                                    initial={{ opacity: 0, x: 20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    exit={{ opacity: 0, x: 20 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    className="flex items-center gap-3"
                                                 >
-                                                    <Plus className="w-4 h-4" />
-                                                    批量生成
-                                                </Button>
-                                            </motion.div>
-                                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                                <Button
-                                                    onClick={() => setIsCreateDialogOpen(true)}
-                                                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/30"
-                                                    disabled={isLoadingKeys || isBatchOperating}
+                                                    {/* 筛选信息 */}
+                                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                                        <Filter className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                        <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                                            已应用 {statusFilter.length + remainingTimeFilter.length} 个筛选条件
+                                                        </span>
+                                                        <span className="text-sm text-slate-500 dark:text-slate-400">
+                                                            · 显示 {filteredApiKeys.length} / {apiKeys.length} 条
+                                                        </span>
+                                                    </div>
+                                                    {/* 清除筛选按钮 */}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={handleClearAllFilters}
+                                                        className="flex items-center gap-2 h-9"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                        清除筛选
+                                                    </Button>
+                                                </motion.div>
+                                            ) : (
+                                                <motion.div
+                                                    key="normal-actions"
+                                                    initial={{ opacity: 0, x: -20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    exit={{ opacity: 0, x: -20 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    className="flex items-center gap-2"
                                                 >
-                                                    <Plus className="w-4 h-4" />
-                                                    生成新 Key
-                                                </Button>
-                                            </motion.div>
-                                        </div>
+                                                    {/* 搜索框 */}
+                                                    <div className="relative">
+                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                                        <Input
+                                                            type="text"
+                                                            placeholder="搜索 API Key..."
+                                                            value={searchKeyword}
+                                                            onChange={(e) => setSearchKeyword(e.target.value)}
+                                                            className="pl-9 w-48 h-9 text-sm border-slate-200 dark:border-slate-700"
+                                                        />
+                                                    </div>
+                                                    {/* 清除筛选按钮（有筛选时显示） */}
+                                                    {hasAnyFilter() && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, scale: 0.8 }}
+                                                            animate={{ opacity: 1, scale: 1 }}
+                                                            exit={{ opacity: 0, scale: 0.8 }}
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                        >
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={handleClearAllFilters}
+                                                                className="border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                                                            >
+                                                                <X className="w-3.5 h-3.5 mr-1" />
+                                                                清除筛选
+                                                            </Button>
+                                                        </motion.div>
+                                                    )}
+                                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={loadApiKeys}
+                                                            disabled={isLoadingKeys || isBatchOperating}
+                                                            className="border-slate-200 dark:border-slate-700"
+                                                        >
+                                                            <RefreshCw className={`w-4 h-4 ${isLoadingKeys ? 'animate-spin' : ''}`} />
+                                                        </Button>
+                                                    </motion.div>
+                                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                setIsBatchOperating(true);
+                                                                setIsBatchCreateDialogOpen(true);
+                                                            }}
+                                                            className="flex items-center gap-2 border-slate-200 dark:border-slate-700"
+                                                            disabled={isLoadingKeys || isBatchOperating}
+                                                        >
+                                                            <Plus className="w-4 h-4" />
+                                                            批量生成
+                                                        </Button>
+                                                    </motion.div>
+                                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                                        <Button
+                                                            onClick={() => setIsCreateDialogOpen(true)}
+                                                            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/30"
+                                                            disabled={isLoadingKeys || isBatchOperating}
+                                                        >
+                                                            <Plus className="w-4 h-4" />
+                                                            生成新 Key
+                                                        </Button>
+                                                    </motion.div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="p-6">
@@ -500,25 +656,6 @@ const Admin: React.FC = () => {
                                         </motion.div>
                                     ) : (
                                         <div className="space-y-4">
-                                            {/* 批量操作工具栏 */}
-                                            <AnimatePresence>
-                                                {selectedKeys.size > 0 && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, y: -10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        exit={{ opacity: 0, y: -10 }}
-                                                    >
-                                                        <BatchActionsBar
-                                                            selectedCount={selectedKeys.size}
-                                                            onBatchExtend={handleBatchExtend}
-                                                            onBatchDelete={handleBatchDelete}
-                                                            onClearSelection={handleClearSelection}
-                                                            disabled={isLoadingKeys || isBatchOperating || isDeleting}
-                                                        />
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-
                                             {/* API Keys 表格 */}
                                             <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                                                 <Table>
@@ -534,18 +671,49 @@ const Admin: React.FC = () => {
                                                             </TableHead>
                                                             <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">API Key</TableHead>
                                                             <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">描述</TableHead>
-                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">创建时间</TableHead>
-                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">过期时间</TableHead>
-                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">剩余时间</TableHead>
-                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 text-center">今日用量</TableHead>
-                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">状态</TableHead>
-                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 text-right">操作</TableHead>
+                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 w-[140px]">创建时间</TableHead>
+                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 w-[140px]">过期时间</TableHead>
+                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 w-[130px]">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span>剩余时间</span>
+                                                                    <TableFilterDropdown
+                                                                        options={[
+                                                                            { label: '已过期', value: 'expired', color: '#ef4444' },
+                                                                            { label: '1天内', value: '1day', color: '#f59e0b' },
+                                                                            { label: '1-7天', value: '7days', color: '#eab308' },
+                                                                            { label: '7-30天', value: '30days', color: '#3b82f6' },
+                                                                            { label: '30天以上', value: 'more', color: '#10b981' },
+                                                                        ]}
+                                                                        selectedValues={remainingTimeFilter}
+                                                                        onSelectionChange={setRemainingTimeFilter}
+                                                                        multiSelect={true}
+                                                                        icon={<Clock className="w-3.5 h-3.5" />}
+                                                                    />
+                                                                </div>
+                                                            </TableHead>
+                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 text-center w-[120px]">今日用量</TableHead>
+                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 w-[110px]">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span>状态</span>
+                                                                    <TableFilterDropdown
+                                                                        options={[
+                                                                            { label: '正常', value: 'enabled', color: '#10b981' },
+                                                                            { label: '已禁用', value: 'disabled', color: '#6b7280' },
+                                                                            { label: '已过期', value: 'expired', color: '#ef4444' },
+                                                                        ]}
+                                                                        selectedValues={statusFilter}
+                                                                        onSelectionChange={setStatusFilter}
+                                                                        multiSelect={true}
+                                                                    />
+                                                                </div>
+                                                            </TableHead>
+                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 text-right w-[100px]">操作</TableHead>
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
                                                         {filteredApiKeys.map((key) => {
                                                             const expired = isKeyExpired(key.expires_at);
-                                                            const canSelect = key.is_enabled && !expired;
+                                                            const canSelect = true; // 允许选择所有 Key，包括已过期的
                                                             const isSelected = selectedKeys.has(key.key);
 
                                                             return (

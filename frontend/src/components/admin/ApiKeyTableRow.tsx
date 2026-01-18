@@ -176,14 +176,13 @@ const ApiKeyTableRow: React.FC<ApiKeyTableRowProps> = memo(({
                             {apiKey.today_search_count} / {apiKey.daily_search_limit}
                         </span>
                         <div className="w-16 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                            <div 
-                                className={`h-full rounded-full transition-all ${
-                                    apiKey.today_search_count >= apiKey.daily_search_limit 
-                                        ? 'bg-red-500' 
-                                        : apiKey.today_search_count >= apiKey.daily_search_limit * 0.8 
-                                            ? 'bg-amber-500' 
+                            <div
+                                className={`h-full rounded-full transition-all ${apiKey.today_search_count >= apiKey.daily_search_limit
+                                        ? 'bg-red-500'
+                                        : apiKey.today_search_count >= apiKey.daily_search_limit * 0.8
+                                            ? 'bg-amber-500'
                                             : 'bg-emerald-500'
-                                }`}
+                                    }`}
                                 style={{ width: `${Math.min(100, (apiKey.today_search_count / apiKey.daily_search_limit) * 100)}%` }}
                             />
                         </div>

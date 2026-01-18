@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 	"pansou/config"
 	"pansou/service"
 	"pansou/util"
@@ -70,28 +69,9 @@ func AdminLoginWithRememberHandler(refreshTokenService *service.RefreshTokenServ
 			return
 		}
 
-		// 验证管理员密码（复用原有逻辑）
-		if config.AppConfig.AdminPasswordHash == "" {
-			c.JSON(500, gin.H{
-				"error": "管理员功能未配置",
-				"code":  "ADMIN_NOT_CONFIGURED",
-			})
-			return
-		}
-
-		if req.Username != "admin" {
-			c.JSON(401, gin.H{
-				"error": "用户名或密码错误",
-				"code":  "ADMIN_LOGIN_FAILED",
-			})
-			return
-		}
-
-		// 验证密码（使用 bcrypt）
-		err := bcrypt.CompareHashAndPassword(
-			[]byte(config.AppConfig.AdminPasswordHash),
-			[]byte(req.Password),
-		)
+		// 使用认证服务进行登录验证
+		authService := service.NewAuthService()
+		accessToken, user, err := authService.Login(req.Username, req.Password)
 		if err != nil {
 			c.JSON(401, gin.H{
 				"error": "用户名或密码错误",
@@ -100,17 +80,11 @@ func AdminLoginWithRememberHandler(refreshTokenService *service.RefreshTokenServ
 			return
 		}
 
-		// 生成 Access Token（短期）
-		accessToken, err := util.GenerateToken(
-			"admin",
-			true,
-			config.AppConfig.AuthJWTSecret,
-			config.AppConfig.AuthTokenExpiry,
-		)
-		if err != nil {
-			c.JSON(500, gin.H{
-				"error": "令牌生成失败",
-				"code":  "TOKEN_GENERATION_FAILED",
+		// 验证用户是否为管理员
+		if !user.IsAdmin() {
+			c.JSON(403, gin.H{
+				"error": "权限不足，需要管理员权限",
+				"code":  "ADMIN_PERMISSION_REQUIRED",
 			})
 			return
 		}
@@ -118,7 +92,7 @@ func AdminLoginWithRememberHandler(refreshTokenService *service.RefreshTokenServ
 		response := LoginWithRememberResponse{
 			AccessToken: accessToken,
 			ExpiresAt:   time.Now().Add(config.AppConfig.AuthTokenExpiry).Unix(),
-			Username:    "admin",
+			Username:    user.Username,
 		}
 
 		// 如果勾选"记住我"，生成 Refresh Token
@@ -131,7 +105,7 @@ func AdminLoginWithRememberHandler(refreshTokenService *service.RefreshTokenServ
 
 			// 创建刷新令牌
 			refreshToken, err := refreshTokenService.CreateToken(
-				"admin",
+				user.Username,
 				true,
 				deviceFingerprint,
 				config.AppConfig.RefreshTokenTTL,
@@ -161,8 +135,8 @@ func UserLoginWithRememberHandler(apiKeyService *service.APIKeyService, refreshT
 			return
 		}
 
-		// 检查是否为 API Key 登录
-		if req.Username == "user" && len(req.Password) == 43 && req.Password[:3] == "sk-" {
+		// 检查是否为 API Key 登录（密码为 sk- 开头的43位字符）
+		if len(req.Password) == 43 && req.Password[:3] == "sk-" {
 			// API Key 登录逻辑
 			if !config.AppConfig.APIKeyEnabled || apiKeyService == nil {
 				c.JSON(403, gin.H{"error": "API Key 认证功能未启用"})
@@ -225,9 +199,47 @@ func UserLoginWithRememberHandler(apiKeyService *service.APIKeyService, refreshT
 			return
 		}
 
-		// 普通用户登录逻辑（与原有逻辑相同）
+		// 普通用户登录逻辑
+		// 优先尝试数据库用户登录
+		authService := service.NewAuthService()
+		accessToken, user, err := authService.Login(req.Username, req.Password)
+		
+		if err == nil {
+			// 数据库用户登录成功
+			response := LoginWithRememberResponse{
+				AccessToken: accessToken,
+				ExpiresAt:   time.Now().Add(config.AppConfig.AuthTokenExpiry).Unix(),
+				Username:    user.Username,
+			}
+
+			// 支持"记住我"
+			if req.RememberMe && config.AppConfig.RefreshTokenEnabled && refreshTokenService != nil {
+				deviceFingerprint := req.DeviceFingerprint
+				if deviceFingerprint == "" {
+					deviceFingerprint = generateDeviceFingerprint(c)
+				}
+
+				refreshToken, err := refreshTokenService.CreateToken(
+					user.Username,
+					user.IsAdmin(),
+					deviceFingerprint,
+					config.AppConfig.RefreshTokenTTL,
+				)
+				if err == nil {
+					encryptedToken, err := refreshTokenService.EncryptForClient(refreshToken.Token)
+					if err == nil {
+						response.RefreshToken = &encryptedToken
+					}
+				}
+			}
+
+			c.JSON(200, response)
+			return
+		}
+
+		// 数据库登录失败，尝试配置文件用户登录（向后兼容）
 		if !config.AppConfig.AuthEnabled {
-			c.JSON(403, gin.H{"error": "认证功能未启用"})
+			c.JSON(401, gin.H{"error": "用户名或密码错误"})
 			return
 		}
 
@@ -243,7 +255,7 @@ func UserLoginWithRememberHandler(apiKeyService *service.APIKeyService, refreshT
 		}
 
 		// 生成 Access Token
-		accessToken, err := util.GenerateToken(
+		accessToken, err = util.GenerateToken(
 			req.Username,
 			false,
 			config.AppConfig.AuthJWTSecret,

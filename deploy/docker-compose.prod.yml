@@ -1,138 +1,277 @@
 version: '3.8'
 
-# UniSearch 生产环境Docker Compose配置
-# 域名: unisearchso.xyz
-# 镜像: liberty159/unisearch:latest (自动更新到最新版本)
+# ============================================
+# 生产环境 Docker Compose 配置
+# ============================================
+# 用途：生产环境容器编排
+# 特点：
+#   - 生产级资源限制
+#   - 自动重启策略
+#   - 健康检查配置
+#   - 数据持久化
+#   - 环境变量配置
+# ============================================
 
 services:
-  unisearch:
-    image: ${UNISEARCH_IMAGE:-liberty159/unisearch:latest}
-    container_name: unisearch
-    restart: always
+  # MySQL 数据库服务 - 生产环境配置
+  mysql:
+    image: mysql:8.0
+    container_name: unisearch-mysql-prod
+    restart: unless-stopped
     ports:
-      - "3000:80"    # 前端端口（Nginx）
-      - "8888:8888"  # 后端API端口
-    env_file:
-      - path: env.prod
-        required: true       # env.prod 必须存在
-      - path: .env.local
-        required: false      # .env.local 可选（向后兼容）
+      - "${DB_PORT:-3306}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      TZ: ${TZ:-Asia/Shanghai}
     volumes:
-      # 缓存数据持久化
-      - unisearch-cache:/app/cache
-      # 日志持久化
-      - unisearch-logs:/var/log/supervisor
-      # 刷新令牌数据持久化（记住密码功能）
-      - unisearch-refresh-tokens:/app/data
+      # 生产环境数据持久化到指定路径
+      - ${MYSQL_DATA_PATH:-/data/mysql}:/var/lib/mysql
+      # MySQL 配置文件（可选）
+      # - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
     networks:
       - unisearch-network
     healthcheck:
-      test: ["CMD", "sh", "-c", "curl -f http://localhost:80/health && curl -f http://localhost:8888/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${DB_USER}", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: 
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      # 生产环境性能优化
+      - --max_connections=500
+      - --innodb_buffer_pool_size=1G
+      - --innodb_log_file_size=256M
+      - --slow_query_log=1
+      - --slow_query_log_file=/var/lib/mysql/slow.log
+      - --long_query_time=2
     deploy:
       resources:
         limits:
+          cpus: '2'
           memory: 2G
-          cpus: '1.0'
         reservations:
-          memory: 512M
-          cpus: '0.5'
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "7"
-        compress: "true"
+          cpus: '1'
+          memory: 1G
     labels:
-      - "traefik.enable=false"  # 禁用traefik，使用Nginx
-      - "com.unisearch.service=main"
-      - "com.unisearch.version=latest"
-      - "com.centurylinklabs.watchtower.enable=true"  # 启用 Watchtower 自动更新
+      - "com.unisearch.service=database"
+      - "com.unisearch.environment=production"
 
-  # 监控服务 - Watchtower（自动更新镜像）
-  watchtower:
-    image: containrrr/watchtower:1.7.1  # 使用明确的新版本，支持 Docker API 1.44+
-    container_name: unisearch-watchtower
-    restart: always
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /opt/unisearch:/opt/unisearch:ro  # 挂载项目目录（只读）
-    networks:
-      - unisearch-network
-    environment:
-      - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_POLL_INTERVAL=3600  # 每小时检查一次
-      - WATCHTOWER_INCLUDE_STOPPED=true
-      - WATCHTOWER_REVIVE_STOPPED=false
-      - DOCKER_API_VERSION=1.44  # 明确指定 API 版本
-      - WATCHTOWER_LIFECYCLE_HOOKS=true  # 启用生命周期钩子
-      - WATCHTOWER_HTTP_API_UPDATE=true  # 启用 HTTP API
-      - WATCHTOWER_HTTP_API_TOKEN=${WATCHTOWER_TOKEN:-unisearch-update-token}
-    command: unisearch
-    labels:
-      - "com.unisearch.service=monitoring"
-      - "com.unisearch.auto-update=true"
-
-  # 监控服务
-  uptime-kuma:
-    image: louislam/uptime-kuma:1
-    container_name: unisearch-uptime-kuma
-    restart: always
+  # 后端服务 - 生产环境配置
+  backend:
+    image: ${FULL_IMAGE_NAME:-liberty159/unisearch:latest}
+    container_name: unisearch-backend-prod
+    restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "${BACKEND_PORT:-8888}:8888"
+    environment:
+      # 时区配置
+      TZ: ${TZ:-Asia/Shanghai}
+      
+      # 服务端口
+      PORT: ${PORT:-8888}
+      
+      # 数据库配置
+      DB_HOST: mysql
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      
+      # 认证配置
+      API_KEY_ENABLED: ${API_KEY_ENABLED:-true}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
+      
+      # 刷新令牌配置
+      REFRESH_TOKEN_ENABLED: ${REFRESH_TOKEN_ENABLED:-true}
+      REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:-720}
+      REFRESH_TOKEN_STORE_PATH: ${REFRESH_TOKEN_STORE_PATH:-/app/data/refresh_tokens.dat}
+      REFRESH_TOKEN_ENCRYPT_KEY: ${REFRESH_TOKEN_ENCRYPT_KEY}
+      
+      # 缓存配置
+      CACHE_ENABLED: ${CACHE_ENABLED:-true}
+      CACHE_PATH: ${CACHE_PATH:-/app/cache}
+      CACHE_MAX_SIZE: ${CACHE_MAX_SIZE:-100}
+      CACHE_TTL: ${CACHE_TTL:-60}
+      
+      # 异步插件配置
+      ASYNC_PLUGIN_ENABLED: ${ASYNC_PLUGIN_ENABLED:-true}
+      ASYNC_RESPONSE_TIMEOUT: ${ASYNC_RESPONSE_TIMEOUT:-4}
+      ASYNC_MAX_BACKGROUND_WORKERS: ${ASYNC_MAX_BACKGROUND_WORKERS:-20}
+      ASYNC_MAX_BACKGROUND_TASKS: ${ASYNC_MAX_BACKGROUND_TASKS:-100}
+      ASYNC_CACHE_TTL_HOURS: ${ASYNC_CACHE_TTL_HOURS:-1}
+      ASYNC_LOG_ENABLED: ${ASYNC_LOG_ENABLED:-true}
+      
+      # 插件配置
+      PLUGIN_TIMEOUT: ${PLUGIN_TIMEOUT:-30}
+      CHANNELS: ${CHANNELS}
+      ENABLED_PLUGINS: ${ENABLED_PLUGINS}
+      PLUGIN_COUNT: ${PLUGIN_COUNT:-21}
+      
+      # HTTP服务器配置
+      HTTP_READ_TIMEOUT: ${HTTP_READ_TIMEOUT:-90}
+      HTTP_WRITE_TIMEOUT: ${HTTP_WRITE_TIMEOUT:-90}
+      HTTP_IDLE_TIMEOUT: ${HTTP_IDLE_TIMEOUT:-120}
+      HTTP_MAX_CONNS: ${HTTP_MAX_CONNS:-2000}
+      
+      # 性能优化配置
+      GC_PERCENT: ${GC_PERCENT:-100}
+      OPTIMIZE_MEMORY: ${OPTIMIZE_MEMORY:-true}
+      ENABLE_COMPRESSION: ${ENABLE_COMPRESSION:-false}
+      MIN_SIZE_TO_COMPRESS: ${MIN_SIZE_TO_COMPRESS:-1024}
+      CONCURRENCY: ${CONCURRENCY:-50}
+      
+      # 部署环境标识
+      DEPLOY_ENV: ${DEPLOY_ENV:-production}
+      DEPLOY_VERSION: ${DEPLOY_VERSION:-1.0.0}
     volumes:
-      - uptime-kuma-data:/app/data
+      # 生产环境数据持久化
+      - ${BACKEND_CACHE_PATH:-/data/backend/cache}:/app/cache
+      - ${BACKEND_DATA_PATH:-/data/backend/data}:/app/data
+      # 日志持久化（可选）
+      # - ${BACKEND_LOG_PATH:-/data/backend/logs}:/app/logs
     networks:
       - unisearch-network
     depends_on:
-      - unisearch
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8888/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
     labels:
-      - "com.unisearch.service=monitoring"
+      - "com.unisearch.service=backend"
+      - "com.unisearch.environment=production"
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.services.backend.loadbalancer.server.port=8888"
 
-volumes:
-  # 缓存数据卷（使用Docker管理的volume）
-  unisearch-cache:
-    name: unisearch-cache
-    driver: local
-  
-  # 日志数据卷（使用Docker管理的volume）
-  unisearch-logs:
-    name: unisearch-logs
-    driver: local
-  
-  # 刷新令牌数据卷（记住密码功能）
-  unisearch-refresh-tokens:
-    name: unisearch-refresh-tokens
-    driver: local
-  
-  # 监控数据卷（使用Docker管理的volume）
-  uptime-kuma-data:
-    name: unisearch-uptime-kuma-data
-    driver: local
+  # 前端服务 - 生产环境配置
+  frontend:
+    image: ${FULL_IMAGE_NAME:-liberty159/unisearch:latest}-frontend
+    container_name: unisearch-frontend-prod
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    environment:
+      NODE_ENV: production
+      TZ: ${TZ:-Asia/Shanghai}
+    networks:
+      - unisearch-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    labels:
+      - "com.unisearch.service=frontend"
+      - "com.unisearch.environment=production"
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+
+  # Nginx 反向代理 - 生产环境（可选）
+  # 如果使用 Traefik 或云负载均衡器，可以注释掉此服务
+  nginx:
+    image: nginx:alpine
+    container_name: unisearch-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      # Nginx 配置文件
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # SSL 证书（如果使用 HTTPS）
+      - ${SSL_CERT_PATH}:/etc/nginx/ssl/cert.pem:ro
+      - ${SSL_KEY_PATH}:/etc/nginx/ssl/key.pem:ro
+      # 静态文件（可选）
+      # - ./nginx/html:/usr/share/nginx/html:ro
+    networks:
+      - unisearch-network
+    depends_on:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    labels:
+      - "com.unisearch.service=nginx"
+      - "com.unisearch.environment=production"
+
+  # Watchtower - 自动更新容器（可选）
+  # 用于自动拉取最新镜像并重启容器
+  watchtower:
+    image: containrrr/watchtower
+    container_name: unisearch-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # 每天凌晨2点检查更新
+      WATCHTOWER_SCHEDULE: "0 0 2 * * *"
+      # 只监控带有特定标签的容器
+      WATCHTOWER_LABEL_ENABLE: "true"
+      # 清理旧镜像
+      WATCHTOWER_CLEANUP: "true"
+      # 通知配置（可选）
+      # WATCHTOWER_NOTIFICATIONS: email
+      # WATCHTOWER_NOTIFICATION_EMAIL_FROM: ${SSL_EMAIL}
+      # WATCHTOWER_NOTIFICATION_EMAIL_TO: ${SSL_EMAIL}
+    networks:
+      - unisearch-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+    labels:
+      - "com.unisearch.service=watchtower"
+      - "com.unisearch.environment=production"
 
 networks:
-  # 应用网络
   unisearch-network:
-    name: unisearch-network
+    name: unisearch-network-prod
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
-    labels:
-      - "com.unisearch.network=main"
 
-# 扩展配置（用于docker-compose.override.yml）
-x-common-variables: &common-variables
-  TZ: Asia/Shanghai
-  CACHE_ENABLED: true
-  ASYNC_PLUGIN_ENABLED: true
-
-x-common-volumes: &common-volumes
-  - unisearch-cache:/app/cache
-  - unisearch-logs:/var/log/supervisor
-
-x-common-networks: &common-networks
-  - unisearch-network
+# 注意：生产环境不使用命名卷，而是使用绑定挂载到宿主机路径
+# 这样可以更好地控制数据备份和迁移
+# volumes:
+#   mysql-data:
+#   backend-cache:
+#   backend-data:

@@ -38,8 +38,8 @@ export const ModernApiKeyTable: React.FC<ModernApiKeyTableProps> = ({
     };
 
     const isAllSelected = (): boolean => {
-        const validKeys = apiKeys.filter(key => key.is_enabled && !isKeyExpired(key.expires_at));
-        return validKeys.length > 0 && validKeys.every(key => selectedKeys.has(key.key));
+        // 允许选择所有 API Key（包括已过期的）
+        return apiKeys.length > 0 && apiKeys.every(key => selectedKeys.has(key.key));
     };
 
     const getStatusColor = (key: APIKeyInfo) => {
@@ -78,7 +78,6 @@ export const ModernApiKeyTable: React.FC<ModernApiKeyTableProps> = ({
             <div className="space-y-3">
                 {apiKeys.map((key, index) => {
                     const expired = isKeyExpired(key.expires_at);
-                    const canSelect = key.is_enabled && !expired;
                     const isSelected = selectedKeys.has(key.key);
 
                     return (
@@ -88,8 +87,8 @@ export const ModernApiKeyTable: React.FC<ModernApiKeyTableProps> = ({
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.05, duration: 0.3 }}
                             className={`group relative bg-white dark:bg-gray-800 rounded-xl p-6 border transition-all duration-300 ${isSelected
-                                    ? 'border-blue-500 shadow-lg shadow-blue-500/20'
-                                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-lg'
+                                ? 'border-blue-500 shadow-lg shadow-blue-500/20'
+                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-lg'
                                 }`}
                         >
                             <div className="flex items-start gap-4">
@@ -98,7 +97,7 @@ export const ModernApiKeyTable: React.FC<ModernApiKeyTableProps> = ({
                                     <Checkbox
                                         checked={isSelected}
                                         onCheckedChange={(checked) => onSelectKey(key.key, checked as boolean)}
-                                        disabled={!canSelect || isDeleting || isBatchOperating}
+                                        disabled={isDeleting || isBatchOperating}
                                     />
                                 </div>
 

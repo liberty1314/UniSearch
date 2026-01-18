@@ -1,15 +1,15 @@
 package zhizhen
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
-	"time"
-	"context"
 	"sync/atomic"
+	"time"
 
 	"pansou/model"
 	"pansou/plugin"
@@ -41,23 +41,23 @@ func init() {
 var (
 	// 密码提取正则表达式
 	passwordRegex = regexp.MustCompile(`\?pwd=([0-9a-zA-Z]+)`)
-	
+
 	// 常见网盘链接的正则表达式（支持16种类型）
-	quarkLinkRegex     = regexp.MustCompile(`https?://pan\.quark\.cn/s/[0-9a-zA-Z]+`)
-	ucLinkRegex        = regexp.MustCompile(`https?://drive\.uc\.cn/s/[0-9a-zA-Z]+(\?[^"'\s]*)?`)
-	baiduLinkRegex     = regexp.MustCompile(`https?://pan\.baidu\.com/s/[0-9a-zA-Z_\-]+(\?pwd=[0-9a-zA-Z]+)?`)
-	aliyunLinkRegex    = regexp.MustCompile(`https?://(www\.)?(aliyundrive\.com|alipan\.com)/s/[0-9a-zA-Z]+`)
-	xunleiLinkRegex    = regexp.MustCompile(`https?://pan\.xunlei\.com/s/[0-9a-zA-Z_\-]+(\?pwd=[0-9a-zA-Z]+)?`)
-	tianyiLinkRegex    = regexp.MustCompile(`https?://cloud\.189\.cn/t/[0-9a-zA-Z]+`)
-	link115Regex       = regexp.MustCompile(`https?://115\.com/s/[0-9a-zA-Z]+`)
-	mobileLinkRegex    = regexp.MustCompile(`https?://caiyun\.feixin\.10086\.cn/[0-9a-zA-Z]+`)
-	weiyunLinkRegex    = regexp.MustCompile(`https?://share\.weiyun\.com/[0-9a-zA-Z]+`)
-	lanzouLinkRegex    = regexp.MustCompile(`https?://(www\.)?(lanzou[uixys]*|lan[zs]o[ux])\.(com|net|org)/[0-9a-zA-Z]+`)
+	quarkLinkRegex      = regexp.MustCompile(`https?://pan\.quark\.cn/s/[0-9a-zA-Z]+`)
+	ucLinkRegex         = regexp.MustCompile(`https?://drive\.uc\.cn/s/[0-9a-zA-Z]+(\?[^"'\s]*)?`)
+	baiduLinkRegex      = regexp.MustCompile(`https?://pan\.baidu\.com/s/[0-9a-zA-Z_\-]+(\?pwd=[0-9a-zA-Z]+)?`)
+	aliyunLinkRegex     = regexp.MustCompile(`https?://(www\.)?(aliyundrive\.com|alipan\.com)/s/[0-9a-zA-Z]+`)
+	xunleiLinkRegex     = regexp.MustCompile(`https?://pan\.xunlei\.com/s/[0-9a-zA-Z_\-]+(\?pwd=[0-9a-zA-Z]+)?`)
+	tianyiLinkRegex     = regexp.MustCompile(`https?://cloud\.189\.cn/t/[0-9a-zA-Z]+`)
+	link115Regex        = regexp.MustCompile(`https?://115\.com/s/[0-9a-zA-Z]+`)
+	mobileLinkRegex     = regexp.MustCompile(`https?://caiyun\.feixin\.10086\.cn/[0-9a-zA-Z]+`)
+	weiyunLinkRegex     = regexp.MustCompile(`https?://share\.weiyun\.com/[0-9a-zA-Z]+`)
+	lanzouLinkRegex     = regexp.MustCompile(`https?://(www\.)?(lanzou[uixys]*|lan[zs]o[ux])\.(com|net|org)/[0-9a-zA-Z]+`)
 	jianguoyunLinkRegex = regexp.MustCompile(`https?://(www\.)?jianguoyun\.com/p/[0-9a-zA-Z]+`)
-	link123Regex       = regexp.MustCompile(`https?://123pan\.com/s/[0-9a-zA-Z]+`)
-	pikpakLinkRegex    = regexp.MustCompile(`https?://mypikpak\.com/s/[0-9a-zA-Z]+`)
-	magnetLinkRegex    = regexp.MustCompile(`magnet:\?xt=urn:btih:[0-9a-fA-F]{40}`)
-	ed2kLinkRegex      = regexp.MustCompile(`ed2k://\|file\|.+\|\d+\|[0-9a-fA-F]{32}\|/`)
+	link123Regex        = regexp.MustCompile(`https?://123pan\.com/s/[0-9a-zA-Z]+`)
+	pikpakLinkRegex     = regexp.MustCompile(`https?://mypikpak\.com/s/[0-9a-zA-Z]+`)
+	magnetLinkRegex     = regexp.MustCompile(`magnet:\?xt=urn:btih:[0-9a-fA-F]{40}`)
+	ed2kLinkRegex       = regexp.MustCompile(`ed2k://\|file\|.+\|\d+\|[0-9a-fA-F]{32}\|/`)
 )
 
 // ZhizhenAsyncPlugin Zhizhen异步插件
@@ -121,16 +121,16 @@ func (p *ZhizhenAsyncPlugin) searchImpl(client *http.Client, keyword string, ext
 
 	// 构建API搜索URL - 使用zhizhen专用域名
 	searchURL := fmt.Sprintf("https://xiaomi666.fun/api.php/provide/vod?ac=detail&wd=%s", url.QueryEscape(keyword))
-	
+
 	// 创建HTTP请求
 	ctx, cancel := context.WithTimeout(context.Background(), DefaultTimeout)
 	defer cancel()
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", searchURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("[%s] 创建搜索请求失败: %w", p.Name(), err)
 	}
-	
+
 	// 设置请求头
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
 	req.Header.Set("Accept", "application/json, text/plain, */*")
@@ -138,30 +138,30 @@ func (p *ZhizhenAsyncPlugin) searchImpl(client *http.Client, keyword string, ext
 	req.Header.Set("Connection", "keep-alive")
 	req.Header.Set("Referer", "https://xiaomi666.fun/")
 	req.Header.Set("Cache-Control", "no-cache")
-	
+
 	// 发送请求
 	resp, err := p.doRequestWithRetry(req, client)
 	if err != nil {
 		return nil, fmt.Errorf("[%s] 搜索请求失败: %w", p.Name(), err)
 	}
 	defer resp.Body.Close()
-	
+
 	// 解析JSON响应
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("[%s] 读取响应失败: %w", p.Name(), err)
 	}
-	
+
 	var apiResponse ZhizhenAPIResponse
 	if err := json.Unmarshal(body, &apiResponse); err != nil {
 		return nil, fmt.Errorf("[%s] 解析JSON响应失败: %w", p.Name(), err)
 	}
-	
+
 	// 检查API响应状态
 	if apiResponse.Code != 1 {
 		return nil, fmt.Errorf("[%s] API返回错误: %s", p.Name(), apiResponse.Msg)
 	}
-	
+
 	// 解析搜索结果
 	var results []model.SearchResult
 	for _, item := range apiResponse.List {
@@ -169,18 +169,18 @@ func (p *ZhizhenAsyncPlugin) searchImpl(client *http.Client, keyword string, ext
 			results = append(results, result)
 		}
 	}
-	
+
 	return results, nil
 }
 
 // ZhizhenAPIResponse API响应结构
 type ZhizhenAPIResponse struct {
-	Code      int             `json:"code"`
-	Msg       string          `json:"msg"`
-	Page      int             `json:"page"`
-	PageCount int             `json:"pagecount"`
-	Limit     int             `json:"limit"`
-	Total     int             `json:"total"`
+	Code      int              `json:"code"`
+	Msg       string           `json:"msg"`
+	Page      int              `json:"page"`
+	PageCount int              `json:"pagecount"`
+	Limit     int              `json:"limit"`
+	Total     int              `json:"total"`
 	List      []ZhizhenAPIItem `json:"list"`
 }
 
@@ -205,13 +205,13 @@ type ZhizhenAPIItem struct {
 func (p *ZhizhenAsyncPlugin) parseAPIItem(item ZhizhenAPIItem) model.SearchResult {
 	// 构建唯一ID
 	uniqueID := fmt.Sprintf("%s-%d", p.Name(), item.VodID)
-	
+
 	// 构建标题
 	title := strings.TrimSpace(item.VodName)
 	if title == "" {
 		return model.SearchResult{}
 	}
-	
+
 	// 构建描述
 	var contentParts []string
 	if item.VodActor != "" {
@@ -233,10 +233,10 @@ func (p *ZhizhenAsyncPlugin) parseAPIItem(item ZhizhenAPIItem) model.SearchResul
 		contentParts = append(contentParts, fmt.Sprintf("状态: %s", item.VodRemarks))
 	}
 	content := strings.Join(contentParts, " | ")
-	
+
 	// 解析下载链接
 	links := p.parseDownloadLinks(item.VodDownFrom, item.VodDownURL)
-	
+
 	// 构建标签
 	var tags []string
 	if item.VodYear != "" {
@@ -245,14 +245,14 @@ func (p *ZhizhenAsyncPlugin) parseAPIItem(item ZhizhenAPIItem) model.SearchResul
 	if item.VodArea != "" {
 		tags = append(tags, item.VodArea)
 	}
-	
+
 	return model.SearchResult{
 		UniqueID: uniqueID,
 		Title:    title,
 		Content:  content,
 		Links:    links,
 		Tags:     tags,
-		Channel:  "", // 插件搜索结果Channel为空
+		Channel:  "",          // 插件搜索结果Channel为空
 		Datetime: time.Time{}, // 使用零值而不是nil，参考jikepan插件标准
 	}
 }
@@ -262,42 +262,42 @@ func (p *ZhizhenAsyncPlugin) parseDownloadLinks(vodDownFrom, vodDownURL string) 
 	if vodDownFrom == "" || vodDownURL == "" {
 		return nil
 	}
-	
+
 	// 按$$$分隔
 	fromParts := strings.Split(vodDownFrom, "$$$")
 	urlParts := strings.Split(vodDownURL, "$$$")
-	
+
 	// 确保数组长度一致
 	minLen := len(fromParts)
 	if len(urlParts) < minLen {
 		minLen = len(urlParts)
 	}
-	
+
 	var links []model.Link
 	for i := 0; i < minLen; i++ {
 		fromType := strings.TrimSpace(fromParts[i])
 		urlStr := strings.TrimSpace(urlParts[i])
-		
+
 		if urlStr == "" || !p.isValidNetworkDriveURL(urlStr) {
 			continue
 		}
-		
+
 		// 映射网盘类型
 		linkType := p.mapCloudType(fromType, urlStr)
 		if linkType == "" {
 			continue
 		}
-		
+
 		// 提取密码
 		password := p.extractPassword(urlStr)
-		
+
 		links = append(links, model.Link{
 			Type:     linkType,
 			URL:      urlStr,
 			Password: password,
 		})
 	}
-	
+
 	return links
 }
 
@@ -305,11 +305,11 @@ func (p *ZhizhenAsyncPlugin) parseDownloadLinks(vodDownFrom, vodDownURL string) 
 func (p *ZhizhenAsyncPlugin) mapCloudType(apiType, url string) string {
 	// 优先根据API标识映射（zhizhen特有）
 	switch strings.ToUpper(apiType) {
-	case "KUAKE":    // ⚠️ zhizhen特有：kuake -> quark
+	case "KUAKE": // ⚠️ zhizhen特有：kuake -> quark
 		return "quark"
-	case "BAIDUI":   // ⚠️ zhizhen特有：BAIDUI -> baidu
+	case "BAIDUI": // ⚠️ zhizhen特有：BAIDUI -> baidu
 		return "baidu"
-	case "UC":       // ✅ 标准：UC -> uc
+	case "UC": // ✅ 标准：UC -> uc
 		return "uc"
 	case "ALY":
 		return "aliyun"
@@ -332,7 +332,7 @@ func (p *ZhizhenAsyncPlugin) mapCloudType(apiType, url string) string {
 	case "PK":
 		return "pikpak"
 	}
-	
+
 	// 如果API标识无法识别，则通过URL模式匹配
 	return p.determineLinkType(url)
 }
@@ -340,29 +340,29 @@ func (p *ZhizhenAsyncPlugin) mapCloudType(apiType, url string) string {
 // isValidNetworkDriveURL 检查URL是否为有效的网盘链接
 func (p *ZhizhenAsyncPlugin) isValidNetworkDriveURL(url string) bool {
 	// 过滤掉明显无效的链接
-	if strings.Contains(url, "javascript:") || 
-	   strings.Contains(url, "#") ||
-	   url == "" ||
-	   (!strings.HasPrefix(url, "http") && !strings.HasPrefix(url, "magnet:") && !strings.HasPrefix(url, "ed2k:")) {
+	if strings.Contains(url, "javascript:") ||
+		strings.Contains(url, "#") ||
+		url == "" ||
+		(!strings.HasPrefix(url, "http") && !strings.HasPrefix(url, "magnet:") && !strings.HasPrefix(url, "ed2k:")) {
 		return false
 	}
-	
+
 	// 检查是否匹配任何支持的网盘格式（16种）
 	return quarkLinkRegex.MatchString(url) ||
-		   ucLinkRegex.MatchString(url) ||
-		   baiduLinkRegex.MatchString(url) ||
-		   aliyunLinkRegex.MatchString(url) ||
-		   xunleiLinkRegex.MatchString(url) ||
-		   tianyiLinkRegex.MatchString(url) ||
-		   link115Regex.MatchString(url) ||
-		   mobileLinkRegex.MatchString(url) ||
-		   weiyunLinkRegex.MatchString(url) ||
-		   lanzouLinkRegex.MatchString(url) ||
-		   jianguoyunLinkRegex.MatchString(url) ||
-		   link123Regex.MatchString(url) ||
-		   pikpakLinkRegex.MatchString(url) ||
-		   magnetLinkRegex.MatchString(url) ||
-		   ed2kLinkRegex.MatchString(url)
+		ucLinkRegex.MatchString(url) ||
+		baiduLinkRegex.MatchString(url) ||
+		aliyunLinkRegex.MatchString(url) ||
+		xunleiLinkRegex.MatchString(url) ||
+		tianyiLinkRegex.MatchString(url) ||
+		link115Regex.MatchString(url) ||
+		mobileLinkRegex.MatchString(url) ||
+		weiyunLinkRegex.MatchString(url) ||
+		lanzouLinkRegex.MatchString(url) ||
+		jianguoyunLinkRegex.MatchString(url) ||
+		link123Regex.MatchString(url) ||
+		pikpakLinkRegex.MatchString(url) ||
+		magnetLinkRegex.MatchString(url) ||
+		ed2kLinkRegex.MatchString(url)
 }
 
 // determineLinkType 根据URL确定链接类型（支持16种类型）
@@ -414,9 +414,9 @@ func (p *ZhizhenAsyncPlugin) extractPassword(url string) string {
 
 // doRequestWithRetry 带重试的HTTP请求（优化JSON API的重试策略）
 func (p *ZhizhenAsyncPlugin) doRequestWithRetry(req *http.Request, client *http.Client) (*http.Response, error) {
-	maxRetries := 2  // 对于JSON API减少重试次数
+	maxRetries := 2 // 对于JSON API减少重试次数
 	var lastErr error
-	
+
 	for i := 0; i < maxRetries; i++ {
 		resp, err := client.Do(req)
 		if err == nil {
@@ -428,13 +428,13 @@ func (p *ZhizhenAsyncPlugin) doRequestWithRetry(req *http.Request, client *http.
 		} else {
 			lastErr = err
 		}
-		
+
 		// JSON API快速重试：只等待很短时间
 		if i < maxRetries-1 {
 			time.Sleep(100 * time.Millisecond) // 从秒级改为100毫秒
 		}
 	}
-	
+
 	return nil, fmt.Errorf("[%s] 请求失败，重试%d次后仍失败: %w", p.Name(), maxRetries, lastErr)
 }
 
@@ -442,15 +442,15 @@ func (p *ZhizhenAsyncPlugin) doRequestWithRetry(req *http.Request, client *http.
 func (p *ZhizhenAsyncPlugin) GetPerformanceStats() map[string]interface{} {
 	totalRequests := atomic.LoadInt64(&searchRequests)
 	totalTime := atomic.LoadInt64(&totalSearchTime)
-	
+
 	var avgTime float64
 	if totalRequests > 0 {
 		avgTime = float64(totalTime) / float64(totalRequests) / 1e6 // 转换为毫秒
 	}
-	
+
 	return map[string]interface{}{
-		"search_requests":    totalRequests,
-		"avg_search_time_ms": avgTime,
+		"search_requests":      totalRequests,
+		"avg_search_time_ms":   avgTime,
 		"total_search_time_ns": totalTime,
 	}
 }

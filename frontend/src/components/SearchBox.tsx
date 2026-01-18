@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { IoCloseOutline, IoTimeOutline } from 'react-icons/io5';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useSearchStore, useSearchHistory } from '@/stores/searchStore';
+import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 import { Button as StatefulButton, StatefulButtonHandle } from '@/components/ui/stateful-button';
 import { twMerge } from "tailwind-merge";
@@ -23,10 +26,12 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   const [isFocused, setIsFocused] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [isHoveringHistory, setIsHoveringHistory] = useState(false);
-  
+
   const { searchParams, setSearchParams, performSearch, clearHistory, removeFromHistory, isLoading } = useSearchStore();
+  const { isAuthenticated, token } = useAuthStore();
+  const navigate = useNavigate();
   const searchHistory = useSearchHistory();
-  
+
   const [inputValue, setInputValue] = useState(searchParams.keyword || '');
 
   // 同步搜索参数变化
@@ -46,11 +51,52 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     const keyword = inputValue.trim();
     if (!keyword) return;
 
+    // 检查：如果用户已登录但未绑定 API Key，阻止搜索并跳转
+    if (isAuthenticated && token) {
+      try {
+        // 尝试获取用户绑定的 API Key
+        const response = await fetch('/api/user/apikey', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.status === 404) {
+          // 用户未绑定 API Key，阻止搜索，提示并跳转
+          toast.warning('请先绑定 API Key 后再进行搜索', {
+            duration: 3000,
+          });
+          navigate('/settings/apikey');
+          return; // 阻止搜索请求
+        }
+      } catch (error) {
+        console.error('检查 API Key 绑定状态失败:', error);
+        // 如果检查失败，也阻止搜索
+        toast.error('无法验证 API Key 绑定状态，请稍后重试');
+        return;
+      }
+    }
+
     setSearchParams({ keyword });
-    // 触发按钮动画并执行搜索
-    await buttonRef.current?.run(() => performSearch({ keyword }));
-    onSearch?.(keyword);
-    setShowHistory(false);
+
+    try {
+      // 触发按钮动画并执行搜索
+      await buttonRef.current?.run(() => performSearch({ keyword }));
+      onSearch?.(keyword);
+      setShowHistory(false);
+    } catch (error: any) {
+      // 处理搜索错误
+      if (error.code === 401 || error.code === 404) {
+        // 401/404 错误：需要绑定 API Key
+        toast.warning('请先绑定 API Key 后再进行搜索', {
+          duration: 3000,
+        });
+        navigate('/settings/apikey');
+      } else {
+        // 其他错误
+        toast.error(error.message || '搜索失败');
+      }
+    }
   };
 
   // 处理键盘事件
@@ -100,8 +146,46 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   const handleSelectHistory = async (keyword: string) => {
     setInputValue(keyword);
     setSearchParams({ keyword });
-    await buttonRef.current?.run(() => performSearch({ keyword }));
-    onSearch?.(keyword);
+
+    // 检查：如果用户已登录但未绑定 API Key，阻止搜索并跳转
+    if (isAuthenticated && token) {
+      try {
+        // 尝试获取用户绑定的 API Key
+        const response = await fetch('/api/user/apikey', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.status === 404) {
+          // 用户未绑定 API Key，阻止搜索，提示并跳转
+          toast.warning('请先绑定 API Key 后再进行搜索', {
+            duration: 3000,
+          });
+          navigate('/settings/apikey');
+          return; // 阻止搜索请求
+        }
+      } catch (error) {
+        console.error('检查 API Key 绑定状态失败:', error);
+        toast.error('无法验证 API Key 绑定状态，请稍后重试');
+        return;
+      }
+    }
+
+    try {
+      await buttonRef.current?.run(() => performSearch({ keyword }));
+      onSearch?.(keyword);
+    } catch (error: any) {
+      // 处理搜索错误
+      if (error.code === 401 || error.code === 404) {
+        toast.warning('请先绑定 API Key 后再进行搜索', {
+          duration: 3000,
+        });
+        navigate('/settings/apikey');
+      } else {
+        toast.error(error.message || '搜索失败');
+      }
+    }
     // 选择历史后保持下拉框打开，便于继续点击其他记录
   };
 
@@ -136,7 +220,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           placeholder={placeholder}
           className="w-full pl-14 pr-24 py-5 text-lg bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none transition-all duration-300"
         />
-        
+
         {/* 清空按钮：移动到搜索按钮左侧 */}
         {inputValue && (
           <button
@@ -147,7 +231,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
             <IoCloseOutline className="w-5 h-5" />
           </button>
         )}
-        
+
         {/* 搜索按钮：StatefulButton */}
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
           <StatefulButton

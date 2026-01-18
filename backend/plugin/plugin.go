@@ -19,22 +19,22 @@ var (
 type AsyncSearchPlugin interface {
 	// Name 返回插件名称
 	Name() string
-	
+
 	// Priority 返回插件优先级
 	Priority() int
-	
+
 	// AsyncSearch 异步搜索方法
 	AsyncSearch(keyword string, searchFunc func(*http.Client, string, map[string]interface{}) ([]model.SearchResult, error), mainCacheKey string, ext map[string]interface{}) ([]model.SearchResult, error)
-	
+
 	// SetMainCacheKey 设置主缓存键
 	SetMainCacheKey(key string)
-	
+
 	// SetCurrentKeyword 设置当前搜索关键词（用于日志显示）
 	SetCurrentKeyword(keyword string)
-	
+
 	// Search 兼容性方法（内部调用AsyncSearch）
 	Search(keyword string, ext map[string]interface{}) ([]model.SearchResult, error)
-	
+
 	// SkipServiceFilter 返回是否跳过Service层的关键词过滤
 	// 对于磁力搜索等需要宽泛结果的插件，应返回true
 	SkipServiceFilter() bool
@@ -52,15 +52,15 @@ func RegisterGlobalPlugin(plugin AsyncSearchPlugin) {
 	if plugin == nil {
 		return
 	}
-	
+
 	globalRegistryLock.Lock()
 	defer globalRegistryLock.Unlock()
-	
+
 	name := plugin.Name()
 	if name == "" {
 		return
 	}
-	
+
 	globalRegistry[name] = plugin
 }
 
@@ -68,12 +68,12 @@ func RegisterGlobalPlugin(plugin AsyncSearchPlugin) {
 func GetRegisteredPlugins() []AsyncSearchPlugin {
 	globalRegistryLock.RLock()
 	defer globalRegistryLock.RUnlock()
-	
+
 	plugins := make([]AsyncSearchPlugin, 0, len(globalRegistry))
 	for _, plugin := range globalRegistry {
 		plugins = append(plugins, plugin)
 	}
-	
+
 	return plugins
 }
 
@@ -81,7 +81,7 @@ func GetRegisteredPlugins() []AsyncSearchPlugin {
 func GetPluginByName(name string) (AsyncSearchPlugin, bool) {
 	globalRegistryLock.RLock()
 	defer globalRegistryLock.RUnlock()
-	
+
 	plugin, exists := globalRegistry[name]
 	return plugin, exists
 }
@@ -120,7 +120,7 @@ func FilterResultsByKeyword(results []model.SearchResult, keyword string) []mode
 	if keyword == "" {
 		return results
 	}
-	
+
 	// 预估过滤后会保留80%的结果
 	filteredResults := make([]model.SearchResult, 0, len(results)*8/10)
 
@@ -151,4 +151,4 @@ func FilterResultsByKeyword(results []model.SearchResult, keyword string) []mode
 	}
 
 	return filteredResults
-} 
+}

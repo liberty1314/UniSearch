@@ -67,11 +67,11 @@ const AdminLogin: React.FC = () => {
             // 调用管理员登录接口（支持"记住我"）
             const response = await AuthService.adminLoginWithRemember(username, password, rememberMe);
 
-            // 保存 Token 和可选的 Refresh Token 到状态管理
+            // 保存 Token 和可选的 Refresh Token 到状态管理（明确设置 isAdmin = true）
             setToken(
                 response.access_token,
                 'admin',
-                true,
+                true, // 管理员登录，明确设置为 true
                 null,
                 response.refresh_token || null
             );

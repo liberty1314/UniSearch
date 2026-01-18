@@ -1,323 +1,350 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
-import { AuthService } from '@/services/authService';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { apiClient } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { Key, Copy, Clock, Calendar, CheckCircle2, XCircle, Sparkles, Home, ArrowLeft } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
-/**
- * 用户 API Key 设置页面
- * 
- * 展示当前用户的 API Key 详细信息
- */
+interface APIKeyInfo {
+    api_key: string;
+    expires_at: string | null;
+    daily_search_limit: number;
+    today_search_count: number;
+    remaining_searches: number;
+    is_valid: boolean;
+}
+
 const UserApiKeySettings: React.FC = () => {
     const navigate = useNavigate();
-    const { apiKey, token } = useAuthStore();
-    const [keyInfo, setKeyInfo] = useState<any>(null);
+    const { token, apiKey, isAuthenticated, logout } = useAuthStore();
+
+    const [apiKeyInfo, setApiKeyInfo] = useState<APIKeyInfo | null>(null);
+    const [newApiKey, setNewApiKey] = useState('');
     const [isLoading, setIsLoading] = useState(true);
-    const [copied, setCopied] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showKey, setShowKey] = useState(false);
 
-    /**
-     * 加载 API Key 信息
-     */
+    // 检查认证状态（支持 token 或 apiKey 登录）
     useEffect(() => {
-        const loadKeyInfo = async () => {
-            if (!apiKey || !token) {
-                toast.error('未找到 API Key 信息');
-                setIsLoading(false);
-                return;
-            }
+        console.log('🔍 UserApiKeySettings - Auth Check:', {
+            isAuthenticated,
+            hasToken: !!token,
+            hasApiKey: !!apiKey,
+            token: token ? `${token.substring(0, 20)}...` : 'null',
+            apiKey: apiKey ? `${apiKey.substring(0, 20)}...` : 'null',
+        });
 
-            try {
-                const info = await AuthService.getUserApiKeyInfo();
-                setKeyInfo(info);
-            } catch (error: any) {
-                console.error('获取 API Key 信息失败:', error);
-                toast.error('获取 API Key 信息失败：' + (error.message || '未知错误'));
-            } finally {
-                setIsLoading(false);
-            }
-        };
+        if (!isAuthenticated || (!token && !apiKey)) {
+            console.error('❌ Auth check failed, redirecting to login');
+            toast.error('请先登录');
+            navigate('/login');
+        } else {
+            console.log('✅ Auth check passed');
+        }
+    }, [isAuthenticated, token, apiKey, navigate]);
 
-        loadKeyInfo();
-    }, [apiKey, token]);
+    // 加载 API Key 信息（只要已认证即可）
+    useEffect(() => {
+        if (isAuthenticated) {
+            loadAPIKeyInfo();
+        }
+    }, [isAuthenticated]);
 
-    /**
-     * 复制 API Key 到剪贴板
-     */
-    const handleCopyKey = async () => {
-        if (!keyInfo?.key) return;
-
+    const loadAPIKeyInfo = async () => {
         try {
-            await navigator.clipboard.writeText(keyInfo.key);
-            setCopied(true);
-            toast.success('API Key 已复制到剪贴板');
+            setIsLoading(true);
+            const response = await apiClient.get('/user/apikey');
 
-            setTimeout(() => {
-                setCopied(false);
-            }, 2000);
-        } catch (error) {
-            toast.error('复制失败，请手动复制');
+            if (response.code === 200 && response.data) {
+                setApiKeyInfo(response.data as APIKeyInfo);
+            }
+        } catch (error: any) {
+            // 404 表示未绑定，这是正常情况
+            if (error.code !== 404) {
+                console.error('加载 API Key 信息失败:', error);
+            }
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    /**
-     * 格式化 API Key（部分掩码显示）
-     */
-    const formatApiKey = (key: string) => {
-        if (!key) return '';
-        const prefix = key.substring(0, 10);
-        const suffix = key.substring(key.length - 8);
-        return `${prefix}${'*'.repeat(24)}${suffix}`;
+    const handleBindAPIKey = async () => {
+        if (!newApiKey.trim()) {
+            toast.error('请输入 API Key');
+            return;
+        }
+
+        // 验证格式
+        if (newApiKey.length !== 43 || !newApiKey.startsWith('sk-')) {
+            toast.error('API Key 格式错误（应为 sk- 开头的43位字符）');
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            const response = await apiClient.post('/user/apikey', {
+                key: newApiKey.trim(),
+            });
+
+            if (response.code === 200) {
+                toast.success('绑定成功');
+                setNewApiKey('');
+                await loadAPIKeyInfo();
+            } else {
+                toast.error(response.message || '绑定失败');
+            }
+        } catch (error: any) {
+            console.error('绑定 API Key 失败:', error);
+            toast.error(error.message || '绑定失败');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
-    /**
-     * 计算进度百分比
-     */
-    const calculateProgress = () => {
-        if (!keyInfo) return 0;
+    const handleUnbindAPIKey = async () => {
+        if (!confirm('确定要解绑当前 API Key 吗？')) {
+            return;
+        }
 
-        const validityDays = parseInt(keyInfo.validity_period);
-        const remainingDays = keyInfo.remaining_days;
+        try {
+            setIsSubmitting(true);
+            const response = await apiClient.delete('/user/apikey');
 
-        if (isNaN(validityDays) || validityDays === 0) return 0;
+            if (response.code === 200) {
+                toast.success('解绑成功');
+                setApiKeyInfo(null);
+            } else {
+                toast.error(response.message || '解绑失败');
+            }
+        } catch (error: any) {
+            console.error('解绑 API Key 失败:', error);
+            toast.error(error.message || '解绑失败');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-        return Math.max(0, Math.min(100, (remainingDays / validityDays) * 100));
+    const formatDate = (dateStr: string | null) => {
+        if (!dateStr) return '永不过期';
+        const date = new Date(dateStr);
+        return date.toLocaleString('zh-CN');
+    };
+
+    const maskAPIKey = (key: string) => {
+        if (key.length <= 10) return key;
+        return `${key.substring(0, 10)}...${key.substring(key.length - 4)}`;
     };
 
     if (isLoading) {
         return (
-            <div className="min-h-screen pt-20 px-4 bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                    <p className="mt-4 text-gray-600 dark:text-gray-400">加载中...</p>
-                </div>
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+                <LoadingSpinner />
             </div>
         );
     }
-
-    if (!keyInfo) {
-        return (
-            <div className="min-h-screen pt-20 px-4 bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-                <Card className="max-w-md">
-                    <CardContent className="pt-6 text-center">
-                        <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-                        <p className="text-gray-600 dark:text-gray-400">无法加载 API Key 信息</p>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
-    const progress = calculateProgress();
-    const isExpired = keyInfo.status === 'expired';
 
     return (
-        <div className="min-h-screen pt-20 px-4 bg-gray-50 dark:bg-gray-900">
-            {/* 背景装饰 */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-green-400/20 to-blue-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-            </div>
-
-            <div className="relative z-10 max-w-4xl mx-auto py-8">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mx-auto">
                 {/* 页面标题 */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="mb-8"
+                    className="text-center mb-8"
                 >
-                    <div className="flex items-center justify-between mb-4">
-                        <Button
-                            onClick={() => navigate('/')}
-                            variant="outline"
-                            className="flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                        >
-                            <ArrowLeft className="w-4 h-4" />
-                            返回首页
-                        </Button>
-                    </div>
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                         API Key 设置
                     </h1>
                     <p className="text-gray-600 dark:text-gray-400">
-                        查看和管理您的 API Key 信息
+                        绑定 API Key 后，搜索时无需重复输入
                     </p>
                 </motion.div>
 
-                {/* API Key 卡片 */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.1 }}
-                >
-                    <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border-gray-200/50 dark:border-gray-700/50 shadow-2xl mb-6">
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                                        <Key className="w-6 h-6 text-white" />
+                {/* 当前绑定状态 */}
+                {apiKeyInfo ? (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-8"
+                    >
+                        <Card className="p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                                    当前绑定的 API Key
+                                </h2>
+                                <span
+                                    className={`px-3 py-1 rounded-full text-sm font-medium ${apiKeyInfo.is_valid
+                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                        }`}
+                                >
+                                    {apiKeyInfo.is_valid ? '有效' : '已失效'}
+                                </span>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* API Key 显示 */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        API Key
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            type={showKey ? 'text' : 'password'}
+                                            value={apiKeyInfo.api_key}
+                                            readOnly
+                                            className="flex-1 font-mono text-sm"
+                                        />
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setShowKey(!showKey)}
+                                        >
+                                            {showKey ? '隐藏' : '显示'}
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(apiKeyInfo.api_key);
+                                                toast.success('已复制到剪贴板');
+                                            }}
+                                        >
+                                            复制
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {/* 使用统计 */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            过期时间
+                                        </label>
+                                        <p className="text-gray-900 dark:text-white">
+                                            {formatDate(apiKeyInfo.expires_at)}
+                                        </p>
                                     </div>
                                     <div>
-                                        <CardTitle className="text-2xl">您的 API Key</CardTitle>
-                                        <CardDescription>
-                                            {keyInfo.description || '无描述'}
-                                        </CardDescription>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            每日限额
+                                        </label>
+                                        <p className="text-gray-900 dark:text-white">
+                                            {apiKeyInfo.daily_search_limit === 0
+                                                ? '无限制'
+                                                : `${apiKeyInfo.daily_search_limit} 次`}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            今日已用
+                                        </label>
+                                        <p className="text-gray-900 dark:text-white">
+                                            {apiKeyInfo.today_search_count} 次
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            今日剩余
+                                        </label>
+                                        <p className="text-gray-900 dark:text-white">
+                                            {apiKeyInfo.remaining_searches === -1
+                                                ? '无限制'
+                                                : `${apiKeyInfo.remaining_searches} 次`}
+                                        </p>
                                     </div>
                                 </div>
-                                <div className={`px-4 py-2 rounded-full ${isExpired ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'}`}>
-                                    {isExpired ? (
-                                        <span className="flex items-center gap-2">
-                                            <XCircle className="w-4 h-4" />
-                                            已过期
-                                        </span>
-                                    ) : (
-                                        <span className="flex items-center gap-2">
-                                            <CheckCircle2 className="w-4 h-4" />
-                                            活跃
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {/* API Key 显示 */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    密钥
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-900 rounded-lg font-mono text-sm break-all">
-                                        {formatApiKey(keyInfo.key)}
-                                    </div>
+
+                                {/* 操作按钮 */}
+                                <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                                     <Button
-                                        onClick={handleCopyKey}
-                                        variant="outline"
-                                        size="icon"
-                                        className="shrink-0"
+                                        variant="destructive"
+                                        onClick={handleUnbindAPIKey}
+                                        disabled={isSubmitting}
                                     >
-                                        {copied ? (
-                                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                        ) : (
-                                            <Copy className="w-4 h-4" />
-                                        )}
+                                        解绑 API Key
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => navigate('/')}
+                                    >
+                                        返回首页
                                     </Button>
                                 </div>
                             </div>
+                        </Card>
+                    </motion.div>
+                ) : (
+                    /* 绑定表单 */
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-8"
+                    >
+                        <Card className="p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                                绑定 API Key
+                            </h2>
 
-                            {/* 有效期进度条 */}
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="font-medium text-gray-700 dark:text-gray-300">
-                                        有效期进度
-                                    </span>
-                                    <span className="text-gray-600 dark:text-gray-400">
-                                        剩余 {keyInfo.remaining_days} 天 / 总计 {keyInfo.validity_period}
-                                    </span>
-                                </div>
-                                <div className="relative h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${progress}%` }}
-                                        transition={{ duration: 1, delay: 0.3 }}
-                                        className={`h-full rounded-full ${progress > 50
-                                            ? 'bg-gradient-to-r from-green-500 to-emerald-500'
-                                            : progress > 20
-                                                ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
-                                                : 'bg-gradient-to-r from-red-500 to-pink-500'
-                                            }`}
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        请输入 API Key
+                                    </label>
+                                    <Input
+                                        type="text"
+                                        placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                        value={newApiKey}
+                                        onChange={(e) => setNewApiKey(e.target.value)}
+                                        className="font-mono"
+                                        disabled={isSubmitting}
                                     />
+                                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                                        API Key 格式：sk- 开头的43位字符
+                                    </p>
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <Button
+                                        onClick={handleBindAPIKey}
+                                        disabled={isSubmitting || !newApiKey.trim()}
+                                        className="flex-1"
+                                    >
+                                        {isSubmitting ? '绑定中...' : '绑定 API Key'}
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => navigate('/')}
+                                        disabled={isSubmitting}
+                                    >
+                                        返回首页
+                                    </Button>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                {/* 详细信息卡片 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* 开始计算时间 */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.2 }}
-                    >
-                        <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border-gray-200/50 dark:border-gray-700/50">
-                            <CardContent className="pt-6">
-                                <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center shrink-0">
-                                        <Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
-                                            开始计算时间
-                                        </h3>
-                                        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                            {keyInfo.first_used_at || '尚未使用'}
-                                        </p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                                            北京时间 (UTC+8)
-                                        </p>
-                                    </div>
-                                </div>
-                            </CardContent>
                         </Card>
                     </motion.div>
+                )}
 
-                    {/* 到期时间 */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.3 }}
-                    >
-                        <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border-gray-200/50 dark:border-gray-700/50">
-                            <CardContent className="pt-6">
-                                <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center shrink-0">
-                                        <Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
-                                            到期时间
-                                        </h3>
-                                        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                            {keyInfo.expires_at}
-                                        </p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                                            北京时间 (UTC+8)
-                                        </p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                </div>
-
-                {/* 提示信息 */}
+                {/* 帮助信息 */}
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5, delay: 0.4 }}
-                    className="mt-6"
+                    transition={{ delay: 0.2 }}
+                    className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
                 >
-                    <Card className="backdrop-blur-xl bg-blue-50/90 dark:bg-blue-900/20 border-blue-200/50 dark:border-blue-800/50">
-                        <CardContent className="pt-6">
-                            <div className="flex items-start gap-3">
-                                <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                                <div className="text-sm text-blue-900 dark:text-blue-100">
-                                    <p className="font-medium mb-1">温馨提示</p>
-                                    <ul className="space-y-1 text-blue-800 dark:text-blue-200">
-                                        <li>• API Key 的有效期从首次使用时开始计算</li>
-                                        <li>• 请妥善保管您的 API Key，不要泄露给他人</li>
-                                        <li>• 如需延长有效期，请联系管理员</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
+                        💡 使用提示
+                    </h3>
+                    <ul className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
+                        <li>• 绑定 API Key 后，搜索时无需重复输入</li>
+                        <li>• 每个用户只能绑定一个 API Key</li>
+                        <li>• 更换 API Key 会自动解绑旧的 Key</li>
+                        <li>• 如需获取 API Key，请联系管理员</li>
+                    </ul>
                 </motion.div>
             </div>
         </div>

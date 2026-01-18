@@ -4,6 +4,12 @@
 
 UniSearch 提供了一套完整的 RESTful API，支持网盘资源搜索、用户认证等功能。
 
+**v3.0.0 重要更新**：
+- 🔄 API Key 存储迁移到 MySQL 数据库
+- 👥 新增用户注册和登录功能
+- 🔗 新增 API Key 绑定和生成功能
+- 📖 详细文档请参考：[MySQL 迁移 API 文档](mysql_migration_api.md)
+
 **基础信息**：
 - 基础 URL: `http://localhost:8888/api`
 - 内容类型: `application/json`
@@ -65,9 +71,62 @@ X-API-Key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ## 认证 API
 
-### 1. 用户登录
+### 1. 用户注册
 
-获取 JWT Token 用于后续 API 调用。支持普通用户登录和 API Key 登录。
+注册新的用户账户。
+
+**接口地址**: `/api/auth/register`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 否
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| username | string | 是 | 用户名（3-32个字符） |
+| password | string | 是 | 密码（6-64个字符） |
+
+**请求示例**:
+
+```json
+{
+  "username": "testuser",
+  "password": "password123"
+}
+```
+
+**成功响应** (200 OK):
+
+```json
+{
+  "user_id": 2,
+  "username": "testuser",
+  "message": "注册成功"
+}
+```
+
+**错误响应**:
+
+- **400 Bad Request** - 参数错误
+  ```json
+  {
+    "error": "用户名长度必须在3-32字符之间"
+  }
+  ```
+
+- **400 Bad Request** - 用户名已存在
+  ```json
+  {
+    "error": "用户名已存在"
+  }
+  ```
+
+---
+
+### 2. 用户登录（统一接口）
+
+获取 JWT Token 用于后续 API 调用。支持三种登录方式：数据库用户登录、API Key 登录、记住我功能。
 
 **接口地址**: `/api/auth/login`  
 **请求方法**: `POST`  
@@ -78,22 +137,27 @@ X-API-Key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 | 参数名 | 类型 | 必填 | 描述 |
 |--------|------|------|------|
-| username | string | 是 | 用户名（API Key 登录时固定为 "user"） |
+| username | string | 是 | 用户名（API Key 登录时可以是任意用户名） |
 | password | string | 是 | 密码（API Key 登录时为 API Key 字符串） |
+| remember_me | boolean | 否 | 是否记住密码（默认 false） |
+| device_fingerprint | string | 否 | 设备指纹（启用记住我时建议提供） |
 
 **请求示例**:
 
 ```json
 // 普通用户登录
 {
-  "username": "admin",
-  "password": "password123"
+  "username": "testuser",
+  "password": "password123",
+  "remember_me": false
 }
 
-// API Key 登录
+// API Key 登录（支持任意用户名）
 {
   "username": "user",
-  "password": "<AUTH_TOKEN>"
+  "password": "<AUTH_TOKEN>",
+  "remember_me": true,
+  "device_fingerprint": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
 }
 ```
 
@@ -101,23 +165,48 @@ X-API-Key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ```json
 {
-  "token": "<AUTH_TOKEN>",
-  "expires_at": 1704067200,
-  "username": "admin"
+  "code": 200,
+  "message": "登录成功",
+  "data": {
+    "access_token": "<AUTH_TOKEN>",
+    "expires_at": 1704067200,
+    "refresh_token": "encrypted_refresh_token_base64_string",
+    "username": "testuser",
+    "user": {
+      "id": 1,
+      "username": "testuser",
+      "role": "user",
+      "created_at": "2026-01-18T10:00:00Z"
+    }
+  }
 }
 ```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 描述 |
+|--------|------|------|
+| access_token | string | 访问令牌（JWT），有效期 24 小时 |
+| expires_at | number | 访问令牌过期时间（Unix 时间戳） |
+| refresh_token | string | 刷新令牌（仅在 remember_me=true 时返回） |
+| username | string | 用户名 |
+| user | object | 用户信息（仅数据库用户登录时返回） |
 
 **错误响应**:
 
 ```json
 {
-  "error": "用户名或密码错误"
+  "code": 401,
+  "message": "用户名或密码错误",
+  "data": null
 }
 ```
 
 ```json
 {
-  "error": "API Key 无效或已过期"
+  "code": 401,
+  "message": "API Key 无效或已过期",
+  "data": null
 }
 ```
 
@@ -125,13 +214,33 @@ X-API-Key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 - `200`: 登录成功
 - `400`: 参数错误
 - `401`: 用户名或密码错误 / API Key 无效
-- `403`: 认证功能未启用
 - `500`: 服务器内部错误
 
+**登录方式说明**:
+
+1. **数据库用户登录**:
+   - 使用注册的用户名和密码登录
+   - 返回包含用户信息的完整响应
+   - 支持"记住我"功能
+
+2. **API Key 登录**:
+   - 密码字段为 API Key（格式：`sk-` + 40位十六进制）
+   - 系统自动检测 API Key 格式（43位且以 `sk-` 开头）
+   - 用户名可以是任意值（建议使用 "user"）
+   - 登录成功后返回 JWT Token
+   - 支持"记住我"功能
+
+3. **记住我功能**:
+   - 设置 `remember_me=true` 启用
+   - 返回 `refresh_token`（有效期 30 天）
+   - 建议提供 `device_fingerprint` 增强安全性
+   - 详见"记住密码功能 API"章节
+
 **重要说明**:
-- API Key 登录时，用户名必须为 "user"，密码为完整的 API Key（格式：`sk-` + 40位十六进制）
-- API Key 登录成功后会返回 JWT Token，后续请求使用该 Token 进行认证
+- 此接口统一了所有登录方式，替代了旧的 `/api/auth/login-remember` 接口
+- API Key 登录时，系统会自动验证 API Key 的有效性和过期时间
 - JWT Token 有效期默认为 24 小时
+- 刷新令牌有效期为 30 天（仅在启用"记住我"时返回）
 
 ---
 
@@ -1400,10 +1509,66 @@ curl -X POST http://localhost:8888/api/admin/test-url \
 
 搜索网盘资源，支持多种网盘类型和过滤条件。
 
+**v3.0.0 重要更新 - 混合访问模式**：
+- 🔑 支持三种认证方式：手动输入 API Key、JWT Token（用户绑定的 Key）、无认证（需提供 Key）
+- 🎯 优先级：手动输入 API Key > JWT Token（用户绑定的 Key）
+- ✅ 向后兼容：访客模式（仅提供 API Key）仍然可用
+
 **接口地址**: `/api/search`  
 **请求方法**: `POST` 或 `GET`  
 **Content-Type**: `application/json`（POST 方法）  
-**是否需要认证**: 取决于 `AUTH_ENABLED` 配置
+**是否需要认证**: 需要 API Key 或 JWT Token
+
+#### 认证方式说明
+
+**方式 1：手动输入 API Key（推荐用于访客）**
+
+通过 HTTP Header 或 URL 参数提供 API Key：
+
+```bash
+# Header 方式（推荐）
+curl -X POST http://localhost:8888/api/search \
+  -H "X-API-Key: <AUTH_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"kw": "速度与激情"}'
+
+# URL 参数方式
+curl -X GET "http://localhost:8888/api/search?kw=速度与激情&key=<AUTH_TOKEN>"
+```
+
+**方式 2：JWT Token（推荐用于登录用户）**
+
+登录后使用 JWT Token，系统自动使用用户绑定的 API Key：
+
+```bash
+curl -X POST http://localhost:8888/api/search \
+  -H "Authorization: Bearer <AUTH_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"kw": "速度与激情"}'
+```
+
+**方式 3：混合模式（手动 Key 优先）**
+
+同时提供 API Key 和 JWT Token 时，优先使用手动输入的 API Key：
+
+```bash
+curl -X POST http://localhost:8888/api/search \
+  -H "X-API-Key: <AUTH_TOKEN>" \
+  -H "Authorization: Bearer <AUTH_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"kw": "速度与激情"}'
+```
+
+**认证优先级**：
+1. 手动输入的 API Key（Header `X-API-Key` 或 URL 参数 `key`）
+2. JWT Token 中用户绑定的 API Key
+3. 如果都没有，返回 401 错误
+
+**API Key 验证**：
+- 检查 API Key 是否有效（`is_enabled=true`）
+- 检查 API Key 是否过期（`expires_at`）
+- 检查每日搜索次数限制（`daily_search_limit`）
+- 自动更新使用统计（`first_used_at`、`today_search_count`、`last_search_date`）
 
 #### POST 请求参数
 
@@ -1721,6 +1886,57 @@ curl http://localhost:8888/api/health
 ---
 
 ## 更新日志
+
+### v3.0.0 (2026-01-18) - MySQL 迁移版本
+
+**重大变更**:
+- 🔄 API Key 存储从 JSON 文件迁移到 MySQL 数据库
+- 🔐 新增完整的用户/管理员权限体系
+- 👥 支持用户注册和登录功能
+- 🔗 支持 API Key 绑定到用户账户
+- 🎯 支持混合访问模式（登录用户 + 访客）
+
+**新增功能**:
+- ✅ 用户注册和登录（JWT Token 认证）
+- ✅ API Key 绑定功能（用户可绑定已有 Key）
+- ✅ API Key 生成功能（普通用户可自行生成）
+- ✅ 混合访问模式搜索（支持手动输入 Key 或使用绑定的 Key）
+- ✅ 每日搜索次数限制（daily_search_limit）
+- ✅ API Key 首次使用时间记录（first_used_at）
+- ✅ 数据迁移工具（从 JSON 迁移到 MySQL）
+
+**新增接口**:
+- `POST /api/auth/register` - 用户注册
+- `POST /api/auth/login` - 用户登录（支持普通用户和 API Key 登录）
+- `POST /api/user/apikey/bind` - 绑定 API Key
+- `POST /api/user/apikey/generate` - 生成 API Key（普通用户）
+- `GET /api/user/apikey/info` - 查询 API Key 信息
+
+**数据库变更**:
+- 新增 `users` 表（用户管理）
+- 新增 `api_keys` 表（API Key 管理）
+- API Key 支持绑定到用户（user_id 字段）
+- 新增每日搜索限制字段（daily_search_limit, today_search_count, last_search_date）
+
+**环境变量新增**:
+- `DB_HOST` - MySQL 数据库主机
+- `DB_PORT` - MySQL 数据库端口
+- `DB_USER` - MySQL 数据库用户名
+- `DB_PASSWORD` - MySQL 数据库密码
+- `DB_NAME` - MySQL 数据库名称
+
+**兼容性说明**:
+- 保持向后兼容，访客模式仍然可用（手动输入 API Key）
+- 现有搜索接口保持不变
+- 提供数据迁移工具，平滑过渡到新系统
+
+**部署说明**:
+- 需要 MySQL 8.0 或更高版本
+- 首次启动会自动创建数据库表结构
+- 自动创建默认管理员账户（admin/admin）
+- 支持从 JSON 文件自动迁移数据
+
+---
 
 ### v2.2.0 (2026-01-05)
 
@@ -2255,5 +2471,756 @@ async function logout() {
 管理员可以通过以下方式强制用户重新登录：
 1. 撤销用户的所有刷新令牌（后端提供 `RevokeUserTokens` 方法）
 2. 更改 `REFRESH_TOKEN_ENCRYPT_KEY` 环境变量（会使所有刷新令牌失效）
+
+---
+
+## JWT 工具函数技术说明
+
+### 概述
+
+本系统提供了符合 `apikey-mysql-migration` 规范的 JWT Token 生成和验证工具函数，用于实现用户身份认证和权限控制。
+
+### 核心数据结构
+
+#### JWTClaims 结构体
+
+JWT Token 的载荷结构，包含用户身份信息和权限信息。
+
+```go
+type JWTClaims struct {
+    UserID   uint   `json:"user_id"`  // 用户ID
+    Username string `json:"username"` // 用户名
+    Role     string `json:"role"`     // 用户角色（admin 或 user）
+    jwt.RegisteredClaims
+}
+```
+
+**字段说明**:
+- `UserID`: 用户的唯一标识符（数据库主键）
+- `Username`: 用户名，用于显示和日志记录
+- `Role`: 用户角色，支持两种值：
+  - `admin`: 管理员，拥有所有权限
+  - `user`: 普通用户，仅能访问用户接口
+- `RegisteredClaims`: JWT 标准字段，包含：
+  - `ExpiresAt`: Token 过期时间
+  - `IssuedAt`: Token 签发时间
+  - `Issuer`: 签发者（固定为 "pansou"）
+
+### 核心函数
+
+#### 1. GenerateJWTToken - 生成 JWT Token
+
+生成包含用户信息的 JWT Token，用于后续 API 调用的身份认证。
+
+**函数签名**:
+```go
+func GenerateJWTToken(userID uint, username, role, secret string, expiry time.Duration) (string, error)
+```
+
+**参数说明**:
+- `userID` (uint): 用户ID，必须大于 0
+- `username` (string): 用户名，不能为空
+- `role` (string): 用户角色，必须为 "admin" 或 "user"
+- `secret` (string): JWT 签名密钥，不能为空，建议使用 32 字符以上的随机字符串
+- `expiry` (time.Duration): Token 过期时间，建议设置为 24 小时（`24 * time.Hour`）
+
+**返回值**:
+- `string`: 生成的 JWT Token 字符串（格式：`<AUTH_TOKEN>`）
+- `error`: 错误信息，可能的错误：
+  - `username cannot be empty`: 用户名为空
+  - `role cannot be empty`: 角色为空
+  - `secret cannot be empty`: 密钥为空
+
+**使用示例**:
+```go
+// 生成普通用户的 Token（有效期 24 小时）
+token, err := util.GenerateJWTToken(
+    1,                    // 用户ID
+    "testuser",          // 用户名
+    "user",              // 角色
+    "your-secret-key",   // JWT 密钥
+    24 * time.Hour,      // 过期时间
+)
+if err != nil {
+    log.Printf("生成 Token 失败: %v", err)
+    return
+}
+fmt.Printf("Token: %s\n", token)
+
+// 生成管理员的 Token
+adminToken, err := util.GenerateJWTToken(
+    2,
+    "admin",
+    "admin",
+    "your-secret-key",
+    24 * time.Hour,
+)
+```
+
+**验证需求**: 5.5, 5.6, 13.6
+
+---
+
+#### 2. ValidateJWTToken - 验证 JWT Token
+
+验证 JWT Token 的有效性，并解析出用户信息。
+
+**函数签名**:
+```go
+func ValidateJWTToken(tokenString string, secret string) (*JWTClaims, error)
+```
+
+**参数说明**:
+- `tokenString` (string): JWT Token 字符串，不能为空
+- `secret` (string): JWT 签名密钥，必须与生成时使用的密钥一致
+
+**返回值**:
+- `*JWTClaims`: 解析后的 JWT Claims，包含 UserID、Username、Role 等信息
+- `error`: 错误信息，可能的错误：
+  - `token cannot be empty`: Token 为空
+  - `secret cannot be empty`: 密钥为空
+  - `unexpected signing method`: 签名算法不正确
+  - `token signature is invalid`: Token 签名无效
+  - `invalid token`: Token 格式错误或已过期
+  - `invalid token: missing user_id`: Token 中缺少 user_id 字段
+  - `invalid token: missing username`: Token 中缺少 username 字段
+  - `invalid token: missing role`: Token 中缺少 role 字段
+
+**使用示例**:
+```go
+// 验证 Token
+claims, err := util.ValidateJWTToken(tokenString, "your-secret-key")
+if err != nil {
+    log.Printf("Token 验证失败: %v", err)
+    return
+}
+
+// 使用解析出的用户信息
+fmt.Printf("用户ID: %d\n", claims.UserID)
+fmt.Printf("用户名: %s\n", claims.Username)
+fmt.Printf("角色: %s\n", claims.Role)
+fmt.Printf("过期时间: %v\n", claims.ExpiresAt.Time)
+
+// 检查用户权限
+if claims.Role == "admin" {
+    fmt.Println("用户是管理员")
+} else {
+    fmt.Println("用户是普通用户")
+}
+```
+
+**验证需求**: 5.5, 5.6, 13.6
+
+---
+
+### 安全最佳实践
+
+#### 1. 密钥管理
+
+**强密钥**:
+- JWT 签名密钥应使用 32 字符以上的随机字符串
+- 建议使用环境变量存储密钥，不要硬编码在代码中
+- 生产环境和开发环境应使用不同的密钥
+
+**示例**:
+```bash
+# .env 文件
+JWT_SECRET=your-super-secret-key-with-at-least-32-characters
+```
+
+```go
+// 从环境变量读取密钥
+secret := os.Getenv("JWT_SECRET")
+if secret == "" {
+    log.Fatal("JWT_SECRET 环境变量未设置")
+}
+```
+
+#### 2. Token 过期时间
+
+**建议设置**:
+- 普通用户：24 小时（`24 * time.Hour`）
+- 管理员：12 小时（`12 * time.Hour`）
+- 敏感操作：1 小时（`1 * time.Hour`）
+
+**原因**:
+- 过期时间过长会增加 Token 被盗用的风险
+- 过期时间过短会影响用户体验
+- 24 小时是安全性和用户体验的平衡点
+
+#### 3. Token 传输
+
+**HTTP Header 方式（推荐）**:
+```
+Authorization: Bearer <AUTH_TOKEN>
+```
+
+**注意事项**:
+- 始终使用 HTTPS 传输 Token
+- 不要在 URL 参数中传递 Token
+- 不要在日志中记录完整的 Token
+
+#### 4. Token 验证
+
+**必需验证项**:
+1. Token 签名是否有效
+2. Token 是否已过期
+3. Token 中的必需字段是否存在（UserID、Username、Role）
+4. 签名算法是否为 HS256
+
+**示例**:
+```go
+// ValidateJWTToken 已经包含了所有必需的验证
+claims, err := util.ValidateJWTToken(tokenString, secret)
+if err != nil {
+    // Token 无效，拒绝请求
+    c.JSON(401, gin.H{"error": "未授权：令牌无效或已过期"})
+    c.Abort()
+    return
+}
+
+// Token 有效，继续处理请求
+c.Set("user_id", claims.UserID)
+c.Set("username", claims.Username)
+c.Set("role", claims.Role)
+c.Next()
+```
+
+#### 5. 错误处理
+
+**不要泄露具体错误信息**:
+```go
+// ❌ 错误示例：泄露了具体的错误原因
+if err != nil {
+    c.JSON(401, gin.H{"error": err.Error()})
+    return
+}
+
+// ✅ 正确示例：返回通用错误消息
+if err != nil {
+    log.Printf("Token 验证失败: %v", err) // 记录详细日志
+    c.JSON(401, gin.H{"error": "未授权：令牌无效或已过期"}) // 返回通用消息
+    return
+}
+```
+
+---
+
+### 与旧版本的兼容性
+
+系统保留了旧版本的 JWT 函数以保持向后兼容：
+
+#### 旧版本函数（已弃用）
+
+```go
+// Claims 结构体（已弃用）
+type Claims struct {
+    Username string `json:"username"`
+    IsAdmin  bool   `json:"is_admin"`
+    APIKey   string `json:"api_key"`
+    jwt.RegisteredClaims
+}
+
+// GenerateToken（已弃用）
+func GenerateToken(username string, isAdmin bool, secret string, expiry time.Duration) (string, error)
+
+// ValidateToken（已弃用）
+func ValidateToken(tokenString string, secret string) (*Claims, error)
+```
+
+**迁移建议**:
+- 新代码应使用 `GenerateJWTToken` 和 `ValidateJWTToken`
+- 旧代码可以继续使用旧函数，但建议逐步迁移
+- 旧版本函数将在未来版本中移除
+
+**迁移示例**:
+```go
+// 旧代码
+token, err := util.GenerateToken("admin", true, secret, 24*time.Hour)
+claims, err := util.ValidateToken(token, secret)
+
+// 新代码
+token, err := util.GenerateJWTToken(1, "admin", "admin", secret, 24*time.Hour)
+claims, err := util.ValidateJWTToken(token, secret)
+```
+
+---
+
+### 常见问题
+
+#### Q1: Token 过期后如何处理？
+
+Token 过期后，用户需要重新登录获取新的 Token。系统不支持 Token 刷新机制，这是出于安全考虑。
+
+**建议**:
+- 在前端实现 Token 过期检测
+- Token 即将过期时提示用户
+- Token 过期后自动跳转到登录页面
+
+#### Q2: 如何实现"记住我"功能？
+
+"记住我"功能可以通过延长 Token 过期时间实现：
+
+```go
+var expiry time.Duration
+if rememberMe {
+    expiry = 7 * 24 * time.Hour // 7 天
+} else {
+    expiry = 24 * time.Hour // 24 小时
+}
+
+token, err := util.GenerateJWTToken(userID, username, role, secret, expiry)
+```
+
+#### Q3: 如何强制用户重新登录？
+
+可以通过以下方式强制用户重新登录：
+
+1. **更改 JWT 密钥**（会使所有 Token 失效）:
+```bash
+# 更新 .env 文件中的 JWT_SECRET
+JWT_SECRET=new-secret-key
+```
+
+2. **实现 Token 黑名单**（需要额外开发）:
+```go
+// 将 Token 加入黑名单
+blacklist.Add(tokenString)
+
+// 验证时检查黑名单
+if blacklist.Contains(tokenString) {
+    return nil, errors.New("token has been revoked")
+}
+```
+
+#### Q4: Token 中应该包含哪些信息？
+
+**应该包含**:
+- 用户ID（UserID）
+- 用户名（Username）
+- 角色（Role）
+- 过期时间（ExpiresAt）
+
+**不应该包含**:
+- 密码或密码哈希
+- 敏感个人信息（如身份证号、手机号）
+- 大量数据（Token 应保持轻量）
+
+#### Q5: 如何在 Gin 中间件中使用？
+
+```go
+func JWTAuth() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        // 1. 从 Header 中获取 Token
+        authHeader := c.GetHeader("Authorization")
+        if authHeader == "" {
+            c.JSON(401, gin.H{"error": "未提供认证令牌"})
+            c.Abort()
+            return
+        }
+
+        // 2. 验证 Token 格式
+        parts := strings.SplitN(authHeader, " ", 2)
+        if len(parts) != 2 || parts[0] != "Bearer" {
+            c.JSON(401, gin.H{"error": "认证令牌格式错误"})
+            c.Abort()
+            return
+        }
+
+        // 3. 验证 Token
+        secret := os.Getenv("JWT_SECRET")
+        claims, err := util.ValidateJWTToken(parts[1], secret)
+        if err != nil {
+            c.JSON(401, gin.H{"error": "认证令牌无效或已过期"})
+            c.Abort()
+            return
+        }
+
+        // 4. 将用户信息存入上下文
+        c.Set("user_id", claims.UserID)
+        c.Set("username", claims.Username)
+        c.Set("role", claims.Role)
+
+        c.Next()
+    }
+}
+```
+
+---
+
+### 相关文档
+
+- [MySQL 迁移 API 文档](mysql_migration_api.md)
+- [用户认证流程](../design/auth_flow.md)
+- [权限控制设计](../design/permission_design.md)
+
+---
+
+**最后更新**: 2026-01-18  
+**版本**: v3.0.0
+
+
+---
+
+## 用户 API Key 管理 API
+
+### 1. 绑定/更新 API Key
+
+将 API Key 绑定到当前登录用户账户。如果用户已绑定其他 Key，将自动解绑旧 Key 并绑定新 Key。
+
+**接口地址**: `/api/user/apikey`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要 JWT Token）
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| api_key | string | 是 | 要绑定的 API Key（格式：sk-开头的43位字符） |
+
+**请求示例**:
+
+```json
+{
+  "api_key": "<AUTH_TOKEN>"
+}
+```
+
+**成功响应** (200 OK):
+
+```json
+{
+  "code": 200,
+  "message": "绑定成功",
+  "data": {
+    "api_key": "<AUTH_TOKEN>"
+  }
+}
+```
+
+**错误响应**:
+
+- **400 Bad Request** - API Key 格式错误或无效
+```json
+{
+  "code": 400,
+  "message": "API Key 格式错误",
+  "data": null
+}
+```
+
+- **400 Bad Request** - API Key 已被其他用户绑定
+```json
+{
+  "code": 400,
+  "message": "该 API Key 已被其他用户绑定",
+  "data": null
+}
+```
+
+- **401 Unauthorized** - 未提供有效的 JWT Token
+```json
+{
+  "code": 401,
+  "message": "未授权",
+  "data": null
+}
+```
+
+---
+
+### 2. 获取绑定的 API Key
+
+查询当前登录用户绑定的 API Key 信息。
+
+**接口地址**: `/api/user/apikey`  
+**请求方法**: `GET`  
+**是否需要认证**: 是（需要 JWT Token）
+
+**请求参数**: 无
+
+**成功响应** (200 OK):
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "api_key": "<AUTH_TOKEN>",
+    "expires_at": "2024-12-31T23:59:59Z",
+    "daily_search_limit": 100,
+    "today_search_count": 25,
+    "remaining_searches": 75,
+    "is_valid": true
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 描述 |
+|--------|------|------|
+| api_key | string | 绑定的 API Key |
+| expires_at | string/null | 过期时间（ISO 8601 格式），null 表示永不过期 |
+| daily_search_limit | int | 每日搜索次数限制（0 表示不限制） |
+| today_search_count | int | 今日已使用搜索次数 |
+| remaining_searches | int | 今日剩余搜索次数（-1 表示无限制） |
+| is_valid | bool | API Key 是否有效（未过期且已启用） |
+
+**错误响应**:
+
+- **404 Not Found** - 用户未绑定 API Key
+```json
+{
+  "code": 404,
+  "message": "未绑定 API Key",
+  "data": null
+}
+```
+
+- **401 Unauthorized** - 未提供有效的 JWT Token
+```json
+{
+  "code": 401,
+  "message": "未授权",
+  "data": null
+}
+```
+
+---
+
+### 3. 解绑 API Key
+
+解除当前登录用户与 API Key 的绑定关系。
+
+**接口地址**: `/api/user/apikey`  
+**请求方法**: `DELETE`  
+**是否需要认证**: 是（需要 JWT Token）
+
+**请求参数**: 无
+
+**成功响应** (200 OK):
+
+```json
+{
+  "code": 200,
+  "message": "解绑成功",
+  "data": null
+}
+```
+
+**错误响应**:
+
+- **404 Not Found** - 用户未绑定 API Key
+```json
+{
+  "code": 404,
+  "message": "未绑定 API Key",
+  "data": null
+}
+```
+
+- **401 Unauthorized** - 未提供有效的 JWT Token
+```json
+{
+  "code": 401,
+  "message": "未授权",
+  "data": null
+}
+```
+
+---
+
+## 搜索接口认证说明（更新）
+
+### 混合访问模式
+
+搜索接口 `/api/search` 支持以下三种访问方式：
+
+#### 1. 手动输入 API Key（未登录用户）
+
+在请求头或 URL 参数中提供 API Key：
+
+```bash
+# 请求头方式
+curl -X POST http://localhost:8888/api/search \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: <AUTH_TOKEN>" \
+  -d '{"kw": "电影"}'
+
+# URL 参数方式
+curl -X GET "http://localhost:8888/api/search?kw=电影&key=<AUTH_TOKEN>"
+```
+
+#### 2. 使用绑定的 API Key（已登录用户）
+
+提供 JWT Token，系统自动使用用户绑定的 API Key：
+
+```bash
+curl -X POST http://localhost:8888/api/search \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <jwt_token>" \
+  -d '{"kw": "电影"}'
+```
+
+**重要说明**：
+- 如果用户已登录但未绑定 API Key，搜索请求将被**阻止**
+- 前端会在发起搜索前检查用户是否已绑定 API Key
+- 如果未绑定，将显示提示消息："请先绑定 API Key 后再进行搜索"
+- 用户将被自动跳转到 API Key 设置页面（`/settings/apikey`）
+- 绑定 API Key 后即可正常搜索
+
+#### 3. 优先级规则
+
+当请求同时包含手动输入的 API Key 和 JWT Token 时：
+- **优先使用手动输入的 API Key**（从 Header `X-API-Key` 或 URL 参数 `key`）
+- 如果未提供手动 API Key，则使用 JWT Token 关联的用户绑定 Key
+- 如果两者都未提供，返回 401 错误
+
+---
+
+## 前端搜索流程说明
+
+### 搜索前 API Key 检查机制
+
+为了提供更好的用户体验，前端在发起搜索请求前会执行以下检查流程：
+
+#### 检查流程
+
+1. **用户点击搜索按钮或按下回车键**
+2. **检查用户登录状态**
+   - 如果用户未登录：允许搜索（需要手动输入 API Key）
+   - 如果用户已登录：继续下一步检查
+
+3. **检查 API Key 绑定状态**（仅针对已登录用户）
+   - 发送 GET 请求到 `/api/user/apikey`
+   - 如果返回 404（未绑定）：
+     - **阻止搜索请求**
+     - 显示 Toast 提示："请先绑定 API Key 后再进行搜索"
+     - 自动跳转到 API Key 设置页面（`/settings/apikey`）
+   - 如果返回 200（已绑定）：允许搜索
+
+4. **执行搜索请求**
+   - 使用用户绑定的 API Key 或手动输入的 API Key
+   - 显示搜索结果
+
+#### 用户体验优化
+
+**优点**：
+- ✅ 提前检查，避免无效的搜索请求
+- ✅ 友好的提示消息，明确告知用户需要绑定 API Key
+- ✅ 自动跳转到设置页面，减少用户操作步骤
+- ✅ 统一的错误处理，提升用户体验
+
+**适用场景**：
+- 用户首次登录后尝试搜索
+- 用户解绑 API Key 后尝试搜索
+- 用户的 API Key 被管理员删除后尝试搜索
+
+#### 前端实现示例
+
+```typescript
+// 搜索前检查
+async function handleSearch(keyword: string) {
+  // 1. 检查用户是否已登录
+  if (isAuthenticated && token) {
+    try {
+      // 2. 检查是否已绑定 API Key
+      const response = await fetch('/api/user/apikey', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 404) {
+        // 3. 未绑定 API Key，阻止搜索
+        toast.warning('请先绑定 API Key 后再进行搜索', {
+          duration: 3000,
+        });
+        navigate('/settings/apikey');
+        return; // 阻止搜索请求
+      }
+    } catch (error) {
+      console.error('检查 API Key 绑定状态失败:', error);
+      toast.error('无法验证 API Key 绑定状态，请稍后重试');
+      return;
+    }
+  }
+
+  // 4. 执行搜索
+  try {
+    await performSearch({ keyword });
+  } catch (error) {
+    // 处理搜索错误
+    if (error.code === 401 || error.code === 404) {
+      toast.warning('请先绑定 API Key 后再进行搜索');
+      navigate('/settings/apikey');
+    } else {
+      toast.error(error.message || '搜索失败');
+    }
+  }
+}
+```
+
+---
+
+## 使用流程示例
+
+### 场景 1：普通用户首次使用
+
+1. **注册账户**
+```bash
+curl -X POST http://localhost:8888/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "user1", "password": "pass123"}'
+```
+
+2. **登录获取 Token**
+```bash
+curl -X POST http://localhost:8888/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "user1", "password": "pass123"}'
+```
+
+响应：
+```json
+{
+  "code": 200,
+  "message": "登录成功",
+  "data": {
+    "access_token": "<AUTH_TOKEN>",
+    "expires_at": 1735689599,
+    "username": "user1"
+  }
+}
+```
+
+3. **绑定 API Key**（从管理员处获取）
+```bash
+curl -X POST http://localhost:8888/api/user/apikey \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <AUTH_TOKEN>" \
+  -d '{"api_key": "<AUTH_TOKEN>"}'
+```
+
+4. **开始搜索**（无需再输入 API Key）
+```bash
+curl -X POST http://localhost:8888/api/search \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <AUTH_TOKEN>" \
+  -d '{"kw": "电影"}'
+```
+
+### 场景 2：未登录用户临时搜索
+
+直接使用 API Key 进行搜索（无需注册登录）：
+
+```bash
+curl -X POST http://localhost:8888/api/search \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: <AUTH_TOKEN>" \
+  -d '{"kw": "电影"}'
+```
 
 ---

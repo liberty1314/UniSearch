@@ -154,11 +154,78 @@ do_start() {
     if ! command -v go &> /dev/null; then log_error "未找到 Go"; exit 1; fi
     if ! command -v pnpm &> /dev/null; then log_error "未找到 pnpm"; exit 1; fi
     if ! command -v lsof &> /dev/null; then log_warning "未找到 lsof，端口检查可能受限"; fi
+    if ! command -v mysql &> /dev/null; then log_warning "未找到 mysql 客户端，数据库连接测试将被跳过"; fi
 
-    # 2. 目录准备
+    # 2. 检查 .env 文件
+    if [ ! -f ".env" ]; then
+        log_error ".env 文件不存在"
+        log_info "请复制 .env.example 为 .env 并配置数据库连接信息"
+        log_info "命令: cp .env.example .env"
+        exit 1
+    fi
+    log_success ".env 文件已找到"
+
+    # 3. 加载环境变量
+    log_step "加载环境变量..."
+    set -a
+    source .env
+    set +a
+    log_success "环境变量已加载"
+
+    # 4. 检查 MySQL 服务状态
+    log_step "检查 MySQL 服务状态..."
+    
+    # 从环境变量获取数据库配置
+    DB_HOST=${DB_HOST:-localhost}
+    DB_PORT=${DB_PORT:-3306}
+    DB_USER=${DB_USER:-root}
+    DB_PASSWORD=${DB_PASSWORD:-root}
+    DB_NAME=${DB_NAME:-unisearch}
+    
+    # 检查 MySQL 端口是否可访问
+    if command -v nc &> /dev/null; then
+        if ! nc -z "$DB_HOST" "$DB_PORT" 2>/dev/null; then
+            log_error "无法连接到 MySQL 服务器 ($DB_HOST:$DB_PORT)"
+            log_info "请确保 MySQL 服务正在运行"
+            log_info "本地 MySQL: brew services start mysql 或 systemctl start mysql"
+            log_info "Docker MySQL: docker-compose up -d mysql"
+            exit 1
+        fi
+        log_success "MySQL 端口 $DB_PORT 可访问"
+    else
+        log_warning "未找到 nc 命令，跳过端口检查"
+    fi
+
+    # 5. 测试数据库连接
+    if command -v mysql &> /dev/null; then
+        log_step "测试数据库连接..."
+        
+        # 尝试连接数据库
+        if mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASSWORD" -e "USE $DB_NAME;" 2>/dev/null; then
+            log_success "数据库连接测试通过 (数据库: $DB_NAME)"
+        else
+            log_warning "数据库 '$DB_NAME' 不存在或连接失败"
+            log_info "尝试创建数据库..."
+            
+            # 尝试创建数据库
+            if mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null; then
+                log_success "数据库 '$DB_NAME' 创建成功"
+            else
+                log_error "无法创建数据库 '$DB_NAME'"
+                log_info "请手动创建数据库或检查数据库权限"
+                log_info "命令: mysql -u$DB_USER -p -e \"CREATE DATABASE $DB_NAME;\""
+                exit 1
+            fi
+        fi
+    else
+        log_warning "跳过数据库连接测试（未安装 mysql 客户端）"
+        log_info "应用启动时将自动尝试连接数据库"
+    fi
+
+    # 6. 目录准备
     mkdir -p "$LOG_DIR" "$PID_DIR" "backend/cache"
 
-    # 3. 冲突检查
+    # 7. 冲突检查
     local conflict=false
     if check_port $BACKEND_PORT; then log_warning "端口 $BACKEND_PORT 被占用"; conflict=true; fi
     if check_port $FRONTEND_PORT_LOCAL; then log_warning "端口 $FRONTEND_PORT_LOCAL 被占用"; conflict=true; fi
@@ -175,26 +242,14 @@ do_start() {
         fi
     fi
 
-    # 4. 启动后端
+    # 8. 启动后端
     log_step "启动后端服务..."
-    
-    # 加载根目录的 .env 文件并导出环境变量
-    if [ -f ".env" ]; then
-        log_info "加载环境变量..."
-        # 使用 set -a 自动导出，source 读取文件
-        set -a
-        source .env
-        set +a
-        log_success "环境变量已加载"
-    else
-        log_warning "未找到 .env 文件，使用默认配置"
-    fi
     
     cd backend
     if [ ! -f "go.mod" ]; then log_error "backend/go.mod 不存在"; exit 1; fi
     
-    log_info "运行 Go 后端..."
-    # 直接运行，环境变量已经在当前 shell 中导出
+    log_info "运行 Go 后端（数据库: $DB_HOST:$DB_PORT/$DB_NAME）..."
+    # 环境变量已经在前面加载，直接运行
     nohup go run main.go > "../$BACKEND_LOG" 2>&1 &
     BACKEND_PID=$!
     echo $BACKEND_PID > "../$BACKEND_PID_FILE"
@@ -213,7 +268,8 @@ do_start() {
         exit 1
     fi
 
-    # 5. 启动前端
+    # 9. 启动前端
+    # 9. 启动前端
     log_step "启动前端服务..."
     cd frontend
     if [ ! -f "package.json" ]; then log_error "frontend/package.json 不存在"; exit 1; fi
@@ -244,7 +300,7 @@ do_start() {
         fi
     fi
 
-    # 6. 显示状态
+    # 10. 显示状态
     do_status
 }
 

@@ -78,11 +78,11 @@ const Login: React.FC = () => {
             const response = await AuthService.loginWithApiKeyAndRemember(apiKey.trim(), rememberMe);
 
             if (response && response.access_token) {
-                // 保存 Token、API Key 和可选的 Refresh Token 到状态管理
+                // 保存 Token、API Key 和可选的 Refresh Token 到状态管理（API Key 登录，isAdmin = false）
                 setToken(
                     response.access_token,
                     response.username || 'user',
-                    false,
+                    false, // API Key 登录，明确设置为 false
                     apiKey.trim(),
                     response.refresh_token || null
                 );
@@ -193,15 +193,34 @@ const Login: React.FC = () => {
                             欢迎回来
                         </CardTitle>
                         <CardDescription className="text-center text-base animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                            使用 API Key 登录 UniSearch
+                            登录 UniSearch 账户
                         </CardDescription>
                     </CardHeader>
 
                     <CardContent className="space-y-6">
                         <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+                            <Label htmlFor="username" className="flex items-center gap-2 text-sm font-medium">
+                                <Key className="w-4 h-4 text-blue-500 animate-bounce" style={{ animationDuration: '2s' }} />
+                                用户名
+                            </Label>
+                            <div className="relative group">
+                                <Input
+                                    id="username"
+                                    type="text"
+                                    placeholder="请输入用户名"
+                                    value={apiKey}
+                                    onChange={(e) => setApiKeyInput(e.target.value)}
+                                    onKeyDown={handleKeyPress}
+                                    disabled={isUserLoading}
+                                    className="text-sm h-12 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all duration-200"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.35s' }}>
                             <Label htmlFor="apiKey" className="flex items-center gap-2 text-sm font-medium">
                                 <Key className="w-4 h-4 text-blue-500 animate-bounce" style={{ animationDuration: '2s' }} />
-                                API Key
+                                密码 / API Key
                             </Label>
                             <div className="relative group">
                                 <Input
@@ -222,6 +241,9 @@ const Login: React.FC = () => {
                                     </div>
                                 )}
                             </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                提示：密码支持 API Key（sk- 开头）或普通密码
+                            </p>
                         </div>
 
                         {/* 记住我复选框 */}

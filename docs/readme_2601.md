@@ -136,3 +136,137 @@
   - Files:
     - README.md
     - docs/api_reference.md
+
+---
+
+### [2026-01-19 23:35] refactor(auth): 引入数据库用户系统和 Controller 架构
+**内容说明**：将用户认证系统从环境变量哈希密码模式重构为完整的数据库用户管理体系。新增 MySQL 数据库连接、自动迁移和种子数据功能，实现用户注册、登录、JWT 双 Token 机制（Access/Refresh）。引入 Controller 层以分离业务逻辑，支持普通用户和管理员双重认证流程。更新所有插件以适配新的日志和缓存架构。
+
+**备注/详情**：
+- **破坏性变更**：移除了 ADMIN_PASSWORD_HASH 环境变量，改为数据库存储用户凭证
+- **数据库**：新增 MySQL 依赖（GORM），支持自动建表和种子数据初始化
+- **认证流程**：支持用户名密码登录 + API Key 登录（sk- 开头），JWT Token 携带用户角色
+- **中间件升级**：新增独立的 JWTAuthMiddleware 和 AdminAuthMiddleware 替代旧的验证逻辑
+- **API 文档更新**：新增用户注册、登录、管理员登录等 10+ 个接口说明
+- **部署配置**：docker-compose 和生产部署脚本新增数据库服务配置，脚本自动生成 JWT 密钥
+
+**涉及文件**：
+- .env.example
+- README.md
+- backend/Dockerfile
+- backend/api/admin_handler.go
+- backend/api/auth_handler.go
+- backend/api/controller/apikey_controller.go
+- backend/api/controller/auth_controller.go
+- backend/api/controller/user_apikey_controller.go
+- backend/api/filter.go
+- backend/api/handler.go
+- backend/api/middleware.go
+- backend/api/middleware/admin_auth.go
+- backend/api/middleware/jwt_auth.go
+- backend/api/refresh_token_handler.go
+- backend/api/router.go
+- backend/config/config.go
+- backend/config/custom_plugins.go
+- backend/coverage.out
+- backend/database/connection.go
+- backend/database/json_migrator.go
+- backend/database/migration.go
+- backend/database/migration_test_manual.go
+- backend/database/seed.go
+- backend/go.mod
+- backend/go.sum
+- backend/main.go
+- backend/model/apikey.go
+- backend/model/plugin_result.go
+- backend/model/refresh_token.go
+- backend/model/request.go
+- backend/model/response.go
+- backend/model/user.go
+- backend/plugin/baseasyncplugin.go
+- backend/plugin/cyg/cyg.go
+- backend/plugin/duoduo/duoduo.go
+- backend/plugin/fox4k/fox4k.go
+- backend/plugin/hdr4k/hdr4k.go
+- backend/plugin/huban/huban.go
+- backend/plugin/hunhepan/hunhepan.go
+- backend/plugin/jikepan/jikepan.go
+- backend/plugin/labi/labi.go
+- backend/plugin/muou/muou.go
+- backend/plugin/ouge/ouge.go
+- backend/plugin/pan666/pan666.go
+- backend/plugin/pansearch/pansearch.go
+- backend/plugin/panta/panta.go
+- backend/plugin/panyq/panyq.go
+- backend/plugin/plugin.go
+- backend/plugin/qupansou/qupansou.go
+- backend/plugin/shandian/shandian.go
+- backend/plugin/susu/susu.go
+- backend/plugin/thepiratebay/thepiratebay.go
+- backend/plugin/wanou/wanou.go
+- backend/plugin/xuexizhinan/xuexizhinan.go
+- backend/plugin/zhizhen/zhizhen.go
+- backend/service/apikey_service.go
+- backend/service/auth_service.go
+- backend/service/cache_integration.go
+- backend/service/search_service.go
+- backend/unisearch
+- backend/util/cache/adaptive_tuning_engine.go
+- backend/util/cache/advanced_data_merger.go
+- backend/util/cache/buffer_status_monitor.go
+- backend/util/cache/cache_key.go
+- backend/util/cache/delayed_batch_write_manager.go
+- backend/util/cache/disk_cache.go
+- backend/util/cache/enhanced_two_level_cache.go
+- backend/util/cache/global_buffer_manager.go
+- backend/util/cache/memory_cache.go
+- backend/util/cache/metric_collector.go
+- backend/util/cache/performance_analyzer.go
+- backend/util/cache/predictive_model.go
+- backend/util/cache/search_pattern_analyzer.go
+- backend/util/cache/serializer.go
+- backend/util/cache/sharded_disk_cache.go
+- backend/util/cache/sharded_memory_cache.go
+- backend/util/cache/tuning_strategy.go
+- backend/util/cache/utils.go
+- backend/util/compression.go
+- backend/util/convert.go
+- backend/util/crypto.go
+- backend/util/http_util.go
+- backend/util/json/json.go
+- backend/util/jwt.go
+- backend/util/keygen.go
+- backend/util/parser_util.go
+- backend/util/pool/object_pool.go
+- backend/util/pool/worker_pool.go
+- backend/util/regex_util.go
+- deploy/README.md
+- deploy/docker-compose.prod.yml
+- deploy/env.prod
+- docker-compose.yml
+- docs/api_reference.md
+- frontend/src/App.tsx
+- frontend/src/components/Navbar.tsx
+- frontend/src/components/SearchBox.tsx
+- frontend/src/components/admin/ApiKeyTableRow.tsx
+- frontend/src/components/admin/BatchActionsBar.tsx
+- frontend/src/components/admin/ModernApiKeyTable.tsx
+- frontend/src/components/admin/TableFilterDropdown.tsx
+- frontend/src/lib/api.ts
+- frontend/src/pages/Admin.tsx
+- frontend/src/pages/AdminLogin.tsx
+- frontend/src/pages/Login.tsx
+- frontend/src/pages/UserApiKeySettings.tsx
+- frontend/src/pages/UserAuth.tsx
+- frontend/src/services/authService.ts
+- frontend/src/stores/authStore.ts
+- frontend/src/stores/searchStore.ts
+- frontend/src/types/api.ts
+- scripts/build.sh
+- scripts/deploy.sh
+- scripts/docker.sh
+- scripts/gen_admin_password.sh
+- scripts/local.sh
+- scripts/sync-config.sh
+
+---

@@ -47,9 +47,9 @@ type CygPlugin struct {
 
 // CygPost 搜索结果结构体
 type CygPost struct {
-	ID       int    `json:"id"`
-	Date     string `json:"date"`
-	Title    struct {
+	ID    int    `json:"id"`
+	Date  string `json:"date"`
+	Title struct {
 		Rendered string `json:"rendered"`
 	} `json:"title"`
 	Excerpt struct {
@@ -265,13 +265,13 @@ func (p *CygPlugin) getDownloadLinks(client *http.Client, postID int) ([]model.L
 // convertToSearchResult 转换为标准搜索结果格式
 func (p *CygPlugin) convertToSearchResult(post CygPost, links []model.Link) model.SearchResult {
 	return model.SearchResult{
-		UniqueID:  fmt.Sprintf("cyg-%d", post.ID),
-		Title:     p.cleanHTML(post.Title.Rendered),
-		Content:   p.cleanHTML(post.Excerpt.Rendered),
-		Datetime:  p.parseDateTime(post.Date),
-		Tags:      []string{post.CategoryName},
-		Links:     links,
-		Channel:   "", // 插件搜索结果必须为空字符串
+		UniqueID: fmt.Sprintf("cyg-%d", post.ID),
+		Title:    p.cleanHTML(post.Title.Rendered),
+		Content:  p.cleanHTML(post.Excerpt.Rendered),
+		Datetime: p.parseDateTime(post.Date),
+		Tags:     []string{post.CategoryName},
+		Links:    links,
+		Channel:  "", // 插件搜索结果必须为空字符串
 	}
 }
 

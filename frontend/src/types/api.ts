@@ -149,6 +149,23 @@ export interface HealthResponse {
 }
 
 /**
+ * 用户注册请求
+ */
+export interface RegisterRequest {
+  username: string;
+  password: string;
+}
+
+/**
+ * 用户注册响应
+ */
+export interface RegisterResponse {
+  user_id: number;
+  username: string;
+  message: string;
+}
+
+/**
  * 登录请求
  */
 export interface LoginRequest {

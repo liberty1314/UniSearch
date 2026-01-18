@@ -77,13 +77,64 @@ check_docker() {
 
 do_start() {
     check_docker
-    log_step "启动 Docker 服务..."
-    $DOCKER_COMPOSE up -d
-    if [ $? -eq 0 ]; then
-        log_success "服务已启动"
-        do_status
+    
+    log_step "检查 Docker Compose 配置..."
+    if [ ! -f "docker-compose.yml" ]; then
+        log_error "未找到 docker-compose.yml 文件"
+        exit 1
+    fi
+    log_success "配置文件检查通过"
+    
+    log_step "检查环境变量配置..."
+    if [ ! -f ".env" ]; then
+        log_warning ".env 文件不存在，将使用默认配置"
+        if [ -f ".env.example" ]; then
+            log_info "提示: 可以复制 .env.example 为 .env 并修改配置"
+        fi
     else
-        log_error "启动失败"
+        log_success "环境变量配置已加载"
+    fi
+    
+    log_step "启动 Docker 服务..."
+    echo
+    log_info "正在启动容器，这可能需要几分钟时间..."
+    echo
+    
+    # 使用 docker-compose up 并显示启动日志
+    $DOCKER_COMPOSE up -d
+    
+    if [ $? -eq 0 ]; then
+        echo
+        log_success "服务已启动"
+        echo
+        
+        log_step "等待服务就绪..."
+        sleep 3
+        
+        log_info "查看启动日志..."
+        echo
+        $DOCKER_COMPOSE logs --tail=50
+        echo
+        
+        log_info "容器状态:"
+        do_status
+        
+        echo
+        log_success "所有服务已成功启动！"
+        echo
+        log_info "访问地址:"
+        echo "  - 前端: http://localhost:3000"
+        echo "  - 后端: http://localhost:8888"
+        echo "  - MySQL: localhost:3306"
+        echo
+        log_info "查看实时日志: $0 logs"
+        log_info "停止服务: $0 stop"
+    else
+        echo
+        log_error "启动失败，请查看错误日志"
+        echo
+        log_info "查看详细日志: $DOCKER_COMPOSE logs"
+        exit 1
     fi
 }
 

@@ -13,10 +13,10 @@ func NewTuningStrategy() *TuningStrategy {
 		parameterAdjustments: make(map[string]ParameterAdjustment),
 		executionHistory:     make([]*StrategyExecution, 0),
 	}
-	
+
 	// 初始化调优规则
 	strategy.initializeRules()
-	
+
 	return strategy
 }
 
@@ -112,45 +112,45 @@ func (t *TuningStrategy) GenerateDecision(metrics *MetricSnapshot, issues []stri
 	if metrics == nil {
 		return nil
 	}
-	
+
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	
+
 	// 按优先级排序规则
 	sort.Slice(t.rules, func(i, j int) bool {
 		return t.rules[i].Priority < t.rules[j].Priority
 	})
-	
+
 	// 检查规则并生成决策
 	for _, rule := range t.rules {
 		if !rule.Enabled {
 			continue
 		}
-		
+
 		// 检查冷却时间（防止频繁调优）
 		if time.Since(rule.LastTriggered) < 5*time.Minute {
 			continue
 		}
-		
+
 		// 检查条件
 		if rule.Condition(metrics) {
 			decision, err := rule.Action(nil) // 简化实现，不传递engine
 			if err != nil {
 				continue
 			}
-			
+
 			// 更新规则状态
 			rule.LastTriggered = time.Now()
 			rule.TriggerCount++
-			
+
 			// 设置决策基本信息
 			decision.Timestamp = time.Now()
 			decision.Trigger = rule.Name
-			
+
 			return decision
 		}
 	}
-	
+
 	return nil
 }
 
@@ -176,7 +176,7 @@ func (t *TuningStrategy) createCPUOptimizationDecision(engine *AdaptiveTuningEng
 			Risk:            "low",
 		},
 	}
-	
+
 	return &TuningDecision{
 		Adjustments:         adjustments,
 		Confidence:          0.8,
@@ -208,7 +208,7 @@ func (t *TuningStrategy) createMemoryOptimizationDecision(engine *AdaptiveTuning
 			Risk:            "low",
 		},
 	}
-	
+
 	return &TuningDecision{
 		Adjustments:         adjustments,
 		Confidence:          0.85,
@@ -240,7 +240,7 @@ func (t *TuningStrategy) createResponseTimeOptimizationDecision(engine *Adaptive
 			Risk:            "high",
 		},
 	}
-	
+
 	return &TuningDecision{
 		Adjustments:         adjustments,
 		Confidence:          0.75,
@@ -272,7 +272,7 @@ func (t *TuningStrategy) createCacheOptimizationDecision(engine *AdaptiveTuningE
 			Risk:            "medium",
 		},
 	}
-	
+
 	return &TuningDecision{
 		Adjustments:         adjustments,
 		Confidence:          0.9,
@@ -304,7 +304,7 @@ func (t *TuningStrategy) createOverallPerformanceDecision(engine *AdaptiveTuning
 			Risk:            "low",
 		},
 	}
-	
+
 	return &TuningDecision{
 		Adjustments:         adjustments,
 		Confidence:          0.7,
@@ -328,7 +328,7 @@ func (t *TuningStrategy) createPreventiveDecision(engine *AdaptiveTuningEngine) 
 			Risk:            "low",
 		},
 	}
-	
+
 	return &TuningDecision{
 		Adjustments:         adjustments,
 		Confidence:          0.6,
@@ -345,7 +345,7 @@ func (t *TuningStrategy) ExecuteDecision(decision *TuningDecision) *StrategyExec
 		Decision:  decision,
 		Executed:  false,
 	}
-	
+
 	// 简化的执行逻辑
 	execution.Executed = true
 	execution.Result = &ExecutionResult{
@@ -355,17 +355,17 @@ func (t *TuningStrategy) ExecuteDecision(decision *TuningDecision) *StrategyExec
 		Improvement:       0.15,
 		SideEffects:       []string{},
 	}
-	
+
 	// 记录执行历史
 	t.mutex.Lock()
 	t.executionHistory = append(t.executionHistory, execution)
-	
+
 	// 限制历史记录大小
 	if len(t.executionHistory) > 100 {
 		t.executionHistory = t.executionHistory[1:]
 	}
 	t.mutex.Unlock()
-	
+
 	return execution
 }
 
@@ -373,15 +373,15 @@ func (t *TuningStrategy) ExecuteDecision(decision *TuningDecision) *StrategyExec
 func (t *TuningStrategy) GetExecutionHistory(limit int) []*StrategyExecution {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
-	
+
 	if limit <= 0 || limit > len(t.executionHistory) {
 		limit = len(t.executionHistory)
 	}
-	
+
 	history := make([]*StrategyExecution, limit)
 	startIndex := len(t.executionHistory) - limit
 	copy(history, t.executionHistory[startIndex:])
-	
+
 	return history
 }
 
@@ -389,9 +389,9 @@ func (t *TuningStrategy) GetExecutionHistory(limit int) []*StrategyExecution {
 func (t *TuningStrategy) UpdateStrategy(strategyType string) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	
+
 	t.strategyType = strategyType
-	
+
 	// 根据策略类型调整规则优先级和启用状态
 	switch strategyType {
 	case "conservative":
@@ -399,13 +399,13 @@ func (t *TuningStrategy) UpdateStrategy(strategyType string) {
 		for _, rule := range t.rules {
 			rule.Enabled = rule.Priority <= 5
 		}
-		
+
 	case "aggressive":
 		// 激进策略：启用所有规则
 		for _, rule := range t.rules {
 			rule.Enabled = true
 		}
-		
+
 	case "balanced":
 		// 平衡策略：默认设置
 		for _, rule := range t.rules {
@@ -418,22 +418,22 @@ func (t *TuningStrategy) UpdateStrategy(strategyType string) {
 func (t *TuningStrategy) GetStrategyStats() map[string]interface{} {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
-	
+
 	stats := map[string]interface{}{
-		"strategy_type":     t.strategyType,
-		"total_executions":  len(t.executionHistory),
-		"enabled_rules":     0,
-		"rule_statistics":   make(map[string]interface{}),
+		"strategy_type":    t.strategyType,
+		"total_executions": len(t.executionHistory),
+		"enabled_rules":    0,
+		"rule_statistics":  make(map[string]interface{}),
 	}
-	
+
 	enabledRules := 0
 	ruleStats := make(map[string]interface{})
-	
+
 	for _, rule := range t.rules {
 		if rule.Enabled {
 			enabledRules++
 		}
-		
+
 		ruleStats[rule.Name] = map[string]interface{}{
 			"enabled":        rule.Enabled,
 			"priority":       rule.Priority,
@@ -441,10 +441,10 @@ func (t *TuningStrategy) GetStrategyStats() map[string]interface{} {
 			"last_triggered": rule.LastTriggered,
 		}
 	}
-	
+
 	stats["enabled_rules"] = enabledRules
 	stats["rule_statistics"] = ruleStats
-	
+
 	// 计算成功率
 	successfulExecutions := 0
 	for _, execution := range t.executionHistory {
@@ -452,12 +452,12 @@ func (t *TuningStrategy) GetStrategyStats() map[string]interface{} {
 			successfulExecutions++
 		}
 	}
-	
+
 	if len(t.executionHistory) > 0 {
 		stats["success_rate"] = float64(successfulExecutions) / float64(len(t.executionHistory))
 	} else {
 		stats["success_rate"] = 0.0
 	}
-	
+
 	return stats
 }

@@ -40,11 +40,11 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
     }
 
     return (
-        <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div className="flex items-center gap-3">
             {/* 左侧：选中数量 */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                    已选中 {selectedCount} 个 API Key
+                    已选中 {selectedCount} 个
                 </span>
             </div>
 
@@ -54,7 +54,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={onBatchExtend}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 h-9"
                     disabled={disabled}
                 >
                     <Clock className="w-4 h-4" />
@@ -64,7 +64,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={onBatchDelete}
-                    className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
+                    className="flex items-center gap-2 h-9 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
                     disabled={disabled}
                 >
                     <Trash2 className="w-4 h-4" />
@@ -74,7 +74,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={onClearSelection}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 h-9"
                     disabled={disabled}
                 >
                     <X className="w-4 h-4" />
