@@ -397,3 +397,118 @@ export interface SystemInfoResponse {
   stats: SystemStats;
   config: SystemConfig;
 }
+
+// ============ 用户管理相关类型 ============
+
+/**
+ * 用户信息
+ */
+export interface UserInfo {
+  id: number;
+  username: string;
+  role: 'admin' | 'user';
+  is_enabled: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * 用户列表查询请求
+ */
+export interface ListUsersRequest {
+  page?: number;
+  page_size?: number;
+  keyword?: string;
+  role?: 'admin' | 'user';
+}
+
+/**
+ * 用户列表查询响应
+ */
+export interface ListUsersResponse {
+  users: UserInfo[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+/**
+ * 创建用户请求
+ */
+export interface CreateUserRequest {
+  username: string;
+  password: string;
+  role: 'admin' | 'user';
+}
+
+/**
+ * 更新用户请求
+ */
+export interface UpdateUserRequest {
+  username: string;
+  role: 'admin' | 'user';
+}
+
+/**
+ * 重置密码请求
+ */
+export interface ResetPasswordRequest {
+  password: string;
+}
+
+/**
+ * 设置用户状态请求
+ */
+export interface SetUserStatusRequest {
+  is_enabled: boolean;
+}
+
+/**
+ * 批量删除用户请求
+ */
+export interface BatchDeleteUsersRequest {
+  user_ids: number[];
+}
+
+/**
+ * 批量修改角色请求
+ */
+export interface BatchUpdateRoleRequest {
+  user_ids: number[];
+  role: 'admin' | 'user';
+}
+
+/**
+ * 批量操作错误项
+ */
+export interface BatchUserOperationError {
+  id: number;
+  error: string;
+}
+
+/**
+ * 批量操作结果
+ */
+export interface BatchUserOperationResult {
+  success_count: number;
+  failed_count: number;
+  success: number[];
+  failed: BatchUserOperationError[];
+}
+
+/**
+ * 成功响应
+ */
+export interface SuccessResponse {
+  message: string;
+}
+
+/**
+ * 错误响应
+ */
+export interface ErrorResponse {
+  error: string;
+  code: string;
+}

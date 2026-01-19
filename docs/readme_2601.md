@@ -270,3 +270,39 @@
 - scripts/sync-config.sh
 
 ---
+
+---
+
+## [2026-01-19 14:41] feat(admin): 新增完整的用户管理功能模块
+
+**Body**: 实现了管理员用户管理的完整功能，包括用户的增删改查、批量操作、角色管理和密码重置。后端新增用户管理接口和参数验证中间件，前端实现了用户表格、对话框组件和服务层，完善了 API 文档。
+
+**Footer**: 无
+
+**Files**:
+- .gitignore
+- backend/api/controller/auth_controller.go
+- backend/api/router.go
+- backend/api/user_handler.go
+- backend/api/validation_middleware.go
+- backend/main.go
+- backend/model/user.go
+- backend/service/auth_service.go
+- backend/service/user_service.go
+- backend/unisearch
+- docs/api_reference.md
+- frontend/package.json
+- frontend/pnpm-lock.yaml
+- frontend/src/components/admin/BatchDeleteDialog.tsx
+- frontend/src/components/admin/BatchDeleteKeysDialog.tsx
+- frontend/src/components/admin/BatchUpdateRoleDialog.tsx
+- frontend/src/components/admin/CreateUserDialog.tsx
+- frontend/src/components/admin/EditUserDialog.tsx
+- frontend/src/components/admin/ResetPasswordDialog.tsx
+- frontend/src/components/admin/Sidebar.tsx
+- frontend/src/components/admin/UserTable.tsx
+- frontend/src/components/admin/UserTableRow.tsx
+- frontend/src/components/ui/scroll-area.tsx
+- frontend/src/pages/Admin.tsx
+- frontend/src/services/userService.ts
+- frontend/src/types/api.ts

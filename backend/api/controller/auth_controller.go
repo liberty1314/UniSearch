@@ -290,6 +290,17 @@ func (ctrl *AuthController) handleDatabaseUserLogin(c *gin.Context, req LoginReq
 			return
 		}
 
+		// 账户被禁用
+		if strings.Contains(err.Error(), "账户已被禁用") || strings.Contains(err.Error(), "禁用") {
+			log.Printf("✗ 登录失败: 账户已被禁用 - %s", req.Username)
+			c.JSON(403, LoginResponse{
+				Code:    403,
+				Message: "账户已被禁用，请联系管理员",
+				Data:    nil,
+			})
+			return
+		}
+
 		// 其他错误（数据库错误等）
 		log.Printf("✗ 登录失败: %v", err)
 		c.JSON(500, LoginResponse{

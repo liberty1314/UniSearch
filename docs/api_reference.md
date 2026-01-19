@@ -10,10 +10,118 @@ UniSearch 提供了一套完整的 RESTful API，支持网盘资源搜索、用�
 - 🔗 新增 API Key 绑定和生成功能
 - 📖 详细文档请参考：[MySQL 迁移 API 文档](mysql_migration_api.md)
 
+**v3.1.0 重要更新**：
+- 🛡️ 增强请求验证中间件，支持更严格的错误处理
+- ✅ 支持 405 Method Not Allowed 错误响应
+- 🔒 增强路径和认证令牌格式验证
+
 **基础信息**：
 - 基础 URL: `http://localhost:8888/api`
 - 内容类型: `application/json`
 - 字符编码: `UTF-8`
+
+---
+
+## 错误处理
+
+### 标准错误响应格式
+
+所有错误响应都遵循统一的 JSON 格式：
+
+```json
+{
+  "error": "错误描述信息",
+  "code": "ERROR_CODE"
+}
+```
+
+### 常见 HTTP 状态码
+
+| 状态码 | 说明 | 示例场景 |
+|--------|------|----------|
+| 200 | 成功 | 请求成功处理 |
+| 400 | 错误请求 | 参数格式错误、路径包含非法字符 |
+| 401 | 未授权 | 缺少或无效的认证凭据 |
+| 403 | 禁止访问 | 权限不足 |
+| 404 | 未找到 | 资源不存在 |
+| 405 | 方法不允许 | 使用了不支持的 HTTP 方法 |
+| 414 | URI 过长 | 请求 URI 超过 2048 字符 |
+| 429 | 请求过多 | 超过速率限制或每日搜索限额 |
+| 500 | 服务器错误 | 内部错误 |
+
+### 请求验证错误
+
+系统会自动验证所有请求，以下情况会返回错误：
+
+#### 1. 路径验证错误 (400 Bad Request)
+
+**错误码**: `INVALID_PATH_NULL_BYTE`、`INVALID_PATH_CONTROL_CHAR`、`INVALID_PATH_CHAR`、`INVALID_PATH_FORMAT`
+
+**触发条件**:
+- 路径包含空字节（`\x00` 或 `%00`）
+- 路径包含控制字符
+- 路径包含非法字符（`<>\"{}|\\^[]` 等）
+- 路径包含多余的斜杠（`//`）
+
+**示例**:
+```json
+{
+  "error": "请求路径包含非法字符（空字节）",
+  "code": "INVALID_PATH_NULL_BYTE"
+}
+```
+
+#### 2. URI 过长错误 (414 URI Too Long)
+
+**错误码**: `URI_TOO_LONG`
+
+**触发条件**: 请求 URI 长度超过 2048 字符
+
+**示例**:
+```json
+{
+  "error": "请求URI过长",
+  "code": "URI_TOO_LONG"
+}
+```
+
+#### 3. 认证令牌格式错误 (400 Bad Request)
+
+**错误码**: `INVALID_AUTH_TOKEN_EMPTY`、`INVALID_AUTH_TOKEN_FORMAT`、`INVALID_AUTH_SCHEME`
+
+**触发条件**:
+- Bearer Token 为空
+- Token 包含空白字符
+- 使用不支持的认证方式（非 Bearer 或 Basic）
+
+**示例**:
+```json
+{
+  "error": "认证令牌格式错误（Token为空）",
+  "code": "INVALID_AUTH_TOKEN_EMPTY"
+}
+```
+
+#### 4. HTTP 方法不允许 (405 Method Not Allowed)
+
+**错误码**: `METHOD_NOT_ALLOWED`
+
+**触发条件**: 使用了端点不支持的 HTTP 方法
+
+**示例**:
+```json
+{
+  "error": "不支持的HTTP方法: PATCH",
+  "code": "METHOD_NOT_ALLOWED",
+  "allowed_methods": ["GET", "HEAD"]
+}
+```
+
+**各端点支持的方法**:
+- `/api/health`: GET, HEAD
+- `/api/search`: GET, POST
+- `/api/auth/*`: POST
+- `/api/admin/*`: GET, POST, PUT, PATCH, DELETE
 
 ---
 
@@ -3222,5 +3330,477 @@ curl -X POST http://localhost:8888/api/search \
   -H "X-API-Key: <AUTH_TOKEN>" \
   -d '{"kw": "电影"}'
 ```
+
+---
+
+
+---
+
+## 用户管理 API
+
+用户管理模块提供完整的用户生命周期管理功能，包括用户的增删改查、状态管理、批量操作等。
+
+**权限要求**: 所有用户管理接口都需要管理员权限（JWT Token 认证 + 管理员角色）
+
+### 1. 获取用户列表
+
+获取系统中所有用户的列表，支持分页、搜索和筛选。
+
+**接口地址**: `GET /api/admin/users`
+
+**请求头**:
+```
+Authorization: Bearer <admin_token>
+```
+
+**查询参数**:
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| page | int | 否 | 页码，默认 1 |
+| page_size | int | 否 | 每页数量，默认 20，最大 100 |
+| keyword | string | 否 | 搜索关键词（用户名模糊匹配） |
+| role | string | 否 | 角色筛选（admin 或 user） |
+
+**返回示例**:
+```json
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "role": "admin",
+      "is_enabled": true,
+      "last_login_at": "2026-01-19T10:30:00Z",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-19T10:30:00Z"
+    },
+    {
+      "id": 2,
+      "username": "user1",
+      "role": "user",
+      "is_enabled": true,
+      "last_login_at": "2026-01-18T15:20:00Z",
+      "created_at": "2026-01-10T08:00:00Z",
+      "updated_at": "2026-01-18T15:20:00Z"
+    }
+  ],
+  "total": 100,
+  "page": 1,
+  "page_size": 20,
+  "total_pages": 5
+}
+```
+
+**错误码**:
+- `401 UNAUTHORIZED`: 未授权（Token 无效或过期）
+- `403 FORBIDDEN`: 权限不足（非管理员）
+- `500 INTERNAL_SERVER_ERROR`: 服务器内部错误
+
+---
+
+### 2. 获取单个用户
+
+根据用户 ID 获取用户详细信息。
+
+**接口地址**: `GET /api/admin/users/:id`
+
+**请求头**:
+```
+Authorization: Bearer <admin_token>
+```
+
+**路径参数**:
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | int | 是 | 用户 ID |
+
+**返回示例**:
+```json
+{
+  "id": 1,
+  "username": "admin",
+  "role": "admin",
+  "is_enabled": true,
+  "last_login_at": "2026-01-19T10:30:00Z",
+  "created_at": "2026-01-01T00:00:00Z",
+  "updated_at": "2026-01-19T10:30:00Z"
+}
+```
+
+**错误码**:
+- `400 INVALID_USER_ID`: 无效的用户 ID
+- `401 UNAUTHORIZED`: 未授权
+- `403 FORBIDDEN`: 权限不足
+- `404 USER_NOT_FOUND`: 用户不存在
+- `500 INTERNAL_SERVER_ERROR`: 服务器内部错误
+
+---
+
+### 3. 创建用户
+
+创建新的用户账户。
+
+**接口地址**: `POST /api/admin/users`
+
+**请求头**:
+```
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+```
+
+**请求体**:
+```json
+{
+  "username": "newuser",
+  "password": "password123",
+  "role": "user"
+}
+```
+
+**请求参数说明**:
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| username | string | 是 | 用户名（3-32 字符，只能包含字母、数字、下划线、连字符） |
+| password | string | 是 | 密码（6-64 字符） |
+| role | string | 是 | 角色（admin 或 user） |
+
+**返回示例**:
+```json
+{
+  "id": 3,
+  "username": "newuser",
+  "role": "user",
+  "is_enabled": true,
+  "last_login_at": null,
+  "created_at": "2026-01-19T11:00:00Z",
+  "updated_at": "2026-01-19T11:00:00Z"
+}
+```
+
+**错误码**:
+- `400 INVALID_REQUEST`: 请求参数错误
+- `400 INVALID_USERNAME`: 用户名格式错误
+- `400 INVALID_PASSWORD`: 密码格式错误
+- `400 INVALID_ROLE`: 角色值无效
+- `401 UNAUTHORIZED`: 未授权
+- `403 FORBIDDEN`: 权限不足
+- `409 USERNAME_EXISTS`: 用户名已存在
+- `500 INTERNAL_SERVER_ERROR`: 服务器内部错误
+
+---
+
+### 4. 更新用户
+
+更新用户的用户名和角色。
+
+**接口地址**: `PUT /api/admin/users/:id`
+
+**请求头**:
+```
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+```
+
+**路径参数**:
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | int | 是 | 用户 ID |
+
+**请求体**:
+```json
+{
+  "username": "updateduser",
+  "role": "admin"
+}
+```
+
+**请求参数说明**:
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| username | string | 是 | 新用户名（3-32 字符） |
+| role | string | 是 | 新角色（admin 或 user） |
+
+**返回示例**:
+```json
+{
+  "id": 3,
+  "username": "updateduser",
+  "role": "admin",
+  "is_enabled": true,
+  "last_login_at": null,
+  "created_at": "2026-01-19T11:00:00Z",
+  "updated_at": "2026-01-19T11:30:00Z"
+}
+```
+
+**错误码**:
+- `400 INVALID_REQUEST`: 请求参数错误
+- `400 INVALID_USERNAME`: 用户名格式错误
+- `400 INVALID_ROLE`: 角色值无效
+- `401 UNAUTHORIZED`: 未授权
+- `403 FORBIDDEN`: 权限不足
+- `403 CANNOT_MODIFY_SELF_ROLE`: 不能修改自己的角色
+- `404 USER_NOT_FOUND`: 用户不存在
+- `409 USERNAME_EXISTS`: 用户名已存在
+- `500 INTERNAL_SERVER_ERROR`: 服务器内部错误
+
+---
+
+### 5. 重置密码
+
+重置用户的密码。
+
+**接口地址**: `POST /api/admin/users/:id/reset-password`
+
+**请求头**:
+```
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+```
+
+**路径参数**:
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | int | 是 | 用户 ID |
+
+**请求体**:
+```json
+{
+  "password": "newpassword123"
+}
+```
+
+**请求参数说明**:
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| password | string | 是 | 新密码（6-64 字符） |
+
+**返回示例**:
+```json
+{
+  "message": "密码重置成功"
+}
+```
+
+**错误码**:
+- `400 INVALID_REQUEST`: 请求参数错误
+- `400 INVALID_PASSWORD`: 密码格式错误
+- `401 UNAUTHORIZED`: 未授权
+- `403 FORBIDDEN`: 权限不足
+- `404 USER_NOT_FOUND`: 用户不存在
+- `500 INTERNAL_SERVER_ERROR`: 服务器内部错误
+
+---
+
+### 6. 删除用户
+
+删除指定的用户（软删除）。
+
+**接口地址**: `DELETE /api/admin/users/:id`
+
+**请求头**:
+```
+Authorization: Bearer <admin_token>
+```
+
+**路径参数**:
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | int | 是 | 用户 ID |
+
+**返回示例**:
+```json
+{
+  "message": "用户已删除"
+}
+```
+
+**错误码**:
+- `400 INVALID_USER_ID`: 无效的用户 ID
+- `401 UNAUTHORIZED`: 未授权
+- `403 FORBIDDEN`: 权限不足
+- `403 CANNOT_DELETE_SELF`: 不能删除自己
+- `403 CANNOT_DELETE_LAST_ADMIN`: 不能删除最后一个管理员
+- `404 USER_NOT_FOUND`: 用户不存在
+- `500 INTERNAL_SERVER_ERROR`: 服务器内部错误
+
+---
+
+### 7. 设置用户状态
+
+启用或禁用用户账户。
+
+**接口地址**: `POST /api/admin/users/:id/status`
+
+**请求头**:
+```
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+```
+
+**路径参数**:
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | int | 是 | 用户 ID |
+
+**请求体**:
+```json
+{
+  "is_enabled": false
+}
+```
+
+**请求参数说明**:
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| is_enabled | boolean | 是 | 是否启用（true 启用，false 禁用） |
+
+**返回示例**:
+```json
+{
+  "message": "用户状态已更新"
+}
+```
+
+**错误码**:
+- `400 INVALID_REQUEST`: 请求参数错误
+- `401 UNAUTHORIZED`: 未授权
+- `403 FORBIDDEN`: 权限不足
+- `403 CANNOT_DISABLE_SELF`: 不能禁用自己的账户
+- `404 USER_NOT_FOUND`: 用户不存在
+- `500 INTERNAL_SERVER_ERROR`: 服务器内部错误
+
+---
+
+### 8. 批量删除用户
+
+批量删除多个用户。
+
+**接口地址**: `POST /api/admin/users/batch-delete`
+
+**请求头**:
+```
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+```
+
+**请求体**:
+```json
+{
+  "user_ids": [2, 3, 4]
+}
+```
+
+**请求参数说明**:
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| user_ids | array | 是 | 用户 ID 列表（至少包含 1 个 ID） |
+
+**返回示例**:
+```json
+{
+  "success_count": 2,
+  "failed_count": 1,
+  "success": [2, 3],
+  "failed": [
+    {
+      "id": 4,
+      "error": "不能删除最后一个管理员"
+    }
+  ]
+}
+```
+
+**错误码**:
+- `400 INVALID_REQUEST`: 请求参数错误
+- `401 UNAUTHORIZED`: 未授权
+- `403 FORBIDDEN`: 权限不足
+- `500 INTERNAL_SERVER_ERROR`: 服务器内部错误
+
+---
+
+### 9. 批量修改角色
+
+批量修改多个用户的角色。
+
+**接口地址**: `POST /api/admin/users/batch-update-role`
+
+**请求头**:
+```
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+```
+
+**请求体**:
+```json
+{
+  "user_ids": [2, 3, 4],
+  "role": "admin"
+}
+```
+
+**请求参数说明**:
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| user_ids | array | 是 | 用户 ID 列表（至少包含 1 个 ID） |
+| role | string | 是 | 目标角色（admin 或 user） |
+
+**返回示例**:
+```json
+{
+  "success_count": 3,
+  "failed_count": 0,
+  "success": [2, 3, 4],
+  "failed": []
+}
+```
+
+**错误码**:
+- `400 INVALID_REQUEST`: 请求参数错误
+- `400 INVALID_ROLE`: 角色值无效
+- `401 UNAUTHORIZED`: 未授权
+- `403 FORBIDDEN`: 权限不足
+- `500 INTERNAL_SERVER_ERROR`: 服务器内部错误
+
+---
+
+## 用户管理业务规则
+
+### 权限控制
+- 所有用户管理接口都需要管理员权限
+- 使用 JWT Token 进行认证
+- Token 在 HTTP Header 中传输：`Authorization: Bearer <token>`
+
+### 用户名规则
+- 长度：3-32 字符
+- 允许字符：字母、数字、下划线（_）、连字符（-）
+- 必须唯一
+
+### 密码规则
+- 长度：6-64 字符
+- 使用 bcrypt 加密存储（cost=10）
+- 密码哈希永不返回给前端
+
+### 角色类型
+- `admin`: 管理员，可以访问所有管理功能
+- `user`: 普通用户，只能访问基本功能
+
+### 业务约束
+1. **不能删除自己**: 管理员不能删除自己的账户
+2. **不能修改自己的角色**: 管理员不能修改自己的角色
+3. **不能禁用自己**: 管理员不能禁用自己的账户
+4. **保留最后一个管理员**: 系统必须至少保留一个管理员账户
+5. **禁用用户无法登录**: 被禁用的用户无法登录系统
+
+### 软删除机制
+- 删除用户时使用软删除（设置 `deleted_at` 字段）
+- 软删除的用户不会出现在用户列表中
+- 数据库记录仍然保留，可用于审计
+
+### 批量操作
+- 批量操作会跳过当前用户
+- 批量操作会跳过不符合条件的用户
+- 返回成功和失败的用户 ID 列表
+- 使用事务确保数据一致性
 
 ---

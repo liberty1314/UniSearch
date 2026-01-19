@@ -11,7 +11,7 @@ import (
 
 // SetupRouter 设置路由
 // 验证需求：4.1, 5.1, 6.1, 7.1, 8.1, 10.1, 10.3
-func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService) *gin.Engine {
+func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService) *gin.Engine {
 	// 设置搜索服务
 	SetSearchService(searchService)
 	// 设置API Key服务
@@ -31,7 +31,12 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 	// 添加中间件
 	r.Use(CORSMiddleware())
 	r.Use(LoggerMiddleware())
-	r.Use(util.GzipMiddleware()) // 添加压缩中间件
+	r.Use(ValidationMiddleware()) // 添加请求验证中间件
+	r.Use(util.GzipMiddleware())  // 添加压缩中间件
+
+	// 设置 405 Method Not Allowed 处理器
+	r.HandleMethodNotAllowed = true
+	r.NoMethod(MethodNotAllowedHandler())
 
 	// 定义API路由组
 	api := r.Group("/api")
@@ -102,6 +107,20 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 		admin.Use(JWTMiddleware())   // 应用 JWT 中间件
 		admin.Use(AdminMiddleware()) // 应用管理员中间件
 		{
+			// 用户管理路由
+			users := admin.Group("/users")
+			{
+				users.GET("", ListUsersHandler(userService))                      // 获取用户列表
+				users.GET("/:id", GetUserHandler(userService))                    // 获取单个用户
+				users.POST("", CreateUserHandler(userService))                    // 创建用户
+				users.PUT("/:id", UpdateUserHandler(userService))                 // 更新用户
+				users.POST("/:id/reset-password", ResetPasswordHandler(userService)) // 重置密码
+				users.DELETE("/:id", DeleteUserHandler(userService))              // 删除用户
+				users.POST("/:id/status", SetUserStatusHandler(userService))      // 设置用户状态
+				users.POST("/batch-delete", BatchDeleteUsersHandler(userService)) // 批量删除
+				users.POST("/batch-update-role", BatchUpdateRoleHandler(userService)) // 批量修改角色
+			}
+
 			// API Key 管理
 			apikey := admin.Group("/apikey")
 			{

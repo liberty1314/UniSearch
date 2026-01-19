@@ -341,3 +341,6 @@ logs/
 .clouder/
 .cursor/
 .claude/
+
+# 测试文件
+testsprite_tests/

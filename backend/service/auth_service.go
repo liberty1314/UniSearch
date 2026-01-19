@@ -129,6 +129,11 @@ func (s *AuthService) Login(username, password string) (token string, user *mode
 		return "", nil, errors.New("用户名或密码错误")
 	}
 
+	// 检查账户是否被禁用
+	if !dbUser.IsEnabled {
+		return "", nil, errors.New("账户已被禁用，请联系管理员")
+	}
+
 	// 生成 JWT Token
 	// Token 包含 user_id, username, role 字段，有效期 24 小时
 	jwtSecret := config.AppConfig.AuthJWTSecret
@@ -140,6 +145,14 @@ func (s *AuthService) Login(username, password string) (token string, user *mode
 	token, err = util.GenerateJWTToken(dbUser.ID, dbUser.Username, dbUser.Role, jwtSecret, tokenExpiry)
 	if err != nil {
 		return "", nil, fmt.Errorf("生成Token失败: %w", err)
+	}
+
+	// 更新最后登录时间
+	now := time.Now()
+	dbUser.LastLoginAt = &now
+	if err := s.db.Model(&dbUser).Update("last_login_at", now).Error; err != nil {
+		log.Printf("⚠️  更新最后登录时间失败: %v", err)
+		// 不影响登录流程，继续执行
 	}
 
 	log.Printf("✓ 用户登录成功: %s (ID: %d, Role: %s)", dbUser.Username, dbUser.ID, dbUser.Role)

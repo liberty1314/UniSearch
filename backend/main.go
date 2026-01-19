@@ -176,8 +176,12 @@ func startServer() {
 	authService := service.NewAuthService()
 	fmt.Println("Auth 服务已启动（用户认证功能已启用）")
 
+	// 初始化 User 服务（用户管理服务）
+	userService := service.NewUserService(database.GetDB())
+	fmt.Println("User 服务已启动（用户管理功能已启用）")
+
 	// 设置路由
-	router := api.SetupRouter(searchService, apiKeyService, authService, refreshTokenService)
+	router := api.SetupRouter(searchService, apiKeyService, authService, refreshTokenService, userService)
 
 	// 获取端口配置
 	port := config.AppConfig.Port

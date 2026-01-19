@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthService } from '@/services/authService';
+import { UserService } from '@/services/userService';
 import { useAuthStore } from '@/stores/authStore';
-import type { APIKeyInfo } from '@/types/api';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import type { APIKeyInfo, UserInfo } from '@/types/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Table,
@@ -28,13 +30,19 @@ import { CreateKeyDialog } from '@/components/CreateKeyDialog';
 import { EditKeyDialog } from '@/components/admin/EditKeyDialog';
 import { BatchExtendDialog } from '@/components/admin/BatchExtendDialog';
 import { BatchCreateDialog } from '@/components/admin/BatchCreateDialog';
-import { BatchDeleteDialog } from '@/components/admin/BatchDeleteDialog';
+import { BatchDeleteKeysDialog } from '@/components/admin/BatchDeleteKeysDialog';
+import { BatchDeleteDialog as BatchDeleteUsersDialog } from '@/components/admin/BatchDeleteDialog';
+import { BatchUpdateRoleDialog } from '@/components/admin/BatchUpdateRoleDialog';
+import { CreateUserDialog } from '@/components/admin/CreateUserDialog';
+import { EditUserDialog } from '@/components/admin/EditUserDialog';
+import { ResetPasswordDialog } from '@/components/admin/ResetPasswordDialog';
+import UserTable from '@/components/admin/UserTable';
 import { Sidebar, type AdminView } from '@/components/admin/Sidebar';
 import { BatchActionsBar } from '@/components/admin/BatchActionsBar';
 import { StatsCard } from '@/components/admin/StatsCard';
 import { SystemInfoView } from '@/components/admin/SystemInfoView';
 import { TableFilterDropdown } from '@/components/admin/TableFilterDropdown';
-import { Plus, RefreshCw, Key, AlertCircle, CheckCircle2, Activity, Search, Filter, X, Clock } from 'lucide-react';
+import { Plus, RefreshCw, Key, AlertCircle, CheckCircle2, Activity, Search, Filter, X, Clock, Users, Shield, UserCheck, UserX } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import ApiKeyTableRow from '@/components/admin/ApiKeyTableRow';
@@ -102,6 +110,43 @@ const Admin: React.FC = () => {
     // 筛选状态
     const [statusFilter, setStatusFilter] = useState<string[]>([]);
     const [remainingTimeFilter, setRemainingTimeFilter] = useState<string[]>([]);
+
+    // ============ 用户管理状态 ============
+    
+    // 用户列表
+    const [users, setUsers] = useState<UserInfo[]>([]);
+    const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false);
+    
+    // 选中的用户
+    const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
+    
+    // 搜索和筛选
+    const [userSearchKeyword, setUserSearchKeyword] = useState<string>('');
+    const debouncedUserSearchKeyword = useDebouncedValue(userSearchKeyword, 500); // 500ms 防抖
+    const [userRoleFilter, setUserRoleFilter] = useState<string[]>([]);
+    const [userStatusFilter, setUserStatusFilter] = useState<string[]>([]);
+    
+    // 分页状态
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const [totalUsers, setTotalUsers] = useState<number>(0);
+    const [pageSize] = useState<number>(20);
+    const [totalPages, setTotalPages] = useState<number>(0);
+    
+    // 对话框状态
+    const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState<boolean>(false);
+    const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState<boolean>(false);
+    const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState<boolean>(false);
+    const [isBatchDeleteUsersDialogOpen, setIsBatchDeleteUsersDialogOpen] = useState<boolean>(false);
+    const [isBatchUpdateRoleDialogOpen, setIsBatchUpdateRoleDialogOpen] = useState<boolean>(false);
+    
+    // 当前操作的用户
+    const [userToEdit, setUserToEdit] = useState<UserInfo | null>(null);
+    const [userToResetPassword, setUserToResetPassword] = useState<UserInfo | null>(null);
+    const [userToDelete, setUserToDelete] = useState<number | null>(null);
+    
+    // 用户操作加载状态
+    const [isDeletingUser, setIsDeletingUser] = useState<boolean>(false);
+    const [isBatchOperatingUsers, setIsBatchOperatingUsers] = useState<boolean>(false);
 
     /**
      * 判断 Key 是否已过期
@@ -220,6 +265,54 @@ const Admin: React.FC = () => {
     }, [logout, navigate]);
 
     /**
+     * 加载用户列表
+     */
+    const loadUsers = useCallback(async (page?: number) => {
+        setIsLoadingUsers(true);
+        try {
+            // 使用传入的页码或当前页码
+            const targetPage = page || currentPage;
+            
+            // 构建筛选条件
+            let roleFilter: 'admin' | 'user' | undefined = undefined;
+            if (userRoleFilter.length === 1) {
+                roleFilter = userRoleFilter[0] as 'admin' | 'user';
+            }
+            
+            // 调用 API（使用防抖后的搜索关键词）
+            const response = await UserService.listUsers(
+                targetPage,
+                pageSize,
+                debouncedUserSearchKeyword.trim() || undefined,
+                roleFilter
+            );
+            
+            // 更新状态
+            setUsers(response.users);
+            setTotalUsers(response.total);
+            setTotalPages(response.total_pages);
+            setCurrentPage(response.page);
+        } catch (error: unknown) {
+            console.error('加载用户列表失败:', error);
+
+            if (error && typeof error === 'object' && 'response' in error) {
+                const err = error as { response?: { status?: number }; message?: string };
+                if (err.response?.status === 401) {
+                    toast.error('登录已过期，请重新登录');
+                    logout();
+                    navigate('/login');
+                } else {
+                    toast.error('加载用户列表失败：' + (err.message || '未知错误'));
+                }
+            } else {
+                toast.error('加载用户列表失败：未知错误');
+            }
+        } finally {
+            setIsLoadingUsers(false);
+        }
+    }, [currentPage, pageSize, debouncedUserSearchKeyword, userRoleFilter, logout, navigate]);
+
+    /**
      * 初始加载数据
      */
     useEffect(() => {
@@ -227,6 +320,15 @@ const Admin: React.FC = () => {
             loadApiKeys();
         }
     }, [isAdmin, loadApiKeys]);
+
+    /**
+     * 加载用户数据（当视图切换到用户管理或搜索/筛选条件变化时）
+     */
+    useEffect(() => {
+        if (isAdmin && currentView === 'user-management') {
+            loadUsers(1); // 条件变化时重置到第一页
+        }
+    }, [isAdmin, currentView, debouncedUserSearchKeyword, userRoleFilter, loadUsers]);
 
     /**
      * 处理创建 Key 成功
@@ -406,6 +508,229 @@ const Admin: React.FC = () => {
      */
     const isAllSelected = (): boolean => {
         return apiKeys.length > 0 && apiKeys.every(key => selectedKeys.has(key.key));
+    };
+
+    // ============ 用户管理操作处理函数 ============
+
+    /**
+     * 处理创建用户按钮点击
+     * 验证需求: 2.1
+     */
+    const handleCreateUser = () => {
+        setIsCreateUserDialogOpen(true);
+    };
+
+    /**
+     * 处理编辑用户按钮点击
+     * 验证需求: 3.1
+     */
+    const handleEditUser = (user: UserInfo) => {
+        setUserToEdit(user);
+        setIsEditUserDialogOpen(true);
+    };
+
+    /**
+     * 处理重置密码按钮点击
+     * 验证需求: 4.1
+     */
+    const handleResetPassword = (user: UserInfo) => {
+        setUserToResetPassword(user);
+        setIsResetPasswordDialogOpen(true);
+    };
+
+    /**
+     * 处理删除用户按钮点击
+     * 验证需求: 5.1
+     */
+    const handleDeleteUser = async (userId: number) => {
+        // 显示确认对话框
+        setUserToDelete(userId);
+    };
+
+    /**
+     * 确认删除用户
+     * 验证需求: 5.1, 5.5
+     */
+    const handleDeleteUserConfirm = async () => {
+        if (!userToDelete) return;
+
+        setIsDeletingUser(true);
+        try {
+            await UserService.deleteUser(userToDelete);
+            toast.success('用户已删除');
+
+            // 刷新列表
+            loadUsers();
+
+            // 清除选择
+            setSelectedUsers(prev => {
+                const newSelected = new Set(prev);
+                newSelected.delete(userToDelete);
+                return newSelected;
+            });
+
+            // 关闭对话框
+            setUserToDelete(null);
+        } catch (error: unknown) {
+            console.error('删除用户失败:', error);
+
+            if (error && typeof error === 'object' && 'response' in error) {
+                const err = error as { response?: { status?: number; data?: { error?: string } }; message?: string };
+                if (err.response?.status === 401) {
+                    toast.error('登录已过期，请重新登录');
+                    logout();
+                    navigate('/login');
+                } else if (err.response?.status === 403) {
+                    toast.error(err.response?.data?.error || '权限不足');
+                } else {
+                    toast.error('删除失败：' + (err.response?.data?.error || err.message || '未知错误'));
+                }
+            } else {
+                toast.error('删除失败：未知错误');
+            }
+        } finally {
+            setIsDeletingUser(false);
+        }
+    };
+
+    /**
+     * 处理切换用户状态
+     * 验证需求: 6.1
+     */
+    const handleToggleStatus = async (userId: number, isEnabled: boolean) => {
+        try {
+            await UserService.setUserStatus(userId, isEnabled);
+            toast.success(`用户已${isEnabled ? '启用' : '禁用'}`);
+
+            // 刷新列表
+            loadUsers();
+        } catch (error: unknown) {
+            console.error('切换用户状态失败:', error);
+
+            if (error && typeof error === 'object' && 'response' in error) {
+                const err = error as { response?: { status?: number; data?: { error?: string } }; message?: string };
+                if (err.response?.status === 401) {
+                    toast.error('登录已过期，请重新登录');
+                    logout();
+                    navigate('/login');
+                } else if (err.response?.status === 403) {
+                    toast.error(err.response?.data?.error || '权限不足');
+                } else {
+                    toast.error('操作失败：' + (err.response?.data?.error || err.message || '未知错误'));
+                }
+            } else {
+                toast.error('操作失败：未知错误');
+            }
+        }
+    };
+
+    /**
+     * 处理选择单个用户
+     * 验证需求: 7.1
+     */
+    const handleSelectUser = useCallback((userId: number, checked: boolean) => {
+        setSelectedUsers(prev => {
+            const newSelected = new Set(prev);
+            if (checked) {
+                newSelected.add(userId);
+            } else {
+                newSelected.delete(userId);
+            }
+            return newSelected;
+        });
+    }, []);
+
+    /**
+     * 处理全选/取消全选用户
+     * 验证需求: 7.1
+     */
+    const handleSelectAllUsers = useCallback((checked: boolean) => {
+        if (checked) {
+            // 全选：选中所有用户（排除当前用户）
+            const currentUsername = useAuthStore.getState().username;
+            const selectableUserIds = users
+                .filter(u => u.username !== currentUsername)
+                .map(u => u.id);
+            setSelectedUsers(new Set(selectableUserIds));
+        } else {
+            // 取消全选
+            setSelectedUsers(new Set());
+        }
+    }, [users]);
+
+    /**
+     * 处理批量删除用户
+     * 验证需求: 7.2
+     */
+    const handleBatchDeleteUsers = () => {
+        if (selectedUsers.size === 0) {
+            toast.error('请先选择要删除的用户');
+            return;
+        }
+
+        setIsBatchOperatingUsers(true);
+        setIsBatchDeleteUsersDialogOpen(true);
+    };
+
+    /**
+     * 处理批量修改角色
+     * 验证需求: 7.5
+     */
+    const handleBatchUpdateRole = () => {
+        if (selectedUsers.size === 0) {
+            toast.error('请先选择要修改的用户');
+            return;
+        }
+
+        setIsBatchOperatingUsers(true);
+        setIsBatchUpdateRoleDialogOpen(true);
+    };
+
+    /**
+     * 处理清除用户选择
+     * 验证需求: 7.1
+     */
+    const handleClearUserSelection = useCallback(() => {
+        setSelectedUsers(new Set());
+    }, []);
+
+    /**
+     * 处理用户操作成功（刷新列表）
+     */
+    const handleUserOperationSuccess = () => {
+        loadUsers();
+        setSelectedUsers(new Set());
+    };
+
+    /**
+     * 处理分页变化
+     * 验证需求: 1.3
+     */
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+        loadUsers(page);
+    };
+
+    /**
+     * 获取当前登录用户 ID
+     */
+    const getCurrentUserId = (): number => {
+        // 由于 authStore 中没有存储用户 ID，我们需要从用户列表中查找
+        const currentUsername = useAuthStore.getState().username;
+        const currentUser = users.find(u => u.username === currentUsername);
+        return currentUser?.id || 0;
+    };
+
+    /**
+     * 计算用户统计数据
+     */
+    const getUserStats = () => {
+        const total = totalUsers;
+        const active = users.filter(u => u.is_enabled).length;
+        const disabled = users.filter(u => !u.is_enabled).length;
+        const admins = users.filter(u => u.role === 'admin').length;
+
+        return { total, active, disabled, admins };
     };
 
     return (
@@ -741,6 +1066,291 @@ const Admin: React.FC = () => {
                         </motion.div>
                     )}
 
+                    {/* 用户管理视图 */}
+                    {currentView === 'user-management' && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="space-y-6"
+                        >
+                            {/* 统计卡片 */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <StatsCard
+                                    title="总用户数"
+                                    value={getUserStats().total}
+                                    icon={Users}
+                                    color="blue"
+                                    index={0}
+                                />
+                                <StatsCard
+                                    title="活跃用户"
+                                    value={getUserStats().active}
+                                    icon={UserCheck}
+                                    color="emerald"
+                                    index={1}
+                                />
+                                <StatsCard
+                                    title="禁用用户"
+                                    value={getUserStats().disabled}
+                                    icon={UserX}
+                                    color="amber"
+                                    index={2}
+                                />
+                                <StatsCard
+                                    title="管理员数量"
+                                    value={getUserStats().admins}
+                                    icon={Shield}
+                                    color="purple"
+                                    index={3}
+                                />
+                            </div>
+
+                            {/* 用户管理卡片 */}
+                            <Card className="border-gray-100 dark:border-gray-700/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+                                <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50 min-h-[88px]">
+                                    <div className="flex items-center justify-between h-full">
+                                        <div className="flex-shrink-0">
+                                            <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
+                                                <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                                用户管理
+                                            </CardTitle>
+                                            <CardDescription className="text-slate-500 dark:text-slate-400 mt-1">
+                                                {selectedUsers.size > 0 ? (
+                                                    <span className="flex items-center gap-2">
+                                                        <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                                        <span className="text-blue-700 dark:text-blue-300 font-medium">
+                                                            已选中 {selectedUsers.size} 个用户
+                                                        </span>
+                                                    </span>
+                                                ) : (
+                                                    '管理系统用户，控制访问权限和账户状态'
+                                                )}
+                                            </CardDescription>
+                                        </div>
+
+                                        {/* 批量操作工具栏（选中时显示）或常规按钮组 */}
+                                        <AnimatePresence mode="wait">
+                                            {selectedUsers.size > 0 ? (
+                                                <motion.div
+                                                    key="batch-actions-users"
+                                                    initial={{ opacity: 0, x: 20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    exit={{ opacity: 0, x: 20 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    className="flex items-center gap-3"
+                                                >
+                                                    {/* 批量操作按钮 */}
+                                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                                        <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                        <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                                            已选中 {selectedUsers.size} 个用户
+                                                        </span>
+                                                    </div>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={handleBatchUpdateRole}
+                                                        disabled={isLoadingUsers || isBatchOperatingUsers || isDeletingUser}
+                                                        className="border-slate-200 dark:border-slate-700"
+                                                    >
+                                                        <Shield className="w-4 h-4 mr-1" />
+                                                        批量修改角色
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={handleBatchDeleteUsers}
+                                                        disabled={isLoadingUsers || isBatchOperatingUsers || isDeletingUser}
+                                                        className="border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                                    >
+                                                        <X className="w-4 h-4 mr-1" />
+                                                        批量删除
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={handleClearUserSelection}
+                                                        disabled={isLoadingUsers || isBatchOperatingUsers || isDeletingUser}
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </Button>
+                                                </motion.div>
+                                            ) : (
+                                                <motion.div
+                                                    key="normal-actions-users"
+                                                    initial={{ opacity: 0, x: -20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    exit={{ opacity: 0, x: -20 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    className="flex items-center gap-3"
+                                                >
+                                                    {/* 搜索框 */}
+                                                    <div className="relative">
+                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                                        <Input
+                                                            type="text"
+                                                            placeholder="搜索用户名..."
+                                                            value={userSearchKeyword}
+                                                            onChange={(e) => setUserSearchKeyword(e.target.value)}
+                                                            className="pl-9 w-48 h-9 text-sm border-slate-200 dark:border-slate-700"
+                                                        />
+                                                    </div>
+
+                                                    {/* 角色筛选 */}
+                                                    <TableFilterDropdown
+                                                        options={[
+                                                            { label: '管理员', value: 'admin', color: '#8b5cf6' },
+                                                            { label: '普通用户', value: 'user', color: '#3b82f6' },
+                                                        ]}
+                                                        selectedValues={userRoleFilter}
+                                                        onSelectionChange={setUserRoleFilter}
+                                                        multiSelect={false}
+                                                        icon={<Filter className="w-3.5 h-3.5" />}
+                                                    />
+
+                                                    {/* 刷新按钮 */}
+                                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => loadUsers()}
+                                                            disabled={isLoadingUsers || isBatchOperatingUsers}
+                                                            className="border-slate-200 dark:border-slate-700"
+                                                        >
+                                                            <RefreshCw className={`w-4 h-4 ${isLoadingUsers ? 'animate-spin' : ''}`} />
+                                                        </Button>
+                                                    </motion.div>
+
+                                                    {/* 创建用户按钮 */}
+                                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                                        <Button
+                                                            onClick={handleCreateUser}
+                                                            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/30"
+                                                            disabled={isLoadingUsers || isBatchOperatingUsers}
+                                                        >
+                                                            <Plus className="w-4 h-4" />
+                                                            创建用户
+                                                        </Button>
+                                                    </motion.div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-6">
+                                    {isLoadingUsers ? (
+                                        <div className="text-center py-12">
+                                            <motion.div
+                                                animate={{ rotate: 360 }}
+                                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                className="inline-block"
+                                            >
+                                                <RefreshCw className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                                            </motion.div>
+                                            <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
+                                        </div>
+                                    ) : users.length === 0 ? (
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            className="text-center py-12"
+                                        >
+                                            <div className="inline-flex p-4 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
+                                                <Users className="w-8 h-8 text-slate-400" />
+                                            </div>
+                                            <p className="text-slate-500 dark:text-slate-400 mb-4">
+                                                {userSearchKeyword || userRoleFilter.length > 0
+                                                    ? '没有找到匹配的用户'
+                                                    : '暂无用户'}
+                                            </p>
+                                            {!userSearchKeyword && userRoleFilter.length === 0 && (
+                                                <Button
+                                                    onClick={handleCreateUser}
+                                                    className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                                                >
+                                                    <Plus className="w-4 h-4 mr-2" />
+                                                    创建第一个用户
+                                                </Button>
+                                            )}
+                                        </motion.div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {/* 用户表格 */}
+                                            <UserTable
+                                                users={users}
+                                                isLoading={isLoadingUsers}
+                                                selectedUsers={selectedUsers}
+                                                onSelectUser={handleSelectUser}
+                                                onSelectAll={handleSelectAllUsers}
+                                                onEditClick={handleEditUser}
+                                                onResetPasswordClick={handleResetPassword}
+                                                onDeleteClick={handleDeleteUser}
+                                                onToggleStatus={handleToggleStatus}
+                                                currentUserId={getCurrentUserId()}
+                                                isDeleting={isDeletingUser}
+                                                isBatchOperating={isBatchOperatingUsers}
+                                            />
+
+                                            {/* 分页控件 */}
+                                            {totalPages > 1 && (
+                                                <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700">
+                                                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                                                        显示第 {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalUsers)} 条，共 {totalUsers} 条
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handlePageChange(currentPage - 1)}
+                                                            disabled={currentPage === 1 || isLoadingUsers}
+                                                        >
+                                                            上一页
+                                                        </Button>
+                                                        <div className="flex items-center gap-1">
+                                                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                                                let pageNum: number;
+                                                                if (totalPages <= 5) {
+                                                                    pageNum = i + 1;
+                                                                } else if (currentPage <= 3) {
+                                                                    pageNum = i + 1;
+                                                                } else if (currentPage >= totalPages - 2) {
+                                                                    pageNum = totalPages - 4 + i;
+                                                                } else {
+                                                                    pageNum = currentPage - 2 + i;
+                                                                }
+                                                                return (
+                                                                    <Button
+                                                                        key={pageNum}
+                                                                        variant={currentPage === pageNum ? 'default' : 'outline'}
+                                                                        size="sm"
+                                                                        onClick={() => handlePageChange(pageNum)}
+                                                                        disabled={isLoadingUsers}
+                                                                        className={currentPage === pageNum ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                                                                    >
+                                                                        {pageNum}
+                                                                    </Button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handlePageChange(currentPage + 1)}
+                                                            disabled={currentPage === totalPages || isLoadingUsers}
+                                                        >
+                                                            下一页
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    )}
+
                     {/* 系统监控视图 */}
                     {currentView === 'system-info' && <SystemInfoView />}
                 </div>
@@ -789,7 +1399,7 @@ const Admin: React.FC = () => {
             />
 
             {/* 批量删除对话框 */}
-            <BatchDeleteDialog
+            <BatchDeleteKeysDialog
                 open={isBatchDeleteDialogOpen}
                 onOpenChange={(open) => {
                     setIsBatchDeleteDialogOpen(open);
@@ -824,6 +1434,85 @@ const Admin: React.FC = () => {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* ============ 用户管理对话框 ============ */}
+
+            {/* 创建用户对话框 */}
+            <CreateUserDialog
+                open={isCreateUserDialogOpen}
+                onOpenChange={setIsCreateUserDialogOpen}
+                onSuccess={handleUserOperationSuccess}
+            />
+
+            {/* 编辑用户对话框 */}
+            {userToEdit && (
+                <EditUserDialog
+                    open={isEditUserDialogOpen}
+                    onOpenChange={setIsEditUserDialogOpen}
+                    user={userToEdit}
+                    onSuccess={handleUserOperationSuccess}
+                />
+            )}
+
+            {/* 重置密码对话框 */}
+            {userToResetPassword && (
+                <ResetPasswordDialog
+                    open={isResetPasswordDialogOpen}
+                    onOpenChange={setIsResetPasswordDialogOpen}
+                    user={userToResetPassword}
+                    onSuccess={handleUserOperationSuccess}
+                />
+            )}
+
+            {/* 删除用户确认对话框 */}
+            <AlertDialog open={userToDelete !== null} onOpenChange={(open) => !open && setUserToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>确认删除用户</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            您确定要删除这个用户吗？此操作无法撤销，该用户将无法继续访问系统。
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeletingUser}>
+                            取消
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeleteUserConfirm}
+                            disabled={isDeletingUser}
+                            className="bg-red-500 hover:bg-red-600"
+                        >
+                            {isDeletingUser ? '删除中...' : '确认删除'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* 批量删除用户对话框 */}
+            <BatchDeleteUsersDialog
+                open={isBatchDeleteUsersDialogOpen}
+                onOpenChange={(open) => {
+                    setIsBatchDeleteUsersDialogOpen(open);
+                    if (!open) {
+                        setIsBatchOperatingUsers(false);
+                    }
+                }}
+                users={users.filter(u => selectedUsers.has(u.id))}
+                onSuccess={handleUserOperationSuccess}
+            />
+
+            {/* 批量修改角色对话框 */}
+            <BatchUpdateRoleDialog
+                open={isBatchUpdateRoleDialogOpen}
+                onOpenChange={(open) => {
+                    setIsBatchUpdateRoleDialogOpen(open);
+                    if (!open) {
+                        setIsBatchOperatingUsers(false);
+                    }
+                }}
+                users={users.filter(u => selectedUsers.has(u.id))}
+                onSuccess={handleUserOperationSuccess}
+            />
         </div>
     );
 };

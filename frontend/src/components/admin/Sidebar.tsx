@@ -1,12 +1,12 @@
 import React from 'react';
-import { Key, Activity, X, Menu } from 'lucide-react';
+import { Key, Activity, X, Menu, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 
 /**
  * 管理视图类型
  */
-export type AdminView = 'api-keys' | 'system-info';
+export type AdminView = 'api-keys' | 'system-info' | 'user-management';
 
 /**
  * 导航项配置
@@ -59,6 +59,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             id: 'api-keys',
             label: 'API Key 管理',
             icon: <Key className="w-5 h-5" />,
+        },
+        {
+            id: 'user-management',
+            label: '用户管理',
+            icon: <Users className="w-5 h-5" />,
         },
     ];
 
