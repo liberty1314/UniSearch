@@ -85,6 +85,64 @@ do_start() {
     fi
     log_success "配置文件检查通过"
     
+    log_step "检查并修正 Docker 环境配置..."
+    
+    # 检查 .env.docker 文件是否存在
+    if [ ! -f ".env.docker" ]; then
+        log_warning ".env.docker 文件不存在，正在创建..."
+        if [ -f ".env" ]; then
+            # 从 .env 复制并修改 DB_HOST
+            cp .env .env.docker
+            log_success ".env.docker 已从 .env 复制"
+        elif [ -f ".env.example" ]; then
+            cp .env.example .env.docker
+            log_success ".env.docker 已从 .env.example 复制"
+        else
+            log_error "未找到 .env 或 .env.example 文件"
+            exit 1
+        fi
+    fi
+    
+    # 检查并修正 DB_HOST 为 mysql
+    if grep -q "^DB_HOST=" .env.docker; then
+        current_db_host=$(grep "^DB_HOST=" .env.docker | cut -d'=' -f2)
+        if [ "$current_db_host" != "mysql" ]; then
+            log_warning "检测到 DB_HOST=$current_db_host，Docker 环境需要使用 mysql"
+            log_step "正在修正 .env.docker 中的 DB_HOST..."
+            
+            # macOS 和 Linux 兼容的 sed 命令
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                sed -i '' 's/^DB_HOST=.*/DB_HOST=mysql/' .env.docker
+            else
+                sed -i 's/^DB_HOST=.*/DB_HOST=mysql/' .env.docker
+            fi
+            
+            log_success "DB_HOST 已修正为 mysql"
+        else
+            log_success "DB_HOST 配置正确 (mysql)"
+        fi
+    else
+        log_warning ".env.docker 中未找到 DB_HOST，正在添加..."
+        echo "DB_HOST=mysql" >> .env.docker
+        log_success "DB_HOST=mysql 已添加"
+    fi
+    
+    # 修正 REFRESH_TOKEN_STORE_PATH 为容器路径
+    if grep -q "^REFRESH_TOKEN_STORE_PATH=" .env.docker; then
+        current_path=$(grep "^REFRESH_TOKEN_STORE_PATH=" .env.docker | cut -d'=' -f2)
+        if [[ "$current_path" != "/app/data/"* ]]; then
+            log_step "修正 REFRESH_TOKEN_STORE_PATH 为容器路径..."
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                sed -i '' 's|^REFRESH_TOKEN_STORE_PATH=.*|REFRESH_TOKEN_STORE_PATH=/app/data/refresh_tokens.dat|' .env.docker
+            else
+                sed -i 's|^REFRESH_TOKEN_STORE_PATH=.*|REFRESH_TOKEN_STORE_PATH=/app/data/refresh_tokens.dat|' .env.docker
+            fi
+            log_success "REFRESH_TOKEN_STORE_PATH 已修正"
+        fi
+    fi
+    
+    log_success "Docker 环境配置检查完成"
+    
     log_step "检查环境变量配置..."
     if [ ! -f ".env" ]; then
         log_warning ".env 文件不存在，将使用默认配置"

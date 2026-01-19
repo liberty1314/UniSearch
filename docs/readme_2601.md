@@ -306,3 +306,13 @@
 - frontend/src/pages/Admin.tsx
 - frontend/src/services/userService.ts
 - frontend/src/types/api.ts
+
+## [2026-01-19 16:53] fix(config): 修复本地和 Docker 环境配置自动检测与错误消息处理
+
+**Body**: 修复了本地和 Docker 环境启动脚本中的数据库主机配置自动检测和修正逻辑，确保本地环境使用 localhost，Docker 环境使用 mysql。同时优化了前端 API 错误处理，优先使用后端返回的错误消息。
+
+**Files**:
+- docker-compose.yml
+- frontend/src/lib/api.ts
+- scripts/docker.sh
+- scripts/local.sh

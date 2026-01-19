@@ -165,7 +165,46 @@ do_start() {
     fi
     log_success ".env 文件已找到"
 
-    # 3. 加载环境变量
+    # 3. 检查并修正 DB_HOST 为 localhost
+    log_step "检查本地环境数据库配置..."
+    if grep -q "^DB_HOST=" .env; then
+        current_db_host=$(grep "^DB_HOST=" .env | cut -d'=' -f2)
+        if [ "$current_db_host" != "localhost" ]; then
+            log_warning "检测到 DB_HOST=$current_db_host，本地环境需要使用 localhost"
+            log_step "正在修正 .env 中的 DB_HOST..."
+            
+            # macOS 和 Linux 兼容的 sed 命令
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                sed -i '' 's/^DB_HOST=.*/DB_HOST=localhost/' .env
+            else
+                sed -i 's/^DB_HOST=.*/DB_HOST=localhost/' .env
+            fi
+            
+            log_success "DB_HOST 已修正为 localhost"
+        else
+            log_success "DB_HOST 配置正确 (localhost)"
+        fi
+    else
+        log_warning ".env 中未找到 DB_HOST，正在添加..."
+        echo "DB_HOST=localhost" >> .env
+        log_success "DB_HOST=localhost 已添加"
+    fi
+    
+    # 修正 REFRESH_TOKEN_STORE_PATH 为本地路径
+    if grep -q "^REFRESH_TOKEN_STORE_PATH=" .env; then
+        current_path=$(grep "^REFRESH_TOKEN_STORE_PATH=" .env | cut -d'=' -f2)
+        if [[ "$current_path" == "/app/"* ]]; then
+            log_step "修正 REFRESH_TOKEN_STORE_PATH 为本地路径..."
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                sed -i '' 's|^REFRESH_TOKEN_STORE_PATH=.*|REFRESH_TOKEN_STORE_PATH=./refresh_tokens.dat|' .env
+            else
+                sed -i 's|^REFRESH_TOKEN_STORE_PATH=.*|REFRESH_TOKEN_STORE_PATH=./refresh_tokens.dat|' .env
+            fi
+            log_success "REFRESH_TOKEN_STORE_PATH 已修正"
+        fi
+    fi
+
+    # 4. 加载环境变量
     log_step "加载环境变量..."
     set -a
     source .env

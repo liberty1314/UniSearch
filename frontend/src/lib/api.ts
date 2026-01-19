@@ -119,9 +119,15 @@ class ApiClient {
       // 服务器响应错误
       const { status, data } = error.response;
 
+      // 优先使用后端返回的错误消息
+      if (data?.message) {
+        return data.message;
+      }
+
+      // 如果后端没有返回消息，使用通用错误消息
       switch (status) {
         case 400:
-          return data?.message || '请求参数错误';
+          return '请求参数错误';
         case 401:
           return '未授权访问';
         case 403:
@@ -135,7 +141,7 @@ class ApiClient {
         case 503:
           return '服务暂不可用';
         default:
-          return data?.message || `请求失败 (${status})`;
+          return `请求失败 (${status})`;
       }
     } else if (error.request) {
       // 网络错误
