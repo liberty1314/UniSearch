@@ -423,3 +423,8 @@
 **Files**:
 - docs/api_reference.md
 - frontend/src/pages/UserApiKeySettings.tsx
+
+[2026-01-29 23:14] fix(docker): 修正数据库名称从 pansou 改为 unisearch
+  - Body: 将 Dockerfile 中的默认数据库名称从 pansou 更正为 unisearch，确保与项目名称保持一致。
+  - Files:
+    - backend/Dockerfile

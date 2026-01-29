@@ -60,7 +60,7 @@ ENV PORT=8888 \
     DB_PORT=3306 \
     DB_USER=root \
     DB_PASSWORD=root \
-    DB_NAME=pansou
+    DB_NAME=unisearch
 
 # 构建参数
 ARG VERSION=dev
