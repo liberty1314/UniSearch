@@ -410,3 +410,16 @@
     - frontend/src/pages/UserApiKeySettings.tsx
     - frontend/src/pages/UserAuth.tsx
     - frontend/src/services/systemSettingsService.ts
+
+
+---
+
+## [2026-01-29 16:00] feat(user): 优化用户 API Key 设置页面 UI 为 Apple 风格
+
+**Body**: 重构用户 API Key 设置页面，采用 Apple 风格设计语言，提升视觉体验和交互友好度。主要改进包括：使用渐变背景和毛玻璃效果卡片；优化表单布局和输入框样式（圆角、阴影、过渡动画）；改进状态显示（有效/失效）的视觉呈现；添加解绑确认对话框，替换原生 confirm；优化日期格式显示（YYYY/MM/DD）；统一按钮和交互元素的 Apple 风格；修正 API 文档中的参数名（api_key -> key）。
+
+**Footer**: 无
+
+**Files**:
+- docs/api_reference.md
+- frontend/src/pages/UserApiKeySettings.tsx

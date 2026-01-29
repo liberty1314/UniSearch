@@ -3241,13 +3241,13 @@ func JWTAuth() gin.HandlerFunc {
 
 | 参数名 | 类型 | 必填 | 描述 |
 |--------|------|------|------|
-| api_key | string | 是 | 要绑定的 API Key（格式：sk-开头的43位字符） |
+| key | string | 是 | 要绑定的 API Key（格式：sk-开头的43位字符） |
 
 **请求示例**:
 
 ```json
 {
-  "api_key": "<AUTH_TOKEN>"
+  "key": "<AUTH_TOKEN>"
 }
 ```
 
