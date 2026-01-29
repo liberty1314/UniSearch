@@ -81,7 +81,7 @@ export function useAutoRefreshToken() {
                 response.refresh_token
             );
 
-            console.log('✅ 访问令牌已自动刷新');
+            // Token 刷新成功，无需额外日志
         } catch (error) {
             console.error('❌ 自动刷新令牌失败:', error);
             // 刷新失败，清除认证状态

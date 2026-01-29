@@ -180,8 +180,12 @@ func startServer() {
 	userService := service.NewUserService(database.GetDB())
 	fmt.Println("User 服务已启动（用户管理功能已启用）")
 
+	// 初始化 SystemSettings 服务（系统设置服务）
+	systemSettingsService := service.NewSystemSettingsService(database.GetDB())
+	fmt.Println("SystemSettings 服务已启动（系统设置功能已启用）")
+
 	// 设置路由
-	router := api.SetupRouter(searchService, apiKeyService, authService, refreshTokenService, userService)
+	router := api.SetupRouter(searchService, apiKeyService, authService, refreshTokenService, userService, systemSettingsService)
 
 	// 获取端口配置
 	port := config.AppConfig.Port

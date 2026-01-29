@@ -10,9 +10,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { AppleInput } from '@/components/ui/AppleInput';
+import { AppleButton } from '@/components/ui/AppleButton';
 import {
     Select,
     SelectContent,
@@ -20,6 +19,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import type { UserInfo } from '@/types/api';
 
 /**
@@ -195,24 +195,19 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }: EditUser
 
                 <div className="space-y-4 py-4">
                     {/* 用户名输入 */}
-                    <div className="space-y-2">
-                        <Label htmlFor="edit-username">
-                            用户名 <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                            id="edit-username"
-                            type="text"
-                            placeholder="请输入用户名（3-32 字符）"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            disabled={isLoading}
-                            autoComplete="off"
-                        />
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                            用户名长度为 3-32 字符
-                        </p>
-                    </div>
+                    <AppleInput
+                        label="用户名"
+                        id="edit-username"
+                        type="text"
+                        placeholder="请输入用户名（3-32 字符）"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        disabled={isLoading}
+                        autoComplete="off"
+                        helperText="用户名长度为 3-32 字符"
+                        required
+                    />
 
                     {/* 角色选择 */}
                     <div className="space-y-2">
@@ -267,19 +262,21 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }: EditUser
                 </div>
 
                 <DialogFooter>
-                    <Button
-                        variant="outline"
+                    <AppleButton
+                        variant="secondary"
                         onClick={handleClose}
                         disabled={isLoading}
                     >
                         取消
-                    </Button>
-                    <Button
+                    </AppleButton>
+                    <AppleButton
+                        variant="primary"
                         onClick={handleUpdate}
+                        loading={isLoading}
                         disabled={isLoading}
                     >
-                        {isLoading ? '更新中...' : '保存修改'}
-                    </Button>
+                        保存修改
+                    </AppleButton>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

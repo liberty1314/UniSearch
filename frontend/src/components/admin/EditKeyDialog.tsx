@@ -10,9 +10,9 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { AppleInput } from '@/components/ui/AppleInput';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { AppleButton } from '@/components/ui/AppleButton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 /**
@@ -201,21 +201,17 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
                     </div>
 
                     {/* 每日搜索次数限制 */}
-                    <div className="space-y-2">
-                        <Label htmlFor="daily-search-limit">每日搜索次数限制</Label>
-                        <Input
-                            id="daily-search-limit"
-                            type="number"
-                            min="0"
-                            placeholder="0 表示不限制"
-                            value={dailySearchLimit}
-                            onChange={(e) => setDailySearchLimit(e.target.value)}
-                            disabled={isLoading}
-                        />
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                            0 表示不限制
-                        </p>
-                    </div>
+                    <AppleInput
+                        label="每日搜索次数限制"
+                        id="daily-search-limit"
+                        type="number"
+                        min="0"
+                        placeholder="0 表示不限制"
+                        value={dailySearchLimit}
+                        onChange={(e) => setDailySearchLimit(e.target.value)}
+                        disabled={isLoading}
+                        helperText="0 表示不限制"
+                    />
 
                     {/* 编辑方式选择 */}
                     <Tabs value={editMode} onValueChange={(value) => setEditMode(value as 'datetime' | 'extend')}>
@@ -226,63 +222,57 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
 
                         {/* 延长有效期模式 */}
                         <TabsContent value="extend" className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="extend-hours">延长小时数</Label>
-                                <Input
-                                    id="extend-hours"
-                                    type="number"
-                                    min="1"
-                                    placeholder="例如：720（30天）"
-                                    value={extendHours}
-                                    onChange={(e) => setExtendHours(e.target.value)}
-                                    disabled={isLoading}
-                                />
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    在当前过期时间基础上延长指定小时数
+                            <AppleInput
+                                label="延长小时数"
+                                id="extend-hours"
+                                type="number"
+                                min="1"
+                                placeholder="例如：720（30天）"
+                                value={extendHours}
+                                onChange={(e) => setExtendHours(e.target.value)}
+                                disabled={isLoading}
+                                helperText="在当前过期时间基础上延长指定小时数"
+                            />
+                            {extendHours && !isNaN(Number(extendHours)) && Number(extendHours) > 0 && (
+                                <p className="text-xs text-blue-600 dark:text-blue-400">
+                                    延长后过期时间: {formatDateTime(
+                                        new Date(new Date(apiKey.expires_at).getTime() + Number(extendHours) * 60 * 60 * 1000).toISOString()
+                                    )}
                                 </p>
-                                {extendHours && !isNaN(Number(extendHours)) && Number(extendHours) > 0 && (
-                                    <p className="text-xs text-blue-600 dark:text-blue-400">
-                                        延长后过期时间: {formatDateTime(
-                                            new Date(new Date(apiKey.expires_at).getTime() + Number(extendHours) * 60 * 60 * 1000).toISOString()
-                                        )}
-                                    </p>
-                                )}
-                            </div>
+                            )}
                         </TabsContent>
 
                         {/* 设置新时间模式 */}
                         <TabsContent value="datetime" className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="new-expires-at">新的过期时间</Label>
-                                <Input
-                                    id="new-expires-at"
-                                    type="datetime-local"
-                                    value={newExpiresAt}
-                                    onChange={(e) => setNewExpiresAt(e.target.value)}
-                                    disabled={isLoading}
-                                />
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    直接设置新的过期日期和时间
-                                </p>
-                            </div>
+                            <AppleInput
+                                label="新的过期时间"
+                                id="new-expires-at"
+                                type="datetime-local"
+                                value={newExpiresAt}
+                                onChange={(e) => setNewExpiresAt(e.target.value)}
+                                disabled={isLoading}
+                                helperText="直接设置新的过期日期和时间"
+                            />
                         </TabsContent>
                     </Tabs>
                 </div>
 
                 <DialogFooter>
-                    <Button
-                        variant="outline"
+                    <AppleButton
+                        variant="secondary"
                         onClick={handleClose}
                         disabled={isLoading}
                     >
                         取消
-                    </Button>
-                    <Button
+                    </AppleButton>
+                    <AppleButton
+                        variant="primary"
                         onClick={handleUpdate}
+                        loading={isLoading}
                         disabled={isLoading}
                     >
-                        {isLoading ? '更新中...' : '确认更新'}
-                    </Button>
+                        确认更新
+                    </AppleButton>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

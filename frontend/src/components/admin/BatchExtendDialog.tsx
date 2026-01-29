@@ -9,9 +9,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { AppleInput } from '@/components/ui/AppleInput';
+import { AppleButton } from '@/components/ui/AppleButton';
 import { Clock, Loader2 } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -177,26 +176,21 @@ export function BatchExtendDialog({
                     </div>
 
                     {/* 延长小时数输入 */}
-                    <div className="space-y-2">
-                        <Label htmlFor="extend-hours">延长小时数</Label>
-                        <Input
-                            id="extend-hours"
-                            type="number"
-                            min="1"
-                            placeholder="例如：720（30天）"
-                            value={extendHours}
-                            onChange={(e) => setExtendHours(e.target.value)}
-                            disabled={isLoading}
-                        />
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                            在当前过期时间基础上延长指定小时数
-                        </p>
-                        {extendHours && !isNaN(Number(extendHours)) && Number(extendHours) > 0 && (
-                            <p className="text-xs text-blue-600 dark:text-blue-400">
-                                将延长约 {calculateDays()} 天
-                            </p>
-                        )}
-                    </div>
+                    <AppleInput
+                        label="延长小时数"
+                        id="extend-hours"
+                        type="number"
+                        min="1"
+                        placeholder="例如：720（30天）"
+                        value={extendHours}
+                        onChange={(e) => setExtendHours(e.target.value)}
+                        disabled={isLoading}
+                        helperText={
+                            extendHours && !isNaN(Number(extendHours)) && Number(extendHours) > 0
+                                ? `将延长约 ${calculateDays()} 天`
+                                : "在当前过期时间基础上延长指定小时数"
+                        }
+                    />
 
                     {/* 操作进度提示 */}
                     {isLoading && (
@@ -210,26 +204,21 @@ export function BatchExtendDialog({
                 </div>
 
                 <DialogFooter>
-                    <Button
-                        variant="outline"
+                    <AppleButton
+                        variant="secondary"
                         onClick={handleClose}
                         disabled={isLoading}
                     >
                         取消
-                    </Button>
-                    <Button
+                    </AppleButton>
+                    <AppleButton
+                        variant="primary"
                         onClick={handleBatchExtendClick}
+                        loading={isLoading}
                         disabled={isLoading}
                     >
-                        {isLoading ? (
-                            <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                处理中...
-                            </>
-                        ) : (
-                            '确认延长'
-                        )}
-                    </Button>
+                        确认延长
+                    </AppleButton>
                 </DialogFooter>
             </DialogContent>
 

@@ -11,11 +11,13 @@ import (
 
 // SetupRouter 设置路由
 // 验证需求：4.1, 5.1, 6.1, 7.1, 8.1, 10.1, 10.3
-func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService) *gin.Engine {
+func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService, systemSettingsService *service.SystemSettingsService) *gin.Engine {
 	// 设置搜索服务
 	SetSearchService(searchService)
 	// 设置API Key服务
 	SetAPIKeyService(apiKeyService)
+	// 设置系统设置服务
+	SetSystemSettingsService(systemSettingsService)
 
 	// 创建控制器实例
 	authController := controller.NewAuthController(authService)
@@ -70,6 +72,10 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			auth.POST("/verify", VerifyHandler)
 			auth.POST("/logout", LogoutHandler)
 		}
+
+		// ========== 系统设置接口（公开接口）==========
+		// 获取系统设置（用于登录页面判断是否显示用户登录选项）
+		api.GET("/system-settings", GetSystemSettingsHandler)
 
 		// ========== 搜索接口（支持混合访问模式）==========
 		// 验证需求：10.1, 10.3
@@ -148,6 +154,10 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			admin.PUT("/plugins/:pluginName", UpdatePluginHandler())                   // 新增：更新插件
 			admin.DELETE("/plugins/:pluginName", DeletePluginHandler())                // 新增：删除插件
 			admin.POST("/test-url", TestURLHandler())                                  // 新增：测试URL连通性
+			
+			// 系统设置管理
+			admin.GET("/system-settings", GetSystemSettingsHandler)       // 获取系统设置
+			admin.PUT("/system-settings", UpdateSystemSettingsHandler)    // 更新系统设置
 		}
 
 		// 健康检查接口（支持 GET 和 HEAD 方法）

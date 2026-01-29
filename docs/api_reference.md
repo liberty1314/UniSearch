@@ -20,6 +20,12 @@ UniSearch 提供了一套完整的 RESTful API，支持网盘资源搜索、用�
 - 内容类型: `application/json`
 - 字符编码: `UTF-8`
 
+**CORS 支持**：
+- 允许所有来源（`Access-Control-Allow-Origin: *`）
+- 支持的 HTTP 方法：GET, POST, PUT, PATCH, DELETE, OPTIONS
+- 允许的请求头：Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-API-Key
+- 支持预检请求（OPTIONS）
+
 ---
 
 ## 错误处理
@@ -122,6 +128,8 @@ UniSearch 提供了一套完整的 RESTful API，支持网盘资源搜索、用�
 - `/api/search`: GET, POST
 - `/api/auth/*`: POST
 - `/api/admin/*`: GET, POST, PUT, PATCH, DELETE
+- `/api/user/*`: GET, POST, PUT, PATCH, DELETE
+- `/api/system/*`: GET, PUT
 
 ---
 
@@ -2115,6 +2123,254 @@ curl http://localhost:8888/api/health
 
 ---
 
+---
+
+## 系统设置 API
+
+系统设置 API 用于管理系统全局配置，提供细粒度的用户认证功能控制。
+
+### 1. 获取系统设置（公开接口）
+
+获取系统的全局设置信息，无需认证即可访问。主要用于前端判断是否显示用户登录/注册功能。
+
+**接口地址**: `/api/system-settings`  
+**请求方法**: `GET`  
+**是否需要认证**: 否（公开接口）
+
+**请求示例**:
+
+```bash
+curl -X GET http://localhost:8888/api/system-settings
+```
+
+**成功响应** (200 OK):
+
+```json
+{
+  "enable_user_auth": true,
+  "enable_user_login": true,
+  "enable_user_signup": true
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 描述 |
+|--------|------|------|
+| enable_user_auth | bool | 总开关：是否启用用户认证功能（true=启用，false=禁用） |
+| enable_user_login | bool | 是否启用用户登录功能（true=启用，false=禁用） |
+| enable_user_signup | bool | 是否启用用户注册功能（true=启用，false=禁用） |
+
+**开关层级关系**:
+```
+enable_user_auth (总开关)
+├── enable_user_login (登录开关)
+└── enable_user_signup (注册开关)
+```
+
+**使用场景**:
+- 前端页面加载时调用此接口，判断是否显示"登录"和"注册"按钮
+- 如果 `enable_user_auth` 为 `false`，前端隐藏所有用户认证相关功能，仅显示 API Key 登录
+- 如果 `enable_user_auth` 为 `true`：
+  - `enable_user_login` 为 `true` 时显示"登录"选项卡
+  - `enable_user_signup` 为 `true` 时显示"注册"选项卡
+  - API Key 登录始终可用
+
+**错误响应**:
+
+```json
+{
+  "error": "获取系统设置失败：数据库连接错误"
+}
+```
+
+**状态码**:
+- `200`: 获取成功
+- `500`: 服务器内部错误
+
+---
+
+### 2. 更新系统设置（管理员接口）
+
+更新系统的全局设置，仅管理员可访问。支持独立更新任意一个或多个开关。
+
+**接口地址**: `/api/admin/system-settings`  
+**请求方法**: `PUT`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| enable_user_auth | bool | 否 | 总开关：是否启用用户认证功能 |
+| enable_user_login | bool | 否 | 是否启用用户登录功能 |
+| enable_user_signup | bool | 否 | 是否启用用户注册功能 |
+
+**注意**: 至少需要提供一个字段，可以同时更新多个字段。
+
+**请求示例**:
+
+```bash
+# 示例 1: 仅更新总开关
+curl -X PUT http://localhost:8888/api/admin/system-settings \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enable_user_auth": false
+  }'
+
+# 示例 2: 仅更新登录开关
+curl -X PUT http://localhost:8888/api/admin/system-settings \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enable_user_login": false
+  }'
+
+# 示例 3: 同时更新多个开关
+curl -X PUT http://localhost:8888/api/admin/system-settings \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enable_user_auth": true,
+    "enable_user_login": true,
+    "enable_user_signup": false
+  }'
+```
+
+**成功响应** (200 OK):
+
+```json
+{
+  "message": "系统设置已更新",
+  "enable_user_auth": true,
+  "enable_user_login": true,
+  "enable_user_signup": false
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 描述 |
+|--------|------|------|
+| message | string | 操作结果消息 |
+| enable_user_auth | bool | 更新后的总开关状态 |
+| enable_user_login | bool | 更新后的登录开关状态 |
+| enable_user_signup | bool | 更新后的注册开关状态 |
+
+**错误响应**:
+
+- **400 Bad Request** - 参数错误（未提供任何字段）
+```json
+{
+  "error": "请求参数错误：至少需要提供一个设置字段"
+}
+```
+
+- **400 Bad Request** - JSON 格式错误
+```json
+{
+  "error": "请求参数错误：JSON 格式不正确"
+}
+```
+
+- **401 Unauthorized** - 未授权
+```json
+{
+  "error": "未授权：需要管理员令牌"
+}
+```
+
+- **403 Forbidden** - 权限不足
+```json
+{
+  "error": "权限不足：需要管理员权限"
+}
+```
+
+- **500 Internal Server Error** - 服务器错误
+```json
+{
+  "error": "更新系统设置失败：数据库写入错误"
+}
+```
+
+**状态码**:
+- `200`: 更新成功
+- `400`: 参数错误（未提供任何字段或 JSON 格式错误）
+- `401`: 未授权
+- `403`: 权限不足
+- `500`: 服务器内部错误
+
+**参数验证规则**:
+- 至少需要提供一个字段（`enable_user_auth`、`enable_user_login` 或 `enable_user_signup`）
+- 所有字段都是可选的，但不能全部省略
+- 字段必须是布尔类型（`true` 或 `false`），不接受字符串 `"true"` 或 `"false"`
+- 后端使用指针类型进行严格验证，确保客户端明确指定了设置值
+
+**技术实现细节**:
+```go
+// 后端使用指针类型接收参数
+type UpdateSettingsRequest struct {
+    EnableUserAuth   *bool `json:"enable_user_auth"`
+    EnableUserLogin  *bool `json:"enable_user_login"`
+    EnableUserSignup *bool `json:"enable_user_signup"`
+}
+
+// 检查至少提供了一个字段
+if req.EnableUserAuth == nil && req.EnableUserLogin == nil && req.EnableUserSignup == nil {
+    return error("至少需要提供一个设置字段")
+}
+
+// 获取当前设置
+currentSettings := GetSettings()
+
+// 确定主开关的值
+enableUserAuth := currentSettings.EnableUserAuth
+if req.EnableUserAuth != nil {
+    enableUserAuth = *req.EnableUserAuth
+}
+
+// 更新设置（未提供的字段保持原值）
+UpdateSettings(enableUserAuth, req.EnableUserLogin, req.EnableUserSignup)
+```
+
+这种设计可以区分以下情况：
+1. **未提供字段**: 保持原值不变
+2. **提供 null 值**: 保持原值不变（指针为 nil）
+3. **提供明确值**: 更新为新值
+
+**业务逻辑说明**:
+
+1. **总开关优先级最高**:
+   - 当 `enable_user_auth` 为 `false` 时，无论 `enable_user_login` 和 `enable_user_signup` 的值如何，用户认证功能都会被禁用
+   - 前端应该在总开关关闭时禁用登录和注册开关的操作
+
+2. **独立控制子功能**:
+   - 当 `enable_user_auth` 为 `true` 时，可以独立控制登录和注册功能
+   - 可以只开启登录而关闭注册，或反之
+
+3. **灵活的组合策略**:
+   - 企业内部部署：关闭总开关，仅使用 API Key
+   - 仅允许登录：开启总开关和登录开关，关闭注册开关
+   - 仅允许注册：开启总开关和注册开关，关闭登录开关
+   - 公开服务：开启所有开关
+
+**使用场景**:
+- 管理员在后台管理页面切换用户认证功能的开关
+- 系统维护时临时禁用用户注册或登录功能
+- 根据业务需求灵活调整访问策略
+- 根据业务需求动态控制用户认证功能的可用性
+
+**重要说明**:
+- 禁用用户认证功能后，前端将隐藏登录/注册入口
+- 已登录的用户不受影响，仍可继续使用系统
+- 管理员登录功能不受此设置影响，始终可用
+- 设置更改后立即生效，无需重启服务
+
+---
+
 ## 联系方式
 
 如有问题或建议，请通过以下方式联系：
@@ -3802,5 +4058,250 @@ Content-Type: application/json
 - 批量操作会跳过不符合条件的用户
 - 返回成功和失败的用户 ID 列表
 - 使用事务确保数据一致性
+
+---
+
+## 系统设置接口
+
+### 获取系统设置（公开接口）
+
+获取系统设置信息，用于前端判断是否显示用户登录注册功能。
+
+**接口地址**: `/api/system-settings`  
+**请求方法**: `GET`  
+**是否需要认证**: 否（公开接口）
+
+#### 请求示例
+
+```bash
+curl -X GET http://localhost:8888/api/system-settings
+```
+
+#### 成功响应 (200 OK)
+
+```json
+{
+  "enable_user_auth": true,
+  "enable_user_login": true,
+  "enable_user_signup": true
+}
+```
+
+**响应字段说明**:
+- `enable_user_auth` (boolean): 是否启用用户登录注册功能（主开关）
+  - `true`: 启用，登录页面显示用户认证相关选项
+  - `false`: 禁用，登录页面仅显示 API Key 登录选项
+- `enable_user_login` (boolean): 是否启用用户登录功能（子选项）
+  - 仅在 `enable_user_auth` 为 `true` 时生效
+  - `true`: 显示用户名密码登录选项
+  - `false`: 隐藏用户名密码登录选项
+- `enable_user_signup` (boolean): 是否启用用户注册功能（子选项）
+  - 仅在 `enable_user_auth` 为 `true` 时生效
+  - `true`: 显示用户注册选项
+  - `false`: 隐藏用户注册选项
+
+#### 错误响应
+
+**500 Internal Server Error** - 服务器内部错误
+
+```json
+{
+  "error": "获取系统设置失败：数据库连接错误"
+}
+```
+
+---
+
+### 获取系统设置（管理员接口）
+
+管理员获取系统设置信息。
+
+**接口地址**: `/api/admin/system-settings`  
+**请求方法**: `GET`  
+**是否需要认证**: 是（需要管理员 Token）
+
+#### 请求示例
+
+```bash
+curl -X GET http://localhost:8888/api/admin/system-settings \
+  -H "Authorization: Bearer <admin_token>"
+```
+
+#### 成功响应 (200 OK)
+
+```json
+{
+  "enable_user_auth": true,
+  "enable_user_login": true,
+  "enable_user_signup": true
+}
+```
+
+#### 错误响应
+
+**401 Unauthorized** - 未授权
+
+```json
+{
+  "error": "未授权：需要管理员令牌",
+  "code": "ADMIN_TOKEN_REQUIRED"
+}
+```
+
+**500 Internal Server Error** - 服务器内部错误
+
+```json
+{
+  "error": "获取系统设置失败：数据库连接错误"
+}
+```
+
+---
+
+### 更新系统设置
+
+管理员更新系统设置。支持单独更新主开关或子选项。
+
+**接口地址**: `/api/admin/system-settings`  
+**请求方法**: `PUT`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| enable_user_auth | boolean | 否 | 是否启用用户登录注册功能（主开关） |
+| enable_user_login | boolean | 否 | 是否启用用户登录功能（子选项） |
+| enable_user_signup | boolean | 否 | 是否启用用户注册功能（子选项） |
+
+**注意**: 至少需要提供一个参数。
+
+#### 请求示例
+
+```bash
+# 启用用户登录注册功能（主开关）
+curl -X PUT http://localhost:8888/api/admin/system-settings \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enable_user_auth": true
+  }'
+
+# 禁用用户登录注册功能（仅保留 API Key 登录）
+curl -X PUT http://localhost:8888/api/admin/system-settings \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enable_user_auth": false
+  }'
+
+# 单独控制登录功能（禁用登录，保留注册）
+curl -X PUT http://localhost:8888/api/admin/system-settings \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enable_user_login": false
+  }'
+
+# 单独控制注册功能（禁用注册，保留登录）
+curl -X PUT http://localhost:8888/api/admin/system-settings \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enable_user_signup": false
+  }'
+
+# 同时更新多个选项
+curl -X PUT http://localhost:8888/api/admin/system-settings \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enable_user_auth": true,
+    "enable_user_login": true,
+    "enable_user_signup": false
+  }'
+```
+
+#### 成功响应 (200 OK)
+
+```json
+{
+  "message": "系统设置已更新",
+  "enable_user_auth": true,
+  "enable_user_login": true,
+  "enable_user_signup": false
+}
+```
+
+**响应字段说明**:
+- `message` (string): 操作结果消息
+- `enable_user_auth` (boolean): 更新后的主开关值
+- `enable_user_login` (boolean): 更新后的登录功能开关值
+- `enable_user_signup` (boolean): 更新后的注册功能开关值
+
+#### 错误响应
+
+**400 Bad Request** - 请求参数错误
+
+```json
+{
+  "error": "请求参数错误：至少需要提供一个设置字段"
+}
+```
+
+**401 Unauthorized** - 未授权
+
+```json
+{
+  "error": "未授权：需要管理员令牌",
+  "code": "ADMIN_TOKEN_REQUIRED"
+}
+```
+
+**500 Internal Server Error** - 服务器内部错误
+
+```json
+{
+  "error": "更新系统设置失败：数据库写入错误"
+}
+```
+
+---
+
+## 系统设置业务规则
+
+### 功能说明
+- 系统设置用于控制前端登录页面的显示行为
+- **主开关** (`enable_user_auth`):
+  - 当为 `true` 时，启用用户认证功能，子选项生效
+  - 当为 `false` 时，禁用所有用户认证功能，登录页面仅显示 API Key 登录选项
+- **子选项** (`enable_user_login` 和 `enable_user_signup`):
+  - 仅在主开关为 `true` 时生效
+  - 可以单独控制登录和注册功能的显示
+
+### 显示逻辑
+
+| enable_user_auth | enable_user_login | enable_user_signup | 登录页面显示 |
+|------------------|-------------------|-------------------|-------------|
+| false | * | * | 仅显示 API Key 登录 |
+| true | true | true | 登录 + 注册 + API Key |
+| true | true | false | 登录 + API Key |
+| true | false | true | 注册 + API Key |
+| true | false | false | 仅显示 API Key 登录 |
+
+### 权限控制
+- 获取系统设置（公开接口）：无需认证，任何人都可以访问
+- 更新系统设置：需要管理员权限
+
+### 默认值
+- 首次部署时，所有开关默认为 `true`（全部启用）
+- 如果数据库中没有设置记录，系统会自动创建默认设置
+
+### 使用场景
+1. **完全开放**：启用所有功能，用户可以自由注册和登录
+2. **仅登录**：禁用注册，仅允许已有用户登录（适合封闭系统）
+3. **仅注册**：禁用登录，仅允许新用户注册（适合特殊场景）
+4. **仅 API Key**：禁用所有用户认证，仅通过 API Key 访问（适合企业内部）
 
 ---

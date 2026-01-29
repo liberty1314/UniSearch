@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { StatsCard } from './StatsCard';
 import { PluginManageDialog } from './PluginManageDialog';
+import { ApplePluginTable } from './ApplePluginTable';
 import {
     Activity,
     RefreshCw,
@@ -196,56 +196,10 @@ export const SystemInfoView: React.FC = () => {
                     </div>
                 </CardHeader>
                 <CardContent className="p-6">
-                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                    <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">插件名称</TableHead>
-                                    <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">优先级</TableHead>
-                                    <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">状态</TableHead>
-                                    <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">描述</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {systemInfo.plugins
-                                    .sort((a, b) => a.priority - b.priority)
-                                    .map((plugin) => (
-                                        <TableRow
-                                            key={plugin.name}
-                                            className="transition-all duration-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/50"
-                                        >
-                                            <TableCell className="font-medium text-slate-700 dark:text-slate-300">
-                                                {plugin.name}
-                                            </TableCell>
-                                            <TableCell className="text-slate-600 dark:text-slate-400">
-                                                <Badge variant="outline" className="font-mono">
-                                                    {plugin.priority}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge
-                                                    variant={plugin.status === 'active' ? 'success' : 'outline'}
-                                                    className="font-medium"
-                                                >
-                                                    <div className="flex items-center gap-1.5">
-                                                        <div className={`w-1.5 h-1.5 rounded-full ${plugin.status === 'active'
-                                                                ? 'bg-green-500'
-                                                                : plugin.status === 'inactive'
-                                                                    ? 'bg-gray-400'
-                                                                    : 'bg-red-500'
-                                                            }`} />
-                                                        {plugin.status === 'active' ? '活跃' : plugin.status === 'inactive' ? '不活跃' : '错误'}
-                                                    </div>
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-slate-600 dark:text-slate-400">
-                                                {plugin.description}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                            </TableBody>
-                        </Table>
-                    </div>
+                    <ApplePluginTable
+                        plugins={systemInfo.plugins}
+                        isLoading={isLoading}
+                    />
                 </CardContent>
             </Card>
 

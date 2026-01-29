@@ -1,70 +1,16 @@
-# UniSearch - 网盘资源搜索系统
+# UniSearch - 网盘资源聚合搜索系统
 
 <div align="center">
 
 [![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![React Version](https://img.shields.io/badge/React-18.3-61DAFB?style=flat&logo=react)](https://react.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/fish2018/UniSearch/pulls)
 
 一个高性能的网盘资源聚合搜索系统，支持多渠道搜索、智能缓存和异步插件架构
 
-[功能特性](#-功能特性) • [快速开始](#-快速开始) • [部署指南](#-生产部署) • [开发文档](#-开发文档)
+[功能特性](#-功能特性) • [快速开始](#-快速开始) • [技术架构](#-技术架构) • [开发文档](#-开发文档)
 
 </div>
-
----
-
-## 🎉 最新更新 (v3.0.0)
-
-<div align="center">
-
-### 🔄 MySQL 数据库迁移
-API Key 存储迁移到 MySQL • 用户权限体系 • API Key 绑定功能 • 混合访问模式
-
-### 👥 用户管理系统
-用户注册/登录 • JWT Token 认证 • API Key 自助生成 • 每日搜索限制
-
-### 🔐 增强的安全性
-Bcrypt 密码加密 • 数据库事务支持 • SQL 注入防护 • 外键约束
-
-[查看完整更新日志](CHANGELOG.md) • [MySQL 迁移 API 文档](docs/mysql_migration_api.md)
-
-</div>
-
----
-
-## 🎉 最新更新 (v2.3.0)
-
-<div align="center">
-
-### 🔐 刷新令牌与"记住我"功能
-30天自动登录 • 设备指纹验证 • AES-256-GCM加密 • Token轮转机制
-
-### 🔌 插件管理系统
-可视化管理 • 动态添加/编辑/删除 • 优先级设置 • 状态监控
-
-### 📊 API使用次数限制
-每日搜索限制 • 实时统计 • 批量管理 • 自动检查
-
-[查看完整更新日志](CHANGELOG.md)
-
-</div>
-
----
-
-## 📖 目录
-
-- [功能特性](#-功能特性)
-- [技术架构](#-技术架构)
-- [快速开始](#-快速开始)
-  - [本地开发](#本地开发)
-  - [Docker部署](#docker部署)
-- [生产部署](#-生产部署)
-- [项目结构](#-项目结构)
-- [开发文档](#-开发文档)
-- [常见问题](#-常见问题)
-- [贡献指南](#-贡献指南)
 
 ---
 
@@ -88,10 +34,57 @@ Bcrypt 密码加密 • 数据库事务支持 • SQL 注入防护 • 外键约
   - 网盘类型自动识别与分类
   - 支持 12 种网盘类型识别
 
+### 👥 用户管理系统
+
+- **用户认证**
+  - 用户注册/登录
+  - JWT Token 认证（Access Token + Refresh Token）
+  - "记住我"功能（30天自动登录）
+  - 设备指纹验证
+  - API Key 登录支持
+
+- **权限管理**
+  - 管理员/普通用户角色
+  - 基于角色的访问控制
+  - API Key 绑定与管理
+
+### 🛡️ 管理后台
+
+- **用户管理**
+  - 用户列表查看与搜索
+  - 创建、编辑、删除用户
+  - 批量修改用户角色
+  - 用户状态管理（启用/禁用）
+  - 密码重置功能
+
+- **API Key 管理**
+  - API Key 生成与删除
+  - 批量创建和延长有效期
+  - 使用统计与限额管理
+  - 每日搜索次数限制
+  - 过期状态监控
+
+- **插件管理**
+  - 可视化插件管理界面
+  - 动态添加/编辑/删除插件
+  - 插件连通性测试
+  - 优先级设置
+
+- **系统设置**
+  - 用户认证功能开关
+  - 实时配置更新
+  - 可视化设置界面
+  - 配置状态预览
+
+- **系统监控**
+  - 插件状态监控
+  - 系统信息查看
+  - 统计数据展示
+
 ### 🎨 用户体验
 
 - **现代化 UI 设计**
-  - 苹果风格界面设计
+  - Apple 风格界面设计
   - 响应式布局（支持移动端）
   - 流畅动画与交互
 
@@ -163,11 +156,16 @@ Bcrypt 密码加密 • 数据库事务支持 • SQL 注入防护 • 外键约
         │(APIKeyService)│          └─────────────────┴───▶│ 内存缓存│    │磁盘缓存│
         └──────────────┘                                  └────────┘    └────────┘
                 │
-                ▼
-        ┌──────────────┐
-        │  MySQL 8.0   │
-        │  (GORM ORM)  │
-        └──────────────┘
+                ├──────────────┐
+                ▼              ▼
+        ┌──────────────┐  ┌──────────────┐
+        │  系统设置    │  │  MySQL 8.0   │
+        │(SettingsService)│  │  (GORM ORM)  │
+        └──────────────┘  └──────────────┘
+                              │
+                              ├─ users 表
+                              ├─ api_keys 表
+                              └─ system_settings 表
 ```
 
 ---
@@ -179,7 +177,7 @@ Bcrypt 密码加密 • 数据库事务支持 • SQL 注入防护 • 外键约
 - **Go**: 1.23 或更高版本
 - **Node.js**: 18 或更高版本
 - **pnpm**: 最新版本
-- **MySQL**: 8.0 或更高版本（v3.0.0 新增）
+- **MySQL**: 8.0 或更高版本
 - **Docker** (可选): 用于容器化部署
 
 ### 本地开发
@@ -191,29 +189,22 @@ Bcrypt 密码加密 • 数据库事务支持 • SQL 注入防护 • 外键约
 git clone https://github.com/fish2018/UniSearch.git
 cd UniSearch
 
-# 配置数据库（v3.0.0 新增）
-cp backend/.env.example backend/.env
-# 编辑 backend/.env 文件，配置 MySQL 连接信息：
-# DB_HOST=localhost
-# DB_PORT=3306
-# DB_USER=root
-# DB_PASSWORD=your_password
-# DB_NAME=unisearch
-# JWT_SECRET=your_jwt_secret_key_here
+# 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，配置数据库连接信息
 
-# 启动 MySQL 数据库（如果未安装，请先安装 MySQL 8.0+）
+# 启动 MySQL 数据库
 # macOS: brew install mysql && brew services start mysql
 # Ubuntu: sudo apt install mysql-server && sudo systemctl start mysql
-# Windows: 下载并安装 MySQL 8.0+ 安装包
 
 # 创建数据库
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS unisearch CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 # 启动所有服务（前端 + 后端）
-./scripts/start.sh
+./scripts/local.sh
 
 # 停止所有服务
-./scripts/stop.sh
+# 按 Ctrl+C 停止
 ```
 
 **启动脚本功能：**
@@ -222,17 +213,11 @@ mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS unisearch CHARACTER SET utf8m
 - ✅ 自动执行数据库迁移
 - ✅ 并行启动前后端服务
 - ✅ 实时显示服务状态
-- ✅ 生成日志文件（`logs/` 目录）
 
 **首次启动说明：**
-- 系统会自动创建数据库表结构（users 和 api_keys 表）
+- 系统会自动创建数据库表结构
 - 自动创建默认管理员账户（admin/admin）
-- 如果存在 `backend/api_keys.json` 文件，会自动迁移数据到 MySQL
-- 迁移完成后，原 JSON 文件会被保留作为备份
-
-**数据库表结构：**
-- `users` 表：存储用户信息（用户名、密码哈希、角色）
-- `api_keys` 表：存储 API Key 信息（Key、绑定用户、使用统计、限额配置）
+- 自动创建默认系统设置
 
 #### 方式二：手动启动
 
@@ -255,13 +240,12 @@ pnpm run dev
 - 🌐 前端应用: http://localhost:5173
 - 🔌 后端 API: http://localhost:8888
 - 📊 健康检查: http://localhost:8888/api/health
+- 🛡️ 管理后台: http://localhost:5173/admin/login
 
-### Docker部署
-
-#### 本地开发环境
+### Docker 部署
 
 ```bash
-# 使用 Docker Compose 启动（包含 MySQL 和应用）
+# 使用 Docker Compose 启动
 docker-compose up -d
 
 # 查看日志
@@ -269,306 +253,6 @@ docker-compose logs -f
 
 # 停止服务
 docker-compose down
-
-# 停止服务并删除数据卷（清空数据库）
-docker-compose down -v
-```
-
-**Docker Compose 配置说明：**
-- MySQL 服务：端口 3306，数据持久化到 `mysql_data` 卷
-- 应用服务：端口 3000（前端）和 8888（后端）
-- 健康检查：确保 MySQL 启动后再启动应用
-- 自动执行数据库迁移和默认管理员创建
-
-#### 生产环境镜像
-
-```bash
-# 使用预构建镜像（包含前后端）
-docker run -d \
-  --name unisearch \
-  -p 3000:3000 \
-  -p 8888:8888 \
-  -e DB_HOST=your_mysql_host \
-  -e DB_PORT=3306 \
-  -e DB_USER=root \
-  -e DB_PASSWORD=your_password \
-  -e DB_NAME=unisearch \
-  -e JWT_SECRET=your_jwt_secret \
-  -v unisearch-cache:/app/cache \
-  liberty159/unisearch:latest
-
-# 注意：需要单独部署 MySQL 数据库
-```
-
----
-
-## 🌐 生产部署
-
-### ⚠️ 重要提示
-
-**中国大陆服务器部署需要 ICP 备案！**
-
-- 未备案域名无法使用 80/443 端口
-- 备案周期：7-20 个工作日
-- 详细指南：📖 [ICP备案完整指南](docs/ICP_BEIAN_GUIDE.md)
-
-### 部署环境要求
-
-| 项目 | 要求 |
-|------|------|
-| **操作系统** | Ubuntu 24.04 LTS (64-bit) |
-| **内存** | 2GB+ |
-| **磁盘** | 20GB+ |
-| **网络** | 公网 IP + 域名 |
-| **软件** | Docker + Docker Compose |
-| **数据库** | MySQL 8.0+ (可使用 Docker 部署) |
-
-### 快速部署流程
-
-#### 1️⃣ 构建 Docker 镜像（可选）
-
-```bash
-# 构建、推送并在本地运行（默认）
-./scripts/build.sh
-
-# 仅构建和推送，不在本地运行
-./scripts/build.sh --no-run
-
-# 自定义配置
-./scripts/build.sh <username> <image> <version>
-
-# 自定义配置且不在本地运行
-./scripts/build.sh --no-run <username> <image> <version>
-```
-
-**构建脚本功能：**
-- ✅ 多架构构建（linux/amd64, linux/arm64）
-- ✅ 自动推送到 Docker Hub
-- ✅ 验证镜像可用性（带重试机制）
-- ✅ 自动拉取并在本地运行 latest 镜像
-- ✅ 自动配置管理员密码
-
-**本地运行信息：**
-- 容器名称：`unisearch-local`
-- 前端地址：http://localhost:3000
-- 后端地址：http://localhost:8888
-- 管理后台：http://localhost:3000/admin/login
-
-**注意事项：**
-- 构建完成后，Docker Hub 可能需要 1-2 分钟同步镜像
-- 如果验证失败，请等待片刻后使用验证脚本检查
-- 即使验证失败，镜像通常已成功推送
-
-#### 2️⃣ 服务器初始化
-
-```bash
-# 初始化服务器环境（首次部署必须执行）
-sudo ./scripts/deploy.sh init
-```
-
-**初始化操作：**
-- 安装 Docker 和 Docker Compose（使用清华镜像源）
-- 安装并配置 Nginx
-- 配置 UFW 防火墙
-- 创建必要的目录和配置文件
-- 部署 MySQL 数据库容器（如果使用 Docker 部署）
-
-**重要提示：**
-- 建议使用 `git clone` 方式部署项目，以支持自动配置同步
-- 如果使用其他方式部署，需要手动同步配置文件
-- MySQL 可以选择 Docker 部署或独立部署
-
-#### 3️⃣ 配置环境变量
-
-**生成管理员密码哈希：**
-```bash
-# 使用脚本生成密码哈希
-./scripts/gen_admin_password.sh "你的密码"
-
-# 示例输出：
-# ✓ 密码哈希生成成功！
-# ADMIN_PASSWORD_HASH=$2a$10$RGtHe7PyEsFfnffZ9JaxJeQ9LwoiSOGpJaxeo1kqtwfpHcVRPiFTS
-```
-
-**配置生产环境变量：**
-```bash
-# 1. 复制配置模板
-cp deploy/.env.local.example deploy/.env.local
-
-# 2. 编辑配置文件
-vim deploy/.env.local
-
-# 3. 配置必要的环境变量
-ADMIN_PASSWORD_HASH=$2a$10$RGtHe7PyEsFfnffZ9JaxJeQ9LwoiSOGpJaxeo1kqtwfpHcadPiFTS
-DB_HOST=mysql                    # MySQL 主机地址（Docker 内部使用服务名）
-DB_PORT=3306                     # MySQL 端口
-DB_USER=root                     # MySQL 用户名
-DB_PASSWORD=your_mysql_password  # MySQL 密码
-DB_NAME=unisearch                # 数据库名称
-JWT_SECRET=your_jwt_secret_key   # JWT 密钥（建议使用随机生成的长字符串）
-
-# 4. 设置文件权限（重要！）
-chmod 600 deploy/.env.local
-```
-
-⚠️ **安全提示**：
-- 密码哈希和数据库密码必须配置在 `deploy/.env.local` 文件中
-- JWT_SECRET 应使用强随机字符串（至少 32 字符）
-- 不要将 `.env.local` 文件提交到 Git 仓库
-- 详细安全指南请参考：[安全部署指南](docs/SECURITY_GUIDE.md)
-
-#### 4️⃣ 启动服务
-
-```bash
-# 启动应用
-sudo ./scripts/deploy.sh start
-
-# 查看状态
-sudo ./scripts/deploy.sh status
-
-# 查看日志
-sudo ./scripts/deploy.sh logs
-```
-
-#### 5️⃣ 设置自动更新（推荐）
-
-```bash
-# 设置定时自动同步配置文件
-sudo ./scripts/deploy.sh setup-auto-sync
-```
-
-**自动更新机制：**
-- ✅ Watchtower 每小时自动检查并更新 Docker 镜像
-- ✅ 定时任务每小时从 Git 仓库同步配置文件
-- ✅ 配置变更时自动重启服务应用新配置
-- ✅ 完全自动化，无需手动干预
-
-**工作流程：**
-1. 本地修改代码并推送到 Git 仓库
-2. 本地构建并推送 Docker 镜像到 Docker Hub
-3. 服务器自动检测并更新镜像和配置
-4. 自动重启服务应用最新版本
-
-**注意事项：**
-- 确保项目是通过 `git clone` 部署的
-- 确保服务器可以访问 Git 仓库
-- 服务器上的本地修改可能会被覆盖
-
-#### 6️⃣ SSL 证书配置
-
-**备案期间（临时访问）：**
-```bash
-# 使用 8080 端口临时部署
-sudo ./scripts/ssl.sh temp
-
-# 访问地址
-http://your-ip:8080
-http://your-domain.com:8080
-```
-
-**备案完成后（正式上线）：**
-```bash
-# 检查备案状态
-sudo ./scripts/ssl.sh check
-
-# 申请 Let's Encrypt SSL 证书
-sudo ./scripts/ssl.sh apply
-
-# 访问地址
-https://your-domain.com
-```
-
-### 服务管理命令
-
-```bash
-# 启动服务
-sudo ./scripts/deploy.sh start
-
-# 停止服务
-sudo ./scripts/deploy.sh stop
-
-# 重启服务
-sudo ./scripts/deploy.sh restart
-
-# 手动更新（镜像+配置）
-sudo ./scripts/deploy.sh update
-
-# 仅同步配置文件
-sudo ./scripts/deploy.sh sync
-
-# 设置自动同步
-sudo ./scripts/deploy.sh setup-auto-sync
-
-# 查看状态
-sudo ./scripts/deploy.sh status
-
-# 查看日志
-sudo ./scripts/deploy.sh logs
-
-# 备份数据
-sudo ./scripts/deploy.sh backup
-
-# 从备份恢复
-sudo ./scripts/deploy.sh restore <backup_file>
-```
-
-### SSL 证书管理
-
-```bash
-# 检查备案状态
-sudo ./scripts/ssl.sh check
-
-# 临时 8080 部署
-sudo ./scripts/ssl.sh temp
-
-# 申请证书（HTTP 验证）
-sudo ./scripts/ssl.sh apply
-
-# 申请证书（DNS 验证）
-sudo ./scripts/ssl.sh dns
-
-# 手动续期
-sudo ./scripts/ssl.sh renew
-```
-
-### 部署架构
-
-```
-Internet
-   │
-   ▼
-┌─────────────────────┐
-│  Nginx (80/443)     │ ◀── SSL 证书（Let's Encrypt）
-│  反向代理           │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│  Docker Container   │
-│  ┌─────────────────┐│
-│  │ 前端 (3000)     ││
-│  └─────────────────┘│
-│  ┌─────────────────┐│
-│  │ 后端 (8888)     ││
-│  │  - JWT Auth    ││
-│  │  - API Gateway ││
-│  └─────────────────┘│
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│  MySQL Container    │
-│  - users 表         │
-│  - api_keys 表      │
-└─────────────────────┘
-           │
-           ▼
-┌─────────────────────┐
-│  数据卷             │
-│  - mysql_data/     │
-│  - cache/          │
-│  - logs/           │
-└─────────────────────┘
 ```
 
 ---
@@ -579,86 +263,38 @@ Internet
 UniSearch/
 ├── backend/                    # Go 后端服务
 │   ├── main.go                # 主程序入口
-│   ├── .env.example           # 环境变量配置模板
 │   ├── api/                   # API 路由和处理器
-│   │   ├── handler.go         # 请求处理器
-│   │   ├── middleware.go      # 中间件
+│   │   ├── controller/        # 控制器层
+│   │   ├── middleware/        # 中间件
 │   │   └── router.go          # 路由配置
 │   ├── config/                # 配置管理
-│   │   └── config.go          # 环境变量读取
-│   ├── controller/            # 控制器层
-│   │   ├── auth_controller.go # 用户认证控制器
-│   │   ├── apikey_controller.go # API Key 管理控制器
-│   │   └── search_controller.go # 搜索控制器
 │   ├── database/              # 数据库层
 │   │   ├── connection.go      # 数据库连接
 │   │   ├── migration.go       # 数据库迁移
 │   │   └── seed.go            # 默认数据初始化
-│   ├── middleware/            # 中间件层
-│   │   ├── jwt_auth.go        # JWT 认证中间件
-│   │   └── admin_auth.go      # 管理员权限中间件
-│   ├── migration/             # 数据迁移
-│   │   └── json_migrator.go   # JSON 数据迁移
-│   ├── models/                # 数据模型
-│   │   ├── user.go            # 用户模型
-│   │   └── apikey.go          # API Key 模型
+│   ├── model/                 # 数据模型
 │   ├── plugin/                # 搜索插件
-│   │   ├── plugin.go          # 插件接口定义
-│   │   ├── baseasyncplugin.go # 异步插件基类
-│   │   ├── hdr4k/            # HDR4K 插件
-│   │   ├── susu/             # SuSu 插件
-│   │   └── ...               # 更多插件
 │   ├── service/               # 业务逻辑层
-│   │   ├── auth_service.go    # 用户认证服务
-│   │   ├── apikey_service.go  # API Key 管理服务
-│   │   ├── search_service.go  # 搜索服务
-│   │   └── cache_integration.go # 缓存集成
-│   └── utils/                 # 工具库
-│       ├── crypto.go          # 密码加密
-│       ├── jwt.go             # JWT Token 生成和验证
-│       ├── keygen.go          # API Key 生成器
-│       ├── cache/            # 缓存系统
-│       └── pool/             # 工作池
+│   └── util/                  # 工具库
 │
 ├── frontend/                  # React 前端应用
 │   ├── src/
 │   │   ├── pages/            # 页面组件
-│   │   │   ├── Home.tsx      # 首页
-│   │   │   ├── Login.tsx     # 登录页面
-│   │   │   └── Admin.tsx     # 管理后台
 │   │   ├── components/       # UI 组件
-│   │   │   ├── SearchBox.tsx # 搜索框
-│   │   │   ├── SearchResults.tsx # 结果展示
-│   │   │   └── ...
 │   │   ├── stores/           # 状态管理
 │   │   ├── services/         # API 服务
 │   │   └── lib/              # 工具函数
-│   ├── package.json
-│   └── vite.config.ts
-│
-├── deploy/                    # 生产部署配置
-│   ├── docker-compose.prod.yml # 生产环境 Docker Compose
-│   ├── .env.local.example    # 环境变量配置模板
-│   └── nginx/
-│       ├── http.conf         # HTTP 配置
-│       └── https.conf        # HTTPS 配置
-│
-├── scripts/                   # 自动化脚本
-│   ├── start.sh              # 本地开发启动
-│   ├── stop.sh               # 本地开发停止
-│   ├── build.sh              # Docker 镜像构建
-│   ├── deploy.sh             # 服务器部署管理
-│   ├── ssl.sh                # SSL 证书管理
-│   └── gen_admin_password.sh # 管理员密码生成
+│   └── package.json
 │
 ├── docs/                      # 项目文档
-│   ├── mysql_migration_api.md # MySQL 迁移 API 文档
 │   ├── api_reference.md      # API 接口文档
-│   ├── SCRIPTS_GUIDE.md      # 脚本使用指南
-│   ├── ICP_BEIAN_GUIDE.md    # ICP备案指南
-│   ├── SECURITY_GUIDE.md     # 安全部署指南
-│   ├── 系统开发设计文档.md    # 系统设计文档
-│   └── 插件开发指南.md        # 插件开发指南
+│   ├── admin_guide.md        # 管理后台使用指南
+│   └── readme_2601.md        # 开发日志
+│
+├── scripts/                   # 自动化脚本
+│   ├── local.sh              # 本地开发启动
+│   ├── build.sh              # Docker 镜像构建
+│   └── deploy.sh             # 服务器部署管理
 │
 ├── docker-compose.yml         # 本地开发 Docker 配置
 └── README.md                  # 本文档
@@ -672,211 +308,16 @@ UniSearch/
 
 | 文档 | 说明 |
 |------|------|
-| [MySQL 迁移 API 文档](docs/mysql_migration_api.md) | v3.0.0 新增的用户管理和 API Key 管理接口 |
-| [API 接口文档](docs/api_reference.md) | 完整的 API 接口文档（包含搜索、插件管理等） |
-| [脚本使用指南](docs/SCRIPTS_GUIDE.md) | 详细的脚本命令和使用说明 |
-| [系统设计文档](docs/系统开发设计文档.md) | 架构设计和技术实现详解 |
-| [插件开发指南](docs/插件开发指南.md) | 如何开发自定义搜索插件 |
-| [ICP备案指南](docs/ICP_BEIAN_GUIDE.md) | 中国大陆服务器备案流程 |
-| [安全部署指南](docs/SECURITY_GUIDE.md) | 生产环境安全配置指南 |
+| [管理后台使用指南](docs/admin_guide.md) | 管理后台功能详解和操作指南 |
+| [API 接口文档](docs/api_reference.md) | 完整的 API 接口文档 |
+| [开发日志](docs/readme_2601.md) | 2026年01月开发记录 |
 
-### API 文档
+### 快速链接
 
-#### 用户认证接口（v3.0.0 新增）
-
-**用户注册**
-```http
-POST /api/auth/register
-Content-Type: application/json
-
-{
-  "username": "testuser",
-  "password": "password123"
-}
-```
-
-**响应示例：**
-```json
-{
-  "code": 200,
-  "message": "注册成功",
-  "data": {
-    "id": 1,
-    "username": "testuser",
-    "role": "user",
-    "created_at": "2025-01-15T10:30:00Z"
-  }
-}
-```
-
-**用户登录**
-```http
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "username": "testuser",
-  "password": "password123"
-}
-```
-
-**响应示例：**
-```json
-{
-  "code": 200,
-  "message": "登录成功",
-  "data": {
-    "token": "<AUTH_TOKEN>",
-    "user": {
-      "id": 1,
-      "username": "testuser",
-      "role": "user"
-    }
-  }
-}
-```
-
-#### API Key 管理接口（v3.0.0 新增）
-
-**绑定 API Key（需要登录）**
-```http
-POST /api/user/apikey/bind
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "key": "<API_KEY>"
-}
-```
-
-**查询 API Key 信息（需要登录）**
-```http
-GET /api/user/apikey/info
-Authorization: Bearer <token>
-```
-
-**响应示例：**
-```json
-{
-  "code": 200,
-  "message": "查询成功",
-  "data": {
-    "key": "sk-****...****",
-    "expires_at": "2025-12-31T23:59:59Z",
-    "daily_search_limit": 100,
-    "today_search_count": 25,
-    "last_search_date": "2025-01-15"
-  }
-}
-```
-
-**生成 API Key（仅管理员）**
-```http
-POST /api/admin/apikey/generate
-Authorization: Bearer <admin_token>
-Content-Type: application/json
-
-{
-  "ttl_hours": 8760,
-  "daily_search_limit": 100,
-  "description": "测试用 API Key"
-}
-```
-
-**响应示例：**
-```json
-{
-  "code": 200,
-  "message": "生成成功",
-  "data": {
-    "id": 1,
-    "key": "<API_KEY>",
-    "expires_at": "2026-01-15T10:30:00Z",
-    "daily_search_limit": 100,
-    "description": "测试用 API Key"
-  }
-}
-```
-
-#### 搜索接口（支持混合访问模式）
-
-```http
-GET/POST /api/search
-```
-
-**请求参数：**
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `kw` | string | ✅ | 搜索关键词 |
-| `api_key` | string | ❌ | 手动输入的 API Key（访客模式） |
-| `channels` | string | ❌ | TG 频道列表（逗号分隔） |
-| `plugins` | string | ❌ | 插件列表（逗号分隔） |
-| `cloud_types` | string | ❌ | 网盘类型过滤 |
-| `src` | string | ❌ | 数据来源：all/tg/plugin |
-| `res` | string | ❌ | 结果类型：all/results/merge |
-| `refresh` | bool | ❌ | 强制刷新缓存 |
-
-**访问模式说明：**
-1. **访客模式**：提供 `api_key` 参数，无需登录
-2. **登录用户模式**：提供 `Authorization: Bearer <token>`，使用绑定的 API Key
-3. **混合模式**：同时提供 `api_key` 和 Token，优先使用手动输入的 API Key
-
-**响应示例：**
-
-```json
-{
-  "code": 200,
-  "message": "搜索成功",
-  "data": {
-    "results": [
-      {
-        "title": "资源标题",
-        "content": "资源描述",
-        "link": "https://pan.baidu.com/s/xxxxx",
-        "cloud_type": "baidu",
-        "source": "susu",
-        "time": "2025-01-15 10:30:00"
-      }
-    ],
-    "cloud_groups": {
-      "baidu": [...],
-      "aliyun": [...]
-    }
-  }
-}
-```
-
-#### 健康检查接口
-
-```http
-GET /api/health
-```
-
-**响应示例：**
-
-```json
-{
-  "code": 200,
-  "data": {
-    "status": "healthy",
-    "plugins": ["hdr4k", "susu", "pansearch", ...],
-    "cache_enabled": true
-  }
-}
-```
-
-#### 插件管理接口
-
-管理员可通过以下接口管理搜索插件：
-
-- `POST /api/admin/plugins` - 创建自定义插件
-- `PUT /api/admin/plugins/:pluginName` - 更新插件配置
-- `DELETE /api/admin/plugins/:pluginName` - 删除插件
-- `POST /api/admin/plugins/:pluginName/test` - 测试插件连通性
-- `POST /api/admin/test-url` - 测试 URL 连通性
-
-详细文档请参考：[插件管理 API](docs/api_reference.md#插件管理-api)
+- **用户认证 API**: 注册、登录、Token 验证
+- **管理员 API**: 用户管理、API Key 管理、系统设置
+- **插件管理 API**: 创建、更新、删除、测试插件
+- **搜索 API**: 网盘资源搜索接口
 
 ---
 
@@ -890,155 +331,20 @@ A: 请检查以下几点：
 1. 确认 MySQL 服务已启动
 2. 检查 `.env` 文件中的数据库配置是否正确
 3. 确认数据库已创建：`CREATE DATABASE unisearch;`
-4. 检查用户权限：`GRANT ALL PRIVILEGES ON unisearch.* TO 'root'@'localhost';`
-
-**Q: 数据库迁移失败怎么办？**
-
-A: 系统会自动执行数据库迁移，如果失败：
-```bash
-# 手动连接数据库检查
-mysql -u root -p unisearch
-
-# 查看表是否创建
-SHOW TABLES;
-
-# 如果表不存在，重启应用会自动重试迁移
-```
 
 **Q: 忘记管理员密码怎么办？**
 
 A: 可以通过数据库直接重置：
-```bash
-# 1. 生成新密码哈希
-./scripts/gen_admin_password.sh "new_password"
-
-# 2. 更新数据库
-mysql -u root -p unisearch
-UPDATE users SET password_hash='新生成的哈希' WHERE username='admin';
+```sql
+-- 默认密码是 "admin"，对应的哈希值
+UPDATE users SET password_hash='$2a$10$...' WHERE username='admin';
 ```
 
 **Q: 端口被占用怎么办？**
 
 A: 启动脚本会自动检测端口占用，您可以选择：
 - 停止占用端口的程序
-- 修改配置文件中的端口号
-
-**Q: 依赖安装失败？**
-
-A: 确保网络连接正常，可以尝试：
-```bash
-# Go 依赖
-go env -w GOPROXY=https://goproxy.cn,direct
-go mod download
-
-# 前端依赖
-pnpm install --registry=https://registry.npmmirror.com
-```
-
-### 生产部署
-
-**Q: 生产环境如何配置 MySQL？**
-
-A: 有两种方式：
-
-**方式一：使用 Docker 部署 MySQL（推荐）**
-```bash
-# deploy/docker-compose.prod.yml 已包含 MySQL 配置
-# 只需配置环境变量即可
-vim deploy/.env.local
-# 设置 DB_PASSWORD 等参数
-```
-
-**方式二：使用独立 MySQL 服务器**
-```bash
-# 在 .env.local 中配置外部 MySQL
-DB_HOST=your_mysql_host
-DB_PORT=3306
-DB_USER=unisearch_user
-DB_PASSWORD=strong_password
-DB_NAME=unisearch
-```
-
-**Q: 域名未备案能否部署？**
-
-A: 可以使用 8080 端口临时部署：
-```bash
-sudo ./scripts/ssl.sh temp
-```
-备案完成后再申请 SSL 证书。
-
-**Q: 管理员登录失败怎么办？**
-
-A: 请按以下步骤排查：
-
-1. **检查配置文件是否存在：**
-```bash
-ls -la deploy/.env.local
-```
-
-2. **验证密码哈希配置：**
-```bash
-grep ADMIN_PASSWORD_HASH deploy/.env.local
-```
-
-3. **使用测试脚本验证配置：**
-```bash
-./scripts/test-env.sh
-```
-
-4. **检查容器环境变量：**
-```bash
-docker exec unisearch env | grep ADMIN_PASSWORD_HASH
-```
-
-5. **如果配置正确但仍然失败，重启服务：**
-```bash
-sudo ./scripts/deploy.sh restart
-```
-
-常见问题：
-- `.env.local` 文件不存在 → 复制 `.env.local.example` 并配置
-- 密码哈希为空 → 使用 `gen_admin_password.sh` 生成
-- 容器中没有环境变量 → 检查 `docker-compose.prod.yml` 配置
-
-**Q: SSL 证书会自动续期吗？**
-
-A: 是的。使用 HTTP 验证方式申请的证书会自动续期（每天凌晨 3 点检查）。
-
-**Q: 如何修改配置？**
-
-A: 修改 `deploy/.env.local` 文件，然后重启服务：
-```bash
-sudo ./scripts/deploy.sh restart
-```
-
-**Q: 如何备份数据库？**
-
-A: 使用部署脚本的备份功能：
-```bash
-# 备份数据
-sudo ./scripts/deploy.sh backup
-
-# 从备份恢复
-sudo ./scripts/deploy.sh restore <backup_file>
-```
-
-### 性能优化
-
-**Q: 如何提高搜索速度？**
-
-A: 系统已实现多项优化：
-- 二级缓存机制（自动启用）
-- 异步插件系统（并发搜索）
-- 智能结果去重与合并
-
-**Q: 缓存如何清理？**
-
-A: 缓存会自动管理，也可以手动清理：
-```bash
-# 清理磁盘缓存
-rm -rf backend/cache/*
-```
+- 修改 `.env` 文件中的端口号
 
 ---
 
@@ -1054,14 +360,6 @@ rm -rf backend/cache/*
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 开启 **Pull Request**
 
-### 开发插件
-
-查看 [插件开发指南](docs/插件开发指南.md) 了解如何开发自定义搜索插件。
-
-### 报告问题
-
-发现 Bug 或有功能建议？请 [提交 Issue](https://github.com/fish2018/UniSearch/issues)。
-
 ---
 
 ## 📄 许可证
@@ -1072,6 +370,8 @@ rm -rf backend/cache/*
 
 <div align="center">
 
-[返回顶部](#unisearch---网盘资源搜索系统)
+**Made with ❤️ by UniSearch Team**
+
+[返回顶部](#unisearch---网盘资源聚合搜索系统)
 
 </div>

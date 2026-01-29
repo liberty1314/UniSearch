@@ -9,9 +9,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { AppleInput } from '@/components/ui/AppleInput';
+import { AppleButton } from '@/components/ui/AppleButton';
 import {
     Select,
     SelectContent,
@@ -19,6 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 /**
  * 创建用户对话框组件属性
@@ -171,7 +171,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
     /**
      * 处理按下 Enter 键
      */
-    const handleKeyPress = (e: React.KeyboardEvent) => {
+    const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !isLoading) {
             handleCreate();
         }
@@ -189,66 +189,49 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
 
                 <div className="space-y-4 py-4">
                     {/* 用户名输入 */}
-                    <div className="space-y-2">
-                        <Label htmlFor="username">
-                            用户名 <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                            id="username"
-                            type="text"
-                            placeholder="请输入用户名（3-32 字符）"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            disabled={isLoading}
-                            autoComplete="off"
-                        />
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                            用户名长度为 3-32 字符
-                        </p>
-                    </div>
+                    <AppleInput
+                        label="用户名"
+                        id="username"
+                        type="text"
+                        placeholder="请输入用户名（3-32 字符）"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        disabled={isLoading}
+                        autoComplete="off"
+                        helperText="用户名长度为 3-32 字符"
+                        required
+                    />
 
                     {/* 密码输入 */}
-                    <div className="space-y-2">
-                        <Label htmlFor="password">
-                            密码 <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                            id="password"
-                            type="password"
-                            placeholder="请输入密码（6-64 字符）"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            disabled={isLoading}
-                            autoComplete="new-password"
-                        />
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                            密码长度为 6-64 字符
-                        </p>
-                    </div>
+                    <AppleInput
+                        label="密码"
+                        id="password"
+                        type="password"
+                        placeholder="请输入密码（6-64 字符）"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        disabled={isLoading}
+                        autoComplete="new-password"
+                        helperText="密码长度为 6-64 字符"
+                        required
+                    />
 
                     {/* 确认密码输入 */}
-                    <div className="space-y-2">
-                        <Label htmlFor="confirm-password">
-                            确认密码 <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                            id="confirm-password"
-                            type="password"
-                            placeholder="请再次输入密码"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            disabled={isLoading}
-                            autoComplete="new-password"
-                        />
-                        {confirmPassword && password !== confirmPassword && (
-                            <p className="text-xs text-red-500">
-                                两次输入的密码不一致
-                            </p>
-                        )}
-                    </div>
+                    <AppleInput
+                        label="确认密码"
+                        id="confirm-password"
+                        type="password"
+                        placeholder="请再次输入密码"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        disabled={isLoading}
+                        autoComplete="new-password"
+                        error={confirmPassword && password !== confirmPassword ? '两次输入的密码不一致' : undefined}
+                        required
+                    />
 
                     {/* 角色选择 */}
                     <div className="space-y-2">
@@ -275,19 +258,21 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
                 </div>
 
                 <DialogFooter>
-                    <Button
-                        variant="outline"
+                    <AppleButton
+                        variant="secondary"
                         onClick={handleClose}
                         disabled={isLoading}
                     >
                         取消
-                    </Button>
-                    <Button
+                    </AppleButton>
+                    <AppleButton
+                        variant="primary"
                         onClick={handleCreate}
+                        loading={isLoading}
                         disabled={isLoading}
                     >
-                        {isLoading ? '创建中...' : '创建用户'}
-                    </Button>
+                        创建用户
+                    </AppleButton>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

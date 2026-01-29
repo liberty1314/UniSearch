@@ -9,13 +9,6 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import type { APIKeyInfo, UserInfo } from '@/types/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-    Table,
-    TableBody,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -36,16 +29,16 @@ import { BatchUpdateRoleDialog } from '@/components/admin/BatchUpdateRoleDialog'
 import { CreateUserDialog } from '@/components/admin/CreateUserDialog';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
 import { ResetPasswordDialog } from '@/components/admin/ResetPasswordDialog';
-import UserTable from '@/components/admin/UserTable';
+import { AppleUserTable } from '@/components/admin/AppleUserTable';
 import { Sidebar, type AdminView } from '@/components/admin/Sidebar';
 import { BatchActionsBar } from '@/components/admin/BatchActionsBar';
 import { StatsCard } from '@/components/admin/StatsCard';
 import { SystemInfoView } from '@/components/admin/SystemInfoView';
+import { SystemSettingsView } from '@/components/admin/SystemSettingsView';
 import { TableFilterDropdown } from '@/components/admin/TableFilterDropdown';
 import { Plus, RefreshCw, Key, AlertCircle, CheckCircle2, Activity, Search, Filter, X, Clock, Users, Shield, UserCheck, UserX } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import ApiKeyTableRow from '@/components/admin/ApiKeyTableRow';
+import { AppleApiKeyTable } from '@/components/admin/AppleApiKeyTable';
 
 /**
  * 后台管理页面组件
@@ -980,86 +973,18 @@ const Admin: React.FC = () => {
                                             </Button>
                                         </motion.div>
                                     ) : (
-                                        <div className="space-y-4">
-                                            {/* API Keys 表格 */}
-                                            <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                                            <TableHead className="w-12">
-                                                                <Checkbox
-                                                                    checked={isAllSelected()}
-                                                                    onCheckedChange={handleSelectAll}
-                                                                    aria-label="全选"
-                                                                    disabled={isLoadingKeys || isBatchOperating || isDeleting}
-                                                                />
-                                                            </TableHead>
-                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">API Key</TableHead>
-                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">描述</TableHead>
-                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 w-[140px]">创建时间</TableHead>
-                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 w-[140px]">过期时间</TableHead>
-                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 w-[130px]">
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <span>剩余时间</span>
-                                                                    <TableFilterDropdown
-                                                                        options={[
-                                                                            { label: '已过期', value: 'expired', color: '#ef4444' },
-                                                                            { label: '1天内', value: '1day', color: '#f59e0b' },
-                                                                            { label: '1-7天', value: '7days', color: '#eab308' },
-                                                                            { label: '7-30天', value: '30days', color: '#3b82f6' },
-                                                                            { label: '30天以上', value: 'more', color: '#10b981' },
-                                                                        ]}
-                                                                        selectedValues={remainingTimeFilter}
-                                                                        onSelectionChange={setRemainingTimeFilter}
-                                                                        multiSelect={true}
-                                                                        icon={<Clock className="w-3.5 h-3.5" />}
-                                                                    />
-                                                                </div>
-                                                            </TableHead>
-                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 text-center w-[120px]">今日用量</TableHead>
-                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 w-[110px]">
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <span>状态</span>
-                                                                    <TableFilterDropdown
-                                                                        options={[
-                                                                            { label: '正常', value: 'enabled', color: '#10b981' },
-                                                                            { label: '已禁用', value: 'disabled', color: '#6b7280' },
-                                                                            { label: '已过期', value: 'expired', color: '#ef4444' },
-                                                                        ]}
-                                                                        selectedValues={statusFilter}
-                                                                        onSelectionChange={setStatusFilter}
-                                                                        multiSelect={true}
-                                                                    />
-                                                                </div>
-                                                            </TableHead>
-                                                            <TableHead className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 text-right w-[100px]">操作</TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {filteredApiKeys.map((key) => {
-                                                            const expired = isKeyExpired(key.expires_at);
-                                                            const canSelect = true; // 允许选择所有 Key，包括已过期的
-                                                            const isSelected = selectedKeys.has(key.key);
-
-                                                            return (
-                                                                <ApiKeyTableRow
-                                                                    key={key.key}
-                                                                    apiKey={key}
-                                                                    isSelected={isSelected}
-                                                                    canSelect={canSelect}
-                                                                    isDeleting={isDeleting}
-                                                                    isBatchOperating={isBatchOperating}
-                                                                    onSelectChange={handleSelectKey}
-                                                                    onCopyKey={handleCopyKey}
-                                                                    onEditClick={handleEditClick}
-                                                                    onDeleteClick={handleDeleteClick}
-                                                                />
-                                                            );
-                                                        })}
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
-                                        </div>
+                                        <AppleApiKeyTable
+                                            apiKeys={filteredApiKeys}
+                                            selectedKeys={selectedKeys}
+                                            onSelectKey={handleSelectKey}
+                                            onSelectAll={handleSelectAll}
+                                            onCopyKey={handleCopyKey}
+                                            onEditClick={handleEditClick}
+                                            onDeleteClick={handleDeleteClick}
+                                            isDeleting={isDeleting}
+                                            isBatchOperating={isBatchOperating}
+                                            isLoading={isLoadingKeys}
+                                        />
                                     )}
                                 </CardContent>
                             </Card>
@@ -1277,12 +1202,10 @@ const Admin: React.FC = () => {
                                     ) : (
                                         <div className="space-y-4">
                                             {/* 用户表格 */}
-                                            <UserTable
+                                            <AppleUserTable
                                                 users={users}
-                                                isLoading={isLoadingUsers}
                                                 selectedUsers={selectedUsers}
                                                 onSelectUser={handleSelectUser}
-                                                onSelectAll={handleSelectAllUsers}
                                                 onEditClick={handleEditUser}
                                                 onResetPasswordClick={handleResetPassword}
                                                 onDeleteClick={handleDeleteUser}
@@ -1290,6 +1213,7 @@ const Admin: React.FC = () => {
                                                 currentUserId={getCurrentUserId()}
                                                 isDeleting={isDeletingUser}
                                                 isBatchOperating={isBatchOperatingUsers}
+                                                isLoading={isLoadingUsers}
                                             />
 
                                             {/* 分页控件 */}
@@ -1353,6 +1277,9 @@ const Admin: React.FC = () => {
 
                     {/* 系统监控视图 */}
                     {currentView === 'system-info' && <SystemInfoView />}
+
+                    {/* 系统设置视图 */}
+                    {currentView === 'system-settings' && <SystemSettingsView />}
                 </div>
             </div>
 

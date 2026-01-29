@@ -316,3 +316,97 @@
 - frontend/src/lib/api.ts
 - scripts/docker.sh
 - scripts/local.sh
+
+
+---
+
+## [2026-01-29 15:30] docs(admin): 完善系统设置和管理后台文档
+
+**Body**: 新增管理后台使用指南文档,详细说明系统设置、用户管理、API Key 管理等功能的使用方法。更新 README.md 添加管理后台功能特性说明和文档链接。完善 Apple UI 组件库需求文档的验收标准。
+
+**Footer**: 
+- 新增文档: docs/admin_guide.md - 管理后台完整使用指南
+- 更新文档: README.md - 添加管理后台功能模块说明
+- 更新文档: .kiro/specs/apple-ui-components/requirements.md - 标记文档验收标准为已完成
+
+**Files**:
+- README.md
+- docs/admin_guide.md
+- .kiro/specs/apple-ui-components/requirements.md
+- frontend/src/pages/Admin.tsx
+
+**功能说明**:
+- 📚 新增管理后台使用指南,包含所有功能模块的详细操作说明
+- 🛡️ 完善系统设置功能文档,说明用户认证开关的使用场景
+- 📝 更新 README.md,添加管理后台功能特性和文档链接
+- ✅ 标记 Apple UI 组件库文档验收标准为已完成
+
+**文档内容**:
+1. **管理后台使用指南** (`docs/admin_guide.md`):
+   - 系统信息查看
+   - API Key 管理（生成、编辑、批量操作）
+   - 用户管理（创建、编辑、批量操作）
+   - 系统设置（用户认证开关）
+   - 统计数据展示
+   - 搜索和筛选功能
+   - 响应式设计说明
+   - 安全建议和常见问题
+
+2. **README.md 更新**:
+   - 新增"管理后台"功能模块章节
+   - 详细说明用户管理、API Key 管理、系统设置、系统监控功能
+   - 添加管理后台使用指南文档链接
+
+3. **需求文档更新**:
+   - 标记管理后台使用指南已创建
+   - 标记系统设置功能文档已完善
+   - 更新验收标准为已完成状态
+
+
+[2026-01-29 13:25] feat(system-settings): 新增系统设置功能并重构 UI 组件为 Apple 风格
+  - Body: 新增系统设置功能，支持动态控制用户认证、登录、注册开关；重构前端 UI 组件为 Apple 风格（AppleButton、AppleCard、AppleInput、AppleTable 系列），提升视觉一致性和用户体验；移除前端调试日志，优化代码质量。
+  - Files:
+    - README.md
+    - backend/api/middleware.go
+    - backend/api/router.go
+    - backend/api/system_settings_handler.go
+    - backend/database/migration.go
+    - backend/database/migration_test_manual.go
+    - backend/main.go
+    - backend/model/system_settings.go
+    - backend/service/system_settings_service.go
+    - backend/unisearch
+    - docs/api_reference.md
+    - docs/readme_2601.md
+    - docs/系统开发设计文档.md
+    - frontend/package.json
+    - frontend/pnpm-lock.yaml
+    - frontend/src/App.tsx
+    - frontend/src/components/AppleTable.tsx
+    - frontend/src/components/admin/ApiKeyTableRow.tsx
+    - frontend/src/components/admin/AppleApiKeyTable.tsx
+    - frontend/src/components/admin/ApplePluginTable.tsx
+    - frontend/src/components/admin/AppleUserTable.tsx
+    - frontend/src/components/admin/BatchCreateDialog.tsx
+    - frontend/src/components/admin/BatchExtendDialog.tsx
+    - frontend/src/components/admin/CreateUserDialog.tsx
+    - frontend/src/components/admin/EditKeyDialog.tsx
+    - frontend/src/components/admin/EditUserDialog.tsx
+    - frontend/src/components/admin/ModernApiKeyTable.tsx
+    - frontend/src/components/admin/Sidebar.tsx
+    - frontend/src/components/admin/StatsCard.tsx
+    - frontend/src/components/admin/SystemInfoView.tsx
+    - frontend/src/components/admin/SystemSettingsView.tsx
+    - frontend/src/components/admin/UserTable.tsx
+    - frontend/src/components/admin/UserTableRow.tsx
+    - frontend/src/components/ui/AppleButton.tsx
+    - frontend/src/components/ui/AppleCard.tsx
+    - frontend/src/components/ui/AppleInput.tsx
+    - frontend/src/components/ui/button.tsx
+    - frontend/src/components/ui/input.tsx
+    - frontend/src/hooks/useAutoRefreshToken.ts
+    - frontend/src/lib/api.ts
+    - frontend/src/pages/Admin.tsx
+    - frontend/src/pages/UserApiKeySettings.tsx
+    - frontend/src/pages/UserAuth.tsx
+    - frontend/src/services/systemSettingsService.ts

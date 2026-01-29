@@ -1,22 +1,14 @@
-import * as React from "react"
+/**
+ * 兼容层：重新导出 AppleInput 作为 Input
+ * 这个文件用于向后兼容，所有新代码应直接使用 AppleInput
+ */
+import React, { forwardRef, InputHTMLAttributes } from 'react';
+import { AppleInput, AppleInputProps } from './AppleInput';
 
-import { cn } from "@/lib/utils"
+export interface InputProps extends Omit<AppleInputProps, 'label' | 'error' | 'helperText'> {}
 
-const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
-    return (
-      <input
-        type={type}
-        className={cn(
-          "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-          className
-        )}
-        ref={ref}
-        {...props}
-      />
-    )
-  }
-)
-Input.displayName = "Input"
+export const Input = forwardRef<HTMLInputElement, InputProps>((props, ref) => {
+  return <AppleInput ref={ref} {...props} />;
+});
 
-export { Input }
+Input.displayName = 'Input';

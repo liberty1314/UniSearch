@@ -30,20 +30,9 @@ const UserApiKeySettings: React.FC = () => {
 
     // 检查认证状态（支持 token 或 apiKey 登录）
     useEffect(() => {
-        console.log('🔍 UserApiKeySettings - Auth Check:', {
-            isAuthenticated,
-            hasToken: !!token,
-            hasApiKey: !!apiKey,
-            token: token ? `${token.substring(0, 20)}...` : 'null',
-            apiKey: apiKey ? `${apiKey.substring(0, 20)}...` : 'null',
-        });
-
         if (!isAuthenticated || (!token && !apiKey)) {
-            console.error('❌ Auth check failed, redirecting to login');
             toast.error('请先登录');
             navigate('/login');
-        } else {
-            console.log('✅ Auth check passed');
         }
     }, [isAuthenticated, token, apiKey, navigate]);
 

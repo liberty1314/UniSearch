@@ -10,9 +10,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { AppleInput } from '@/components/ui/AppleInput';
+import { AppleButton } from '@/components/ui/AppleButton';
 import { Plus, Loader2, Download, Check } from 'lucide-react';
 import {
     Table,
@@ -268,77 +267,60 @@ export function BatchCreateDialog({
                     <>
                         <div className="space-y-4 py-4">
                             {/* 创建数量输入 */}
-                            <div className="space-y-2">
-                                <Label htmlFor="count">创建数量</Label>
-                                <Input
-                                    id="count"
-                                    type="number"
-                                    min="1"
-                                    max="100"
-                                    placeholder="例如：10"
-                                    value={count}
-                                    onChange={(e) => setCount(e.target.value)}
-                                    disabled={isLoading}
-                                />
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    一次最多创建 100 个 API Key
-                                </p>
-                            </div>
+                            <AppleInput
+                                label="创建数量"
+                                id="count"
+                                type="number"
+                                min="1"
+                                max="100"
+                                placeholder="例如：10"
+                                value={count}
+                                onChange={(e) => setCount(e.target.value)}
+                                disabled={isLoading}
+                                helperText="一次最多创建 100 个 API Key"
+                            />
 
                             {/* 有效期输入 */}
-                            <div className="space-y-2">
-                                <Label htmlFor="ttl-hours">有效期（小时）</Label>
-                                <Input
-                                    id="ttl-hours"
-                                    type="number"
-                                    min="1"
-                                    placeholder="例如：720（30天）"
-                                    value={ttlHours}
-                                    onChange={(e) => setTtlHours(e.target.value)}
-                                    disabled={isLoading}
-                                />
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    所有密钥将使用相同的有效期
-                                </p>
-                                {ttlHours && !isNaN(Number(ttlHours)) && Number(ttlHours) > 0 && (
-                                    <p className="text-xs text-blue-600 dark:text-blue-400">
-                                        有效期约 {calculateDays()} 天
-                                    </p>
-                                )}
-                            </div>
+                            <AppleInput
+                                label="有效期（小时）"
+                                id="ttl-hours"
+                                type="number"
+                                min="1"
+                                placeholder="例如：720（30天）"
+                                value={ttlHours}
+                                onChange={(e) => setTtlHours(e.target.value)}
+                                disabled={isLoading}
+                                helperText={
+                                    ttlHours && !isNaN(Number(ttlHours)) && Number(ttlHours) > 0
+                                        ? `有效期约 ${calculateDays()} 天`
+                                        : "所有密钥将使用相同的有效期"
+                                }
+                            />
 
                             {/* 描述前缀输入 */}
-                            <div className="space-y-2">
-                                <Label htmlFor="description-prefix">描述前缀（可选）</Label>
-                                <Input
-                                    id="description-prefix"
-                                    type="text"
-                                    placeholder="例如：批量生成-"
-                                    value={descriptionPrefix}
-                                    onChange={(e) => setDescriptionPrefix(e.target.value)}
-                                    disabled={isLoading}
-                                />
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    每个密钥的描述将为：前缀 + 序号（如"批量生成-1"）
-                                </p>
-                            </div>
+                            <AppleInput
+                                label="描述前缀（可选）"
+                                id="description-prefix"
+                                type="text"
+                                placeholder="例如：批量生成-"
+                                value={descriptionPrefix}
+                                onChange={(e) => setDescriptionPrefix(e.target.value)}
+                                disabled={isLoading}
+                                helperText='每个密钥的描述将为：前缀 + 序号（如"批量生成-1"）'
+                            />
 
                             {/* 每日搜索限制输入 */}
-                            <div className="space-y-2">
-                                <Label htmlFor="daily-search-limit">每日搜索次数限制</Label>
-                                <Input
-                                    id="daily-search-limit"
-                                    type="number"
-                                    min="0"
-                                    placeholder="例如：10（0表示不限制）"
-                                    value={dailySearchLimit}
-                                    onChange={(e) => setDailySearchLimit(e.target.value)}
-                                    disabled={isLoading}
-                                />
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    设置为 0 表示不限制每日搜索次数
-                                </p>
-                            </div>
+                            <AppleInput
+                                label="每日搜索次数限制"
+                                id="daily-search-limit"
+                                type="number"
+                                min="0"
+                                placeholder="例如：10（0表示不限制）"
+                                value={dailySearchLimit}
+                                onChange={(e) => setDailySearchLimit(e.target.value)}
+                                disabled={isLoading}
+                                helperText="设置为 0 表示不限制每日搜索次数"
+                            />
 
                             {/* 操作进度提示 */}
                             {isLoading && (
@@ -352,29 +334,22 @@ export function BatchCreateDialog({
                         </div>
 
                         <DialogFooter>
-                            <Button
-                                variant="outline"
+                            <AppleButton
+                                variant="secondary"
                                 onClick={handleClose}
                                 disabled={isLoading}
                             >
                                 取消
-                            </Button>
-                            <Button
+                            </AppleButton>
+                            <AppleButton
+                                variant="primary"
                                 onClick={handleBatchCreateClick}
+                                loading={isLoading}
                                 disabled={isLoading}
                             >
-                                {isLoading ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        创建中...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Plus className="w-4 h-4 mr-2" />
-                                        开始创建
-                                    </>
-                                )}
-                            </Button>
+                                <Plus className="w-4 h-4 mr-2" />
+                                开始创建
+                            </AppleButton>
                         </DialogFooter>
                     </>
                 ) : (
@@ -421,16 +396,19 @@ export function BatchCreateDialog({
                         </div>
 
                         <DialogFooter>
-                            <Button
-                                variant="outline"
+                            <AppleButton
+                                variant="secondary"
                                 onClick={handleExportCSV}
                             >
                                 <Download className="w-4 h-4 mr-2" />
                                 导出为 CSV
-                            </Button>
-                            <Button onClick={handleClose}>
+                            </AppleButton>
+                            <AppleButton
+                                variant="primary"
+                                onClick={handleClose}
+                            >
                                 完成
-                            </Button>
+                            </AppleButton>
                         </DialogFooter>
                     </>
                 )}

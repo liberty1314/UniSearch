@@ -3,14 +3,24 @@ import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-ro
 import { Toaster } from 'sonner';
 import Navbar from '@/components/Navbar';
 import Home from '@/pages/Home';
-import Login from '@/pages/Login';
 import UserAuth from '@/pages/UserAuth';
 import AdminLogin from '@/pages/AdminLogin';
 import Admin from '@/pages/Admin';
 import UserApiKeySettings from '@/pages/UserApiKeySettings';
 import { useAuthStore } from '@/stores/authStore';
 import PageLoader from '@/components/PageLoader';
-import { useAutoRefreshToken } from '@/hooks/useAutoRefreshToken'; // 新增：自动刷新令牌
+import { useAutoRefreshToken } from '@/hooks/useAutoRefreshToken';
+
+// 常量配置
+const INITIAL_LOADING_DURATION = 1500;
+const TOAST_CONFIG = {
+  position: 'top-right' as const,
+  offset: '72px',
+  toastOptions: {
+    duration: 2000,
+  },
+  closeButton: true,
+};
 
 /**
  * 管理员路由保护组件
@@ -77,10 +87,9 @@ const App: React.FC = () => {
 
   // 初始加载效果
   useEffect(() => {
-    // 模拟初始化加载
     const timer = setTimeout(() => {
       setIsInitialLoading(false);
-    }, 1500);
+    }, INITIAL_LOADING_DURATION);
 
     return () => clearTimeout(timer);
   }, []);
@@ -120,6 +129,7 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
+              
               {/* 404 页面 */}
               <Route path="*" element={
                 <div className="min-h-screen flex items-center justify-center pt-16">
@@ -144,14 +154,7 @@ const App: React.FC = () => {
           </main>
 
           {/* Toast 通知 */}
-          <Toaster
-            position="top-right"
-            offset="72px"
-            toastOptions={{
-              duration: 2000,
-            }}
-            closeButton
-          />
+          <Toaster {...TOAST_CONFIG} />
         </div>
       </Router>
     </>

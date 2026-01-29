@@ -30,37 +30,19 @@ class ApiClient {
         // 从 authStore 获取认证信息
         const authStore = useAuthStore.getState();
 
-        // 调试日志：打印认证状态
-        console.log('🔐 Auth State:', {
-          hasToken: !!authStore.token,
-          hasApiKey: !!authStore.apiKey,
-          isAuthenticated: authStore.isAuthenticated,
-          isAdmin: authStore.isAdmin,
-          username: authStore.username,
-        });
-
         // 添加 JWT Token（如果存在）
         if (authStore.token) {
           config.headers.Authorization = `Bearer ${authStore.token}`;
-          console.log('✅ Added JWT Token to request');
-        } else {
-          console.warn('⚠️ No JWT Token found in authStore');
         }
 
         // 添加 API Key（如果存在）
         if (authStore.apiKey) {
           config.headers['X-API-Key'] = authStore.apiKey;
-          console.log('✅ Added API Key to request');
         }
 
-        // 添加请求日志（仅在开发环境）
-        if (import.meta.env.DEV) {
-          console.log('🚀 API Request:', config.method?.toUpperCase(), config.url, config.data);
-        }
         return config;
       },
       (error: AxiosError) => {
-        console.error('❌ Request Error:', error);
         return Promise.reject(error);
       }
     );
@@ -68,23 +50,11 @@ class ApiClient {
     // 响应拦截器 - 处理 401 错误
     this.instance.interceptors.response.use(
       (response: AxiosResponse<ApiResponse>) => {
-        // 添加响应日志（仅在开发环境）
-        if (import.meta.env.DEV) {
-          console.log('✅ API Response:', response.config.url, response.data);
-        }
         return response;
       },
       (error: AxiosError<ApiResponse>) => {
-        console.error('❌ API Error:', {
-          url: error.config?.url,
-          status: error.response?.status,
-          message: error.response?.data?.message || error.message,
-        });
-
         // 处理 401 未授权错误
         if (error.response?.status === 401) {
-          console.warn('⚠️ 401 Unauthorized:', error.config?.url);
-
           // 清除认证状态
           const authStore = useAuthStore.getState();
           authStore.logout();
@@ -92,14 +62,12 @@ class ApiClient {
           // 跳转到登录页（避免在登录页和认证相关页面重复跳转）
           const currentPath = window.location.pathname;
           if (!currentPath.includes('/login') && !currentPath.includes('/auth')) {
-            console.log('🔄 Redirecting to login page');
             window.location.href = '/login';
           }
         }
 
         // 统一错误处理
         const errorMessage = this.handleError(error);
-        console.error('❌ API Error Message:', errorMessage);
 
         // 返回标准化的错误响应
         return Promise.reject({

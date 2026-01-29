@@ -15,8 +15,9 @@ func AutoMigrate() error {
 	// 使用 GORM AutoMigrate 自动创建或更新表结构
 	// 迁移顺序很重要：先迁移 User（父表），再迁移 APIKey（子表，包含外键）
 	err := DB.AutoMigrate(
-		&model.User{},   // 创建 users 表
-		&model.APIKey{}, // 创建 api_keys 表（包含外键 user_id）
+		&model.User{},           // 创建 users 表
+		&model.APIKey{},         // 创建 api_keys 表（包含外键 user_id）
+		&model.SystemSettings{}, // 创建 system_settings 表
 	)
 
 	if err != nil {
@@ -27,6 +28,7 @@ func AutoMigrate() error {
 	log.Println("✓ 数据库迁移完成")
 	log.Println("  - users 表已创建/更新")
 	log.Println("  - api_keys 表已创建/更新")
+	log.Println("  - system_settings 表已创建/更新")
 	log.Println("  - 外键约束已创建（api_keys.user_id -> users.id）")
 
 	return nil
