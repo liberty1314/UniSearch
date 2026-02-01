@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"pansou/config"
-	"pansou/plugin"
-	"pansou/service"
+	"unisearch/config"
+	"unisearch/plugin"
+	"unisearch/service"
 )
 
 // AdminLoginRequest 管理员登录请求

@@ -3,7 +3,7 @@ package pool
 import (
 	"sync"
 
-	"pansou/model"
+	"unisearch/model"
 )
 
 // LinkPool 网盘链接对象池

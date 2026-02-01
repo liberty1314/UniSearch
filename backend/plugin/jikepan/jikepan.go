@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"pansou/model"
-	"pansou/plugin"
-	"pansou/util/json"
+	"unisearch/model"
+	"unisearch/plugin"
+	"unisearch/util/json"
 	"strings"
 	"time"
 )

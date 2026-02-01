@@ -47,7 +47,7 @@ func GenerateTokenWithAPIKey(username string, isAdmin bool, apiKey string, secre
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "pansou",
+			Issuer:    "unisearch",
 		},
 	}
 
@@ -101,7 +101,7 @@ func GenerateJWTTokenWithAPIKey(userID uint, username, role, apiKey, secret stri
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "pansou",
+			Issuer:    "unisearch",
 		},
 	}
 

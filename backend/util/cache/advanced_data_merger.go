@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"pansou/model"
+	"unisearch/model"
 )
 
 // AdvancedDataMerger 高级数据合并器

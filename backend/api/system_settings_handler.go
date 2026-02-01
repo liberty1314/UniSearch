@@ -2,7 +2,7 @@ package api
 
 import (
 	"net/http"
-	"pansou/service"
+	"unisearch/service"
 
 	"github.com/gin-gonic/gin"
 )

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"pansou/plugin"
+	"unisearch/plugin"
 )
 
 // 预计算的哈希值映射

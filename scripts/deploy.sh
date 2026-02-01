@@ -162,6 +162,48 @@ check_and_create_env_local() {
     fi
 }
 
+# 配置数据库密码
+configure_database_password() {
+    log_header "配置数据库密码"
+    
+    local env_local="${DEPLOY_DIR}/.env.local"
+    
+    # 检查是否已配置安全密码
+    local current_password=$(grep "^DB_PASSWORD=" "$env_local" 2>/dev/null | cut -d'=' -f2)
+    
+    if [ -n "$current_password" ] && [ "$current_password" != "root" ] && [ "$current_password" != "your_secure_password_here" ]; then
+        log_success "数据库密码已配置"
+        return 0
+    fi
+    
+    echo ""
+    log_warning "⚠️  检测到不安全的数据库密码，需要重新配置"
+    echo ""
+    
+    # 提示用户输入密码
+    read -p "请输入 MySQL 数据库密码（至少8个字符）: " -s db_password
+    echo ""
+    
+    if [ -z "$db_password" ]; then
+        log_error "密码不能为空"
+        exit 1
+    fi
+    
+    if [ ${#db_password} -lt 8 ]; then
+        log_error "密码长度至少为 8 个字符"
+        exit 1
+    fi
+    
+    # 写入配置文件
+    if grep -q "^DB_PASSWORD=" "$env_local"; then
+        sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${db_password}|" "$env_local"
+    else
+        echo "DB_PASSWORD=${db_password}" >> "$env_local"
+    fi
+    
+    log_success "数据库密码配置完成"
+}
+
 # 配置管理员密码
 configure_admin_password() {
     log_header "配置管理员密码"
@@ -206,7 +248,7 @@ configure_admin_password() {
     # 创建临时 Go 程序
     cat > go.mod << 'EOF'
 module gen_hash
-go 1.22
+go 1.24
 EOF
     
     cat > main.go << 'EOF'
@@ -305,6 +347,7 @@ auto_configure() {
     # 检查并创建 .env.local
     if ! check_and_create_env_local; then
         # 需要配置
+        configure_database_password
         configure_admin_password
         configure_refresh_token_key
     fi
@@ -408,6 +451,17 @@ start_service() {
     # 检查服务状态
     if docker compose -f docker-compose.prod.yml ps | grep -q "Up"; then
         log_success "服务启动成功"
+        
+        # 验证数据库连接
+        log_step "验证数据库连接..."
+        sleep 3
+        
+        if docker compose -f docker-compose.prod.yml exec -T mysql mysqladmin ping -h localhost -u"${DB_USER:-root}" -p"${DB_PASSWORD}" --silent 2>/dev/null; then
+            log_success "数据库连接正常"
+        else
+            log_warning "数据库连接验证失败，请检查配置"
+        fi
+        
         echo ""
         show_service_info
     else

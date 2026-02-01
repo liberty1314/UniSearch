@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"pansou/config"
-	"pansou/util"
+	"unisearch/config"
+	"unisearch/util"
 )
 
 // JWTAuth JWT 认证中间件

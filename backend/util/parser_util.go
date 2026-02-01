@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"pansou/model"
+	"unisearch/model"
 )
 
 // isSupportedLink 检查链接是否为支持的网盘链接

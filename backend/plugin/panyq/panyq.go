@@ -9,15 +9,15 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"os"
-	"pansou/util/json"
+	"unisearch/util/json"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 
-	"pansou/model"
-	"pansou/plugin"
+	"unisearch/model"
+	"unisearch/plugin"
 )
 
 // 常量定义

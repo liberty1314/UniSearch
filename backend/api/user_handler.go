@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"pansou/model"
-	"pansou/service"
+	"unisearch/model"
+	"unisearch/service"
 
 	"github.com/gin-gonic/gin"
 )

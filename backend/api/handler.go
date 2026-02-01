@@ -6,11 +6,11 @@ import (
 	// "os"
 
 	"github.com/gin-gonic/gin"
-	"pansou/config"
-	"pansou/model"
-	"pansou/service"
-	"pansou/util"
-	jsonutil "pansou/util/json"
+	"unisearch/config"
+	"unisearch/model"
+	"unisearch/service"
+	"unisearch/util"
+	jsonutil "unisearch/util/json"
 	"strings"
 )
 

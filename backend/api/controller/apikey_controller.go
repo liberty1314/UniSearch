@@ -3,8 +3,8 @@ package controller
 import (
 	"errors"
 	"log"
-	"pansou/model"
-	"pansou/service"
+	"unisearch/model"
+	"unisearch/service"
 	"strconv"
 	"strings"
 

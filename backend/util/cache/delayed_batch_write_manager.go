@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"pansou/model"
+	"unisearch/model"
 )
 
 // CacheWriteStrategy 缓存写入策略

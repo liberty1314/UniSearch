@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"pansou/config"
+	"unisearch/config"
 )
 
 // 压缩响应的包装器

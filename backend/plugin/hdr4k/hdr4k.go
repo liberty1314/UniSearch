@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"pansou/model"
-	"pansou/plugin"
+	"unisearch/model"
+	"unisearch/plugin"
 )
 
 // 缓存相关变量

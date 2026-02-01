@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"pansou/config"
-	"pansou/model"
-	"pansou/plugin"
-	"pansou/util"
-	"pansou/util/cache"
-	"pansou/util/pool"
+	"unisearch/config"
+	"unisearch/model"
+	"unisearch/plugin"
+	"unisearch/util"
+	"unisearch/util/cache"
+	"unisearch/util/pool"
 	"regexp"
 	"sync"
 )

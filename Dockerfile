@@ -1,7 +1,7 @@
 # ============================================
 # 阶段 1: 构建后端 (Go)
 # ============================================
-FROM golang:1.23-alpine AS backend-builder
+FROM golang:1.24-alpine AS backend-builder
 
 # 安装构建依赖
 RUN apk add --no-cache git ca-certificates tzdata
@@ -18,7 +18,7 @@ RUN go mod download
 COPY backend/ ./
 
 # 构建后端应用（静态编译）
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -extldflags '-static'" -o pansou .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -extldflags '-static'" -o unisearch .
 
 # ============================================
 # 阶段 2: 构建前端 (Node.js + pnpm)
@@ -54,7 +54,7 @@ RUN apk add --no-cache ca-certificates tzdata curl supervisor
 RUN mkdir -p /app/backend /app/cache /var/log/supervisor
 
 # 从构建阶段复制后端可执行文件
-COPY --from=backend-builder /app/backend/pansou /app/backend/pansou
+COPY --from=backend-builder /app/backend/unisearch /app/backend/unisearch
 
 # 从构建阶段复制前端构建产物
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
@@ -174,7 +174,7 @@ RUN echo '[supervisord]' > /etc/supervisord.conf && \
     echo 'stderr_logfile_maxbytes=0' >> /etc/supervisord.conf && \
     echo '' >> /etc/supervisord.conf && \
     echo '[program:backend]' >> /etc/supervisord.conf && \
-    echo 'command=/app/backend/pansou' >> /etc/supervisord.conf && \
+    echo 'command=/app/backend/unisearch' >> /etc/supervisord.conf && \
     echo 'directory=/app/backend' >> /etc/supervisord.conf && \
     echo 'autostart=true' >> /etc/supervisord.conf && \
     echo 'autorestart=true' >> /etc/supervisord.conf && \

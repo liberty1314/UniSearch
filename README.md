@@ -111,7 +111,7 @@
 
 ### 后端技术栈
 
-- **框架**: Go 1.23 + Gin Web Framework
+- **框架**: Go 1.24 + Gin Web Framework
 - **数据库**: MySQL 8.0 + GORM ORM
 - **认证**: JWT Token + Bcrypt 密码加密
 - **特性**: 

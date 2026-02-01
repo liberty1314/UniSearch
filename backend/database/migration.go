@@ -2,7 +2,7 @@ package database
 
 import (
 	"log"
-	"pansou/model"
+	"unisearch/model"
 )
 
 // AutoMigrate 执行数据库自动迁移

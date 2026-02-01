@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"pansou/model"
+	"unisearch/model"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"

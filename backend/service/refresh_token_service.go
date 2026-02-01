@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"pansou/model"
+	"unisearch/model"
 )
 
 // RefreshTokenService 刷新令牌服务

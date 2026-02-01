@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
-	"pansou/model"
+	"unisearch/model"
 )
 
 // 全局异步插件注册表

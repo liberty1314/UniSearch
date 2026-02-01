@@ -1,4 +1,4 @@
-module pansou
+module unisearch
 
 go 1.24.0
 

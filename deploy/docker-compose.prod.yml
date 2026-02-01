@@ -60,13 +60,14 @@ services:
       - "com.unisearch.service=database"
       - "com.unisearch.environment=production"
 
-  # 后端服务 - 生产环境配置
-  backend:
-    image: ${FULL_IMAGE_NAME:-liberty159/unisearch:latest}
-    container_name: unisearch-backend-prod
+  # UniSearch 应用服务 - 单体镜像（包含前端 + 后端）
+  app:
+    image: ${DOCKER_USERNAME:-liberty159}/${IMAGE_NAME:-unisearch}:${VERSION:-latest}
+    container_name: unisearch-app-prod
     restart: unless-stopped
     ports:
-      - "${BACKEND_PORT:-8888}:8888"
+      - "${FRONTEND_PORT:-3000}:80"      # 前端端口 (Nginx)
+      - "${BACKEND_PORT:-8888}:8888"     # 后端端口 (Go API)
     environment:
       # 时区配置
       TZ: ${TZ:-Asia/Shanghai}
@@ -76,10 +77,10 @@ services:
       
       # 数据库配置
       DB_HOST: mysql
-      DB_PORT: ${DB_PORT:-3306}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      DB_NAME: ${DB_NAME:-unisearch}
       
       # 认证配置
       API_KEY_ENABLED: ${API_KEY_ENABLED:-true}
@@ -147,92 +148,15 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
           cpus: '1'
           memory: 512M
-        reservations:
-          cpus: '0.5'
-          memory: 256M
     labels:
-      - "com.unisearch.service=backend"
+      - "com.unisearch.service=app"
       - "com.unisearch.environment=production"
-      - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
-      - "traefik.http.services.backend.loadbalancer.server.port=8888"
-
-  # 前端服务 - 生产环境配置
-  frontend:
-    image: ${FULL_IMAGE_NAME:-liberty159/unisearch:latest}-frontend
-    container_name: unisearch-frontend-prod
-    restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-3000}:80"
-    environment:
-      NODE_ENV: production
-      TZ: ${TZ:-Asia/Shanghai}
-    networks:
-      - unisearch-network
-    depends_on:
-      backend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.25'
-          memory: 128M
-    labels:
-      - "com.unisearch.service=frontend"
-      - "com.unisearch.environment=production"
-      - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.services.frontend.loadbalancer.server.port=80"
-
-  # Nginx 反向代理 - 生产环境（可选）
-  # 如果使用 Traefik 或云负载均衡器，可以注释掉此服务
-  nginx:
-    image: nginx:alpine
-    container_name: unisearch-nginx-prod
-    restart: unless-stopped
-    ports:
-      - "${NGINX_HTTP_PORT:-80}:80"
-      - "${NGINX_HTTPS_PORT:-443}:443"
-    volumes:
-      # Nginx 配置文件
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      # SSL 证书（如果使用 HTTPS）
-      - ${SSL_CERT_PATH}:/etc/nginx/ssl/cert.pem:ro
-      - ${SSL_KEY_PATH}:/etc/nginx/ssl/key.pem:ro
-      # 静态文件（可选）
-      # - ./nginx/html:/usr/share/nginx/html:ro
-    networks:
-      - unisearch-network
-    depends_on:
-      - frontend
-      - backend
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.25'
-          memory: 128M
-    labels:
-      - "com.unisearch.service=nginx"
-      - "com.unisearch.environment=production"
+      - "com.watchtower.enable=true"
 
   # Watchtower - 自动更新容器（可选）
   # 用于自动拉取最新镜像并重启容器
@@ -251,8 +175,8 @@ services:
       WATCHTOWER_CLEANUP: "true"
       # 通知配置（可选）
       # WATCHTOWER_NOTIFICATIONS: email
-      # WATCHTOWER_NOTIFICATION_EMAIL_FROM: ${SSL_EMAIL}
-      # WATCHTOWER_NOTIFICATION_EMAIL_TO: ${SSL_EMAIL}
+      # WATCHTOWER_NOTIFICATION_EMAIL_FROM: ${NOTIFICATION_EMAIL}
+      # WATCHTOWER_NOTIFICATION_EMAIL_TO: ${NOTIFICATION_EMAIL}
     networks:
       - unisearch-network
     deploy:

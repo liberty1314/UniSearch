@@ -1,40 +1,96 @@
-# 生产环境部署指南
+# UniSearch 生产环境部署指南
 
-本目录包含生产环境部署所需的配置文件和说明文档。
+## 📋 目录结构
 
-## 📁 文件说明
-
-- `docker-compose.prod.yml` - 生产环境 Docker Compose 配置文件
-- `.env.production.example` - 生产环境配置模板
-- `README.md` - 本文档
-
-## 🚀 快速开始
-
-### 1. 准备配置文件
-
-```bash
-# 复制配置模板
-cp deploy/.env.production.example deploy/.env.production
-
-# 编辑配置文件，修改所有必需的配置项
-vim deploy/.env.production
+```
+deploy/
+├── docker-compose.prod.yml  # 生产环境 Docker Compose 配置
+├── env.prod                 # 生产环境变量配置模板
+├── .env.local              # 本地敏感配置（需手动创建，不提交到 Git）
+├── nginx/                  # Nginx 配置文件
+│   ├── http.conf          # HTTP 配置
+│   ├── https.conf         # HTTPS 配置
+│   └── monitor.conf       # 监控配置
+└── README.md              # 本文档
 ```
 
-**必须修改的配置项：**
-- `DB_PASSWORD` - 数据库密码（使用强密码）
-- `ADMIN_PASSWORD_HASH` - 管理员密码哈希
-- `REFRESH_TOKEN_ENCRYPT_KEY` - 刷新令牌加密密钥
-- `DOMAIN` - 你的域名
-- `FULL_IMAGE_NAME` - Docker 镜像名称和版本
+## 🚀 快速部署
 
-### 2. 生成密钥和密码
+### 1. 准备工作
+
+#### 1.1 服务器要求
+- 操作系统: Ubuntu 20.04+ / CentOS 7+ / Debian 10+
+- CPU: 2核心以上
+- 内存: 4GB 以上
+- 磁盘: 20GB 以上可用空间
+- Docker: 20.10+
+- Docker Compose: 2.0+
+
+#### 1.2 安装 Docker 和 Docker Compose
 
 ```bash
-# 生成管理员密码哈希
-./scripts/gen_admin_password.sh "your_admin_password"
+# 安装 Docker
+curl -fsSL https://get.docker.com | bash
 
-# 生成刷新令牌加密密钥
-openssl rand -base64 32
+# 启动 Docker 服务
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# 验证安装
+docker --version
+docker compose version
+```
+
+### 2. 配置环境变量
+
+#### 2.1 复制配置模板
+
+```bash
+cd deploy
+cp env.prod .env
+```
+
+#### 2.2 修改必要配置
+
+编辑 `.env` 文件，**必须修改**以下配置项：
+
+```bash
+# 数据库密码（必须修改）
+DB_PASSWORD=your_secure_password_here
+
+# 域名配置（如果有域名）
+DOMAIN=your-domain.com
+WWW_DOMAIN=www.your-domain.com
+
+# Docker 镜像配置
+DOCKER_USERNAME=liberty159
+IMAGE_NAME=unisearch
+VERSION=latest
+```
+
+#### 2.3 配置敏感信息（推荐）
+
+为了安全，建议将敏感配置单独存储在 `.env.local` 文件中：
+
+```bash
+# 创建本地敏感配置文件
+touch .env.local
+chmod 600 .env.local
+```
+
+在 `.env.local` 中添加：
+
+```bash
+# 数据库密码
+DB_PASSWORD=your_secure_password_here
+
+# 管理员密码哈希
+# 生成方法: cd .. && go run gen_hash.go "你的密码"
+ADMIN_PASSWORD_HASH=$2a$10$...
+
+# 刷新令牌加密密钥
+# 生成方法: openssl rand -base64 32
+REFRESH_TOKEN_ENCRYPT_KEY=your_32_byte_random_key_here
 ```
 
 ### 3. 创建数据目录
@@ -46,216 +102,189 @@ sudo mkdir -p /data/backend/cache
 sudo mkdir -p /data/backend/data
 
 # 设置权限
-sudo chown -R $USER:$USER /data
+sudo chown -R 999:999 /data/mysql  # MySQL 容器使用 UID 999
+sudo chmod -R 755 /data/backend
 ```
 
-### 4. 部署应用
+### 4. 启动服务
 
 ```bash
-# 使用部署脚本（推荐）
-./scripts/deploy.sh
-
-# 或手动部署
+# 进入部署目录
 cd deploy
-docker-compose -f docker-compose.prod.yml --env-file .env.production up -d
+
+# 拉取最新镜像
+docker compose -f docker-compose.prod.yml pull
+
+# 启动服务（后台运行）
+docker compose -f docker-compose.prod.yml up -d
+
+# 查看服务状态
+docker compose -f docker-compose.prod.yml ps
+
+# 查看日志
+docker compose -f docker-compose.prod.yml logs -f
 ```
 
 ### 5. 验证部署
 
 ```bash
-# 查看容器状态
-docker-compose -f deploy/docker-compose.prod.yml ps
+# 检查容器状态
+docker ps
 
-# 查看日志
-docker-compose -f deploy/docker-compose.prod.yml logs -f
-
-# 健康检查
+# 检查后端健康状态
 curl http://localhost:8888/api/health
+
+# 检查前端访问
+curl http://localhost:3000
 ```
 
-## 🔧 配置说明
+## 🔧 常用运维命令
 
-### 资源限制
-
-生产环境配置了以下资源限制：
-
-| 服务 | CPU 限制 | 内存限制 | CPU 预留 | 内存预留 |
-|------|---------|---------|---------|---------|
-| MySQL | 2 核 | 2GB | 1 核 | 1GB |
-| Backend | 1 核 | 512MB | 0.5 核 | 256MB |
-| Frontend | 0.5 核 | 256MB | 0.25 核 | 128MB |
-| Nginx | 0.5 核 | 256MB | 0.25 核 | 128MB |
-
-根据实际负载情况，可以在 `docker-compose.prod.yml` 中调整这些限制。
-
-### 重启策略
-
-所有服务都配置了 `restart: unless-stopped` 策略：
-- 容器异常退出时自动重启
-- 手动停止的容器不会自动重启
-- 系统重启后自动启动容器
-
-### 健康检查
-
-所有服务都配置了健康检查：
-- **MySQL**: 每 10 秒检查一次，启动后 30 秒开始检查
-- **Backend**: 每 30 秒检查一次，启动后 20 秒开始检查
-- **Frontend**: 每 30 秒检查一次，启动后 10 秒开始检查
-- **Nginx**: 每 30 秒检查一次
-
-### 数据持久化
-
-生产环境使用绑定挂载而非命名卷：
-
-```yaml
-volumes:
-  - /data/mysql:/var/lib/mysql              # MySQL 数据
-  - /data/backend/cache:/app/cache          # 后端缓存
-  - /data/backend/data:/app/data            # 后端数据
-```
-
-**优点：**
-- 便于备份和迁移
-- 可以直接访问数据文件
-- 更好的性能监控
-
-### MySQL 性能优化
-
-生产环境配置了以下 MySQL 优化参数：
-
-```yaml
-command:
-  - --max_connections=500                    # 最大连接数
-  - --innodb_buffer_pool_size=1G            # InnoDB 缓冲池大小
-  - --innodb_log_file_size=256M             # 日志文件大小
-  - --slow_query_log=1                      # 启用慢查询日志
-  - --long_query_time=2                     # 慢查询阈值（秒）
-```
-
-## 🔐 安全建议
-
-### 1. 密码和密钥安全
-
-- ✅ 使用强随机密码（至少 16 字符，包含大小写字母、数字、特殊字符）
-- ✅ 定期更换密码和密钥（建议每 3-6 个月）
-- ✅ 不要将 `.env.production` 提交到版本控制系统
-- ✅ 限制配置文件访问权限：`chmod 600 deploy/.env.production`
-
-### 2. 网络安全
+### 服务管理
 
 ```bash
-# 配置防火墙（UFW）
+# 启动服务
+docker compose -f docker-compose.prod.yml up -d
+
+# 停止服务
+docker compose -f docker-compose.prod.yml down
+
+# 重启服务
+docker compose -f docker-compose.prod.yml restart
+
+# 查看服务状态
+docker compose -f docker-compose.prod.yml ps
+
+# 查看实时日志
+docker compose -f docker-compose.prod.yml logs -f
+
+# 查看特定服务日志
+docker compose -f docker-compose.prod.yml logs -f app
+docker compose -f docker-compose.prod.yml logs -f mysql
+```
+
+### 更新部署
+
+```bash
+# 拉取最新镜像
+docker compose -f docker-compose.prod.yml pull
+
+# 重新创建并启动容器
+docker compose -f docker-compose.prod.yml up -d --force-recreate
+
+# 清理旧镜像
+docker image prune -f
+```
+
+### 数据备份
+
+```bash
+# 备份 MySQL 数据库
+docker exec unisearch-mysql-prod mysqldump -uroot -p${DB_PASSWORD} unisearch > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# 备份后端缓存和数据
+tar -czf backend_data_$(date +%Y%m%d_%H%M%S).tar.gz /data/backend/
+```
+
+### 数据恢复
+
+```bash
+# 恢复 MySQL 数据库
+docker exec -i unisearch-mysql-prod mysql -uroot -p${DB_PASSWORD} unisearch < backup.sql
+
+# 恢复后端数据
+tar -xzf backend_data_backup.tar.gz -C /
+```
+
+## 🔐 安全配置
+
+### 1. 修改默认密码
+
+```bash
+# 生成管理员密码哈希
+cd ..
+go run gen_hash.go "your_new_password"
+
+# 将生成的哈希值更新到 .env.local 中的 ADMIN_PASSWORD_HASH
+```
+
+### 2. 生成加密密钥
+
+```bash
+# 生成刷新令牌加密密钥
+openssl rand -base64 32
+
+# 将生成的密钥更新到 .env.local 中的 REFRESH_TOKEN_ENCRYPT_KEY
+```
+
+### 3. 配置防火墙
+
+```bash
+# 安装 UFW
+sudo apt install ufw
+
+# 允许必要端口
 sudo ufw allow 22/tcp    # SSH
 sudo ufw allow 80/tcp    # HTTP
 sudo ufw allow 443/tcp   # HTTPS
+
+# 启用防火墙
 sudo ufw enable
 
-# 限制 MySQL 端口访问（仅容器内部访问）
-# 不要在 docker-compose.prod.yml 中暴露 MySQL 端口到宿主机
+# 查看状态
+sudo ufw status
 ```
 
-### 3. SSL/TLS 配置
+### 4. 配置 SSL 证书（可选）
 
-使用 Let's Encrypt 免费证书：
+如果需要 HTTPS 访问，可以使用 Let's Encrypt 免费证书：
 
 ```bash
 # 安装 Certbot
-sudo apt-get install certbot
+sudo apt install certbot
 
 # 获取证书
-sudo certbot certonly --standalone -d unisearchso.xyz -d www.unisearchso.xyz
+sudo certbot certonly --standalone -d your-domain.com -d www.your-domain.com
 
-# 自动续期
-sudo certbot renew --dry-run
+# 证书会自动保存到 /etc/letsencrypt/live/your-domain.com/
 ```
-
-### 4. 容器安全
-
-- ✅ 使用官方镜像或可信镜像源
-- ✅ 定期更新镜像和依赖
-- ✅ 使用非 root 用户运行容器（在 Dockerfile 中配置）
-- ✅ 限制容器权限和资源
 
 ## 📊 监控和日志
 
-### 查看日志
+### 查看容器资源使用
 
 ```bash
-# 查看所有服务日志
-docker-compose -f deploy/docker-compose.prod.yml logs -f
-
-# 查看特定服务日志
-docker-compose -f deploy/docker-compose.prod.yml logs -f backend
-
-# 查看最近 100 行日志
-docker-compose -f deploy/docker-compose.prod.yml logs --tail=100 backend
-```
-
-### 监控容器状态
-
-```bash
-# 查看容器状态
-docker-compose -f deploy/docker-compose.prod.yml ps
-
-# 查看资源使用情况
+# 查看所有容器资源使用情况
 docker stats
 
-# 查看容器详细信息
-docker inspect unisearch-backend-prod
+# 查看特定容器
+docker stats unisearch-app-prod unisearch-mysql-prod
 ```
 
-### 日志收集（可选）
-
-可以集成以下日志收集工具：
-- **ELK Stack** (Elasticsearch + Logstash + Kibana)
-- **Loki + Grafana**
-- **Fluentd**
-
-## 🔄 更新和维护
-
-### 更新应用
+### 查看应用日志
 
 ```bash
-# 方式 1: 使用部署脚本（推荐）
-./scripts/deploy.sh
+# 查看后端日志
+docker compose -f docker-compose.prod.yml logs -f app
 
-# 方式 2: 手动更新
-cd deploy
-docker-compose -f docker-compose.prod.yml pull
-docker-compose -f docker-compose.prod.yml up -d
+# 查看数据库日志
+docker compose -f docker-compose.prod.yml logs -f mysql
+
+# 查看最近 100 行日志
+docker compose -f docker-compose.prod.yml logs --tail=100 app
 ```
 
-### 自动更新（Watchtower）
-
-生产环境配置了 Watchtower 服务，可以自动检查并更新容器：
-
-- **检查频率**: 每天凌晨 2 点
-- **更新策略**: 只更新带有特定标签的容器
-- **清理策略**: 自动清理旧镜像
-
-如果不需要自动更新，可以在 `docker-compose.prod.yml` 中注释掉 `watchtower` 服务。
-
-### 备份数据
+### 进入容器调试
 
 ```bash
-# 备份 MySQL 数据
-docker exec unisearch-mysql-prod mysqldump -u root -p${DB_PASSWORD} ${DB_NAME} > backup_$(date +%Y%m%d).sql
+# 进入应用容器
+docker exec -it unisearch-app-prod sh
 
-# 备份数据目录
-sudo tar -czf backup_$(date +%Y%m%d).tar.gz /data
+# 进入数据库容器
+docker exec -it unisearch-mysql-prod bash
 
-# 定期备份（添加到 crontab）
-0 2 * * * /path/to/backup_script.sh
-```
-
-### 恢复数据
-
-```bash
-# 恢复 MySQL 数据
-docker exec -i unisearch-mysql-prod mysql -u root -p${DB_PASSWORD} ${DB_NAME} < backup_20240101.sql
-
-# 恢复数据目录
-sudo tar -xzf backup_20240101.tar.gz -C /
+# 连接 MySQL 数据库
+docker exec -it unisearch-mysql-prod mysql -uroot -p${DB_PASSWORD} unisearch
 ```
 
 ## 🐛 故障排查
@@ -264,54 +293,96 @@ sudo tar -xzf backup_20240101.tar.gz -C /
 
 ```bash
 # 查看容器日志
-docker-compose -f deploy/docker-compose.prod.yml logs backend
+docker compose -f docker-compose.prod.yml logs
 
-# 查看容器状态
-docker-compose -f deploy/docker-compose.prod.yml ps
+# 检查配置文件语法
+docker compose -f docker-compose.prod.yml config
 
-# 检查配置文件
-docker-compose -f deploy/docker-compose.prod.yml config
+# 检查端口占用
+sudo netstat -tulpn | grep -E '3000|8888|3306'
 ```
 
 ### 数据库连接失败
 
 ```bash
-# 检查 MySQL 容器状态
-docker-compose -f deploy/docker-compose.prod.yml ps mysql
+# 检查数据库容器状态
+docker ps | grep mysql
 
-# 检查 MySQL 日志
-docker-compose -f deploy/docker-compose.prod.yml logs mysql
+# 检查数据库健康状态
+docker inspect unisearch-mysql-prod | grep -A 10 Health
 
 # 测试数据库连接
-docker exec -it unisearch-mysql-prod mysql -u root -p
+docker exec -it unisearch-mysql-prod mysql -uroot -p${DB_PASSWORD} -e "SELECT 1"
 ```
 
-### 性能问题
+### 应用无法访问
 
 ```bash
-# 查看资源使用情况
-docker stats
+# 检查应用容器状态
+docker ps | grep app
 
-# 查看 MySQL 慢查询日志
-docker exec unisearch-mysql-prod cat /var/lib/mysql/slow.log
+# 检查应用健康状态
+curl http://localhost:8888/api/health
 
-# 调整资源限制
-# 编辑 docker-compose.prod.yml 中的 deploy.resources 配置
+# 检查网络连接
+docker network inspect unisearch-network-prod
 ```
 
-## 📞 支持
+## 📝 配置说明
 
-如有问题，请：
-1. 查看日志：`docker-compose -f deploy/docker-compose.prod.yml logs`
-2. 检查配置：`docker-compose -f deploy/docker-compose.prod.yml config`
-3. 查看文档：`docs/` 目录
-4. 提交 Issue：GitHub Issues
+### 环境变量说明
 
-## 📝 变更日志
+| 变量名 | 说明 | 默认值 | 是否必须 |
+|--------|------|--------|----------|
+| `DB_HOST` | 数据库主机 | `mysql` | 是 |
+| `DB_PORT` | 数据库端口 | `3306` | 是 |
+| `DB_USER` | 数据库用户 | `root` | 是 |
+| `DB_PASSWORD` | 数据库密码 | - | **是（必须修改）** |
+| `DB_NAME` | 数据库名称 | `unisearch` | 是 |
+| `ADMIN_PASSWORD_HASH` | 管理员密码哈希 | - | **是（必须修改）** |
+| `REFRESH_TOKEN_ENCRYPT_KEY` | 刷新令牌加密密钥 | - | **是（必须修改）** |
+| `FRONTEND_PORT` | 前端端口 | `3000` | 否 |
+| `BACKEND_PORT` | 后端端口 | `8888` | 否 |
+| `CACHE_ENABLED` | 是否启用缓存 | `true` | 否 |
+| `ASYNC_PLUGIN_ENABLED` | 是否启用异步插件 | `true` | 否 |
 
-### v1.0.0 (2024-01-01)
-- ✅ 初始生产环境配置
-- ✅ 添加资源限制和健康检查
-- ✅ 配置数据持久化
-- ✅ 添加 Watchtower 自动更新
-- ✅ 优化 MySQL 性能参数
+### 资源限制说明
+
+生产环境配置了资源限制，确保服务稳定运行：
+
+- **MySQL 容器**:
+  - CPU 限制: 2核心
+  - 内存限制: 2GB
+  - 预留资源: 1核心 + 1GB 内存
+
+- **应用容器**:
+  - CPU 限制: 2核心
+  - 内存限制: 1GB
+  - 预留资源: 1核心 + 512MB 内存
+
+## 🔄 自动更新（Watchtower）
+
+生产环境配置了 Watchtower 自动更新服务：
+
+- 每天凌晨 2 点检查镜像更新
+- 自动拉取最新镜像并重启容器
+- 自动清理旧镜像
+
+如需禁用自动更新，可以停止 Watchtower 服务：
+
+```bash
+docker compose -f docker-compose.prod.yml stop watchtower
+```
+
+## 📞 技术支持
+
+如遇到问题，请检查：
+
+1. 容器日志: `docker compose -f docker-compose.prod.yml logs`
+2. 系统资源: `docker stats`
+3. 网络连接: `docker network inspect unisearch-network-prod`
+4. 配置文件: `docker compose -f docker-compose.prod.yml config`
+
+---
+
+**最后更新**: 2026-02-01

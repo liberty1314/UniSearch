@@ -1,43 +1,17 @@
 #!/bin/bash
 
 # ============================================
-# API Key MySQL 迁移项目 - Docker 镜像构建脚本
+# UniSearch 生产环境 Docker 镜像构建脚本
 # ============================================
-# 
-# 功能说明：
-#   - 构建 Go 后端应用的 Docker 镜像
-#   - 支持自定义镜像名称和版本标签
-#   - 使用多阶段构建优化镜像大小
-#   - 支持构建参数配置（GOOS、GOARCH）
-#
-# 使用方法：
-#   ./scripts/build.sh [VERSION]
-#
-# 参数说明：
-#   VERSION    - 镜像版本号（可选，默认：latest）
-#
-# 环境变量：
-#   IMAGE_NAME - 自定义镜像名称（默认：pansou-backend）
-#   GOOS       - 目标操作系统（默认：linux）
-#   GOARCH     - 目标架构（默认：amd64）
-#
-# 使用示例：
-#   # 构建默认版本
-#   ./scripts/build.sh
-#
-#   # 构建指定版本
-#   ./scripts/build.sh v1.0.0
-#
-#   # 自定义镜像名称
-#   IMAGE_NAME=my-backend ./scripts/build.sh v1.0.0
-#
-#   # 构建 ARM64 架构镜像
-#   GOARCH=arm64 ./scripts/build.sh v1.0.0
-#
+# 功能：
+#   - 支持多架构构建 (linux/amd64, linux/arm64)
+#   - 支持自定义版本标签
+#   - 本地测试验证
+#   - 推送到远程仓库
+# 用法: ./build.sh
 # ============================================
 
-set -e  # 遇到错误立即退出
-set -o pipefail  # 管道命令中任何一个失败都会导致整个管道失败
+set -e
 
 # ============================================
 # 颜色定义
@@ -46,22 +20,25 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m'  # No Color
+CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+NC='\033[0m'
 
 # ============================================
-# 配置参数
+# 默认配置
 # ============================================
-# 从环境变量读取或使用默认值
-IMAGE_NAME="${IMAGE_NAME:-pansou-backend}"
-VERSION="${1:-latest}"
-GOOS="${GOOS:-linux}"
-GOARCH="${GOARCH:-amd64}"
+DEFAULT_USERNAME="liberty159"
+DEFAULT_IMAGE="unisearch"
+DEFAULT_VERSION="1.0.4"
 
-# Dockerfile 路径
-DOCKERFILE="backend/Dockerfile"
-
-# 完整镜像标签
-IMAGE_TAG="${IMAGE_NAME}:${VERSION}"
+# 全局变量
+DOCKER_USERNAME=""
+IMAGE_NAME=""
+VERSION=""
+FULL_IMAGE_NAME=""
+TEST_IMAGE_TAG=""
+BUILD_PLATFORMS="linux/amd64,linux/arm64"
+SKIP_TEST=false  # 是否跳过测试
 
 # ============================================
 # 日志函数
@@ -71,187 +48,660 @@ log_info() {
 }
 
 log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    echo -e "${GREEN}[✓]${NC} $1"
 }
 
 log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    echo -e "${YELLOW}[⚠]${NC} $1"
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    echo -e "${RED}[✗]${NC} $1"
+}
+
+log_step() {
+    echo -e "${CYAN}[→]${NC} $1"
+}
+
+log_header() {
+    echo ""
+    echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${MAGENTA}  $1${NC}"
+    echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
 }
 
 # ============================================
-# 错误处理函数
+# 菜单函数
 # ============================================
-handle_error() {
-    local exit_code=$?
-    local line_number=$1
-    log_error "构建失败！退出码: ${exit_code}, 行号: ${line_number}"
-    log_error "请检查上述错误信息并修复问题后重试"
-    exit ${exit_code}
+
+# 显示欢迎信息
+show_welcome() {
+    clear
+    cat << "EOF"
+    
+    ╔══════════════════════════════════════════════════════╗
+    ║                                                      ║
+    ║        UniSearch Docker 镜像构建工具                 ║
+    ║                                                      ║
+    ║        支持多架构 | 版本管理 | 自动测试              ║
+    ║                                                      ║
+    ╚══════════════════════════════════════════════════════╝
+    
+EOF
+    
+    if [ "$SKIP_TEST" = true ]; then
+        echo -e "${YELLOW}⚡ 快速模式: 跳过本地测试，直接推送到 Docker Hub${NC}"
+        echo ""
+    fi
 }
 
-# 设置错误陷阱
-trap 'handle_error ${LINENO}' ERR
+# 配置菜单
+show_config_menu() {
+    log_header "配置构建参数"
+    
+    echo ""
+    echo -e "${CYAN}请配置以下参数（直接回车使用默认值）:${NC}"
+    echo ""
+    
+    # Docker Hub 用户名
+    read -p "$(echo -e ${YELLOW}Docker Hub 用户名${NC} [${DEFAULT_USERNAME}]: )" input_username
+    DOCKER_USERNAME="${input_username:-$DEFAULT_USERNAME}"
+    
+    # 镜像名称
+    read -p "$(echo -e ${YELLOW}镜像名称${NC} [${DEFAULT_IMAGE}]: )" input_image
+    IMAGE_NAME="${input_image:-$DEFAULT_IMAGE}"
+    
+    # 版本号
+    read -p "$(echo -e ${YELLOW}版本号${NC} [${DEFAULT_VERSION}]: )" input_version
+    VERSION="${input_version:-$DEFAULT_VERSION}"
+    
+    # 设置完整镜像名称
+    FULL_IMAGE_NAME="${DOCKER_USERNAME}/${IMAGE_NAME}"
+    TEST_IMAGE_TAG="${IMAGE_NAME}:local-test"
+    
+    echo ""
+    log_success "配置完成"
+    echo ""
+    echo -e "  ${CYAN}Docker Hub 用户:${NC} ${DOCKER_USERNAME}"
+    echo -e "  ${CYAN}镜像名称:${NC}       ${IMAGE_NAME}"
+    echo -e "  ${CYAN}版本号:${NC}         ${VERSION}"
+    echo -e "  ${CYAN}完整镜像名:${NC}     ${FULL_IMAGE_NAME}:${VERSION}"
+    echo -e "  ${CYAN}构建平台:${NC}       ${BUILD_PLATFORMS}"
+    echo ""
+}
+
+# 确认菜单
+confirm_action() {
+    local prompt="$1"
+    local default="${2:-N}"
+    
+    if [ "$default" = "Y" ]; then
+        read -p "$(echo -e ${YELLOW}${prompt}${NC} [Y/n]: )" choice
+        choice=${choice:-Y}
+    else
+        read -p "$(echo -e ${YELLOW}${prompt}${NC} [y/N]: )" choice
+        choice=${choice:-N}
+    fi
+    
+    [[ "$choice" =~ ^[Yy]$ ]]
+}
 
 # ============================================
-# 环境检查函数
+# 检查函数
 # ============================================
+
+# 检查 Docker 环境
 check_docker() {
     log_info "检查 Docker 环境..."
     
     if ! command -v docker &> /dev/null; then
-        log_error "Docker 未安装，请先安装 Docker"
+        log_error "Docker 未安装"
         log_info "下载地址: https://www.docker.com/products/docker-desktop"
         exit 1
     fi
     
     if ! docker info &> /dev/null; then
-        log_error "Docker 未运行，请启动 Docker 服务"
+        log_error "Docker 未运行，请启动 Docker Desktop"
         exit 1
     fi
     
     log_success "Docker 环境检查通过"
 }
 
-check_dockerfile() {
-    log_info "检查 Dockerfile..."
+# 检查 Docker Hub 登录状态
+check_dockerhub_login() {
+    log_info "检查 Docker Hub 登录状态..."
     
-    if [ ! -f "${DOCKERFILE}" ]; then
-        log_error "Dockerfile 不存在: ${DOCKERFILE}"
-        log_info "请确保在项目根目录执行此脚本"
-        exit 1
+    if ! docker info 2>/dev/null | grep -q "Username: ${DOCKER_USERNAME}"; then
+        log_warning "未检测到 Docker Hub 登录或用户名不匹配"
+        log_info "尝试登录到 ${DOCKER_USERNAME}..."
+        
+        if docker login; then
+            log_success "Docker Hub 登录成功"
+        else
+            log_error "Docker Hub 登录失败"
+            exit 1
+        fi
+    else
+        log_success "Docker Hub 已登录 (${DOCKER_USERNAME})"
+    fi
+}
+
+# 创建并配置 buildx 构建器
+setup_buildx() {
+    log_info "配置 Docker buildx 构建器..."
+    
+    # 检查是否已存在构建器
+    if ! docker buildx ls | grep -q "unisearch-builder"; then
+        log_info "创建新的 buildx 构建器..."
+        docker buildx create --name unisearch-builder --use
+    else
+        log_info "使用现有 buildx 构建器..."
+        docker buildx use unisearch-builder
     fi
     
-    log_success "Dockerfile 检查通过: ${DOCKERFILE}"
+    # 启动构建器
+    docker buildx inspect --bootstrap
+    
+    log_success "buildx 构建器配置完成"
 }
 
 # ============================================
-# 构建镜像函数
+# 构建函数
 # ============================================
-build_image() {
-    log_info "开始构建 Docker 镜像..."
-    echo
-    log_info "构建配置："
-    echo "  镜像名称: ${IMAGE_NAME}"
-    echo "  版本标签: ${VERSION}"
-    echo "  完整标签: ${IMAGE_TAG}"
-    echo "  目标系统: ${GOOS}"
-    echo "  目标架构: ${GOARCH}"
-    echo "  Dockerfile: ${DOCKERFILE}"
-    echo
+
+# 构建本地测试镜像
+build_local_test_image() {
+    log_header "Step 1: 构建本地测试镜像"
     
-    # 构建镜像
-    # 使用 --build-arg 传递构建参数
-    # 使用 --no-cache 确保获取最新依赖（可选）
-    log_info "执行 Docker 构建..."
-    docker build \
-        --file "${DOCKERFILE}" \
-        --tag "${IMAGE_TAG}" \
-        --build-arg GOOS="${GOOS}" \
-        --build-arg GOARCH="${GOARCH}" \
+    log_info "构建适配当前机器架构的镜像用于本地测试..."
+    echo ""
+    
+    # 构建并加载到本地 Docker Daemon
+    docker buildx build \
+        --load \
+        --file Dockerfile \
+        --tag "${TEST_IMAGE_TAG}" \
         --build-arg VERSION="${VERSION}" \
-        backend/
+        --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+        --build-arg VCS_REF="$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')" \
+        .
     
     if [ $? -eq 0 ]; then
-        log_success "镜像构建成功！"
+        log_success "本地测试镜像构建成功: ${TEST_IMAGE_TAG}"
     else
-        log_error "镜像构建失败"
+        log_error "本地测试镜像构建失败"
         exit 1
     fi
 }
 
-# ============================================
-# 显示镜像信息函数
-# ============================================
-show_image_info() {
-    log_info "获取镜像信息..."
-    echo
+# 运行本地容器测试
+run_local_container_test() {
+    log_header "Step 2: 本地容器测试"
     
-    # 获取镜像大小
-    local image_size=$(docker images "${IMAGE_TAG}" --format "{{.Size}}")
-    local image_id=$(docker images "${IMAGE_TAG}" --format "{{.ID}}")
-    local created=$(docker images "${IMAGE_TAG}" --format "{{.CreatedAt}}")
+    local network_name="${IMAGE_NAME}-test-network"
+    local mysql_container="${IMAGE_NAME}-mysql-local"
+    local app_container="${IMAGE_NAME}-local"
     
-    log_success "镜像构建完成！"
-    echo
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  镜像信息"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  镜像名称: ${IMAGE_NAME}"
-    echo "  版本标签: ${VERSION}"
-    echo "  完整标签: ${IMAGE_TAG}"
-    echo "  镜像 ID:  ${image_id}"
-    echo "  镜像大小: ${image_size}"
-    echo "  创建时间: ${created}"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo
+    # 清理旧的测试环境
+    log_info "清理旧的测试环境..."
+    docker stop "${app_container}" &> /dev/null || true
+    docker rm "${app_container}" &> /dev/null || true
+    docker stop "${mysql_container}" &> /dev/null || true
+    docker rm "${mysql_container}" &> /dev/null || true
+    docker network rm "${network_name}" &> /dev/null || true
     
-    # 显示镜像优化提示
-    log_info "镜像大小优化说明："
-    echo "  ✓ 使用多阶段构建减少最终镜像大小"
-    echo "  ✓ 使用 alpine 基础镜像"
-    echo "  ✓ 静态编译 Go 二进制文件（CGO_ENABLED=0）"
-    echo "  ✓ 使用 -ldflags='-s -w' 去除调试信息"
-    echo
+    # 创建测试网络
+    log_info "创建测试网络..."
+    docker network create "${network_name}" &> /dev/null
+    if [ $? -eq 0 ]; then
+        log_success "测试网络创建成功: ${network_name}"
+    else
+        log_error "测试网络创建失败"
+        return 1
+    fi
+    
+    # 启动 MySQL 容器
+    log_info "启动 MySQL 数据库容器..."
+    docker run -d \
+        --name "${mysql_container}" \
+        --network "${network_name}" \
+        -e MYSQL_ROOT_PASSWORD=test_password \
+        -e MYSQL_DATABASE=unisearch_test \
+        -e TZ=Asia/Shanghai \
+        mysql:8.0 \
+        --character-set-server=utf8mb4 \
+        --collation-server=utf8mb4_unicode_ci \
+        --default-authentication-plugin=mysql_native_password
+    
+    if [ $? -ne 0 ]; then
+        log_error "MySQL 容器启动失败"
+        docker network rm "${network_name}" &> /dev/null || true
+        return 1
+    fi
+    
+    log_success "MySQL 容器启动成功"
+    
+    # 等待 MySQL 启动完成
+    log_info "等待 MySQL 数据库初始化..."
+    local max_wait=60
+    local wait_count=0
+    
+    while [ $wait_count -lt $max_wait ]; do
+        if docker exec "${mysql_container}" mysqladmin ping -h localhost -uroot -ptest_password &> /dev/null; then
+            log_success "MySQL 数据库已就绪"
+            break
+        fi
+        
+        wait_count=$((wait_count + 1))
+        if [ $((wait_count % 5)) -eq 0 ]; then
+            echo -n "."
+        fi
+        sleep 1
+    done
+    
+    if [ $wait_count -ge $max_wait ]; then
+        log_error "MySQL 数据库启动超时"
+        docker logs "${mysql_container}"
+        docker stop "${mysql_container}" &> /dev/null || true
+        docker rm "${mysql_container}" &> /dev/null || true
+        docker network rm "${network_name}" &> /dev/null || true
+        return 1
+    fi
+    
+    echo ""
+    
+    # 启动应用容器
+    log_info "启动应用容器..."
+    docker run -d \
+        --name "${app_container}" \
+        --network "${network_name}" \
+        -p 3000:80 \
+        -p 8888:8888 \
+        -e TZ=Asia/Shanghai \
+        -e PORT=8888 \
+        -e CACHE_ENABLED=true \
+        -e CACHE_PATH=/app/cache \
+        -e ASYNC_PLUGIN_ENABLED=true \
+        -e API_KEY_ENABLED=true \
+        -e ADMIN_PASSWORD_HASH='$2a$10$ZBSWuVQONjalBEe.NziFdOLFg0NMji43X9JiBzu2iLuBCZwHL7WEy' \
+        -e DB_HOST="${mysql_container}" \
+        -e DB_PORT=3306 \
+        -e DB_USER=root \
+        -e DB_PASSWORD=test_password \
+        -e DB_NAME=unisearch_test \
+        "${TEST_IMAGE_TAG}"
+    
+    if [ $? -ne 0 ]; then
+        log_error "应用容器启动失败"
+        docker stop "${mysql_container}" &> /dev/null || true
+        docker rm "${mysql_container}" &> /dev/null || true
+        docker network rm "${network_name}" &> /dev/null || true
+        return 1
+    fi
+    
+    log_success "应用容器启动成功"
+    echo ""
+    log_info "容器信息:"
+    echo "  网络名称: ${network_name}"
+    echo "  MySQL 容器: ${mysql_container}"
+    echo "  应用容器: ${app_container}"
+    echo "  前端地址: http://localhost:3000"
+    echo "  后端地址: http://localhost:8888"
+    echo ""
+    
+    # 等待服务启动
+    log_info "等待服务启动 (15秒)..."
+    sleep 15
+    
+    # 检查服务健康状态
+    log_info "检查服务健康状态..."
+    local all_good=true
+    
+    # 检查前端服务
+    if curl -s http://localhost:3000 > /dev/null 2>&1; then
+        log_success "✅ 前端服务 (Port 3000): 正常"
+    else
+        log_warning "⚠️  前端服务 (Port 3000): 无法连接"
+        all_good=false
+    fi
+    
+    # 检查后端服务
+    if curl -s http://localhost:8888/api/health > /dev/null 2>&1; then
+        log_success "✅ 后端服务 (Port 8888): 正常"
+    else
+        log_warning "⚠️  后端服务 (Port 8888): 无法连接"
+        all_good=false
+    fi
+    
+    # 检查数据库连接
+    if docker exec "${mysql_container}" mysqladmin ping -h localhost -uroot -ptest_password &> /dev/null; then
+        log_success "✅ MySQL 数据库: 正常"
+    else
+        log_warning "⚠️  MySQL 数据库: 连接异常"
+        all_good=false
+    fi
+    
+    echo ""
+    if [ "$all_good" = true ]; then
+        log_success "本地测试验证通过！"
+    else
+        log_warning "自动检测发现潜在问题，请手动验证"
+        echo ""
+        log_info "查看应用容器日志:"
+        echo "  docker logs ${app_container}"
+        log_info "查看 MySQL 容器日志:"
+        echo "  docker logs ${mysql_container}"
+    fi
+    
+    # 显示应用容器日志
+    echo ""
+    log_info "应用容器日志 (最后 30 行):"
+    echo ""
+    docker logs --tail 30 "${app_container}"
+    
+    return 0
+}
+
+# 清理本地测试环境
+cleanup_local_test() {
+    log_info "清理本地测试环境..."
+    
+    local network_name="${IMAGE_NAME}-test-network"
+    local mysql_container="${IMAGE_NAME}-mysql-local"
+    local app_container="${IMAGE_NAME}-local"
+    
+    # 停止并删除应用容器
+    if docker ps -a | grep -q "${app_container}"; then
+        docker stop "${app_container}" &> /dev/null || true
+        docker rm "${app_container}" &> /dev/null || true
+        log_success "已删除应用容器: ${app_container}"
+    fi
+    
+    # 停止并删除 MySQL 容器
+    if docker ps -a | grep -q "${mysql_container}"; then
+        docker stop "${mysql_container}" &> /dev/null || true
+        docker rm "${mysql_container}" &> /dev/null || true
+        log_success "已删除 MySQL 容器: ${mysql_container}"
+    fi
+    
+    # 删除测试网络
+    if docker network ls | grep -q "${network_name}"; then
+        docker network rm "${network_name}" &> /dev/null || true
+        log_success "已删除测试网络: ${network_name}"
+    fi
+    
+    # 删除测试镜像
+    if docker images | grep -q "${TEST_IMAGE_TAG}"; then
+        docker rmi "${TEST_IMAGE_TAG}" &> /dev/null || true
+        log_success "已删除测试镜像: ${TEST_IMAGE_TAG}"
+    fi
+    
+    log_success "清理完成"
+}
+
+# 构建并推送生产镜像（直接推送，不构建本地测试镜像）
+build_and_push_production_image_direct() {
+    log_header "构建并推送生产镜像（跳过本地测试）"
+    
+    log_info "目标架构: ${BUILD_PLATFORMS}"
+    echo ""
+    log_info "将构建以下镜像标签:"
+    echo -e "  ${GREEN}✓${NC} ${FULL_IMAGE_NAME}:${VERSION}"
+    echo -e "  ${GREEN}✓${NC} ${FULL_IMAGE_NAME}:latest"
+    echo ""
+    
+    # 构建并推送多架构镜像（同时打 latest 和自定义版本标签）
+    docker buildx build \
+        --platform "${BUILD_PLATFORMS}" \
+        --file Dockerfile \
+        --tag "${FULL_IMAGE_NAME}:${VERSION}" \
+        --tag "${FULL_IMAGE_NAME}:latest" \
+        --build-arg VERSION="${VERSION}" \
+        --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+        --build-arg VCS_REF="$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')" \
+        --push \
+        .
+    
+    if [ $? -eq 0 ]; then
+        log_success "生产镜像构建并推送完成"
+        echo ""
+        log_info "已推送的镜像标签:"
+        echo -e "  ${CYAN}•${NC} ${FULL_IMAGE_NAME}:${VERSION}"
+        echo -e "  ${CYAN}•${NC} ${FULL_IMAGE_NAME}:latest"
+    else
+        log_error "镜像推送失败"
+        exit 1
+    fi
+}
+
+# 构建并推送生产镜像
+build_and_push_production_image() {
+    log_header "Step 4: 构建并推送生产镜像"
+    
+    log_info "目标架构: ${BUILD_PLATFORMS}"
+    echo ""
+    log_info "将构建以下镜像标签:"
+    echo -e "  ${GREEN}✓${NC} ${FULL_IMAGE_NAME}:${VERSION}"
+    echo -e "  ${GREEN}✓${NC} ${FULL_IMAGE_NAME}:latest"
+    echo ""
+    
+    # 构建并推送多架构镜像（同时打 latest 和自定义版本标签）
+    docker buildx build \
+        --platform "${BUILD_PLATFORMS}" \
+        --file Dockerfile \
+        --tag "${FULL_IMAGE_NAME}:${VERSION}" \
+        --tag "${FULL_IMAGE_NAME}:latest" \
+        --build-arg VERSION="${VERSION}" \
+        --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+        --build-arg VCS_REF="$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')" \
+        --push \
+        .
+    
+    if [ $? -eq 0 ]; then
+        log_success "生产镜像构建并推送完成"
+        echo ""
+        log_info "已推送的镜像标签:"
+        echo -e "  ${CYAN}•${NC} ${FULL_IMAGE_NAME}:${VERSION}"
+        echo -e "  ${CYAN}•${NC} ${FULL_IMAGE_NAME}:latest"
+    else
+        log_error "镜像推送失败"
+        exit 1
+    fi
+}
+
+# 验证推送的镜像
+verify_pushed_image() {
+    log_info "验证推送的镜像..."
+    log_warning "Docker Hub 同步可能需要几秒钟..."
+    
+    sleep 3
+    
+    echo ""
+    log_info "验证镜像标签:"
+    
+    # 验证自定义版本标签
+    if docker manifest inspect "${FULL_IMAGE_NAME}:${VERSION}" &> /dev/null; then
+        log_success "✅ ${FULL_IMAGE_NAME}:${VERSION} 验证成功"
+    else
+        log_warning "⚠️  ${FULL_IMAGE_NAME}:${VERSION} 等待同步"
+    fi
+    
+    # 验证 latest 标签
+    if docker manifest inspect "${FULL_IMAGE_NAME}:latest" &> /dev/null; then
+        log_success "✅ ${FULL_IMAGE_NAME}:latest 验证成功"
+    else
+        log_warning "⚠️  ${FULL_IMAGE_NAME}:latest 等待同步"
+    fi
+    
+    # 显示镜像架构信息
+    echo ""
+    log_info "镜像架构信息:"
+    docker manifest inspect "${FULL_IMAGE_NAME}:${VERSION}" 2>/dev/null | grep -E '"architecture"|"os"' | head -4 || true
 }
 
 # ============================================
-# 显示后续操作提示
+# 主流程
 # ============================================
-show_next_steps() {
-    log_info "后续操作："
-    echo
-    echo "  1. 运行镜像进行测试："
-    echo "     docker run -d -p 8080:8080 --name pansou-test ${IMAGE_TAG}"
-    echo
-    echo "  2. 查看容器日志："
-    echo "     docker logs -f pansou-test"
-    echo
-    echo "  3. 停止并删除测试容器："
-    echo "     docker stop pansou-test && docker rm pansou-test"
-    echo
-    echo "  4. 推送镜像到仓库（如需要）："
-    echo "     docker tag ${IMAGE_TAG} <registry>/${IMAGE_TAG}"
-    echo "     docker push <registry>/${IMAGE_TAG}"
-    echo
-    echo "  5. 使用部署脚本部署到生产环境："
-    echo "     ./scripts/deploy.sh"
-    echo
-}
 
-# ============================================
-# 主函数
-# ============================================
 main() {
-    echo
-    log_info "=== API Key MySQL 迁移项目 - Docker 镜像构建 ==="
-    echo
+    # 显示欢迎信息
+    show_welcome
     
-    # 1. 环境检查
+    # 配置参数
+    show_config_menu
+    
+    # 选择构建模式
+    echo ""
+    log_header "选择构建模式"
+    echo ""
+    echo -e "${CYAN}请选择构建模式:${NC}"
+    echo ""
+    echo -e "  ${GREEN}[1]${NC} 标准流程 - 本地构建 → 本地测试 → 推送到 Docker Hub"
+    echo -e "  ${YELLOW}[2]${NC} 快速推送 - 跳过本地测试，直接推送到 Docker Hub"
+    echo ""
+    
+    while true; do
+        read -p "$(echo -e ${YELLOW}请输入选项${NC} [1/2]: )" build_mode
+        
+        case "$build_mode" in
+            1)
+                log_info "已选择: 标准流程"
+                SKIP_TEST=false
+                break
+                ;;
+            2)
+                log_info "已选择: 快速推送模式"
+                SKIP_TEST=true
+                break
+                ;;
+            *)
+                log_error "无效选项，请输入 1 或 2"
+                ;;
+        esac
+    done
+    
+    # 确认开始构建
+    echo ""
+    if ! confirm_action "是否开始构建？"; then
+        log_info "已取消构建"
+        exit 0
+    fi
+    
+    # 检查环境
+    echo ""
     check_docker
-    check_dockerfile
+    check_dockerhub_login
+    setup_buildx
     
-    echo
+    # 根据选择的模式执行不同流程
+    if [ "$SKIP_TEST" = true ]; then
+        # ============================================
+        # 快速推送模式：直接构建并推送到 Docker Hub
+        # ============================================
+        echo ""
+        log_warning "⚡ 快速推送模式：跳过本地测试，直接推送到 Docker Hub"
+        echo ""
+        
+        # 最后确认
+        if ! confirm_action "确认直接推送到 Docker Hub？"; then
+            log_info "已取消推送"
+            exit 0
+        fi
+        
+        # 直接构建并推送生产镜像
+        echo ""
+        build_and_push_production_image_direct
+    else
+        # ============================================
+        # 标准流程：本地构建 → 本地测试 → 推送
+        # ============================================
+        
+        # Step 1: 构建本地测试镜像
+        echo ""
+        build_local_test_image
+        
+        # Step 2: 询问是否进行本地测试
+        echo ""
+        if confirm_action "是否进行本地测试？" "Y"; then
+            run_local_container_test
+            
+            # Step 3: 人工确认
+            echo ""
+            log_header "Step 3: 人工确认"
+            echo -e "${YELLOW}请手动验证功能: http://localhost:3000${NC}"
+            echo ""
+            
+            if ! confirm_action "测试是否通过？"; then
+                log_warning "测试未通过，已取消推送"
+                
+                # 询问是否清理
+                echo ""
+                if confirm_action "是否清理本地测试环境？" "Y"; then
+                    cleanup_local_test
+                else
+                    log_info "保留本地测试环境"
+                    log_info "手动清理命令:"
+                    echo "  docker stop ${IMAGE_NAME}-local"
+                    echo "  docker rm ${IMAGE_NAME}-local"
+                    echo "  docker rmi ${TEST_IMAGE_TAG}"
+                fi
+                
+                exit 0
+            fi
+            
+            # 清理本地测试环境
+            echo ""
+            cleanup_local_test
+        else
+            log_info "跳过本地测试"
+        fi
+        
+        # Step 4: 询问是否推送到远程仓库
+        echo ""
+        if ! confirm_action "是否推送到 Docker Hub？"; then
+            log_info "已取消推送"
+            
+            # 询问是否清理
+            echo ""
+            if confirm_action "是否删除本地测试镜像？" "Y"; then
+                cleanup_local_test
+            fi
+            
+            exit 0
+        fi
+        
+        # Step 5: 构建并推送生产镜像
+        echo ""
+        build_and_push_production_image
+    fi
     
-    # 2. 构建镜像
-    build_image
+    # Step 6: 验证镜像
+    echo ""
+    verify_pushed_image
     
-    echo
-    
-    # 3. 显示镜像信息
-    show_image_info
-    
-    # 4. 显示后续操作提示
-    show_next_steps
-    
-    log_success "=== 构建流程完成 ==="
-    echo
+    # 完成
+    echo ""
+    log_header "构建完成"
+    log_success "所有操作已完成"
+    echo ""
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}  镜像信息${NC}"
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "  ${CYAN}Docker Hub:${NC}  https://hub.docker.com/r/${DOCKER_USERNAME}/${IMAGE_NAME}"
+    echo -e "  ${CYAN}镜像标签:${NC}    ${FULL_IMAGE_NAME}:${VERSION}"
+    echo -e "  ${CYAN}最新标签:${NC}    ${FULL_IMAGE_NAME}:latest"
+    echo -e "  ${CYAN}支持架构:${NC}    linux/amd64, linux/arm64"
+    echo ""
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    log_info "部署命令:"
+    echo "  docker pull ${FULL_IMAGE_NAME}:${VERSION}"
+    echo "  或在服务器上运行: sudo ./scripts/deploy.sh deploy"
+    echo ""
 }
 
-# ============================================
 # 执行主函数
-# ============================================
 main "$@"

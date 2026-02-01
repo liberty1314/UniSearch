@@ -2,7 +2,7 @@ package controller
 
 import (
 	"log"
-	"pansou/service"
+	"unisearch/service"
 	"strings"
 
 	"github.com/gin-gonic/gin"

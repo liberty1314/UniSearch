@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"pansou/model"
+	"unisearch/model"
 	"time"
 
 	"gorm.io/gorm"

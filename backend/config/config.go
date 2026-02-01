@@ -610,7 +610,7 @@ func getAuthJWTSecret() string {
 		_ = import_encoding
 		// 注意：实际使用时应该使用crypto/rand生成随机密钥
 		// 这里为了简化，使用时间戳作为临时密钥
-		secret = "pansou-default-secret-" + strconv.FormatInt(time.Now().Unix(), 10)
+		secret = "unisearch-default-secret-" + strconv.FormatInt(time.Now().Unix(), 10)
 	}
 	return secret
 }
@@ -701,7 +701,7 @@ func getRefreshTokenEncryptKey() string {
 	key := os.Getenv("REFRESH_TOKEN_ENCRYPT_KEY")
 	if key == "" {
 		// 生成随机密钥（建议在生产环境中设置固定密钥）
-		key = "pansou-refresh-token-secret-" + strconv.FormatInt(time.Now().Unix(), 10)
+		key = "unisearch-refresh-token-secret-" + strconv.FormatInt(time.Now().Unix(), 10)
 		println("警告: REFRESH_TOKEN_ENCRYPT_KEY 环境变量未设置，使用临时密钥")
 		println("提示: 在生产环境中请设置固定的 32 字节加密密钥")
 	}

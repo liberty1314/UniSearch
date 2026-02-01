@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"pansou/model"
-	"pansou/plugin"
-	"pansou/util/json"
+	"unisearch/model"
+	"unisearch/plugin"
+	"unisearch/util/json"
 )
 
 // 在init函数中注册插件

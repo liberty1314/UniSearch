@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"pansou/util/json"
+	"unisearch/util/json"
 )
 
 // 磁盘缓存项元数据

@@ -1,7 +1,7 @@
 package api
 
 import (
-	"pansou/model"
+	"unisearch/model"
 	"strings"
 )
 

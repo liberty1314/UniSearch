@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"pansou/config"
-	"pansou/service"
-	"pansou/util"
+	"unisearch/config"
+	"unisearch/service"
+	"unisearch/util"
 )
 
 // LoginRequest 登录请求结构

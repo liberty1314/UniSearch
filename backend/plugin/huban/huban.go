@@ -11,9 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"pansou/model"
-	"pansou/plugin"
-	"pansou/util/json"
+	"unisearch/model"
+	"unisearch/plugin"
+	"unisearch/util/json"
 )
 
 const (

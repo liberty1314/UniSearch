@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"pansou/model"
+	"unisearch/model"
 )
 
 // 初始化函数，注册model包中的类型到gob

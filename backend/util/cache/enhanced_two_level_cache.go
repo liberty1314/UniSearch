@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"pansou/config"
+	"unisearch/config"
 )
 
 // EnhancedTwoLevelCache 改进的两级缓存

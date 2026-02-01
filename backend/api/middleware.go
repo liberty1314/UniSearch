@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"pansou/config"
-	"pansou/service"
-	"pansou/util"
+	"unisearch/config"
+	"unisearch/service"
+	"unisearch/util"
 )
 
 // CORSMiddleware 跨域中间件

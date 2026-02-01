@@ -2,7 +2,7 @@ package database
 
 import (
 	"log"
-	"pansou/model"
+	"unisearch/model"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"

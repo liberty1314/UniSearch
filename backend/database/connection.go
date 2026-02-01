@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"pansou/config"
+	"unisearch/config"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"

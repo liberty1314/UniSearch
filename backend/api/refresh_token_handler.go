@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"pansou/config"
-	"pansou/service"
-	"pansou/util"
+	"unisearch/config"
+	"unisearch/service"
+	"unisearch/util"
 )
 
 // RefreshTokenRequest 刷新令牌请求

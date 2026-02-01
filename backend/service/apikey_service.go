@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"pansou/database"
-	"pansou/model"
-	"pansou/util"
+	"unisearch/database"
+	"unisearch/model"
+	"unisearch/util"
 
 	"gorm.io/gorm"
 )

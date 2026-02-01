@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"pansou/model"
-	"pansou/plugin"
-	"pansou/util/json"
+	"unisearch/model"
+	"unisearch/plugin"
+	"unisearch/util/json"
 )
 
 // 预编译的正则表达式（性能优化）

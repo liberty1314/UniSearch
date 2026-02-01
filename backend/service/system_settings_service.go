@@ -2,7 +2,7 @@ package service
 
 import (
 	"errors"
-	"pansou/model"
+	"unisearch/model"
 
 	"gorm.io/gorm"
 )

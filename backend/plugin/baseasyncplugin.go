@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"pansou/config"
-	"pansou/model"
+	"unisearch/config"
+	"unisearch/model"
 )
 
 // 工作池和统计相关变量

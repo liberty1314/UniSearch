@@ -2,11 +2,11 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	"pansou/api/controller"
-	"pansou/config"
-	"pansou/plugin"
-	"pansou/service"
-	"pansou/util"
+	"unisearch/api/controller"
+	"unisearch/config"
+	"unisearch/plugin"
+	"unisearch/service"
+	"unisearch/util"
 )
 
 // SetupRouter 设置路由

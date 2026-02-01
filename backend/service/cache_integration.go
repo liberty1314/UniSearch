@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"pansou/model"
-	"pansou/util/cache"
+	"unisearch/model"
+	"unisearch/util/cache"
 )
 
 // CacheWriteIntegration 缓存写入集成层
