@@ -19,6 +19,8 @@ type APIKey struct {
 	DailySearchLimit int            `gorm:"default:0" json:"daily_search_limit"`     // 每日搜索次数限制（0表示不限制）
 	TodaySearchCount int            `gorm:"default:0" json:"today_search_count"`     // 今日已搜索次数
 	LastSearchDate   string         `gorm:"size:10" json:"last_search_date"`         // 上次搜索日期（格式：2006-01-02）
+	IsPermanent      bool           `gorm:"default:false" json:"is_permanent"`       // 是否为永久密钥（管理员专用）
+	IsUnlimited      bool           `gorm:"default:false" json:"is_unlimited"`       // 是否无限制（无搜索次数限制）
 	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`                          // 软删除时间（索引，不在JSON中序列化）
 
 	// 关联关系：属于某个用户（可选）
@@ -34,6 +36,11 @@ func (APIKey) TableName() string {
 func (k *APIKey) IsValid() bool {
 	if !k.IsEnabled {
 		return false
+	}
+
+	// 永久密钥跳过过期检查
+	if k.IsPermanent {
+		return true
 	}
 
 	// 如果从未使用过，则认为有效（等待首次使用）
@@ -85,6 +92,11 @@ func (k *APIKey) ActivateIfNeeded() bool {
 func (k *APIKey) CanSearch() bool {
 	if !k.IsValid() {
 		return false
+	}
+
+	// 无限制密钥跳过搜索次数检查
+	if k.IsUnlimited {
+		return true
 	}
 
 	// 如果没有设置每日限制，则不限制

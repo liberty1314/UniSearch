@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"runtime"
 	"sort"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -47,10 +48,12 @@ import (
 	_ "unisearch/plugin/wanou"
 	_ "unisearch/plugin/xuexizhinan"
 	_ "unisearch/plugin/zhizhen"
+	
+	"unisearch/model"
 )
 
-// 全局缓存写入管理器
-var globalCacheWriteManager *cache.DelayedBatchWriteManager
+// 全局 Redis 缓存实例
+var globalRedisCache *cache.RedisCache
 
 func main() {
 	// 初始化应用
@@ -103,31 +106,68 @@ func initApp() {
 	log.Println("✓ 数据库初始化完成")
 	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
+	// ========== 密钥管理服务初始化 ==========
+	log.Println("正在初始化密钥管理服务...")
+	var secretManager service.SecretManager
+	
+	if config.AppConfig.SecretBackend == "database" {
+		// 数据库模式
+		secretManager = service.NewDatabaseSecretManager(
+			database.GetDB(),
+			config.AppConfig.SecretMasterKey,
+		)
+		log.Println("✓ 密钥管理服务已启动（数据库存储模式）")
+		
+		// 初始化默认密钥（如果不存在）
+		if err := initializeDefaultSecrets(secretManager); err != nil {
+			log.Printf("⚠️  初始化默认密钥失败: %v", err)
+		}
+	} else {
+		// 环境变量模式（向后兼容）
+		secretManager = service.NewEnvironmentSecretManager()
+		log.Println("✓ 密钥管理服务已启动（环境变量模式）")
+	}
+	
+	// 设置全局密钥管理服务
+	service.SetGlobalSecretManager(secretManager)
+	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
 	// 初始化HTTP客户端
 	util.InitHTTPClient()
 
-	// 🔥 初始化缓存写入管理器
-	var err error
-	globalCacheWriteManager, err = cache.NewDelayedBatchWriteManager()
-	if err != nil {
-		log.Fatalf("缓存写入管理器创建失败: %v", err)
-	}
-	if err := globalCacheWriteManager.Initialize(); err != nil {
-		log.Fatalf("缓存写入管理器初始化失败: %v", err)
-	}
-	// 将缓存写入管理器注入到service包
-	service.SetGlobalCacheWriteManager(globalCacheWriteManager)
-
-	// 延迟设置主缓存更新函数，确保service初始化完成
-	go func() {
-		// 等待一小段时间确保service包完全初始化
-		time.Sleep(100 * time.Millisecond)
-		if mainCache := service.GetEnhancedTwoLevelCache(); mainCache != nil {
-			globalCacheWriteManager.SetMainCacheUpdater(func(key string, data []byte, ttl time.Duration) error {
-				return mainCache.SetBothLevels(key, data, ttl)
-			})
+	// ========== Redis 缓存初始化 ==========
+	log.Println("正在初始化 Redis 缓存...")
+	
+	// 从配置创建 Redis 缓存实例
+	if config.AppConfig.Redis != nil {
+		// 将端口字符串转换为整数
+		port, err := strconv.Atoi(config.AppConfig.Redis.Port)
+		if err != nil {
+			log.Printf("⚠️  Redis 端口转换失败: %v，使用默认端口 6379", err)
+			port = 6379
 		}
-	}()
+		
+		redisConfig := cache.Config{
+			Host:     config.AppConfig.Redis.Host,
+			Port:     port,
+			Password: config.AppConfig.Redis.Password,
+			DB:       config.AppConfig.Redis.DB,
+			TTL:      config.AppConfig.Redis.TTL,
+		}
+		
+		globalRedisCache, err = cache.NewRedisCache(redisConfig)
+		if err != nil {
+			log.Printf("⚠️  Redis 缓存初始化失败: %v", err)
+			log.Println("提示: 系统将在没有缓存的情况下运行")
+			globalRedisCache = nil
+		} else {
+			log.Println("✓ Redis 缓存初始化完成")
+		}
+	} else {
+		log.Println("⚠️  Redis 配置未找到，缓存功能将不可用")
+	}
+	
+	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	// 确保异步插件系统初始化
 	plugin.InitAsyncPluginSystem()
@@ -144,8 +184,8 @@ func startServer() {
 	// 更新默认并发数（使用实际插件数）
 	config.UpdateDefaultConcurrency(len(pluginManager.GetPlugins()))
 
-	// 初始化搜索服务
-	searchService := service.NewSearchService(pluginManager)
+	// 初始化搜索服务（注入 Redis 缓存）
+	searchService := service.NewSearchService(pluginManager, globalRedisCache)
 
 	// 初始化 API Key 服务（管理后台需要，必须始终初始化）
 	var apiKeyService *service.APIKeyService
@@ -160,15 +200,37 @@ func startServer() {
 	var refreshTokenService *service.RefreshTokenService
 	var err error
 	if config.AppConfig.RefreshTokenEnabled {
-		refreshTokenService, err = service.NewRefreshTokenService(
-			config.AppConfig.RefreshTokenStorePath,
-			config.AppConfig.RefreshTokenEncryptKey,
-		)
-		if err != nil {
-			log.Printf("警告: Refresh Token 服务初始化失败: %v", err)
-			log.Println("记住密码功能将不可用")
+		// 根据配置选择存储类型
+		storageType := service.StorageType(config.AppConfig.RefreshTokenStorage)
+		
+		if storageType == service.StorageTypeDatabase {
+			// 数据库模式
+			refreshTokenService, err = service.NewRefreshTokenService(
+				storageType,
+				database.GetDB(),
+				"",
+				config.AppConfig.RefreshTokenEncryptKey,
+			)
+			if err != nil {
+				log.Printf("警告: Refresh Token 服务初始化失败: %v", err)
+				log.Println("记住密码功能将不可用")
+			} else {
+				fmt.Println("Refresh Token 服务已启动（数据库存储模式）")
+			}
 		} else {
-			fmt.Println("Refresh Token 服务已启动（记住密码功能已启用）")
+			// 文件模式
+			refreshTokenService, err = service.NewRefreshTokenService(
+				storageType,
+				nil,
+				config.AppConfig.RefreshTokenStorePath,
+				config.AppConfig.RefreshTokenEncryptKey,
+			)
+			if err != nil {
+				log.Printf("警告: Refresh Token 服务初始化失败: %v", err)
+				log.Println("记住密码功能将不可用")
+			} else {
+				fmt.Println("Refresh Token 服务已启动（文件存储模式）")
+			}
 		}
 	}
 
@@ -235,35 +297,23 @@ func startServer() {
 	<-quit
 	fmt.Println("正在关闭服务器...")
 
-	// 🔥 优先保存缓存数据到磁盘（数据安全第一）
-	fmt.Println("💾 正在保存所有缓存数据...")
-
-	// 增加关闭超时时间，确保数据有足够时间保存
-	shutdownTimeout := 10 * time.Second
-
-	if globalCacheWriteManager != nil {
-		if err := globalCacheWriteManager.Shutdown(shutdownTimeout); err != nil {
-			log.Printf("❌ 缓存数据保存失败: %v", err)
-		}
-	}
-
-	// 额外确保内存缓存也被保存（双重保障）
-	if mainCache := service.GetEnhancedTwoLevelCache(); mainCache != nil {
-		fmt.Println("💾 正在强制同步内存缓存到磁盘...")
-		if err := mainCache.FlushMemoryToDisk(); err != nil {
-			log.Printf("❌ 内存缓存同步失败: %v", err)
-		} else {
-			fmt.Println("✅ 内存缓存同步完成")
-		}
-	}
-
 	// 设置关闭超时时间
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	// 优雅关闭服务器
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("服务器关闭异常: %v", err)
+	}
+
+	// 关闭 Redis 连接
+	if globalRedisCache != nil {
+		fmt.Println("正在关闭 Redis 连接...")
+		if err := globalRedisCache.Close(); err != nil {
+			log.Printf("⚠️  关闭 Redis 连接失败: %v", err)
+		} else {
+			fmt.Println("✅ Redis 连接已关闭")
+		}
 	}
 
 	// 关闭数据库连接
@@ -395,4 +445,50 @@ func printServiceInfo(port string, pluginManager *plugin.PluginManager) {
 	for _, p := range plugins {
 		fmt.Printf("  - %s (优先级: %d)\n", p.Name(), p.Priority())
 	}
+}
+
+
+// initializeDefaultSecrets 初始化默认密钥（仅在数据库模式下）
+func initializeDefaultSecrets(secretManager service.SecretManager) error {
+	// 尝试获取 JWT 密钥，如果不存在则从环境变量初始化
+	_, err := secretManager.GetSecret("jwt_secret")
+	if err != nil {
+		// 密钥不存在，从环境变量读取并存储到数据库
+		jwtSecret := config.AppConfig.AuthJWTSecret
+		if jwtSecret != "" {
+			err = secretManager.SetSecret(
+				"jwt_secret",
+				jwtSecret,
+				model.SecretTypeJWT,
+				"JWT 签名密钥（从环境变量迁移）",
+			)
+			if err != nil {
+				log.Printf("⚠️  初始化 JWT 密钥失败: %v", err)
+			} else {
+				log.Println("✓ JWT 密钥已从环境变量迁移到数据库")
+			}
+		}
+	}
+
+	// 尝试获取刷新令牌密钥
+	_, err = secretManager.GetSecret("refresh_token_key")
+	if err != nil {
+		// 密钥不存在，从环境变量读取并存储到数据库
+		refreshTokenKey := config.AppConfig.RefreshTokenEncryptKey
+		if refreshTokenKey != "" {
+			err = secretManager.SetSecret(
+				"refresh_token_key",
+				refreshTokenKey,
+				model.SecretTypeRefreshToken,
+				"刷新令牌加密密钥（从环境变量迁移）",
+			)
+			if err != nil {
+				log.Printf("⚠️  初始化刷新令牌密钥失败: %v", err)
+			} else {
+				log.Println("✓ 刷新令牌密钥已从环境变量迁移到数据库")
+			}
+		}
+	}
+
+	return nil
 }

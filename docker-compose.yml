@@ -55,6 +55,27 @@ services:
     labels:
       - "com.unisearch.service=database"
 
+  # Redis 缓存服务
+  redis:
+    image: redis:7-alpine
+    container_name: unisearch-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - unisearch-network
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    labels:
+      - "com.unisearch.service=cache"
+
   # 后端服务
   backend:
     build:
@@ -66,6 +87,12 @@ services:
       - "8888:8888"
     env_file:
       - .env.docker
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
+      - REDIS_TTL=3600
     volumes:
       - backend-cache:/app/cache
       - backend-refresh-tokens:/app/data
@@ -73,6 +100,8 @@ services:
       - unisearch-network
     depends_on:
       mysql:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8888/api/health"]
@@ -105,6 +134,8 @@ services:
 volumes:
   mysql-data:
     name: unisearch-mysql-data
+  redis-data:
+    name: unisearch-redis-data
   backend-cache:
     name: unisearch-backend-cache
   backend-refresh-tokens:

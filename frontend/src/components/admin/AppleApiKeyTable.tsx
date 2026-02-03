@@ -2,7 +2,7 @@ import React from 'react';
 import { AppleTable, AppleTableColumn } from '@/components/AppleTable';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Copy, Edit, Trash2, CheckCircle2, X, Clock } from 'lucide-react';
+import { Copy, Edit, Trash2, CheckCircle2, X, Clock, Shield } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { APIKeyInfo } from '@/types/api';
@@ -42,6 +42,17 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
   };
 
   /**
+   * 脱敏显示 API Key
+   * 格式：sk...89
+   */
+  const maskApiKey = (key: string): string => {
+    if (key.length <= 4) return key;
+    const prefix = key.substring(0, 2); // 前2位
+    const suffix = key.substring(key.length - 2); // 后2位
+    return `${prefix}...${suffix}`;
+  };
+
+  /**
    * 列配置
    */
   const columns: AppleTableColumn<APIKeyInfo>[] = [
@@ -53,9 +64,10 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
         <Checkbox
           checked={selectedKeys.has(key.key)}
           onCheckedChange={(checked) => onSelectKey(key.key, checked as boolean)}
-          disabled={isLoading || isBatchOperating || isDeleting}
+          disabled={isLoading || isBatchOperating || isDeleting || key.is_permanent}
           aria-label={`选择 ${key.key}`}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          title={key.is_permanent ? '管理员永久密钥不可选择' : undefined}
         />
       ),
     },
@@ -65,8 +77,8 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
       sortable: true,
       render: (key) => (
         <div className="flex items-center gap-2 min-w-0">
-          <code className="text-sm font-mono text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-900 px-3 py-1 rounded-lg truncate max-w-[300px]">
-            {key.key}
+          <code className="text-sm font-mono text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-900 px-3 py-1 rounded-lg">
+            {maskApiKey(key.key)}
           </code>
           <button
             onClick={(e: React.MouseEvent) => {
@@ -74,7 +86,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
               onCopyKey(key.key);
             }}
             className="flex-shrink-0 p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            title="复制"
+            title="复制完整密钥"
           >
             <Copy className="w-4 h-4 text-gray-500" />
           </button>
@@ -86,9 +98,11 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
       title: '描述',
       hideOnMobile: true,
       render: (key) => (
-        <span className="text-sm text-gray-600 dark:text-gray-400">
-          {key.description || '-'}
-        </span>
+        <div className="flex items-center gap-2 max-w-[200px]">
+          <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2" title={key.description || '-'}>
+            {key.description || '-'}
+          </span>
+        </div>
       ),
     },
     {
@@ -97,11 +111,11 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
       sortable: true,
       hideOnMobile: true,
       render: (key) => (
-        <div className="flex flex-col">
-          <span className="text-sm">
+        <div className="flex flex-col min-w-[100px]">
+          <span className="text-sm whitespace-nowrap">
             {new Date(key.created_at).toLocaleDateString('zh-CN')}
           </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
             {formatDistanceToNow(new Date(key.created_at), {
               addSuffix: true,
               locale: zhCN,
@@ -116,13 +130,27 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
       sortable: true,
       hideOnMobile: true,
       render: (key) => {
+        // 永久密钥特殊处理
+        if (key.is_permanent) {
+          return (
+            <div className="flex flex-col min-w-[120px]">
+              <span className="text-sm whitespace-nowrap text-purple-600 dark:text-purple-400 font-medium">
+                永不过期
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                管理员专用
+              </span>
+            </div>
+          );
+        }
+
         const expired = isKeyExpired(key.expires_at);
         return (
-          <div className="flex flex-col">
-            <span className="text-sm">
+          <div className="flex flex-col min-w-[120px]">
+            <span className="text-sm whitespace-nowrap">
               {new Date(key.expires_at).toLocaleDateString('zh-CN')}
             </span>
-            <span className={`text-xs ${expired ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
+            <span className={`text-xs whitespace-nowrap ${expired ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
               {expired
                 ? `已过期 ${formatDistanceToNow(new Date(key.expires_at), { addSuffix: true, locale: zhCN })}`
                 : `${formatDistanceToNow(new Date(key.expires_at), { addSuffix: true, locale: zhCN })}过期`
@@ -137,16 +165,22 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
       title: '状态',
       align: 'center',
       render: (key) => {
-        const expired = isKeyExpired(key.expires_at);
         let statusConfig: { text: string; color: string; icon: React.ReactNode };
         
-        if (!key.is_enabled) {
+        // 永久密钥优先判断
+        if (key.is_permanent) {
+          statusConfig = {
+            text: '永久',
+            color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+            icon: <Shield className="w-4 h-4" />,
+          };
+        } else if (!key.is_enabled) {
           statusConfig = {
             text: '已禁用',
             color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
             icon: <X className="w-4 h-4" />,
           };
-        } else if (expired) {
+        } else if (isKeyExpired(key.expires_at)) {
           statusConfig = {
             text: '已过期',
             color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
@@ -181,8 +215,9 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
               e.stopPropagation();
               onEditClick(key);
             }}
-            disabled={isDeleting || isBatchOperating}
+            disabled={isDeleting || isBatchOperating || key.is_permanent}
             className="hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            title={key.is_permanent ? '管理员永久密钥不可编辑' : '编辑'}
           >
             <Edit className="w-4 h-4" />
           </Button>
@@ -193,8 +228,9 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
               e.stopPropagation();
               onDeleteClick(key.key);
             }}
-            disabled={isDeleting || isBatchOperating}
+            disabled={isDeleting || isBatchOperating || key.is_permanent}
             className="hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600"
+            title={key.is_permanent ? '管理员永久密钥不可删除' : '删除'}
           >
             <Trash2 className="w-4 h-4" />
           </Button>

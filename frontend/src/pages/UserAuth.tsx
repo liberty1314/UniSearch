@@ -201,11 +201,7 @@ const UserAuth: React.FC = () => {
                     response.refresh_token || null
                 );
 
-                if (rememberMe && response.refresh_token) {
-                    toast.success('登录成功！已启用自动登录');
-                } else {
-                    toast.success('登录成功！');
-                }
+                toast.success('登录成功，欢迎访问 UniSearch！');
 
                 // 跳转到首页
                 navigate('/');
@@ -260,11 +256,7 @@ const UserAuth: React.FC = () => {
                     response.refresh_token || null
                 );
 
-                if (rememberMe && response.refresh_token) {
-                    toast.success('登录成功！已启用自动登录');
-                } else {
-                    toast.success('登录成功！');
-                }
+                toast.success('登录成功，欢迎访问 UniSearch！');
 
                 // 跳转到首页
                 navigate('/');

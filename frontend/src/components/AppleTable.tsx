@@ -249,6 +249,7 @@ export function AppleTable<T>({
                 className={cn(
                   'border-b border-gray-100/50 dark:border-gray-800/50',
                   'transition-all duration-200',
+                  'max-h-[80px]', // 限制最大行高
                   hoverable && 'hover:bg-gray-50/50 dark:hover:bg-gray-800/30',
                   onRowClick && 'cursor-pointer active:scale-[0.99]'
                 )}
@@ -259,8 +260,9 @@ export function AppleTable<T>({
                   <td
                     key={column.key}
                     className={cn(
-                      'px-6 py-4',
+                      'px-6 py-3', // 减小垂直内边距
                       'text-sm text-gray-900 dark:text-gray-100',
+                      'max-h-[80px] overflow-hidden', // 限制单元格高度
                       column.align === 'center' && 'text-center',
                       column.align === 'right' && 'text-right'
                     )}

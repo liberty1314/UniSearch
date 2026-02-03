@@ -97,18 +97,19 @@ func (s *AuthService) Register(username, password string) (*model.User, error) {
 // 返回：
 //   - token: JWT Token 字符串
 //   - user: 用户对象（不包含密码哈希）
+//   - apiKey: 管理员永久 API Key（仅管理员返回，普通用户为空字符串）
 //   - err: 错误信息
 // 验证需求：5.1-5.7
-func (s *AuthService) Login(username, password string) (token string, user *model.User, err error) {
+func (s *AuthService) Login(username, password string) (token string, user *model.User, apiKey string, err error) {
 	// 验证参数非空
 	username = strings.TrimSpace(username)
 	password = strings.TrimSpace(password)
 
 	if username == "" {
-		return "", nil, errors.New("用户名不能为空")
+		return "", nil, "", errors.New("用户名不能为空")
 	}
 	if password == "" {
-		return "", nil, errors.New("密码不能为空")
+		return "", nil, "", errors.New("密码不能为空")
 	}
 
 	// 查询用户
@@ -117,21 +118,21 @@ func (s *AuthService) Login(username, password string) (token string, user *mode
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			// 用户不存在，返回通用错误消息（安全考虑）
-			return "", nil, errors.New("用户名或密码错误")
+			return "", nil, "", errors.New("用户名或密码错误")
 		}
 		// 数据库查询错误
-		return "", nil, fmt.Errorf("查询用户失败: %w", result.Error)
+		return "", nil, "", fmt.Errorf("查询用户失败: %w", result.Error)
 	}
 
 	// 验证密码
 	if !util.ComparePassword(dbUser.PasswordHash, password) {
 		// 密码错误，返回通用错误消息（安全考虑）
-		return "", nil, errors.New("用户名或密码错误")
+		return "", nil, "", errors.New("用户名或密码错误")
 	}
 
 	// 检查账户是否被禁用
 	if !dbUser.IsEnabled {
-		return "", nil, errors.New("账户已被禁用，请联系管理员")
+		return "", nil, "", errors.New("账户已被禁用，请联系管理员")
 	}
 
 	// 生成 JWT Token
@@ -144,7 +145,7 @@ func (s *AuthService) Login(username, password string) (token string, user *mode
 
 	token, err = util.GenerateJWTToken(dbUser.ID, dbUser.Username, dbUser.Role, jwtSecret, tokenExpiry)
 	if err != nil {
-		return "", nil, fmt.Errorf("生成Token失败: %w", err)
+		return "", nil, "", fmt.Errorf("生成Token失败: %w", err)
 	}
 
 	// 更新最后登录时间
@@ -155,8 +156,21 @@ func (s *AuthService) Login(username, password string) (token string, user *mode
 		// 不影响登录流程，继续执行
 	}
 
+	// 如果是管理员，获取或创建永久 API Key
+	permanentAPIKey := ""
+	if dbUser.IsAdmin() {
+		apiKeyService := NewAPIKeyService()
+		keyObj, err := apiKeyService.GetOrCreatePermanentAPIKey(dbUser.ID)
+		if err != nil {
+			log.Printf("⚠️  获取管理员永久 Key 失败: %v", err)
+			// 不影响登录流程，继续执行
+		} else {
+			permanentAPIKey = keyObj.Key
+		}
+	}
+
 	log.Printf("✓ 用户登录成功: %s (ID: %d, Role: %s)", dbUser.Username, dbUser.ID, dbUser.Role)
-	return token, &dbUser, nil
+	return token, &dbUser, permanentAPIKey, nil
 }
 
 // ValidateToken 验证 JWT Token

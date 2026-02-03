@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -19,24 +20,6 @@ import (
 	"sync"
 )
 
-// 全局缓存写入管理器引用（避免循环依赖）
-var globalCacheWriteManager *cache.DelayedBatchWriteManager
-
-// SetGlobalCacheWriteManager 设置全局缓存写入管理器
-func SetGlobalCacheWriteManager(manager *cache.DelayedBatchWriteManager) {
-	globalCacheWriteManager = manager
-}
-
-// GetGlobalCacheWriteManager 获取全局缓存写入管理器
-func GetGlobalCacheWriteManager() *cache.DelayedBatchWriteManager {
-	return globalCacheWriteManager
-}
-
-// GetEnhancedTwoLevelCache 获取增强版两级缓存实例
-func GetEnhancedTwoLevelCache() *cache.EnhancedTwoLevelCache {
-	return enhancedTwoLevelCache
-}
-
 // 优先关键词列表
 var priorityKeywords = []string{"合集", "系列", "全", "完", "最新", "附", "complete"}
 
@@ -45,48 +28,6 @@ func extractKeywordFromCacheKey(cacheKey string) string {
 	// 这是一个简化的实现，实际中我们会通过传递来获得关键词
 	// 为了演示，这里返回简化的显示
 	return "搜索关键词"
-}
-
-// logAsyncCacheWithKeyword 异步缓存日志输出辅助函数（带关键词）
-func logAsyncCacheWithKeyword(keyword, cacheKey string, format string, args ...interface{}) {
-	// 检查配置开关
-	if config.AppConfig == nil || !config.AppConfig.AsyncLogEnabled {
-		return
-	}
-
-	// 构建显示的关键词信息
-	displayKeyword := keyword
-	if displayKeyword == "" {
-		displayKeyword = "未知"
-	}
-
-	// 将缓存键替换为简化版本+关键词
-	shortKey := cacheKey
-	if len(cacheKey) > 8 {
-		shortKey = cacheKey[:8] + "..."
-	}
-
-	// 替换格式字符串中的缓存键
-	enhancedFormat := strings.Replace(format, cacheKey, fmt.Sprintf("%s(关键词:%s)", shortKey, displayKeyword), 1)
-	fmt.Printf(enhancedFormat, args...)
-}
-
-// 全局缓存实例和缓存是否初始化标志
-var (
-	enhancedTwoLevelCache *cache.EnhancedTwoLevelCache
-	cacheInitialized      bool
-)
-
-// 初始化缓存
-func init() {
-	if config.AppConfig != nil && config.AppConfig.CacheEnabled {
-		var err error
-		// 使用增强版缓存
-		enhancedTwoLevelCache, err = cache.NewEnhancedTwoLevelCache()
-		if err == nil {
-			cacheInitialized = true
-		}
-	}
 }
 
 // mergeSearchResults 智能合并搜索结果，去重并保留最完整的信息
@@ -188,157 +129,19 @@ func calculateCompletenessScore(result model.SearchResult) int {
 // SearchService 搜索服务
 type SearchService struct {
 	pluginManager *plugin.PluginManager
+	cache         *cache.RedisCache // Redis 缓存客户端
 }
 
-// NewSearchService 创建搜索服务实例并确保缓存可用
-func NewSearchService(pluginManager *plugin.PluginManager) *SearchService {
-	// 检查缓存是否已初始化，如果未初始化则尝试重新初始化
-	if !cacheInitialized && config.AppConfig != nil && config.AppConfig.CacheEnabled {
-		var err error
-		// 使用增强版缓存
-		enhancedTwoLevelCache, err = cache.NewEnhancedTwoLevelCache()
-		if err == nil {
-			cacheInitialized = true
-		}
-	}
-
-	// 将主缓存注入到异步插件中
-	injectMainCacheToAsyncPlugins(pluginManager, enhancedTwoLevelCache)
-
-	// 确保缓存写入管理器设置了主缓存更新函数
-	if globalCacheWriteManager != nil && enhancedTwoLevelCache != nil {
-		globalCacheWriteManager.SetMainCacheUpdater(func(key string, data []byte, ttl time.Duration) error {
-			return enhancedTwoLevelCache.SetBothLevels(key, data, ttl)
-		})
-	}
-
+// NewSearchService 创建搜索服务实例
+// 参数:
+//   - pluginManager: 插件管理器
+//   - redisCache: Redis 缓存客户端实例
+// 返回:
+//   - *SearchService: 搜索服务实例
+func NewSearchService(pluginManager *plugin.PluginManager, redisCache *cache.RedisCache) *SearchService {
 	return &SearchService{
 		pluginManager: pluginManager,
-	}
-}
-
-// injectMainCacheToAsyncPlugins 将主缓存系统注入到异步插件中
-func injectMainCacheToAsyncPlugins(pluginManager *plugin.PluginManager, mainCache *cache.EnhancedTwoLevelCache) {
-	// 如果缓存或插件管理器不可用，直接返回
-	if mainCache == nil || pluginManager == nil {
-		return
-	}
-
-	// 🔧 设置全局序列化器，确保异步插件与主程序使用相同的序列化格式
-	serializer := mainCache.GetSerializer()
-	if serializer != nil {
-		plugin.SetGlobalCacheSerializer(serializer)
-	}
-
-	// 创建缓存更新函数（支持IsFinal参数）- 接收原始数据并与现有缓存合并
-	cacheUpdater := func(key string, newResults []model.SearchResult, ttl time.Duration, isFinal bool, keyword string, pluginName string) error {
-		// 🚀 优化：如果新结果为空，跳过缓存更新（避免无效操作）
-		if len(newResults) == 0 {
-			return nil
-		}
-
-		// 🔧 获取现有缓存数据进行合并
-		var finalResults []model.SearchResult
-		if existingData, hit, err := mainCache.Get(key); err == nil && hit {
-			var existingResults []model.SearchResult
-			if err := mainCache.GetSerializer().Deserialize(existingData, &existingResults); err == nil {
-				// 合并新旧结果，去重保留最完整的数据
-				finalResults = mergeSearchResults(existingResults, newResults)
-				if config.AppConfig != nil && config.AppConfig.AsyncLogEnabled {
-					if keyword != "" {
-						fmt.Printf("🔄 [%s:%s] 更新缓存| 原有: %d + 新增: %d = 合并后: %d\n",
-							pluginName, keyword, len(existingResults), len(newResults), len(finalResults))
-					}
-				}
-			} else {
-				// 反序列化失败，使用新结果
-				finalResults = newResults
-				if config.AppConfig != nil && config.AppConfig.AsyncLogEnabled {
-					displayKey := key[:8] + "..."
-					if keyword != "" {
-						fmt.Printf("⚠️ [异步插件 %s] 缓存反序列化失败，使用新结果: %s(关键词:%s) | 结果数: %d\n", pluginName, displayKey, keyword, len(newResults))
-					} else {
-						fmt.Printf("⚠️ [异步插件 %s] 缓存反序列化失败，使用新结果: %s | 结果数: %d\n", pluginName, key, len(newResults))
-					}
-				}
-			}
-		} else {
-			// 无现有缓存，直接使用新结果
-			finalResults = newResults
-			if config.AppConfig != nil && config.AppConfig.AsyncLogEnabled {
-				displayKey := key[:8] + "..."
-				if keyword != "" {
-					fmt.Printf("📝 [异步插件 %s] 初始缓存创建: %s(关键词:%s) | 结果数: %d\n", pluginName, displayKey, keyword, len(newResults))
-				} else {
-					fmt.Printf("📝 [异步插件 %s] 初始缓存创建: %s | 结果数: %d\n", pluginName, key, len(newResults))
-				}
-			}
-		}
-
-		// 🔧 序列化合并后的结果
-		data, err := mainCache.GetSerializer().Serialize(finalResults)
-		if err != nil {
-			fmt.Printf("❌ [缓存更新] 序列化失败: %s | 错误: %v\n", key, err)
-			return err
-		}
-
-		// 🔥 使用新的缓存写入管理器
-		// 注意：获取外部引用需要导入main包
-		// 为了避免循环依赖，我们暂时通过全局变量访问
-		// TODO: 优化架构，使用依赖注入方式
-
-		// 先更新内存缓存（立即可见）
-		if err := mainCache.SetMemoryOnly(key, data, ttl); err != nil {
-			return fmt.Errorf("内存缓存更新失败: %v", err)
-		}
-
-		// 使用新的缓存写入管理器处理磁盘写入（智能批处理）
-		if cacheWriteManager := globalCacheWriteManager; cacheWriteManager != nil {
-			operation := &cache.CacheOperation{
-				Key:        key,
-				Data:       finalResults, // 使用原始数据而不是序列化后的
-				TTL:        ttl,
-				IsFinal:    isFinal,
-				PluginName: pluginName,
-				Keyword:    keyword,
-				Priority:   2, // 中等优先级
-				Timestamp:  time.Now(),
-				DataSize:   len(data), // 序列化后的数据大小
-			}
-
-			// 根据是否为最终结果设置优先级
-			if isFinal {
-				operation.Priority = 1 // 高优先级
-			}
-
-			return cacheWriteManager.HandleCacheOperation(operation)
-		}
-
-		// 兜底：如果缓存写入管理器不可用，使用原有逻辑
-		if isFinal {
-			return mainCache.SetBothLevels(key, data, ttl)
-		} else {
-			return nil // 内存已更新，磁盘稍后批处理
-		}
-	}
-
-	// 获取所有插件
-	plugins := pluginManager.GetPlugins()
-
-	// 遍历所有插件，找出异步插件
-	for _, p := range plugins {
-		// 检查插件是否实现了SetMainCacheUpdater方法（修复后的签名，增加关键词参数）
-		if asyncPlugin, ok := p.(interface {
-			SetMainCacheUpdater(func(string, []model.SearchResult, time.Duration, bool, string) error)
-		}); ok {
-			// 为每个插件创建专门的缓存更新函数，绑定插件名称
-			pluginName := p.Name()
-			pluginCacheUpdater := func(key string, newResults []model.SearchResult, ttl time.Duration, isFinal bool, keyword string) error {
-				return cacheUpdater(key, newResults, ttl, isFinal, keyword, pluginName)
-			}
-			// 注入缓存更新函数
-			asyncPlugin.SetMainCacheUpdater(pluginCacheUpdater)
-		}
+		cache:         redisCache,
 	}
 }
 
@@ -1130,26 +933,26 @@ func mergeResultsByType(results []model.SearchResult, keyword string, cloudTypes
 
 // searchTG 搜索TG频道
 func (s *SearchService) searchTG(keyword string, channels []string, forceRefresh bool) ([]model.SearchResult, error) {
-	// 生成缓存键
-	cacheKey := cache.GenerateTGCacheKey(keyword, channels)
+	// 生成缓存键（使用新版本函数，只传递关键词）
+	cacheKey := cache.GenerateTGCacheKey(keyword)
 
-	// 如果未启用强制刷新，尝试从缓存获取结果
-	if !forceRefresh && cacheInitialized && config.AppConfig.CacheEnabled {
-		var data []byte
-		var hit bool
-		var err error
-
-		// 使用增强版缓存
-		if enhancedTwoLevelCache != nil {
-			data, hit, err = enhancedTwoLevelCache.Get(cacheKey)
-
-			if err == nil && hit {
-				var results []model.SearchResult
-				if err := enhancedTwoLevelCache.GetSerializer().Deserialize(data, &results); err == nil {
-					// 直接返回缓存数据，不检查新鲜度
-					return results, nil
-				}
-			}
+	// 如果未启用强制刷新，尝试从 Redis 缓存获取结果
+	if !forceRefresh && s.cache != nil && config.AppConfig.CacheEnabled {
+		ctx := context.Background()
+		var cachedResults []model.SearchResult
+		
+		// 尝试从 Redis 缓存读取
+		err := s.cache.Get(ctx, cacheKey, &cachedResults)
+		if err == nil {
+			// 缓存命中，直接返回结果
+			log.Printf("✅ [TG搜索:%s] Redis 缓存命中，结果数: %d", keyword, len(cachedResults))
+			return cachedResults, nil
+		} else if err != cache.ErrCacheMiss {
+			// Redis 操作失败（非缓存未命中），记录警告但继续查询数据源
+			log.Printf("⚠️ [TG搜索:%s] Redis 缓存读取失败: %v，降级到数据源查询", keyword, err)
+		} else {
+			// 缓存未命中，正常情况
+			log.Printf("🔍 [TG搜索:%s] Redis 缓存未命中，查询数据源", keyword)
 		}
 	}
 
@@ -1181,20 +984,20 @@ func (s *SearchService) searchTG(keyword string, channels []string, forceRefresh
 		}
 	}
 
-	// 异步缓存结果
-	if cacheInitialized && config.AppConfig.CacheEnabled {
-		go func(res []model.SearchResult) {
-			ttl := time.Duration(config.AppConfig.CacheTTLMinutes) * time.Minute
-
-			// 使用增强版缓存
-			if enhancedTwoLevelCache != nil {
-				data, err := enhancedTwoLevelCache.GetSerializer().Serialize(res)
-				if err != nil {
-					return
-				}
-				enhancedTwoLevelCache.Set(cacheKey, data, ttl)
+	// 异步写入 Redis 缓存
+	if s.cache != nil && config.AppConfig.CacheEnabled {
+		go func(res []model.SearchResult, kw string, key string) {
+			ctx := context.Background()
+			
+			// 写入 Redis 缓存
+			err := s.cache.Set(ctx, key, res)
+			if err != nil {
+				// Redis 写入失败，记录错误但不影响返回结果
+				log.Printf("❌ [TG搜索:%s] Redis 缓存写入失败: %v", kw, err)
+			} else {
+				log.Printf("📝 [TG搜索:%s] Redis 缓存写入成功，结果数: %d", kw, len(res))
 			}
-		}(results)
+		}(results, keyword, cacheKey)
 	}
 
 	return results, nil
@@ -1207,33 +1010,28 @@ func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRef
 		ext = make(map[string]interface{})
 	}
 
-	// 生成缓存键
-	cacheKey := cache.GeneratePluginCacheKey(keyword, plugins)
+	// 生成缓存键（使用 Redis 缓存键生成函数）
+	cacheKey := cache.GeneratePluginCacheKey(keyword)
 
-	// 如果未启用强制刷新，尝试从缓存获取结果
-	if !forceRefresh && cacheInitialized && config.AppConfig.CacheEnabled {
-		var data []byte
-		var hit bool
-		var err error
-
-		// 使用增强版缓存
-		if enhancedTwoLevelCache != nil {
-
-			// 使用Get方法，它会检查磁盘缓存是否有更新
-			// 如果磁盘缓存比内存缓存更新，会自动更新内存缓存并返回最新数据
-			data, hit, err = enhancedTwoLevelCache.Get(cacheKey)
-
-			if err == nil && hit {
-				var results []model.SearchResult
-				if err := enhancedTwoLevelCache.GetSerializer().Deserialize(data, &results); err == nil {
-					// 返回缓存数据
-					fmt.Printf("✅ [%s] 命中缓存 结果数: %d\n", keyword, len(results))
-					return results, nil
-				} else {
-					displayKey := cacheKey[:8] + "..."
-					fmt.Printf("❌ [主服务] 缓存反序列化失败: %s(关键词:%s) | 错误: %v\n", displayKey, keyword, err)
-				}
-			}
+	// 如果未启用强制刷新且缓存可用，尝试从 Redis 缓存获取结果
+	if !forceRefresh && s.cache != nil && config.AppConfig.CacheEnabled {
+		ctx := context.Background()
+		var cachedResults []model.SearchResult
+		
+		// 尝试从 Redis 缓存读取
+		err := s.cache.Get(ctx, cacheKey, &cachedResults)
+		if err == nil {
+			// 缓存命中，直接返回结果
+			log.Printf("✅ [插件搜索] 缓存命中 - 关键词: %s, 结果数: %d", keyword, len(cachedResults))
+			return cachedResults, nil
+		}
+		
+		// 缓存未命中或读取失败
+		if err != cache.ErrCacheMiss {
+			// Redis 操作失败（非缓存未命中），记录警告但继续查询数据源
+			log.Printf("⚠️ [插件搜索] Redis 缓存读取失败，降级到直接查询 - 关键词: %s, 错误: %v", keyword, err)
+		} else {
+			log.Printf("🔍 [插件搜索] 缓存未命中 - 关键词: %s", keyword)
 		}
 	}
 
@@ -1322,26 +1120,18 @@ func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRef
 		}
 	}
 
-	// 🔧 恢复主程序缓存更新：确保最终合并结果被正确缓存
-	if cacheInitialized && config.AppConfig.CacheEnabled {
+	// 将搜索结果写入 Redis 缓存（异步，不阻塞返回）
+	if s.cache != nil && config.AppConfig.CacheEnabled {
 		go func(res []model.SearchResult, kw string, key string) {
-			ttl := time.Duration(config.AppConfig.CacheTTLMinutes) * time.Minute
-
-			// 使用增强版缓存，确保与异步插件使用相同的序列化器
-			if enhancedTwoLevelCache != nil {
-				data, err := enhancedTwoLevelCache.GetSerializer().Serialize(res)
-				if err != nil {
-					fmt.Printf("❌ [主程序] 缓存序列化失败: %s | 错误: %v\n", key, err)
-					return
-				}
-
-				// 主程序最后更新，覆盖可能有问题的异步插件缓存
-				// 🔥 修复：使用同步方式确保数据写入磁盘
-				enhancedTwoLevelCache.SetBothLevels(key, data, ttl)
-				if config.AppConfig != nil && config.AppConfig.AsyncLogEnabled {
-					fmt.Printf("📝 [主程序] 缓存更新完成: %s | 结果数: %d",
-						key, len(res))
-				}
+			ctx := context.Background()
+			
+			// 尝试写入 Redis 缓存
+			err := s.cache.Set(ctx, key, res)
+			if err != nil {
+				// 缓存写入失败，记录错误但不影响返回结果
+				log.Printf("❌ [插件搜索] Redis 缓存写入失败 - 关键词: %s, 错误: %v", kw, err)
+			} else {
+				log.Printf("📝 [插件搜索] 缓存写入成功 - 关键词: %s, 结果数: %d", kw, len(res))
 			}
 		}(allResults, keyword, cacheKey)
 	}

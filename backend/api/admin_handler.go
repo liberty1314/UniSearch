@@ -100,7 +100,7 @@ func AdminLoginHandler(c *gin.Context) {
 
 	// 使用认证服务进行登录验证
 	authService := service.NewAuthService()
-	token, user, err := authService.Login(req.Username, req.Password)
+	token, user, apiKey, err := authService.Login(req.Username, req.Password)
 	if err != nil {
 		c.JSON(401, gin.H{
 			"error": "用户名或密码错误",
@@ -121,6 +121,7 @@ func AdminLoginHandler(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"token":      token,
 		"expires_at": time.Now().Add(config.AppConfig.AuthTokenExpiry).Unix(),
+		"api_key":    apiKey, // 返回管理员永久 API Key
 	})
 }
 

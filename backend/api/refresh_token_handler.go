@@ -38,6 +38,7 @@ type LoginWithRememberResponse struct {
 	ExpiresAt    int64   `json:"expires_at"`
 	RefreshToken *string `json:"refresh_token,omitempty"` // 仅在 remember_me=true 时返回
 	Username     string  `json:"username"`
+	APIKey       string  `json:"api_key,omitempty"` // 管理员永久 API Key（仅管理员返回）
 }
 
 // generateDeviceFingerprint 生成设备指纹（服务端备用方案）
@@ -71,7 +72,7 @@ func AdminLoginWithRememberHandler(refreshTokenService *service.RefreshTokenServ
 
 		// 使用认证服务进行登录验证
 		authService := service.NewAuthService()
-		accessToken, user, err := authService.Login(req.Username, req.Password)
+		accessToken, user, apiKey, err := authService.Login(req.Username, req.Password)
 		if err != nil {
 			c.JSON(401, gin.H{
 				"error": "用户名或密码错误",
@@ -93,6 +94,7 @@ func AdminLoginWithRememberHandler(refreshTokenService *service.RefreshTokenServ
 			AccessToken: accessToken,
 			ExpiresAt:   time.Now().Add(config.AppConfig.AuthTokenExpiry).Unix(),
 			Username:    user.Username,
+			APIKey:      apiKey, // 返回管理员永久 API Key
 		}
 
 		// 如果勾选"记住我"，生成 Refresh Token
@@ -202,7 +204,7 @@ func UserLoginWithRememberHandler(apiKeyService *service.APIKeyService, refreshT
 		// 普通用户登录逻辑
 		// 优先尝试数据库用户登录
 		authService := service.NewAuthService()
-		accessToken, user, err := authService.Login(req.Username, req.Password)
+		accessToken, user, _, err := authService.Login(req.Username, req.Password)
 		
 		if err == nil {
 			// 数据库用户登录成功

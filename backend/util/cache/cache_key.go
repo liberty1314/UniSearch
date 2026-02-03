@@ -2,6 +2,7 @@ package cache
 
 import (
 	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"sort"
@@ -46,8 +47,18 @@ func init() {
 	precomputedHashes.Store("all_channels", allChannelsHash)
 }
 
-// GenerateTGCacheKey 为TG搜索生成缓存键
-func GenerateTGCacheKey(keyword string, channels []string) string {
+// GenerateTGCacheKey 为TG搜索生成缓存键（新版本 - Redis 迁移）
+// 使用 SHA256 哈希算法生成查询字符串的哈希值
+// 返回格式: tg:search:{query_hash}
+// 注意：此函数签名已更改以符合 Redis 缓存迁移规范
+func GenerateTGCacheKey(query string) string {
+	hash := sha256.Sum256([]byte(query))
+	return fmt.Sprintf("tg:search:%x", hash)
+}
+
+// GenerateTGCacheKeyLegacy 为TG搜索生成缓存键（旧版本 - 保留向后兼容）
+// 已弃用：请使用 GenerateTGCacheKey(query string) 代替
+func GenerateTGCacheKeyLegacy(keyword string, channels []string) string {
 	// 关键词标准化
 	normalizedKeyword := strings.ToLower(strings.TrimSpace(keyword))
 
@@ -60,8 +71,18 @@ func GenerateTGCacheKey(keyword string, channels []string) string {
 	return hex.EncodeToString(hash[:])
 }
 
-// GeneratePluginCacheKey 为插件搜索生成缓存键
-func GeneratePluginCacheKey(keyword string, plugins []string) string {
+// GeneratePluginCacheKey 为插件搜索生成缓存键（新版本 - Redis 迁移）
+// 使用 SHA256 哈希算法生成查询字符串的哈希值
+// 返回格式: plugin:search:{query_hash}
+// 注意：此函数签名已更改以符合 Redis 缓存迁移规范
+func GeneratePluginCacheKey(query string) string {
+	hash := sha256.Sum256([]byte(query))
+	return fmt.Sprintf("plugin:search:%x", hash)
+}
+
+// GeneratePluginCacheKeyLegacy 为插件搜索生成缓存键（旧版本 - 保留向后兼容）
+// 已弃用：请使用 GeneratePluginCacheKey(query string) 代替
+func GeneratePluginCacheKeyLegacy(keyword string, plugins []string) string {
 	// 关键词标准化
 	normalizedKeyword := strings.ToLower(strings.TrimSpace(keyword))
 

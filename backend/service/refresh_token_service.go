@@ -12,19 +12,34 @@ import (
 	"sync"
 	"time"
 
+	"gorm.io/gorm"
 	"unisearch/model"
+)
+
+// StorageType 存储类型
+type StorageType string
+
+const (
+	StorageTypeFile     StorageType = "file"     // 文件存储
+	StorageTypeDatabase StorageType = "database" // 数据库存储
 )
 
 // RefreshTokenService 刷新令牌服务
 type RefreshTokenService struct {
-	tokens     map[string]*model.RefreshToken // token -> RefreshToken
-	mu         sync.RWMutex
-	storePath  string
-	encryptKey []byte // AES-256 密钥（32字节）
+	storageType StorageType                    // 存储类型
+	db          *gorm.DB                       // 数据库连接（数据库模式）
+	tokens      map[string]*model.RefreshToken // token -> RefreshToken（文件模式）
+	mu          sync.RWMutex                   // 互斥锁（文件模式）
+	storePath   string                         // 存储路径（文件模式）
+	encryptKey  []byte                         // AES-256 密钥（32字节）
 }
 
 // NewRefreshTokenService 创建刷新令牌服务实例
-func NewRefreshTokenService(storePath string, encryptKey string) (*RefreshTokenService, error) {
+// storageType: 存储类型（file 或 database）
+// db: 数据库连接（数据库模式必需）
+// storePath: 文件存储路径（文件模式必需）
+// encryptKey: 加密密钥
+func NewRefreshTokenService(storageType StorageType, db *gorm.DB, storePath string, encryptKey string) (*RefreshTokenService, error) {
 	// 确保加密密钥为 32 字节（AES-256）
 	key := []byte(encryptKey)
 	if len(key) < 32 {
@@ -37,27 +52,33 @@ func NewRefreshTokenService(storePath string, encryptKey string) (*RefreshTokenS
 	}
 
 	service := &RefreshTokenService{
-		tokens:     make(map[string]*model.RefreshToken),
-		storePath:  storePath,
-		encryptKey: key,
+		storageType: storageType,
+		db:          db,
+		tokens:      make(map[string]*model.RefreshToken),
+		storePath:   storePath,
+		encryptKey:  key,
 	}
 
-	// 加载已有的令牌
-	if err := service.load(); err != nil {
-		return nil, err
+	// 根据存储类型初始化
+	if storageType == StorageTypeDatabase {
+		if db == nil {
+			return nil, errors.New("数据库模式需要提供数据库连接")
+		}
+		// 数据库模式：启动定期清理
+		go service.cleanupExpiredTokensDB()
+	} else {
+		// 文件模式：加载已有令牌并启动定期清理
+		if err := service.load(); err != nil {
+			return nil, err
+		}
+		go service.cleanupExpiredTokens()
 	}
-
-	// 启动定期清理过期令牌的协程
-	go service.cleanupExpiredTokens()
 
 	return service, nil
 }
 
 // CreateToken 创建新的刷新令牌
 func (s *RefreshTokenService) CreateToken(username string, isAdmin bool, deviceFingerprint string, ttl time.Duration) (*model.RefreshToken, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	// 生成令牌字符串
 	tokenStr, err := model.GenerateRefreshToken()
 	if err != nil {
@@ -77,12 +98,21 @@ func (s *RefreshTokenService) CreateToken(username string, isAdmin bool, deviceF
 		IsRevoked:         false,
 	}
 
-	// 存储令牌
-	s.tokens[tokenStr] = token
-
-	// 持久化
-	if err := s.save(); err != nil {
-		return nil, err
+	// 根据存储类型保存
+	if s.storageType == StorageTypeDatabase {
+		// 数据库模式：直接保存到数据库
+		if err := s.db.Create(token).Error; err != nil {
+			return nil, err
+		}
+	} else {
+		// 文件模式：保存到内存并持久化
+		s.mu.Lock()
+		s.tokens[tokenStr] = token
+		err := s.save()
+		s.mu.Unlock()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return token, nil
@@ -90,12 +120,29 @@ func (s *RefreshTokenService) CreateToken(username string, isAdmin bool, deviceF
 
 // ValidateToken 验证刷新令牌
 func (s *RefreshTokenService) ValidateToken(tokenStr string, deviceFingerprint string) (*model.RefreshToken, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	var token *model.RefreshToken
+	var err error
 
-	token, exists := s.tokens[tokenStr]
-	if !exists {
-		return nil, errors.New("令牌不存在")
+	// 根据存储类型查询
+	if s.storageType == StorageTypeDatabase {
+		// 数据库模式：从数据库查询
+		token = &model.RefreshToken{}
+		err = s.db.Where("token = ?", tokenStr).First(token).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, errors.New("令牌不存在")
+			}
+			return nil, err
+		}
+	} else {
+		// 文件模式：从内存查询
+		s.mu.RLock()
+		var exists bool
+		token, exists = s.tokens[tokenStr]
+		s.mu.RUnlock()
+		if !exists {
+			return nil, errors.New("令牌不存在")
+		}
 	}
 
 	// 检查令牌是否有效
@@ -112,9 +159,20 @@ func (s *RefreshTokenService) ValidateToken(tokenStr string, deviceFingerprint s
 	now := time.Now()
 	token.LastUsedAt = &now
 
-	// 持久化
-	if err := s.save(); err != nil {
-		return nil, err
+	// 根据存储类型更新
+	if s.storageType == StorageTypeDatabase {
+		// 数据库模式：更新数据库
+		if err := s.db.Model(token).Update("last_used_at", now).Error; err != nil {
+			return nil, err
+		}
+	} else {
+		// 文件模式：持久化
+		s.mu.Lock()
+		err := s.save()
+		s.mu.Unlock()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return token, nil
@@ -122,6 +180,21 @@ func (s *RefreshTokenService) ValidateToken(tokenStr string, deviceFingerprint s
 
 // RevokeToken 撤销刷新令牌
 func (s *RefreshTokenService) RevokeToken(tokenStr string) error {
+	if s.storageType == StorageTypeDatabase {
+		// 数据库模式：更新数据库
+		result := s.db.Model(&model.RefreshToken{}).
+			Where("token = ?", tokenStr).
+			Update("is_revoked", true)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return errors.New("令牌不存在")
+		}
+		return nil
+	}
+
+	// 文件模式：更新内存并持久化
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -131,13 +204,19 @@ func (s *RefreshTokenService) RevokeToken(tokenStr string) error {
 	}
 
 	token.IsRevoked = true
-
-	// 持久化
 	return s.save()
 }
 
 // RevokeUserTokens 撤销用户的所有刷新令牌
 func (s *RefreshTokenService) RevokeUserTokens(username string) error {
+	if s.storageType == StorageTypeDatabase {
+		// 数据库模式：批量更新
+		return s.db.Model(&model.RefreshToken{}).
+			Where("username = ?", username).
+			Update("is_revoked", true).Error
+	}
+
+	// 文件模式：遍历更新
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -147,11 +226,10 @@ func (s *RefreshTokenService) RevokeUserTokens(username string) error {
 		}
 	}
 
-	// 持久化
 	return s.save()
 }
 
-// cleanupExpiredTokens 定期清理过期令牌
+// cleanupExpiredTokens 定期清理过期令牌（文件模式）
 func (s *RefreshTokenService) cleanupExpiredTokens() {
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
@@ -168,7 +246,19 @@ func (s *RefreshTokenService) cleanupExpiredTokens() {
 	}
 }
 
-// save 持久化令牌到磁盘（加密存储）
+// cleanupExpiredTokensDB 定期清理过期令牌（数据库模式）
+func (s *RefreshTokenService) cleanupExpiredTokensDB() {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		// 删除过期或已撤销的令牌
+		s.db.Where("expires_at < ? OR is_revoked = ?", time.Now(), true).
+			Delete(&model.RefreshToken{})
+	}
+}
+
+// save 持久化令牌到磁盘（加密存储）- 仅文件模式
 func (s *RefreshTokenService) save() error {
 	// 序列化
 	data, err := json.Marshal(s.tokens)
@@ -186,7 +276,7 @@ func (s *RefreshTokenService) save() error {
 	return os.WriteFile(s.storePath, encryptedData, 0600)
 }
 
-// load 从磁盘加载令牌（解密）
+// load 从磁盘加载令牌（解密）- 仅文件模式
 func (s *RefreshTokenService) load() error {
 	// 检查文件是否存在
 	if _, err := os.Stat(s.storePath); os.IsNotExist(err) {

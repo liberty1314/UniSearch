@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -9,6 +10,37 @@ import (
 	"strings"
 	"time"
 )
+
+// RedisConfig Redis 缓存配置结构
+type RedisConfig struct {
+	Host     string        // Redis 主机地址
+	Port     string        // Redis 端口
+	Password string        // Redis 密码（可选）
+	DB       int           // Redis 数据库编号
+	TTL      time.Duration // Redis 缓存过期时间
+}
+
+// Validate 验证 Redis 配置的有效性
+func (rc *RedisConfig) Validate() error {
+	if rc.Host == "" {
+		return fmt.Errorf("Redis 主机地址不能为空")
+	}
+	if rc.Port == "" {
+		return fmt.Errorf("Redis 端口不能为空")
+	}
+	if rc.DB < 0 || rc.DB > 15 {
+		return fmt.Errorf("Redis 数据库编号必须在 0-15 之间，当前值: %d", rc.DB)
+	}
+	if rc.TTL <= 0 {
+		return fmt.Errorf("Redis 缓存过期时间必须大于 0，当前值: %v", rc.TTL)
+	}
+	return nil
+}
+
+// GetAddress 获取 Redis 完整地址（host:port）
+func (rc *RedisConfig) GetAddress() string {
+	return rc.Host + ":" + rc.Port
+}
 
 // Config 应用配置结构
 type Config struct {
@@ -19,7 +51,8 @@ type Config struct {
 	UseProxy           bool
 	HTTPProxyURL       string
 	HTTPSProxyURL      string
-	// 缓存相关配置
+	// 本地缓存相关配置（已废弃，将在 Redis 迁移完成后移除）
+	// Deprecated: 使用 Redis 缓存替代
 	CacheEnabled    bool
 	CachePath       string
 	CacheMaxSizeMB  int
@@ -51,23 +84,38 @@ type Config struct {
 	AuthEnabled     bool              // 是否启用认证
 	AuthUsers       map[string]string // 用户名:密码映射
 	AuthTokenExpiry time.Duration     // Token有效期
-	AuthJWTSecret   string            // JWT签名密钥
+	AuthJWTSecret   string            // JWT签名密钥（向后兼容，优先使用密钥管理服务）
+	
+	// 密钥管理配置
+	SecretBackend    string // 密钥后端类型（database 或 environment）
+	SecretMasterKey  string // 主密钥（用于加密数据库中的密钥）
 	// API Key 相关配置
 	APIKeyEnabled     bool          // 是否启用 API Key 认证
 	APIKeyDefaultTTL  time.Duration // API Key 默认有效期
 	APIKeyStorePath   string        // API Key 存储路径
 
 	// Refresh Token 相关配置
-	RefreshTokenEnabled    bool          // 是否启用刷新令牌（记住密码）
-	RefreshTokenTTL        time.Duration // 刷新令牌有效期
-	RefreshTokenStorePath  string        // 刷新令牌存储路径
-	RefreshTokenEncryptKey string        // 刷新令牌加密密钥
+	RefreshTokenEnabled     bool          // 是否启用刷新令牌（记住密码）
+	RefreshTokenStorage     string        // 刷新令牌存储类型（file 或 database）
+	RefreshTokenTTL         time.Duration // 刷新令牌有效期
+	RefreshTokenStorePath   string        // 刷新令牌存储路径（文件模式）
+	RefreshTokenEncryptKey  string        // 刷新令牌加密密钥
 	// MySQL 数据库配置
 	DBHost     string // 数据库主机地址
 	DBPort     string // 数据库端口
 	DBUser     string // 数据库用户名
 	DBPassword string // 数据库密码
 	DBName     string // 数据库名称
+	
+	// Redis 缓存配置（保留向后兼容）
+	RedisHost     string        // Redis 主机地址
+	RedisPort     string        // Redis 端口
+	RedisPassword string        // Redis 密码（可选）
+	RedisDB       int           // Redis 数据库编号
+	RedisTTL      time.Duration // Redis 缓存过期时间
+	
+	// Redis 配置对象（推荐使用）
+	Redis *RedisConfig // Redis 配置
 }
 
 // 全局配置实例
@@ -79,6 +127,21 @@ func Init() {
 	pluginTimeoutSeconds := getPluginTimeout()
 	asyncResponseTimeoutSeconds := getAsyncResponseTimeout()
 
+	// 创建 Redis 配置对象
+	redisConfig := &RedisConfig{
+		Host:     getRedisHost(),
+		Port:     getRedisPort(),
+		Password: getRedisPassword(),
+		DB:       getRedisDB(),
+		TTL:      getRedisTTL(),
+	}
+
+	// 验证 Redis 配置
+	if err := redisConfig.Validate(); err != nil {
+		println("警告: Redis 配置验证失败:", err.Error())
+		println("提示: 请检查 REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_TTL 环境变量")
+	}
+
 	AppConfig = &Config{
 		DefaultChannels:    getDefaultChannels(),
 		DefaultConcurrency: getDefaultConcurrency(),
@@ -87,7 +150,7 @@ func Init() {
 		UseProxy:           proxyURL != "",
 		HTTPProxyURL:       getHTTPProxyURL(),
 		HTTPSProxyURL:      getHTTPSProxyURL(),
-		// 缓存相关配置
+		// 本地缓存相关配置（已废弃，从环境变量读取以保持向后兼容）
 		CacheEnabled:    getCacheEnabled(),
 		CachePath:       getCachePath(),
 		CacheMaxSizeMB:  getCacheMaxSize(),
@@ -120,6 +183,10 @@ func Init() {
 		AuthUsers:       getAuthUsers(),
 		AuthTokenExpiry: getAuthTokenExpiry(),
 		AuthJWTSecret:   getAuthJWTSecret(),
+		
+		// 密钥管理配置
+		SecretBackend:   getSecretBackend(),
+		SecretMasterKey: getSecretMasterKey(),
 		// API Key 相关配置
 		APIKeyEnabled:    getAPIKeyEnabled(),
 		APIKeyDefaultTTL: getAPIKeyDefaultTTL(),
@@ -127,6 +194,7 @@ func Init() {
 
 		// Refresh Token 相关配置
 		RefreshTokenEnabled:    getRefreshTokenEnabled(),
+		RefreshTokenStorage:    getRefreshTokenStorage(),
 		RefreshTokenTTL:        getRefreshTokenTTL(),
 		RefreshTokenStorePath:  getRefreshTokenStorePath(),
 		RefreshTokenEncryptKey: getRefreshTokenEncryptKey(),
@@ -136,6 +204,16 @@ func Init() {
 		DBUser:     getDBUser(),
 		DBPassword: getDBPassword(),
 		DBName:     getDBName(),
+		
+		// Redis 缓存配置（向后兼容）
+		RedisHost:     redisConfig.Host,
+		RedisPort:     redisConfig.Port,
+		RedisPassword: redisConfig.Password,
+		RedisDB:       redisConfig.DB,
+		RedisTTL:      redisConfig.TTL,
+		
+		// Redis 配置对象（推荐使用）
+		Redis: redisConfig,
 	}
 
 	// 应用GC配置
@@ -241,6 +319,9 @@ func getHTTPSProxyURL() string {
 	}
 	return os.Getenv("https_proxy")
 }
+
+// 本地缓存相关函数（已废弃，将在 Redis 迁移完成后移除）
+// Deprecated: 使用 Redis 缓存替代
 
 // 从环境变量获取是否启用缓存，如果未设置则默认启用
 func getCacheEnabled() bool {
@@ -669,6 +750,20 @@ func getRefreshTokenEnabled() bool {
 	return enabled != "false" && enabled != "0"
 }
 
+// 从环境变量获取刷新令牌存储类型，如果未设置则默认使用数据库
+func getRefreshTokenStorage() string {
+	storage := os.Getenv("REFRESH_TOKEN_STORAGE")
+	if storage == "" {
+		return "database" // 默认使用数据库存储
+	}
+	// 验证存储类型
+	if storage != "file" && storage != "database" {
+		println("警告: REFRESH_TOKEN_STORAGE 值无效，使用默认值 database")
+		return "database"
+	}
+	return storage
+}
+
 // 从环境变量获取刷新令牌有效期（小时），如果未设置则使用默认值
 func getRefreshTokenTTL() time.Duration {
 	ttlEnv := os.Getenv("REFRESH_TOKEN_TTL")
@@ -752,4 +847,81 @@ func getDBName() string {
 		println("提示: 请在 .env 文件中设置 DB_NAME 环境变量")
 	}
 	return dbName
+}
+
+// 从环境变量获取密钥后端类型，如果未设置则默认使用数据库模式
+func getSecretBackend() string {
+	backend := os.Getenv("SECRET_BACKEND")
+	if backend == "" {
+		return "database" // 默认使用数据库模式（推荐）
+	}
+	// 验证后端类型
+	if backend != "database" && backend != "environment" {
+		println("警告: SECRET_BACKEND 值无效，使用默认值 database")
+		return "database"
+	}
+	return backend
+}
+
+// 从环境变量获取主密钥，如果未设置则生成临时密钥
+func getSecretMasterKey() string {
+	key := os.Getenv("SECRET_MASTER_KEY")
+	if key == "" {
+		// 生成临时密钥（建议在生产环境中设置固定密钥）
+		key = "unisearch-secret-master-key-" + strconv.FormatInt(time.Now().Unix(), 10)
+		println("警告: SECRET_MASTER_KEY 环境变量未设置，使用临时密钥")
+		println("提示: 在生产环境中请设置固定的 32 字节主密钥")
+	}
+	return key
+}
+
+// 从环境变量获取 Redis 主机地址，如果未设置则使用默认值
+func getRedisHost() string {
+	host := os.Getenv("REDIS_HOST")
+	if host == "" {
+		return "localhost" // 默认本地主机
+	}
+	return host
+}
+
+// 从环境变量获取 Redis 端口，如果未设置则使用默认值
+func getRedisPort() string {
+	port := os.Getenv("REDIS_PORT")
+	if port == "" {
+		return "6379" // Redis 默认端口
+	}
+	return port
+}
+
+// 从环境变量获取 Redis 密码，如果未设置则返回空字符串（无密码）
+func getRedisPassword() string {
+	return os.Getenv("REDIS_PASSWORD")
+}
+
+// 从环境变量获取 Redis 数据库编号，如果未设置则使用默认值
+func getRedisDB() int {
+	dbEnv := os.Getenv("REDIS_DB")
+	if dbEnv == "" {
+		return 0 // 默认使用 DB 0
+	}
+	db, err := strconv.Atoi(dbEnv)
+	if err != nil || db < 0 {
+		println("警告: REDIS_DB 值无效，使用默认值 0")
+		return 0
+	}
+	return db
+}
+
+// 从环境变量获取 Redis 缓存过期时间（秒），如果未设置则使用默认值
+func getRedisTTL() time.Duration {
+	ttlEnv := os.Getenv("REDIS_TTL")
+	if ttlEnv == "" {
+		return 3600 * time.Second // 默认 1 小时（3600 秒）
+	}
+	ttl, err := strconv.Atoi(ttlEnv)
+	if err != nil || ttl <= 0 {
+		println("警告: REDIS_TTL 值无效，使用默认值 3600 秒")
+		return 3600 * time.Second
+	}
+	return time.Duration(ttl) * time.Second
 }

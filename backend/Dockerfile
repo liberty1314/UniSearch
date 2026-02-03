@@ -14,7 +14,7 @@ ENV GOPROXY=https://goproxy.cn,https://mirrors.aliyun.com/goproxy/,https://gopro
 # 复制依赖文件
 COPY go.mod go.sum ./
 
-# 下载依赖
+# 下载依赖（包括 Redis 客户端）
 RUN go mod download
 
 # 复制源代码

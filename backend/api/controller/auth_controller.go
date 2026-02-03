@@ -277,7 +277,7 @@ func (ctrl *AuthController) handleAPIKeyLogin(c *gin.Context, req LoginRequest) 
 // handleDatabaseUserLogin 处理数据库用户登录
 func (ctrl *AuthController) handleDatabaseUserLogin(c *gin.Context, req LoginRequest) {
 	// 调用服务层进行登录
-	token, user, err := ctrl.authService.Login(req.Username, req.Password)
+	token, user, _, err := ctrl.authService.Login(req.Username, req.Password)
 	if err != nil {
 		// 根据错误类型返回不同的状态码
 		if strings.Contains(err.Error(), "用户名或密码错误") {

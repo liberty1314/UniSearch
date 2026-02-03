@@ -57,17 +57,18 @@ export const AppleCard = React.forwardRef<HTMLElement, AppleCardProps>(
             : undefined
         }
         className={cn(
-          // 基础样式
-          'group relative overflow-hidden rounded-3xl bg-white',
-          'border border-gray-200/80',
-          'shadow-sm',
+          // 基础样式 - 添加暗色主题支持
+          'group relative overflow-hidden rounded-3xl',
+          'bg-white dark:bg-slate-800/50',
+          'border border-gray-200/80 dark:border-slate-700/50',
+          'shadow-sm dark:shadow-slate-900/20',
           
           // 桌面端 3D 悬浮效果
           !disableHover && [
             'transition-all duration-300 ease-out',
-            'hover:shadow-2xl hover:shadow-gray-200/50',
+            'hover:shadow-2xl hover:shadow-gray-200/50 dark:hover:shadow-slate-900/50',
             'hover:-translate-y-2 hover:scale-[1.02]',
-            'hover:border-gray-300/60',
+            'hover:border-gray-300/60 dark:hover:border-slate-600/60',
           ],
           
           // 移动端优化 (禁用 hover，启用 active)
@@ -90,7 +91,7 @@ export const AppleCard = React.forwardRef<HTMLElement, AppleCardProps>(
           <>
             {/* 图片区域 */}
             {image && (
-              <div className="relative aspect-[16/10] w-full overflow-hidden bg-gray-50">
+              <div className="relative aspect-[16/10] w-full overflow-hidden bg-gray-50 dark:bg-slate-900/50">
                 <img
                   src={image}
                   alt={imageAlt}
@@ -114,7 +115,7 @@ export const AppleCard = React.forwardRef<HTMLElement, AppleCardProps>(
                   {tags.map((tag, index) => (
                     <span
                       key={index}
-                      className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 transition-colors duration-200 group-hover:bg-blue-50 group-hover:text-blue-700"
+                      className="inline-flex items-center rounded-full bg-gray-100 dark:bg-slate-700/50 px-3 py-1 text-xs font-medium text-gray-700 dark:text-slate-300 transition-colors duration-200 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 group-hover:text-blue-700 dark:group-hover:text-blue-400"
                     >
                       {tag}
                     </span>
@@ -124,14 +125,14 @@ export const AppleCard = React.forwardRef<HTMLElement, AppleCardProps>(
 
               {/* 标题 */}
               {title && (
-                <h3 className="mb-2 text-xl font-semibold tracking-tight text-gray-900 md:text-2xl">
+                <h3 className="mb-2 text-xl font-semibold tracking-tight text-gray-900 dark:text-white md:text-2xl">
                   {title}
                 </h3>
               )}
 
               {/* 描述 */}
               {description && (
-                <p className="text-sm leading-relaxed text-gray-600 md:text-base">
+                <p className="text-sm leading-relaxed text-gray-600 dark:text-slate-400 md:text-base">
                   {description}
                 </p>
               )}
@@ -143,7 +144,7 @@ export const AppleCard = React.forwardRef<HTMLElement, AppleCardProps>(
         {isInteractive && (
           <div className="absolute right-4 top-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
             <svg
-              className="h-5 w-5 text-gray-400"
+              className="h-5 w-5 text-gray-400 dark:text-slate-500"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

@@ -177,6 +177,17 @@ func (s *UserService) CreateUser(username, password, role string) (*model.User, 
 		return nil, fmt.Errorf("创建用户失败: %w", err)
 	}
 
+	// 如果是管理员，自动创建永久 Key
+	if role == "admin" {
+		apiKeyService := NewAPIKeyService()
+		description := fmt.Sprintf("管理员永久密钥 (User: %s)", username)
+		_, err := apiKeyService.CreatePermanentAPIKey(user.ID, description)
+		if err != nil {
+			// 记录错误但不影响用户创建
+			fmt.Printf("⚠️  为管理员创建永久 Key 失败: %v\n", err)
+		}
+	}
+
 	return user, nil
 }
 
@@ -192,6 +203,9 @@ func (s *UserService) UpdateUser(userID uint, username, role string, currentUser
 	if err != nil {
 		return nil, err
 	}
+
+	// 记录原角色
+	oldRole := user.Role
 
 	// 验证用户名
 	if err := s.validateUsername(username); err != nil {
@@ -219,6 +233,26 @@ func (s *UserService) UpdateUser(userID uint, username, role string, currentUser
 
 	if err := s.db.Save(user).Error; err != nil {
 		return nil, fmt.Errorf("更新用户失败: %w", err)
+	}
+
+	// 处理角色变更时的永久 Key 管理
+	if oldRole != role {
+		apiKeyService := NewAPIKeyService()
+		
+		if role == "admin" && oldRole == "user" {
+			// user -> admin: 创建永久 Key
+			description := fmt.Sprintf("管理员永久密钥 (User: %s)", username)
+			_, err := apiKeyService.CreatePermanentAPIKey(user.ID, description)
+			if err != nil {
+				fmt.Printf("⚠️  为管理员创建永久 Key 失败: %v\n", err)
+			}
+		} else if role == "user" && oldRole == "admin" {
+			// admin -> user: 删除永久 Key
+			err := apiKeyService.DeletePermanentAPIKey(user.ID)
+			if err != nil {
+				fmt.Printf("⚠️  删除管理员永久 Key 失败: %v\n", err)
+			}
+		}
 	}
 
 	return user, nil
@@ -410,6 +444,8 @@ func (s *UserService) BatchUpdateRole(userIDs []uint, role string, currentUserID
 		Failed:  []BatchOperationError{},
 	}
 
+	apiKeyService := NewAPIKeyService()
+
 	// 使用事务确保原子性
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		for _, userID := range userIDs {
@@ -441,6 +477,9 @@ func (s *UserService) BatchUpdateRole(userIDs []uint, role string, currentUserID
 				continue
 			}
 
+			// 记录原角色
+			oldRole := user.Role
+
 			// 更新角色
 			user.Role = role
 			if err := tx.Save(&user).Error; err != nil {
@@ -450,6 +489,24 @@ func (s *UserService) BatchUpdateRole(userIDs []uint, role string, currentUserID
 				})
 				result.FailedCount++
 				continue
+			}
+
+			// 处理角色变更时的永久 Key 管理
+			if oldRole != role {
+				if role == "admin" && oldRole == "user" {
+					// user -> admin: 创建永久 Key
+					description := fmt.Sprintf("管理员永久密钥 (User: %s)", user.Username)
+					_, err := apiKeyService.CreatePermanentAPIKey(user.ID, description)
+					if err != nil {
+						fmt.Printf("⚠️  为管理员创建永久 Key 失败 (User ID: %d): %v\n", user.ID, err)
+					}
+				} else if role == "user" && oldRole == "admin" {
+					// admin -> user: 删除永久 Key
+					err := apiKeyService.DeletePermanentAPIKey(user.ID)
+					if err != nil {
+						fmt.Printf("⚠️  删除管理员永久 Key 失败 (User ID: %d): %v\n", user.ID, err)
+					}
+				}
 			}
 
 			result.Success = append(result.Success, userID)

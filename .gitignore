@@ -265,9 +265,7 @@ demo/
 
 .venv
 
-cache/
-# 但保留后端代码中的cache包
-!backend/util/cache/
+# 缓存目录已迁移到 Redis，不再需要本地缓存目录配置
 
 # ===== 新增：Docker和Railway相关忽略规则 =====
 
@@ -330,7 +328,6 @@ api_keys.json
 # 配置更新标记文件
 .config_updated
 AGENTS.md
-backend/cache/refresh_tokens.dat
 
 # ui
 .shared/

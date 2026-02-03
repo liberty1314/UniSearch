@@ -486,3 +486,90 @@ func (s *APIKeyService) UpdateAPIKey(apiKey *model.APIKey) error {
 	return nil
 }
 
+// CreatePermanentAPIKey 为管理员创建永久 API Key
+// userID: 用户 ID
+// description: 密钥描述
+// 返回: 生成的永久 API Key 对象
+func (s *APIKeyService) CreatePermanentAPIKey(userID uint, description string) (*model.APIKey, error) {
+	// 生成唯一的 API Key
+	key := util.GenerateAPIKey()
+
+	// 检查 Key 是否已存在
+	var existingKey model.APIKey
+	if err := s.db.Where("api_key = ?", key).First(&existingKey).Error; err == nil {
+		// Key 已存在，重新生成
+		return s.CreatePermanentAPIKey(userID, description)
+	}
+
+	// 创建永久 API Key 对象
+	now := time.Now()
+	apiKey := &model.APIKey{
+		Key:              key,
+		UserID:           &userID,
+		CreatedAt:        now,
+		FirstUsedAt:      &now,         // 立即激活
+		ExpiresAt:        nil,          // 永不过期
+		TTLHours:         0,            // 0 表示永不过期
+		IsEnabled:        true,
+		Description:      description,
+		DailySearchLimit: 0,            // 0 表示不限制
+		TodaySearchCount: 0,
+		LastSearchDate:   "",
+		IsPermanent:      true,         // 标记为永久密钥
+		IsUnlimited:      true,         // 标记为无限制
+	}
+
+	// 保存到数据库
+	if err := s.db.Create(apiKey).Error; err != nil {
+		return nil, fmt.Errorf("创建永久 API Key 失败: %w", err)
+	}
+
+	return apiKey, nil
+}
+
+// GetOrCreatePermanentAPIKey 获取或创建管理员的永久 API Key
+// userID: 用户 ID
+// 返回: 永久 API Key 对象
+func (s *APIKeyService) GetOrCreatePermanentAPIKey(userID uint) (*model.APIKey, error) {
+	// 查询是否已存在永久 Key
+	var apiKey model.APIKey
+	err := s.db.Where("user_id = ? AND is_permanent = ?", userID, true).First(&apiKey).Error
+	
+	if err == nil {
+		// 已存在，直接返回
+		return &apiKey, nil
+	}
+	
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		// 数据库查询错误
+		return nil, fmt.Errorf("查询永久 API Key 失败: %w", err)
+	}
+
+	// 不存在，创建新的永久 Key
+	description := fmt.Sprintf("管理员永久密钥 (User ID: %d)", userID)
+	return s.CreatePermanentAPIKey(userID, description)
+}
+
+// DeletePermanentAPIKey 删除管理员的永久 API Key
+// userID: 用户 ID
+func (s *APIKeyService) DeletePermanentAPIKey(userID uint) error {
+	// 查询永久 Key
+	var apiKey model.APIKey
+	err := s.db.Where("user_id = ? AND is_permanent = ?", userID, true).First(&apiKey).Error
+	
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		// 不存在，直接返回成功
+		return nil
+	}
+	
+	if err != nil {
+		return fmt.Errorf("查询永久 API Key 失败: %w", err)
+	}
+
+	// 软删除
+	if err := s.db.Delete(&apiKey).Error; err != nil {
+		return fmt.Errorf("删除永久 API Key 失败: %w", err)
+	}
+
+	return nil
+}

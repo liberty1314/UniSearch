@@ -266,6 +266,8 @@ export interface APIKeyInfo {
   daily_search_limit: number; // 每日搜索次数限制（0表示不限制）
   today_search_count: number; // 今日已搜索次数
   last_search_date: string; // 上次搜索日期
+  is_permanent: boolean; // 是否为永久密钥（管理员专用，不可编辑删除）
+  is_unlimited: boolean; // 是否无限制（无搜索次数限制）
 }
 
 /**
