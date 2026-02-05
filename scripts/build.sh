@@ -29,7 +29,10 @@ NC='\033[0m'
 # ============================================
 DEFAULT_USERNAME="liberty159"
 DEFAULT_IMAGE="unisearch"
-DEFAULT_VERSION="1.0.4"
+DEFAULT_VERSION="latest"
+
+# 项目根目录
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # 全局变量
 DOCKER_USERNAME=""
@@ -39,6 +42,7 @@ FULL_IMAGE_NAME=""
 TEST_IMAGE_TAG=""
 BUILD_PLATFORMS="linux/amd64,linux/arm64"
 SKIP_TEST=false  # 是否跳过测试
+KEEP_TEST_ENV=false  # 是否保留测试环境
 
 # ============================================
 # 日志函数
@@ -241,8 +245,9 @@ run_local_container_test() {
     log_header "Step 2: 本地容器测试"
     
     local network_name="${IMAGE_NAME}-test-network"
-    local mysql_container="${IMAGE_NAME}-mysql-local"
-    local app_container="${IMAGE_NAME}-local"
+    local mysql_container="${IMAGE_NAME}-mysql-test"
+    local redis_container="${IMAGE_NAME}-redis-test"
+    local app_container="${IMAGE_NAME}-test"
     
     # 清理旧的测试环境
     log_info "清理旧的测试环境..."
@@ -250,6 +255,8 @@ run_local_container_test() {
     docker rm "${app_container}" &> /dev/null || true
     docker stop "${mysql_container}" &> /dev/null || true
     docker rm "${mysql_container}" &> /dev/null || true
+    docker stop "${redis_container}" &> /dev/null || true
+    docker rm "${redis_container}" &> /dev/null || true
     docker network rm "${network_name}" &> /dev/null || true
     
     # 创建测试网络
@@ -267,7 +274,7 @@ run_local_container_test() {
     docker run -d \
         --name "${mysql_container}" \
         --network "${network_name}" \
-        -e MYSQL_ROOT_PASSWORD=test_password \
+        -e MYSQL_ROOT_PASSWORD=test_password_123456 \
         -e MYSQL_DATABASE=unisearch_test \
         -e TZ=Asia/Shanghai \
         mysql:8.0 \
@@ -283,13 +290,32 @@ run_local_container_test() {
     
     log_success "MySQL 容器启动成功"
     
+    # 启动 Redis 容器
+    log_info "启动 Redis 缓存容器..."
+    docker run -d \
+        --name "${redis_container}" \
+        --network "${network_name}" \
+        -e TZ=Asia/Shanghai \
+        redis:7-alpine \
+        redis-server --requirepass test_redis_password
+    
+    if [ $? -ne 0 ]; then
+        log_error "Redis 容器启动失败"
+        docker stop "${mysql_container}" &> /dev/null || true
+        docker rm "${mysql_container}" &> /dev/null || true
+        docker network rm "${network_name}" &> /dev/null || true
+        return 1
+    fi
+    
+    log_success "Redis 容器启动成功"
+    
     # 等待 MySQL 启动完成
     log_info "等待 MySQL 数据库初始化..."
     local max_wait=60
     local wait_count=0
     
     while [ $wait_count -lt $max_wait ]; do
-        if docker exec "${mysql_container}" mysqladmin ping -h localhost -uroot -ptest_password &> /dev/null; then
+        if docker exec "${mysql_container}" mysqladmin ping -h localhost -uroot -ptest_password_123456 &> /dev/null; then
             log_success "MySQL 数据库已就绪"
             break
         fi
@@ -303,40 +329,56 @@ run_local_container_test() {
     
     if [ $wait_count -ge $max_wait ]; then
         log_error "MySQL 数据库启动超时"
-        docker logs "${mysql_container}"
-        docker stop "${mysql_container}" &> /dev/null || true
-        docker rm "${mysql_container}" &> /dev/null || true
+        docker logs "${mysql_container}" 2>&1 | tail -n 20
+        docker stop "${redis_container}" "${mysql_container}" &> /dev/null || true
+        docker rm "${redis_container}" "${mysql_container}" &> /dev/null || true
         docker network rm "${network_name}" &> /dev/null || true
         return 1
     fi
     
     echo ""
     
-    # 启动应用容器
-    log_info "启动应用容器..."
+    # 等待 Redis 启动完成
+    log_info "等待 Redis 缓存服务就绪..."
+    sleep 3
+    
+    if docker exec "${redis_container}" redis-cli -a test_redis_password ping &> /dev/null; then
+        log_success "Redis 缓存服务已就绪"
+    else
+        log_warning "Redis 连接测试失败，但继续测试"
+    fi
+    
+    echo ""
+    
+    # 启动应用容器（单容器架构：Nginx + 后端）
+    log_info "启动应用容器（Nginx + 后端）..."
     docker run -d \
         --name "${app_container}" \
         --network "${network_name}" \
         -p 3000:80 \
-        -p 8888:8888 \
         -e TZ=Asia/Shanghai \
         -e PORT=8888 \
         -e CACHE_ENABLED=true \
         -e CACHE_PATH=/app/cache \
         -e ASYNC_PLUGIN_ENABLED=true \
-        -e API_KEY_ENABLED=true \
-        -e ADMIN_PASSWORD_HASH='$2a$10$ZBSWuVQONjalBEe.NziFdOLFg0NMji43X9JiBzu2iLuBCZwHL7WEy' \
+        -e API_KEY_ENABLED=false \
         -e DB_HOST="${mysql_container}" \
         -e DB_PORT=3306 \
         -e DB_USER=root \
-        -e DB_PASSWORD=test_password \
+        -e DB_PASSWORD=test_password_123456 \
         -e DB_NAME=unisearch_test \
+        -e REDIS_HOST="${redis_container}" \
+        -e REDIS_PORT=6379 \
+        -e REDIS_PASSWORD=test_redis_password \
+        -e AUTH_JWT_SECRET=test_jwt_secret_key_for_testing_only \
+        -e SECRET_MASTER_KEY=test_master_key_for_testing_only_32bytes \
+        -e REFRESH_TOKEN_ENCRYPT_KEY=test_refresh_token_key_32bytes_base64 \
         "${TEST_IMAGE_TAG}"
     
     if [ $? -ne 0 ]; then
         log_error "应用容器启动失败"
-        docker stop "${mysql_container}" &> /dev/null || true
-        docker rm "${mysql_container}" &> /dev/null || true
+        docker stop "${redis_container}" "${mysql_container}" &> /dev/null || true
+        docker rm "${redis_container}" "${mysql_container}" &> /dev/null || true
         docker network rm "${network_name}" &> /dev/null || true
         return 1
     fi
@@ -346,40 +388,50 @@ run_local_container_test() {
     log_info "容器信息:"
     echo "  网络名称: ${network_name}"
     echo "  MySQL 容器: ${mysql_container}"
+    echo "  Redis 容器: ${redis_container}"
     echo "  应用容器: ${app_container}"
     echo "  前端地址: http://localhost:3000"
-    echo "  后端地址: http://localhost:8888"
+    echo "  后端 API: http://localhost:3000/api/"
     echo ""
     
     # 等待服务启动
-    log_info "等待服务启动 (15秒)..."
-    sleep 15
+    log_info "等待服务启动和初始化 (20秒)..."
+    sleep 20
     
     # 检查服务健康状态
     log_info "检查服务健康状态..."
     local all_good=true
     
-    # 检查前端服务
-    if curl -s http://localhost:3000 > /dev/null 2>&1; then
-        log_success "✅ 前端服务 (Port 3000): 正常"
+    # 检查前端服务（Nginx）
+    if curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -q "200"; then
+        log_success "✅ 前端服务 (Nginx): 正常"
     else
-        log_warning "⚠️  前端服务 (Port 3000): 无法连接"
+        log_warning "⚠️  前端服务 (Nginx): 无法连接"
         all_good=false
     fi
     
-    # 检查后端服务
-    if curl -s http://localhost:8888/api/health > /dev/null 2>&1; then
-        log_success "✅ 后端服务 (Port 8888): 正常"
+    # 检查后端 API 健康端点
+    local api_status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/health 2>/dev/null || echo "000")
+    if [ "$api_status" = "200" ]; then
+        log_success "✅ 后端 API (/api/health): 正常"
     else
-        log_warning "⚠️  后端服务 (Port 8888): 无法连接"
+        log_warning "⚠️  后端 API (/api/health): 状态码 ${api_status}"
         all_good=false
     fi
     
     # 检查数据库连接
-    if docker exec "${mysql_container}" mysqladmin ping -h localhost -uroot -ptest_password &> /dev/null; then
+    if docker exec "${mysql_container}" mysqladmin ping -h localhost -uroot -ptest_password_123456 &> /dev/null; then
         log_success "✅ MySQL 数据库: 正常"
     else
         log_warning "⚠️  MySQL 数据库: 连接异常"
+        all_good=false
+    fi
+    
+    # 检查 Redis 连接
+    if docker exec "${redis_container}" redis-cli -a test_redis_password ping &> /dev/null; then
+        log_success "✅ Redis 缓存: 正常"
+    else
+        log_warning "⚠️  Redis 缓存: 连接异常"
         all_good=false
     fi
     
@@ -393,13 +445,15 @@ run_local_container_test() {
         echo "  docker logs ${app_container}"
         log_info "查看 MySQL 容器日志:"
         echo "  docker logs ${mysql_container}"
+        log_info "查看 Redis 容器日志:"
+        echo "  docker logs ${redis_container}"
     fi
     
     # 显示应用容器日志
     echo ""
     log_info "应用容器日志 (最后 30 行):"
     echo ""
-    docker logs --tail 30 "${app_container}"
+    docker logs --tail 30 "${app_container}" 2>&1
     
     return 0
 }
@@ -409,14 +463,22 @@ cleanup_local_test() {
     log_info "清理本地测试环境..."
     
     local network_name="${IMAGE_NAME}-test-network"
-    local mysql_container="${IMAGE_NAME}-mysql-local"
-    local app_container="${IMAGE_NAME}-local"
+    local mysql_container="${IMAGE_NAME}-mysql-test"
+    local redis_container="${IMAGE_NAME}-redis-test"
+    local app_container="${IMAGE_NAME}-test"
     
     # 停止并删除应用容器
     if docker ps -a | grep -q "${app_container}"; then
         docker stop "${app_container}" &> /dev/null || true
         docker rm "${app_container}" &> /dev/null || true
         log_success "已删除应用容器: ${app_container}"
+    fi
+    
+    # 停止并删除 Redis 容器
+    if docker ps -a | grep -q "${redis_container}"; then
+        docker stop "${redis_container}" &> /dev/null || true
+        docker rm "${redis_container}" &> /dev/null || true
+        log_success "已删除 Redis 容器: ${redis_container}"
     fi
     
     # 停止并删除 MySQL 容器
@@ -638,14 +700,16 @@ main() {
                 
                 # 询问是否清理
                 echo ""
-                if confirm_action "是否清理本地测试环境？" "Y"; then
-                    cleanup_local_test
-                else
+                if ! confirm_action "是否清理本地测试环境？" "Y"; then
                     log_info "保留本地测试环境"
                     log_info "手动清理命令:"
-                    echo "  docker stop ${IMAGE_NAME}-local"
-                    echo "  docker rm ${IMAGE_NAME}-local"
+                    echo "  docker stop ${IMAGE_NAME}-test ${IMAGE_NAME}-mysql-test ${IMAGE_NAME}-redis-test"
+                    echo "  docker rm ${IMAGE_NAME}-test ${IMAGE_NAME}-mysql-test ${IMAGE_NAME}-redis-test"
+                    echo "  docker network rm ${IMAGE_NAME}-test-network"
                     echo "  docker rmi ${TEST_IMAGE_TAG}"
+                    KEEP_TEST_ENV=true
+                else
+                    cleanup_local_test
                 fi
                 
                 exit 0
@@ -653,7 +717,9 @@ main() {
             
             # 清理本地测试环境
             echo ""
-            cleanup_local_test
+            if [ "$KEEP_TEST_ENV" = false ]; then
+                cleanup_local_test
+            fi
         else
             log_info "跳过本地测试"
         fi

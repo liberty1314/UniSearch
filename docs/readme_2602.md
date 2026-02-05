@@ -56,3 +56,18 @@
 - deploy/* (新增部署配置)
 - scripts/deploy.sh (删除)
 - .env.example, .gitignore
+
+## 2026-02-05 20:00:20
+
+**Commit**: `feat(deploy): 完善生产环境部署脚本并优化系统设置服务`
+
+**改动说明**:
+- 新增 deploy.sh 生产环境部署脚本，支持完整的部署流程（环境检查、SSL 配置、Docker Compose 生成、服务编排、健康检查等）
+- 优化 build.sh 构建脚本，增强错误处理和日志输出
+- 修复 systemSettingsService.ts 中的类型定义和 API 调用逻辑
+
+**涉及文件**:
+- scripts/deploy.sh (新增)
+- scripts/build.sh (修改)
+- frontend/src/services/systemSettingsService.ts (修改)
+
