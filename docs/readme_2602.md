@@ -71,3 +71,19 @@
 - scripts/build.sh (修改)
 - frontend/src/services/systemSettingsService.ts (修改)
 
+
+## 2026-02-06 11:01:10
+
+**Commit**: `refactor(scripts): 整合部署脚本并移除独立的监控和SSL管理脚本`
+
+**改动说明**:
+- 将原本分散的 monitor.sh 和 ssl.sh 功能整合到统一的 deploy.sh 部署脚本中，简化运维流程
+- 更新了 Nginx 配置文件以适配新的部署架构
+- 删除独立的监控服务管理脚本（monitor.sh）
+- 删除独立的 SSL 证书管理脚本（ssl.sh）
+
+**涉及文件**:
+- deploy/nginx/nginx.conf (修改)
+- scripts/deploy.sh (修改)
+- scripts/monitor.sh (删除)
+- scripts/ssl.sh (删除)
