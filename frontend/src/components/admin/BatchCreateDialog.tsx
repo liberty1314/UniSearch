@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { AppleInput } from '@/components/ui/AppleInput';
 import { AppleButton } from '@/components/ui/AppleButton';
-import { Plus, Loader2, Download, Check } from 'lucide-react';
+import { Plus, Loader2, Download, Check, Copy } from 'lucide-react';
 import {
     Table,
     TableBody,
@@ -61,6 +61,10 @@ export function BatchCreateDialog({
     // 创建结果
     const [createdKeys, setCreatedKeys] = useState<APIKeyInfo[]>([]);
     const [showResults, setShowResults] = useState<boolean>(false);
+
+    // 复制格式设置
+    const [enableCopyFormat, setEnableCopyFormat] = useState<boolean>(true);
+    const [copyFormatTemplate, setCopyFormatTemplate] = useState<string>('卡密：{key}，网址：https://unisearchso.xyz/');
 
     // 确认对话框状态
     const [showConfirm, setShowConfirm] = useState<boolean>(false);
@@ -206,6 +210,49 @@ export function BatchCreateDialog({
         } catch (error) {
             console.error('导出 CSV 失败:', error);
             toast.error('导出失败，请重试');
+        }
+    };
+
+    /**
+     * 复制所有 API Key
+     */
+    const handleCopyAll = () => {
+        if (createdKeys.length === 0) {
+            toast.error('没有可复制的数据');
+            return;
+        }
+
+        try {
+            let formattedKeys: string;
+            
+            if (enableCopyFormat && copyFormatTemplate.trim()) {
+                // 使用自定义格式模板，将 {key} 替换为实际的 API Key
+                formattedKeys = createdKeys.map(key => 
+                    copyFormatTemplate.replace(/{key}/g, key.key)
+                ).join('\n');
+            } else {
+                // 不使用格式，直接复制 API Key
+                formattedKeys = createdKeys.map(key => key.key).join('\n');
+            }
+            
+            // 复制到剪贴板
+            navigator.clipboard.writeText(formattedKeys).then(() => {
+                toast.success(`已复制 ${createdKeys.length} 个 API Key`);
+            }).catch(() => {
+                // 降级方案：使用旧的复制方法
+                const textArea = document.createElement('textarea');
+                textArea.value = formattedKeys;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                toast.success(`已复制 ${createdKeys.length} 个 API Key`);
+            });
+        } catch (error) {
+            console.error('复制失败:', error);
+            toast.error('复制失败，请重试');
         }
     };
 
@@ -393,9 +440,50 @@ export function BatchCreateDialog({
                                     </TableBody>
                                 </Table>
                             </div>
+
+                            {/* 复制格式设置 */}
+                            <div className="space-y-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-md border">
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="enable-copy-format"
+                                        checked={enableCopyFormat}
+                                        onChange={(e) => setEnableCopyFormat(e.target.checked)}
+                                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <label htmlFor="enable-copy-format" className="text-sm font-medium cursor-pointer">
+                                        复制时追加格式文本
+                                    </label>
+                                </div>
+
+                                {enableCopyFormat && (
+                                    <div className="space-y-2">
+                                        <label className="text-sm text-gray-600 dark:text-gray-400">
+                                            自定义格式模板（使用 {'{key}'} 作为占位符）
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={copyFormatTemplate}
+                                            onChange={(e) => setCopyFormatTemplate(e.target.value)}
+                                            placeholder="卡密：{key}，网址：https://unisearchso.xyz/"
+                                            className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                                        />
+                                        <p className="text-xs text-gray-500">
+                                            示例：卡密：{formatKeyDisplay(createdKeys[0]?.key || 'sk-xxx')}，网址：https://unisearchso.xyz/
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <DialogFooter>
+                            <AppleButton
+                                variant="secondary"
+                                onClick={handleCopyAll}
+                            >
+                                <Copy className="w-4 h-4 mr-2" />
+                                复制全部
+                            </AppleButton>
                             <AppleButton
                                 variant="secondary"
                                 onClick={handleExportCSV}

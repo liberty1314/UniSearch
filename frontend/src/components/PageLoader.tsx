@@ -160,67 +160,21 @@ const PageLoader: React.FC<PageLoaderProps> = ({ isLoading, onComplete }) => {
                             initial={{ scale: 0.5, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ duration: 0.5, ease: "easeOut" }}
-                            className="relative mb-8"
+                            className="mb-8"
                         >
-                            {/* 外圈旋转光环 */}
-                            <motion.div
-                                animate={{ rotate: 360 }}
-                                transition={{
-                                    duration: 3,
-                                    repeat: Infinity,
-                                    ease: "linear",
-                                }}
-                                className="absolute inset-0 w-32 h-32 rounded-full"
-                                style={{
-                                    background: 'conic-gradient(from 0deg, transparent 0%, #3b82f6 50%, transparent 100%)',
-                                    filter: 'blur(8px)',
-                                }}
-                            />
-
-                            {/* Logo 容器 */}
-                            <div className="relative w-32 h-32 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl">
-                                {/* 内部光效 */}
-                                <motion.div
-                                    animate={{
-                                        scale: [1, 1.2, 1],
-                                        opacity: [0.5, 0.8, 0.5],
-                                    }}
-                                    transition={{
-                                        duration: 2,
-                                        repeat: Infinity,
-                                        ease: "easeInOut",
-                                    }}
-                                    className="absolute inset-0 bg-white/20 rounded-3xl"
-                                />
-
-                                {/* Logo 文字 */}
-                                <motion.div
-                                    animate={{
-                                        scale: [1, 1.05, 1],
-                                    }}
-                                    transition={{
-                                        duration: 2,
-                                        repeat: Infinity,
-                                        ease: "easeInOut",
-                                    }}
-                                    className="relative text-white text-4xl font-bold"
-                                >
-                                    U
-                                </motion.div>
-                            </div>
-
-                            {/* 脉冲波 */}
-                            <motion.div
+                            {/* Logo 图片 */}
+                            <motion.img
+                                src="/Uni.png"
+                                alt="UniSearch Logo"
                                 animate={{
-                                    scale: [1, 1.5],
-                                    opacity: [0.5, 0],
+                                    scale: [1, 1.05, 1],
                                 }}
                                 transition={{
                                     duration: 2,
                                     repeat: Infinity,
-                                    ease: "easeOut",
+                                    ease: "easeInOut",
                                 }}
-                                className="absolute inset-0 w-32 h-32 border-4 border-blue-500 rounded-3xl"
+                                className="w-32 h-32 object-contain"
                             />
                         </motion.div>
 

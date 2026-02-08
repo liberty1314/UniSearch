@@ -500,8 +500,9 @@ func BatchCreateAPIKeysHandler(apiKeyService *service.APIKeyService) gin.Handler
 		}
 
 		c.JSON(200, gin.H{
-			"count": result.Count,
-			"keys":  result.Keys,
+			"success_count": result.Count,
+			"failed_count":  0,
+			"keys":          result.Keys,
 		})
 	}
 }

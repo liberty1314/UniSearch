@@ -15,6 +15,16 @@ UniSearch 提供了一套完整的 RESTful API，支持网盘资源搜索、用�
 - ✅ 支持 405 Method Not Allowed 错误响应
 - 🔒 增强路径和认证令牌格式验证
 
+**v3.1.1 前端优化**：
+- 🎨 优化批量删除 API Key 的用户体验
+- ✨ 将选择验证逻辑下放到对话框组件，避免重复验证
+- 🔧 简化代码结构，提升可维护性
+
+**v3.1.2 前端简化**：
+- 🎯 简化 API Key 创建对话框，移除批量生成功能
+- ✨ 专注于单个 Key 生成，提升用户体验
+- 🔧 减少组件复杂度，提高代码可维护性
+
 **基础信息**：
 - 基础 URL: `http://localhost:8888/api`
 - 内容类型: `application/json`
@@ -1018,13 +1028,11 @@ curl -X POST http://localhost:8888/api/admin/keys/batch-extend \
   "results": [
     {
       "key": "<AUTH_TOKEN>",
-      "success": true,
-      "new_expires_at": "2026-03-05T10:30:00Z"
+      "success": true
     },
     {
       "key": "<API_KEY>",
-      "success": true,
-      "new_expires_at": "2026-03-04T15:20:00Z"
+      "success": true
     }
   ]
 }
@@ -1039,13 +1047,12 @@ curl -X POST http://localhost:8888/api/admin/keys/batch-extend \
   "results": [
     {
       "key": "<AUTH_TOKEN>",
-      "success": true,
-      "new_expires_at": "2026-03-05T10:30:00Z"
+      "success": true
     },
     {
       "key": "sk-invalid-key",
       "success": false,
-      "error": "密钥不存在"
+      "error": "延长失败"
     }
   ]
 }
@@ -1054,11 +1061,10 @@ curl -X POST http://localhost:8888/api/admin/keys/batch-extend \
 **字段说明**:
 - `success_count`: 成功更新的密钥数量
 - `failed_count`: 失败的密钥数量
-- `results`: 每个密钥的操作结果
+- `results`: 批量操作结果列表（对象数组）
   - `key`: API Key
-  - `success`: 是否成功
-  - `new_expires_at`: 新的过期时间（成功时返回）
-  - `error`: 错误信息（失败时返回）
+  - `success`: 操作是否成功
+  - `error`: 错误信息（仅失败时存在）
 
 **错误响应**:
 
@@ -1087,7 +1093,7 @@ curl -X POST http://localhost:8888/api/admin/keys/batch-extend \
 
 ### 8. 批量创建 API Key
 
-批量生成多个 API Key。
+批量创建多个 API Key，支持自定义有效期、描述前缀和每日搜索限制。
 
 **接口地址**: `/api/admin/keys/batch-create`  
 **请求方法**: `POST`  
@@ -1098,9 +1104,10 @@ curl -X POST http://localhost:8888/api/admin/keys/batch-extend \
 
 | 参数名 | 类型 | 必填 | 描述 |
 |--------|------|------|------|
-| count | number | 是 | 生成数量（1-100） |
+| count | number | 是 | 创建数量（1-100） |
 | ttl_hours | number | 是 | 有效期（小时），最小值为 1 |
-| description_prefix | string | 否 | 描述前缀，生成的密钥描述为"前缀+序号" |
+| description_prefix | string | 否 | 描述前缀（如"批量生成-"） |
+| daily_search_limit | number | 否 | 每日搜索次数限制（0表示不限制） |
 
 **请求示例**:
 
@@ -1111,7 +1118,8 @@ curl -X POST http://localhost:8888/api/admin/keys/batch-create \
   -d '{
     "count": 10,
     "ttl_hours": 720,
-    "description_prefix": "批量生成-"
+    "description_prefix": "批量生成-",
+    "daily_search_limit": 10
   }'
 ```
 
@@ -1124,17 +1132,27 @@ curl -X POST http://localhost:8888/api/admin/keys/batch-create \
   "keys": [
     {
       "key": "<AUTH_TOKEN>",
-      "created_at": "2026-01-05T10:30:00Z",
-      "expires_at": "2026-02-05T10:30:00Z",
+      "created_at": "2026-02-08T10:30:00Z",
+      "first_used_at": null,
+      "expires_at": "2026-03-10T10:30:00Z",
+      "ttl_hours": 720,
       "is_enabled": true,
-      "description": "批量生成-1"
+      "description": "批量生成-1",
+      "daily_search_limit": 10,
+      "today_search_count": 0,
+      "last_search_date": ""
     },
     {
       "key": "<API_KEY>",
-      "created_at": "2026-01-05T10:30:01Z",
-      "expires_at": "2026-02-05T10:30:01Z",
+      "created_at": "2026-02-08T10:30:01Z",
+      "first_used_at": null,
+      "expires_at": "2026-03-10T10:30:01Z",
+      "ttl_hours": 720,
       "is_enabled": true,
-      "description": "批量生成-2"
+      "description": "批量生成-2",
+      "daily_search_limit": 10,
+      "today_search_count": 0,
+      "last_search_date": ""
     }
   ]
 }
@@ -1143,7 +1161,7 @@ curl -X POST http://localhost:8888/api/admin/keys/batch-create \
 **字段说明**:
 - `success_count`: 成功创建的密钥数量
 - `failed_count`: 失败的密钥数量
-- `keys`: 成功创建的 API Key 列表
+- `keys`: 创建的 API Key 列表（完整的 APIKeyInfo 对象数组）
 
 **错误响应**:
 
@@ -1156,7 +1174,7 @@ curl -X POST http://localhost:8888/api/admin/keys/batch-create \
 
 ```json
 {
-  "error": "批量创建失败: 生成数量必须在1-100之间",
+  "error": "批量创建失败: 数据库错误",
   "code": "BATCH_CREATE_FAILED"
 }
 ```
@@ -1167,6 +1185,24 @@ curl -X POST http://localhost:8888/api/admin/keys/batch-create \
 - `401`: 未授权
 - `403`: 禁止访问
 - `500`: 服务器内部错误
+
+**前端功能增强**:
+
+批量创建对话框（`BatchCreateDialog`）提供以下功能：
+
+1. **自定义复制格式**：
+   - 启用/禁用自定义格式开关
+   - 默认格式模板：`卡密：{key}，网址：https://unisearchso.xyz/`
+   - 支持 `{key}` 占位符，自动替换为实际的 API Key
+
+2. **一键复制所有密钥**：
+   - 使用自定义格式时：每行格式为 `卡密：sk-xxx，网址：https://unisearchso.xyz/`
+   - 不使用格式时：每行仅包含 API Key
+   - 使用现代 Clipboard API，兼容旧版浏览器（降级到 `document.execCommand`）
+
+3. **导出为 CSV**：
+   - 导出包含 API Key、描述、创建时间、过期时间、状态等完整信息
+   - 文件名格式：`api_keys_YYYY-MM-DD.csv`
 
 ---
 
@@ -1232,7 +1268,7 @@ curl -X POST http://localhost:8888/api/admin/keys/batch-delete \
     {
       "key": "sk-invalid-key",
       "success": false,
-      "error": "密钥不存在"
+      "error": "删除失败"
     }
   ]
 }
@@ -1241,10 +1277,10 @@ curl -X POST http://localhost:8888/api/admin/keys/batch-delete \
 **字段说明**:
 - `success_count`: 成功删除的密钥数量
 - `failed_count`: 失败的密钥数量
-- `results`: 每个密钥的操作结果
+- `results`: 批量操作结果列表（对象数组）
   - `key`: API Key
-  - `success`: 是否成功
-  - `error`: 错误信息（失败时返回）
+  - `success`: 操作是否成功
+  - `error`: 错误信息（仅失败时存在）
 
 **错误响应**:
 
@@ -2079,19 +2115,16 @@ curl http://localhost:8888/api/health
 - ✅ API Key 管理增强
 - ✅ 单个 API Key 有效期更新
 - ✅ 批量延长 API Key 有效期
-- ✅ 批量创建 API Key
 - ✅ 批量删除 API Key
 
 **新增接口**:
 - `PATCH /api/admin/keys/:key` - 更新 API Key 有效期
 - `POST /api/admin/keys/batch-extend` - 批量延长 API Key 有效期
-- `POST /api/admin/keys/batch-create` - 批量创建 API Key
 - `POST /api/admin/keys/batch-delete` - 批量删除 API Key
 
 **功能改进**:
 - 支持两种方式更新有效期：直接设置过期时间或延长指定小时数
 - 批量操作支持部分成功，返回详细的操作结果
-- 批量创建支持自定义描述前缀
 - 批量删除支持一次性删除多个密钥
 
 **兼容性说明**:

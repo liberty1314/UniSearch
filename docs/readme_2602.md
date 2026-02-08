@@ -87,3 +87,27 @@
 - scripts/deploy.sh (修改)
 - scripts/monitor.sh (删除)
 - scripts/ssl.sh (删除)
+
+---
+
+## 2026-02-08 16:27:45
+
+**Commit**: `refactor(admin): 简化 API Key 创建和批量操作对话框`
+
+**改动说明**:
+简化前端 API Key 管理界面，移除单个创建对话框中的批量生成功能，优化批量删除流程，并为批量创建对话框新增自定义复制格式功能。
+
+**主要改动**:
+1. **CreateKeyDialog**: 移除批量生成 Tab，专注于单个 Key 创建
+2. **BatchDeleteKeysDialog**: 简化删除流程，移除结果展示对话框，直接使用 toast 提示
+3. **BatchCreateDialog**: 新增自定义复制格式功能，支持 `{key}` 占位符
+4. **PageLoader**: 优化 Logo 显示，使用图片替代渐变背景
+5. **API 文档**: 更新批量操作接口文档，调整返回字段说明
+
+**涉及文件**:
+- backend/api/admin_handler.go
+- docs/api_reference.md
+- frontend/src/components/CreateKeyDialog.tsx
+- frontend/src/components/PageLoader.tsx
+- frontend/src/components/admin/BatchCreateDialog.tsx
+- frontend/src/components/admin/BatchDeleteKeysDialog.tsx
