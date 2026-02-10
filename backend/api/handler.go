@@ -6,12 +6,12 @@ import (
 	// "os"
 
 	"github.com/gin-gonic/gin"
+	"strings"
 	"unisearch/config"
 	"unisearch/model"
 	"unisearch/service"
 	"unisearch/util"
 	jsonutil "unisearch/util/json"
-	"strings"
 )
 
 // 保存搜索服务的实例
@@ -42,7 +42,7 @@ func SearchHandler(c *gin.Context) {
 	var apiKeyStr string
 
 	// ========== 混合访问模式：获取 API Key ==========
-	
+
 	// 1. 优先使用请求中的手动输入 API Key（从 Header 或查询参数）
 	apiKeyStr = c.GetHeader("X-API-Key")
 	if apiKeyStr == "" {
@@ -76,7 +76,7 @@ func SearchHandler(c *gin.Context) {
 	}
 
 	// ========== 验证 API Key 有效性 ==========
-	
+
 	if apiKeyService == nil {
 		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(500, "API Key 服务未初始化"))
 		return
@@ -90,7 +90,7 @@ func SearchHandler(c *gin.Context) {
 	}
 
 	// ========== 检查每日搜索限额 ==========
-	
+
 	// 检查并重置每日计数（如果是新的一天）
 	if err := apiKeyService.CheckAndResetDailyCount(apiKey); err != nil {
 		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(500, "检查搜索限制失败: "+err.Error()))
@@ -294,7 +294,7 @@ func SearchHandler(c *gin.Context) {
 	}
 
 	// ========== 搜索成功后，更新 API Key 使用统计 ==========
-	
+
 	// 更新 first_used_at（如果是首次使用）、today_search_count、last_search_date
 	if err := apiKeyService.UpdateAPIKeyUsage(apiKeyStr); err != nil {
 		// 记录错误但不影响搜索结果返回

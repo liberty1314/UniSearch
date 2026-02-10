@@ -43,10 +43,10 @@ export class SearchService {
     try {
       const response = await apiClient.post<SearchResponse>('/search', cleanedData);
 
-      if (response.code === 0 && response.data) {
-        return response.data;
+      if (response) {
+        return response;
       } else {
-        throw new Error(response.message || '搜索失败');
+        throw new Error('搜索失败');
       }
     } catch (error: any) {
       console.error('Search error:', error);
@@ -62,10 +62,10 @@ export class SearchService {
     try {
       const response = await apiClient.get<HealthResponse>('/health');
 
-      if (response.code === 0 && response.data) {
-        return response.data;
+      if (response) {
+        return response;
       } else {
-        throw new Error(response.message || '获取系统状态失败');
+        throw new Error('获取系统状态失败');
       }
     } catch (error: any) {
       console.error('Health check error:', error);

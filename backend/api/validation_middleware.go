@@ -125,8 +125,8 @@ func ValidationMiddleware() gin.HandlerFunc {
 func MethodNotAllowedHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusMethodNotAllowed, gin.H{
-			"error": "不支持的HTTP方法: " + c.Request.Method,
-			"code":  "METHOD_NOT_ALLOWED",
+			"error":           "不支持的HTTP方法: " + c.Request.Method,
+			"code":            "METHOD_NOT_ALLOWED",
 			"allowed_methods": getAllowedMethods(c.Request.URL.Path),
 		})
 	}

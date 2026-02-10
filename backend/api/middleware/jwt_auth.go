@@ -11,10 +11,11 @@ import (
 
 // JWTAuth JWT 认证中间件
 // 功能：
-//   1. 从 Authorization Header 获取 Token
-//   2. 验证 Token 格式（Bearer <token>）
-//   3. 验证 Token 有效性
-//   4. 将用户信息存入 Gin Context
+//  1. 从 Authorization Header 获取 Token
+//  2. 验证 Token 格式（Bearer <token>）
+//  3. 验证 Token 有效性
+//  4. 将用户信息存入 Gin Context
+//
 // 验证需求：6.2, 6.3, 8.2, 10.1, 10.3, 10.4
 func JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -72,6 +73,7 @@ func JWTAuth() gin.HandlerFunc {
 // ExtractBearerToken 从请求头提取 Bearer Token（辅助函数）
 // 参数：
 //   - c: Gin Context
+//
 // 返回：
 //   - string: 提取的 Token 字符串（如果不存在或格式错误则返回空字符串）
 func ExtractBearerToken(c *gin.Context) string {

@@ -242,13 +242,13 @@ func extractAPIKey(c *gin.Context) string {
 // isPublicPath 检查是否为公开路径
 func isPublicPath(path string) bool {
 	publicPaths := []string{
-		"/api/auth/register",        // 新增：用户注册接口
+		"/api/auth/register", // 新增：用户注册接口
 		"/api/auth/login",
-		"/api/auth/login-legacy",    // 原有登录接口
-		"/api/auth/login-remember",  // 新增：支持记住我的登录
-		"/api/auth/refresh",         // 新增：刷新令牌
-		"/api/auth/revoke",          // 新增：撤销令牌
-		"/api/auth/validate",        // 新增：Token 验证接口
+		"/api/auth/login-legacy",   // 原有登录接口
+		"/api/auth/login-remember", // 新增：支持记住我的登录
+		"/api/auth/refresh",        // 新增：刷新令牌
+		"/api/auth/revoke",         // 新增：撤销令牌
+		"/api/auth/validate",       // 新增：Token 验证接口
 		"/api/auth/logout",
 		"/api/health",
 		"/api/search",               // 搜索接口支持混合访问模式

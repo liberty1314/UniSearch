@@ -1,11 +1,11 @@
 package service
 
 import (
-"errors"
-"time"
+	"errors"
+	"time"
 
-"gorm.io/gorm"
-"unisearch/model"
+	"gorm.io/gorm"
+	"unisearch/model"
 )
 
 // DatabaseSecretManager 数据库密钥管理器

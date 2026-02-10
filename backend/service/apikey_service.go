@@ -193,7 +193,8 @@ func (s *APIKeyService) CheckAndResetDailyCount(apiKey *model.APIKey) error {
 // 返回: API Key 列表和总数
 // 验证需求：管理员接口
 func (s *APIKeyService) ListAPIKeys(page, pageSize int) ([]model.APIKey, int64, error) {
-	var keys []model.APIKey
+	// 初始化为空切片而不是 nil，确保 JSON 序列化时返回 [] 而不是 null
+	keys := make([]model.APIKey, 0)
 	var total int64
 
 	// 计算偏移量
@@ -329,7 +330,8 @@ func (s *APIKeyService) CanSearch(key string) (bool, error) {
 
 // ListKeys 列出所有密钥（兼容旧接口）
 func (s *APIKeyService) ListKeys() ([]model.APIKey, error) {
-	var keys []model.APIKey
+	// 初始化为空切片而不是 nil，确保 JSON 序列化时返回 [] 而不是 null
+	keys := make([]model.APIKey, 0)
 	if err := s.db.Order("created_at DESC").Find(&keys).Error; err != nil {
 		return nil, fmt.Errorf("查询 API Key 列表失败: %w", err)
 	}
@@ -350,12 +352,12 @@ func (s *APIKeyService) RevokeKey(key string) error {
 		}
 		return fmt.Errorf("查询 API Key 失败: %w", err)
 	}
-	
+
 	// 软删除
 	if err := s.db.Delete(&apiKey).Error; err != nil {
 		return fmt.Errorf("删除 API Key 失败: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -368,7 +370,7 @@ func (s *APIKeyService) UpdateKeyExpiry(key string, expiresAt *time.Time, extend
 		}
 		return nil, fmt.Errorf("查询 API Key 失败: %w", err)
 	}
-	
+
 	// 更新过期时间
 	if expiresAt != nil {
 		apiKey.ExpiresAt = expiresAt
@@ -386,17 +388,17 @@ func (s *APIKeyService) UpdateKeyExpiry(key string, expiresAt *time.Time, extend
 		}
 		apiKey.TTLHours = extendHours
 	}
-	
+
 	// 更新每日限额
 	if dailyLimit >= 0 {
 		apiKey.DailySearchLimit = dailyLimit
 	}
-	
+
 	// 保存到数据库
 	if err := s.db.Save(&apiKey).Error; err != nil {
 		return nil, fmt.Errorf("更新 API Key 失败: %w", err)
 	}
-	
+
 	return &apiKey, nil
 }
 
@@ -412,7 +414,7 @@ func (s *APIKeyService) BatchExtendKeys(keys []string, extendHours int) (*BatchE
 		Success: []string{},
 		Failed:  []string{},
 	}
-	
+
 	for _, key := range keys {
 		_, err := s.UpdateKeyExpiry(key, nil, extendHours, -1)
 		if err != nil {
@@ -421,7 +423,7 @@ func (s *APIKeyService) BatchExtendKeys(keys []string, extendHours int) (*BatchE
 			result.Success = append(result.Success, key)
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -437,7 +439,7 @@ func (s *APIKeyService) BatchGenerateKeys(count int, ttlHours int, descriptionPr
 		Keys:  []model.APIKey{},
 		Count: 0,
 	}
-	
+
 	for i := 0; i < count; i++ {
 		description := fmt.Sprintf("%s-%d", descriptionPrefix, i+1)
 		apiKey, err := s.GenerateAPIKey(ttlHours, dailyLimit, description)
@@ -447,7 +449,7 @@ func (s *APIKeyService) BatchGenerateKeys(count int, ttlHours int, descriptionPr
 		result.Keys = append(result.Keys, *apiKey)
 		result.Count++
 	}
-	
+
 	return result, nil
 }
 
@@ -463,7 +465,7 @@ func (s *APIKeyService) BatchDeleteKeys(keys []string) (*BatchDeleteKeysResult, 
 		Success: []string{},
 		Failed:  []string{},
 	}
-	
+
 	for _, key := range keys {
 		err := s.RevokeKey(key)
 		if err != nil {
@@ -472,7 +474,7 @@ func (s *APIKeyService) BatchDeleteKeys(keys []string) (*BatchDeleteKeysResult, 
 			result.Success = append(result.Success, key)
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -507,16 +509,16 @@ func (s *APIKeyService) CreatePermanentAPIKey(userID uint, description string) (
 		Key:              key,
 		UserID:           &userID,
 		CreatedAt:        now,
-		FirstUsedAt:      &now,         // 立即激活
-		ExpiresAt:        nil,          // 永不过期
-		TTLHours:         0,            // 0 表示永不过期
+		FirstUsedAt:      &now, // 立即激活
+		ExpiresAt:        nil,  // 永不过期
+		TTLHours:         0,    // 0 表示永不过期
 		IsEnabled:        true,
 		Description:      description,
-		DailySearchLimit: 0,            // 0 表示不限制
+		DailySearchLimit: 0, // 0 表示不限制
 		TodaySearchCount: 0,
 		LastSearchDate:   "",
-		IsPermanent:      true,         // 标记为永久密钥
-		IsUnlimited:      true,         // 标记为无限制
+		IsPermanent:      true, // 标记为永久密钥
+		IsUnlimited:      true, // 标记为无限制
 	}
 
 	// 保存到数据库
@@ -534,12 +536,12 @@ func (s *APIKeyService) GetOrCreatePermanentAPIKey(userID uint) (*model.APIKey, 
 	// 查询是否已存在永久 Key
 	var apiKey model.APIKey
 	err := s.db.Where("user_id = ? AND is_permanent = ?", userID, true).First(&apiKey).Error
-	
+
 	if err == nil {
 		// 已存在，直接返回
 		return &apiKey, nil
 	}
-	
+
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		// 数据库查询错误
 		return nil, fmt.Errorf("查询永久 API Key 失败: %w", err)
@@ -556,12 +558,12 @@ func (s *APIKeyService) DeletePermanentAPIKey(userID uint) error {
 	// 查询永久 Key
 	var apiKey model.APIKey
 	err := s.db.Where("user_id = ? AND is_permanent = ?", userID, true).First(&apiKey).Error
-	
+
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		// 不存在，直接返回成功
 		return nil
 	}
-	
+
 	if err != nil {
 		return fmt.Errorf("查询永久 API Key 失败: %w", err)
 	}

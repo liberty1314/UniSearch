@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"unisearch/model"
-	"unisearch/plugin"
 	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+	"unisearch/model"
+	"unisearch/plugin"
 
 	"github.com/PuerkitoBio/goquery"
 )

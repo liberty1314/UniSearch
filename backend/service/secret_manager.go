@@ -174,7 +174,6 @@ func (m *BaseSecretManager) ClearAllCache() {
 	m.cache = make(map[string]*SecretCache)
 }
 
-
 // 全局密钥管理服务实例
 var globalSecretManager SecretManager
 

@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
+	"time"
 	"unisearch/config"
 	"unisearch/database"
 	"unisearch/model"
 	"unisearch/util"
-	"strings"
-	"time"
 
 	"gorm.io/gorm"
 )
@@ -31,9 +31,11 @@ func NewAuthService() *AuthService {
 // 参数：
 //   - username: 用户名（3-32字符）
 //   - password: 密码（6-64字符）
+//
 // 返回：
 //   - *model.User: 创建的用户对象（不包含密码哈希）
 //   - error: 错误信息
+//
 // 验证需求：4.1-4.6
 func (s *AuthService) Register(username, password string) (*model.User, error) {
 	// 验证参数非空
@@ -94,11 +96,13 @@ func (s *AuthService) Register(username, password string) (*model.User, error) {
 // 参数：
 //   - username: 用户名
 //   - password: 密码
+//
 // 返回：
 //   - token: JWT Token 字符串
 //   - user: 用户对象（不包含密码哈希）
 //   - apiKey: 管理员永久 API Key（仅管理员返回，普通用户为空字符串）
 //   - err: 错误信息
+//
 // 验证需求：5.1-5.7
 func (s *AuthService) Login(username, password string) (token string, user *model.User, apiKey string, err error) {
 	// 验证参数非空
@@ -176,9 +180,11 @@ func (s *AuthService) Login(username, password string) (token string, user *mode
 // ValidateToken 验证 JWT Token
 // 参数：
 //   - tokenString: JWT Token 字符串
+//
 // 返回：
 //   - *util.JWTClaims: 解析后的 JWT Claims（包含 UserID, Username, Role）
 //   - error: 错误信息
+//
 // 验证需求：5.5, 5.6, 13.6
 func (s *AuthService) ValidateToken(tokenString string) (*util.JWTClaims, error) {
 	if tokenString == "" {
@@ -246,6 +252,7 @@ func (s *AuthService) CreateDefaultAdmin() error {
 // GetUserByID 根据用户ID获取用户信息
 // 参数：
 //   - userID: 用户ID
+//
 // 返回：
 //   - *model.User: 用户对象（不包含密码哈希）
 //   - error: 错误信息
@@ -265,6 +272,7 @@ func (s *AuthService) GetUserByID(userID uint) (*model.User, error) {
 // GetUserByUsername 根据用户名获取用户信息
 // 参数：
 //   - username: 用户名
+//
 // 返回：
 //   - *model.User: 用户对象（不包含密码哈希）
 //   - error: 错误信息
@@ -284,6 +292,7 @@ func (s *AuthService) GetUserByUsername(username string) (*model.User, error) {
 // IsAdmin 检查用户是否为管理员
 // 参数：
 //   - userID: 用户ID
+//
 // 返回：
 //   - bool: 是否为管理员
 //   - error: 错误信息

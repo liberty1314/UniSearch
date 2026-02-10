@@ -2,6 +2,31 @@
 
 /**
  * 通用 API 响应结构
+ * 
+ * 所有后端 API 接口都遵循此统一响应格式，包含状态码、消息和数据三部分。
+ * 前端响应拦截器会自动解包 `data` 字段，使 Service 层直接获得业务数据对象。
+ * 
+ * @template T - 响应数据的类型，默认为 any
+ * 
+ * @property {number} code - HTTP 状态码（200 表示成功，4xx 表示客户端错误，5xx 表示服务器错误）
+ * @property {string} message - 响应消息，成功时为操作描述，失败时为错误描述（中文）
+ * @property {T} [data] - 响应数据，包含实际的业务数据对象（可选，错误响应可能不包含此字段）
+ * 
+ * @example
+ * // 成功响应示例
+ * {
+ *   code: 200,
+ *   message: "注册成功",
+ *   data: { user_id: 1, username: "test" }
+ * }
+ * 
+ * @example
+ * // 错误响应示例
+ * {
+ *   code: 400,
+ *   message: "用户名已存在",
+ *   data: { field: "username", constraint: "unique" }
+ * }
  */
 export interface ApiResponse<T = any> {
   code: number;
@@ -150,6 +175,14 @@ export interface HealthResponse {
 
 /**
  * 用户注册请求
+ * 
+ * 此类型定义了注册接口的请求参数。
+ * 
+ * @property {string} username - 用户名（长度限制：3-32 字符）
+ * @property {string} password - 密码（长度限制：6-128 字符）
+ * 
+ * @see RegisterResponse - 注册响应类型
+ * @see AuthService.register - 使用此类型的注册方法
  */
 export interface RegisterRequest {
   username: string;
@@ -157,12 +190,32 @@ export interface RegisterRequest {
 }
 
 /**
- * 用户注册响应
+ * 用户注册响应（数据部分）
+ * 
+ * 此类型定义了注册接口返回的业务数据结构。
+ * 实际 API 返回格式为 `ApiResponse<RegisterResponse>`，即：
+ * ```json
+ * {
+ *   "code": 200,
+ *   "message": "注册成功",
+ *   "data": {
+ *     "user_id": 1,
+ *     "username": "test"
+ *   }
+ * }
+ * ```
+ * 
+ * 前端响应拦截器会自动解包 `data` 字段，Service 层直接获得 `RegisterResponse` 对象。
+ * 
+ * @property {number} user_id - 新创建的用户 ID
+ * @property {string} username - 用户名
+ * 
+ * @see ApiResponse - 通用 API 响应结构
+ * @see AuthService.register - 使用此类型的注册方法
  */
 export interface RegisterResponse {
   user_id: number;
   username: string;
-  message: string;
 }
 
 /**
@@ -175,6 +228,20 @@ export interface LoginRequest {
 
 /**
  * 登录响应
+ * 
+ * 此类型定义了基本登录接口返回的数据结构。
+ * 实际 API 返回格式为 `ApiResponse<LoginResponse>`。
+ * 
+ * 注意：此类型用于不支持"记住我"功能的基本登录接口。
+ * 如需"记住我"功能，请使用 `LoginWithRememberResponse`。
+ * 
+ * @property {string} token - JWT 访问令牌
+ * @property {number} expires_at - 令牌过期时间（Unix 时间戳，秒）
+ * @property {string} username - 用户名
+ * 
+ * @see ApiResponse - 通用 API 响应结构
+ * @see LoginWithRememberResponse - 支持"记住我"的登录响应
+ * @see LoginRequest - 登录请求参数
  */
 export interface LoginResponse {
   token: string;
@@ -184,6 +251,17 @@ export interface LoginResponse {
 
 /**
  * Token 验证响应
+ * 
+ * 此类型定义了 Token 验证接口返回的数据结构。
+ * 实际 API 返回格式为 `ApiResponse<VerifyResponse>`。
+ * 
+ * 用于验证访问令牌是否有效，以及获取令牌关联的用户信息。
+ * 
+ * @property {boolean} valid - Token 是否有效
+ * @property {string} [username] - 用户名（仅在 valid=true 时返回）
+ * @property {string} [message] - 验证消息（通常在 valid=false 时说明原因）
+ * 
+ * @see ApiResponse - 通用 API 响应结构
  */
 export interface VerifyResponse {
   valid: boolean;
@@ -210,6 +288,17 @@ export interface AdminLoginResponse {
 
 /**
  * 支持"记住我"的登录请求
+ * 
+ * 此类型定义了登录接口的请求参数。
+ * 当 `remember_me` 为 true 时，后端会返回 refresh_token，用于长期保持登录状态。
+ * 
+ * @property {string} username - 用户名
+ * @property {string} password - 密码
+ * @property {boolean} remember_me - 是否记住登录状态（true 时返回 refresh_token）
+ * @property {string} [device_fingerprint] - 设备指纹，用于识别设备（可选）
+ * 
+ * @see LoginWithRememberResponse - 登录响应类型
+ * @see AuthService.userLogin - 使用此类型的登录方法
  */
 export interface LoginWithRememberRequest {
   username: string;
@@ -219,7 +308,33 @@ export interface LoginWithRememberRequest {
 }
 
 /**
- * 支持"记住我"的登录响应
+ * 支持"记住我"的登录响应（数据部分）
+ * 
+ * 此类型定义了登录接口返回的业务数据结构。
+ * 实际 API 返回格式为 `ApiResponse<LoginWithRememberResponse>`，即：
+ * ```json
+ * {
+ *   "code": 200,
+ *   "message": "登录成功",
+ *   "data": {
+ *     "access_token": "eyJhbGc...",
+ *     "expires_at": 1234567890,
+ *     "refresh_token": "eyJhbGc...",
+ *     "username": "test"
+ *   }
+ * }
+ * ```
+ * 
+ * 前端响应拦截器会自动解包 `data` 字段，Service 层直接获得 `LoginWithRememberResponse` 对象。
+ * 
+ * @property {string} access_token - JWT 访问令牌，用于后续 API 请求的身份验证
+ * @property {number} expires_at - 访问令牌过期时间（Unix 时间戳，秒）
+ * @property {string} [refresh_token] - 刷新令牌，仅在 remember_me=true 时返回，用于获取新的访问令牌
+ * @property {string} username - 用户名
+ * 
+ * @see ApiResponse - 通用 API 响应结构
+ * @see LoginWithRememberRequest - 登录请求参数
+ * @see AuthService.userLogin - 使用此类型的登录方法
  */
 export interface LoginWithRememberResponse {
   access_token: string;
@@ -229,7 +344,58 @@ export interface LoginWithRememberResponse {
 }
 
 /**
+ * 用户 API Key 信息响应（数据部分）
+ * 
+ * 此类型定义了获取用户 API Key 信息接口返回的业务数据结构。
+ * 实际 API 返回格式为 `ApiResponse<APIKeyInfoResponse>`，即：
+ * ```json
+ * {
+ *   "code": 200,
+ *   "message": "获取成功",
+ *   "data": {
+ *     "api_key": "sk_test_...",
+ *     "expires_at": "2024-12-31T23:59:59Z",
+ *     "daily_search_limit": 100,
+ *     "today_search_count": 10,
+ *     "remaining_searches": 90,
+ *     "is_valid": true
+ *   }
+ * }
+ * ```
+ * 
+ * 前端响应拦截器会自动解包 `data` 字段，Service 层直接获得 `APIKeyInfoResponse` 对象。
+ * 
+ * @property {string} api_key - API Key 字符串
+ * @property {string} expires_at - API Key 过期时间（ISO 8601 格式）
+ * @property {number} daily_search_limit - 每日搜索次数限制（0 表示不限制）
+ * @property {number} today_search_count - 今日已使用的搜索次数
+ * @property {number} remaining_searches - 今日剩余可用搜索次数
+ * @property {boolean} is_valid - API Key 是否有效（未过期且未被禁用）
+ * 
+ * @see ApiResponse - 通用 API 响应结构
+ * @see AuthService.getUserApiKeyInfo - 使用此类型的获取 API Key 信息方法
+ * @see AuthService.unbindApiKey - 解绑 API Key 的方法
+ */
+export interface APIKeyInfoResponse {
+  api_key: string;
+  expires_at: string;
+  daily_search_limit: number;
+  today_search_count: number;
+  remaining_searches: number;
+  is_valid: boolean;
+}
+
+/**
  * 刷新令牌请求
+ * 
+ * 此类型定义了刷新访问令牌的请求参数。
+ * 使用 refresh_token 可以在访问令牌过期后获取新的访问令牌，无需重新登录。
+ * 
+ * @property {string} refresh_token - 刷新令牌（从登录响应中获得）
+ * @property {string} device_fingerprint - 设备指纹，必须与登录时的设备指纹匹配
+ * 
+ * @see RefreshTokenResponse - 刷新令牌响应类型
+ * @see LoginWithRememberResponse - 登录时获得 refresh_token
  */
 export interface RefreshTokenRequest {
   refresh_token: string;
@@ -238,6 +404,19 @@ export interface RefreshTokenRequest {
 
 /**
  * 刷新令牌响应
+ * 
+ * 此类型定义了刷新访问令牌接口返回的数据结构。
+ * 实际 API 返回格式为 `ApiResponse<RefreshTokenResponse>`。
+ * 
+ * 采用 Token 轮转机制：每次刷新都会返回新的 refresh_token，旧的 refresh_token 将失效。
+ * 这提高了安全性，防止 refresh_token 被盗用后长期有效。
+ * 
+ * @property {string} access_token - 新的 JWT 访问令牌
+ * @property {number} expires_at - 新访问令牌的过期时间（Unix 时间戳，秒）
+ * @property {string} refresh_token - 新的刷新令牌（Token 轮转机制，旧令牌将失效）
+ * 
+ * @see ApiResponse - 通用 API 响应结构
+ * @see RefreshTokenRequest - 刷新令牌请求参数
  */
 export interface RefreshTokenResponse {
   access_token: string;
@@ -247,6 +426,13 @@ export interface RefreshTokenResponse {
 
 /**
  * 撤销刷新令牌请求
+ * 
+ * 此类型定义了撤销刷新令牌的请求参数。
+ * 用于用户主动登出或安全原因需要使 refresh_token 失效的场景。
+ * 
+ * @property {string} refresh_token - 要撤销的刷新令牌
+ * 
+ * @see RefreshTokenResponse - 刷新令牌响应类型
  */
 export interface RevokeRefreshTokenRequest {
   refresh_token: string;
@@ -502,6 +688,25 @@ export interface BatchUserOperationResult {
 
 /**
  * 成功响应
+ * 
+ * 此类型定义了简单成功操作的响应数据结构。
+ * 实际 API 返回格式为 `ApiResponse<SuccessResponse>`。
+ * 
+ * 用于不需要返回具体数据的操作，如删除、更新状态等。
+ * 
+ * @property {string} message - 成功消息描述
+ * 
+ * @see ApiResponse - 通用 API 响应结构
+ * 
+ * @example
+ * // API 返回示例
+ * {
+ *   "code": 200,
+ *   "message": "操作成功",
+ *   "data": {
+ *     "message": "API Key 解绑成功"
+ *   }
+ * }
  */
 export interface SuccessResponse {
   message: string;
@@ -509,6 +714,28 @@ export interface SuccessResponse {
 
 /**
  * 错误响应
+ * 
+ * 此类型定义了错误情况下的响应数据结构。
+ * 实际 API 返回格式为 `ApiResponse<ErrorResponse>`。
+ * 
+ * 当 API 请求失败时，后端会返回此格式的错误信息。
+ * 前端错误拦截器会自动提取 `message` 字段并展示给用户。
+ * 
+ * @property {string} error - 错误描述信息（中文）
+ * @property {string} code - 错误代码（用于程序化处理）
+ * 
+ * @see ApiResponse - 通用 API 响应结构
+ * 
+ * @example
+ * // API 错误响应示例
+ * {
+ *   "code": 400,
+ *   "message": "请求参数无效",
+ *   "data": {
+ *     "error": "用户名长度必须在3-32字符之间",
+ *     "code": "VALIDATION_ERROR"
+ *   }
+ * }
  */
 export interface ErrorResponse {
   error: string;

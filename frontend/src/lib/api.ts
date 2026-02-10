@@ -47,9 +47,38 @@ class ApiClient {
       }
     );
 
-    // 响应拦截器 - 处理 401 错误
+    // 响应拦截器 - 自动解包响应数据并处理错误
     this.instance.interceptors.response.use(
-      (response: AxiosResponse<ApiResponse>) => {
+      (response: AxiosResponse) => {
+        // 检查是否为标准 API 响应格式 { code, message, data }
+        if (
+          response.data &&
+          typeof response.data === 'object' &&
+          'code' in response.data &&
+          'message' in response.data
+        ) {
+          const apiResponse = response.data as ApiResponse;
+
+          // 检查是否有弃用警告
+          if (response.headers['x-deprecated-api'] === 'true') {
+            const deprecationMessage = response.headers['x-deprecation-message'] || '此接口已弃用，请尽快迁移';
+            console.warn(
+              `[API Deprecated] ${response.config.method?.toUpperCase()} ${response.config.url} - ${deprecationMessage}`
+            );
+          }
+
+          // 自动解包 data 字段，并保留 code 和 message 到 _meta 对象
+          return {
+            ...response,
+            data: apiResponse.data,
+            _meta: {
+              code: apiResponse.code,
+              message: apiResponse.message,
+            },
+          };
+        }
+
+        // 非标准格式，直接返回原始响应
         return response;
       },
       (error: AxiosError<ApiResponse>) => {
@@ -66,8 +95,14 @@ class ApiClient {
           }
         }
 
-        // 统一错误处理
-        const errorMessage = this.handleError(error);
+        // 从错误响应中提取 message 字段
+        let errorMessage = this.handleError(error);
+        if (error.response?.data && typeof error.response.data === 'object') {
+          const apiError = error.response.data as ApiResponse;
+          if (apiError.message) {
+            errorMessage = apiError.message;
+          }
+        }
 
         // 返回标准化的错误响应
         return Promise.reject({
@@ -122,107 +157,47 @@ class ApiClient {
 
   /**
    * GET 请求
+   * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async get<T = any>(url: string, config?: any): Promise<ApiResponse<T>> {
+  async get<T = any>(url: string, config?: any): Promise<T> {
     const response = await this.instance.get<T>(url, config);
-
-    // 如果响应已经是目标类型，则包装成 ApiResponse 格式
-    if (response.data && typeof response.data === 'object') {
-      // 检查是否已经是 ApiResponse 格式
-      if ('code' in response.data || 'message' in response.data) {
-        return response.data as unknown as ApiResponse<T>;
-      }
-
-      // 否则包装成 ApiResponse 格式
-      return {
-        code: 200,
-        message: 'success',
-        data: response.data as T,
-      } as ApiResponse<T>;
-    }
-
-    return response.data as unknown as ApiResponse<T>;
+    return response.data;
   }
 
   /**
    * POST 请求
+   * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async post<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
+  async post<T = any>(url: string, data?: any): Promise<T> {
     const response = await this.instance.post<T>(url, data);
-
-    // 如果响应已经是目标类型（例如管理员登录直接返回 {token, expires_at}）
-    // 则包装成 ApiResponse 格式
-    if (response.data && typeof response.data === 'object') {
-      // 检查是否已经是 ApiResponse 格式
-      if ('code' in response.data || 'message' in response.data) {
-        return response.data as unknown as ApiResponse<T>;
-      }
-
-      // 否则包装成 ApiResponse 格式
-      return {
-        code: 200,
-        message: 'success',
-        data: response.data as T,
-      } as ApiResponse<T>;
-    }
-
-    return response.data as unknown as ApiResponse<T>;
+    return response.data;
   }
 
   /**
    * PUT 请求
+   * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async put<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
-    const response = await this.instance.put<ApiResponse<T>>(url, data);
+  async put<T = any>(url: string, data?: any): Promise<T> {
+    const response = await this.instance.put<T>(url, data);
     return response.data;
   }
 
   /**
    * PATCH 请求
+   * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async patch<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
+  async patch<T = any>(url: string, data?: any): Promise<T> {
     const response = await this.instance.patch<T>(url, data);
-
-    // 如果响应已经是目标类型，则包装成 ApiResponse 格式
-    if (response.data && typeof response.data === 'object') {
-      // 检查是否已经是 ApiResponse 格式
-      if ('code' in response.data || 'message' in response.data) {
-        return response.data as unknown as ApiResponse<T>;
-      }
-
-      // 否则包装成 ApiResponse 格式
-      return {
-        code: 200,
-        message: 'success',
-        data: response.data as T,
-      } as ApiResponse<T>;
-    }
-
-    return response.data as unknown as ApiResponse<T>;
+    return response.data;
   }
 
   /**
    * DELETE 请求
+   * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async delete<T = any>(url: string): Promise<ApiResponse<T>> {
+  async delete<T = any>(url: string): Promise<T> {
     const response = await this.instance.delete<T>(url);
-
-    // 如果响应已经是目标类型，则包装成 ApiResponse 格式
-    if (response.data && typeof response.data === 'object') {
-      // 检查是否已经是 ApiResponse 格式
-      if ('code' in response.data || 'message' in response.data) {
-        return response.data as unknown as ApiResponse<T>;
-      }
-
-      // 否则包装成 ApiResponse 格式
-      return {
-        code: 200,
-        message: 'success',
-        data: response.data as T,
-      } as ApiResponse<T>;
-    }
-
-    return response.data as unknown as ApiResponse<T>;
+    return response.data;
   }
 
   /**

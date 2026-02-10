@@ -111,3 +111,102 @@
 - frontend/src/components/PageLoader.tsx
 - frontend/src/components/admin/BatchCreateDialog.tsx
 - frontend/src/components/admin/BatchDeleteKeysDialog.tsx
+
+---
+
+## 2026-02-11 00:22:14
+
+**Commit**: `refactor(api): 统一前端 API 响应处理并完善类型文档`
+
+**类型**: refactor  
+**范围**: api
+
+### 改动说明
+
+移除前端 API 客户端中的手动响应包装逻辑，统一由响应拦截器自动解包 data 字段。简化所有 Service 层方法的返回值处理，直接返回业务数据对象。为 API 类型定义添加详细的 JSDoc 注释，说明响应格式和数据结构。
+
+### 主要变更
+
+- **frontend/src/lib/api.ts**: 移除 POST/PUT/PATCH/DELETE 方法中的手动包装逻辑，统一返回类型为泛型 T
+- **frontend/src/services/authService.ts**: 简化所有方法的响应处理，移除 `response.data` 访问，直接返回响应对象
+- **frontend/src/services/searchService.ts**: 统一响应处理逻辑
+- **frontend/src/services/userService.ts**: 统一响应处理逻辑
+- **frontend/src/types/api.ts**: 
+  - 为所有 API 类型添加详细的 JSDoc 注释
+  - 新增 `APIKeyInfoResponse` 类型定义
+  - 完善 `ApiResponse`、`RegisterResponse`、`LoginResponse` 等类型的文档说明
+- **backend**: Controller 架构重构、中间件优化、数据库迁移等后端改进
+- **清理**: 删除项目根目录的临时文件（gen_hash.go, package.json, pnpm-lock.yaml）
+
+### 影响的文件
+
+```
+.gitignore
+backend/api/controller/apikey_controller.go
+backend/api/controller/auth_controller.go
+backend/api/controller/user_apikey_controller.go
+backend/api/filter.go
+backend/api/handler.go
+backend/api/middleware.go
+backend/api/middleware/admin_auth.go
+backend/api/middleware/deprecated.go
+backend/api/middleware/jwt_auth.go
+backend/api/refresh_token_handler.go
+backend/api/router.go
+backend/api/user_handler.go
+backend/api/validation_middleware.go
+backend/config/config.go
+backend/coverage.out
+backend/database/connection.go
+backend/database/json_migrator.go
+backend/database/migration.go
+backend/go.mod
+backend/go.sum
+backend/main.go
+backend/model/apikey.go
+backend/model/refresh_token.go
+backend/model/secret.go
+backend/model/system_settings.go
+backend/plugin/duoduo/duoduo.go
+backend/plugin/jikepan/jikepan.go
+backend/plugin/labi/labi.go
+backend/plugin/muou/muou.go
+backend/plugin/pansearch/pansearch.go
+backend/plugin/panta/panta.go
+backend/plugin/panyq/panyq.go
+backend/plugin/shandian/shandian.go
+backend/service/apikey_service.go
+backend/service/auth_service.go
+backend/service/search_service.go
+backend/service/secret_manager.go
+backend/service/secret_manager_db.go
+backend/service/secret_manager_env.go
+backend/service/system_settings_service.go
+backend/service/user_service.go
+backend/unisearch
+backend/util/cache/redis_cache.go
+backend/util/jwt.go
+backend/util/keygen.go
+docs/api_reference.md
+frontend/.vite/deps/chunk-3W6WHVWM.js
+frontend/src/components/magicui/cool-mode.tsx
+frontend/src/hooks/useAutoRefreshToken.ts
+frontend/src/lib/api.ts
+frontend/src/services/authService.ts
+frontend/src/services/searchService.ts
+frontend/src/services/userService.ts
+frontend/src/types/api.ts
+gen_hash.go (已删除)
+package.json (已删除)
+pnpm-lock.yaml (已删除)
+```
+
+**总计**: 56 个文件变更
+
+### 技术要点
+
+1. **响应拦截器统一处理**: 所有 API 响应由 axios 响应拦截器自动解包 `data` 字段
+2. **类型安全**: Service 层方法直接返回业务数据类型，无需手动类型断言
+3. **文档完善**: 为所有 API 类型添加详细的 JSDoc 注释，提升代码可维护性
+4. **代码简化**: 移除冗余的响应包装逻辑，减少代码行数约 100+ 行
+

@@ -10,14 +10,14 @@ import (
 	"strings"
 	"time"
 
+	"regexp"
+	"sync"
 	"unisearch/config"
 	"unisearch/model"
 	"unisearch/plugin"
 	"unisearch/util"
 	"unisearch/util/cache"
 	"unisearch/util/pool"
-	"regexp"
-	"sync"
 )
 
 // 优先关键词列表
@@ -136,6 +136,7 @@ type SearchService struct {
 // 参数:
 //   - pluginManager: 插件管理器
 //   - redisCache: Redis 缓存客户端实例
+//
 // 返回:
 //   - *SearchService: 搜索服务实例
 func NewSearchService(pluginManager *plugin.PluginManager, redisCache *cache.RedisCache) *SearchService {
@@ -940,7 +941,7 @@ func (s *SearchService) searchTG(keyword string, channels []string, forceRefresh
 	if !forceRefresh && s.cache != nil && config.AppConfig.CacheEnabled {
 		ctx := context.Background()
 		var cachedResults []model.SearchResult
-		
+
 		// 尝试从 Redis 缓存读取
 		err := s.cache.Get(ctx, cacheKey, &cachedResults)
 		if err == nil {
@@ -988,7 +989,7 @@ func (s *SearchService) searchTG(keyword string, channels []string, forceRefresh
 	if s.cache != nil && config.AppConfig.CacheEnabled {
 		go func(res []model.SearchResult, kw string, key string) {
 			ctx := context.Background()
-			
+
 			// 写入 Redis 缓存
 			err := s.cache.Set(ctx, key, res)
 			if err != nil {
@@ -1017,7 +1018,7 @@ func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRef
 	if !forceRefresh && s.cache != nil && config.AppConfig.CacheEnabled {
 		ctx := context.Background()
 		var cachedResults []model.SearchResult
-		
+
 		// 尝试从 Redis 缓存读取
 		err := s.cache.Get(ctx, cacheKey, &cachedResults)
 		if err == nil {
@@ -1025,7 +1026,7 @@ func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRef
 			log.Printf("✅ [插件搜索] 缓存命中 - 关键词: %s, 结果数: %d", keyword, len(cachedResults))
 			return cachedResults, nil
 		}
-		
+
 		// 缓存未命中或读取失败
 		if err != cache.ErrCacheMiss {
 			// Redis 操作失败（非缓存未命中），记录警告但继续查询数据源
@@ -1124,7 +1125,7 @@ func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRef
 	if s.cache != nil && config.AppConfig.CacheEnabled {
 		go func(res []model.SearchResult, kw string, key string) {
 			ctx := context.Background()
-			
+
 			// 尝试写入 Redis 缓存
 			err := s.cache.Set(ctx, key, res)
 			if err != nil {

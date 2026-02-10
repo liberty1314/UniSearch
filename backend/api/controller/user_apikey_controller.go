@@ -2,8 +2,8 @@ package controller
 
 import (
 	"log"
-	"unisearch/service"
 	"strings"
+	"unisearch/service"
 
 	"github.com/gin-gonic/gin"
 )

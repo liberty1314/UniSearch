@@ -1,8 +1,8 @@
 package api
 
 import (
-	"unisearch/model"
 	"strings"
+	"unisearch/model"
 )
 
 // applyResultFilter 应用过滤器到搜索响应

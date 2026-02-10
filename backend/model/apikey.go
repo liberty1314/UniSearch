@@ -7,21 +7,21 @@ import (
 
 // APIKey API密钥结构
 type APIKey struct {
-	ID               uint           `gorm:"primaryKey" json:"id"`                    // API Key ID（主键，自增）
+	ID               uint           `gorm:"primaryKey" json:"id"`                                   // API Key ID（主键，自增）
 	Key              string         `gorm:"column:api_key;uniqueIndex;not null;size:50" json:"key"` // 密钥，格式：sk-{40位十六进制}（唯一索引）
-	UserID           *uint          `gorm:"index" json:"user_id"`                    // 关联用户ID（可为NULL，表示未绑定）
-	CreatedAt        time.Time      `json:"created_at"`                              // 创建时间
-	FirstUsedAt      *time.Time     `json:"first_used_at"`                           // 首次使用时间（nil表示未使用）
-	ExpiresAt        *time.Time     `json:"expires_at"`                              // 过期时间（可为NULL）
-	TTLHours         int            `gorm:"default:0" json:"ttl_hours"`              // 有效期（小时，0表示永不过期）
-	IsEnabled        bool           `gorm:"default:true" json:"is_enabled"`          // 是否启用
-	Description      string         `gorm:"size:255" json:"description"`             // 描述信息
-	DailySearchLimit int            `gorm:"default:0" json:"daily_search_limit"`     // 每日搜索次数限制（0表示不限制）
-	TodaySearchCount int            `gorm:"default:0" json:"today_search_count"`     // 今日已搜索次数
-	LastSearchDate   string         `gorm:"size:10" json:"last_search_date"`         // 上次搜索日期（格式：2006-01-02）
-	IsPermanent      bool           `gorm:"default:false" json:"is_permanent"`       // 是否为永久密钥（管理员专用）
-	IsUnlimited      bool           `gorm:"default:false" json:"is_unlimited"`       // 是否无限制（无搜索次数限制）
-	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`                          // 软删除时间（索引，不在JSON中序列化）
+	UserID           *uint          `gorm:"index" json:"user_id"`                                   // 关联用户ID（可为NULL，表示未绑定）
+	CreatedAt        time.Time      `json:"created_at"`                                             // 创建时间
+	FirstUsedAt      *time.Time     `json:"first_used_at"`                                          // 首次使用时间（nil表示未使用）
+	ExpiresAt        *time.Time     `json:"expires_at"`                                             // 过期时间（可为NULL）
+	TTLHours         int            `gorm:"default:0" json:"ttl_hours"`                             // 有效期（小时，0表示永不过期）
+	IsEnabled        bool           `gorm:"default:true" json:"is_enabled"`                         // 是否启用
+	Description      string         `gorm:"size:255" json:"description"`                            // 描述信息
+	DailySearchLimit int            `gorm:"default:0" json:"daily_search_limit"`                    // 每日搜索次数限制（0表示不限制）
+	TodaySearchCount int            `gorm:"default:0" json:"today_search_count"`                    // 今日已搜索次数
+	LastSearchDate   string         `gorm:"size:10" json:"last_search_date"`                        // 上次搜索日期（格式：2006-01-02）
+	IsPermanent      bool           `gorm:"default:false" json:"is_permanent"`                      // 是否为永久密钥（管理员专用）
+	IsUnlimited      bool           `gorm:"default:false" json:"is_unlimited"`                      // 是否无限制（无搜索次数限制）
+	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`                                         // 软删除时间（索引，不在JSON中序列化）
 
 	// 关联关系：属于某个用户（可选）
 	User *User `gorm:"foreignKey:UserID" json:"-"` // 关联的用户（不在JSON中序列化）

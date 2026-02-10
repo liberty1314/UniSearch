@@ -1979,7 +1979,7 @@ var require_react_dom_development = __commonJS({
           if (value != null) {
             if (type === "number") {
               if (value === 0 && node.value === "" || // We explicitly want to coerce to number here if possible.
-              // eslint-disable-next-line
+               
               node.value != value) {
                 node.value = toString(value);
               }
@@ -5580,7 +5580,7 @@ var require_react_dom_development = __commonJS({
             case "touchstart":
             case "volumechange":
             // Used by polyfills:
-            // eslint-disable-next-line no-fallthrough
+             
             case "change":
             case "selectionchange":
             case "textInput":
@@ -5588,11 +5588,11 @@ var require_react_dom_development = __commonJS({
             case "compositionend":
             case "compositionupdate":
             // Only enableCreateEventHandleAPI:
-            // eslint-disable-next-line no-fallthrough
+             
             case "beforeblur":
             case "afterblur":
             // Not used by React but could be by user code:
-            // eslint-disable-next-line no-fallthrough
+             
             case "beforeinput":
             case "blur":
             case "fullscreenchange":
@@ -5618,7 +5618,7 @@ var require_react_dom_development = __commonJS({
             case "touchmove":
             case "wheel":
             // Not used by React but could be by user code:
-            // eslint-disable-next-line no-fallthrough
+             
             case "mouseenter":
             case "mouseleave":
             case "pointerenter":
@@ -20452,15 +20452,15 @@ var require_react_dom_development = __commonJS({
               case REACT_OFFSCREEN_TYPE:
                 return createFiberFromOffscreen(pendingProps, mode, lanes, key);
               case REACT_LEGACY_HIDDEN_TYPE:
-              // eslint-disable-next-line no-fallthrough
+               
               case REACT_SCOPE_TYPE:
-              // eslint-disable-next-line no-fallthrough
+               
               case REACT_CACHE_TYPE:
-              // eslint-disable-next-line no-fallthrough
+               
               case REACT_TRACING_MARKER_TYPE:
-              // eslint-disable-next-line no-fallthrough
+               
               case REACT_DEBUG_TRACING_MODE_TYPE:
-              // eslint-disable-next-line no-fallthrough
+               
               default: {
                 if (typeof type === "object" && type !== null) {
                   switch (type.$$typeof) {

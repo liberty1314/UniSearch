@@ -32,10 +32,10 @@ type UserListResult struct {
 
 // BatchOperationResult 批量操作结果
 type BatchOperationResult struct {
-	SuccessCount int                    `json:"success_count"`
-	FailedCount  int                    `json:"failed_count"`
-	Success      []uint                 `json:"success"`
-	Failed       []BatchOperationError  `json:"failed"`
+	SuccessCount int                   `json:"success_count"`
+	FailedCount  int                   `json:"failed_count"`
+	Success      []uint                `json:"success"`
+	Failed       []BatchOperationError `json:"failed"`
 }
 
 // BatchOperationError 批量操作错误
@@ -238,7 +238,7 @@ func (s *UserService) UpdateUser(userID uint, username, role string, currentUser
 	// 处理角色变更时的永久 Key 管理
 	if oldRole != role {
 		apiKeyService := NewAPIKeyService()
-		
+
 		if role == "admin" && oldRole == "user" {
 			// user -> admin: 创建永久 Key
 			description := fmt.Sprintf("管理员永久密钥 (User: %s)", username)

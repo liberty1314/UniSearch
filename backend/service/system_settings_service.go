@@ -20,7 +20,7 @@ func NewSystemSettingsService(db *gorm.DB) *SystemSettingsService {
 // GetSettings 获取系统设置（如果不存在则创建默认设置）
 func (s *SystemSettingsService) GetSettings() (*model.SystemSettings, error) {
 	var settings model.SystemSettings
-	
+
 	// 尝试获取第一条记录
 	err := s.db.First(&settings).Error
 	if err != nil {
@@ -38,7 +38,7 @@ func (s *SystemSettingsService) GetSettings() (*model.SystemSettings, error) {
 		}
 		return nil, err
 	}
-	
+
 	return &settings, nil
 }
 
@@ -48,10 +48,10 @@ func (s *SystemSettingsService) UpdateSettings(enableUserAuth bool, enableUserLo
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 更新主开关
 	settings.EnableUserAuth = enableUserAuth
-	
+
 	// 更新子选项（如果提供）
 	if enableUserLogin != nil {
 		settings.EnableUserLogin = *enableUserLogin
@@ -59,10 +59,10 @@ func (s *SystemSettingsService) UpdateSettings(enableUserAuth bool, enableUserLo
 	if enableUserSignup != nil {
 		settings.EnableUserSignup = *enableUserSignup
 	}
-	
+
 	if err := s.db.Save(settings).Error; err != nil {
 		return nil, err
 	}
-	
+
 	return settings, nil
 }

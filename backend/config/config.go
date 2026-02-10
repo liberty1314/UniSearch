@@ -85,35 +85,35 @@ type Config struct {
 	AuthUsers       map[string]string // 用户名:密码映射
 	AuthTokenExpiry time.Duration     // Token有效期
 	AuthJWTSecret   string            // JWT签名密钥（向后兼容，优先使用密钥管理服务）
-	
+
 	// 密钥管理配置
-	SecretBackend    string // 密钥后端类型（database 或 environment）
-	SecretMasterKey  string // 主密钥（用于加密数据库中的密钥）
+	SecretBackend   string // 密钥后端类型（database 或 environment）
+	SecretMasterKey string // 主密钥（用于加密数据库中的密钥）
 	// API Key 相关配置
-	APIKeyEnabled     bool          // 是否启用 API Key 认证
-	APIKeyDefaultTTL  time.Duration // API Key 默认有效期
-	APIKeyStorePath   string        // API Key 存储路径
+	APIKeyEnabled    bool          // 是否启用 API Key 认证
+	APIKeyDefaultTTL time.Duration // API Key 默认有效期
+	APIKeyStorePath  string        // API Key 存储路径
 
 	// Refresh Token 相关配置
-	RefreshTokenEnabled     bool          // 是否启用刷新令牌（记住密码）
-	RefreshTokenStorage     string        // 刷新令牌存储类型（file 或 database）
-	RefreshTokenTTL         time.Duration // 刷新令牌有效期
-	RefreshTokenStorePath   string        // 刷新令牌存储路径（文件模式）
-	RefreshTokenEncryptKey  string        // 刷新令牌加密密钥
+	RefreshTokenEnabled    bool          // 是否启用刷新令牌（记住密码）
+	RefreshTokenStorage    string        // 刷新令牌存储类型（file 或 database）
+	RefreshTokenTTL        time.Duration // 刷新令牌有效期
+	RefreshTokenStorePath  string        // 刷新令牌存储路径（文件模式）
+	RefreshTokenEncryptKey string        // 刷新令牌加密密钥
 	// MySQL 数据库配置
 	DBHost     string // 数据库主机地址
 	DBPort     string // 数据库端口
 	DBUser     string // 数据库用户名
 	DBPassword string // 数据库密码
 	DBName     string // 数据库名称
-	
+
 	// Redis 缓存配置（保留向后兼容）
 	RedisHost     string        // Redis 主机地址
 	RedisPort     string        // Redis 端口
 	RedisPassword string        // Redis 密码（可选）
 	RedisDB       int           // Redis 数据库编号
 	RedisTTL      time.Duration // Redis 缓存过期时间
-	
+
 	// Redis 配置对象（推荐使用）
 	Redis *RedisConfig // Redis 配置
 }
@@ -183,7 +183,7 @@ func Init() {
 		AuthUsers:       getAuthUsers(),
 		AuthTokenExpiry: getAuthTokenExpiry(),
 		AuthJWTSecret:   getAuthJWTSecret(),
-		
+
 		// 密钥管理配置
 		SecretBackend:   getSecretBackend(),
 		SecretMasterKey: getSecretMasterKey(),
@@ -204,14 +204,14 @@ func Init() {
 		DBUser:     getDBUser(),
 		DBPassword: getDBPassword(),
 		DBName:     getDBName(),
-		
+
 		// Redis 缓存配置（向后兼容）
 		RedisHost:     redisConfig.Host,
 		RedisPort:     redisConfig.Port,
 		RedisPassword: redisConfig.Password,
 		RedisDB:       redisConfig.DB,
 		RedisTTL:      redisConfig.TTL,
-		
+
 		// Redis 配置对象（推荐使用）
 		Redis: redisConfig,
 	}

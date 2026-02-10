@@ -54,11 +54,11 @@ func NewRedisCache(cfg Config) (*RedisCache, error) {
 		Addr:         addr,
 		Password:     cfg.Password,
 		DB:           cfg.DB,
-		DialTimeout:  5 * time.Second,  // 连接超时
-		ReadTimeout:  5 * time.Second,  // 读取超时
-		WriteTimeout: 5 * time.Second,  // 写入超时
-		PoolSize:     10,                // 连接池大小
-		MinIdleConns: 2,                 // 最小空闲连接数
+		DialTimeout:  5 * time.Second, // 连接超时
+		ReadTimeout:  5 * time.Second, // 读取超时
+		WriteTimeout: 5 * time.Second, // 写入超时
+		PoolSize:     10,              // 连接池大小
+		MinIdleConns: 2,               // 最小空闲连接数
 	})
 
 	// 测试连接
@@ -100,6 +100,7 @@ func (rc *RedisCache) Close() error {
 //   - ctx: 上下文，用于超时控制
 //   - key: 缓存键
 //   - value: 要缓存的数据（将被序列化为 JSON）
+//
 // 返回:
 //   - error: 如果序列化失败或 Redis 操作失败，返回错误
 func (rc *RedisCache) Set(ctx context.Context, key string, value interface{}) error {
@@ -145,6 +146,7 @@ func (rc *RedisCache) Set(ctx context.Context, key string, value interface{}) er
 //   - ctx: 上下文，用于超时控制
 //   - key: 缓存键
 //   - dest: 目标对象指针，用于接收反序列化后的数据
+//
 // 返回:
 //   - error: 如果缓存未命中返回 ErrCacheMiss，如果反序列化失败或 Redis 操作失败返回相应错误
 func (rc *RedisCache) Get(ctx context.Context, key string, dest interface{}) error {
@@ -168,13 +170,13 @@ func (rc *RedisCache) Get(ctx context.Context, key string, dest interface{}) err
 			log.Printf("调试: 缓存未命中 - 键: %s", key)
 			return ErrCacheMiss
 		}
-		
+
 		// 检查是否是超时错误
 		if ctx.Err() == context.DeadlineExceeded {
 			log.Printf("警告: Redis 操作超时 - 键: %s", key)
 			return fmt.Errorf("Redis 操作超时: %w", ctx.Err())
 		}
-		
+
 		log.Printf("错误: Redis 读取失败 - 键: %s, 错误: %v", key, err)
 		return fmt.Errorf("Redis 读取失败: %w", err)
 	}
@@ -190,7 +192,7 @@ func (rc *RedisCache) Get(ctx context.Context, key string, dest interface{}) err
 	go func(k string, ttl time.Duration) {
 		refreshCtx, refreshCancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer refreshCancel()
-		
+
 		if err := rc.client.Expire(refreshCtx, k, ttl).Err(); err != nil {
 			log.Printf("警告: 缓存 TTL 刷新失败 - 键: %s, 错误: %v", k, err)
 		} else {
@@ -207,6 +209,7 @@ func (rc *RedisCache) Get(ctx context.Context, key string, dest interface{}) err
 // 参数:
 //   - ctx: 上下文，用于超时控制
 //   - key: 要删除的缓存键
+//
 // 返回:
 //   - error: 如果 Redis 操作失败，返回错误
 func (rc *RedisCache) Delete(ctx context.Context, key string) error {
@@ -227,7 +230,7 @@ func (rc *RedisCache) Delete(ctx context.Context, key string) error {
 			log.Printf("警告: Redis 操作超时 - 键: %s", key)
 			return fmt.Errorf("Redis 操作超时: %w", ctx.Err())
 		}
-		
+
 		log.Printf("错误: Redis 删除失败 - 键: %s, 错误: %v", key, err)
 		return fmt.Errorf("Redis 删除失败: %w", err)
 	}
@@ -241,6 +244,7 @@ func (rc *RedisCache) Delete(ctx context.Context, key string) error {
 // 参数:
 //   - ctx: 上下文，用于超时控制
 //   - key: 要检查的缓存键
+//
 // 返回:
 //   - bool: 如果键存在返回 true，否则返回 false
 //   - error: 如果 Redis 操作失败，返回错误
@@ -262,7 +266,7 @@ func (rc *RedisCache) Exists(ctx context.Context, key string) (bool, error) {
 			log.Printf("警告: Redis 操作超时 - 键: %s", key)
 			return false, fmt.Errorf("Redis 操作超时: %w", ctx.Err())
 		}
-		
+
 		log.Printf("错误: Redis 检查失败 - 键: %s, 错误: %v", key, err)
 		return false, fmt.Errorf("Redis 检查失败: %w", err)
 	}
@@ -277,6 +281,7 @@ func (rc *RedisCache) Exists(ctx context.Context, key string) (bool, error) {
 // 参数:
 //   - ctx: 上下文，用于超时控制
 //   - key: 要刷新的缓存键
+//
 // 返回:
 //   - error: 如果 Redis 操作失败，返回错误
 func (rc *RedisCache) RefreshTTL(ctx context.Context, key string) error {
@@ -297,7 +302,7 @@ func (rc *RedisCache) RefreshTTL(ctx context.Context, key string) error {
 			log.Printf("警告: Redis 操作超时 - 键: %s", key)
 			return fmt.Errorf("Redis 操作超时: %w", ctx.Err())
 		}
-		
+
 		log.Printf("错误: Redis TTL 刷新失败 - 键: %s, 错误: %v", key, err)
 		return fmt.Errorf("Redis TTL 刷新失败: %w", err)
 	}
@@ -313,6 +318,7 @@ func (rc *RedisCache) RefreshTTL(ctx context.Context, key string) error {
 //   - ctx: 上下文，用于超时控制
 //   - key: 缓存键
 //   - dest: 目标对象指针，用于接收反序列化后的数据
+//
 // 返回:
 //   - error: 如果缓存未命中返回 ErrCacheMiss，如果反序列化失败或 Redis 操作失败返回相应错误
 func (rc *RedisCache) GetAndRefresh(ctx context.Context, key string, dest interface{}) error {
@@ -336,13 +342,13 @@ func (rc *RedisCache) GetAndRefresh(ctx context.Context, key string, dest interf
 			log.Printf("调试: 缓存未命中 - 键: %s", key)
 			return ErrCacheMiss
 		}
-		
+
 		// 检查是否是超时错误
 		if ctx.Err() == context.DeadlineExceeded {
 			log.Printf("警告: Redis 操作超时 - 键: %s", key)
 			return fmt.Errorf("Redis 操作超时: %w", ctx.Err())
 		}
-		
+
 		log.Printf("错误: Redis 读取失败 - 键: %s, 错误: %v", key, err)
 		return fmt.Errorf("Redis 读取失败: %w", err)
 	}

@@ -48,7 +48,7 @@ import (
 	_ "unisearch/plugin/wanou"
 	_ "unisearch/plugin/xuexizhinan"
 	_ "unisearch/plugin/zhizhen"
-	
+
 	"unisearch/model"
 )
 
@@ -77,39 +77,39 @@ func initApp() {
 
 	// ========== 数据库初始化 ==========
 	// 验证需求：2.1-2.6, 11.1-11.7
-	
+
 	// 1. 连接数据库
 	log.Println("正在连接数据库...")
 	if err := database.InitDB(); err != nil {
 		log.Fatalf("❌ 数据库连接失败: %v", err)
 	}
-	
+
 	// 2. 执行数据库迁移
 	log.Println("正在执行数据库迁移...")
 	if err := database.AutoMigrate(); err != nil {
 		log.Fatalf("❌ 数据库迁移失败: %v", err)
 	}
-	
+
 	// 3. 创建默认管理员
 	log.Println("正在检查默认管理员账户...")
 	if err := database.SeedDefaultAdmin(); err != nil {
 		log.Fatalf("❌ 创建默认管理员失败: %v", err)
 	}
-	
+
 	// 4. 执行 JSON 数据迁移（如果需要）
 	log.Println("正在检查 JSON 数据迁移...")
 	if err := database.MigrateFromDefaultJSONFile(); err != nil {
 		// 数据迁移失败不应该导致系统无法启动，只记录警告
 		log.Printf("⚠️  JSON 数据迁移失败: %v", err)
 	}
-	
+
 	log.Println("✓ 数据库初始化完成")
 	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	// ========== 密钥管理服务初始化 ==========
 	log.Println("正在初始化密钥管理服务...")
 	var secretManager service.SecretManager
-	
+
 	if config.AppConfig.SecretBackend == "database" {
 		// 数据库模式
 		secretManager = service.NewDatabaseSecretManager(
@@ -117,7 +117,7 @@ func initApp() {
 			config.AppConfig.SecretMasterKey,
 		)
 		log.Println("✓ 密钥管理服务已启动（数据库存储模式）")
-		
+
 		// 初始化默认密钥（如果不存在）
 		if err := initializeDefaultSecrets(secretManager); err != nil {
 			log.Printf("⚠️  初始化默认密钥失败: %v", err)
@@ -127,7 +127,7 @@ func initApp() {
 		secretManager = service.NewEnvironmentSecretManager()
 		log.Println("✓ 密钥管理服务已启动（环境变量模式）")
 	}
-	
+
 	// 设置全局密钥管理服务
 	service.SetGlobalSecretManager(secretManager)
 	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -137,7 +137,7 @@ func initApp() {
 
 	// ========== Redis 缓存初始化 ==========
 	log.Println("正在初始化 Redis 缓存...")
-	
+
 	// 从配置创建 Redis 缓存实例
 	if config.AppConfig.Redis != nil {
 		// 将端口字符串转换为整数
@@ -146,7 +146,7 @@ func initApp() {
 			log.Printf("⚠️  Redis 端口转换失败: %v，使用默认端口 6379", err)
 			port = 6379
 		}
-		
+
 		redisConfig := cache.Config{
 			Host:     config.AppConfig.Redis.Host,
 			Port:     port,
@@ -154,7 +154,7 @@ func initApp() {
 			DB:       config.AppConfig.Redis.DB,
 			TTL:      config.AppConfig.Redis.TTL,
 		}
-		
+
 		globalRedisCache, err = cache.NewRedisCache(redisConfig)
 		if err != nil {
 			log.Printf("⚠️  Redis 缓存初始化失败: %v", err)
@@ -166,7 +166,7 @@ func initApp() {
 	} else {
 		log.Println("⚠️  Redis 配置未找到，缓存功能将不可用")
 	}
-	
+
 	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	// 确保异步插件系统初始化
@@ -202,7 +202,7 @@ func startServer() {
 	if config.AppConfig.RefreshTokenEnabled {
 		// 根据配置选择存储类型
 		storageType := service.StorageType(config.AppConfig.RefreshTokenStorage)
-		
+
 		if storageType == service.StorageTypeDatabase {
 			// 数据库模式
 			refreshTokenService, err = service.NewRefreshTokenService(
@@ -446,7 +446,6 @@ func printServiceInfo(port string, pluginManager *plugin.PluginManager) {
 		fmt.Printf("  - %s (优先级: %d)\n", p.Name(), p.Priority())
 	}
 }
-
 
 // initializeDefaultSecrets 初始化默认密钥（仅在数据库模式下）
 func initializeDefaultSecrets(secretManager service.SecretManager) error {

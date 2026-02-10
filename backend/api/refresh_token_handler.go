@@ -205,7 +205,7 @@ func UserLoginWithRememberHandler(apiKeyService *service.APIKeyService, refreshT
 		// 优先尝试数据库用户登录
 		authService := service.NewAuthService()
 		accessToken, user, _, err := authService.Login(req.Username, req.Password)
-		
+
 		if err == nil {
 			// 数据库用户登录成功
 			response := LoginWithRememberResponse{

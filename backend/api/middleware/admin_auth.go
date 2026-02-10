@@ -6,9 +6,10 @@ import (
 
 // AdminAuth 管理员权限验证中间件
 // 功能：
-//   1. 从 Context 获取用户角色（由 JWTAuth 中间件设置）
-//   2. 验证 role='admin'
-//   3. 返回 403 错误（如果非管理员）
+//  1. 从 Context 获取用户角色（由 JWTAuth 中间件设置）
+//  2. 验证 role='admin'
+//  3. 返回 403 错误（如果非管理员）
+//
 // 验证需求：7.3, 10.2
 // 注意：此中间件必须在 JWTAuth 中间件之后使用
 func AdminAuth() gin.HandlerFunc {

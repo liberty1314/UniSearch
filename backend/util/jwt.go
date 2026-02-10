@@ -18,9 +18,9 @@ type Claims struct {
 // JWTClaims JWT载荷结构（新版本，符合 apikey-mysql-migration 规范）
 // 包含 UserID, Username, Role 字段，用于用户身份验证和权限控制
 type JWTClaims struct {
-	UserID   uint   `json:"user_id"`  // 用户ID
-	Username string `json:"username"` // 用户名
-	Role     string `json:"role"`     // 用户角色（admin 或 user）
+	UserID   uint   `json:"user_id"`           // 用户ID
+	Username string `json:"username"`          // 用户名
+	Role     string `json:"role"`              // 用户角色（admin 或 user）
 	APIKey   string `json:"api_key,omitempty"` // API Key（仅用于 API Key 登录）
 	jwt.RegisteredClaims
 }
@@ -62,9 +62,11 @@ func GenerateTokenWithAPIKey(username string, isAdmin bool, apiKey string, secre
 //   - role: 用户角色（admin 或 user）
 //   - secret: JWT 签名密钥
 //   - expiry: Token 过期时间（建议 24 小时）
+//
 // 返回：
 //   - string: 生成的 JWT Token 字符串
 //   - error: 错误信息
+//
 // 验证需求：5.5, 5.6, 13.6
 func GenerateJWTToken(userID uint, username, role, secret string, expiry time.Duration) (string, error) {
 	return GenerateJWTTokenWithAPIKey(userID, username, role, "", secret, expiry)
@@ -78,6 +80,7 @@ func GenerateJWTToken(userID uint, username, role, secret string, expiry time.Du
 //   - apiKey: API Key（可选，仅用于 API Key 登录）
 //   - secret: JWT 签名密钥
 //   - expiry: Token 过期时间（建议 24 小时）
+//
 // 返回：
 //   - string: 生成的 JWT Token 字符串
 //   - error: 错误信息
@@ -143,9 +146,11 @@ func ValidateToken(tokenString string, secret string) (*Claims, error) {
 // 参数：
 //   - tokenString: JWT Token 字符串
 //   - secret: JWT 签名密钥
+//
 // 返回：
 //   - *JWTClaims: 解析后的 JWT Claims（包含 UserID, Username, Role）
 //   - error: 错误信息
+//
 // 验证需求：5.5, 5.6, 13.6
 func ValidateJWTToken(tokenString string, secret string) (*JWTClaims, error) {
 	if tokenString == "" {

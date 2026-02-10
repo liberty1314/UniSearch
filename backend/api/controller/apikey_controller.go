@@ -3,10 +3,10 @@ package controller
 import (
 	"errors"
 	"log"
-	"unisearch/model"
-	"unisearch/service"
 	"strconv"
 	"strings"
+	"unisearch/model"
+	"unisearch/service"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -38,9 +38,9 @@ type GenerateAPIKeyRequest struct {
 
 // GenerateAPIKeyResponse 生成 API Key 响应结构
 type GenerateAPIKeyResponse struct {
-	Code    int            `json:"code"`           // 响应码
-	Message string         `json:"message"`        // 响应消息
-	Data    *model.APIKey  `json:"data,omitempty"` // 响应数据（成功时包含 API Key 信息）
+	Code    int           `json:"code"`           // 响应码
+	Message string        `json:"message"`        // 响应消息
+	Data    *model.APIKey `json:"data,omitempty"` // 响应数据（成功时包含 API Key 信息）
 }
 
 // BindAPIKeyRequest 绑定 API Key 请求结构（用户）
@@ -50,16 +50,16 @@ type BindAPIKeyRequest struct {
 
 // BindAPIKeyResponse 绑定 API Key 响应结构
 type BindAPIKeyResponse struct {
-	Code    int            `json:"code"`           // 响应码
-	Message string         `json:"message"`        // 响应消息
-	Data    *model.APIKey  `json:"data,omitempty"` // 响应数据（成功时包含 API Key 信息）
+	Code    int           `json:"code"`           // 响应码
+	Message string        `json:"message"`        // 响应消息
+	Data    *model.APIKey `json:"data,omitempty"` // 响应数据（成功时包含 API Key 信息）
 }
 
 // GetAPIKeyInfoResponse 查询 API Key 信息响应结构
 type GetAPIKeyInfoResponse struct {
-	Code    int            `json:"code"`           // 响应码
-	Message string         `json:"message"`        // 响应消息
-	Data    *model.APIKey  `json:"data,omitempty"` // 响应数据（成功时包含 API Key 信息）
+	Code    int           `json:"code"`           // 响应码
+	Message string        `json:"message"`        // 响应消息
+	Data    *model.APIKey `json:"data,omitempty"` // 响应数据（成功时包含 API Key 信息）
 }
 
 // ListAPIKeysResponse 列出所有 API Keys 响应结构（管理员）

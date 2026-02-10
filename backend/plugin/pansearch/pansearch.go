@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
+	"sync/atomic"
 	"unisearch/model"
 	"unisearch/plugin"
 	"unisearch/util/json"
-	"sync/atomic"
 )
 
 // 预编译正则表达式

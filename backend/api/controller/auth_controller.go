@@ -5,12 +5,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"log"
-	"unisearch/config"
-	"unisearch/model"
-	"unisearch/service"
-	"unisearch/util"
 	"strings"
 	"time"
+	"unisearch/config"
+	"unisearch/service"
+	"unisearch/util"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -37,24 +36,24 @@ type RegisterRequest struct {
 
 // RegisterResponse 用户注册响应结构
 type RegisterResponse struct {
-	Code    int         `json:"code"`              // 响应码
-	Message string      `json:"message"`           // 响应消息
-	Data    interface{} `json:"data,omitempty"`    // 响应数据（成功时包含用户信息）
+	Code    int         `json:"code"`           // 响应码
+	Message string      `json:"message"`        // 响应消息
+	Data    interface{} `json:"data,omitempty"` // 响应数据（成功时包含用户信息）
 }
 
 // LoginRequest 用户登录请求结构（支持记住我）
 type LoginRequest struct {
-	Username          string `json:"username" binding:"required"`          // 用户名
-	Password          string `json:"password" binding:"required"`          // 密码或 API Key
-	RememberMe        bool   `json:"remember_me"`                          // 是否记住我（可选）
-	DeviceFingerprint string `json:"device_fingerprint"`                   // 设备指纹（可选）
+	Username          string `json:"username" binding:"required"` // 用户名
+	Password          string `json:"password" binding:"required"` // 密码或 API Key
+	RememberMe        bool   `json:"remember_me"`                 // 是否记住我（可选）
+	DeviceFingerprint string `json:"device_fingerprint"`          // 设备指纹（可选）
 }
 
 // LoginResponse 用户登录响应结构（支持刷新令牌）
 type LoginResponse struct {
-	Code    int         `json:"code"`              // 响应码
-	Message string      `json:"message"`           // 响应消息
-	Data    interface{} `json:"data,omitempty"`    // 响应数据（成功时包含 Token 和用户信息）
+	Code    int         `json:"code"`           // 响应码
+	Message string      `json:"message"`        // 响应消息
+	Data    interface{} `json:"data,omitempty"` // 响应数据（成功时包含 Token 和用户信息）
 }
 
 // LoginData 登录成功返回的数据（支持刷新令牌）
@@ -63,7 +62,6 @@ type LoginData struct {
 	ExpiresAt    int64   `json:"expires_at"`              // Token 过期时间（Unix 时间戳）
 	RefreshToken *string `json:"refresh_token,omitempty"` // 刷新令牌（仅在 remember_me=true 时返回）
 	Username     string  `json:"username"`                // 用户名
-	User         *model.User `json:"user,omitempty"`      // 用户信息（数据库用户）
 }
 
 // Register 处理用户注册请求
@@ -130,12 +128,15 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 		return
 	}
 
-	// 注册成功，返回用户信息（不包含密码）
+	// 注册成功，返回用户信息（仅返回 user_id 和 username）
 	log.Printf("✓ 用户注册成功: %s (ID: %d)", user.Username, user.ID)
 	c.JSON(200, RegisterResponse{
 		Code:    200,
 		Message: "注册成功",
-		Data:    user,
+		Data: gin.H{
+			"user_id":  user.ID,
+			"username": user.Username,
+		},
 	})
 }
 
@@ -316,7 +317,6 @@ func (ctrl *AuthController) handleDatabaseUserLogin(c *gin.Context, req LoginReq
 		AccessToken: token,
 		ExpiresAt:   ctrl.getTokenExpiryTime(),
 		Username:    user.Username,
-		User:        user,
 	}
 
 	// 如果启用"记住我"，生成刷新令牌
@@ -405,7 +405,7 @@ func (ctrl *AuthController) getTokenExpiryTime() int64 {
 func (ctrl *AuthController) generateDeviceFingerprint(c *gin.Context) string {
 	// 使用 IP + User-Agent 生成设备指纹
 	data := c.ClientIP() + c.GetHeader("User-Agent")
-	
+
 	// 使用 SHA256 哈希
 	hash := sha256.Sum256([]byte(data))
 	return hex.EncodeToString(hash[:])

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"unisearch/model"
 	"time"
+	"unisearch/model"
 
 	"gorm.io/gorm"
 )
@@ -79,9 +79,9 @@ func MigrateFromJSON(jsonFilePath string) error {
 			TTLHours:         jsonKey.TTLHours,
 			IsEnabled:        jsonKey.IsEnabled,
 			Description:      jsonKey.Description,
-			DailySearchLimit: 0,    // JSON 中没有此字段，默认为 0（不限制）
-			TodaySearchCount: 0,    // 初始化为 0
-			LastSearchDate:   "",   // 初始化为空
+			DailySearchLimit: 0,  // JSON 中没有此字段，默认为 0（不限制）
+			TodaySearchCount: 0,  // 初始化为 0
+			LastSearchDate:   "", // 初始化为空
 		}
 
 		// 尝试插入数据库

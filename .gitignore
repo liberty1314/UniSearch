@@ -296,6 +296,12 @@ dist/
 *.tar.gz
 *.zip
 
+# Go 编译产物
+backend/unisearch
+backend/*.exe
+backend/*.test
+backend/*.out
+
 # 临时Dockerfile
 Dockerfile.*.cn
 Dockerfile.test

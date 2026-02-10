@@ -3,11 +3,10 @@ import type {
     AdminLoginRequest,
     AdminLoginResponse,
     APIKeyInfo,
-    CreateAPIKeyRequest,
+    APIKeyInfoResponse,
     UpdateAPIKeyRequest,
     BatchExtendRequest,
     BatchOperationResult,
-    BatchCreateRequest,
     BatchCreateResult,
     LoginWithRememberRequest,
     LoginWithRememberResponse,
@@ -28,27 +27,31 @@ import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 export class AuthService {
     /**
      * 用户注册
+     * 
+     * 后端返回格式：`{ code: 200, message: "注册成功", data: { user_id, username } }`
+     * 响应拦截器会自动解包 `data` 字段，此方法直接返回 `RegisterResponse` 对象
+     * 
      * @param username 用户名
      * @param password 密码
-     * @returns 注册响应
+     * @returns 注册响应数据（已解包）
      */
     static async register(username: string, password: string): Promise<RegisterResponse> {
         const request: RegisterRequest = { username, password };
+        // 响应拦截器已自动解包 data 字段，直接返回业务数据
         const response = await apiClient.post<RegisterResponse>('/auth/register', request);
-
-        if (!response.data) {
-            throw new Error('注册失败：服务器未返回有效数据');
-        }
-
-        return response.data;
+        return response;
     }
 
     /**
      * 用户登录（支持"记住我"）
+     * 
+     * 后端返回格式：`{ code: 200, message: "登录成功", data: { access_token, expires_at, refresh_token?, username } }`
+     * 响应拦截器会自动解包 `data` 字段，此方法直接返回 `LoginWithRememberResponse` 对象
+     * 
      * @param username 用户名
      * @param password 密码
-     * @param rememberMe 是否记住密码
-     * @returns 登录响应，包含 token 和可选的 refresh_token
+     * @param rememberMe 是否记住密码（true 时返回 refresh_token）
+     * @returns 登录响应数据（已解包）
      */
     static async userLogin(
         username: string,
@@ -63,17 +66,12 @@ export class AuthService {
             device_fingerprint: deviceFingerprint,
         };
 
-        // 统一使用 /api/auth/login 接口
+        // 响应拦截器已自动解包 data 字段，直接返回业务数据
         const response = await apiClient.post<LoginWithRememberResponse>(
             '/auth/login',
             request
         );
-
-        if (!response.data) {
-            throw new Error('登录失败：服务器未返回有效数据');
-        }
-
-        return response.data;
+        return response;
     }
 
     /**
@@ -86,11 +84,11 @@ export class AuthService {
         const request: LoginRequest = { username, password };
         const response = await apiClient.post<LoginResponse>('/auth/login', request);
 
-        if (!response.data) {
+        if (!response) {
             throw new Error('登录失败：服务器未返回有效数据');
         }
 
-        return response.data;
+        return response;
     }
     /**
      * 管理员登录（支持"记住我"）
@@ -117,11 +115,11 @@ export class AuthService {
             request
         );
 
-        if (!response.data) {
+        if (!response) {
             throw new Error('登录失败：服务器未返回有效数据');
         }
 
-        return response.data;
+        return response;
     }
 
     /**
@@ -134,11 +132,11 @@ export class AuthService {
         const request: AdminLoginRequest = { username, password };
         const response = await apiClient.post<AdminLoginResponse>('/admin/login', request);
 
-        if (!response.data) {
+        if (!response) {
             throw new Error('登录失败：服务器未返回有效数据');
         }
 
-        return response.data;
+        return response;
     }
 
     /**
@@ -165,11 +163,11 @@ export class AuthService {
             request
         );
 
-        if (!response.data) {
+        if (!response) {
             throw new Error('登录失败：服务器未返回有效数据');
         }
 
-        return response.data;
+        return response;
     }
 
     /**
@@ -184,11 +182,11 @@ export class AuthService {
         };
         const response = await apiClient.post<AdminLoginResponse>('/auth/login', request);
 
-        if (!response.data) {
+        if (!response) {
             throw new Error('登录失败：服务器未返回有效数据');
         }
 
-        return response.data;
+        return response;
     }
 
     /**
@@ -211,18 +209,32 @@ export class AuthService {
 
     /**
      * 获取用户 API Key 详情
-     * @param apiKey API Key 字符串（可选，拦截器会自动从 authStore 获取）
      * @returns API Key 详细信息
      */
-    static async getUserApiKeyInfo(apiKey?: string): Promise<any> {
-        const response = await apiClient.get('/user/apikey-info');
+    /**
+         * 获取用户 API Key 详情
+         * @returns API Key 详细信息
+         */
+        static async getUserApiKeyInfo(): Promise<APIKeyInfoResponse> {
+            const response = await apiClient.get<APIKeyInfoResponse>('/user/apikey');
 
-        if (!response.data) {
-            throw new Error('获取 API Key 信息失败：服务器未返回有效数据');
+            if (!response) {
+                throw new Error('获取 API Key 信息失败：服务器未返回有效数据');
+            }
+
+            return response;
         }
 
-        return response.data;
-    }
+        /**
+         * 解绑用户 API Key
+         * 发送 DELETE 请求到 /user/apikey 以解除当前用户的 API Key 绑定
+         * @returns Promise<void> 解绑成功时返回
+         * @throws Error 当解绑失败时抛出错误
+         */
+        static async unbindApiKey(): Promise<void> {
+            await apiClient.delete('/user/apikey');
+        }
+
 
     /**
      * 获取 API Keys 列表（管理员权限）
@@ -231,12 +243,12 @@ export class AuthService {
     static async listApiKeys(): Promise<APIKeyInfo[]> {
         const response = await apiClient.get<{ keys: APIKeyInfo[] }>('/admin/keys');
 
-        if (!response.data) {
+        if (!response) {
             throw new Error('获取 API Keys 失败：服务器未返回有效数据');
         }
 
         // 后端返回的是 {keys: [...]}，需要提取 keys 字段
-        return (response.data as any).keys || [];
+        return (response as any).keys || [];
     }
 
     /**
@@ -255,12 +267,12 @@ export class AuthService {
 
         const response = await apiClient.post<{ key: APIKeyInfo }>('/admin/keys', request);
 
-        if (!response.data) {
+        if (!response) {
             throw new Error('创建 API Key 失败：服务器未返回有效数据');
         }
 
         // 后端返回的是 {key: {...}}，需要提取 key 字段
-        return (response.data as any).key;
+        return (response as any).key;
     }
 
     /**
@@ -301,12 +313,12 @@ export class AuthService {
 
         const response = await apiClient.patch<{ key: APIKeyInfo }>(`/admin/keys/${key}`, request);
 
-        if (!response.data) {
+        if (!response) {
             throw new Error('更新 API Key 失败：服务器未返回有效数据');
         }
 
         // 后端返回的是 {key: {...}}，需要提取 key 字段
-        return (response.data as any).key;
+        return (response as any).key;
     }
 
     /**
@@ -329,11 +341,11 @@ export class AuthService {
             request
         );
 
-        if (!response.data) {
+        if (!response) {
             throw new Error('批量延长失败：服务器未返回有效数据');
         }
 
-        return response.data;
+        return response;
     }
 
     /**
@@ -362,11 +374,11 @@ export class AuthService {
             request
         );
 
-        if (!response.data) {
+        if (!response) {
             throw new Error('批量创建失败：服务器未返回有效数据');
         }
 
-        return response.data;
+        return response;
     }
 
     /**
@@ -382,11 +394,11 @@ export class AuthService {
             request
         );
 
-        if (!response.data) {
+        if (!response) {
             throw new Error('批量删除失败：服务器未返回有效数据');
         }
 
-        return response.data;
+        return response;
     }
 
     /**
@@ -403,11 +415,11 @@ export class AuthService {
 
         const response = await apiClient.post<RefreshTokenResponse>('/auth/refresh', request);
 
-        if (!response.data) {
+        if (!response) {
             throw new Error('刷新令牌失败：服务器未返回有效数据');
         }
 
-        return response.data;
+        return response;
     }
 
     /**

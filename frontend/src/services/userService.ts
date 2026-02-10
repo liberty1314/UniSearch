@@ -40,7 +40,7 @@ export class UserService {
     }
 
     const response = await apiClient.get<ListUsersResponse>('/admin/users', { params });
-    return response.data;
+    return response;
   }
 
   /**
@@ -48,7 +48,7 @@ export class UserService {
    */
   static async getUser(userId: number): Promise<UserInfo> {
     const response = await apiClient.get<UserInfo>(`/admin/users/${userId}`);
-    return response.data;
+    return response;
   }
 
   /**
@@ -66,7 +66,7 @@ export class UserService {
     };
 
     const response = await apiClient.post<UserInfo>('/admin/users', data);
-    return response.data;
+    return response;
   }
 
   /**
@@ -83,7 +83,7 @@ export class UserService {
     };
 
     const response = await apiClient.put<UserInfo>(`/admin/users/${userId}`, data);
-    return response.data;
+    return response;
   }
 
   /**
@@ -127,7 +127,7 @@ export class UserService {
       '/admin/users/batch-delete',
       data
     );
-    return response.data;
+    return response;
   }
 
   /**
@@ -146,6 +146,6 @@ export class UserService {
       '/admin/users/batch-update-role',
       data
     );
-    return response.data;
+    return response;
   }
 }

@@ -25,6 +25,16 @@ UniSearch 提供了一套完整的 RESTful API，支持网盘资源搜索、用�
 - ✨ 专注于单个 Key 生成，提升用户体验
 - 🔧 减少组件复杂度，提高代码可维护性
 
+**v3.2.0 API 一致性修复** (2026-02-10):
+- ⚠️ 新增弃用警告中间件，支持平滑 API 迁移
+- 📋 旧接口将返回 `X-Deprecated-API: true` 响应头
+- 📝 自动记录旧接口使用日志，便于追踪迁移进度
+- 🔄 为 API 路径标准化提供向后兼容支持
+- ✅ 统一所有接口响应格式为 `{ code, message, data }`
+- 🔄 新增 RESTful 风格的 API Key 管理接口
+- 🎯 前端响应拦截器自动解包 `data` 字段
+- 📊 完整的集成测试验证（详见 [集成测试报告](integration_test_report.md)）
+
 **基础信息**：
 - 基础 URL: `http://localhost:8888/api`
 - 内容类型: `application/json`
@@ -192,6 +202,50 @@ X-API-Key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 - `/api/health` - 健康检查
 - `/api/auth/login` - 用户登录
 - `/api/admin/login` - 管理员登录
+
+---
+
+## API 弃用警告机制
+
+为了支持 API 接口的平滑迁移和版本升级，UniSearch 实现了弃用警告机制。当您调用已标记为弃用的旧接口时，系统会提供明确的警告信息。
+
+### 弃用警告响应头
+
+当调用已弃用的接口时，响应中会包含以下特殊头部：
+
+```
+X-Deprecated-API: true
+X-Deprecation-Message: 请使用 GET /api/user/apikey
+```
+
+**响应头说明**：
+- `X-Deprecated-API`: 标识此接口已被弃用（值为 `true`）
+- `X-Deprecation-Message`: 提供迁移建议，说明应该使用的新接口路径
+
+### 日志记录
+
+所有对弃用接口的调用都会被记录到服务器日志中，包含以下信息：
+- 请求方法（GET、POST 等）
+- 请求路径
+- 客户端 IP 地址
+- User-Agent 信息
+- 弃用警告消息
+
+**日志格式示例**：
+```
+⚠️ [DEPRECATED API] 方法: GET, 路径: /user/apikey-info, 客户端IP: 192.168.1.100, User-Agent: Mozilla/5.0..., 警告: 请使用 GET /api/user/apikey
+```
+
+### 迁移建议
+
+如果您在使用 UniSearch API 时收到弃用警告，建议：
+
+1. **检查响应头**：查看 `X-Deprecation-Message` 获取新接口路径
+2. **更新代码**：尽快将代码迁移到新接口
+3. **测试验证**：确保新接口功能正常
+4. **移除旧接口调用**：完成迁移后移除对旧接口的依赖
+
+**注意**：弃用的接口在未来版本中可能会被完全移除，请及时完成迁移。
 
 ---
 
@@ -2436,6 +2490,14 @@ UpdateSettings(enableUserAuth, req.EnableUserLogin, req.EnableUserSignup)
 
 UniSearch 支持安全的"记住密码"功能，通过刷新令牌（Refresh Token）实现 30 天内自动登录。
 
+**v3.3.0 重要更新** (2026-02-11):
+- ✅ 修复长时间未访问后需要重新登录的问题
+- 🔄 增强自动刷新机制，支持页面加载时自动恢复登录状态
+- ⏰ 访问令牌过期但刷新令牌有效时，自动静默刷新
+- 🎯 真正实现 30 天免密登录体验
+- 🛡️ 防止重复刷新，避免并发请求导致的令牌冲突
+- ⚡ 优化刷新逻辑，提前检测令牌状态并主动刷新
+
 ### 存储方式
 
 **v3.2.0 更新**：刷新令牌支持两种存储方式，通过环境变量 `REFRESH_TOKEN_STORAGE` 配置：
@@ -2660,9 +2722,25 @@ UniSearch 支持安全的"记住密码"功能，通过刷新令牌（Refresh Tok
 
 **使用说明**:
 
-1. 前端在访问令牌即将过期前（建议提前 5 分钟）自动调用此接口
-2. 使用返回的新访问令牌和新刷新令牌替换旧的令牌
-3. 如果刷新失败，清除本地存储的令牌并跳转到登录页
+1. **自动刷新时机**（v3.3.0 增强）：
+   - **页面加载时**：检测访问令牌是否过期或即将过期（5分钟内），如果过期但刷新令牌有效，自动刷新
+   - **定时刷新**：在访问令牌过期前 5 分钟自动刷新
+   - **长时间未访问**：即使几天未访问，只要刷新令牌未过期（30天内），打开页面时自动恢复登录状态
+   - **无令牌恢复**：如果没有访问令牌但有刷新令牌，自动尝试刷新获取新令牌
+
+2. **防重复刷新机制**：
+   - 使用 `isRefreshingRef` 标志防止并发刷新请求
+   - 确保同一时间只有一个刷新请求在进行
+   - 避免令牌轮转冲突和不必要的网络请求
+
+3. **Token 更新**：
+   - 使用返回的新访问令牌和新刷新令牌替换旧的令牌
+   - 前端自动更新 localStorage 中的令牌
+   - 更新后重新设置定时器，确保下次刷新时机准确
+
+4. **失败处理**：
+   - 如果刷新失败（刷新令牌过期或无效），清除本地存储的令牌并跳转到登录页
+   - 用户需要重新登录
 
 ---
 
@@ -2711,6 +2789,195 @@ UniSearch 支持安全的"记住密码"功能，通过刷新令牌（Refresh Tok
 1. 用户点击"退出登录"时调用此接口
 2. 即使撤销失败，前端也应清除本地存储的所有令牌
 3. 撤销后的刷新令牌将无法再次使用
+
+---
+
+### 5. 前端自动刷新实现
+
+前端通过 `useAutoRefreshToken` Hook 实现访问令牌的自动刷新机制，确保用户在 30 天内无需重新登录。
+
+**文件位置**: `frontend/src/hooks/useAutoRefreshToken.ts`
+
+#### 核心功能
+
+1. **页面加载时自动恢复登录状态**
+   - 检测本地存储的访问令牌和刷新令牌
+   - 如果访问令牌不存在但刷新令牌存在，自动调用刷新接口
+   - 如果访问令牌已过期或即将过期（5分钟内），自动刷新
+
+2. **定时自动刷新**
+   - 解析 JWT Token 获取过期时间
+   - 在过期前 5 分钟自动触发刷新
+   - 使用 `setTimeout` 设置精确的刷新时机
+
+3. **防重复刷新机制**
+   - 使用 `isRefreshingRef` 标志防止并发刷新
+   - 确保同一时间只有一个刷新请求
+   - 避免令牌轮转冲突
+
+#### 实现细节
+
+**JWT Token 解析**:
+```typescript
+const parseJWT = (token: string) => {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+            atob(base64)
+                .split('')
+                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join('')
+        );
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null;
+    }
+};
+```
+
+**过期检测**:
+```typescript
+const isTokenExpiredOrExpiring = (token: string, bufferMinutes: number = 5): boolean => {
+    const payload = parseJWT(token);
+    if (!payload || !payload.exp) {
+        return true;
+    }
+
+    const expiresAt = payload.exp * 1000; // 转换为毫秒
+    const now = Date.now();
+    const bufferTime = bufferMinutes * 60 * 1000;
+
+    return now >= (expiresAt - bufferTime);
+};
+```
+
+**自动刷新逻辑**:
+```typescript
+useEffect(() => {
+    // 1. 没有刷新令牌，不启用自动刷新
+    if (!refreshToken) {
+        return;
+    }
+
+    // 2. 没有访问令牌但有刷新令牌，立即刷新
+    if (!token) {
+        handleRefresh();
+        return;
+    }
+
+    // 3. 访问令牌已过期或即将过期，立即刷新
+    if (isTokenExpiredOrExpiring(token)) {
+        handleRefresh();
+        return;
+    }
+
+    // 4. 访问令牌有效，设置定时刷新
+    const payload = parseJWT(token);
+    if (!payload || !payload.exp) {
+        return;
+    }
+
+    const expiresAt = payload.exp * 1000;
+    const now = Date.now();
+    const refreshTime = expiresAt - 5 * 60 * 1000; // 提前 5 分钟
+    const delay = refreshTime - now;
+
+    if (delay > 0) {
+        refreshTimerRef.current = setTimeout(() => {
+            handleRefresh();
+        }, delay);
+    }
+
+    // 清理定时器
+    return () => {
+        if (refreshTimerRef.current) {
+            clearTimeout(refreshTimerRef.current);
+        }
+    };
+}, [token, refreshToken]);
+```
+
+**刷新处理函数**:
+```typescript
+const handleRefresh = async () => {
+    // 防止重复刷新
+    if (!refreshToken || isRefreshingRef.current) {
+        return;
+    }
+
+    isRefreshingRef.current = true;
+
+    try {
+        const response = await AuthService.refreshAccessToken(refreshToken);
+
+        // 更新令牌
+        setToken(
+            response.access_token,
+            username || 'user',
+            isAdmin,
+            null,
+            response.refresh_token
+        );
+
+        console.log('✅ Token 自动刷新成功');
+    } catch (error) {
+        console.error('❌ 自动刷新令牌失败:', error);
+        // 刷新失败，清除认证状态
+        logout();
+    } finally {
+        isRefreshingRef.current = false;
+    }
+};
+```
+
+#### 使用方式
+
+在应用根组件中引入 Hook：
+
+```typescript
+import { useAutoRefreshToken } from '@/hooks/useAutoRefreshToken';
+
+function App() {
+    // 启用自动刷新
+    useAutoRefreshToken();
+
+    return (
+        // 应用内容
+    );
+}
+```
+
+#### 工作流程
+
+1. **用户登录**
+   - 用户勾选"记住我"并登录
+   - 后端返回访问令牌（24小时）和刷新令牌（30天）
+   - 前端将两个令牌存储到 localStorage
+
+2. **正常使用期间**
+   - Hook 监听令牌状态
+   - 在访问令牌过期前 5 分钟自动刷新
+   - 用户无感知，持续保持登录状态
+
+3. **长时间未访问后**
+   - 用户几天后重新打开页面
+   - Hook 检测到访问令牌已过期
+   - 自动使用刷新令牌获取新的访问令牌
+   - 用户无需重新登录，直接恢复登录状态
+
+4. **刷新令牌过期**
+   - 30 天后刷新令牌过期
+   - 自动刷新失败
+   - Hook 调用 `logout()` 清除本地状态
+   - 用户需要重新登录
+
+#### 安全特性
+
+- **防重复刷新**: 使用 `isRefreshingRef` 标志防止并发请求
+- **自动清理**: 组件卸载时自动清理定时器
+- **错误处理**: 刷新失败时自动登出，避免无效令牌残留
+- **令牌轮转**: 每次刷新都会获得新的刷新令牌，提高安全性
 
 ---
 
@@ -2797,39 +3064,175 @@ async function adminLogin(username: string, password: string, rememberMe: boolea
 }
 ```
 
-### 3. 自动刷新令牌
+### 3. 自动刷新令牌（v3.3.0 增强版）
+
+**改进说明**：
+- ✅ 页面加载时自动检测并恢复登录状态
+- ✅ 支持长时间未访问后的自动登录（30天内）
+- ✅ 定时刷新机制，在访问令牌过期前5分钟自动刷新
 
 ```typescript
-// 在访问令牌即将过期前自动刷新
-async function autoRefreshToken() {
-    const refreshToken = localStorage.getItem('refresh_token');
-    if (!refreshToken) return;
-    
-    const deviceFingerprint = await generateDeviceFingerprint();
-    
+/**
+ * 解析 JWT Token 获取过期时间
+ */
+function parseJWT(token: string) {
     try {
-        const response = await fetch('/api/auth/refresh', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                refresh_token: refreshToken,
-                device_fingerprint: deviceFingerprint
-            })
-        });
-        
-        const data = await response.json();
-        
-        // 更新令牌
-        localStorage.setItem('access_token', data.access_token);
-        localStorage.setItem('refresh_token', data.refresh_token);
-    } catch (error) {
-        // 刷新失败，清除令牌并跳转到登录页
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+            atob(base64)
+                .split('')
+                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join('')
+        );
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null;
     }
 }
+
+/**
+ * 检查 Token 是否已过期或即将过期
+ * @param token JWT Token
+ * @param bufferMinutes 提前多少分钟判定为即将过期（默认5分钟）
+ */
+function isTokenExpiredOrExpiring(token: string, bufferMinutes: number = 5): boolean {
+    const payload = parseJWT(token);
+    if (!payload || !payload.exp) {
+        return true;
+    }
+
+    const expiresAt = payload.exp * 1000; // 转换为毫秒
+    const now = Date.now();
+    const bufferTime = bufferMinutes * 60 * 1000;
+
+    return now >= (expiresAt - bufferTime);
+}
+
+/**
+ * 自动刷新令牌 Hook（React 示例）
+ * 
+ * 功能：
+ * 1. 页面加载时检测 Token 状态，如果已过期但 Refresh Token 有效，自动刷新
+ * 2. 在 Token 即将过期前自动使用 Refresh Token 获取新的 Access Token
+ * 3. 支持长时间未访问后的自动恢复登录状态（30天内）
+ */
+function useAutoRefreshToken() {
+    const token = localStorage.getItem('access_token');
+    const refreshToken = localStorage.getItem('refresh_token');
+    let refreshTimer: NodeJS.Timeout | null = null;
+    let isRefreshing = false; // 防止重复刷新
+
+    useEffect(() => {
+        // 如果没有刷新令牌，不启用自动刷新
+        if (!refreshToken) {
+            return;
+        }
+
+        // 如果没有 Token 但有 Refresh Token，尝试刷新
+        if (!token) {
+            handleRefresh();
+            return;
+        }
+
+        // 检查 Token 是否已过期或即将过期
+        if (isTokenExpiredOrExpiring(token)) {
+            handleRefresh();
+            return;
+        }
+
+        // Token 有效，设置定时刷新
+        const payload = parseJWT(token);
+        if (!payload || !payload.exp) {
+            return;
+        }
+
+        // 计算刷新时间：在过期前 5 分钟刷新
+        const expiresAt = payload.exp * 1000;
+        const now = Date.now();
+        const refreshTime = expiresAt - 5 * 60 * 1000;
+        const delay = refreshTime - now;
+
+        // 设置定时器
+        if (delay > 0) {
+            refreshTimer = setTimeout(() => {
+                handleRefresh();
+            }, delay);
+        }
+
+        // 清理定时器
+        return () => {
+            if (refreshTimer) {
+                clearTimeout(refreshTimer);
+            }
+        };
+    }, [token, refreshToken]);
+
+    // 刷新令牌处理函数
+    async function handleRefresh() {
+        if (!refreshToken || isRefreshing) {
+            return;
+        }
+
+        isRefreshing = true;
+
+        try {
+            const deviceFingerprint = await generateDeviceFingerprint();
+            
+            const response = await fetch('/api/auth/refresh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    refresh_token: refreshToken,
+                    device_fingerprint: deviceFingerprint
+                })
+            });
+
+            const data = await response.json();
+
+            // 更新 Token 和 Refresh Token
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('refresh_token', data.refresh_token);
+
+            console.log('✅ Token 自动刷新成功');
+        } catch (error) {
+            console.error('❌ 自动刷新令牌失败:', error);
+            // 刷新失败，清除认证状态（Refresh Token 可能已过期）
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            window.location.href = '/login';
+        } finally {
+            isRefreshing = false;
+        }
+    }
+}
+
+// 在应用根组件中使用
+function App() {
+    useAutoRefreshToken(); // 启用自动刷新功能
+    
+    return (
+        <div>
+            {/* 应用内容 */}
+        </div>
+    );
+}
 ```
+
+**使用说明**：
+
+1. **页面加载时自动恢复**：
+   - 用户几天未访问网站，再次打开时自动检测 Token 状态
+   - 如果 Access Token 已过期但 Refresh Token 有效（30天内），自动静默刷新
+   - 用户无需重新登录，直接恢复登录状态
+
+2. **定时自动刷新**：
+   - 在 Access Token 过期前 5 分钟自动刷新
+   - 用户在使用过程中无感知，不会被强制登出
+
+3. **失败处理**：
+   - 如果 Refresh Token 也过期（超过30天），自动跳转到登录页
+   - 用户需要重新输入用户名和密码
 
 ### 4. 登出流程
 

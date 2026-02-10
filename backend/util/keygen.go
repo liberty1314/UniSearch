@@ -21,7 +21,7 @@ import (
 func GenerateAPIKey() string {
 	// 生成 20 字节的随机数据（20 字节 = 40 位十六进制字符）
 	randomBytes := make([]byte, 20)
-	
+
 	// 使用 crypto/rand 生成安全的随机数
 	_, err := rand.Read(randomBytes)
 	if err != nil {
@@ -29,10 +29,10 @@ func GenerateAPIKey() string {
 		// 这里我们 panic，因为无法生成安全的随机数是严重错误
 		panic(fmt.Sprintf("无法生成安全随机数: %v", err))
 	}
-	
+
 	// 将随机字节编码为十六进制字符串（40 个字符）
 	hexString := hex.EncodeToString(randomBytes)
-	
+
 	// 添加 "sk-" 前缀，返回 42 字符的 API Key
 	return "sk-" + hexString
 }

@@ -70,7 +70,7 @@ func MigratePermanentAPIKeys() error {
 		// 检查是否已存在永久 Key
 		var existingKey model.APIKey
 		err := DB.Where("user_id = ? AND is_permanent = ?", admin.ID, true).First(&existingKey).Error
-		
+
 		if err == nil {
 			// 已存在，跳过
 			skippedCount++
@@ -79,7 +79,7 @@ func MigratePermanentAPIKeys() error {
 
 		// 创建永久 Key（直接在这里实现，避免循环导入）
 		key := util.GenerateAPIKey()
-		
+
 		// 检查 Key 是否已存在
 		var checkKey model.APIKey
 		if err := DB.Where("api_key = ?", key).First(&checkKey).Error; err == nil {
@@ -93,16 +93,16 @@ func MigratePermanentAPIKeys() error {
 			Key:              key,
 			UserID:           &admin.ID,
 			CreatedAt:        now,
-			FirstUsedAt:      &now,  // 立即激活
-			ExpiresAt:        nil,   // 永不过期
-			TTLHours:         0,     // 0 表示永不过期
+			FirstUsedAt:      &now, // 立即激活
+			ExpiresAt:        nil,  // 永不过期
+			TTLHours:         0,    // 0 表示永不过期
 			IsEnabled:        true,
 			Description:      fmt.Sprintf("管理员永久密钥 (User: %s)", admin.Username),
-			DailySearchLimit: 0,     // 0 表示不限制
+			DailySearchLimit: 0, // 0 表示不限制
 			TodaySearchCount: 0,
 			LastSearchDate:   "",
-			IsPermanent:      true,  // 标记为永久密钥
-			IsUnlimited:      true,  // 标记为无限制
+			IsPermanent:      true, // 标记为永久密钥
+			IsUnlimited:      true, // 标记为无限制
 		}
 
 		// 保存到数据库

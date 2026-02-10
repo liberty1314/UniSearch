@@ -78,10 +78,10 @@ type BatchUpdateRoleRequest struct {
 
 // BatchOperationResponse 批量操作响应
 type BatchOperationResponse struct {
-	SuccessCount int                    `json:"success_count"`
-	FailedCount  int                    `json:"failed_count"`
-	Success      []uint                 `json:"success"`
-	Failed       []BatchOperationError  `json:"failed"`
+	SuccessCount int                   `json:"success_count"`
+	FailedCount  int                   `json:"failed_count"`
+	Success      []uint                `json:"success"`
+	Failed       []BatchOperationError `json:"failed"`
 }
 
 // BatchOperationError 批量操作错误
@@ -109,12 +109,12 @@ func getCurrentUserID(c *gin.Context) (uint, error) {
 	if !exists {
 		return 0, nil
 	}
-	
+
 	id, ok := userID.(uint)
 	if !ok {
 		return 0, nil
 	}
-	
+
 	return id, nil
 }
 
@@ -457,7 +457,7 @@ func BatchDeleteUsersHandler(userService *service.UserService) gin.HandlerFunc {
 		}
 
 		log.Printf("✓ 批量删除用户完成: 成功 %d, 失败 %d", result.SuccessCount, result.FailedCount)
-		
+
 		// 转换为响应格式
 		response := BatchOperationResponse{
 			SuccessCount: result.SuccessCount,
@@ -505,7 +505,7 @@ func BatchUpdateRoleHandler(userService *service.UserService) gin.HandlerFunc {
 		}
 
 		log.Printf("✓ 批量修改角色完成: 成功 %d, 失败 %d (目标角色: %s)", result.SuccessCount, result.FailedCount, req.Role)
-		
+
 		// 转换为响应格式
 		response := BatchOperationResponse{
 			SuccessCount: result.SuccessCount,
