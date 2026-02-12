@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Clock, X, Trash2 } from 'lucide-react';
+import { Clock, X, Trash2, Download } from 'lucide-react';
 
 /**
  * BatchActionsBar 组件属性
@@ -12,6 +12,8 @@ interface BatchActionsBarProps {
     onBatchExtend: () => void;
     /** 批量删除回调 */
     onBatchDelete: () => void;
+    /** 批量导出回调 */
+    onBatchExport: () => void;
     /** 清除选择回调 */
     onClearSelection: () => void;
     /** 是否禁用操作按钮 */
@@ -24,6 +26,7 @@ interface BatchActionsBarProps {
  * 功能：
  * - 显示选中数量
  * - 批量延长按钮
+ * - 批量导出按钮
  * - 批量删除按钮
  * - 清除选择按钮
  */
@@ -31,6 +34,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
     selectedCount,
     onBatchExtend,
     onBatchDelete,
+    onBatchExport,
     onClearSelection,
     disabled = false,
 }) => {
@@ -59,6 +63,16 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                 >
                     <Clock className="w-4 h-4" />
                     批量延长有效期
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onBatchExport}
+                    className="flex items-center gap-2 h-9 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20"
+                    disabled={disabled}
+                >
+                    <Download className="w-4 h-4" />
+                    批量导出
                 </Button>
                 <Button
                     variant="outline"

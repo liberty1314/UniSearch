@@ -256,3 +256,37 @@ pnpm-lock.yaml (已删除)
 - frontend/src/components/admin/BatchCreateDialog.tsx
 - frontend/src/components/admin/EditKeyDialog.tsx
 - frontend/src/pages/UserApiKeySettings.tsx
+
+
+---
+
+## 2026-02-13 16:45
+
+**Commit**: `feat(admin): 新增 API Key 批量导出功能并优化全选逻辑`
+
+**详细说明**:
+
+1. 新增批量导出功能:
+   - 创建 BatchExportDialog 组件，支持批量导出选中的 API Key
+   - 支持自定义复制格式，使用 {key} 作为占位符（例如：卡密：{key}，网址：https://unisearchso.xyz/）
+   - 支持一键复制全部 API Key（可选择是否应用自定义格式）
+   - 支持导出为 CSV 文件，包含 API Key、描述、创建时间、过期时间、状态、每日限额等信息
+   - 在 BatchActionsBar 中新增"批量导出"按钮
+
+2. 优化全选逻辑:
+   - 修改全选逻辑，仅选择非永久密钥的 API Key（排除管理员永久密钥）
+   - 在 AppleApiKeyTable 的表头新增全选复选框
+   - AppleTable 组件支持 ReactNode 类型的列标题，以支持复选框等复杂组件
+   - 全选复选框会根据可选择的 Key 数量自动判断是否全选状态
+
+3. 代码优化:
+   - 新增 BatchActionsBar.refactored.example.tsx 作为重构示例（展示更优雅的实现方式）
+   - 优化批量操作按钮的样式和交互体验
+
+**涉及文件**:
+- frontend/src/components/AppleTable.tsx
+- frontend/src/components/admin/AppleApiKeyTable.tsx
+- frontend/src/components/admin/BatchActionsBar.refactored.example.tsx (新增)
+- frontend/src/components/admin/BatchActionsBar.tsx
+- frontend/src/components/admin/BatchExportDialog.tsx (新增)
+- frontend/src/pages/Admin.tsx

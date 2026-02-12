@@ -27,6 +27,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
   apiKeys,
   selectedKeys,
   onSelectKey,
+  onSelectAll,
   onCopyKey,
   onEditClick,
   onDeleteClick,
@@ -53,12 +54,37 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
   };
 
   /**
+   * 计算可选择的 Keys（排除永久密钥）
+   */
+  const selectableKeys = apiKeys.filter(key => !key.is_permanent);
+  
+  /**
+   * 判断是否全选（仅针对可选择的 Keys）
+   */
+  const isAllSelected = selectableKeys.length > 0 && selectableKeys.every(key => selectedKeys.has(key.key));
+
+  /**
+   * 处理全选/取消全选
+   */
+  const handleSelectAllChange = (checked: boolean) => {
+    onSelectAll(checked);
+  };
+
+  /**
    * 列配置
    */
   const columns: AppleTableColumn<APIKeyInfo>[] = [
     {
       key: 'select',
-      title: '',
+      title: (
+        <Checkbox
+          checked={isAllSelected}
+          onCheckedChange={handleSelectAllChange}
+          disabled={isLoading || isBatchOperating || isDeleting || selectableKeys.length === 0}
+          aria-label="全选"
+          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+        />
+      ),
       width: '48px',
       render: (key) => (
         <Checkbox
@@ -67,7 +93,6 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
           disabled={isLoading || isBatchOperating || isDeleting || key.is_permanent}
           aria-label={`选择 ${key.key}`}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
-          title={key.is_permanent ? '管理员永久密钥不可选择' : undefined}
         />
       ),
     },

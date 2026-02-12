@@ -24,6 +24,7 @@ import { EditKeyDialog } from '@/components/admin/EditKeyDialog';
 import { BatchExtendDialog } from '@/components/admin/BatchExtendDialog';
 import { BatchCreateDialog } from '@/components/admin/BatchCreateDialog';
 import { BatchDeleteKeysDialog } from '@/components/admin/BatchDeleteKeysDialog';
+import { BatchExportDialog } from '@/components/admin/BatchExportDialog';
 import { BatchDeleteDialog as BatchDeleteUsersDialog } from '@/components/admin/BatchDeleteDialog';
 import { BatchUpdateRoleDialog } from '@/components/admin/BatchUpdateRoleDialog';
 import { CreateUserDialog } from '@/components/admin/CreateUserDialog';
@@ -93,6 +94,9 @@ const Admin: React.FC = () => {
 
     // 批量删除对话框状态
     const [isBatchDeleteDialogOpen, setIsBatchDeleteDialogOpen] = useState<boolean>(false);
+
+    // 批量导出对话框状态
+    const [isBatchExportDialogOpen, setIsBatchExportDialogOpen] = useState<boolean>(false);
 
     // 删除确认对话框状态
     const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
@@ -404,13 +408,13 @@ const Admin: React.FC = () => {
     };
 
     /**
-     * 处理全选/取消全选
+     * 处理全选/取消全选（仅选择可选择的 Keys，排除永久密钥）
      */
     const handleSelectAll = useCallback((checked: boolean) => {
         if (checked) {
-            // 全选：选中所有 API Keys（包括已过期的）
-            const allKeys = apiKeys.map(key => key.key);
-            setSelectedKeys(new Set(allKeys));
+            // 全选：只选中非永久密钥的 API Keys
+            const selectableKeys = apiKeys.filter(key => !key.is_permanent).map(key => key.key);
+            setSelectedKeys(new Set(selectableKeys));
         } else {
             // 取消全选
             setSelectedKeys(new Set());
@@ -479,6 +483,17 @@ const Admin: React.FC = () => {
         loadApiKeys();
         setSelectedKeys(new Set());
         setIsBatchOperating(false);
+    };
+
+    /**
+     * 处理批量导出
+     */
+    const handleBatchExport = () => {
+        if (selectedKeys.size === 0) {
+            toast.error('请先选择要导出的 API Key');
+            return;
+        }
+        setIsBatchExportDialogOpen(true);
     };
 
     /**
@@ -857,6 +872,7 @@ const Admin: React.FC = () => {
                                                         selectedCount={selectedKeys.size}
                                                         onBatchExtend={handleBatchExtend}
                                                         onBatchDelete={handleBatchDelete}
+                                                        onBatchExport={handleBatchExport}
                                                         onClearSelection={handleClearSelection}
                                                         disabled={isLoadingKeys || isBatchOperating || isDeleting}
                                                     />
@@ -1343,6 +1359,13 @@ const Admin: React.FC = () => {
                 }}
                 selectedKeys={Array.from(selectedKeys)}
                 onSuccess={handleBatchDeleteSuccess}
+            />
+
+            {/* 批量导出对话框 */}
+            <BatchExportDialog
+                open={isBatchExportDialogOpen}
+                onOpenChange={setIsBatchExportDialogOpen}
+                selectedKeys={apiKeys.filter(key => selectedKeys.has(key.key))}
             />
 
             {/* 删除确认对话框 */}

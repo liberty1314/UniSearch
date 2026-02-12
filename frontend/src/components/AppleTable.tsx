@@ -10,7 +10,7 @@ export interface AppleTableColumn<T> {
   /** 列的唯一标识 */
   key: string;
   /** 列标题 */
-  title: string;
+  title: string | React.ReactNode;
   /** 数据渲染函数 */
   render: (item: T, index: number) => React.ReactNode;
   /** 列宽度（仅 PC 端生效） */
