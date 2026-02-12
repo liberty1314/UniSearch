@@ -210,3 +210,14 @@ pnpm-lock.yaml (已删除)
 3. **文档完善**: 为所有 API 类型添加详细的 JSDoc 注释，提升代码可维护性
 4. **代码简化**: 移除冗余的响应包装逻辑，减少代码行数约 100+ 行
 
+
+---
+**时间**: 2026-02-12 (周四)
+**Commit**: `feat(admin): 新增 Apple 风格分页组件并应用到管理页面`
+
+**Body**: 创建可复用的 ApplePagination 组件,提供简洁优雅的分页交互体验,支持自定义每页显示数量和流畅动画效果。在管理页面的 API Key 和用户管理模块中应用该组件,替换原有的内联分页实现,提升代码复用性和用户体验。
+
+**Files**:
+- frontend/src/components/admin/ApplePagination.tsx (新增)
+- frontend/src/pages/Admin.tsx (修改)
+

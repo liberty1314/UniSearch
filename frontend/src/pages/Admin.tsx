@@ -39,6 +39,7 @@ import { TableFilterDropdown } from '@/components/admin/TableFilterDropdown';
 import { Plus, RefreshCw, Key, AlertCircle, CheckCircle2, Activity, Search, Filter, X, Clock, Users, Shield, UserCheck, UserX } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { AppleApiKeyTable } from '@/components/admin/AppleApiKeyTable';
+import { ApplePagination } from '@/components/admin/ApplePagination';
 
 /**
  * 后台管理页面组件
@@ -69,6 +70,10 @@ const Admin: React.FC = () => {
     // API Keys 列表
     const [apiKeys, setApiKeys] = useState<APIKeyInfo[]>([]);
     const [isLoadingKeys, setIsLoadingKeys] = useState<boolean>(true);
+    
+    // API Keys 分页状态
+    const [apiKeyCurrentPage, setApiKeyCurrentPage] = useState<number>(1);
+    const [apiKeyPageSize, setApiKeyPageSize] = useState<number>(10);
 
     // 选中的 API Keys
     const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
@@ -206,6 +211,16 @@ const Admin: React.FC = () => {
 
         return filtered;
     }, [apiKeys, searchKeyword, statusFilter, remainingTimeFilter]);
+
+    // 分页后的 API Keys
+    const paginatedApiKeys = React.useMemo(() => {
+        const startIndex = (apiKeyCurrentPage - 1) * apiKeyPageSize;
+        const endIndex = startIndex + apiKeyPageSize;
+        return filteredApiKeys.slice(startIndex, endIndex);
+    }, [filteredApiKeys, apiKeyCurrentPage, apiKeyPageSize]);
+
+    // API Keys 总页数
+    const apiKeyTotalPages = Math.ceil(filteredApiKeys.length / apiKeyPageSize);
 
     /**
      * 检查管理员权限
@@ -494,6 +509,22 @@ const Admin: React.FC = () => {
     const handleClearAllFilters = () => {
         setStatusFilter([]);
         setRemainingTimeFilter([]);
+        setApiKeyCurrentPage(1); // 重置到第一页
+    };
+
+    /**
+     * 处理 API Key 分页变化
+     */
+    const handleApiKeyPageChange = (page: number) => {
+        setApiKeyCurrentPage(page);
+    };
+
+    /**
+     * 处理 API Key 每页数量变化
+     */
+    const handleApiKeyPageSizeChange = (size: number) => {
+        setApiKeyPageSize(size);
+        setApiKeyCurrentPage(1); // 重置到第一页
     };
 
     /**
@@ -973,18 +1004,35 @@ const Admin: React.FC = () => {
                                             </Button>
                                         </motion.div>
                                     ) : (
-                                        <AppleApiKeyTable
-                                            apiKeys={filteredApiKeys}
-                                            selectedKeys={selectedKeys}
-                                            onSelectKey={handleSelectKey}
-                                            onSelectAll={handleSelectAll}
-                                            onCopyKey={handleCopyKey}
-                                            onEditClick={handleEditClick}
-                                            onDeleteClick={handleDeleteClick}
-                                            isDeleting={isDeleting}
-                                            isBatchOperating={isBatchOperating}
-                                            isLoading={isLoadingKeys}
-                                        />
+                                        <div className="space-y-4">
+                                            {/* API Key 表格 */}
+                                            <AppleApiKeyTable
+                                                apiKeys={paginatedApiKeys}
+                                                selectedKeys={selectedKeys}
+                                                onSelectKey={handleSelectKey}
+                                                onSelectAll={handleSelectAll}
+                                                onCopyKey={handleCopyKey}
+                                                onEditClick={handleEditClick}
+                                                onDeleteClick={handleDeleteClick}
+                                                isDeleting={isDeleting}
+                                                isBatchOperating={isBatchOperating}
+                                                isLoading={isLoadingKeys}
+                                            />
+
+                                            {/* 分页控件 */}
+                                            {apiKeyTotalPages > 1 && (
+                                                <ApplePagination
+                                                    currentPage={apiKeyCurrentPage}
+                                                    totalPages={apiKeyTotalPages}
+                                                    totalItems={filteredApiKeys.length}
+                                                    pageSize={apiKeyPageSize}
+                                                    onPageChange={handleApiKeyPageChange}
+                                                    onPageSizeChange={handleApiKeyPageSizeChange}
+                                                    isLoading={isLoadingKeys}
+                                                    pageSizeOptions={[10, 20, 50, 100]}
+                                                />
+                                            )}
+                                        </div>
                                     )}
                                 </CardContent>
                             </Card>
@@ -1218,55 +1266,14 @@ const Admin: React.FC = () => {
 
                                             {/* 分页控件 */}
                                             {totalPages > 1 && (
-                                                <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700">
-                                                    <div className="text-sm text-slate-600 dark:text-slate-400">
-                                                        显示第 {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalUsers)} 条，共 {totalUsers} 条
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handlePageChange(currentPage - 1)}
-                                                            disabled={currentPage === 1 || isLoadingUsers}
-                                                        >
-                                                            上一页
-                                                        </Button>
-                                                        <div className="flex items-center gap-1">
-                                                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                                                let pageNum: number;
-                                                                if (totalPages <= 5) {
-                                                                    pageNum = i + 1;
-                                                                } else if (currentPage <= 3) {
-                                                                    pageNum = i + 1;
-                                                                } else if (currentPage >= totalPages - 2) {
-                                                                    pageNum = totalPages - 4 + i;
-                                                                } else {
-                                                                    pageNum = currentPage - 2 + i;
-                                                                }
-                                                                return (
-                                                                    <Button
-                                                                        key={pageNum}
-                                                                        variant={currentPage === pageNum ? 'default' : 'outline'}
-                                                                        size="sm"
-                                                                        onClick={() => handlePageChange(pageNum)}
-                                                                        disabled={isLoadingUsers}
-                                                                        className={currentPage === pageNum ? 'bg-blue-600 hover:bg-blue-700' : ''}
-                                                                    >
-                                                                        {pageNum}
-                                                                    </Button>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handlePageChange(currentPage + 1)}
-                                                            disabled={currentPage === totalPages || isLoadingUsers}
-                                                        >
-                                                            下一页
-                                                        </Button>
-                                                    </div>
-                                                </div>
+                                                <ApplePagination
+                                                    currentPage={currentPage}
+                                                    totalPages={totalPages}
+                                                    totalItems={totalUsers}
+                                                    pageSize={pageSize}
+                                                    onPageChange={handlePageChange}
+                                                    isLoading={isLoadingUsers}
+                                                />
                                             )}
                                         </div>
                                     )}
