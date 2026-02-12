@@ -190,7 +190,12 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
                         </div>
                         <div className="text-sm">
                             <span className="text-gray-600 dark:text-gray-400">当前过期时间: </span>
-                            <span className="font-medium">{formatDateTime(apiKey.expires_at)}</span>
+                            <span className="font-medium">
+                                {apiKey.first_used_at 
+                                    ? formatDateTime(apiKey.expires_at)
+                                    : '待激活（首次使用时生效）'
+                                }
+                            </span>
                         </div>
                         <div className="text-sm">
                             <span className="text-gray-600 dark:text-gray-400">当前每日限额: </span>

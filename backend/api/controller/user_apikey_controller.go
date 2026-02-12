@@ -73,6 +73,16 @@ func (ctrl *UserAPIKeyController) BindAPIKey(c *gin.Context) {
 		return
 	}
 
+	// 检查是否为 API Key 登录用户（user_id = 0）
+	if uid == 0 {
+		c.JSON(400, gin.H{
+			"code":    400,
+			"message": "您当前使用 API Key 登录，无需绑定。如需绑定，请使用用户名密码登录",
+			"data":    nil,
+		})
+		return
+	}
+
 	// 验证 API Key 是否有效
 	apiKey, err := ctrl.apiKeyService.ValidateAPIKey(req.Key)
 	if err != nil {
@@ -140,9 +150,11 @@ func (ctrl *UserAPIKeyController) GetAPIKey(c *gin.Context) {
 	// 优先从 Context 获取 API Key（用于 API Key 登录的用户）
 	if apiKeyStr, exists := c.Get("api_key"); exists {
 		if key, ok := apiKeyStr.(string); ok && key != "" {
+			log.Printf("🔑 GetAPIKey: 检测到 API Key 登录，Key=%s...", key[:10])
 			// 通过 API Key 登录，直接查询该 API Key 的信息
 			apiKey, err := ctrl.apiKeyService.GetKey(key)
 			if err != nil {
+				log.Printf("✗ GetAPIKey: 查询 API Key 失败: %v", err)
 				c.JSON(404, gin.H{
 					"code":    404,
 					"message": "API Key 不存在",
@@ -151,6 +163,8 @@ func (ctrl *UserAPIKeyController) GetAPIKey(c *gin.Context) {
 				return
 			}
 
+			log.Printf("✓ GetAPIKey: 成功获取 API Key 信息，FirstUsedAt=%v, ExpiresAt=%v", apiKey.FirstUsedAt, apiKey.ExpiresAt)
+			
 			// 返回 API Key 信息
 			c.JSON(200, gin.H{
 				"code":    200,
@@ -168,6 +182,8 @@ func (ctrl *UserAPIKeyController) GetAPIKey(c *gin.Context) {
 		}
 	}
 
+	log.Printf("🔑 GetAPIKey: 未检测到 API Key 登录，尝试从用户绑定获取")
+	
 	// 从 Context 获取用户 ID（由 JWT 中间件设置）
 	userID, exists := c.Get("user_id")
 	if !exists {

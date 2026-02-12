@@ -147,11 +147,8 @@ func (s *APIKeyService) UpdateAPIKeyUsage(key string) error {
 		return fmt.Errorf("查询 API Key 失败: %w", err)
 	}
 
-	// 如果是首次使用，更新 first_used_at
-	if apiKey.FirstUsedAt == nil {
-		now := time.Now()
-		apiKey.FirstUsedAt = &now
-	}
+	// 激活密钥（首次使用时会自动设置 first_used_at 并重新计算过期时间）
+	apiKey.ActivateIfNeeded()
 
 	// 检查并重置每日计数
 	if err := s.CheckAndResetDailyCount(&apiKey); err != nil {
@@ -251,11 +248,8 @@ func (s *APIKeyService) ValidateKey(key string) (bool, error) {
 		return false, nil
 	}
 
-	// 如果是首次使用，激活密钥
-	if apiKey.FirstUsedAt == nil {
-		now := time.Now()
-		apiKey.FirstUsedAt = &now
-
+	// 激活密钥（首次使用时会自动设置 first_used_at 并重新计算过期时间）
+	if apiKey.ActivateIfNeeded() {
 		// 保存到数据库
 		if err := s.db.Save(apiKey).Error; err != nil {
 			return false, fmt.Errorf("保存密钥失败: %w", err)

@@ -221,3 +221,38 @@ pnpm-lock.yaml (已删除)
 - frontend/src/components/admin/ApplePagination.tsx (新增)
 - frontend/src/pages/Admin.tsx (修改)
 
+
+---
+
+## 2026-02-13 15:30
+
+**Commit**: `feat(apikey): 优化 API Key 激活逻辑并完善用户绑定功能`
+
+**详细说明**:
+
+1. 后端优化:
+   - 统一使用 ActivateIfNeeded() 方法处理 API Key 首次激活逻辑
+   - 修复 API Key 登录用户无法绑定的问题（user_id = 0 时返回 400）
+   - 在 JWT 中间件中传递 api_key 到上下文，支持 API Key 登录用户查询自己的信息
+   - 增强 GetAPIKey 接口的日志输出，便于调试
+
+2. 前端优化:
+   - 在管理页面和批量创建对话框中显示"待激活"状态（first_used_at 为空时）
+   - 优化状态图标的样式，添加 flex-shrink-0 防止图标被压缩
+   - 修复 UserApiKeySettings 页面的 API 调用逻辑，正确处理 apiClient 自动解包的响应
+
+3. 文档更新:
+   - 完善 API Key 激活机制的说明文档
+   - 新增用户 API Key 管理 API 文档（绑定/查询/解绑）
+   - 详细说明 API Key 登录用户的限制和业务场景
+
+**涉及文件**:
+- backend/api/controller/user_apikey_controller.go
+- backend/api/middleware/jwt_auth.go
+- backend/service/apikey_service.go
+- docs/api_reference.md
+- frontend/src/components/admin/AppleApiKeyTable.refactored.example.tsx
+- frontend/src/components/admin/AppleApiKeyTable.tsx
+- frontend/src/components/admin/BatchCreateDialog.tsx
+- frontend/src/components/admin/EditKeyDialog.tsx
+- frontend/src/pages/UserApiKeySettings.tsx

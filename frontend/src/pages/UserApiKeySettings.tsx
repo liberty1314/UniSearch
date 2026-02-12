@@ -58,11 +58,9 @@ const UserApiKeySettings: React.FC = () => {
     const loadAPIKeyInfo = async () => {
         try {
             setIsLoading(true);
-            const response = await apiClient.get('/user/apikey');
-
-            if (response.code === 200 && response.data) {
-                setApiKeyInfo(response.data as APIKeyInfo);
-            }
+            // apiClient.get 已经自动解包了 data 字段，直接返回业务数据
+            const data = await apiClient.get<APIKeyInfo>('/user/apikey');
+            setApiKeyInfo(data);
         } catch (error: any) {
             // 404 表示未绑定，这是正常情况
             if (error.code !== 404) {
@@ -87,17 +85,14 @@ const UserApiKeySettings: React.FC = () => {
 
         try {
             setIsSubmitting(true);
-            const response = await apiClient.post('/user/apikey', {
+            // apiClient.post 已经自动解包了 data 字段
+            await apiClient.post('/user/apikey', {
                 key: newApiKey.trim(),
             });
 
-            if (response.code === 200) {
-                toast.success('绑定成功');
-                setNewApiKey('');
-                await loadAPIKeyInfo();
-            } else {
-                toast.error(response.message || '绑定失败');
-            }
+            toast.success('绑定成功');
+            setNewApiKey('');
+            await loadAPIKeyInfo();
         } catch (error: any) {
             console.error('绑定 API Key 失败:', error);
             toast.error(error.message || '绑定失败');
@@ -109,15 +104,12 @@ const UserApiKeySettings: React.FC = () => {
     const handleUnbindAPIKey = async () => {
         try {
             setIsSubmitting(true);
-            const response = await apiClient.delete('/user/apikey');
+            // apiClient.delete 已经自动解包了 data 字段
+            await apiClient.delete('/user/apikey');
 
-            if (response.code === 200) {
-                toast.success('解绑成功');
-                setApiKeyInfo(null);
-                setShowUnbindDialog(false);
-            } else {
-                toast.error(response.message || '解绑失败');
-            }
+            toast.success('解绑成功');
+            setApiKeyInfo(null);
+            setShowUnbindDialog(false);
         } catch (error: any) {
             console.error('解绑 API Key 失败:', error);
             toast.error(error.message || '解绑失败');

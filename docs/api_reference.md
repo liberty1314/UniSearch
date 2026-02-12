@@ -708,7 +708,10 @@ curl -X GET http://localhost:8888/api/admin/keys \
 **重要说明**:
 - API Key 的有效期从**首次使用时**开始计算，而不是创建时
 - 创建后未使用的 Key 不会过期，直到首次使用
-- 首次使用时，系统会自动记录使用时间并重新计算过期时间
+- 首次使用时，系统会自动调用 `ActivateIfNeeded()` 方法：
+  - 记录首次使用时间（`first_used_at`）
+  - 根据 TTL 重新计算过期时间（`expires_at = first_used_at + ttl_hours`）
+  - 确保有效期从实际使用时刻开始计算
 
 **错误响应**:
 
@@ -771,7 +774,7 @@ curl -X POST http://localhost:8888/api/admin/keys \
 }
 ```
 
-**注意**: 新创建的 Key 的 `first_used_at` 为 `null`，表示尚未使用。有效期将从首次使用时开始计算。
+**注意**: 新创建的 Key 的 `first_used_at` 为 `null`，表示尚未使用。有效期将从首次使用时开始计算，此时系统会自动调用 `ActivateIfNeeded()` 方法设置首次使用时间并重新计算过期时间。
 
 **错误响应**:
 
@@ -2228,6 +2231,266 @@ curl http://localhost:8888/api/health
 - 认证功能默认关闭，不影响现有部署
 
 ---
+
+---
+
+## 用户 API Key 管理 API
+
+用户 API Key 管理 API 用于普通用户绑定、查询和解绑自己的 API Key，需要 JWT Token 认证。
+
+### 1. 绑定 API Key
+
+将一个已存在的 API Key 绑定到当前登录用户账户。
+
+**接口地址**: `/api/user/apikey`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要 JWT Token）
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| key | string | 是 | 要绑定的 API Key（格式：sk- + 40位十六进制，共43位） |
+
+**请求示例**:
+
+```bash
+curl -X POST http://localhost:8888/api/user/apikey \
+  -H "Authorization: Bearer <jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "<AUTH_TOKEN>"
+  }'
+```
+
+**成功响应** (200 OK):
+
+```json
+{
+  "code": 200,
+  "message": "绑定成功",
+  "data": {
+    "api_key": "<AUTH_TOKEN>"
+  }
+}
+```
+
+**错误响应**:
+
+- **400 Bad Request** - API Key 格式错误
+```json
+{
+  "code": 400,
+  "message": "API Key 格式错误",
+  "data": null
+}
+```
+
+- **400 Bad Request** - API Key 登录用户无法绑定
+```json
+{
+  "code": 400,
+  "message": "您当前使用 API Key 登录，无需绑定。如需绑定，请使用用户名密码登录",
+  "data": null
+}
+```
+
+- **400 Bad Request** - API Key 无效或已过期
+```json
+{
+  "code": 400,
+  "message": "API Key 无效或已过期",
+  "data": null
+}
+```
+
+- **400 Bad Request** - API Key 已被其他用户绑定
+```json
+{
+  "code": 400,
+  "message": "该 API Key 已被其他用户绑定",
+  "data": null
+}
+```
+
+- **401 Unauthorized** - 未授权
+```json
+{
+  "code": 401,
+  "message": "未授权",
+  "data": null
+}
+```
+
+**状态码**:
+- `200`: 绑定成功
+- `400`: 参数错误或业务逻辑错误
+- `401`: 未授权（缺少或无效的 JWT Token）
+- `500`: 服务器内部错误
+
+**重要说明**:
+- 用户只能绑定一个 API Key，如果已绑定其他 Key，会自动解绑旧 Key 并绑定新 Key
+- API Key 必须是有效且未过期的
+- API Key 不能被多个用户同时绑定
+- **使用 API Key 登录的用户（user_id = 0）无法执行绑定操作**，必须使用用户名密码登录后才能绑定
+- 这个限制是为了避免循环绑定和逻辑混乱：API Key 登录本身就是一种临时访问方式，不应该再绑定其他 Key
+
+**业务场景说明**:
+
+1. **正常用户绑定流程**:
+   - 用户使用用户名密码登录（获得 JWT Token，user_id > 0）
+   - 调用绑定接口，将管理员提供的 API Key 绑定到账户
+   - 后续搜索时自动使用绑定的 API Key
+
+2. **API Key 登录用户的限制**:
+   - 用户使用 API Key 登录（获得 JWT Token，user_id = 0）
+   - 此时调用绑定接口会返回 400 错误
+   - 提示用户需要使用用户名密码登录才能绑定
+
+3. **为什么需要这个限制**:
+   - API Key 登录是一种临时访问方式，不应该有持久化的绑定关系
+   - 避免用户使用 API Key A 登录后绑定 API Key B 的混乱逻辑
+   - 保持系统的清晰性：绑定功能仅供正式注册用户使用
+
+---
+
+### 2. 获取用户绑定的 API Key
+
+获取当前登录用户绑定的 API Key 详细信息。
+
+**接口地址**: `/api/user/apikey`  
+**请求方法**: `GET`  
+**是否需要认证**: 是（需要 JWT Token 或 API Key）
+
+**请求示例**:
+
+```bash
+# 方式 1: 使用 JWT Token（用户名密码登录）
+curl -X GET http://localhost:8888/api/user/apikey \
+  -H "Authorization: Bearer <jwt_token>"
+
+# 方式 2: 使用 API Key 登录获得的 JWT Token
+curl -X GET http://localhost:8888/api/user/apikey \
+  -H "Authorization: Bearer <jwt_token_from_apikey_login>"
+```
+
+**成功响应** (200 OK):
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "api_key": "<AUTH_TOKEN>",
+    "expires_at": "2026-03-05T10:30:00Z",
+    "daily_search_limit": 100,
+    "today_search_count": 25,
+    "remaining_searches": 75,
+    "is_valid": true
+  }
+}
+```
+
+**响应字段说明**:
+
+| 字段名 | 类型 | 描述 |
+|--------|------|------|
+| api_key | string | API Key 字符串 |
+| expires_at | string | 过期时间（ISO 8601 格式） |
+| daily_search_limit | number | 每日搜索次数限制（0表示不限制） |
+| today_search_count | number | 今日已使用搜索次数 |
+| remaining_searches | number | 今日剩余搜索次数 |
+| is_valid | bool | API Key 是否有效（未过期且未超限） |
+
+**错误响应**:
+
+- **404 Not Found** - 未绑定 API Key
+```json
+{
+  "code": 404,
+  "message": "未绑定 API Key",
+  "data": null
+}
+```
+
+- **401 Unauthorized** - 未授权
+```json
+{
+  "code": 401,
+  "message": "未授权",
+  "data": null
+}
+```
+
+**状态码**:
+- `200`: 获取成功
+- `401`: 未授权
+- `404`: 未绑定 API Key
+- `500`: 服务器内部错误
+
+**重要说明**:
+- 如果使用 API Key 登录获得的 JWT Token，会直接返回该 API Key 的信息
+- 如果使用用户名密码登录，会返回用户绑定的 API Key 信息
+- 未绑定 API Key 的用户会收到 404 错误
+
+---
+
+### 3. 解绑 API Key
+
+解绑当前登录用户的 API Key。
+
+**接口地址**: `/api/user/apikey`  
+**请求方法**: `DELETE`  
+**是否需要认证**: 是（需要 JWT Token）
+
+**请求示例**:
+
+```bash
+curl -X DELETE http://localhost:8888/api/user/apikey \
+  -H "Authorization: Bearer <jwt_token>"
+```
+
+**成功响应** (200 OK):
+
+```json
+{
+  "code": 200,
+  "message": "解绑成功",
+  "data": null
+}
+```
+
+**错误响应**:
+
+- **404 Not Found** - 未绑定 API Key
+```json
+{
+  "code": 404,
+  "message": "未绑定 API Key",
+  "data": null
+}
+```
+
+- **401 Unauthorized** - 未授权
+```json
+{
+  "code": 401,
+  "message": "未授权",
+  "data": null
+}
+```
+
+**状态码**:
+- `200`: 解绑成功
+- `401`: 未授权
+- `404`: 未绑定 API Key
+- `500`: 服务器内部错误
+
+**重要说明**:
+- 解绑后，API Key 的 `user_id` 字段会被设置为 `NULL`
+- 解绑后的 API Key 可以被其他用户绑定
+- 解绑操作不会删除 API Key，只是取消绑定关系
 
 ---
 

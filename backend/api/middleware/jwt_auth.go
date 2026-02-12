@@ -65,6 +65,11 @@ func JWTAuth() gin.HandlerFunc {
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
+		
+		// 如果是 API Key 登录，将 API Key 也存入上下文
+		if claims.APIKey != "" {
+			c.Set("api_key", claims.APIKey)
+		}
 
 		c.Next()
 	}

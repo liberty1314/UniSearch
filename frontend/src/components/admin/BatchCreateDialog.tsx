@@ -433,7 +433,10 @@ export function BatchCreateDialog({
                                                     {key.description}
                                                 </TableCell>
                                                 <TableCell className="text-sm">
-                                                    {formatDateTime(key.expires_at)}
+                                                    {key.first_used_at 
+                                                        ? formatDateTime(key.expires_at)
+                                                        : '待激活'
+                                                    }
                                                 </TableCell>
                                             </TableRow>
                                         ))}
