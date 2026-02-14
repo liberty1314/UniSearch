@@ -45,6 +45,8 @@ export interface AppleTableProps<T> {
   hoverable?: boolean;
   /** 排序变化回调 */
   onSortChange?: (key: string, direction: 'asc' | 'desc' | null) => void;
+  /** 自定义移动端渲染函数 */
+  renderMobileItem?: (item: T, index: number) => React.ReactNode;
 }
 
 /**
@@ -66,6 +68,7 @@ export function AppleTable<T>({
   className,
   hoverable = true,
   onSortChange,
+  renderMobileItem,
 }: AppleTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
@@ -75,7 +78,7 @@ export function AppleTable<T>({
    */
   const handleSort = (key: string) => {
     let newDirection: 'asc' | 'desc' | null = 'asc';
-    
+
     if (sortKey === key) {
       if (sortDirection === 'asc') {
         newDirection = 'desc';
@@ -186,7 +189,7 @@ export function AppleTable<T>({
    * 渲染 PC 端表格视图
    */
   const renderDesktopView = () => (
-    <div className="hidden sm:block overflow-x-auto">
+    <div className="hidden md:block overflow-x-auto">
       <table className="w-full" role="table">
         <thead>
           <tr className="border-b border-gray-200/50 dark:border-gray-700/50">
@@ -283,7 +286,7 @@ export function AppleTable<T>({
    * 渲染移动端卡片视图
    */
   const renderMobileView = () => (
-    <div className="sm:hidden space-y-3">
+    <div className="md:hidden space-y-3 px-1">
       <AnimatePresence mode="popLayout">
         {sortedData.map((item, index) => (
           <motion.div
@@ -311,18 +314,22 @@ export function AppleTable<T>({
             role="article"
           >
             <div className="p-4 space-y-3">
-              {columns
-                .filter((column) => !column.hideOnMobile)
-                .map((column) => (
-                  <div key={column.key} className="flex flex-col gap-1">
-                    <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      {column.title}
-                    </span>
-                    <div className="text-sm text-gray-900 dark:text-gray-100">
-                      {column.render(item, index)}
+              {renderMobileItem ? (
+                renderMobileItem(item, index)
+              ) : (
+                columns
+                  .filter((column) => !column.hideOnMobile)
+                  .map((column) => (
+                    <div key={column.key} className="flex flex-col gap-1">
+                      <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        {column.title}
+                      </span>
+                      <div className="text-sm text-gray-900 dark:text-gray-100">
+                        {column.render(item, index)}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+              )}
             </div>
           </motion.div>
         ))}

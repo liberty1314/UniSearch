@@ -66,13 +66,12 @@ const Admin: React.FC = () => {
         return (viewParam === 'system-info' || viewParam === 'api-keys') ? viewParam : 'system-info';
     });
 
-    // 移动端侧边栏状态
-    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+
 
     // API Keys 列表
     const [apiKeys, setApiKeys] = useState<APIKeyInfo[]>([]);
     const [isLoadingKeys, setIsLoadingKeys] = useState<boolean>(true);
-    
+
     // API Keys 分页状态
     const [apiKeyCurrentPage, setApiKeyCurrentPage] = useState<number>(1);
     const [apiKeyPageSize, setApiKeyPageSize] = useState<number>(10);
@@ -115,38 +114,38 @@ const Admin: React.FC = () => {
     const [remainingTimeFilter, setRemainingTimeFilter] = useState<string[]>([]);
 
     // ============ 用户管理状态 ============
-    
+
     // 用户列表
     const [users, setUsers] = useState<UserInfo[]>([]);
     const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false);
-    
+
     // 选中的用户
     const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
-    
+
     // 搜索和筛选
     const [userSearchKeyword, setUserSearchKeyword] = useState<string>('');
     const debouncedUserSearchKeyword = useDebouncedValue(userSearchKeyword, 500); // 500ms 防抖
     const [userRoleFilter, setUserRoleFilter] = useState<string[]>([]);
     const [userStatusFilter, setUserStatusFilter] = useState<string[]>([]);
-    
+
     // 分页状态
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [totalUsers, setTotalUsers] = useState<number>(0);
     const [pageSize] = useState<number>(20);
     const [totalPages, setTotalPages] = useState<number>(0);
-    
+
     // 对话框状态
     const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState<boolean>(false);
     const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState<boolean>(false);
     const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState<boolean>(false);
     const [isBatchDeleteUsersDialogOpen, setIsBatchDeleteUsersDialogOpen] = useState<boolean>(false);
     const [isBatchUpdateRoleDialogOpen, setIsBatchUpdateRoleDialogOpen] = useState<boolean>(false);
-    
+
     // 当前操作的用户
     const [userToEdit, setUserToEdit] = useState<UserInfo | null>(null);
     const [userToResetPassword, setUserToResetPassword] = useState<UserInfo | null>(null);
     const [userToDelete, setUserToDelete] = useState<number | null>(null);
-    
+
     // 用户操作加载状态
     const [isDeletingUser, setIsDeletingUser] = useState<boolean>(false);
     const [isBatchOperatingUsers, setIsBatchOperatingUsers] = useState<boolean>(false);
@@ -285,13 +284,13 @@ const Admin: React.FC = () => {
         try {
             // 使用传入的页码或当前页码
             const targetPage = page || currentPage;
-            
+
             // 构建筛选条件
             let roleFilter: 'admin' | 'user' | undefined = undefined;
             if (userRoleFilter.length === 1) {
                 roleFilter = userRoleFilter[0] as 'admin' | 'user';
             }
-            
+
             // 调用 API（使用防抖后的搜索关键词）
             const response = await UserService.listUsers(
                 targetPage,
@@ -299,7 +298,7 @@ const Admin: React.FC = () => {
                 debouncedUserSearchKeyword.trim() || undefined,
                 roleFilter
             );
-            
+
             // 更新状态
             setUsers(response.users);
             setTotalUsers(response.total);
@@ -782,8 +781,6 @@ const Admin: React.FC = () => {
             <Sidebar
                 currentView={currentView}
                 onViewChange={setCurrentView}
-                isMobileOpen={isMobileSidebarOpen}
-                onMobileToggle={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
             />
 
             {/* 主内容区域 */}
@@ -835,7 +832,7 @@ const Admin: React.FC = () => {
                             {/* API Key 管理卡片 */}
                             <Card className="border-gray-100 dark:border-gray-700/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
                                 <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50 min-h-[88px]">
-                                    <div className="flex items-center justify-between h-full">
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                                         <div className="flex-shrink-0">
                                             <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
                                                 <Key className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -867,7 +864,7 @@ const Admin: React.FC = () => {
                                                     animate={{ opacity: 1, x: 0 }}
                                                     exit={{ opacity: 0, x: 20 }}
                                                     transition={{ duration: 0.2 }}
-                                                    className="flex items-center"
+                                                    className="flex flex-wrap items-center gap-2"
                                                 >
                                                     <BatchActionsBar
                                                         selectedCount={selectedKeys.size}
@@ -885,7 +882,7 @@ const Admin: React.FC = () => {
                                                     animate={{ opacity: 1, x: 0 }}
                                                     exit={{ opacity: 0, x: 20 }}
                                                     transition={{ duration: 0.2 }}
-                                                    className="flex items-center gap-3"
+                                                    className="flex flex-wrap items-center gap-2 sm:gap-3"
                                                 >
                                                     {/* 筛选信息 */}
                                                     <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -915,7 +912,7 @@ const Admin: React.FC = () => {
                                                     animate={{ opacity: 1, x: 0 }}
                                                     exit={{ opacity: 0, x: -20 }}
                                                     transition={{ duration: 0.2 }}
-                                                    className="flex items-center gap-2"
+                                                    className="flex flex-wrap items-center gap-2"
                                                 >
                                                     {/* 搜索框 */}
                                                     <div className="relative">
@@ -925,7 +922,7 @@ const Admin: React.FC = () => {
                                                             placeholder="搜索 API Key..."
                                                             value={searchKeyword}
                                                             onChange={(e) => setSearchKeyword(e.target.value)}
-                                                            className="pl-9 w-48 h-9 text-sm border-slate-200 dark:border-slate-700"
+                                                            className="pl-9 w-full sm:w-48 h-9 text-sm border-slate-200 dark:border-slate-700"
                                                         />
                                                     </div>
                                                     {/* 清除筛选按钮（有筛选时显示） */}
@@ -970,7 +967,7 @@ const Admin: React.FC = () => {
                                                             disabled={isLoadingKeys || isBatchOperating}
                                                         >
                                                             <Plus className="w-4 h-4" />
-                                                            批量生成
+                                                            <span className="hidden sm:inline">批量生成</span>
                                                         </Button>
                                                     </motion.div>
                                                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -980,7 +977,7 @@ const Admin: React.FC = () => {
                                                             disabled={isLoadingKeys || isBatchOperating}
                                                         >
                                                             <Plus className="w-4 h-4" />
-                                                            生成新 Key
+                                                            <span className="hidden sm:inline">生成新 Key</span>
                                                         </Button>
                                                     </motion.div>
                                                 </motion.div>
@@ -1099,7 +1096,7 @@ const Admin: React.FC = () => {
                             {/* 用户管理卡片 */}
                             <Card className="border-gray-100 dark:border-gray-700/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
                                 <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50 min-h-[88px]">
-                                    <div className="flex items-center justify-between h-full">
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                                         <div className="flex-shrink-0">
                                             <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
                                                 <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -1128,12 +1125,12 @@ const Admin: React.FC = () => {
                                                     animate={{ opacity: 1, x: 0 }}
                                                     exit={{ opacity: 0, x: 20 }}
                                                     transition={{ duration: 0.2 }}
-                                                    className="flex items-center gap-3"
+                                                    className="flex flex-wrap items-center gap-2 sm:gap-3"
                                                 >
                                                     {/* 批量操作按钮 */}
                                                     <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                                                         <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                                        <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                                        <span className="text-sm font-medium text-blue-900 dark:text-blue-100 hidden sm:inline">
                                                             已选中 {selectedUsers.size} 个用户
                                                         </span>
                                                     </div>
@@ -1144,8 +1141,8 @@ const Admin: React.FC = () => {
                                                         disabled={isLoadingUsers || isBatchOperatingUsers || isDeletingUser}
                                                         className="border-slate-200 dark:border-slate-700"
                                                     >
-                                                        <Shield className="w-4 h-4 mr-1" />
-                                                        批量修改角色
+                                                        <Shield className="w-4 h-4 sm:mr-1" />
+                                                        <span className="hidden sm:inline">批量修改角色</span>
                                                     </Button>
                                                     <Button
                                                         variant="outline"
@@ -1154,8 +1151,8 @@ const Admin: React.FC = () => {
                                                         disabled={isLoadingUsers || isBatchOperatingUsers || isDeletingUser}
                                                         className="border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30"
                                                     >
-                                                        <X className="w-4 h-4 mr-1" />
-                                                        批量删除
+                                                        <X className="w-4 h-4 sm:mr-1" />
+                                                        <span className="hidden sm:inline">批量删除</span>
                                                     </Button>
                                                     <Button
                                                         variant="ghost"
@@ -1173,7 +1170,7 @@ const Admin: React.FC = () => {
                                                     animate={{ opacity: 1, x: 0 }}
                                                     exit={{ opacity: 0, x: -20 }}
                                                     transition={{ duration: 0.2 }}
-                                                    className="flex items-center gap-3"
+                                                    className="flex flex-wrap items-center gap-2 sm:gap-3"
                                                 >
                                                     {/* 搜索框 */}
                                                     <div className="relative">
@@ -1183,7 +1180,7 @@ const Admin: React.FC = () => {
                                                             placeholder="搜索用户名..."
                                                             value={userSearchKeyword}
                                                             onChange={(e) => setUserSearchKeyword(e.target.value)}
-                                                            className="pl-9 w-48 h-9 text-sm border-slate-200 dark:border-slate-700"
+                                                            className="pl-9 w-full sm:w-48 h-9 text-sm border-slate-200 dark:border-slate-700"
                                                         />
                                                     </div>
 
@@ -1220,7 +1217,7 @@ const Admin: React.FC = () => {
                                                             disabled={isLoadingUsers || isBatchOperatingUsers}
                                                         >
                                                             <Plus className="w-4 h-4" />
-                                                            创建用户
+                                                            <span className="hidden sm:inline">创建用户</span>
                                                         </Button>
                                                     </motion.div>
                                                 </motion.div>

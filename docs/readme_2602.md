@@ -369,3 +369,61 @@ pnpm-lock.yaml (已删除)
 - frontend/src/stores/announcementStore.ts (新增)
 - frontend/src/types/api.ts (修改)
 - frontend/src/utils/text.ts (新增)
+
+
+---
+
+## 2026-02-15 00:12:47
+
+**Commit**: `refactor(admin): 优化管理界面响应式布局并新增移动端适配`
+
+**详细说明**:
+
+重构管理页面的响应式布局，优化移动端用户体验。新增 adminStore 管理侧边栏状态，优化 API Key 和用户管理表格的移动端卡片渲染，调整批量操作按钮和分页组件的响应式显示。修复代码格式问题，提升整体 UI 一致性。
+
+**主要改动**:
+
+1. 状态管理优化:
+   - 新增 adminStore.ts，使用 Zustand 管理移动端侧边栏状态
+   - 移除 Admin.tsx 中的本地侧边栏状态，统一使用 store 管理
+   - Sidebar 组件改用 store 状态，支持全局控制
+
+2. 移动端适配:
+   - AppleApiKeyTable 新增 renderMobileItem 方法，提供移动端卡片布局
+   - AppleUserTable 新增 renderMobileItem 方法，优化移动端用户信息展示
+   - 移动端卡片包含完整的操作按钮（编辑、删除、状态切换等）
+   - 优化移动端的信息层级和视觉呈现
+
+3. 响应式布局优化:
+   - Admin.tsx 中的 CardHeader 改用 flex-col 布局，移动端垂直排列
+   - BatchActionsBar 按钮文字在小屏幕隐藏，仅显示图标
+   - ApplePagination 在移动端隐藏显示信息和每页数量选择
+   - StatsCard 调整内边距和字体大小，适配小屏幕
+   - SystemInfoView 中的长文本添加 break-all 防止溢出
+
+4. 侧边栏优化:
+   - 移动端侧边栏从顶部导航栏下方开始（top-20），避免遮挡导航栏
+   - 侧边栏高度调整为 calc(100vh-6rem)，适配移动端布局
+   - 新增圆角和阴影效果（rounded-r-3xl shadow-2xl）
+
+5. 代码格式修复:
+   - 统一代码缩进和换行格式
+   - 修复 AnnouncementManagement 中的 className 格式
+   - 优化 AppleUserTable 和 AppleApiKeyTable 的代码结构
+
+**涉及文件**:
+- frontend/src/components/AnnouncementDialog.tsx (格式修复)
+- frontend/src/components/AnnouncementPanel.tsx (格式修复)
+- frontend/src/components/AppleTable.tsx (格式修复)
+- frontend/src/components/Navbar.tsx (格式修复)
+- frontend/src/components/admin/AdminLayout.tsx (格式修复)
+- frontend/src/components/admin/AnnouncementManagement.tsx (格式修复)
+- frontend/src/components/admin/AppleApiKeyTable.tsx (新增移动端渲染)
+- frontend/src/components/admin/ApplePagination.tsx (响应式优化)
+- frontend/src/components/admin/AppleUserTable.tsx (新增移动端渲染)
+- frontend/src/components/admin/BatchActionsBar.tsx (响应式优化)
+- frontend/src/components/admin/Sidebar.tsx (状态管理重构)
+- frontend/src/components/admin/StatsCard.tsx (响应式优化)
+- frontend/src/components/admin/SystemInfoView.tsx (文本溢出修复)
+- frontend/src/pages/Admin.tsx (布局优化)
+- frontend/src/stores/adminStore.ts (新增)

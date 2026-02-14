@@ -44,10 +44,10 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
     }
 
     return (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* 左侧：选中数量 */}
             <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-100 hidden sm:inline">
                     已选中 {selectedCount} 个
                 </span>
             </div>
@@ -62,7 +62,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                     disabled={disabled}
                 >
                     <Clock className="w-4 h-4" />
-                    批量延长有效期
+                    <span className="hidden sm:inline">批量延长有效期</span>
                 </Button>
                 <Button
                     variant="outline"
@@ -72,7 +72,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                     disabled={disabled}
                 >
                     <Download className="w-4 h-4" />
-                    批量导出
+                    <span className="hidden sm:inline">批量导出</span>
                 </Button>
                 <Button
                     variant="outline"
@@ -82,7 +82,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                     disabled={disabled}
                 >
                     <Trash2 className="w-4 h-4" />
-                    批量删除
+                    <span className="hidden sm:inline">批量删除</span>
                 </Button>
                 <Button
                     variant="ghost"
@@ -92,7 +92,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                     disabled={disabled}
                 >
                     <X className="w-4 h-4" />
-                    清除选择
+                    <span className="hidden sm:inline">清除选择</span>
                 </Button>
             </div>
         </div>

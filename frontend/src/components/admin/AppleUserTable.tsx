@@ -149,15 +149,15 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
       render: (user) => {
         const statusConfig = user.is_enabled
           ? {
-              text: '正常',
-              color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
-              icon: <Power className="w-4 h-4" />,
-            }
+            text: '正常',
+            color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+            icon: <Power className="w-4 h-4" />,
+          }
           : {
-              text: '已禁用',
-              color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-              icon: <PowerOff className="w-4 h-4" />,
-            };
+            text: '已禁用',
+            color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+            icon: <PowerOff className="w-4 h-4" />,
+          };
 
         return (
           <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
@@ -173,7 +173,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
       align: 'right',
       render: (user) => {
         const isCurrentUser = user.id === currentUserId;
-        
+
         return (
           <div className="flex items-center justify-end gap-2">
             <Button
@@ -234,6 +234,113 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
     },
   ];
 
+  /**
+   * 渲染移动端卡片项
+   */
+  const renderMobileItem = (user: UserInfo) => {
+    const isCurrentUser = user.id === currentUserId;
+    const statusConfig = user.is_enabled
+      ? {
+        text: '正常',
+        color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+        icon: <Power className="w-3 h-3" />,
+      }
+      : {
+        text: '已禁用',
+        color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+        icon: <PowerOff className="w-3 h-3" />,
+      };
+
+    return (
+      <div className="flex flex-col gap-3">
+        {/* Header: Checkbox | User Info | Role */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Checkbox
+              checked={selectedUsers.has(user.id)}
+              onCheckedChange={(checked) => onSelectUser(user.id, checked as boolean)}
+              disabled={user.id === currentUserId || isLoading || isBatchOperating || isDeleting}
+              onClick={(e) => e.stopPropagation()}
+              className="h-5 w-5"
+            />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-apple-blue to-apple-purple flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
+                {user.username.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex flex-col">
+                <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{user.username}</span>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                  {user.role === 'admin' ? '管理员' : '普通用户'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${statusConfig.color}`}>
+            {statusConfig.icon}
+            <span>{statusConfig.text}</span>
+          </div>
+        </div>
+
+        {/* Content: Stats */}
+        <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 p-2 rounded-lg">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] uppercase tracking-wider opacity-70">创建时间</span>
+            <span>{new Date(user.created_at).toLocaleDateString('zh-CN')}</span>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] uppercase tracking-wider opacity-70">最后登录</span>
+            <span>{user.last_login_at ? formatDistanceToNow(new Date(user.last_login_at), { addSuffix: true, locale: zhCN }) : '从未登录'}</span>
+          </div>
+        </div>
+
+        {/* Footer: Actions */}
+        <div className="flex items-center justify-end gap-1 pt-1 border-t border-gray-100 dark:border-gray-800/50">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); onEditClick(user); }}
+            disabled={isDeleting || isBatchOperating}
+            className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+          >
+            <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); onResetPasswordClick(user); }}
+            disabled={isDeleting || isBatchOperating}
+            className="h-8 w-8 p-0 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+          >
+            <KeyRound className="w-4 h-4 text-amber-600" />
+          </Button>
+          {!isCurrentUser && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); onToggleStatus(user.id, !user.is_enabled); }}
+                disabled={isDeleting || isBatchOperating}
+                className="h-8 w-8 p-0 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+              >
+                {user.is_enabled ? <PowerOff className="w-4 h-4 text-purple-600" /> : <Power className="w-4 h-4 text-purple-600" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); onDeleteClick(user.id); }}
+                disabled={isDeleting || isBatchOperating}
+                className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/20"
+              >
+                <Trash2 className="w-4 h-4 text-red-600" />
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <AppleTable
       data={users}
@@ -242,6 +349,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
       loading={isLoading}
       emptyText="暂无用户数据"
       hoverable
+      renderMobileItem={renderMobileItem}
     />
   );
 };

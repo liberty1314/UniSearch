@@ -83,7 +83,7 @@ export const ApplePagination: React.FC<ApplePaginationProps> = ({
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
       {/* 左侧：显示信息和每页数量选择 */}
-      <div className="flex items-center gap-4">
+      <div className="hidden sm:flex items-center gap-4">
         {/* 显示范围信息 */}
         <div className="text-sm text-slate-600 dark:text-slate-400">
           显示第 <span className="font-medium text-slate-900 dark:text-white">{start}</span> - <span className="font-medium text-slate-900 dark:text-white">{end}</span> 条，
@@ -169,11 +169,10 @@ export const ApplePagination: React.FC<ApplePaginationProps> = ({
                   (e.target as HTMLElement).blur();
                 }}
                 disabled={isLoading}
-                className={`h-9 w-9 p-0 focus:outline-none focus:ring-0 ${
-                  currentPage === pageNum
+                className={`h-9 w-9 p-0 focus:outline-none focus:ring-0 ${currentPage === pageNum
                     ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
                     : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
-                }`}
+                  }`}
               >
                 {pageNum}
               </Button>

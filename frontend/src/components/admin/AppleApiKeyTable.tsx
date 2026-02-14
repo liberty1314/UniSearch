@@ -57,7 +57,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
    * 计算可选择的 Keys（排除永久密钥）
    */
   const selectableKeys = apiKeys.filter(key => !key.is_permanent);
-  
+
   /**
    * 判断是否全选（仅针对可选择的 Keys）
    */
@@ -205,7 +205,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
       align: 'center',
       render: (key) => {
         let statusConfig: { text: string; color: string; icon: React.ReactNode };
-        
+
         // 永久密钥优先判断
         if (key.is_permanent) {
           statusConfig = {
@@ -285,6 +285,122 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
     },
   ];
 
+  /**
+   * 渲染移动端卡片项
+   */
+  const renderMobileItem = (key: APIKeyInfo) => {
+    let statusConfig: { text: string; color: string; icon: React.ReactNode };
+
+    // 永久密钥优先判断
+    if (key.is_permanent) {
+      statusConfig = {
+        text: '永久',
+        color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+        icon: <Shield className="w-3 h-3 flex-shrink-0" />,
+      };
+    } else if (!key.is_enabled) {
+      statusConfig = {
+        text: '已禁用',
+        color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+        icon: <X className="w-3 h-3 flex-shrink-0" />,
+      };
+    } else if (!key.first_used_at) {
+      // 未激活的密钥
+      statusConfig = {
+        text: '待激活',
+        color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+        icon: <Clock className="w-3 h-3 flex-shrink-0" />,
+      };
+    } else if (isKeyExpired(key.expires_at)) {
+      statusConfig = {
+        text: '已过期',
+        color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+        icon: <Clock className="w-3 h-3 flex-shrink-0" />,
+      };
+    } else {
+      statusConfig = {
+        text: '正常',
+        color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+        icon: <CheckCircle2 className="w-3 h-3 flex-shrink-0" />,
+      };
+    }
+
+    return (
+      <div className="flex flex-col gap-3">
+        {/* Header: Checkbox | Status | Actions */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Checkbox
+              checked={selectedKeys.has(key.key)}
+              onCheckedChange={(checked) => onSelectKey(key.key, checked as boolean)}
+              disabled={isLoading || isBatchOperating || isDeleting || key.is_permanent}
+              onClick={(e) => e.stopPropagation()}
+              className="h-5 w-5"
+            />
+            <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${statusConfig.color}`}>
+              {statusConfig.icon}
+              <span>{statusConfig.text}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditClick(key);
+              }}
+              disabled={isDeleting || isBatchOperating || key.is_permanent}
+              className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            >
+              <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteClick(key.key);
+              }}
+              disabled={isDeleting || isBatchOperating || key.is_permanent}
+              className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
+              <Trash2 className="w-4 h-4 text-red-500" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Content: API Key */}
+        <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2.5 border border-gray-100 dark:border-gray-800">
+          <div className="flex flex-col min-w-0 flex-1 mr-2">
+            <span className="text-[10px] text-gray-400 uppercase tracking-widest mb-0.5">API KEY</span>
+            <code className="text-sm font-mono text-gray-900 dark:text-gray-100 truncate">
+              {maskApiKey(key.key)}
+            </code>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); onCopyKey(key.key); }}
+            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
+            title="复制"
+          >
+            <Copy className="w-4 h-4 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Footer: Description & Time */}
+        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-1 border-t border-gray-100 dark:border-gray-800/50">
+          <span className="truncate max-w-[50%] mr-2" title={key.description || ''}>
+            {key.description || '无描述'}
+          </span>
+          <span className="flex-shrink-0">
+            {key.is_permanent ? '永久有效' : formatDistanceToNow(new Date(key.expires_at), { addSuffix: true, locale: zhCN })}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <AppleTable
       data={apiKeys}
@@ -293,6 +409,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
       loading={isLoading}
       emptyText="暂无 API Keys"
       hoverable
+      renderMobileItem={renderMobileItem}
     />
   );
 };

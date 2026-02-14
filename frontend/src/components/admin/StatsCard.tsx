@@ -54,8 +54,8 @@ export const StatsCard: React.FC<StatsCardProps> = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.1 }}
         >
-            <AppleCard className="h-full">
-                <div className="p-6 md:p-8">
+            <AppleCard className="h-full min-w-0">
+                <div className="p-4 sm:p-6 md:p-8">
                     {/* 背景装饰 */}
                     <div className={`absolute top-0 right-0 w-32 h-32 ${colors.bg} rounded-full blur-3xl opacity-30 -z-0`} />
 
@@ -72,7 +72,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
 
                         {/* 数值 */}
                         <div className="flex items-end justify-between">
-                            <h3 className="text-3xl font-bold text-slate-800 dark:text-white">
+                            <h3 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-white truncate">
                                 {value}
                             </h3>
 
@@ -80,8 +80,8 @@ export const StatsCard: React.FC<StatsCardProps> = ({
                             {trend && (
                                 <span
                                     className={`text-xs font-semibold px-2 py-1 rounded-full ${trend.isPositive
-                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                                         }`}
                                 >
                                     {trend.isPositive ? '↑' : '↓'} {trend.value}

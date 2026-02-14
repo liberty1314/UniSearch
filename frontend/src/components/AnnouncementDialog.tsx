@@ -49,7 +49,6 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
   announcement,
   onDismiss,
 }) => {
-  const [neverShowAgain, setNeverShowAgain] = useState(false);
 
   /**
    * 使用 DOMPurify 净化 HTML 内容，防止 XSS 攻击
@@ -72,8 +71,8 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
    * 处理弹窗关闭
    */
   const handleClose = () => {
-    onDismiss(announcement.id, neverShowAgain);
-    setNeverShowAgain(false);
+    // 用户点击关闭或我知道了，直接标记为已读（不再提示）
+    onDismiss(announcement.id, true);
   };
 
   /**
@@ -197,25 +196,7 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
                   transition={{ delay: 0.3, duration: 0.4 }}
                   className="space-y-4"
                 >
-                  {/* 不再提示选项 */}
-                  <label className="flex items-center gap-3 cursor-pointer group select-none">
-                    <input
-                      type="checkbox"
-                      checked={neverShowAgain}
-                      onChange={(e) => setNeverShowAgain(e.target.checked)}
-                      className={cn(
-                        'w-4 h-4 rounded',
-                        'border-2 border-gray-300 dark:border-gray-600',
-                        'text-blue-600 dark:text-blue-500',
-                        'focus:ring-2 focus:ring-blue-500/20',
-                        'transition-all duration-200',
-                        'cursor-pointer'
-                      )}
-                    />
-                    <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors">
-                      不再提示此公告
-                    </span>
-                  </label>
+
 
                   {/* 确认按钮 - 蓝色渐变 */}
                   <button

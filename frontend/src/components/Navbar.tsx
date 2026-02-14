@@ -2,9 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   IoMenuOutline,
-  IoCloseOutline,
-  IoLogoGithub,
-  IoHeartOutline,
   IoKeyOutline,
   IoSettingsOutline,
   IoLogInOutline,
@@ -18,6 +15,7 @@ import IconButton from './IconButton';
 import { AnimatedThemeToggler } from '@/components/magicui/animated-theme-toggler';
 import { useAuthStore } from '@/stores/authStore';
 import { useAnnouncementStore } from '@/stores/announcementStore';
+import { useAdminStore } from '@/stores/adminStore';
 import { AnnouncementPanel } from './AnnouncementPanel';
 import { AuthService } from '@/services/authService';
 import { toast } from 'sonner';
@@ -29,10 +27,13 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ className }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAnnouncementPanelOpen, setIsAnnouncementPanelOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Admin Sidebar State
+  const { toggleMobileSidebar } = useAdminStore();
+  const isAdminPage = location.pathname.startsWith('/admin');
 
   // 获取认证状态
   const { isAuthenticated, isAdmin, logout, username } = useAuthStore();
@@ -84,7 +85,6 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
     logout();
     toast.success('已退出登录');
     navigate('/');
-    setIsMobileMenuOpen(false);
     setIsUserMenuOpen(false);
   };
 
@@ -96,25 +96,28 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
       )}>
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link
-              to="/"
-              className="flex items-center gap-3 text-xl font-bold text-gray-900 dark:text-white hover:text-apple-blue dark:hover:text-apple-blue transition-all duration-300 transform hover:scale-105 group"
-              title="点击返回首页"
-            >
-              <div className="relative">
-                <img
-                  src="/Uni.png?v=20250908"
-                  alt="UniSearch Logo"
-                  className="w-8 h-8 transition-transform duration-300 group-hover:rotate-12"
-                />
-                {/* Logo悬停时的光晕效果 */}
-                <div className="absolute inset-0 bg-apple-blue/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm scale-110"></div>
-              </div>
-              <span className="hidden sm:block font-extrabold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent group-hover:from-apple-blue group-hover:to-apple-blue/80 transition-all duration-300">
-                UniSearch
-              </span>
-            </Link>
+            <div className="flex items-center gap-3">
+
+              {/* Logo */}
+              <Link
+                to="/"
+                className="flex items-center gap-3 text-xl font-bold text-gray-900 dark:text-white hover:text-apple-blue dark:hover:text-apple-blue transition-all duration-300 transform hover:scale-105 group"
+                title="点击返回首页"
+              >
+                <div className="relative">
+                  <img
+                    src="/Uni.png?v=20250908"
+                    alt="UniSearch Logo"
+                    className="w-8 h-8 transition-transform duration-300 group-hover:rotate-12"
+                  />
+                  {/* Logo悬停时的光晕效果 */}
+                  <div className="absolute inset-0 bg-apple-blue/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm scale-110"></div>
+                </div>
+                <span className="hidden sm:block font-extrabold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent group-hover:from-apple-blue group-hover:to-apple-blue/80 transition-all duration-300">
+                  UniSearch
+                </span>
+              </Link>
+            </div>
 
             {/* 桌面端导航 */}
             <div className="hidden md:flex items-center gap-1">
@@ -163,8 +166,8 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
               {/* 认证相关按钮 */}
               {isAuthenticated ? (
                 <>
-                  {/* 用户菜单 - 桌面端 */}
-                  <div className="hidden md:block relative" ref={userMenuRef}>
+                  {/* 用户菜单 */}
+                  <div className="relative" ref={userMenuRef}>
                     <button
                       onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                       className={cn(
@@ -243,167 +246,35 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                     )}
                   </div>
 
-                  {/* 普通用户移动端：显示 API Key 设置图标 */}
-                  {!isAdmin && (
-                    <Link
-                      to="/settings/apikey"
-                      className="md:hidden p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
-                      title="API Key 设置"
-                    >
-                      <IoKeyOutline className="w-5 h-5" />
-                    </Link>
-                  )}
+
                 </>
               ) : (
                 /* 未登录：显示登录/注册入口 */
                 <Link
                   to="/login"
-                  className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-apple-blue hover:text-apple-blue/80 hover:bg-apple-blue/10 transition-all duration-200"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-apple-blue hover:text-apple-blue/80 hover:bg-apple-blue/10 transition-all duration-200"
                   title="登录/注册"
                 >
-                  <IoLogInOutline className="w-4 h-4" />
-                  <span>登录/注册</span>
+                  <IoLogInOutline className="w-5 h-5" />
+                  <span className="hidden sm:inline">登录/注册</span>
                 </Link>
               )}
 
               {/* 主题切换 */}
               <AnimatedThemeToggler />
-              {/* 移动端菜单按钮 */}
-              <IconButton
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                aria-label={isMobileMenuOpen ? '关闭菜单' : '打开菜单'}
-                className="md:hidden"
-              >
-                {isMobileMenuOpen ? (
-                  <IoCloseOutline className="w-5 h-5" />
-                ) : (
-                  <IoMenuOutline className="w-5 h-5" />
-                )}
-              </IconButton>
+
+              {/* 移动端 Admin Sidebar Toggle */}
+              {isAdminPage && isAdmin && (
+                <IconButton
+                  onClick={toggleMobileSidebar}
+                  className="md:hidden"
+                  aria-label="打开侧边栏"
+                >
+                  <IoMenuOutline className="w-6 h-6" />
+                </IconButton>
+              )}
             </div>
           </div>
-
-          {/* 移动端菜单 */}
-          {isMobileMenuOpen && (
-            <div className="md:hidden py-4 border-t border-gray-200 dark:border-gray-700">
-              <div className="space-y-2">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = isActivePath(item.path);
-
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={cn(
-                        'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200',
-                        isActive
-                          ? 'bg-apple-blue text-white shadow-sm'
-                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
-                      )}
-                    >
-                      <Icon className="w-5 h-5" />
-                      <div>
-                        <div>{item.label}</div>
-                        <div className="text-xs opacity-75">{item.description}</div>
-                      </div>
-                    </Link>
-                  );
-                })}
-
-                {/* 移动端认证相关链接 */}
-                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                  {isAuthenticated ? (
-                    <>
-                      {/* 管理员：后台管理 */}
-                      {isAdmin && (
-                        <Link
-                          to="/admin"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                        >
-                          <IoSettingsOutline className="w-5 h-5" />
-                          <div>
-                            <div>后台管理</div>
-                            <div className="text-xs opacity-75">管理 API Keys 和系统</div>
-                          </div>
-                        </Link>
-                      )}
-
-                      {/* 普通用户：API Key 设置 */}
-                      {!isAdmin && (
-                        <Link
-                          to="/settings/apikey"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                        >
-                          <IoKeyOutline className="w-5 h-5" />
-                          <div>
-                            <div>API Key 设置</div>
-                            <div className="text-xs opacity-75">管理您的 API Key</div>
-                          </div>
-                        </Link>
-                      )}
-
-                      {/* 登出 */}
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                      >
-                        <IoLogOutOutline className="w-5 h-5" />
-                        <div>
-                          <div>退出登录</div>
-                          <div className="text-xs opacity-75">安全退出系统</div>
-                        </div>
-                      </button>
-                    </>
-                  ) : (
-                    /* 未登录：登录/注册入口 */
-                    <Link
-                      to="/login"
-                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-apple-blue hover:text-apple-blue/80 hover:bg-apple-blue/10 transition-colors"
-                    >
-                      <IoLogInOutline className="w-5 h-5" />
-                      <div>
-                        <div>登录/注册</div>
-                        <div className="text-xs opacity-75">创建账户或使用 API Key</div>
-                      </div>
-                    </Link>
-                  )}
-                </div>
-
-                {/* 移动端额外链接 */}
-                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                  <a
-                    href="https://github.com/your-repo/unisearch"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <IoLogoGithub className="w-5 h-5" />
-                    <div>
-                      <div>GitHub</div>
-                      <div className="text-xs opacity-75">查看源代码</div>
-                    </div>
-                  </a>
-
-                  <a
-                    href="https://github.com/sponsors/your-username"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <IoHeartOutline className="w-5 h-5" />
-                    <div>
-                      <div>赞助</div>
-                      <div className="text-xs opacity-75">支持项目发展</div>
-                    </div>
-                  </a>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </nav>
 

@@ -9,13 +9,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Megaphone, 
-  RefreshCw, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Power, 
+import {
+  Megaphone,
+  RefreshCw,
+  Plus,
+  Edit,
+  Trash2,
+  Power,
   PowerOff,
   Calendar,
   AlertCircle
@@ -315,14 +315,12 @@ export const AnnouncementManagement: React.FC = () => {
     <button
       onClick={() => onChange(!checked)}
       disabled={disabled}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-        checked ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
-      } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${checked ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          checked ? 'translate-x-6' : 'translate-x-1'
-        }`}
+        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'
+          }`}
       />
     </button>
   );
@@ -383,9 +381,8 @@ export const AnnouncementManagement: React.FC = () => {
                 <div className="mt-3 space-y-2">
                   <div className="flex items-center gap-2 text-sm">
                     <div
-                      className={`w-2 h-2 rounded-full ${
-                        featureEnabled ? 'bg-green-500' : 'bg-gray-400'
-                      }`}
+                      className={`w-2 h-2 rounded-full ${featureEnabled ? 'bg-green-500' : 'bg-gray-400'
+                        }`}
                     ></div>
                     <span className="text-slate-600 dark:text-slate-300">
                       {featureEnabled ? '已启用' : '已禁用'}
@@ -450,9 +447,9 @@ export const AnnouncementManagement: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
                         <h3 className="text-lg font-semibold text-slate-800 dark:text-white">
                           {announcement.title}
                         </h3>
@@ -479,7 +476,7 @@ export const AnnouncementManagement: React.FC = () => {
                           __html: announcement.content.replace(/<[^>]*>/g, '').slice(0, 100) + '...',
                         }}
                       />
-                      <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-4 text-xs text-slate-500 dark:text-slate-400">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
                           生效: {formatDateTime(announcement.start_time)}
@@ -492,7 +489,7 @@ export const AnnouncementManagement: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 ml-4">
+                    <div className="flex items-center gap-2 self-end sm:self-start">
                       <Button
                         onClick={() => handleToggleStatus(announcement)}
                         variant="outline"
@@ -649,14 +646,12 @@ export const AnnouncementManagement: React.FC = () => {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setFormData({ ...formData, is_enabled: !formData.is_enabled })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                  formData.is_enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${formData.is_enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    formData.is_enabled ? 'translate-x-6' : 'translate-x-1'
-                  }`}
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.is_enabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
                 />
               </button>
               <Label>启用公告</Label>

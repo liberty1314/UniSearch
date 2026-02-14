@@ -223,9 +223,9 @@ export const SystemInfoView: React.FC = () => {
                                 缓存配置
                             </div>
                             <div className="space-y-2 pl-6 text-sm">
-                                <div className="flex justify-between">
+                                <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                                     <span className="text-slate-500 dark:text-slate-400">缓存路径:</span>
-                                    <span className="text-slate-700 dark:text-slate-300 font-mono text-xs">
+                                    <span className="text-slate-700 dark:text-slate-300 font-mono text-xs break-all">
                                         {systemInfo.config.cache_path}
                                     </span>
                                 </div>
@@ -282,7 +282,7 @@ export const SystemInfoView: React.FC = () => {
                                 {systemInfo.stats.proxy_enabled && (
                                     <div className="flex justify-between">
                                         <span className="text-slate-500 dark:text-slate-400">代理地址:</span>
-                                        <span className="text-slate-700 dark:text-slate-300 font-mono text-xs">
+                                        <span className="text-slate-700 dark:text-slate-300 font-mono text-xs break-all">
                                             {formatProxyUrl(systemInfo.config.proxy_url)}
                                         </span>
                                     </div>

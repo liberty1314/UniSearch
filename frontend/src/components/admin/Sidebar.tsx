@@ -2,6 +2,7 @@ import React from 'react';
 import { Key, Activity, X, Menu, Users, Settings, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
+import { useAdminStore } from '@/stores/adminStore';
 
 /**
  * 管理视图类型
@@ -25,9 +26,9 @@ interface SidebarProps {
     currentView: AdminView;
     /** 视图切换回调 */
     onViewChange: (view: AdminView) => void;
-    /** 移动端是否打开 */
+    /** 移动端是否打开 (已弃用，改用 store) */
     isMobileOpen?: boolean;
-    /** 移动端切换回调 */
+    /** 移动端切换回调 (已弃用，改用 store) */
     onMobileToggle?: () => void;
 }
 
@@ -43,9 +44,10 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({
     currentView,
     onViewChange,
-    isMobileOpen = false,
-    onMobileToggle,
 }) => {
+    const { isMobileSidebarOpen, setMobileSidebarOpen } = useAdminStore();
+    const isMobileOpen = isMobileSidebarOpen;
+    const onMobileToggle = () => setMobileSidebarOpen(!isMobileSidebarOpen);
     /**
      * 导航项配置
      */
@@ -104,9 +106,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* 侧边栏容器 - 桌面端固定，移动端弹出 */}
             <aside
                 className={`
-                    fixed top-0 left-0 h-full
+                    fixed top-20 lg:top-0 left-0
+                    h-[calc(100vh-6rem)] lg:h-full
                     w-64 lg:w-auto
-                    transition-transform duration-300 ease-in-out z-50 lg:z-auto
+                    transition-transform duration-300 ease-in-out z-40 lg:z-auto
                     flex flex-shrink-0
                     ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
                 `}
@@ -263,6 +266,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         bg-white dark:bg-gray-800
                         border-r border-gray-200 dark:border-gray-700
                         flex flex-col
+                        rounded-r-3xl shadow-2xl
                     "
                 >
                     {/* 侧边栏头部 */}

@@ -33,6 +33,10 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
     isLoading,
   } = useAnnouncementStore();
 
+  // 分离已读和未读公告
+  const unreadList = activeAnnouncements.filter(a => !isRead(a.id));
+  const readList = activeAnnouncements.filter(a => isRead(a.id));
+
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -77,6 +81,66 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
       onOpenChange(false);
     }
   };
+
+  /**
+   * 渲染单个公告卡片
+   */
+  const renderAnnouncementCard = (announcement: Announcement, index: number, isUnread: boolean) => (
+    <motion.button
+      key={announcement.id}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05, duration: 0.3 }}
+      onClick={() => handleAnnouncementClick(announcement)}
+      className={cn(
+        'w-full text-left p-4 rounded-xl transition-all duration-200',
+        'border hover:shadow-md group relative overflow-hidden',
+        isUnread
+          ? 'bg-gradient-to-br from-blue-50/80 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/10 border-blue-100 dark:border-blue-800'
+          : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+      )}
+    >
+      {isUnread && (
+        <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-blue-500/10 to-transparent -mr-8 -mt-8 rounded-full blur-xl pointer-events-none"></div>
+      )}
+      <div className="flex items-start justify-between gap-3 relative z-10">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1.5">
+            <h3 className={cn(
+              'font-semibold text-sm truncate',
+              isUnread
+                ? 'text-gray-900 dark:text-white'
+                : 'text-gray-600 dark:text-gray-300'
+            )}>
+              {announcement.title}
+            </h3>
+            {isUnread && (
+              <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
+                NEW
+              </span>
+            )}
+          </div>
+          <p className={cn(
+            'text-xs line-clamp-2 leading-relaxed',
+            isUnread
+              ? 'text-gray-600 dark:text-gray-300'
+              : 'text-gray-400 dark:text-gray-500'
+          )}>
+            {announcement.content.replace(/<[^>]*>/g, '').substring(0, 80)}...
+          </p>
+          <div className="mt-2 text-[10px] text-gray-400 dark:text-gray-600">
+            {new Date(announcement.created_at).toLocaleDateString()}
+          </div>
+        </div>
+        <ChevronRight className={cn(
+          'w-4 h-4 flex-shrink-0 transition-all duration-200 group-hover:translate-x-1 mt-1',
+          isUnread
+            ? 'text-blue-500'
+            : 'text-gray-300 dark:text-gray-600 group-hover:text-gray-400'
+        )} />
+      </div>
+    </motion.button>
+  );
 
   return (
     <>
@@ -148,59 +212,27 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
                     <p className="text-gray-500 dark:text-gray-400">暂无公告</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {activeAnnouncements.map((announcement, index) => {
-                      const isUnread = !isRead(announcement.id);
+                  <div className="space-y-6">
+                    {/* 未读公告区域 */}
+                    {unreadList.length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider px-1 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                          未读消息 ({unreadList.length})
+                        </h3>
+                        {unreadList.map((announcement, index) => renderAnnouncementCard(announcement, index, true))}
+                      </div>
+                    )}
 
-                      return (
-                        <motion.button
-                          key={announcement.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05, duration: 0.3 }}
-                          onClick={() => handleAnnouncementClick(announcement)}
-                          className={cn(
-                            'w-full text-left p-4 rounded-xl transition-all duration-200',
-                            'border hover:shadow-md group',
-                            isUnread
-                              ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'
-                          )}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className={cn(
-                                  'font-semibold text-sm truncate',
-                                  isUnread
-                                    ? 'text-gray-900 dark:text-white'
-                                    : 'text-gray-700 dark:text-gray-300'
-                                )}>
-                                  {announcement.title}
-                                </h3>
-                                {isUnread && (
-                                  <span className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                                )}
-                              </div>
-                              <p className={cn(
-                                'text-xs line-clamp-2',
-                                isUnread
-                                  ? 'text-gray-600 dark:text-gray-400'
-                                  : 'text-gray-500 dark:text-gray-500'
-                              )}>
-                                {announcement.content.replace(/<[^>]*>/g, '').substring(0, 100)}...
-                              </p>
-                            </div>
-                            <ChevronRight className={cn(
-                              'w-4 h-4 flex-shrink-0 transition-transform duration-200 group-hover:translate-x-1',
-                              isUnread
-                                ? 'text-blue-500'
-                                : 'text-gray-400 dark:text-gray-600'
-                            )} />
-                          </div>
-                        </motion.button>
-                      );
-                    })}
+                    {/* 已读公告区域 */}
+                    {readList.length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-1">
+                          历史消息
+                        </h3>
+                        {readList.map((announcement, index) => renderAnnouncementCard(announcement, index, false))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

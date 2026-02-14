@@ -77,10 +77,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             {/* 右侧主内容区域 */}
             <div className="flex flex-1 flex-col overflow-hidden">
                 {/* 顶部导航栏 */}
-                <header className="flex-shrink-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+                <header className="flex-shrink-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4">
                     <div className="flex items-center justify-between">
                         {/* 左侧：移动端菜单按钮 + 标题 */}
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3 sm:gap-4">
                             <Button
                                 variant="ghost"
                                 size="sm"
@@ -89,13 +89,13 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                             >
                                 <Menu className="w-5 h-5" />
                             </Button>
-                            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+                            <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">
                                 后台管理
                             </h1>
                         </div>
 
                         {/* 右侧：操作按钮 */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3">
                             {/* 主题切换 */}
                             <Button
                                 variant="ghost"
@@ -127,7 +127,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 
                 {/* 可滚动内容区域 */}
                 <main className="flex-1 overflow-y-auto">
-                    <div className="max-w-7xl mx-auto px-6 py-6">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
                         {children}
                     </div>
                 </main>
