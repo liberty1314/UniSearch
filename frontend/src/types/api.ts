@@ -741,3 +741,167 @@ export interface ErrorResponse {
   error: string;
   code: string;
 }
+
+// ============ 公告管理相关类型 ============
+
+/**
+ * 公告优先级
+ */
+export type AnnouncementPriority = 'high' | 'medium' | 'low';
+
+/**
+ * 公告信息
+ * 
+ * 此类型定义了公告的完整数据结构。
+ * 
+ * @property {number} id - 公告 ID
+ * @property {string} title - 公告标题（最大 200 字符）
+ * @property {string} content - 公告内容（HTML 格式）
+ * @property {AnnouncementPriority} priority - 优先级（high/medium/low）
+ * @property {string} start_time - 生效时间（ISO 8601 格式）
+ * @property {string | null} end_time - 失效时间（ISO 8601 格式，null 表示永久有效）
+ * @property {boolean} is_enabled - 是否启用
+ * @property {string} created_at - 创建时间（ISO 8601 格式）
+ * @property {string} updated_at - 更新时间（ISO 8601 格式）
+ * @property {string} created_by - 创建者用户名
+ * @property {string | null} updated_by - 最后更新者用户名（可选）
+ */
+export interface Announcement {
+  id: number;
+  title: string;
+  content: string;
+  priority: AnnouncementPriority;
+  start_time: string;
+  end_time: string | null;
+  is_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  updated_by: string | null;
+}
+
+/**
+ * 创建公告请求
+ * 
+ * 此类型定义了创建公告接口的请求参数。
+ * 
+ * @property {string} title - 公告标题（必填，最大 200 字符）
+ * @property {string} content - 公告内容（必填，HTML 格式）
+ * @property {AnnouncementPriority} priority - 优先级（必填，high/medium/low）
+ * @property {string} start_time - 生效时间（必填，ISO 8601 格式）
+ * @property {string} [end_time] - 失效时间（可选，ISO 8601 格式）
+ * @property {boolean} is_enabled - 是否启用（必填）
+ * 
+ * @see Announcement - 公告信息类型
+ */
+export interface CreateAnnouncementRequest {
+  title: string;
+  content: string;
+  priority: AnnouncementPriority;
+  start_time: string;
+  end_time?: string;
+  is_enabled: boolean;
+}
+
+/**
+ * 更新公告请求
+ * 
+ * 此类型定义了更新公告接口的请求参数。
+ * 
+ * @property {string} title - 公告标题（必填，最大 200 字符）
+ * @property {string} content - 公告内容（必填，HTML 格式）
+ * @property {AnnouncementPriority} priority - 优先级（必填，high/medium/low）
+ * @property {string} start_time - 生效时间（必填，ISO 8601 格式）
+ * @property {string} [end_time] - 失效时间（可选，ISO 8601 格式）
+ * @property {boolean} is_enabled - 是否启用（必填）
+ * 
+ * @see Announcement - 公告信息类型
+ */
+export interface UpdateAnnouncementRequest {
+  title: string;
+  content: string;
+  priority: AnnouncementPriority;
+  start_time: string;
+  end_time?: string;
+  is_enabled: boolean;
+}
+
+/**
+ * 公告列表响应（数据部分）
+ * 
+ * 此类型定义了获取公告列表接口返回的业务数据结构。
+ * 实际 API 返回格式为 `ApiResponse<ListAnnouncementsResponse>`。
+ * 
+ * @property {Announcement[]} announcements - 公告列表
+ * @property {number} total - 总数量
+ * @property {number} page - 当前页码
+ * @property {number} page_size - 每页数量
+ * @property {number} total_pages - 总页数
+ * 
+ * @see ApiResponse - 通用 API 响应结构
+ * @see Announcement - 公告信息类型
+ */
+export interface ListAnnouncementsResponse {
+  announcements: Announcement[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+/**
+ * 设置公告状态请求
+ * 
+ * 此类型定义了设置公告启用/禁用状态的请求参数。
+ * 
+ * @property {boolean} is_enabled - 是否启用
+ */
+export interface SetAnnouncementStatusRequest {
+  is_enabled: boolean;
+}
+
+/**
+ * 公告功能启用状态响应（数据部分）
+ * 
+ * 此类型定义了获取公告功能启用状态接口返回的业务数据结构。
+ * 实际 API 返回格式为 `ApiResponse<AnnouncementFeatureEnabledResponse>`。
+ * 
+ * @property {boolean} enabled - 公告功能是否启用
+ * 
+ * @see ApiResponse - 通用 API 响应结构
+ */
+export interface AnnouncementFeatureEnabledResponse {
+  enabled: boolean;
+}
+
+/**
+ * 设置公告功能启用状态请求
+ * 
+ * 此类型定义了设置公告功能启用/禁用状态的请求参数。
+ * 
+ * @property {boolean} enabled - 是否启用公告功能
+ */
+export interface SetAnnouncementFeatureEnabledRequest {
+  enabled: boolean;
+}
+
+/**
+ * 已读状态存储结构
+ * 
+ * 此类型定义了本地存储中公告已读状态的数据结构。
+ * 存储在 localStorage 中，key 为 `announcement_read_status`。
+ * 
+ * @example
+ * {
+ *   "1": true,
+ *   "2": true,
+ *   "5": true
+ * }
+ * 
+ * @description
+ * - key: 公告 ID（数字）
+ * - value: true 表示用户选择了"不再提示"
+ */
+export interface AnnouncementReadStatus {
+  [announcementId: number]: boolean;
+}

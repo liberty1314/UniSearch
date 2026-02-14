@@ -214,6 +214,18 @@ body {
   }
 }
 
+@keyframes userMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* 响应式工具类 */
 .container-responsive {
   @apply container mx-auto px-4 sm:px-6 lg:px-8;

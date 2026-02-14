@@ -27,9 +27,10 @@ func (s *SystemSettingsService) GetSettings() (*model.SystemSettings, error) {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// 如果不存在，创建默认设置
 			settings = model.SystemSettings{
-				EnableUserAuth:   true, // 默认启用用户登录注册
-				EnableUserLogin:  true, // 默认启用用户登录
-				EnableUserSignup: true, // 默认启用用户注册
+				EnableUserAuth:      true,  // 默认启用用户登录注册
+				EnableUserLogin:     true,  // 默认启用用户登录
+				EnableUserSignup:    true,  // 默认启用用户注册
+				AnnouncementEnabled: false, // 默认禁用公告功能（需求 13.5）
 			}
 			if err := s.db.Create(&settings).Error; err != nil {
 				return nil, err
@@ -65,4 +66,35 @@ func (s *SystemSettingsService) UpdateSettings(enableUserAuth bool, enableUserLo
 	}
 
 	return settings, nil
+}
+
+// GetAnnouncementEnabled 获取公告功能启用状态
+// 返回: 是否启用和错误信息
+// 需求: 13.1
+func (s *SystemSettingsService) GetAnnouncementEnabled() (bool, error) {
+	settings, err := s.GetSettings()
+	if err != nil {
+		return false, err
+	}
+	return settings.AnnouncementEnabled, nil
+}
+
+// SetAnnouncementEnabled 设置公告功能启用状态
+// 参数:
+//   - enabled: 是否启用
+// 返回: 错误信息
+// 需求: 13.1, 13.4
+func (s *SystemSettingsService) SetAnnouncementEnabled(enabled bool) error {
+	settings, err := s.GetSettings()
+	if err != nil {
+		return err
+	}
+
+	settings.AnnouncementEnabled = enabled
+
+	if err := s.db.Save(settings).Error; err != nil {
+		return err
+	}
+
+	return nil
 }

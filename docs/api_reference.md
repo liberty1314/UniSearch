@@ -2494,6 +2494,582 @@ curl -X DELETE http://localhost:8888/api/user/apikey \
 
 ---
 
+## 公告管理 API
+
+公告管理 API 用于管理系统公告，包括创建、更新、删除、查询公告等功能。
+
+**接口分类**：
+- **管理员接口**：需要管理员 JWT Token 认证，用于 CRUD 操作
+- **用户接口**：需要普通用户 JWT Token 认证，用于查看有效公告
+- **公开接口**：无需认证，用于查询功能开关状态
+
+**重要说明**：
+- 所有管理员接口都需要同时通过 JWT 认证和管理员权限验证
+- 用户接口只需要 JWT 认证（普通用户或管理员均可访问）
+- 公告功能受系统设置中的 `announcement_enabled` 开关控制
+
+---
+
+### 1. 创建公告（管理员）
+
+创建新的系统公告。
+
+**接口地址**: `/api/announcements`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| title | string | 是 | 公告标题（最大 200 字符） |
+| content | string | 是 | 公告内容（HTML 格式） |
+| priority | string | 是 | 优先级（high/medium/low） |
+| start_time | string | 是 | 生效时间（ISO 8601 格式） |
+| end_time | string | 否 | 失效时间（ISO 8601 格式，可选） |
+| is_enabled | boolean | 是 | 是否启用 |
+
+**请求示例**:
+
+```bash
+curl -X POST http://localhost:8888/api/announcements \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "系统维护通知",
+    "content": "<p>系统将于今晚进行维护...</p>",
+    "priority": "high",
+    "start_time": "2024-01-20T00:00:00Z",
+    "end_time": "2024-01-21T00:00:00Z",
+    "is_enabled": true
+  }'
+```
+
+**成功响应**:
+
+```json
+{
+  "code": 200,
+  "message": "创建成功",
+  "data": {
+    "id": 1,
+    "title": "系统维护通知",
+    "content": "<p>系统将于今晚进行维护...</p>",
+    "priority": "high",
+    "start_time": "2024-01-20T00:00:00Z",
+    "end_time": "2024-01-21T00:00:00Z",
+    "is_enabled": true,
+    "created_at": "2024-01-19T10:00:00Z",
+    "updated_at": "2024-01-19T10:00:00Z",
+    "created_by": "admin",
+    "updated_by": ""
+  }
+}
+```
+
+**错误响应**:
+
+```json
+{
+  "code": 400,
+  "message": "数据验证失败",
+  "data": {
+    "error": "标题不能为空",
+    "field": "title"
+  }
+}
+```
+
+```json
+{
+  "code": 400,
+  "message": "数据验证失败",
+  "data": {
+    "error": "失效时间必须晚于生效时间"
+  }
+}
+```
+
+**状态码**:
+- `200`: 创建成功
+- `400`: 参数错误或验证失败
+- `401`: 未授权
+- `403`: 禁止访问（非管理员）
+- `500`: 服务器内部错误
+
+---
+
+### 2. 更新公告（管理员）
+
+更新指定公告的信息。
+
+**接口地址**: `/api/announcements/:id`  
+**请求方法**: `PUT`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| id | number | 是 | 公告 ID |
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| title | string | 是 | 公告标题（最大 200 字符） |
+| content | string | 是 | 公告内容（HTML 格式） |
+| priority | string | 是 | 优先级（high/medium/low） |
+| start_time | string | 是 | 生效时间（ISO 8601 格式） |
+| end_time | string | 否 | 失效时间（ISO 8601 格式，可选） |
+| is_enabled | boolean | 是 | 是否启用 |
+
+**请求示例**:
+
+```bash
+curl -X PUT http://localhost:8888/api/announcements/1 \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "系统维护通知(更新)",
+    "content": "<p>维护时间调整...</p>",
+    "priority": "medium",
+    "start_time": "2024-01-20T02:00:00Z",
+    "end_time": "2024-01-21T02:00:00Z",
+    "is_enabled": true
+  }'
+```
+
+**成功响应**:
+
+```json
+{
+  "code": 200,
+  "message": "更新成功",
+  "data": {
+    "id": 1,
+    "title": "系统维护通知(更新)",
+    "content": "<p>维护时间调整...</p>",
+    "priority": "medium",
+    "start_time": "2024-01-20T02:00:00Z",
+    "end_time": "2024-01-21T02:00:00Z",
+    "is_enabled": true,
+    "created_at": "2024-01-19T10:00:00Z",
+    "updated_at": "2024-01-19T12:00:00Z",
+    "created_by": "admin",
+    "updated_by": "admin"
+  }
+}
+```
+
+**错误响应**:
+
+```json
+{
+  "code": 404,
+  "message": "公告不存在"
+}
+```
+
+**状态码**:
+- `200`: 更新成功
+- `400`: 参数错误或验证失败
+- `401`: 未授权
+- `403`: 禁止访问（非管理员）
+- `404`: 公告不存在
+- `500`: 服务器内部错误
+
+---
+
+### 3. 删除公告（管理员）
+
+删除指定的公告（软删除）。
+
+**接口地址**: `/api/announcements/:id`  
+**请求方法**: `DELETE`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| id | number | 是 | 公告 ID |
+
+**请求示例**:
+
+```bash
+curl -X DELETE http://localhost:8888/api/announcements/1 \
+  -H "Authorization: Bearer <admin_token>"
+```
+
+**成功响应**:
+
+```json
+{
+  "code": 200,
+  "message": "删除成功"
+}
+```
+
+**错误响应**:
+
+```json
+{
+  "code": 404,
+  "message": "公告不存在"
+}
+```
+
+**状态码**:
+- `200`: 删除成功
+- `401`: 未授权
+- `403`: 禁止访问（非管理员）
+- `404`: 公告不存在
+- `500`: 服务器内部错误
+
+---
+
+### 4. 获取公告列表（管理员）
+
+获取所有公告的列表，支持分页和排序。
+
+**接口地址**: `/api/announcements`  
+**请求方法**: `GET`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**查询参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| page | number | 否 | 页码（默认 1） |
+| page_size | number | 否 | 每页数量（默认 20） |
+| sort_by | string | 否 | 排序字段（created_at/priority/start_time，默认 created_at） |
+| sort_order | string | 否 | 排序方向（asc/desc，默认 desc） |
+
+**请求示例**:
+
+```bash
+curl -X GET "http://localhost:8888/api/announcements?page=1&page_size=20&sort_by=created_at&sort_order=desc" \
+  -H "Authorization: Bearer <admin_token>"
+```
+
+**成功响应**:
+
+```json
+{
+  "code": 200,
+  "message": "查询成功",
+  "data": {
+    "announcements": [
+      {
+        "id": 1,
+        "title": "系统维护通知",
+        "content": "<p>系统将于今晚进行维护...</p>",
+        "priority": "high",
+        "start_time": "2024-01-20T00:00:00Z",
+        "end_time": "2024-01-21T00:00:00Z",
+        "is_enabled": true,
+        "created_at": "2024-01-19T10:00:00Z",
+        "updated_at": "2024-01-19T10:00:00Z",
+        "created_by": "admin",
+        "updated_by": "admin"
+      }
+    ],
+    "total": 10,
+    "page": 1,
+    "page_size": 20,
+    "total_pages": 1
+  }
+}
+```
+
+**错误响应**:
+
+```json
+{
+  "code": 400,
+  "message": "无效的排序字段"
+}
+```
+
+**状态码**:
+- `200`: 查询成功
+- `400`: 参数错误
+- `401`: 未授权
+- `403`: 禁止访问（非管理员）
+- `500`: 服务器内部错误
+
+---
+
+### 5. 获取单个公告（管理员）
+
+获取指定公告的详细信息。
+
+**接口地址**: `/api/announcements/:id`  
+**请求方法**: `GET`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| id | number | 是 | 公告 ID |
+
+**请求示例**:
+
+```bash
+curl -X GET http://localhost:8888/api/announcements/1 \
+  -H "Authorization: Bearer <admin_token>"
+```
+
+**成功响应**:
+
+```json
+{
+  "code": 200,
+  "message": "查询成功",
+  "data": {
+    "id": 1,
+    "title": "系统维护通知",
+    "content": "<p>系统将于今晚进行维护...</p>",
+    "priority": "high",
+    "start_time": "2024-01-20T00:00:00Z",
+    "end_time": "2024-01-21T00:00:00Z",
+    "is_enabled": true,
+    "created_at": "2024-01-19T10:00:00Z",
+    "updated_at": "2024-01-19T10:00:00Z",
+    "created_by": "admin",
+    "updated_by": "admin"
+  }
+}
+```
+
+**错误响应**:
+
+```json
+{
+  "code": 404,
+  "message": "公告不存在"
+}
+```
+
+**状态码**:
+- `200`: 查询成功
+- `401`: 未授权
+- `403`: 禁止访问（非管理员）
+- `404`: 公告不存在
+- `500`: 服务器内部错误
+
+---
+
+### 6. 设置公告状态（管理员）
+
+设置公告的启用/禁用状态。
+
+**接口地址**: `/api/announcements/:id/status`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**路径参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| id | number | 是 | 公告 ID |
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| is_enabled | boolean | 是 | 是否启用 |
+
+**请求示例**:
+
+```bash
+curl -X POST http://localhost:8888/api/announcements/1/status \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "is_enabled": false
+  }'
+```
+
+**成功响应**:
+
+```json
+{
+  "code": 200,
+  "message": "状态更新成功"
+}
+```
+
+**错误响应**:
+
+```json
+{
+  "code": 404,
+  "message": "公告不存在"
+}
+```
+
+**状态码**:
+- `200`: 更新成功
+- `400`: 参数错误
+- `401`: 未授权
+- `403`: 禁止访问（非管理员）
+- `404`: 公告不存在
+- `500`: 服务器内部错误
+
+---
+
+### 7. 获取当前有效公告（用户端）
+
+获取当前有效的公告列表（普通用户和管理员均可访问）。
+
+**接口地址**: `/api/announcements/active`  
+**请求方法**: `GET`  
+**是否需要认证**: 是（需要 JWT Token，普通用户或管理员）
+
+**请求示例**:
+
+```bash
+curl -X GET http://localhost:8888/api/announcements/active \
+  -H "Authorization: Bearer <user_token>"
+```
+
+**成功响应**:
+
+```json
+{
+  "code": 200,
+  "message": "查询成功",
+  "data": [
+    {
+      "id": 1,
+      "title": "系统维护通知",
+      "content": "<p>系统将于今晚进行维护...</p>",
+      "priority": "high",
+      "start_time": "2024-01-20T00:00:00Z",
+      "end_time": "2024-01-21T00:00:00Z",
+      "created_at": "2024-01-19T10:00:00Z"
+    }
+  ]
+}
+```
+
+**说明**:
+- 此接口会检查系统设置中的公告功能开关
+- 如果功能未启用，返回空数组
+- 只返回满足以下条件的公告：
+  - 启用状态为 true
+  - 当前时间 >= 生效时间
+  - 失效时间为空 OR 当前时间 <= 失效时间
+- 按优先级（high > medium > low）和创建时间倒序排序
+
+**错误响应**:
+
+```json
+{
+  "code": 401,
+  "message": "未授权：需要登录"
+}
+```
+
+**状态码**:
+- `200`: 查询成功
+- `401`: 未授权
+- `500`: 服务器内部错误
+
+---
+
+### 8. 获取公告功能状态（公开接口）
+
+获取系统公告功能的启用/禁用状态。此接口无需认证，用于前端判断是否显示公告相关功能。
+
+**接口地址**: `/api/system-settings/announcement-enabled`  
+**请求方法**: `GET`  
+**是否需要认证**: 否（公开接口）
+
+**请求示例**:
+
+```bash
+curl -X GET http://localhost:8888/api/system-settings/announcement-enabled
+```
+
+**成功响应**:
+
+```json
+{
+  "code": 200,
+  "message": "查询成功",
+  "data": {
+    "enabled": false
+  }
+}
+```
+
+**说明**:
+- 此接口无需认证，任何人都可以访问
+- 用于前端判断是否显示公告功能入口
+- 默认值为 `false`（功能禁用）
+
+**状态码**:
+- `200`: 查询成功
+- `500`: 服务器内部错误
+
+---
+
+### 9. 设置公告功能状态（管理员）
+
+设置系统公告功能的启用/禁用状态。
+
+**接口地址**: `/api/system-settings/announcement-enabled`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| enabled | boolean | 是 | 是否启用公告功能 |
+
+**请求示例**:
+
+```bash
+curl -X POST http://localhost:8888/api/system-settings/announcement-enabled \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enabled": true
+  }'
+```
+
+**成功响应**:
+
+```json
+{
+  "code": 200,
+  "message": "设置成功"
+}
+```
+
+**状态码**:
+- `200`: 设置成功
+- `400`: 参数错误
+- `401`: 未授权
+- `403`: 禁止访问（非管理员）
+- `500`: 服务器内部错误
+
+**重要说明**:
+- 公告功能默认为禁用状态
+- 当功能禁用时，用户端不会显示任何公告
+- 管理员仍可以在功能禁用时管理公告
+
+---
+
 ## 系统设置 API
 
 系统设置 API 用于管理系统全局配置，提供细粒度的用户认证功能控制。
@@ -5167,3 +5743,564 @@ err := cache.RefreshTTL(ctx, key)
 ```
 
 ---
+
+
+---
+
+## 公告管理接口
+
+### 概述
+
+公告管理功能允许管理员创建、管理和发布系统公告，用户在登录后会自动看到最新的有效公告。
+
+**功能特性**：
+- 完整的公告 CRUD 操作
+- 系统级别的功能开关控制
+- 基于时间的自动生效/失效控制
+- 优先级管理和排序
+- 用户已读状态追踪（基于本地存储）
+- 富文本内容支持
+- 默认禁用，需手动启用
+
+---
+
+### 1. 获取公告功能启用状态
+
+获取系统公告功能的启用状态。
+
+**接口地址**: `GET /api/system-settings/announcement-enabled`
+
+**权限要求**: 无（公开接口）
+
+**请求参数**: 无
+
+**返回示例**:
+```json
+{
+  "code": 200,
+  "message": "查询成功",
+  "data": {
+    "enabled": false
+  }
+}
+```
+
+**字段说明**:
+- `enabled` (boolean): 公告功能是否启用
+
+---
+
+### 2. 设置公告功能启用状态
+
+设置系统公告功能的启用状态（管理员专用）。
+
+**接口地址**: `POST /api/system-settings/announcement-enabled`
+
+**权限要求**: 管理员
+
+**请求头**:
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**请求参数**:
+```json
+{
+  "enabled": true
+}
+```
+
+**参数说明**:
+- `enabled` (boolean, 必填): 是否启用公告功能
+
+**返回示例**:
+```json
+{
+  "code": 200,
+  "message": "设置成功"
+}
+```
+
+**错误响应**:
+- `401 Unauthorized`: 未授权访问
+- `403 Forbidden`: 非管理员用户
+- `500 Internal Server Error`: 服务器内部错误
+
+---
+
+### 3. 获取当前有效公告
+
+获取当前有效的公告列表（用户端）。
+
+**接口地址**: `GET /api/announcements/active`
+
+**权限要求**: 已登录用户
+
+**请求头**:
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**请求参数**: 无
+
+**返回示例**:
+```json
+{
+  "code": 200,
+  "message": "查询成功",
+  "data": [
+    {
+      "id": 1,
+      "title": "系统维护通知",
+      "content": "<p>系统将于今晚进行维护...</p>",
+      "priority": "high",
+      "start_time": "2024-01-20T00:00:00Z",
+      "end_time": "2024-01-21T00:00:00Z",
+      "is_enabled": true,
+      "created_at": "2024-01-19T10:00:00Z",
+      "updated_at": "2024-01-19T10:00:00Z",
+      "created_by": "admin",
+      "updated_by": ""
+    }
+  ]
+}
+```
+
+**字段说明**:
+- `id` (uint): 公告 ID
+- `title` (string): 公告标题
+- `content` (string): 公告内容（HTML 格式）
+- `priority` (string): 优先级（`high`/`medium`/`low`）
+- `start_time` (string): 生效时间（ISO 8601 格式）
+- `end_time` (string|null): 失效时间（ISO 8601 格式，null 表示永久有效）
+- `is_enabled` (boolean): 是否启用
+- `created_at` (string): 创建时间
+- `updated_at` (string): 更新时间
+- `created_by` (string): 创建者用户名
+- `updated_by` (string): 最后更新者用户名
+
+**说明**:
+- 如果公告功能未启用，返回空数组
+- 只返回满足以下条件的公告：
+  - 启用状态为 true
+  - 当前时间在生效时间和失效时间之间
+  - 按优先级（高→中→低）和创建时间（新→旧）排序
+
+**错误响应**:
+- `401 Unauthorized`: 未授权访问
+- `500 Internal Server Error`: 服务器内部错误
+
+---
+
+### 4. 创建公告
+
+创建新的系统公告（管理员专用）。
+
+**接口地址**: `POST /api/announcements`
+
+**权限要求**: 管理员
+
+**请求头**:
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**请求参数**:
+```json
+{
+  "title": "系统维护通知",
+  "content": "<p>系统将于今晚进行维护...</p>",
+  "priority": "high",
+  "start_time": "2024-01-20T00:00:00Z",
+  "end_time": "2024-01-21T00:00:00Z",
+  "is_enabled": true
+}
+```
+
+**参数说明**:
+- `title` (string, 必填): 公告标题，最大 200 字符
+- `content` (string, 必填): 公告内容，支持 HTML 格式
+- `priority` (string, 必填): 优先级，可选值：`high`、`medium`、`low`
+- `start_time` (string, 必填): 生效时间，ISO 8601 格式
+- `end_time` (string, 可选): 失效时间，ISO 8601 格式，不填表示永久有效
+- `is_enabled` (boolean, 必填): 是否启用
+
+**返回示例**:
+```json
+{
+  "code": 200,
+  "message": "创建成功",
+  "data": {
+    "id": 1,
+    "title": "系统维护通知",
+    "content": "<p>系统将于今晚进行维护...</p>",
+    "priority": "high",
+    "start_time": "2024-01-20T00:00:00Z",
+    "end_time": "2024-01-21T00:00:00Z",
+    "is_enabled": true,
+    "created_at": "2024-01-19T10:00:00Z",
+    "updated_at": "2024-01-19T10:00:00Z",
+    "created_by": "admin",
+    "updated_by": ""
+  }
+}
+```
+
+**错误响应**:
+- `400 Bad Request`: 数据验证失败
+  - 标题或内容为空
+  - 失效时间早于或等于生效时间
+  - 优先级值无效
+  - 标题超过 200 字符
+- `401 Unauthorized`: 未授权访问
+- `403 Forbidden`: 非管理员用户
+- `500 Internal Server Error`: 服务器内部错误
+
+**验证错误示例**:
+```json
+{
+  "code": 400,
+  "message": "数据验证失败",
+  "data": {
+    "error": "失效时间必须晚于生效时间",
+    "field": "end_time"
+  }
+}
+```
+
+---
+
+### 5. 更新公告
+
+更新现有的系统公告（管理员专用）。
+
+**接口地址**: `PUT /api/announcements/:id`
+
+**权限要求**: 管理员
+
+**请求头**:
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**路径参数**:
+- `id` (uint): 公告 ID
+
+**请求参数**:
+```json
+{
+  "title": "系统维护通知（更新）",
+  "content": "<p>维护时间调整...</p>",
+  "priority": "medium",
+  "start_time": "2024-01-20T02:00:00Z",
+  "end_time": "2024-01-21T02:00:00Z",
+  "is_enabled": true
+}
+```
+
+**参数说明**: 同创建公告接口
+
+**返回示例**: 同创建公告接口
+
+**错误响应**:
+- `400 Bad Request`: 数据验证失败或无效的公告 ID
+- `401 Unauthorized`: 未授权访问
+- `403 Forbidden`: 非管理员用户
+- `404 Not Found`: 公告不存在
+- `500 Internal Server Error`: 服务器内部错误
+
+---
+
+### 6. 删除公告
+
+删除指定的系统公告（管理员专用）。
+
+**接口地址**: `DELETE /api/announcements/:id`
+
+**权限要求**: 管理员
+
+**请求头**:
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**路径参数**:
+- `id` (uint): 公告 ID
+
+**请求参数**: 无
+
+**返回示例**:
+```json
+{
+  "code": 200,
+  "message": "删除成功"
+}
+```
+
+**错误响应**:
+- `400 Bad Request`: 无效的公告 ID
+- `401 Unauthorized`: 未授权访问
+- `403 Forbidden`: 非管理员用户
+- `404 Not Found`: 公告不存在
+- `500 Internal Server Error`: 服务器内部错误
+
+---
+
+### 7. 获取公告列表
+
+获取所有公告的列表（管理员专用）。
+
+**接口地址**: `GET /api/announcements`
+
+**权限要求**: 管理员
+
+**请求头**:
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**查询参数**:
+- `page` (int, 可选): 页码，默认 1，最小 1
+- `page_size` (int, 可选): 每页数量，默认 20，范围 1-100
+- `sort_by` (string, 可选): 排序字段，可选值：`created_at`、`priority`、`start_time`，默认 `created_at`
+- `sort_order` (string, 可选): 排序方向，可选值：`asc`、`desc`，默认 `desc`
+
+**请求示例**:
+```
+GET /api/announcements?page=1&page_size=20&sort_by=created_at&sort_order=desc
+```
+
+**返回示例**:
+```json
+{
+  "code": 200,
+  "message": "查询成功",
+  "data": {
+    "announcements": [
+      {
+        "id": 1,
+        "title": "系统维护通知",
+        "content": "<p>系统将于今晚进行维护...</p>",
+        "priority": "high",
+        "start_time": "2024-01-20T00:00:00Z",
+        "end_time": "2024-01-21T00:00:00Z",
+        "is_enabled": true,
+        "created_at": "2024-01-19T10:00:00Z",
+        "updated_at": "2024-01-19T10:00:00Z",
+        "created_by": "admin",
+        "updated_by": ""
+      }
+    ],
+    "total": 10,
+    "page": 1,
+    "page_size": 20,
+    "total_pages": 1
+  }
+}
+```
+
+**字段说明**:
+- `announcements` (array): 公告列表
+- `total` (int64): 总记录数
+- `page` (int): 当前页码
+- `page_size` (int): 每页数量
+- `total_pages` (int): 总页数
+
+**错误响应**:
+- `400 Bad Request`: 请求参数错误
+- `401 Unauthorized`: 未授权访问
+- `403 Forbidden`: 非管理员用户
+- `500 Internal Server Error`: 服务器内部错误
+
+---
+
+### 8. 获取单个公告
+
+获取指定公告的详细信息（管理员专用）。
+
+**接口地址**: `GET /api/announcements/:id`
+
+**权限要求**: 管理员
+
+**请求头**:
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**路径参数**:
+- `id` (uint): 公告 ID
+
+**请求参数**: 无
+
+**返回示例**:
+```json
+{
+  "code": 200,
+  "message": "查询成功",
+  "data": {
+    "id": 1,
+    "title": "系统维护通知",
+    "content": "<p>系统将于今晚进行维护...</p>",
+    "priority": "high",
+    "start_time": "2024-01-20T00:00:00Z",
+    "end_time": "2024-01-21T00:00:00Z",
+    "is_enabled": true,
+    "created_at": "2024-01-19T10:00:00Z",
+    "updated_at": "2024-01-19T10:00:00Z",
+    "created_by": "admin",
+    "updated_by": ""
+  }
+}
+```
+
+**错误响应**:
+- `400 Bad Request`: 无效的公告 ID
+- `401 Unauthorized`: 未授权访问
+- `403 Forbidden`: 非管理员用户
+- `404 Not Found`: 公告不存在
+- `500 Internal Server Error`: 服务器内部错误
+
+---
+
+### 9. 设置公告状态
+
+设置公告的启用/禁用状态（管理员专用）。
+
+**接口地址**: `POST /api/announcements/:id/status`
+
+**权限要求**: 管理员
+
+**请求头**:
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**路径参数**:
+- `id` (uint): 公告 ID
+
+**请求参数**:
+```json
+{
+  "is_enabled": false
+}
+```
+
+**参数说明**:
+- `is_enabled` (boolean, 必填): 是否启用
+
+**返回示例**:
+```json
+{
+  "code": 200,
+  "message": "状态更新成功"
+}
+```
+
+**错误响应**:
+- `400 Bad Request`: 无效的公告 ID 或请求参数错误
+- `401 Unauthorized`: 未授权访问
+- `403 Forbidden`: 非管理员用户
+- `404 Not Found`: 公告不存在
+- `500 Internal Server Error`: 服务器内部错误
+
+---
+
+### 公告接口使用流程
+
+#### 管理员操作流程
+
+1. **启用公告功能**
+   ```bash
+   POST /api/system-settings/announcement-enabled
+   { "enabled": true }
+   ```
+
+2. **创建公告**
+   ```bash
+   POST /api/announcements
+   {
+     "title": "系统维护通知",
+     "content": "<p>系统将于今晚进行维护...</p>",
+     "priority": "high",
+     "start_time": "2024-01-20T00:00:00Z",
+     "end_time": "2024-01-21T00:00:00Z",
+     "is_enabled": true
+   }
+   ```
+
+3. **查看公告列表**
+   ```bash
+   GET /api/announcements?page=1&page_size=20
+   ```
+
+4. **更新公告**
+   ```bash
+   PUT /api/announcements/1
+   {
+     "title": "系统维护通知（更新）",
+     ...
+   }
+   ```
+
+5. **禁用公告**
+   ```bash
+   POST /api/announcements/1/status
+   { "is_enabled": false }
+   ```
+
+6. **删除公告**
+   ```bash
+   DELETE /api/announcements/1
+   ```
+
+#### 用户操作流程
+
+1. **检查功能是否启用**
+   ```bash
+   GET /api/system-settings/announcement-enabled
+   ```
+
+2. **获取有效公告**
+   ```bash
+   GET /api/announcements/active
+   ```
+
+3. **前端处理**
+   - 将已读公告 ID 存储到 localStorage
+   - 过滤掉已读公告
+   - 显示公告弹窗
+
+---
+
+### 注意事项
+
+1. **权限控制**
+   - 所有管理接口需要管理员权限
+   - 用户端接口需要登录用户权限
+   - 功能开关查询接口为公开接口
+
+2. **时间格式**
+   - 所有时间字段使用 ISO 8601 格式（`2024-01-20T00:00:00Z`）
+   - 时区统一使用 UTC
+
+3. **内容安全**
+   - 公告内容支持 HTML 格式
+   - 前端需要进行 XSS 防护（使用 DOMPurify）
+
+4. **功能开关**
+   - 默认状态为禁用
+   - 功能禁用时，用户端接口返回空数组
+   - 管理端接口不受功能开关影响
+
+5. **已读状态**
+   - 已读状态存储在前端 localStorage
+   - 格式：`{ "1": true, "2": true }`
+   - key 为公告 ID，value 为 true 表示已读
+
+6. **优先级排序**
+   - 高优先级（high）> 中优先级（medium）> 低优先级（low）
+   - 相同优先级按创建时间倒序排序
+
+7. **有效性判断**
+   - 公告有效条件：启用状态为 true + 当前时间在生效时间和失效时间之间
+   - 失效时间为 null 表示永久有效

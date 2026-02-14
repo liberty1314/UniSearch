@@ -246,8 +246,12 @@ func startServer() {
 	systemSettingsService := service.NewSystemSettingsService(database.GetDB())
 	fmt.Println("SystemSettings 服务已启动（系统设置功能已启用）")
 
+	// 初始化 Announcement 服务（公告服务）
+	announcementService := service.NewAnnouncementService(database.GetDB())
+	fmt.Println("Announcement 服务已启动（公告功能已启用）")
+
 	// 设置路由
-	router := api.SetupRouter(searchService, apiKeyService, authService, refreshTokenService, userService, systemSettingsService)
+	router := api.SetupRouter(searchService, apiKeyService, authService, refreshTokenService, userService, systemSettingsService, announcementService)
 
 	// 获取端口配置
 	port := config.AppConfig.Port

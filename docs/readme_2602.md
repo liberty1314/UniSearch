@@ -290,3 +290,82 @@ pnpm-lock.yaml (已删除)
 - frontend/src/components/admin/BatchActionsBar.tsx
 - frontend/src/components/admin/BatchExportDialog.tsx (新增)
 - frontend/src/pages/Admin.tsx
+
+
+---
+
+## 2026-02-14 22:34:17
+
+**Commit**: `feat(announcement): 新增公告管理功能并完善前后端交互`
+
+**详细说明**:
+
+实现完整的公告管理系统，包括后端 CRUD 接口、数据库迁移、前端管理界面和用户端展示组件。支持公告优先级、生效时间控制、HTML 内容渲染和已读状态本地存储。新增系统设置中的公告功能开关，优化用户体验。
+
+**主要功能**:
+
+1. 后端实现:
+   - 新增 announcement_handler.go，提供公告的增删改查接口
+   - 新增 announcement_service.go，实现公告业务逻辑（包括有效公告筛选、优先级排序）
+   - 新增 announcement.go 数据模型，支持优先级、生效时间、失效时间、启用状态等字段
+   - 在 system_settings.go 中新增公告功能开关（announcement_enabled）
+   - 数据库迁移脚本自动创建 announcements 表和系统设置默认值
+   - 路由注册公告管理接口（需管理员权限）和用户端接口（需登录认证）
+
+2. 前端管理界面:
+   - 新增 AnnouncementManagement.tsx，提供公告列表、创建、编辑、删除功能
+   - 支持公告优先级设置（高/中/低）
+   - 支持生效时间和失效时间配置（失效时间可选，留空表示永久有效）
+   - 支持 HTML 内容编辑和预览
+   - 支持启用/禁用公告状态切换
+   - 在管理侧边栏新增"公告管理"菜单项
+
+3. 前端用户端展示:
+   - 新增 AnnouncementProvider.tsx，全局管理公告状态和已读记录
+   - 新增 AnnouncementDialog.tsx，弹窗展示有效公告
+   - 新增 AnnouncementPanel.tsx，导航栏公告面板（支持点击外部关闭、ESC 键关闭）
+   - 在 Navbar 中新增公告图标和未读数量徽章
+   - 支持"不再提示"功能，已读状态存储在 localStorage
+   - 支持 HTML 内容渲染（使用 dangerouslySetInnerHTML）
+
+4. 状态管理:
+   - 新增 announcementStore.ts，使用 Zustand 管理公告列表、已读状态、功能开关
+   - 新增 announcementService.ts，封装公告相关 API 调用
+   - 在 api.ts 中新增公告相关类型定义（Announcement、CreateAnnouncementRequest 等）
+
+5. 工具函数和 Hooks:
+   - 新增 useClickOutside.ts，检测点击外部区域
+   - 新增 useEscapeKey.ts，检测 ESC 键按下
+   - 新增 text.ts，提供文本处理工具函数（移除 HTML 标签、截断文本、高亮关键词）
+
+6. 样式优化:
+   - 在 index.css 中新增 userMenuFadeIn 动画，优化公告面板的展开效果
+
+**涉及文件**:
+- backend/api/announcement_handler.go (新增)
+- backend/api/router.go (修改)
+- backend/database/migration.go (修改)
+- backend/main.go (修改)
+- backend/model/announcement.go (新增)
+- backend/model/system_settings.go (修改)
+- backend/service/announcement_service.go (新增)
+- backend/service/system_settings_service.go (修改)
+- docs/api_reference.md (修改)
+- frontend/package.json (修改)
+- frontend/pnpm-lock.yaml (修改)
+- frontend/src/App.tsx (修改)
+- frontend/src/components/AnnouncementDialog.tsx (新增)
+- frontend/src/components/AnnouncementPanel.tsx (新增)
+- frontend/src/components/AnnouncementProvider.refactored.example.tsx (新增)
+- frontend/src/components/AnnouncementProvider.tsx (新增)
+- frontend/src/components/Navbar.tsx (修改)
+- frontend/src/components/admin/AnnouncementManagement.tsx (新增)
+- frontend/src/components/admin/Sidebar.tsx (修改)
+- frontend/src/hooks/useClickOutside.ts (新增)
+- frontend/src/hooks/useEscapeKey.ts (新增)
+- frontend/src/index.css (修改)
+- frontend/src/pages/Admin.tsx (修改)
+- frontend/src/services/announcementService.ts (新增)
+- frontend/src/stores/announcementStore.ts (新增)
+- frontend/src/types/api.ts (修改)
+- frontend/src/utils/text.ts (新增)

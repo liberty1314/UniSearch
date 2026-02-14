@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import Navbar from '@/components/Navbar';
+import { AnnouncementProvider } from '@/components/AnnouncementProvider';
 import Home from '@/pages/Home';
 import UserAuth from '@/pages/UserAuth';
 import AdminLogin from '@/pages/AdminLogin';
@@ -58,6 +59,34 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   return <>{children}</>;
 };
 
+/**
+ * 访客路由保护组件
+ * 已登录用户访问登录页时自动重定向到首页
+ */
+const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated } = useAuthStore();
+
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+/**
+ * 管理员访客路由保护组件
+ * 已登录管理员访问管理员登录页时自动重定向到后台
+ */
+const AdminGuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAdmin } = useAuthStore();
+
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 const App: React.FC = () => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
@@ -103,6 +132,9 @@ const App: React.FC = () => {
         <div className="bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
           <Navbar />
 
+          {/* 系统公告提供者 - 用户登录后自动检查并显示公告 */}
+          <AnnouncementProvider />
+
           <main>
             <Routes>
               <Route path="/" element={
@@ -110,9 +142,9 @@ const App: React.FC = () => {
                   <Home />
                 </ProtectedRoute>
               } />
-              <Route path="/login" element={<UserAuth />} />
+              <Route path="/login" element={<GuestRoute><UserAuth /></GuestRoute>} />
               <Route path="/auth" element={<Navigate to="/login" replace />} />
-              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin/login" element={<AdminGuestRoute><AdminLogin /></AdminGuestRoute>} />
               <Route
                 path="/admin"
                 element={
@@ -129,7 +161,7 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
-              
+
               {/* 404 页面 */}
               <Route path="*" element={
                 <div className="min-h-screen flex items-center justify-center pt-16">

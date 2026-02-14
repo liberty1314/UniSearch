@@ -36,6 +36,7 @@ import { BatchActionsBar } from '@/components/admin/BatchActionsBar';
 import { StatsCard } from '@/components/admin/StatsCard';
 import { SystemInfoView } from '@/components/admin/SystemInfoView';
 import { SystemSettingsView } from '@/components/admin/SystemSettingsView';
+import { AnnouncementManagement } from '@/components/admin/AnnouncementManagement';
 import { TableFilterDropdown } from '@/components/admin/TableFilterDropdown';
 import { Plus, RefreshCw, Key, AlertCircle, CheckCircle2, Activity, Search, Filter, X, Clock, Users, Shield, UserCheck, UserX } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -1303,6 +1304,9 @@ const Admin: React.FC = () => {
 
                     {/* 系统设置视图 */}
                     {currentView === 'system-settings' && <SystemSettingsView />}
+
+                    {/* 公告管理视图 */}
+                    {currentView === 'announcement-management' && <AnnouncementManagement />}
                 </div>
             </div>
 
