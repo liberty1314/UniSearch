@@ -96,12 +96,12 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
         'w-full text-left p-4 rounded-xl transition-all duration-200',
         'border hover:shadow-md group relative overflow-hidden',
         isUnread
-          ? 'bg-gradient-to-br from-blue-50/80 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/10 border-blue-100 dark:border-blue-800'
+          ? 'bg-gradient-to-br from-nebula-50/80 to-cosmic-50/50 dark:from-nebula-900/20 dark:to-cosmic-900/10 border-nebula-100 dark:border-nebula-800'
           : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
       )}
     >
       {isUnread && (
-        <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-blue-500/10 to-transparent -mr-8 -mt-8 rounded-full blur-xl pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-nebula-500/10 to-transparent -mr-8 -mt-8 rounded-full blur-xl pointer-events-none"></div>
       )}
       <div className="flex items-start justify-between gap-3 relative z-10">
         <div className="flex-1 min-w-0">
@@ -115,7 +115,7 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
               {announcement.title}
             </h3>
             {isUnread && (
-              <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
+              <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-nebula-100 text-nebula-600 dark:bg-nebula-900/40 dark:text-nebula-400">
                 NEW
               </span>
             )}
@@ -135,7 +135,7 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
         <ChevronRight className={cn(
           'w-4 h-4 flex-shrink-0 transition-all duration-200 group-hover:translate-x-1 mt-1',
           isUnread
-            ? 'text-blue-500'
+            ? 'text-nebula-500'
             : 'text-gray-300 dark:text-gray-600 group-hover:text-gray-400'
         )} />
       </div>
@@ -173,13 +173,13 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: 300, scale: 0.95 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="relative w-full max-w-md max-h-[calc(100vh-6rem)] bg-white/95 dark:bg-gray-800/95 backdrop-blur-apple rounded-2xl shadow-card border border-gray-200/50 dark:border-gray-700/50 overflow-hidden"
+              className="relative w-full max-w-md max-h-[calc(100vh-6rem)] glass-panel rounded-2xl shadow-nebula border border-nebula-100 dark:border-nebula-800 overflow-hidden"
             >
               {/* 头部 */}
               <div className="sticky top-0 z-10 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 px-6 py-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-nebula-500 to-cosmic-500 flex items-center justify-center shadow-lg">
                       <Bell className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -204,7 +204,7 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
               <div className="overflow-y-auto max-h-[calc(100vh-12rem)] p-4">
                 {isLoading ? (
                   <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-nebula-500 border-t-transparent"></div>
                   </div>
                 ) : activeAnnouncements.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -216,8 +216,8 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
                     {/* 未读公告区域 */}
                     {unreadList.length > 0 && (
                       <div className="space-y-3">
-                        <h3 className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider px-1 flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                        <h3 className="text-xs font-semibold text-nebula-600 dark:text-nebula-400 uppercase tracking-wider px-1 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-nebula-500 animate-pulse"></span>
                           未读消息 ({unreadList.length})
                         </h3>
                         {unreadList.map((announcement, index) => renderAnnouncementCard(announcement, index, true))}

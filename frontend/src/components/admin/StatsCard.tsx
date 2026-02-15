@@ -11,15 +11,20 @@ interface StatsCardProps {
         value: string;
         isPositive: boolean;
     };
-    color?: 'blue' | 'emerald' | 'amber' | 'purple';
+    color?: 'blue' | 'emerald' | 'amber' | 'purple' | 'nebula';
     index?: number;
 }
 
 const colorClasses = {
-    blue: {
-        bg: 'bg-blue-50 dark:bg-blue-950/20',
-        icon: 'text-blue-600 dark:text-blue-400',
-        iconBg: 'bg-blue-100 dark:bg-blue-900/30',
+    nebula: {
+        bg: 'bg-nebula-50 dark:bg-nebula-950/20',
+        icon: 'text-nebula-600 dark:text-nebula-400',
+        iconBg: 'bg-nebula-100 dark:bg-nebula-900/30',
+    },
+    blue: { // Backwards compatibility / Alias to nebula
+        bg: 'bg-nebula-50 dark:bg-nebula-950/20',
+        icon: 'text-nebula-600 dark:text-nebula-400',
+        iconBg: 'bg-nebula-100 dark:bg-nebula-900/30',
     },
     emerald: {
         bg: 'bg-emerald-50 dark:bg-emerald-950/20',
@@ -43,7 +48,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
     value,
     icon: Icon,
     trend,
-    color = 'blue',
+    color = 'nebula',
     index = 0,
 }) => {
     const colors = colorClasses[color];

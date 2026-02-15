@@ -205,8 +205,8 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   return (
     <div className={cn('relative w-full max-w-2xl mx-auto group', className)}>
       {/* 搜索框容器 */}
-      <div className="relative glass-card-3d rounded-2xl group-focus-within:border-apple-blue/60 group-focus-within:focus-glow-apple hover-lift">
-        <svg className="absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-apple-blue w-6 h-6 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="relative glass-panel rounded-2xl group-focus-within:border-nebula-500/60 group-focus-within:focus-glow-nebula hover-lift">
+        <svg className="absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-nebula-500 w-6 h-6 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
         <input
@@ -278,7 +278,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
                   type="button"
                   onClick={() => handleSelectHistory(keyword)}
                   /* 使用命名分组 group/chip，避免被外层 group 影响 */
-                  className="relative group/chip inline-flex items-center rounded-2xl px-4 py-2 bg-white/80 dark:bg-gray-700/70 border border-gray-200/60 dark:border-gray-700/60 text-sm text-gray-800 dark:text-gray-200 shadow-sm hover:shadow-md transition-all whitespace-nowrap hover:bg-gradient-to-r hover:from-apple-blue/10 hover:to-purple-500/10"
+                  className="relative group/chip inline-flex items-center rounded-2xl px-4 py-2 bg-white/80 dark:bg-gray-700/70 border border-gray-200/60 dark:border-gray-700/60 text-sm text-gray-800 dark:text-gray-200 shadow-sm hover:shadow-md transition-all whitespace-nowrap hover:bg-gradient-to-r hover:from-nebula-500/10 hover:to-cosmic-500/10"
                   style={{ animationDelay: `${index * 40}ms` }}
                 >
                   {/* 悬停出现的左上角删除按钮 */}

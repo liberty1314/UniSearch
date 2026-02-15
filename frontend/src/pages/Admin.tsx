@@ -773,7 +773,7 @@ const Admin: React.FC = () => {
     };
 
     return (
-        <div className="fixed inset-0 top-16 flex w-full bg-gradient-to-br from-gray-50 via-gray-50 to-blue-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-blue-950/20">
+        <div className="fixed inset-0 top-16 flex w-full bg-gradient-to-br from-gray-50 via-gray-50 to-nebula-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-nebula-950/20">
             {/* 侧边栏占位容器 - 桌面端 */}
             <div className="hidden lg:block flex-shrink-0 w-[288px]" />
 
@@ -800,7 +800,7 @@ const Admin: React.FC = () => {
                                     title="总密钥数"
                                     value={apiKeys.length}
                                     icon={Key}
-                                    color="blue"
+                                    color="nebula"
                                     index={0}
                                 />
                                 <StatsCard
@@ -1067,7 +1067,7 @@ const Admin: React.FC = () => {
                                     title="总用户数"
                                     value={getUserStats().total}
                                     icon={Users}
-                                    color="blue"
+                                    color="nebula"
                                     index={0}
                                 />
                                 <StatsCard

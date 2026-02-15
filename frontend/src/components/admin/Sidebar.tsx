@@ -122,12 +122,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         transition={{ duration: 0.3 }}
                         className="
                             w-64 h-[calc(100vh-6.5rem)]
-                            bg-white/95 dark:bg-gray-800/95
-                            backdrop-blur-xl
+                            glass-panel
                             rounded-3xl
-                            border border-gray-100 dark:border-gray-700/50
-                            shadow-[0_8px_30px_rgb(0,0,0,0.04)]
-                            dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)]
+                            border border-white/20 dark:border-white/10
+                            shadow-2xl
                             flex flex-col
                             overflow-hidden
                             sticky top-20
@@ -147,7 +145,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     className="w-11 h-11 transition-transform duration-300"
                                 />
                                 {/* Logo 悬停时的光晕效果 */}
-                                <div className="absolute inset-0 bg-blue-500/20 rounded-full opacity-0 hover:opacity-100 transition-opacity duration-300 blur-sm scale-110" />
+                                <div className="absolute inset-0 bg-nebula-500/20 rounded-full opacity-0 hover:opacity-100 transition-opacity duration-300 blur-sm scale-110" />
                             </motion.div>
                             <div>
                                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">
@@ -160,7 +158,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         </div>
 
                         {/* 分隔线 */}
-                        <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
+                        <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/10 dark:via-white/5 to-transparent" />
 
                         {/* 导航列表 */}
                         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto relative">
@@ -176,7 +174,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             transition-colors duration-300
                                             ${isActive
                                                 ? 'text-white font-medium'
-                                                : 'text-gray-700 dark:text-gray-300'
+                                                : 'text-gray-600 dark:text-gray-400 hover:text-nebula-600 dark:hover:text-nebula-300'
                                             }
                                         `}
                                         initial={false}
@@ -192,7 +190,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         {isActive && (
                                             <motion.div
                                                 layoutId="activeTab"
-                                                className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg shadow-blue-500/30"
+                                                className="absolute inset-0 bg-gradient-to-r from-nebula-600 to-cosmic-500 rounded-xl shadow-nebula"
                                                 transition={{
                                                     type: "spring",
                                                     stiffness: 350,
@@ -204,7 +202,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         {/* 非激活状态悬停背景 */}
                                         {!isActive && (
                                             <motion.div
-                                                className="absolute inset-0 bg-gray-100/80 dark:bg-gray-700/50 rounded-xl"
+                                                className="absolute inset-0 bg-white/50 dark:bg-white/5 rounded-xl border border-white/20 dark:border-white/10"
                                                 initial={{ opacity: 0 }}
                                                 whileHover={{ opacity: 1 }}
                                                 transition={{ duration: 0.2 }}
@@ -263,14 +261,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className="
                         lg:hidden
                         w-64 h-full
-                        bg-white dark:bg-gray-800
-                        border-r border-gray-200 dark:border-gray-700
+                        bg-white dark:bg-gray-900
+                        glass-panel
+                        border-r border-white/20 dark:border-white/10
                         flex flex-col
                         rounded-r-3xl shadow-2xl
                     "
                 >
                     {/* 侧边栏头部 */}
-                    <div className="flex-shrink-0 flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex-shrink-0 flex items-center justify-between p-6 border-b border-white/10 dark:border-white/5">
                         <div className="flex items-center gap-3">
                             {/* Logo 图标 */}
                             <div className="relative">
@@ -315,7 +314,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         transition-colors duration-300
                                         ${isActive
                                             ? 'text-white font-medium'
-                                            : 'text-gray-700 dark:text-gray-300'
+                                            : 'text-gray-600 dark:text-gray-400 hover:text-nebula-600 dark:hover:text-nebula-300'
                                         }
                                     `}
                                     initial={false}
@@ -330,7 +329,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     {isActive && (
                                         <motion.div
                                             layoutId="mobileActiveTab"
-                                            className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg shadow-blue-500/30"
+                                            className="absolute inset-0 bg-gradient-to-r from-nebula-600 to-cosmic-500 rounded-xl shadow-nebula"
                                             transition={{
                                                 type: "spring",
                                                 stiffness: 350,
@@ -341,7 +340,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                                     {/* 非激活状态悬停背景 */}
                                     {!isActive && (
-                                        <div className="absolute inset-0 bg-gray-100 dark:bg-gray-700/50 rounded-xl opacity-0 hover:opacity-100 transition-opacity duration-200" />
+                                        <div className="absolute inset-0 bg-white/50 dark:bg-white/5 rounded-xl opacity-0 hover:opacity-100 transition-opacity duration-200 border border-white/20 dark:border-white/10" />
                                     )}
 
                                     {/* 图标 */}
@@ -379,7 +378,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </nav>
 
                     {/* 侧边栏底部信息 */}
-                    <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex-shrink-0 p-4 border-t border-white/10 dark:border-white/5">
                         <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
                             <p>UniSearch v1.0.0</p>
                             <p className="mt-1">© 2026 All Rights Reserved</p>

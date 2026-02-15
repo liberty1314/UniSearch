@@ -45,6 +45,32 @@ export default {
 					'orange-light': '#FFB340',
 					'orange-dark': '#E6850E'
 				},
+				nebula: {
+					50: '#f5f3ff',
+					100: '#ede9fe',
+					200: '#ddd6fe',
+					300: '#c4b5fd',
+					400: '#a78bfa',
+					500: '#8b5cf6',
+					600: '#7c3aed',
+					700: '#6d28d9',
+					800: '#5b21b6',
+					900: '#4c1d95',
+					950: '#2e1065',
+				},
+				cosmic: {
+					50: '#f0f9ff',
+					100: '#e0f2fe',
+					200: '#bae6fd',
+					300: '#7dd3fc',
+					400: '#38bdf8',
+					500: '#0ea5e9',
+					600: '#0284c7',
+					700: '#0369a1',
+					800: '#075985',
+					900: '#0c4a6e',
+					950: '#082f49',
+				},
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				card: {
@@ -102,8 +128,9 @@ export default {
 			},
 			borderRadius: {
 				apple: '8px',
-				card: '12px',
-				large: '16px',
+				card: '16px',
+				large: '24px',
+				pill: '9999px',
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
@@ -117,19 +144,27 @@ export default {
 				'button-active': '0 1px 4px rgba(0, 122, 255, 0.5)',
 				'button-orange': '0 2px 8px rgba(255, 149, 0, 0.3)',
 				'button-orange-hover': '0 4px 16px rgba(255, 149, 0, 0.4)',
-				'button-orange-active': '0 1px 4px rgba(255, 149, 0, 0.5)'
+				'button-orange-active': '0 1px 4px rgba(255, 149, 0, 0.5)',
+				'nebula': '0 0 15px rgba(139, 92, 246, 0.3)',
+				'nebula-hover': '0 0 25px rgba(139, 92, 246, 0.5)',
+				'cosmic': '0 0 15px rgba(14, 165, 233, 0.3)',
+				'cosmic-hover': '0 0 25px rgba(14, 165, 233, 0.5)',
+				'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.37)'
 			},
 			animation: {
-				'fade-in': 'fadeIn 0.3s ease-in-out',
-				'slide-up': 'slideUp 0.3s ease-out',
-				'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+				'fade-in': 'fadeIn 0.5s ease-out forwards',
+				'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+				'slide-up': 'slideUp 0.5s ease-out forwards',
+				'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
 				'button-press': 'buttonPress 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
 				'button-release': 'buttonRelease 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
 				'loading-pulse': 'loadingPulse 1.5s ease-in-out infinite',
 				'text-fade': 'textFade 0.2s ease-in-out',
 				'icon-rotate': 'iconRotate 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
 				'scale-bounce': 'scaleBounce 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
-				ripple: 'ripple 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+				ripple: 'ripple 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+				'float': 'float 3s ease-in-out infinite',
+				'glow': 'glow 2s ease-in-out infinite'
 			},
 			keyframes: {
 				fadeIn: {
@@ -228,6 +263,18 @@ export default {
 						transform: 'scale(4)',
 						opacity: '0'
 					}
+				},
+				float: {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-10px)' },
+				},
+				glow: {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.6' },
+				},
+				fadeInUp: {
+					'0%': { opacity: '0', transform: 'translateY(20px)' },
+					'100%': { opacity: '1', transform: 'translateY(0)' },
 				}
 			},
 			transitionTimingFunction: {

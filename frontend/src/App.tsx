@@ -4,12 +4,15 @@ import { Toaster } from 'sonner';
 import Navbar from '@/components/Navbar';
 import { AnnouncementProvider } from '@/components/AnnouncementProvider';
 import Home from '@/pages/Home';
-import UserAuth from '@/pages/UserAuth';
+import LoginPage from '@/pages/LoginPage';
+import RegisterPage from '@/pages/RegisterPage';
+import ApiKeyLoginPage from '@/pages/ApiKeyLoginPage';
 import AdminLogin from '@/pages/AdminLogin';
 import Admin from '@/pages/Admin';
 import UserApiKeySettings from '@/pages/UserApiKeySettings';
 import { useAuthStore } from '@/stores/authStore';
 import PageLoader from '@/components/PageLoader';
+import PageTransition from '@/components/PageTransition';
 import { useAutoRefreshToken } from '@/hooks/useAutoRefreshToken';
 
 // 常量配置
@@ -135,60 +138,65 @@ const App: React.FC = () => {
           {/* 系统公告提供者 - 用户登录后自动检查并显示公告 */}
           <AnnouncementProvider />
 
-          <main>
-            <Routes>
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              } />
-              <Route path="/login" element={<GuestRoute><UserAuth /></GuestRoute>} />
-              <Route path="/auth" element={<Navigate to="/login" replace />} />
-              <Route path="/admin/login" element={<AdminGuestRoute><AdminLogin /></AdminGuestRoute>} />
-              <Route
-                path="/admin"
-                element={
-                  <AdminRoute>
-                    <Admin />
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="/settings/apikey"
-                element={
+          <main className="relative min-h-screen">
+            <PageTransition>
+              <Routes>
+                <Route path="/" element={
                   <ProtectedRoute>
-                    <UserApiKeySettings />
+                    <Home />
                   </ProtectedRoute>
-                }
-              />
+                } />
+                <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+                <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
+                <Route path="/auth/apikey" element={<GuestRoute><ApiKeyLoginPage /></GuestRoute>} />
+                <Route path="/auth" element={<Navigate to="/login" replace />} />
+                <Route path="/admin/login" element={<AdminGuestRoute><AdminLogin /></AdminGuestRoute>} />
+                <Route
+                  path="/admin"
+                  element={
+                    <AdminRoute>
+                      <Admin />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/settings/apikey"
+                  element={
+                    <ProtectedRoute>
+                      <UserApiKeySettings />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* 404 页面 */}
-              <Route path="*" element={
-                <div className="min-h-screen flex items-center justify-center pt-16">
-                  <div className="text-center">
-                    <h1 className="text-6xl font-bold text-gray-300 dark:text-gray-600 mb-4">404</h1>
-                    <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-4">
-                      页面未找到
-                    </h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-8">
-                      抱歉，您访问的页面不存在。
-                    </p>
-                    <Link
-                      to="/"
-                      className="inline-flex items-center px-6 py-3 bg-apple-blue text-white rounded-lg hover:bg-apple-blue/90 transition-colors"
-                    >
-                      返回首页
-                    </Link>
+                {/* 404 页面 */}
+                <Route path="*" element={
+                  <div className="min-h-screen flex items-center justify-center pt-16">
+                    <div className="text-center">
+                      <h1 className="text-6xl font-bold text-gray-300 dark:text-gray-600 mb-4">404</h1>
+                      <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-4">
+                        页面未找到
+                      </h2>
+                      <p className="text-gray-500 dark:text-gray-400 mb-8">
+                        抱歉，您访问的页面不存在。
+                      </p>
+                      <Link
+                        to="/"
+                        className="inline-flex items-center px-6 py-3 bg-apple-blue text-white rounded-lg hover:bg-apple-blue/90 transition-colors"
+                      >
+                        返回首页
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              } />
-            </Routes>
+                } />
+
+              </Routes>
+            </PageTransition>
           </main>
 
           {/* Toast 通知 */}
           <Toaster {...TOAST_CONFIG} />
         </div>
-      </Router>
+      </Router >
     </>
   );
 };

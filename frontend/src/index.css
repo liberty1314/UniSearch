@@ -26,10 +26,21 @@
   --apple-gray-800: #1F2937;
   --apple-gray-900: #111827;
 
+  /* Nebula 风格颜色变量 */
+  --nebula-bg-light: #F0F2F5;
+  /* 更软的浅灰背景 */
+  --nebula-bg-dark: #0F172A;
+  /* 深蓝黑背景 */
+  --nebula-primary: #8B5CF6;
+  /* 紫色主色 */
+  --nebula-secondary: #0EA5E9;
+  /* 蓝色辅色 */
+
   /* 搜索状态颜色变量 */
-  --search-orange: #FF9500;
-  --search-orange-light: #FFB340;
-  --search-orange-dark: #E6850E;
+  --search-orange: #F97316;
+  /* 更鲜艳的橙色 */
+  --search-orange-light: #FB923C;
+  --search-orange-dark: #EA580C;
 
   /* Safe Area Variables */
   --safe-area-inset-top: env(safe-area-inset-top, 0px);
@@ -68,8 +79,8 @@ body {
 }
 
 .dark body {
-  background-color: #111827;
-  color: #F9FAFB;
+  background-color: var(--nebula-bg-dark);
+  color: #F8FAFC;
 }
 
 /* 滚动条样式 */
@@ -102,12 +113,14 @@ body {
 
 /* 选择文本样式 */
 ::selection {
-  background-color: rgba(0, 122, 255, 0.2);
+  background-color: rgba(139, 92, 246, 0.3);
+  /* Nebula Purple */
   color: inherit;
 }
 
 .dark ::selection {
-  background-color: rgba(0, 122, 255, 0.3);
+  background-color: rgba(14, 165, 233, 0.4);
+  /* Cosmic Blue */
 }
 
 /* 焦点样式 */
@@ -117,34 +130,34 @@ body {
 
 /* 按钮基础样式 */
 .btn-primary {
-  @apply bg-apple-blue text-white hover:bg-apple-blue/90 focus:bg-apple-blue/90 active:bg-apple-blue/80 transition-colors duration-200;
+  @apply bg-gradient-to-r from-nebula-600 to-cosmic-500 text-white shadow-nebula hover:shadow-nebula-hover hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 rounded-lg font-medium;
 }
 
 .btn-secondary {
-  @apply bg-gray-100 text-gray-900 hover:bg-gray-200 focus:bg-gray-200 active:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 dark:focus:bg-gray-700 dark:active:bg-gray-600 transition-colors duration-200;
+  @apply bg-white/10 backdrop-blur-md border border-white/20 text-gray-800 dark:text-gray-100 hover:bg-white/20 dark:hover:bg-white/10 active:bg-white/30 transition-all duration-200 rounded-lg;
 }
 
 /* 搜索按钮样式 */
 .btn-search {
-  @apply bg-search-orange text-white hover:bg-search-orange/90 focus:bg-search-orange/90 active:bg-search-orange/80 transition-colors duration-200;
+  @apply bg-gradient-to-r from-search-orange to-red-500 text-white shadow-search hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 rounded-lg font-bold;
 }
 
 .btn-search-loading {
-  @apply bg-search-orange text-white cursor-wait transition-all duration-300;
+  @apply bg-gray-400 text-white cursor-wait transition-all duration-300 rounded-lg;
 }
 
 /* 卡片样式 */
 .card {
-  @apply bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-card shadow-card transition-all duration-200;
+  @apply bg-white/80 dark:bg-gray-900/60 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-card shadow-card transition-all duration-300;
 }
 
 .card-hover {
-  @apply hover:shadow-hover hover:-translate-y-0.5 transition-all duration-200;
+  @apply hover:border-nebula-400/50 hover:shadow-nebula-hover hover:-translate-y-1 transition-all duration-300;
 }
 
 /* 输入框样式 */
 .input {
-  @apply bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-apple-blue dark:focus:border-apple-blue focus:ring-1 focus:ring-apple-blue transition-colors duration-200;
+  @apply bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-nebula-500 focus:ring-2 focus:ring-nebula-500/20 transition-all duration-300 rounded-lg;
 }
 
 /* 动画类 */
@@ -269,14 +282,19 @@ body {
 }
 
 /* 毛玻璃效果 */
-.backdrop-blur-apple {
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+.backdrop-blur-nebula {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dark .backdrop-blur-nebula {
+  background: rgba(15, 23, 42, 0.4);
 }
 
 /* 渐变背景 */
-.gradient-apple {
-  background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+.gradient-nebula {
+  background: linear-gradient(135deg, #8B5CF6 0%, #0EA5E9 100%);
 }
 
 /* 搜索状态渐变背景 */
@@ -441,16 +459,39 @@ body {
     0 6px 14px rgba(0, 0, 0, 0.35);
 }
 
-.focus-glow-apple {
-  box-shadow:
-    0 0 0 8px rgba(0, 122, 255, 0.10),
-    0 12px 30px rgba(2, 6, 23, 0.10);
+/* Glassmorphism Utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
-.dark .focus-glow-apple {
-  box-shadow:
-    0 0 0 8px rgba(0, 122, 255, 0.18),
-    0 16px 40px rgba(0, 0, 0, 0.55);
+.dark .glass {
+  background: rgba(17, 24, 39, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.dark .glass-panel {
+  background: rgba(15, 23, 42, 0.6);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.focus-glow-nebula {
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.3);
+}
+
+.dark .focus-glow-nebula {
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.4);
 }
 
 /* Toast 样式自定义 */
@@ -469,4 +510,10 @@ body {
 
 [data-sonner-toast]:hover [data-close-button] {
   opacity: 1;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }

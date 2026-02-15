@@ -44,7 +44,7 @@ const BubbleLoader: React.FC<BubbleLoaderProps> = ({ size = 130, className }) =>
                     {/* bubble */}
                     <motion.div
                         className={cn(bubbleBaseClass, "left-[15px]")}
-                        style={{ background: "radial-gradient(circle at 30% 30%, #ffb3c1, #e64980, #ff8787)" }}
+                        style={{ background: "radial-gradient(circle at 30% 30%, #a78bfa, #8b5cf6, #7c3aed)" }} // Nebula Purple
                         variants={dropAndShift}
                         animate="animate"
                         transition={transition(5)}
@@ -53,7 +53,7 @@ const BubbleLoader: React.FC<BubbleLoaderProps> = ({ size = 130, className }) =>
                     {/* bubble1 */}
                     <motion.div
                         className={cn(bubbleBaseClass, "left-[8px] z-20")}
-                        style={{ background: "radial-gradient(circle at 30% 30%, #edb3ff, #ac49e6, #fb87ff)" }}
+                        style={{ background: "radial-gradient(circle at 30% 30%, #38bdf8, #0ea5e9, #0284c7)" }} // Cosmic Blue
                         variants={dropAndShift}
                         animate="animate"
                         transition={transition(6)}
@@ -62,7 +62,7 @@ const BubbleLoader: React.FC<BubbleLoaderProps> = ({ size = 130, className }) =>
                     {/* bubble2 */}
                     <motion.div
                         className={cn(bubbleBaseClass, "left-[12px] z-30")}
-                        style={{ background: "radial-gradient(circle at 30% 30%, #b3d8ff, #4963e6, #87a7ff)" }}
+                        style={{ background: "radial-gradient(circle at 30% 30%, #f472b6, #db2777, #be185d)" }} // Starlight Pink
                         variants={dropAndShift}
                         animate="animate"
                         transition={transition(4)}
@@ -71,7 +71,7 @@ const BubbleLoader: React.FC<BubbleLoaderProps> = ({ size = 130, className }) =>
                     {/* bubble3 */}
                     <motion.div
                         className={cn(bubbleBaseClass, "left-[10px] z-40")}
-                        style={{ background: "radial-gradient(circle at 30% 30%, #b3ffbc, #35a32f, #75ba61)" }}
+                        style={{ background: "radial-gradient(circle at 30% 30%, #818cf8, #6366f1, #4f46e5)" }} // Indigo
                         variants={dropAndShift}
                         animate="animate"
                         transition={transition(7)}

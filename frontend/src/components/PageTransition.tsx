@@ -16,35 +16,28 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
     const pageVariants = {
         initial: {
             opacity: 0,
-            y: 20,
-            scale: 0.98,
         },
         animate: {
             opacity: 1,
-            y: 0,
-            scale: 1,
         },
         exit: {
             opacity: 0,
-            y: -20,
-            scale: 0.98,
         },
-    };
-
-    const pageTransition = {
-        duration: 0.4,
-        ease: [0.25, 0.1, 0.25, 1] as const,
     };
 
     return (
         <AnimatePresence mode="wait">
             <motion.div
                 key={location.pathname}
+                className="w-full"
                 variants={pageVariants}
                 initial="initial"
                 animate="animate"
                 exit="exit"
-                transition={pageTransition}
+                transition={{
+                    duration: 0.5,
+                    ease: [0.22, 1, 0.36, 1], // Custom cubic-bezier for "premium" feel
+                }}
             >
                 {children}
             </motion.div>

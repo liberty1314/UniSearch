@@ -128,7 +128,7 @@ export const SystemInfoView: React.FC = () => {
                     title="插件总数"
                     value={systemInfo.stats.plugin_count}
                     icon={Layers}
-                    color="blue"
+                    color="nebula"
                     index={0}
                 />
                 <StatsCard

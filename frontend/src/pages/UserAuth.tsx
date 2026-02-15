@@ -54,7 +54,7 @@ const UserAuth: React.FC = () => {
                 setEnableUserAuth(settings.enable_user_auth);
                 setEnableUserLogin(settings.enable_user_login);
                 setEnableUserSignup(settings.enable_user_signup);
-                
+
                 // 如果禁用了用户认证，强制切换到 API Key 模式
                 if (!settings.enable_user_auth && activeTab !== 'apikey') {
                     setActiveTab('apikey');
@@ -296,18 +296,18 @@ const UserAuth: React.FC = () => {
     };
 
     return (
-        <div className="fixed inset-0 top-16 flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-8 overflow-y-auto">
+        <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-8 pt-20 overflow-y-auto relative">
             {/* 背景装饰 */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/30 to-purple-400/30 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-nebula-400/30 to-cosmic-400/30 rounded-full blur-3xl animate-pulse"></div>
                 <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-green-400/30 to-blue-400/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-nebula-400/20 to-cosmic-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
 
                 {/* 浮动粒子 */}
                 {particles.map((particle) => (
                     <div
                         key={particle.id}
-                        className="absolute w-2 h-2 bg-blue-400/30 rounded-full"
+                        className="absolute w-2 h-2 bg-nebula-400/30 rounded-full"
                         style={{
                             left: `${particle.x}%`,
                             top: `${particle.y}%`,
@@ -323,26 +323,26 @@ const UserAuth: React.FC = () => {
 
             {/* 认证卡片 */}
             <div className="relative z-10 w-full max-w-md my-auto">
-                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-2xl blur-2xl opacity-20 animate-pulse"></div>
+                <div className="absolute -inset-1 bg-gradient-to-r from-nebula-500 via-cosmic-500 to-purple-500 rounded-2xl blur-2xl opacity-20 animate-pulse"></div>
 
-                <Card className="relative backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border-gray-200/50 dark:border-gray-700/50 shadow-2xl animate-slide-up">
+                <Card className="relative glass-panel shadow-2xl animate-slide-up border-nebula-200 dark:border-nebula-800">
                     <CardHeader className="space-y-3 pb-6">
                         <div className="flex justify-center mb-2">
                             <div className="relative group">
-                                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+                                <div className="w-16 h-16 bg-gradient-to-br from-nebula-500 to-cosmic-600 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
                                     {activeTab === 'apikey' ? (
                                         <Key className="w-8 h-8 text-white animate-pulse" />
                                     ) : (
                                         <User className="w-8 h-8 text-white animate-pulse" />
                                     )}
                                 </div>
-                                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
+                                <div className="absolute inset-0 bg-gradient-to-br from-nebula-500 to-cosmic-600 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
                                 <Sparkles className="absolute -top-2 -right-2 w-5 h-5 text-yellow-400 animate-ping" />
-                                <Sparkles className="absolute -bottom-2 -left-2 w-4 h-4 text-blue-400 animate-ping" style={{ animationDelay: '0.5s' }} />
+                                <Sparkles className="absolute -bottom-2 -left-2 w-4 h-4 text-nebula-400 animate-ping" style={{ animationDelay: '0.5s' }} />
                             </div>
                         </div>
 
-                        <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
+                        <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-nebula-600 via-cosmic-600 to-purple-600 bg-clip-text text-transparent animate-gradient">
                             欢迎回来
                         </CardTitle>
                         <CardDescription className="text-center text-base animate-fade-in" style={{ animationDelay: '0.2s' }}>
@@ -361,9 +361,8 @@ const UserAuth: React.FC = () => {
                         ) : enableUserAuth ? (
                             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'login' | 'register' | 'apikey')} className="w-full">
                                 {/* 根据系统设置动态显示 Tab */}
-                                <TabsList className={`grid w-full ${
-                                    enableUserLogin && enableUserSignup ? 'grid-cols-3' : 'grid-cols-2'
-                                } mb-6 h-auto p-1 bg-gray-100/80 dark:bg-gray-800/80`}>
+                                <TabsList className={`grid w-full ${enableUserLogin && enableUserSignup ? 'grid-cols-3' : 'grid-cols-2'
+                                    } mb-6 h-auto p-1 bg-white/50 dark:bg-gray-800/50 border border-white/20 dark:border-white/10`}>
                                     {enableUserLogin && (
                                         <TabsTrigger
                                             value="login"
@@ -391,259 +390,259 @@ const UserAuth: React.FC = () => {
                                     </TabsTrigger>
                                 </TabsList>
 
-                            {enableUserLogin && (
-                            <TabsContent value="login" className="space-y-4 animate-fade-in-up">
-                                <div className="space-y-3">
-                                    <Label htmlFor="login-username" className="flex items-center gap-2 text-sm font-medium">
-                                        <User className="w-4 h-4 text-blue-500" />
-                                        用户名
-                                    </Label>
-                                    <Input
-                                        id="login-username"
-                                        type="text"
-                                        placeholder="请输入用户名"
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        onKeyDown={handleKeyPress}
-                                        disabled={isLoading}
-                                        className="h-12 bg-white/50 dark:bg-gray-900/50 transition-all duration-200"
-                                    />
-                                </div>
+                                {enableUserLogin && (
+                                    <TabsContent value="login" className="space-y-4 animate-fade-in-up">
+                                        <div className="space-y-3">
+                                            <Label htmlFor="login-username" className="flex items-center gap-2 text-sm font-medium">
+                                                <User className="w-4 h-4 text-blue-500" />
+                                                用户名
+                                            </Label>
+                                            <Input
+                                                id="login-username"
+                                                type="text"
+                                                placeholder="请输入用户名"
+                                                value={username}
+                                                onChange={(e) => setUsername(e.target.value)}
+                                                onKeyDown={handleKeyPress}
+                                                disabled={isLoading}
+                                                className="h-12 bg-white/50 dark:bg-gray-900/50 transition-all duration-200"
+                                            />
+                                        </div>
 
-                                <div className="space-y-3">
-                                    <Label htmlFor="login-password" className="flex items-center gap-2 text-sm font-medium">
-                                        <Lock className="w-4 h-4 text-blue-500" />
-                                        密码
-                                    </Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="login-password"
-                                            type={showPassword ? "text" : "password"}
-                                            placeholder="请输入密码"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            onKeyDown={handleKeyPress}
-                                            disabled={isLoading}
-                                            className="h-12 bg-white/50 dark:bg-gray-900/50 transition-all duration-200 pr-10"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                                            tabIndex={-1}
-                                        >
-                                            {showPassword ? (
-                                                <EyeOff className="w-4 h-4" />
-                                            ) : (
-                                                <Eye className="w-4 h-4" />
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center space-x-2">
-                                    <input
-                                        type="checkbox"
-                                        id="remember-me"
-                                        checked={rememberMe}
-                                        onChange={(e) => setRememberMe(e.target.checked)}
-                                        className="w-4 h-4 text-blue-500 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
-                                    />
-                                    <Label htmlFor="remember-me" className="text-sm font-medium cursor-pointer select-none">
-                                        记住我（30天内自动登录）
-                                    </Label>
-                                </div>
-
-                                <Button
-                                    onClick={handleLogin}
-                                    disabled={isLoading || !username.trim() || !password.trim()}
-                                    className="w-full h-12 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white font-medium shadow-lg hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-                                >
-                                    {isLoading ? (
-                                        <span className="flex items-center gap-2">
-                                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            登录中...
-                                        </span>
-                                    ) : (
-                                        '登录'
-                                    )}
-                                </Button>
-                            </TabsContent>
-                            )}
-
-                            {enableUserSignup && (
-                            <TabsContent value="register" className="space-y-4 animate-fade-in-up">
-                                <div className="space-y-3">
-                                    <Label htmlFor="register-username" className="flex items-center gap-2 text-sm font-medium">
-                                        <User className="w-4 h-4 text-blue-500" />
-                                        用户名
-                                    </Label>
-                                    <Input
-                                        id="register-username"
-                                        type="text"
-                                        placeholder="3-32个字符"
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        onKeyDown={handleKeyPress}
-                                        disabled={isLoading}
-                                        className="h-12 bg-white/50 dark:bg-gray-900/50 transition-all duration-200"
-                                    />
-                                </div>
-
-                                <div className="space-y-3">
-                                    <Label htmlFor="register-password" className="flex items-center gap-2 text-sm font-medium">
-                                        <Lock className="w-4 h-4 text-blue-500" />
-                                        密码
-                                    </Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="register-password"
-                                            type={showPassword ? "text" : "password"}
-                                            placeholder="6-64个字符"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            onKeyDown={handleKeyPress}
-                                            disabled={isLoading}
-                                            className="h-12 bg-white/50 dark:bg-gray-900/50 transition-all duration-200 pr-10"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                                            tabIndex={-1}
-                                        >
-                                            {showPassword ? (
-                                                <EyeOff className="w-4 h-4" />
-                                            ) : (
-                                                <Eye className="w-4 h-4" />
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <Label htmlFor="confirm-password" className="flex items-center gap-2 text-sm font-medium">
-                                        <Lock className="w-4 h-4 text-blue-500" />
-                                        确认密码
-                                    </Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="confirm-password"
-                                            type={showConfirmPassword ? "text" : "password"}
-                                            placeholder="再次输入密码"
-                                            value={confirmPassword}
-                                            onChange={(e) => setConfirmPassword(e.target.value)}
-                                            onKeyDown={handleKeyPress}
-                                            disabled={isLoading}
-                                            className="h-12 bg-white/50 dark:bg-gray-900/50 transition-all duration-200 pr-10"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                                            tabIndex={-1}
-                                        >
-                                            {showConfirmPassword ? (
-                                                <EyeOff className="w-4 h-4" />
-                                            ) : (
-                                                <Eye className="w-4 h-4" />
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <Button
-                                    onClick={handleRegister}
-                                    disabled={isLoading || !username.trim() || !password.trim() || !confirmPassword.trim()}
-                                    className="w-full h-12 bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 hover:from-green-600 hover:via-blue-600 hover:to-purple-600 text-white font-medium shadow-lg hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-                                >
-                                    {isLoading ? (
-                                        <span className="flex items-center gap-2">
-                                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            注册中...
-                                        </span>
-                                    ) : (
-                                        '注册'
-                                    )}
-                                </Button>
-                            </TabsContent>
-                            )}
-
-                            {/* API Key 登录 Tab */}
-                            <TabsContent value="apikey" className="space-y-4 animate-fade-in-up">
-                                <div className="space-y-3">
-                                    <Label htmlFor="apikey-input" className="flex items-center gap-2 text-sm font-medium">
-                                        <Key className="w-4 h-4 text-blue-500 animate-bounce" style={{ animationDuration: '2s' }} />
-                                        API Key
-                                    </Label>
-                                    <div className="relative group">
-                                        <Input
-                                            id="apikey-input"
-                                            type="text"
-                                            placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                                            value={apiKey}
-                                            onChange={(e) => setApiKey(e.target.value)}
-                                            onKeyDown={handleKeyPress}
-                                            disabled={isLoading}
-                                            className="font-mono text-sm h-12 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all duration-200"
-                                        />
-                                        <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-purple-500/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                                        {apiKey && (
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                        <div className="space-y-3">
+                                            <Label htmlFor="login-password" className="flex items-center gap-2 text-sm font-medium">
+                                                <Lock className="w-4 h-4 text-blue-500" />
+                                                密码
+                                            </Label>
+                                            <div className="relative">
+                                                <Input
+                                                    id="login-password"
+                                                    type={showPassword ? "text" : "password"}
+                                                    placeholder="请输入密码"
+                                                    value={password}
+                                                    onChange={(e) => setPassword(e.target.value)}
+                                                    onKeyDown={handleKeyPress}
+                                                    disabled={isLoading}
+                                                    className="h-12 bg-white/50 dark:bg-gray-900/50 transition-all duration-200 pr-10"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                                    tabIndex={-1}
+                                                >
+                                                    {showPassword ? (
+                                                        <EyeOff className="w-4 h-4" />
+                                                    ) : (
+                                                        <Eye className="w-4 h-4" />
+                                                    )}
+                                                </button>
                                             </div>
-                                        )}
+                                        </div>
+
+                                        <div className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                id="remember-me"
+                                                checked={rememberMe}
+                                                onChange={(e) => setRememberMe(e.target.checked)}
+                                                className="w-4 h-4 text-nebula-500 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-nebula-500/20 transition-all duration-200"
+                                            />
+                                            <Label htmlFor="remember-me" className="text-sm font-medium cursor-pointer select-none">
+                                                记住我（30天内自动登录）
+                                            </Label>
+                                        </div>
+
+                                        <Button
+                                            onClick={handleLogin}
+                                            disabled={isLoading || !username.trim() || !password.trim()}
+                                            className="w-full h-12 bg-gradient-to-r from-nebula-500 via-cosmic-500 to-purple-500 hover:from-nebula-600 hover:via-cosmic-600 hover:to-purple-600 text-white font-medium shadow-lg hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                                        >
+                                            {isLoading ? (
+                                                <span className="flex items-center gap-2">
+                                                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    登录中...
+                                                </span>
+                                            ) : (
+                                                '登录'
+                                            )}
+                                        </Button>
+                                    </TabsContent>
+                                )}
+
+                                {enableUserSignup && (
+                                    <TabsContent value="register" className="space-y-4 animate-fade-in-up">
+                                        <div className="space-y-3">
+                                            <Label htmlFor="register-username" className="flex items-center gap-2 text-sm font-medium">
+                                                <User className="w-4 h-4 text-blue-500" />
+                                                用户名
+                                            </Label>
+                                            <Input
+                                                id="register-username"
+                                                type="text"
+                                                placeholder="3-32个字符"
+                                                value={username}
+                                                onChange={(e) => setUsername(e.target.value)}
+                                                onKeyDown={handleKeyPress}
+                                                disabled={isLoading}
+                                                className="h-12 bg-white/50 dark:bg-gray-900/50 transition-all duration-200"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <Label htmlFor="register-password" className="flex items-center gap-2 text-sm font-medium">
+                                                <Lock className="w-4 h-4 text-blue-500" />
+                                                密码
+                                            </Label>
+                                            <div className="relative">
+                                                <Input
+                                                    id="register-password"
+                                                    type={showPassword ? "text" : "password"}
+                                                    placeholder="6-64个字符"
+                                                    value={password}
+                                                    onChange={(e) => setPassword(e.target.value)}
+                                                    onKeyDown={handleKeyPress}
+                                                    disabled={isLoading}
+                                                    className="h-12 bg-white/50 dark:bg-gray-900/50 transition-all duration-200 pr-10"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                                    tabIndex={-1}
+                                                >
+                                                    {showPassword ? (
+                                                        <EyeOff className="w-4 h-4" />
+                                                    ) : (
+                                                        <Eye className="w-4 h-4" />
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <Label htmlFor="confirm-password" className="flex items-center gap-2 text-sm font-medium">
+                                                <Lock className="w-4 h-4 text-blue-500" />
+                                                确认密码
+                                            </Label>
+                                            <div className="relative">
+                                                <Input
+                                                    id="confirm-password"
+                                                    type={showConfirmPassword ? "text" : "password"}
+                                                    placeholder="再次输入密码"
+                                                    value={confirmPassword}
+                                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                                    onKeyDown={handleKeyPress}
+                                                    disabled={isLoading}
+                                                    className="h-12 bg-white/50 dark:bg-gray-900/50 transition-all duration-200 pr-10"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                                    tabIndex={-1}
+                                                >
+                                                    {showConfirmPassword ? (
+                                                        <EyeOff className="w-4 h-4" />
+                                                    ) : (
+                                                        <Eye className="w-4 h-4" />
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <Button
+                                            onClick={handleRegister}
+                                            disabled={isLoading || !username.trim() || !password.trim() || !confirmPassword.trim()}
+                                            className="w-full h-12 bg-gradient-to-r from-emerald-500 via-nebula-500 to-cosmic-500 hover:from-emerald-600 hover:via-nebula-600 hover:to-cosmic-600 text-white font-medium shadow-lg hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                                        >
+                                            {isLoading ? (
+                                                <span className="flex items-center gap-2">
+                                                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    注册中...
+                                                </span>
+                                            ) : (
+                                                '注册'
+                                            )}
+                                        </Button>
+                                    </TabsContent>
+                                )}
+
+                                {/* API Key 登录 Tab */}
+                                <TabsContent value="apikey" className="space-y-4 animate-fade-in-up">
+                                    <div className="space-y-3">
+                                        <Label htmlFor="apikey-input" className="flex items-center gap-2 text-sm font-medium">
+                                            <Key className="w-4 h-4 text-blue-500 animate-bounce" style={{ animationDuration: '2s' }} />
+                                            API Key
+                                        </Label>
+                                        <div className="relative group">
+                                            <Input
+                                                id="apikey-input"
+                                                type="text"
+                                                placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                                value={apiKey}
+                                                onChange={(e) => setApiKey(e.target.value)}
+                                                onKeyDown={handleKeyPress}
+                                                disabled={isLoading}
+                                                className="font-mono text-sm h-12 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all duration-200"
+                                            />
+                                            <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-purple-500/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                                            {apiKey && (
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div className="flex items-center space-x-2">
-                                    <input
-                                        type="checkbox"
-                                        id="apikey-remember-me"
-                                        checked={rememberMe}
-                                        onChange={(e) => setRememberMe(e.target.checked)}
-                                        className="w-4 h-4 text-blue-500 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
-                                    />
-                                    <Label htmlFor="apikey-remember-me" className="text-sm font-medium cursor-pointer select-none">
-                                        记住我（30天内自动登录）
-                                    </Label>
-                                </div>
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            id="apikey-remember-me"
+                                            checked={rememberMe}
+                                            onChange={(e) => setRememberMe(e.target.checked)}
+                                            className="w-4 h-4 text-blue-500 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
+                                        />
+                                        <Label htmlFor="apikey-remember-me" className="text-sm font-medium cursor-pointer select-none">
+                                            记住我（30天内自动登录）
+                                        </Label>
+                                    </div>
 
-                                <Button
-                                    onClick={handleApiKeyLogin}
-                                    disabled={isLoading || !apiKey.trim()}
-                                    className="w-full h-12 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white font-medium shadow-lg hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 relative overflow-hidden group"
-                                >
-                                    {/* 按钮光泽效果 */}
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
+                                    <Button
+                                        onClick={handleApiKeyLogin}
+                                        disabled={isLoading || !apiKey.trim()}
+                                        className="w-full h-12 bg-gradient-to-r from-nebula-500 via-cosmic-500 to-purple-500 hover:from-nebula-600 hover:via-cosmic-600 hover:to-purple-600 text-white font-medium shadow-lg hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 relative overflow-hidden group"
+                                    >
+                                        {/* 按钮光泽效果 */}
+                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
 
-                                    <span className="relative z-10">
-                                        {isLoading ? (
-                                            <span className="flex items-center gap-2">
-                                                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg>
-                                                验证中...
-                                            </span>
-                                        ) : (
-                                            <span className="flex items-center gap-2">
-                                                登录
-                                                <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                                </svg>
-                                            </span>
-                                        )}
-                                    </span>
-                                </Button>
-                            </TabsContent>
-                        </Tabs>
+                                        <span className="relative z-10">
+                                            {isLoading ? (
+                                                <span className="flex items-center gap-2">
+                                                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    验证中...
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center gap-2">
+                                                    登录
+                                                    <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                                    </svg>
+                                                </span>
+                                            )}
+                                        </span>
+                                    </Button>
+                                </TabsContent>
+                            </Tabs>
                         ) : (
                             // 仅显示 API Key 登录
                             <div className="space-y-6 animate-fade-in-up">
@@ -695,7 +694,7 @@ const UserAuth: React.FC = () => {
                                 <Button
                                     onClick={handleApiKeyLogin}
                                     disabled={isLoading || !apiKey.trim()}
-                                    className="w-full h-12 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white font-medium shadow-lg hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden group"
+                                    className="w-full h-12 bg-gradient-to-r from-nebula-500 via-cosmic-500 to-purple-500 hover:from-nebula-600 hover:via-cosmic-600 hover:to-purple-600 text-white font-medium shadow-lg hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden group"
                                 >
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
                                     <span className="relative z-10">

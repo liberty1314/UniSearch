@@ -119,13 +119,13 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
                 repeat: Infinity,
                 ease: "easeInOut",
               }}
-              className="absolute -inset-4 rounded-3xl blur-2xl bg-gradient-to-r from-blue-500/10 to-cyan-500/10"
+              className="absolute -inset-4 rounded-3xl blur-2xl bg-gradient-to-r from-nebula-500/10 to-cosmic-500/10"
             />
 
             {/* 卡片主体 */}
-            <div className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-apple rounded-2xl shadow-card border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+            <div className="relative glass-panel rounded-2xl shadow-nebula border border-nebula-100 dark:border-nebula-800 overflow-hidden">
               {/* 顶部渐变装饰条 - 蓝色渐变 */}
-              <div className="h-1.5 bg-gradient-to-r from-blue-500 to-cyan-500" />
+              <div className="h-1.5 bg-gradient-to-r from-nebula-500 to-cosmic-500" />
 
               {/* 关闭按钮 */}
               <button
@@ -156,9 +156,9 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
                   {/* 图标 - 蓝色渐变 */}
                   <div className={cn(
                     'flex-shrink-0 w-12 h-12 rounded-2xl',
-                    'bg-gradient-to-r from-blue-500 to-cyan-500',
+                    'bg-gradient-to-r from-nebula-500 to-cosmic-500',
                     'flex items-center justify-center',
-                    'shadow-lg shadow-blue-500/30',
+                    'shadow-lg shadow-nebula-500/30',
                     'transition-transform duration-300'
                   )}>
                     <Bell className="w-6 h-6 text-white" />
@@ -204,13 +204,13 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
                     className={cn(
                       'w-full py-3 px-6',
                       'rounded-xl',
-                      'bg-gradient-to-r from-blue-500 to-cyan-500',
+                      'bg-gradient-to-r from-nebula-500 to-cosmic-500',
                       'text-white font-medium',
-                      'shadow-lg shadow-blue-500/30',
+                      'shadow-lg shadow-nebula-500/30',
                       'transition-all duration-200',
-                      'hover:scale-[1.02] hover:shadow-xl hover:shadow-blue-500/40',
+                      'hover:scale-[1.02] hover:shadow-xl hover:shadow-nebula-500/40',
                       'active:scale-[0.98]',
-                      'focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2'
+                      'focus:outline-none focus:ring-2 focus:ring-nebula-500/50 focus:ring-offset-2'
                     )}
                   >
                     我知道了

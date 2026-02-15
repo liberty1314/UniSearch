@@ -546,3 +546,100 @@ pnpm-lock.yaml (已删除)
 - frontend/src/index.css (修改)
 - frontend/src/pages/Home.tsx (修改)
 - frontend/tailwind.config.js (修改)
+
+
+---
+
+## 2026-02-15 15:25:45
+
+**Commit**: `refactor(frontend): 重构用户认证页面并优化全局 UI 体验`
+
+**详细说明**:
+
+拆分 UserAuth 页面为独立的登录、注册和 API Key 登录页面，优化代码结构和用户体验。重构 Navbar、PageLoader 等核心组件，统一使用 Framer Motion 动画。新增 animated-theme-toggler 组件，优化暗黑模式切换体验。更新全局样式和 Tailwind 配置，提升整体 UI 一致性和流畅度。
+
+**主要改动**:
+
+1. 用户认证页面重构:
+   - 拆分 UserAuth.tsx 为三个独立页面：LoginPage.tsx、RegisterPage.tsx、ApiKeyLoginPage.tsx
+   - 每个页面独立管理状态和逻辑，提升代码可维护性
+   - 优化表单布局和交互体验
+   - 统一错误提示和加载状态处理
+   - 改进响应式设计，优化移动端体验
+
+2. 核心组件优化:
+   - Navbar: 重构布局和样式，优化移动端菜单交互
+   - PageLoader: 简化加载动画，使用 Framer Motion 替代复杂的 CSS 动画
+   - AnimatedButton: 优化按钮动画效果
+   - AnnouncementDialog/Panel: 调整样式和动画
+   - BubbleLoader: 微调动画参数
+   - LoadingSpinner: 优化加载指示器
+   - PageTransition: 统一页面过渡动画
+
+3. 新增组件:
+   - animated-theme-toggler.tsx: 创意暗黑模式切换器，支持流畅的主题切换动画
+   - 提供视觉反馈和交互体验
+
+4. 管理后台优化:
+   - Sidebar: 优化侧边栏样式和响应式布局
+   - StatsCard: 调整卡片样式和动画
+   - SystemInfoView: 微调信息展示
+   - Admin: 优化整体布局
+   - AdminLogin: 改进登录页面样式
+
+5. 其他页面优化:
+   - Home: 重构首页布局，优化搜索框和结果展示
+   - UserApiKeySettings: 优化 API Key 设置页面的布局和交互
+   - SearchBox: 调整搜索框样式
+
+6. 全局样式更新:
+   - index.css: 新增多个动画关键帧和工具类
+   - 优化暗黑模式样式
+   - 新增渐变和过渡效果
+   - 改进滚动条样式
+
+7. Tailwind 配置优化:
+   - 新增自定义动画配置
+   - 扩展颜色和间距系统
+   - 优化主题配置
+
+8. 配置文件更新:
+   - components.json: 更新 shadcn/ui 配置
+   - dialog.tsx: 优化对话框组件
+
+**技术要点**:
+
+- 页面拆分提升代码可维护性和复用性
+- 统一使用 Framer Motion 实现流畅动画
+- 优化响应式设计，提升移动端体验
+- 改进暗黑模式支持和主题切换体验
+- 统一组件样式和交互规范
+
+**涉及文件**:
+- frontend/components.json (修改)
+- frontend/src/App.tsx (修改)
+- frontend/src/components/AnimatedButton.tsx (修改)
+- frontend/src/components/AnnouncementDialog.tsx (修改)
+- frontend/src/components/AnnouncementPanel.tsx (修改)
+- frontend/src/components/BubbleLoader.tsx (修改)
+- frontend/src/components/LoadingSpinner.tsx (修改)
+- frontend/src/components/MobileMenu.tsx (修改)
+- frontend/src/components/Navbar.tsx (修改)
+- frontend/src/components/PageLoader.tsx (修改)
+- frontend/src/components/PageTransition.tsx (修改)
+- frontend/src/components/SearchBox.tsx (修改)
+- frontend/src/components/admin/Sidebar.tsx (修改)
+- frontend/src/components/admin/StatsCard.tsx (修改)
+- frontend/src/components/admin/SystemInfoView.tsx (修改)
+- frontend/src/components/ui/animated-theme-toggler.tsx (新增)
+- frontend/src/components/ui/dialog.tsx (修改)
+- frontend/src/index.css (修改)
+- frontend/src/pages/Admin.tsx (修改)
+- frontend/src/pages/AdminLogin.tsx (修改)
+- frontend/src/pages/ApiKeyLoginPage.tsx (新增)
+- frontend/src/pages/Home.tsx (修改)
+- frontend/src/pages/LoginPage.tsx (新增)
+- frontend/src/pages/RegisterPage.tsx (新增)
+- frontend/src/pages/UserApiKeySettings.tsx (修改)
+- frontend/src/pages/UserAuth.tsx (修改)
+- frontend/tailwind.config.js (修改)

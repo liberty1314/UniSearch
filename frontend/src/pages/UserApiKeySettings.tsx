@@ -58,11 +58,9 @@ const UserApiKeySettings: React.FC = () => {
     const loadAPIKeyInfo = async () => {
         try {
             setIsLoading(true);
-            // apiClient.get 已经自动解包了 data 字段，直接返回业务数据
             const data = await apiClient.get<APIKeyInfo>('/user/apikey');
             setApiKeyInfo(data);
         } catch (error: any) {
-            // 404 表示未绑定，这是正常情况
             if (error.code !== 404) {
                 console.error('加载 API Key 信息失败:', error);
             }
@@ -77,7 +75,6 @@ const UserApiKeySettings: React.FC = () => {
             return;
         }
 
-        // 验证格式
         if (newApiKey.length !== 43 || !newApiKey.startsWith('sk-')) {
             toast.error('API Key 格式错误（应为 sk- 开头的43位字符）');
             return;
@@ -85,7 +82,6 @@ const UserApiKeySettings: React.FC = () => {
 
         try {
             setIsSubmitting(true);
-            // apiClient.post 已经自动解包了 data 字段
             await apiClient.post('/user/apikey', {
                 key: newApiKey.trim(),
             });
@@ -104,7 +100,6 @@ const UserApiKeySettings: React.FC = () => {
     const handleUnbindAPIKey = async () => {
         try {
             setIsSubmitting(true);
-            // apiClient.delete 已经自动解包了 data 字段
             await apiClient.delete('/user/apikey');
 
             toast.success('解绑成功');
@@ -121,270 +116,218 @@ const UserApiKeySettings: React.FC = () => {
     const formatDate = (dateStr: string | null) => {
         if (!dateStr) return '永不过期';
         const date = new Date(dateStr);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}/${month}/${day}`;
-    };
-
-    const maskAPIKey = (key: string) => {
-        if (key.length <= 10) return key;
-        return `${key.substring(0, 10)}...${key.substring(key.length - 4)}`;
+        return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
     };
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-gray-950 dark:via-blue-950/20 dark:to-gray-950 flex items-center justify-center">
+            <div className="min-h-screen bg-[#F2F2F7] dark:bg-black flex items-center justify-center">
                 <LoadingSpinner />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-gray-950 dark:via-blue-950/20 dark:to-gray-950">
+        <div className="min-h-screen bg-[#F2F2F7] dark:bg-black font-sans selection:bg-blue-500/30">
             {/* 顶部导航 */}
-            <div className="max-w-2xl mx-auto px-4 pt-8 pb-4">
+            <div className="max-w-3xl mx-auto px-6 pt-24 pb-6">
                 <button
                     onClick={() => navigate('/')}
-                    className="group flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+                    className="group flex items-center gap-1 text-[17px] text-blue-500 hover:opacity-70 transition-opacity font-medium"
                 >
-                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                    <ArrowLeft className="w-5 h-5 -ml-1" strokeWidth={2.5} />
                     <span>返回首页</span>
                 </button>
             </div>
 
-            <div className="max-w-2xl mx-auto px-4 pb-16">
+            <div className="max-w-3xl mx-auto px-6 pb-20">
                 {/* 页面标题 */}
                 <motion.div
-                    initial={{ opacity: 0, y: -10 }}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="mb-8"
                 >
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-                        API Key 设置
+                    <h1 className="text-[34px] font-bold text-black dark:text-white tracking-tight leading-tight">
+                        API Key
                     </h1>
-                    <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                        绑定后搜索时无需重复输入
+                    <p className="mt-1 text-[17px] text-gray-500 dark:text-gray-400 font-normal">
+                        管理您的个人的搜索访问密钥
                     </p>
                 </motion.div>
 
-                {/* 当前绑定状态 - Apple 风格 */}
+                {/* 当前绑定状态 */}
                 {apiKeyInfo ? (
                     <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="space-y-4"
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                        className="space-y-6"
                     >
-                        {/* API Key 卡片 */}
-                        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl shadow-sm border border-slate-200/50 dark:border-slate-800/50 overflow-hidden">
-                            {/* 状态头部 */}
-                            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/50 flex items-center justify-between">
-                                <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-                                    当前 API Key
-                                </h2>
+                        {/* 状态概览卡片 */}
+                        <div className="bg-white dark:bg-[#1C1C1E] rounded-[20px] shadow-sm overflow-hidden">
+                            <div className="px-5 py-4 border-b border-gray-100 dark:border-white/10 flex items-center justify-between">
+                                <span className="text-[17px] font-semibold text-black dark:text-white">
+                                    当前密钥状态
+                                </span>
                                 <div className="flex items-center gap-2">
                                     {apiKeyInfo.is_valid ? (
-                                        <>
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-500" />
-                                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400">
-                                                有效
-                                            </span>
-                                        </>
+                                        <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-[13px] font-medium">
+                                            <CheckCircle2 className="w-3.5 h-3.5" />
+                                            有效
+                                        </span>
                                     ) : (
-                                        <>
-                                            <XCircle className="w-4 h-4 text-red-600 dark:text-red-500" />
-                                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400">
-                                                已失效
-                                            </span>
-                                        </>
+                                        <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 text-[13px] font-medium">
+                                            <XCircle className="w-3.5 h-3.5" />
+                                            已失效
+                                        </span>
                                     )}
                                 </div>
                             </div>
 
-                            {/* API Key 输入区 */}
-                            <div className="px-6 py-5">
-                                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">
-                                    密钥
-                                </label>
+                            {/* 密钥显示 */}
+                            <div className="p-5">
                                 <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span className="text-gray-400 font-mono text-sm">KEY</span>
+                                    </div>
                                     <input
                                         type={showKey ? 'text' : 'password'}
                                         value={apiKeyInfo.api_key}
                                         readOnly
-                                        className="w-full px-4 py-3 pr-24 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl font-mono text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-500/30 transition-all"
+                                        className="w-full pl-12 pr-24 py-3 bg-gray-50 dark:bg-[#2C2C2E] rounded-xl text-[15px] font-mono text-gray-900 dark:text-gray-100 border-none focus:ring-0 cursor-default"
                                     />
                                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                                         <button
                                             onClick={() => setShowKey(!showKey)}
-                                            className="p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                                            title={showKey ? '隐藏' : '显示'}
+                                            className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
                                         >
-                                            {showKey ? (
-                                                <EyeOff className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                                            ) : (
-                                                <Eye className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                                            )}
+                                            {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                         </button>
                                         <button
                                             onClick={() => {
                                                 navigator.clipboard.writeText(apiKeyInfo.api_key);
-                                                toast.success('已复制到剪贴板');
+                                                toast.success('已复制');
                                             }}
-                                            className="p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                                            title="复制"
+                                            className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
                                         >
-                                            <Copy className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                                            <Copy className="w-4 h-4" />
                                         </button>
                                     </div>
                                 </div>
                             </div>
-
-                            {/* 使用统计 - Grid 布局 */}
-                            <div className="px-6 pb-6">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4">
-                                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                                            过期时间
-                                        </div>
-                                        <div className="text-lg font-semibold text-slate-900 dark:text-white">
-                                            {formatDate(apiKeyInfo.expires_at)}
-                                        </div>
-                                    </div>
-                                    <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4">
-                                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                                            每日限额
-                                        </div>
-                                        <div className="text-lg font-semibold text-slate-900 dark:text-white">
-                                            {apiKeyInfo.daily_search_limit === 0
-                                                ? '无限制'
-                                                : `${apiKeyInfo.daily_search_limit} 次`}
-                                        </div>
-                                    </div>
-                                    <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4">
-                                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                                            今日已用
-                                        </div>
-                                        <div className="text-lg font-semibold text-slate-900 dark:text-white">
-                                            {apiKeyInfo.today_search_count} 次
-                                        </div>
-                                    </div>
-                                    <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4">
-                                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                                            今日剩余
-                                        </div>
-                                        <div className="text-lg font-semibold text-slate-900 dark:text-white">
-                                            {apiKeyInfo.remaining_searches === -1
-                                                ? '无限制'
-                                                : `${apiKeyInfo.remaining_searches} 次`}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* 操作按钮 - 仅当绑定的 API Key 与登录使用的 API Key 不同时显示 */}
-                            {apiKeyInfo.api_key !== apiKey && (
-                                <div className="px-6 pb-6">
-                                    <button
-                                        onClick={() => setShowUnbindDialog(true)}
-                                        disabled={isSubmitting}
-                                        className="w-full py-3 px-4 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 font-medium rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        解绑 API Key
-                                    </button>
-                                </div>
-                            )}
                         </div>
+
+                        {/* 统计 Widget Grid */}
+                        <div className="grid grid-cols-2 gap-4">
+                            {[
+                                { label: '过期时间', value: formatDate(apiKeyInfo.expires_at), sub: '有效期至' },
+                                { label: '每日限额', value: apiKeyInfo.daily_search_limit === 0 ? '∞' : apiKeyInfo.daily_search_limit, sub: '次/天', highlight: false },
+                                { label: '今日已用', value: apiKeyInfo.today_search_count, sub: '次调用', highlight: true },
+                                { label: '今日剩余', value: apiKeyInfo.remaining_searches === -1 ? '∞' : apiKeyInfo.remaining_searches, sub: '次可用', highlight: true },
+                            ].map((stat, idx) => (
+                                <motion.div
+                                    key={idx}
+                                    whileHover={{ scale: 1.02 }}
+                                    className="bg-white dark:bg-[#1C1C1E] p-5 rounded-[20px] shadow-sm flex flex-col justify-between h-32"
+                                >
+                                    <span className="text-[13px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                        {stat.label}
+                                    </span>
+                                    <div>
+                                        <div className={`text-2xl font-bold ${stat.highlight ? 'text-blue-500' : 'text-black dark:text-white'}`}>
+                                            {stat.value}
+                                        </div>
+                                        <div className="text-[13px] text-gray-400 dark:text-gray-500 mt-0.5">
+                                            {stat.sub}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+
+                        {/* 操作区 */}
+                        {apiKeyInfo.api_key !== apiKey && (
+                            <motion.button
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setShowUnbindDialog(true)}
+                                className="w-full py-3.5 bg-white dark:bg-[#1C1C1E] text-red-500 text-[17px] font-medium rounded-[14px] shadow-sm hover:bg-gray-50 dark:hover:bg-[#2C2C2E] transition-colors"
+                            >
+                                解除绑定
+                            </motion.button>
+                        )}
                     </motion.div>
                 ) : (
-                    /* 绑定表单 - Apple 风格 */
+                    /* 绑定表单 */
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
+                        className="bg-white dark:bg-[#1C1C1E] rounded-[20px] shadow-sm overflow-hidden"
                     >
-                        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl shadow-sm border border-slate-200/50 dark:border-slate-800/50 overflow-hidden">
-                            <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800/50">
-                                <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-                                    绑定 API Key
-                                </h2>
-                            </div>
+                        <div className="p-6">
+                            <label className="block text-[13px] font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide ml-1">
+                                输入密钥
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="sk-..."
+                                value={newApiKey}
+                                onChange={(e) => setNewApiKey(e.target.value)}
+                                className="w-full px-4 py-3 bg-gray-100 dark:bg-[#2C2C2E] rounded-xl text-[17px] text-black dark:text-white placeholder-gray-400 border-none focus:ring-2 focus:ring-blue-500/50 transition-all font-mono"
+                                autoFocus
+                            />
+                            <p className="mt-3 ml-1 text-[13px] text-gray-400">
+                                请输入以 <code className="bg-gray-100 dark:bg-[#2C2C2E] px-1 rounded text-gray-600 dark:text-gray-300">sk-</code> 开头的 43 位密钥
+                            </p>
 
-                            <div className="px-6 py-6 space-y-5">
-                                <div>
-                                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">
-                                        请输入密钥
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                                        value={newApiKey}
-                                        onChange={(e) => setNewApiKey(e.target.value)}
-                                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl font-mono text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-500/30 transition-all"
-                                        disabled={isSubmitting}
-                                    />
-                                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                                        格式：sk- 开头的 43 位字符
-                                    </p>
-                                </div>
-
+                            <div className="mt-8">
                                 <button
                                     onClick={handleBindAPIKey}
                                     disabled={isSubmitting || !newApiKey.trim()}
-                                    className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+                                    className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 text-white text-[17px] font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20 active:scale-[0.98]"
                                 >
-                                    {isSubmitting ? '绑定中...' : '绑定 API Key'}
+                                    {isSubmitting ? '验证并绑定...' : '绑定 API Key'}
                                 </button>
                             </div>
                         </div>
                     </motion.div>
                 )}
 
-                {/* 帮助信息 - 极简风格 */}
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    className="mt-6 space-y-3"
-                >
-                    <div className="flex items-start gap-3 text-sm text-slate-600 dark:text-slate-400">
-                        <Lightbulb className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-500" />
-                        <div className="space-y-2">
-                            <p>绑定后搜索时无需重复输入</p>
-                            <p>每个用户只能绑定一个 API Key</p>
-                            <p>更换 API Key 会自动解绑旧的密钥</p>
-                            <p>如需获取 API Key，请联系管理员</p>
-                        </div>
+                {/* 说明文本 */}
+                <div className="mt-8 px-4 flex gap-4">
+                    <Lightbulb className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                    <div className="space-y-1 text-[13px] text-gray-400 leading-relaxed">
+                        <p>API Key 用于验证您的身份并统计您的搜索用量。</p>
+                        <p>如果您的 Key 泄露，请立即联系管理员重置。</p>
                     </div>
-                </motion.div>
+                </div>
             </div>
 
-            {/* 解绑确认对话框 */}
+            {/* 解绑确认对话框 - iOS Style */}
             <AlertDialog open={showUnbindDialog} onOpenChange={setShowUnbindDialog}>
-                <AlertDialogContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="text-slate-900 dark:text-white">
-                            确认解绑 API Key
-                        </AlertDialogTitle>
-                        <AlertDialogDescription className="text-slate-600 dark:text-slate-400">
-                            确定要解绑当前 API Key 吗？解绑后，您需要在搜索时重新输入 API Key。
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel 
-                            disabled={isSubmitting}
-                            className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700"
+                <AlertDialogContent className="w-[320px] p-0 gap-0 bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-xl border-none rounded-[14px] overflow-hidden">
+                    <div className="p-6 text-center">
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="text-[17px] font-semibold text-black dark:text-white text-center">
+                                解除绑定?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription className="text-[13px] text-gray-500 dark:text-gray-400 text-center mt-1">
+                                解绑后您将无法使用高级搜索功能，确定要继续吗？
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                    </div>
+                    <div className="flex border-t border-gray-200/50 dark:border-white/10 divide-x divide-gray-200/50 dark:divide-white/10">
+                        <AlertDialogCancel
+                            className="flex-1 h-12 bg-transparent hover:bg-gray-100 dark:hover:bg-white/5 border-none rounded-none text-[17px] text-blue-500 font-normal m-0"
                         >
                             取消
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleUnbindAPIKey}
-                            disabled={isSubmitting}
-                            className="bg-red-600 hover:bg-red-700 text-white"
+                            className="flex-1 h-12 bg-transparent hover:bg-gray-100 dark:hover:bg-white/5 border-none rounded-none text-[17px] text-red-500 font-semibold m-0 shadow-none hover:shadow-none"
                         >
-                            {isSubmitting ? '解绑中...' : '确认解绑'}
+                            解除绑定
                         </AlertDialogAction>
-                    </AlertDialogFooter>
+                    </div>
                 </AlertDialogContent>
             </AlertDialog>
         </div>

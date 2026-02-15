@@ -126,18 +126,18 @@ const AdminLogin: React.FC = () => {
     };
 
     return (
-        <div className="fixed inset-0 top-16 flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 overflow-hidden">
+        <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 pt-16 overflow-hidden relative">
             {/* 背景装饰 - 动态渐变球（管理员主题：橙色/红色） */}
             <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-orange-400/30 to-red-400/30 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-red-400/30 to-pink-400/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-orange-400/20 to-red-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+                <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-nebula-400/30 to-cosmic-400/30 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-cosmic-400/30 to-purple-400/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-nebula-400/20 to-cosmic-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
 
                 {/* 浮动粒子 */}
                 {particles.map((particle) => (
                     <div
                         key={particle.id}
-                        className="absolute w-2 h-2 bg-orange-400/30 rounded-full"
+                        className="absolute w-2 h-2 bg-nebula-400/30 rounded-full"
                         style={{
                             left: `${particle.x}%`,
                             top: `${particle.y}%`,
@@ -154,24 +154,24 @@ const AdminLogin: React.FC = () => {
             {/* 登录卡片 */}
             <div className="relative z-10 w-full max-w-md">
                 {/* 卡片光晕效果 */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-2xl blur-2xl opacity-20 animate-pulse"></div>
+                <div className="absolute -inset-1 bg-gradient-to-r from-nebula-500 via-cosmic-500 to-purple-500 rounded-2xl blur-2xl opacity-20 animate-pulse"></div>
 
-                <Card className="relative backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border-gray-200/50 dark:border-gray-700/50 shadow-2xl animate-slide-up">
+                <Card className="relative glass-panel shadow-2xl animate-slide-up border-nebula-200 dark:border-nebula-800">
                     <CardHeader className="space-y-3 pb-6">
                         {/* Logo 或图标 */}
                         <div className="flex justify-center mb-2">
                             <div className="relative group">
-                                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+                                <div className="w-16 h-16 bg-gradient-to-br from-nebula-500 to-cosmic-600 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
                                     <Lock className="w-8 h-8 text-white animate-pulse" />
                                 </div>
-                                <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
+                                <div className="absolute inset-0 bg-gradient-to-br from-nebula-500 to-cosmic-600 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
                                 {/* 闪烁盾牌 */}
                                 <Shield className="absolute -top-2 -right-2 w-5 h-5 text-yellow-400 animate-ping" />
-                                <Shield className="absolute -bottom-2 -left-2 w-4 h-4 text-orange-400 animate-ping" style={{ animationDelay: '0.5s' }} />
+                                <Shield className="absolute -bottom-2 -left-2 w-4 h-4 text-nebula-400 animate-ping" style={{ animationDelay: '0.5s' }} />
                             </div>
                         </div>
 
-                        <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
+                        <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-nebula-600 via-cosmic-600 to-purple-600 bg-clip-text text-transparent animate-gradient">
                             管理员登录
                         </CardTitle>
                         <CardDescription className="text-center text-base animate-fade-in" style={{ animationDelay: '0.2s' }}>
@@ -183,7 +183,7 @@ const AdminLogin: React.FC = () => {
                         <form onSubmit={(e) => { e.preventDefault(); handleAdminLogin(); }} className="space-y-6">
                             <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.3s' }}>
                                 <Label htmlFor="username" className="flex items-center gap-2 text-sm font-medium">
-                                    <User className="w-4 h-4 text-orange-500 animate-bounce" style={{ animationDuration: '2s' }} />
+                                    <User className="w-4 h-4 text-nebula-500 animate-bounce" style={{ animationDuration: '2s' }} />
                                     用户名
                                 </Label>
                                 <div className="relative group">
@@ -197,9 +197,9 @@ const AdminLogin: React.FC = () => {
                                         onChange={(e) => setUsername(e.target.value)}
                                         onKeyDown={handleKeyPress}
                                         disabled={isAdminLoading}
-                                        className="h-12 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all duration-200"
+                                        className="h-12 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 focus:border-nebula-500 dark:focus:border-nebula-400 focus:ring-2 focus:ring-nebula-500/20 focus:outline-none transition-all duration-200"
                                     />
-                                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-red-500/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-nebula-500/0 via-nebula-500/10 to-cosmic-500/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                                     {/* 输入框光标效果 */}
                                     {username && (
                                         <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -211,7 +211,7 @@ const AdminLogin: React.FC = () => {
 
                             <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.35s' }}>
                                 <Label htmlFor="password" className="flex items-center gap-2 text-sm font-medium">
-                                    <Lock className="w-4 h-4 text-orange-500 animate-bounce" style={{ animationDuration: '2s', animationDelay: '0.1s' }} />
+                                    <Lock className="w-4 h-4 text-nebula-500 animate-bounce" style={{ animationDuration: '2s', animationDelay: '0.1s' }} />
                                     管理员密码
                                 </Label>
                                 <div className="relative group">
@@ -225,12 +225,12 @@ const AdminLogin: React.FC = () => {
                                         onChange={(e) => setPassword(e.target.value)}
                                         onKeyDown={handleKeyPress}
                                         disabled={isAdminLoading}
-                                        className="h-12 pr-12 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all duration-200"
+                                        className="h-12 pr-12 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 focus:border-nebula-500 dark:focus:border-nebula-400 focus:ring-2 focus:ring-nebula-500/20 focus:outline-none transition-all duration-200"
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-400 transition-colors duration-200 z-10"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-nebula-500 dark:text-gray-400 dark:hover:text-nebula-400 transition-colors duration-200 z-10"
                                         tabIndex={-1}
                                     >
                                         {showPassword ? (
@@ -239,7 +239,7 @@ const AdminLogin: React.FC = () => {
                                             <Eye className="w-5 h-5" />
                                         )}
                                     </button>
-                                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-red-500/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-nebula-500/0 via-nebula-500/10 to-cosmic-500/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                                     {/* 输入框光标效果 */}
                                     {password && (
                                         <div className="absolute right-12 top-1/2 -translate-y-1/2">
@@ -256,7 +256,7 @@ const AdminLogin: React.FC = () => {
                                     id="rememberMe"
                                     checked={rememberMe}
                                     onChange={(e) => setRememberMe(e.target.checked)}
-                                    className="w-4 h-4 text-orange-500 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-orange-500/20 transition-all duration-200"
+                                    className="w-4 h-4 text-nebula-500 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-nebula-500/20 transition-all duration-200"
                                 />
                                 <Label
                                     htmlFor="rememberMe"
@@ -271,7 +271,7 @@ const AdminLogin: React.FC = () => {
                                     type="submit"
                                     onClick={handleButtonClick}
                                     disabled={isAdminLoading || !username.trim() || !password.trim()}
-                                    className="w-full h-12 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white font-medium shadow-lg hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden group"
+                                    className="w-full h-12 bg-gradient-to-r from-nebula-500 via-cosmic-500 to-purple-500 hover:from-nebula-600 hover:via-cosmic-600 hover:to-purple-600 text-white font-medium shadow-lg hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden group"
                                 >
                                     {/* 按钮光泽效果 */}
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>

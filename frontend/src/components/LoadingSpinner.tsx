@@ -34,13 +34,13 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   const getColorStyles = () => {
     switch (color) {
       case 'primary':
-        return 'border-apple-blue';
+        return 'border-nebula-500';
       case 'white':
         return 'border-white';
       case 'gray':
         return 'border-gray-400';
       default:
-        return 'border-apple-blue';
+        return 'border-nebula-500';
     }
   };
 

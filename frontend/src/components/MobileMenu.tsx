@@ -79,11 +79,11 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                         initial="closed"
                         animate="open"
                         exit="closed"
-                        className="fixed top-0 right-0 bottom-0 w-[280px] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-50 md:hidden flex flex-col safe-area-inset"
+                        className="fixed top-0 right-0 bottom-0 w-[280px] glass-panel border-l border-white/20 dark:border-white/10 shadow-2xl z-50 md:hidden flex flex-col safe-area-inset"
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
-                            <span className="font-bold text-lg text-gray-900 dark:text-white">菜单</span>
+                        <div className="flex items-center justify-between p-4 border-b border-white/10 dark:border-white/5">
+                            <span className="font-bold text-lg text-gray-900 dark:text-white bg-gradient-to-r from-nebula-600 to-cosmic-500 bg-clip-text text-transparent">菜单</span>
                             <button
                                 onClick={onClose}
                                 className="p-2 -mr-2 text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -96,7 +96,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-6">
                             {/* User Info Section */}
                             {isAuthenticated ? (
-                                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                                <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-gray-800/50 rounded-xl border border-white/20 dark:border-white/10">
                                     <div className="p-2 bg-white dark:bg-gray-700 rounded-full shadow-sm">
                                         <IoPersonCircleOutline className="w-8 h-8 text-gray-400" />
                                     </div>
@@ -113,7 +113,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                                 <Link
                                     to="/login"
                                     onClick={onClose}
-                                    className="flex items-center justify-center gap-2 w-full p-3 bg-apple-blue text-white rounded-xl font-medium shadow-button hover:shadow-button-hover transition-all active:scale-95"
+                                    className="flex items-center justify-center gap-2 w-full p-3 bg-gradient-to-r from-nebula-600 to-cosmic-500 text-white rounded-xl font-medium shadow-nebula hover:shadow-nebula-hover transition-all active:scale-95"
                                 >
                                     <IoLogInOutline className="w-5 h-5" />
                                     登录 / 注册
@@ -169,7 +169,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                         </div>
 
                         {/* Footer Actions */}
-                        <div className="p-4 border-t border-gray-100 dark:border-gray-800 space-y-4">
+                        <div className="p-4 border-t border-white/10 dark:border-white/5 space-y-4">
                             {/* Theme Toggler */}
                             <div className="flex items-center justify-between px-3">
                                 <span className="text-sm font-medium text-gray-600 dark:text-gray-400">深色模式</span>

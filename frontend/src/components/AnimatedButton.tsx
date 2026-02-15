@@ -55,13 +55,13 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
 
     switch (variant) {
       case 'primary':
-        return 'bg-gradient-to-r from-apple-blue to-apple-blue/90 hover:from-apple-blue/90 hover:to-apple-blue text-white shadow-button hover:shadow-button-hover';
+        return 'bg-gradient-to-r from-nebula-600 to-cosmic-500 hover:from-nebula-500 hover:to-cosmic-400 text-white shadow-nebula hover:shadow-nebula-hover';
       case 'secondary':
         return 'bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100 shadow-sm hover:shadow-md';
       case 'ghost':
         return 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600';
       default:
-        return 'bg-gradient-to-r from-apple-blue to-apple-blue/90 hover:from-apple-blue/90 hover:to-apple-blue text-white shadow-button hover:shadow-button-hover';
+        return 'bg-gradient-to-r from-nebula-600 to-cosmic-500 hover:from-nebula-500 hover:to-cosmic-400 text-white shadow-nebula hover:shadow-nebula-hover';
     }
   };
 
@@ -115,7 +115,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
     if (loading) {
       return 'white';
     }
-    
+
     switch (variant) {
       case 'primary':
         return 'white';
@@ -161,7 +161,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
       onTouchEnd={handleTouchEnd}
       disabled={disabled || loading}
       className={cn(
-        'relative overflow-hidden font-medium transition-all duration-300 ease-smooth transform will-change-transform hover:scale-105 active:scale-95 disabled:hover:scale-100 disabled:active:scale-100 flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 no-tap-highlight',
+        'relative overflow-hidden font-medium transition-all duration-300 ease-smooth transform will-change-transform hover:scale-105 active:scale-95 disabled:hover:scale-100 disabled:active:scale-100 flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-nebula-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 no-tap-highlight',
         getVariantStyles(),
         getSizeStyles(),
         getDisabledStyles(),
@@ -185,9 +185,9 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
       {/* 背景渐变动画 */}
       <div className={cn(
         "absolute inset-0 transition-opacity duration-300 rounded-xl",
-        loading 
+        loading
           ? "bg-gradient-to-r from-search-orange/20 to-yellow-500/20 opacity-0 hover:opacity-100"
-          : "bg-gradient-to-r from-apple-blue/20 to-purple-500/20 opacity-0 hover:opacity-100"
+          : "bg-gradient-to-r from-nebula-500/20 to-cosmic-500/20 opacity-0 hover:opacity-100"
       )} />
 
       {/* 图标 */}
