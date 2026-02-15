@@ -12,6 +12,7 @@ import {
 } from 'react-icons/io5';
 import { cn } from '@/lib/utils';
 import IconButton from './IconButton';
+import { MobileMenu } from '@/components/MobileMenu';
 import { AnimatedThemeToggler } from '@/components/magicui/animated-theme-toggler';
 import { useAuthStore } from '@/stores/authStore';
 import { useAnnouncementStore } from '@/stores/announcementStore';
@@ -29,6 +30,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
   const navigate = useNavigate();
   const [isAnnouncementPanelOpen, setIsAnnouncementPanelOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Admin Sidebar State
@@ -58,7 +60,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
   }, [isUserMenuOpen]);
 
   const navItems = [
-    // 导航菜单项（当前为空）
+    // 示例：{ path: '/about', label: '关于', icon: IoInformationCircleOutline }
   ];
 
   const isActivePath = (path: string) => {
@@ -144,9 +146,9 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
               })}
             </div>
 
-            {/* 右侧操作 */}
+            {/* 右侧操作 - Desktop & Tablet */}
             <div className="flex items-center gap-2">
-              {/* 公告按钮 - 只在已登录时显示 */}
+              {/* 公告按钮 */}
               {isAuthenticated && (
                 <button
                   onClick={() => setIsAnnouncementPanelOpen(true)}
@@ -154,7 +156,6 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                   title={unreadAnnouncements.length > 0 ? `${unreadAnnouncements.length} 条未读公告` : '查看公告'}
                 >
                   <IoNotificationsOutline className="w-5 h-5" />
-                  {/* 未读数量徽章 */}
                   {unreadAnnouncements.length > 0 && (
                     <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full shadow-lg animate-pulse">
                       {unreadAnnouncements.length > 99 ? '99+' : unreadAnnouncements.length}
@@ -163,10 +164,9 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                 </button>
               )}
 
-              {/* 认证相关按钮 */}
-              {isAuthenticated ? (
-                <>
-                  {/* 用户菜单 */}
+              {/* Desktop Auth & Theme */}
+              <div className="hidden md:flex items-center gap-2">
+                {isAuthenticated ? (
                   <div className="relative" ref={userMenuRef}>
                     <button
                       onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -176,7 +176,6 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                           ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
                           : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
                       )}
-                      title="用户菜单"
                     >
                       <IoPersonCircleOutline className="w-6 h-6" />
                       <IoChevronDownOutline className={cn(
@@ -185,58 +184,45 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                       )} />
                     </button>
 
-                    {/* 下拉菜单 */}
                     {isUserMenuOpen && (
                       <div
-                        className="absolute right-0 mt-2 w-56 origin-top-right rounded-xl border border-gray-200/60 dark:border-gray-700/60 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl shadow-lg shadow-black/10 dark:shadow-black/30 ring-1 ring-black/5 dark:ring-white/5 overflow-hidden"
-                        style={{ animation: 'userMenuFadeIn 0.15s ease-out' }}
+                        className="absolute right-0 mt-2 w-56 origin-top-right rounded-xl border border-gray-200/60 dark:border-gray-700/60 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl shadow-lg shadow-black/10 dark:shadow-black/30 ring-1 ring-black/5 dark:ring-white/5 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
                       >
-                        {/* 用户信息 */}
                         <div className="px-4 py-3 border-b border-gray-200/60 dark:border-gray-700/60">
                           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                             {username || '用户'}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {isAdmin ? (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-gradient-to-r from-amber-500/15 to-orange-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                                管理员
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-gradient-to-r from-blue-500/15 to-cyan-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                普通用户
-                              </span>
-                            )}
+                            {isAdmin ? '管理员' : '普通用户'}
                           </p>
                         </div>
 
-                        {/* 菜单项 */}
                         <div className="py-1.5">
                           {isAdmin ? (
                             <Link
                               to="/admin"
                               onClick={() => setIsUserMenuOpen(false)}
-                              className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-700/50 transition-colors duration-150"
+                              className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-700/50 transition-colors"
                             >
-                              <IoSettingsOutline className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                              <IoSettingsOutline className="w-4 h-4" />
                               <span>后台管理</span>
                             </Link>
                           ) : (
                             <Link
                               to="/settings/apikey"
                               onClick={() => setIsUserMenuOpen(false)}
-                              className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-700/50 transition-colors duration-150"
+                              className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-700/50 transition-colors"
                             >
-                              <IoKeyOutline className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                              <IoKeyOutline className="w-4 h-4" />
                               <span>API Key 设置</span>
                             </Link>
                           )}
                         </div>
 
-                        {/* 退出登录 */}
                         <div className="border-t border-gray-200/60 dark:border-gray-700/60 py-1.5">
                           <button
                             onClick={handleLogout}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 dark:text-red-400 hover:bg-red-50/80 dark:hover:bg-red-500/10 transition-colors duration-150"
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 dark:text-red-400 hover:bg-red-50/80 dark:hover:bg-red-500/10 transition-colors"
                           >
                             <IoLogOutOutline className="w-4 h-4" />
                             <span>退出登录</span>
@@ -245,41 +231,47 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                       </div>
                     )}
                   </div>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-apple-blue hover:text-apple-blue/80 hover:bg-apple-blue/10 transition-all duration-200"
+                  >
+                    <IoLogInOutline className="w-5 h-5" />
+                    <span>登录</span>
+                  </Link>
+                )}
+                <AnimatedThemeToggler />
+              </div>
 
-
-                </>
-              ) : (
-                /* 未登录：显示登录/注册入口 */
-                <Link
-                  to="/login"
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-apple-blue hover:text-apple-blue/80 hover:bg-apple-blue/10 transition-all duration-200"
-                  title="登录/注册"
-                >
-                  <IoLogInOutline className="w-5 h-5" />
-                  <span className="hidden sm:inline">登录/注册</span>
-                </Link>
-              )}
-
-              {/* 主题切换 */}
-              <AnimatedThemeToggler />
-
-              {/* 移动端 Admin Sidebar Toggle */}
-              {isAdminPage && isAdmin && (
+              {/* Mobile Menu Toggle - Visible only on mobile */}
+              <div className="md:hidden flex items-center">
                 <IconButton
-                  onClick={toggleMobileSidebar}
-                  className="md:hidden"
-                  aria-label="打开侧边栏"
+                  onClick={() => {
+                    if (isAdminPage) {
+                      toggleMobileSidebar();
+                    } else {
+                      setIsMobileMenuOpen(true);
+                    }
+                  }}
+                  className="text-gray-600 dark:text-gray-300"
+                  aria-label={isAdminPage ? "打开侧边栏" : "打开菜单"}
                 >
                   <IoMenuOutline className="w-6 h-6" />
                 </IconButton>
-              )}
+              </div>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* 公告面板 - 放在 nav 外部，因为 nav 的 backdrop-blur 会创建新的层叠上下文，
-          导致内部 fixed 定位的弹窗无法相对视口居中 */}
+      {/* Mobile Menu */}
+      <MobileMenu
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        navItems={navItems as any[]}
+      />
+
+      {/* 公告面板 */}
       <AnnouncementPanel
         open={isAnnouncementPanelOpen}
         onOpenChange={setIsAnnouncementPanelOpen}

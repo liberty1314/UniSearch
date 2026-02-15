@@ -13,7 +13,7 @@ import PageLoader from '@/components/PageLoader';
 import { useAutoRefreshToken } from '@/hooks/useAutoRefreshToken';
 
 // 常量配置
-const INITIAL_LOADING_DURATION = 1500;
+const INITIAL_LOADING_DURATION = 800;
 const TOAST_CONFIG = {
   position: 'top-right' as const,
   offset: '72px',

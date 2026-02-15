@@ -20,13 +20,9 @@ const Home: React.FC = () => {
 
   const [isPageLoading, setIsPageLoading] = useState(true);
 
-  // 页面加载效果
+  // 页面加载效果：移除人为延迟，直接展示
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsPageLoading(false);
-    }, 800);
-
-    return () => clearTimeout(timer);
+    setIsPageLoading(false);
   }, []);
 
 
@@ -77,8 +73,8 @@ const Home: React.FC = () => {
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.4, duration: 0.5 }}
-              className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed font-medium"
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="text-lg sm:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed font-medium px-4"
             >
               智能网盘资源搜索引擎
             </motion.p>
@@ -86,7 +82,7 @@ const Home: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5, duration: 0.5 }}
-              className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mt-3"
+              className="text-base sm:text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mt-3 px-4"
             >
               快速找到您需要的文件，支持多平台资源搜索
             </motion.p>
@@ -140,10 +136,10 @@ const Home: React.FC = () => {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.8, duration: 0.6 }}
-                  className="text-center mb-20"
+                  transition={{ delay: 0.6, duration: 0.6 }}
+                  className="text-center mb-12 sm:mb-20 px-4"
                 >
-                  <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
                     为什么选择UniSearch？
                   </h2>
                   <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">

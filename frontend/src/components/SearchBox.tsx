@@ -218,14 +218,14 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholder={placeholder}
-          className="w-full pl-14 pr-24 py-5 text-lg bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none transition-all duration-300"
+          className="w-full pl-12 sm:pl-14 pr-20 sm:pr-24 py-4 sm:py-5 text-base sm:text-lg bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none transition-all duration-300"
         />
 
-        {/* 清空按钮：移动到搜索按钮左侧 */}
+        {/* 清空按钮 */}
         {inputValue && (
           <button
             onClick={handleClear}
-            className="absolute right-[116px] top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95"
+            className="absolute right-[90px] sm:right-[116px] top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95"
             aria-label="清空输入"
           >
             <IoCloseOutline className="w-5 h-5" />

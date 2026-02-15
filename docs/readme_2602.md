@@ -491,3 +491,58 @@ pnpm-lock.yaml (已删除)
 - frontend/src/components/__tests__/Env.test.tsx (新增)
 - frontend/src/test/setup.ts (新增)
 - frontend/vite.config.ts (修改)
+
+
+---
+
+## 2026-02-15 10:32:46
+
+**Commit**: `feat(frontend): 新增移动端菜单组件并优化响应式导航栏`
+
+**详细说明**:
+
+新增 MobileMenu 组件，提供移动端友好的导航菜单。重构 Navbar 组件，优化移动端布局和交互体验。调整 SearchBox 和 SearchResults 的响应式样式，优化 Home 页面的移动端适配。更新 Tailwind 配置，新增移动端相关的 CSS 动画和样式。
+
+**主要改动**:
+
+1. 新增 MobileMenu 组件:
+   - 创建独立的移动端菜单组件，支持滑入/滑出动画
+   - 使用 Framer Motion 实现流畅的过渡效果
+   - 支持用户登录状态显示和快捷操作
+   - 提供导航链接（首页、管理后台、用户设置等）
+   - 支持点击外部区域或 ESC 键关闭菜单
+
+2. Navbar 组件优化:
+   - 重构移动端布局，新增汉堡菜单按钮
+   - 优化桌面端和移动端的显示逻辑
+   - 调整公告图标和用户菜单的响应式显示
+   - 优化导航栏的间距和对齐方式
+
+3. SearchBox 和 SearchResults 优化:
+   - 调整移动端的输入框和按钮样式
+   - 优化搜索结果的卡片布局和间距
+   - 改进响应式断点和显示效果
+
+4. Home 页面优化:
+   - 调整移动端的页面布局和内边距
+   - 优化搜索框容器的响应式样式
+   - 改进页面整体的移动端体验
+
+5. Tailwind 配置更新:
+   - 重新组织配置文件结构
+   - 新增移动端相关的动画和过渡效果
+   - 优化主题配置和扩展设置
+
+6. CSS 样式新增:
+   - 新增移动端菜单的滑入动画（mobileMenuSlideIn）
+   - 添加相关的动画关键帧定义
+
+**涉及文件**:
+- frontend/src/App.tsx (修改)
+- frontend/src/components/MobileMenu.tsx (新增)
+- frontend/src/components/Navbar.tsx (修改)
+- frontend/src/components/SearchBox.tsx (修改)
+- frontend/src/components/SearchResults.tsx (修改)
+- frontend/src/index.css (修改)
+- frontend/src/pages/Home.tsx (修改)
+- frontend/tailwind.config.js (修改)

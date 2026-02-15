@@ -172,7 +172,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       return (
         <div
           key={linkId}
-          className="group relative p-6 bg-white/95 dark:bg-gray-800/95 backdrop-blur-apple rounded-3xl border border-gray-200/60 dark:border-gray-700/60 hover:shadow-xl hover:shadow-blue-200/50 dark:hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 animate-fade-in cursor-pointer h-35"
+          className="group relative p-5 md:p-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-3xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-xl hover:shadow-blue-200/50 dark:hover:shadow-blue-500/20 hover:-translate-y-1 transition-all duration-300 animate-fade-in cursor-pointer h-full glass-card-3d"
           style={{ animationDelay: `${(index % 48) * 50}ms` }}
           onClick={handleLinkClick}
         >
@@ -208,7 +208,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     return (
       <div
         key={linkId}
-        className="group relative p-5 bg-white/95 dark:bg-gray-800/95 backdrop-blur-apple rounded-2xl border border-gray-200/60 dark:border-gray-700/60 hover:shadow-lg hover:shadow-blue-200/50 dark:hover:shadow-blue-500/20 hover:border-apple-blue/30 transition-all duration-300 animate-fade-in cursor-pointer"
+        className="group relative p-4 md:p-5 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-lg hover:shadow-blue-200/50 dark:hover:shadow-blue-500/20 hover:border-apple-blue/30 transition-all duration-300 animate-fade-in cursor-pointer glass-card-3d"
         style={{ animationDelay: `${(index % 48) * 30}ms` }}
         onClick={handleLinkClick}
       >
@@ -349,8 +349,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       {/* 搜索结果 */}
       <div className={cn(
         viewMode === 'grid'
-          ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-          : 'space-y-6'
+          ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6'
+          : 'space-y-4 sm:space-y-6'
       )}>
         {displayedResults.map((item, index) =>
           renderResultItem(item, index)
