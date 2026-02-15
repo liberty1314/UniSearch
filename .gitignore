@@ -298,6 +298,7 @@ dist/
 
 # Go 编译产物
 backend/unisearch
+backend/backend
 backend/*.exe
 backend/*.test
 backend/*.out

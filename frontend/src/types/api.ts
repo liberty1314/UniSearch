@@ -586,6 +586,20 @@ export interface SystemInfoResponse {
   config: SystemConfig;
 }
 
+// ============ TG 频道管理相关类型 ============
+
+/**
+ * Telegram 频道信息
+ */
+export interface TGChannel {
+  id: number;
+  name: string;
+  is_enabled: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 // ============ 用户管理相关类型 ============
 
 /**

@@ -246,7 +246,17 @@ func SearchHandler(c *gin.Context) {
 
 	// 检查并设置默认值
 	if len(req.Channels) == 0 {
-		req.Channels = config.AppConfig.DefaultChannels
+		// 优先从 TGChannelService 获取数据库中的启用频道
+		if tgChannelService != nil {
+			dbChannels, err := tgChannelService.GetEnabledChannels()
+			if err == nil && len(dbChannels) > 0 {
+				req.Channels = dbChannels
+			} else {
+				req.Channels = config.AppConfig.DefaultChannels
+			}
+		} else {
+			req.Channels = config.AppConfig.DefaultChannels
+		}
 	}
 
 	// 如果未指定结果类型，默认返回merge并转换为merged_by_type

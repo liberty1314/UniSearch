@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Zap, Trash2, Loader2, CheckCircle2, XCircle, AlertCircle, Eye, Edit3, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Plus, Zap, Trash2, Loader2, CheckCircle2, XCircle, AlertCircle, Eye, Edit3, Save, ChevronDown, ChevronUp, PlayCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,6 +33,12 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
     plugins,
 }) => {
     const [testingStatus, setTestingStatus] = useState<Record<string, TestStatus>>({});
+    const [localPlugins, setLocalPlugins] = useState<PluginInfo[]>(plugins);
+
+    // 同步 props 到本地状态
+    useEffect(() => {
+        setLocalPlugins(plugins);
+    }, [plugins]);
     const [showAddForm, setShowAddForm] = useState(false);
     const [newPlugin, setNewPlugin] = useState({ name: '', url: '', priority: 100, description: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,11 +46,12 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
     const [expandedPlugin, setExpandedPlugin] = useState<string | null>(null);
     const [editingPlugin, setEditingPlugin] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<{ priority: number; description: string; url: string }>({ priority: 0, description: '', url: '' });
+    const [isBatchTesting, setIsBatchTesting] = useState(false);
 
     // 测试插件连通性
     const handleTestPlugin = async (pluginName: string) => {
         setTestingStatus(prev => ({ ...prev, [pluginName]: 'testing' }));
-        
+
         try {
             const response = await fetch(`/api/admin/plugins/${pluginName}/test`, {
                 method: 'POST',
@@ -56,9 +63,15 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
 
             if (response.ok) {
                 setTestingStatus(prev => ({ ...prev, [pluginName]: 'success' }));
+                setLocalPlugins(prev => prev.map(p =>
+                    p.name === pluginName ? { ...p, status: p.url ? 'custom' : 'active' } : p
+                ));
                 toast.success(`插件 ${pluginName} 连通性测试成功`);
             } else {
                 setTestingStatus(prev => ({ ...prev, [pluginName]: 'error' }));
+                setLocalPlugins(prev => prev.map(p =>
+                    p.name === pluginName ? { ...p, status: 'error' } : p
+                ));
                 toast.error(`插件 ${pluginName} 连通性测试失败`);
             }
         } catch (error) {
@@ -70,6 +83,72 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
         setTimeout(() => {
             setTestingStatus(prev => ({ ...prev, [pluginName]: 'idle' }));
         }, 5000);
+    };
+
+    // 批量测试所有活跃/自定义/测试失败的插件
+    const handleBatchTest = async () => {
+        const activePlugins = localPlugins.filter(p => p.status === 'active' || p.status === 'custom' || p.status === 'error');
+        if (activePlugins.length === 0) {
+            toast.error('没有可供测试的插件');
+            return;
+        }
+
+        setIsBatchTesting(true);
+        const testingMap: Record<string, TestStatus> = {};
+        activePlugins.forEach(p => { testingMap[p.name] = 'testing'; });
+        setTestingStatus(prev => ({ ...prev, ...testingMap }));
+
+        const results = await Promise.allSettled(
+            activePlugins.map(async (plugin) => {
+                try {
+                    const response = await fetch(`/api/admin/plugins/${plugin.name}/test`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                    });
+                    const ok = response.ok;
+                    setTestingStatus(prev => ({
+                        ...prev,
+                        [plugin.name]: ok ? 'success' : 'error',
+                    }));
+
+                    // 更新插件状态
+                    setLocalPlugins(prev => prev.map(p => {
+                        if (p.name === plugin.name) {
+                            return { ...p, status: ok ? (p.url ? 'custom' : 'active') : 'error' };
+                        }
+                        return p;
+                    }));
+
+                    return { name: plugin.name, ok };
+                } catch {
+                    setTestingStatus(prev => ({ ...prev, [plugin.name]: 'error' }));
+                    setLocalPlugins(prev => prev.map(p =>
+                        p.name === plugin.name ? { ...p, status: 'error' } : p
+                    ));
+                    return { name: plugin.name, ok: false };
+                }
+            })
+        );
+
+        const successCount = results.filter(
+            r => r.status === 'fulfilled' && r.value.ok
+        ).length;
+        const failCount = activePlugins.length - successCount;
+
+        if (failCount === 0) {
+            toast.success(`全部 ${successCount} 个插件测试通过`);
+        } else {
+            toast.warning(`${successCount} 个通过，${failCount} 个失败`);
+        }
+
+        setIsBatchTesting(false);
+
+        setTimeout(() => {
+            setTestingStatus({});
+        }, 10000);
     };
 
     // 删除插件
@@ -181,7 +260,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
         }
 
         setNewUrlTestStatus('testing');
-        
+
         try {
             const response = await fetch('/api/admin/test-url', {
                 method: 'POST',
@@ -193,7 +272,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
             });
 
             const result = await response.json();
-            
+
             if (result.success) {
                 setNewUrlTestStatus('success');
                 toast.success('URL连通性测试成功', {
@@ -342,10 +421,9 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                                             size="sm"
                                                             onClick={handleTestNewUrl}
                                                             disabled={newUrlTestStatus === 'testing'}
-                                                            className={`cursor-pointer ${
-                                                                newUrlTestStatus === 'success' ? 'border-green-500 text-green-600' :
+                                                            className={`cursor-pointer ${newUrlTestStatus === 'success' ? 'border-green-500 text-green-600' :
                                                                 newUrlTestStatus === 'error' ? 'border-red-500 text-red-600' : ''
-                                                            }`}
+                                                                }`}
                                                         >
                                                             {newUrlTestStatus === 'testing' ? (
                                                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -358,8 +436,8 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                                             )}
                                                             <span className="ml-1">
                                                                 {newUrlTestStatus === 'testing' ? '测试中' :
-                                                                 newUrlTestStatus === 'success' ? '成功' :
-                                                                 newUrlTestStatus === 'error' ? '失败' : '测试'}
+                                                                    newUrlTestStatus === 'success' ? '成功' :
+                                                                        newUrlTestStatus === 'error' ? '失败' : '测试'}
                                                             </span>
                                                         </Button>
                                                     </div>
@@ -402,7 +480,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
 
                                 {/* 插件列表 */}
                                 <div className="space-y-2">
-                                    {plugins.map((plugin) => (
+                                    {localPlugins.map((plugin) => (
                                         <motion.div
                                             key={plugin.name}
                                             initial={{ opacity: 0, x: -10 }}
@@ -412,10 +490,10 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                             {/* 插件主行 */}
                                             <div className="flex items-center justify-between p-3">
                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                                                        plugin.status === 'active' ? 'bg-green-500' : 
-                                                        plugin.status === 'custom' ? 'bg-blue-500' : 'bg-gray-400'
-                                                    }`} />
+                                                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${plugin.status === 'active' ? 'bg-green-500' :
+                                                        plugin.status === 'custom' ? 'bg-blue-500' :
+                                                            plugin.status === 'error' ? 'bg-red-500' : 'bg-gray-400'
+                                                        }`} />
                                                     <div className="min-w-0 flex-1">
                                                         <div className="font-medium text-slate-700 dark:text-slate-200 truncate">{plugin.name}</div>
                                                         <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{plugin.description}</div>
@@ -426,6 +504,9 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                                     )}
                                                     {plugin.status === 'active' && (
                                                         <Badge className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 flex-shrink-0">内置</Badge>
+                                                    )}
+                                                    {plugin.status === 'error' && (
+                                                        <Badge className="text-xs bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 flex-shrink-0">异常</Badge>
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2 ml-2">
@@ -559,7 +640,9 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                                                         <div>
                                                                             <span className="text-xs text-slate-500 dark:text-slate-400">状态</span>
                                                                             <p className="font-medium text-slate-700 dark:text-slate-200">
-                                                                                {plugin.status === 'active' ? '内置插件' : plugin.status === 'custom' ? '自定义插件' : plugin.status}
+                                                                                {plugin.status === 'active' ? '内置插件' :
+                                                                                    plugin.status === 'custom' ? '自定义插件' :
+                                                                                        plugin.status === 'error' ? '测试失败' : plugin.status}
                                                                             </p>
                                                                         </div>
                                                                         <div>
@@ -611,9 +694,25 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                     <span className="text-sm text-slate-500 dark:text-slate-400">
                                         共 {plugins.length} 个插件
                                     </span>
-                                    <Button variant="outline" onClick={handleClose} className="cursor-pointer">
-                                        关闭
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleBatchTest}
+                                            disabled={isBatchTesting || plugins.length === 0}
+                                            className="cursor-pointer text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/20"
+                                        >
+                                            {isBatchTesting ? (
+                                                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                                            ) : (
+                                                <PlayCircle className="w-4 h-4 mr-1" />
+                                            )}
+                                            批量测试
+                                        </Button>
+                                        <Button variant="outline" onClick={handleClose} className="cursor-pointer">
+                                            关闭
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>

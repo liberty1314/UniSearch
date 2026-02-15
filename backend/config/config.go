@@ -229,6 +229,16 @@ func getDefaultChannels() []string {
 	return strings.Split(channelsEnv, ",")
 }
 
+// UpdateChannels 运行时更新频道列表（由 TGChannelService 调用）
+func UpdateChannels(channels []string) {
+	if AppConfig == nil {
+		return
+	}
+	AppConfig.DefaultChannels = channels
+	// 同步更新并发数
+	UpdateDefaultConcurrency(len(AppConfig.EnabledPlugins))
+}
+
 // 从环境变量获取默认并发数，如果未设置则使用基于环境变量的简单计算
 func getDefaultConcurrency() int {
 	concurrencyEnv := os.Getenv("CONCURRENCY")

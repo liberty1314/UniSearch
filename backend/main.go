@@ -250,8 +250,18 @@ func startServer() {
 	announcementService := service.NewAnnouncementService(database.GetDB())
 	fmt.Println("Announcement 服务已启动（公告功能已启用）")
 
+	// 初始化 TGChannel 服务（Telegram 频道管理服务）
+	tgChannelService := service.NewTGChannelService(database.GetDB())
+	// 迁移环境变量中的频道到数据库
+	if err := tgChannelService.MigrateFromEnv(); err != nil {
+		log.Printf("⚠️  TG 频道迁移失败: %v", err)
+	}
+	// 从数据库同步频道到运行时配置
+	tgChannelService.SyncToConfig()
+	fmt.Println("TGChannel 服务已启动（Telegram 频道管理功能已启用）")
+
 	// 设置路由
-	router := api.SetupRouter(searchService, apiKeyService, authService, refreshTokenService, userService, systemSettingsService, announcementService)
+	router := api.SetupRouter(searchService, apiKeyService, authService, refreshTokenService, userService, systemSettingsService, announcementService, tgChannelService)
 
 	// 获取端口配置
 	port := config.AppConfig.Port

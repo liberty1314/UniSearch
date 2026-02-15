@@ -6304,3 +6304,309 @@ Authorization: Bearer <JWT_TOKEN>
 7. **有效性判断**
    - 公告有效条件：启用状态为 true + 当前时间在生效时间和失效时间之间
    - 失效时间为 null 表示永久有效
+
+---
+
+## TG 频道管理 API
+
+管理 Telegram 搜索频道的增删改查，支持启用/禁用、排序调整和可用性测试。所有接口需要管理员 JWT Token 认证。
+
+### 1. 获取频道列表
+
+获取所有已配置的 Telegram 频道（按 sort_order 排序）。
+
+**接口地址**: `/api/admin/channels`  
+**请求方法**: `GET`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**请求示例**:
+
+```bash
+curl -X GET http://localhost:8888/api/admin/channels \
+  -H "Authorization: Bearer <admin_token>"
+```
+
+**成功响应**:
+
+```json
+{
+  "channels": [
+    {
+      "id": 1,
+      "name": "tgsearchers3",
+      "is_enabled": true,
+      "sort_order": 0,
+      "created_at": "2026-02-15T10:00:00Z",
+      "updated_at": "2026-02-15T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "name": "aaborunovi",
+      "is_enabled": true,
+      "sort_order": 1,
+      "created_at": "2026-02-15T10:00:00Z",
+      "updated_at": "2026-02-15T10:00:00Z"
+    }
+  ]
+}
+```
+
+**字段说明**:
+- `id` (number): 频道 ID（主键，自增）
+- `name` (string): 频道名称（唯一索引）
+- `is_enabled` (boolean): 是否启用（禁用的频道不参与搜索）
+- `sort_order` (number): 排序权重（越小越靠前）
+- `created_at` (string): 创建时间（ISO 8601）
+- `updated_at` (string): 更新时间（ISO 8601）
+
+**状态码**:
+- `200`: 获取成功
+- `401`: 未授权
+- `500`: 服务器内部错误
+
+---
+
+### 2. 添加频道
+
+添加一个新的 Telegram 搜索频道。
+
+**接口地址**: `/api/admin/channels`  
+**请求方法**: `POST`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| name | string | 是 | 频道名称（不含 @ 前缀） |
+
+**请求示例**:
+
+```json
+{
+  "name": "tgsearchers3"
+}
+```
+
+**成功响应** (200 OK):
+
+```json
+{
+  "channel": {
+    "id": 3,
+    "name": "tgsearchers3",
+    "is_enabled": true,
+    "sort_order": 2,
+    "created_at": "2026-02-15T10:00:00Z",
+    "updated_at": "2026-02-15T10:00:00Z"
+  }
+}
+```
+
+**错误响应**:
+
+```json
+{
+  "error": "频道 tgsearchers3 已存在"
+}
+```
+
+**状态码**:
+- `200`: 添加成功
+- `400`: 参数错误或频道名已存在
+- `401`: 未授权
+- `500`: 服务器内部错误
+
+---
+
+### 3. 更新频道
+
+更新指定频道的配置信息。
+
+**接口地址**: `/api/admin/channels/:id`  
+**请求方法**: `PUT`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**路径参数**:
+
+| 参数名 | 类型 | 描述 |
+|--------|------|------|
+| id | number | 频道 ID |
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| name | string | 否 | 新的频道名称 |
+| is_enabled | boolean | 否 | 是否启用 |
+| sort_order | number | 否 | 排序权重 |
+
+**请求示例**:
+
+```json
+{
+  "is_enabled": false
+}
+```
+
+**成功响应** (200 OK):
+
+```json
+{
+  "channel": {
+    "id": 1,
+    "name": "tgsearchers3",
+    "is_enabled": false,
+    "sort_order": 0,
+    "created_at": "2026-02-15T10:00:00Z",
+    "updated_at": "2026-02-15T11:00:00Z"
+  }
+}
+```
+
+**状态码**:
+- `200`: 更新成功
+- `400`: 参数错误
+- `401`: 未授权
+- `404`: 频道不存在
+- `500`: 服务器内部错误
+
+---
+
+### 4. 删除频道
+
+删除指定的 Telegram 频道。
+
+**接口地址**: `/api/admin/channels/:id`  
+**请求方法**: `DELETE`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**路径参数**:
+
+| 参数名 | 类型 | 描述 |
+|--------|------|------|
+| id | number | 频道 ID |
+
+**成功响应** (200 OK):
+
+```json
+{
+  "message": "频道删除成功"
+}
+```
+
+**状态码**:
+- `200`: 删除成功
+- `400`: 参数错误
+- `401`: 未授权
+- `404`: 频道不存在
+- `500`: 服务器内部错误
+
+---
+
+### 5. 测试频道可用性
+
+测试指定频道是否可以正常访问（通过 HTTP 请求 `https://t.me/s/{name}`）。
+
+**接口地址**: `/api/admin/channels/:name/test`  
+**请求方法**: `POST`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**路径参数**:
+
+| 参数名 | 类型 | 描述 |
+|--------|------|------|
+| name | string | 频道名称 |
+
+**成功响应** (200 OK):
+
+```json
+{
+  "name": "tgsearchers3",
+  "accessible": true,
+  "status_code": 200
+}
+```
+
+**频道不可访问时**:
+
+```json
+{
+  "name": "nonexistent_channel",
+  "accessible": false,
+  "status_code": 404,
+  "error": "频道返回非200状态码: 404"
+}
+```
+
+**状态码**:
+- `200`: 测试完成（不代表频道可访问，需检查 `accessible` 字段）
+- `401`: 未授权
+
+---
+
+### 6. 批量更新频道
+
+批量更新多个频道的配置。
+
+**接口地址**: `/api/admin/channels/batch`  
+**请求方法**: `PUT`  
+**Content-Type**: `application/json`  
+**是否需要认证**: 是（需要管理员 Token）
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 描述 |
+|--------|------|------|------|
+| channels | array | 是 | 频道更新列表 |
+| channels[].id | number | 是 | 频道 ID |
+| channels[].name | string | 否 | 新名称 |
+| channels[].is_enabled | boolean | 否 | 是否启用 |
+| channels[].sort_order | number | 否 | 排序权重 |
+
+**请求示例**:
+
+```json
+{
+  "channels": [
+    { "id": 1, "sort_order": 0, "is_enabled": true },
+    { "id": 2, "sort_order": 1, "is_enabled": false }
+  ]
+}
+```
+
+**成功响应** (200 OK):
+
+```json
+{
+  "message": "批量更新成功",
+  "updated_count": 2
+}
+```
+
+**状态码**:
+- `200`: 批量更新成功
+- `400`: 参数错误
+- `401`: 未授权
+- `500`: 服务器内部错误
+
+---
+
+### 设计说明
+
+1. **混合配置策略**
+   - 数据库优先：运行时频道配置始终从数据库读取
+   - 环境变量回退：首次启动时自动将 `.env` 中的 `CHANNELS` 迁移到数据库
+   - 迁移幂等：相同频道不会重复创建
+
+2. **运行时同步**
+   - 每次增删改操作后，自动同步到运行时配置（`config.AppConfig.DefaultChannels`）
+   - 无需重启服务
+
+3. **搜索集成**
+   - 搜索接口优先从数据库获取已启用频道列表
+   - 仅启用状态的频道参与搜索（`is_enabled = true`）
+   - 按 `sort_order` 排序
+

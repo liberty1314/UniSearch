@@ -24,6 +24,7 @@ func AutoMigrate() error {
 		&model.RefreshToken{},   // 创建 refresh_tokens 表（记住密码功能）
 		&model.Secret{},         // 创建 secrets 表（密钥管理）
 		&model.Announcement{},   // 创建 announcements 表（系统公告）
+		&model.TGChannel{},      // 创建 tg_channels 表（Telegram 频道管理）
 	)
 
 	if err != nil {
@@ -38,6 +39,7 @@ func AutoMigrate() error {
 	log.Println("  - refresh_tokens 表已创建/更新")
 	log.Println("  - secrets 表已创建/更新")
 	log.Println("  - announcements 表已创建/更新")
+	log.Println("  - tg_channels 表已创建/更新")
 	log.Println("  - 外键约束已创建（api_keys.user_id -> users.id）")
 
 	// 执行数据迁移：为现有管理员创建永久 Key

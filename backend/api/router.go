@@ -12,13 +12,15 @@ import (
 
 // SetupRouter 设置路由
 // 验证需求：4.1, 5.1, 6.1, 7.1, 8.1, 10.1, 10.3
-func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService, systemSettingsService *service.SystemSettingsService, announcementService *service.AnnouncementService) *gin.Engine {
+func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService, systemSettingsService *service.SystemSettingsService, announcementService *service.AnnouncementService, tgChannelService *service.TGChannelService) *gin.Engine {
 	// 设置搜索服务
 	SetSearchService(searchService)
 	// 设置API Key服务
 	SetAPIKeyService(apiKeyService)
 	// 设置系统设置服务
 	SetSystemSettingsService(systemSettingsService)
+	// 设置 TG 频道服务
+	SetTGChannelService(tgChannelService)
 
 	// 创建控制器实例
 	authController := controller.NewAuthController(authService)
@@ -186,6 +188,17 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			// 系统设置管理
 			admin.GET("/system-settings", GetSystemSettingsHandler)    // 获取系统设置
 			admin.PUT("/system-settings", UpdateSystemSettingsHandler) // 更新系统设置
+
+			// TG 频道管理
+			channels := admin.Group("/channels")
+			{
+				channels.GET("", ListTGChannelsHandler)                    // 获取频道列表
+				channels.POST("", AddTGChannelHandler)                     // 添加频道
+				channels.PUT("/batch", BatchUpdateTGChannelsHandler)       // 批量更新频道
+				channels.PUT("/:id", UpdateTGChannelHandler)               // 更新频道
+				channels.DELETE("/:id", DeleteTGChannelHandler)            // 删除频道
+				channels.POST("/:name/test", TestTGChannelHandler)         // 测试频道
+			}
 		}
 		
 		// ========== 公告管理接口（需要 JWT 认证 + 管理员权限）==========
@@ -234,9 +247,22 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 				}
 			}
 
-			// 获取频道信息
-			channels := config.AppConfig.DefaultChannels
-			channelsCount := len(channels)
+			// 获取频道信息（优先从 TGChannelService 获取）
+			var channels []string
+			var channelsCount int
+			if tgChannelService != nil {
+				dbChannels, err := tgChannelService.GetEnabledChannels()
+				if err == nil && len(dbChannels) > 0 {
+					channels = dbChannels
+					channelsCount = len(dbChannels)
+				} else {
+					channels = config.AppConfig.DefaultChannels
+					channelsCount = len(channels)
+				}
+			} else {
+				channels = config.AppConfig.DefaultChannels
+				channelsCount = len(channels)
+			}
 
 			response := gin.H{
 				"status":          "ok",

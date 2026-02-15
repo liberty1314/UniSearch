@@ -643,3 +643,76 @@ pnpm-lock.yaml (已删除)
 - frontend/src/pages/UserApiKeySettings.tsx (修改)
 - frontend/src/pages/UserAuth.tsx (修改)
 - frontend/tailwind.config.js (修改)
+
+
+---
+
+## 2026-02-15 17:34:37
+
+**Commit**: `feat(plugin): 新增 Telegram 频道管理功能并优化插件配置`
+
+**详细说明**:
+
+实现 Telegram 频道管理功能，支持频道的增删改查和启用/禁用操作。新增后端 API 接口和数据库模型，前端新增 ChannelManageDialog 组件。优化插件管理对话框，支持 Telegram 频道配置。更新系统信息视图，展示 Telegram 频道配置状态。完善 API 文档，新增 Telegram 频道管理相关接口说明。
+
+**主要改动**:
+
+1. 后端实现:
+   - 新增 tg_channel_handler.go，提供 Telegram 频道的 CRUD 接口
+   - 新增 tg_channel_service.go，实现频道业务逻辑
+   - 新增 tg_channel.go 数据模型，定义频道数据结构
+   - 在 router.go 中注册频道管理路由
+   - 在 handler.go 中集成频道处理器
+   - 在 migration.go 中添加频道表的数据库迁移
+   - 在 config.go 中新增 Telegram 相关配置项
+
+2. 前端管理界面:
+   - 新增 ChannelManageDialog.tsx，提供频道管理对话框
+   - 支持频道列表展示、创建、编辑、删除操作
+   - 支持频道启用/禁用状态切换
+   - 优化 PluginManageDialog.tsx，集成频道管理功能
+   - 更新 ApplePluginTable.tsx，优化插件表格展示
+   - 更新 SystemInfoView.tsx，展示 Telegram 频道配置状态
+
+3. API 文档更新:
+   - 新增 Telegram 频道管理接口文档
+   - 包含获取频道列表、创建频道、更新频道、删除频道、设置频道状态等接口
+   - 详细说明请求参数、返回格式和错误码
+
+4. 类型定义:
+   - 在 api.ts 中新增 TelegramChannel 相关类型定义
+   - 定义频道数据结构和请求/响应类型
+
+5. 配置文件更新:
+   - 更新 .env.example，新增 Telegram 相关配置示例
+   - 更新 .gitignore，忽略敏感配置文件
+
+6. 主程序优化:
+   - 在 main.go 中初始化 Telegram 频道服务
+   - 优化服务启动流程
+
+**功能特性**:
+
+- 支持多个 Telegram 频道配置
+- 支持频道的启用/禁用控制
+- 支持频道信息的增删改查
+- 提供友好的管理界面
+- 完善的错误处理和验证
+
+**涉及文件**:
+- .env.example (修改)
+- .gitignore (修改)
+- backend/api/handler.go (修改)
+- backend/api/router.go (修改)
+- backend/api/tg_channel_handler.go (新增)
+- backend/config/config.go (修改)
+- backend/database/migration.go (修改)
+- backend/main.go (修改)
+- backend/model/tg_channel.go (新增)
+- backend/service/tg_channel_service.go (新增)
+- docs/api_reference.md (修改)
+- frontend/src/components/admin/ApplePluginTable.tsx (修改)
+- frontend/src/components/admin/ChannelManageDialog.tsx (新增)
+- frontend/src/components/admin/PluginManageDialog.tsx (修改)
+- frontend/src/components/admin/SystemInfoView.tsx (修改)
+- frontend/src/types/api.ts (修改)

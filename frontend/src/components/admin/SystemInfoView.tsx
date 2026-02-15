@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { StatsCard } from './StatsCard';
 import { PluginManageDialog } from './PluginManageDialog';
+import { ChannelManageDialog } from './ChannelManageDialog';
 import { ApplePluginTable } from './ApplePluginTable';
 import {
     Activity,
@@ -35,6 +36,7 @@ export const SystemInfoView: React.FC = () => {
     const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [isManageDialogOpen, setIsManageDialogOpen] = useState<boolean>(false);
+    const [isChannelDialogOpen, setIsChannelDialogOpen] = useState<boolean>(false);
 
     /**
      * 加载系统信息
@@ -154,6 +156,52 @@ export const SystemInfoView: React.FC = () => {
                 />
             </div>
 
+            {/* 频道列表 - 独立卡片 */}
+            <Card className="border-gray-100 dark:border-gray-700/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+                <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
+                                <Radio className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                Telegram 频道列表
+                                <Badge variant="outline" className="ml-1 text-xs">
+                                    {systemInfo.config.channels.length}
+                                </Badge>
+                            </CardTitle>
+                            <CardDescription className="text-slate-500 dark:text-slate-400">
+                                当前已启用的搜索频道
+                            </CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => setIsChannelDialogOpen(true)}
+                                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+                                >
+                                    <Edit className="w-4 h-4 mr-1" />
+                                    编辑
+                                </Button>
+                            </motion.div>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <div className="flex flex-wrap gap-2">
+                        {systemInfo.config.channels.map((channel) => (
+                            <Badge
+                                key={channel}
+                                variant="outline"
+                                className="font-mono text-xs"
+                            >
+                                {channel}
+                            </Badge>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* 插件列表 */}
             <Card className="border-gray-100 dark:border-gray-700/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
                 <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50">
@@ -167,32 +215,17 @@ export const SystemInfoView: React.FC = () => {
                                 查看所有已注册插件的详细信息
                             </CardDescription>
                         </div>
-                        <div className="flex items-center gap-2">
-                            {/* 编辑按钮 */}
-                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Button
-                                    variant="default"
-                                    size="sm"
-                                    onClick={handleOpenManageDialog}
-                                    className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
-                                >
-                                    <Edit className="w-4 h-4 mr-1" />
-                                    编辑
-                                </Button>
-                            </motion.div>
-                            {/* 刷新按钮 */}
-                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={loadSystemInfo}
-                                    disabled={isLoading}
-                                    className="border-slate-200 dark:border-slate-700 cursor-pointer"
-                                >
-                                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                                </Button>
-                            </motion.div>
-                        </div>
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                            <Button
+                                variant="default"
+                                size="sm"
+                                onClick={handleOpenManageDialog}
+                                className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+                            >
+                                <Edit className="w-4 h-4 mr-1" />
+                                编辑
+                            </Button>
+                        </motion.div>
                     </div>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -328,25 +361,6 @@ export const SystemInfoView: React.FC = () => {
                             </div>
                         </div>
                     </div>
-
-                    {/* 频道列表 */}
-                    <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-                        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-                            <Radio className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                            Telegram 频道列表 ({systemInfo.config.channels.length})
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {systemInfo.config.channels.map((channel) => (
-                                <Badge
-                                    key={channel}
-                                    variant="outline"
-                                    className="font-mono text-xs"
-                                >
-                                    {channel}
-                                </Badge>
-                            ))}
-                        </div>
-                    </div>
                 </CardContent>
             </Card>
 
@@ -357,6 +371,14 @@ export const SystemInfoView: React.FC = () => {
                 onSuccess={handleManageSuccess}
                 token={token || ''}
                 plugins={systemInfo.plugins}
+            />
+
+            {/* 频道管理对话框 */}
+            <ChannelManageDialog
+                isOpen={isChannelDialogOpen}
+                onClose={() => setIsChannelDialogOpen(false)}
+                onSuccess={handleManageSuccess}
+                token={token || ''}
             />
         </motion.div>
     );

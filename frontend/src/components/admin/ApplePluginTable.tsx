@@ -55,21 +55,27 @@ export const ApplePluginTable: React.FC<ApplePluginTableProps> = ({
         const statusConfig =
           plugin.status === 'active'
             ? {
-                text: '活跃',
-                color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
-                dotColor: 'bg-green-500',
+              text: '活跃',
+              color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+              dotColor: 'bg-green-500',
+            }
+            : plugin.status === 'custom'
+              ? {
+                text: '自定义',
+                color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+                dotColor: 'bg-blue-500',
               }
-            : plugin.status === 'inactive'
-            ? {
-                text: '不活跃',
-                color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-                dotColor: 'bg-gray-400',
-              }
-            : {
-                text: '错误',
-                color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
-                dotColor: 'bg-red-500',
-              };
+              : plugin.status === 'inactive'
+                ? {
+                  text: '不活跃',
+                  color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+                  dotColor: 'bg-gray-400',
+                }
+                : {
+                  text: '错误',
+                  color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+                  dotColor: 'bg-red-500',
+                };
 
         return (
           <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
