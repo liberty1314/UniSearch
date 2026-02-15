@@ -344,6 +344,7 @@ logs/
 .clouder/
 .cursor/
 .claude/
+.agent/
 
 # 测试文件
 testsprite_tests/

@@ -18,7 +18,8 @@ RUN go mod download
 COPY backend/ ./
 
 # 构建后端应用（静态编译）
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -extldflags '-static'" -o unisearch .
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -ldflags="-s -w -extldflags '-static'" -o unisearch .
 
 # ============================================
 # 阶段 2: 构建前端 (Node.js + pnpm)

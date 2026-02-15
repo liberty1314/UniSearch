@@ -427,3 +427,67 @@ pnpm-lock.yaml (已删除)
 - frontend/src/components/admin/SystemInfoView.tsx (文本溢出修复)
 - frontend/src/pages/Admin.tsx (布局优化)
 - frontend/src/stores/adminStore.ts (新增)
+
+
+---
+
+## 2026-02-15 09:51:15
+
+**Commit**: `refactor(frontend): 移除 styled-components 依赖并新增 Vitest 测试环境`
+
+**详细说明**:
+
+重构 BubbleLoader 组件，使用 Framer Motion 和 Tailwind CSS 替代 styled-components，减少依赖体积。删除示例文件 AnnouncementProvider.refactored.example.tsx。新增 Vitest 测试环境配置，支持 jsdom 和 @testing-library/react，为前端单元测试奠定基础。更新 Dockerfile 以优化构建流程。
+
+**主要改动**:
+
+1. 依赖优化:
+   - 从 package.json 中移除 styled-components 依赖
+   - 新增 Vitest 相关依赖：@testing-library/jest-dom、@testing-library/react、jsdom、vitest
+   - 更新 pnpm-lock.yaml，移除 styled-components 相关包
+
+2. BubbleLoader 组件重构:
+   - 移除 styled-components，改用 Framer Motion 的 motion 组件
+   - 使用 Tailwind CSS 类名替代 CSS-in-JS
+   - 使用 motion.div 的 variants 和 animate 属性实现动画
+   - 保持原有的视觉效果和动画逻辑
+   - 优化代码结构，提升可维护性
+
+3. 测试环境配置:
+   - 新增 vite.config.ts 中的 test 配置块
+   - 配置 jsdom 环境模拟浏览器 DOM
+   - 启用 globals 模式，支持全局测试 API（describe、it、expect 等）
+   - 新增 src/test/setup.ts 作为测试初始化文件
+   - 导入 @testing-library/jest-dom 提供额外的 DOM 断言方法
+
+4. 测试文件:
+   - 新增 src/components/__tests__/Env.test.tsx 作为测试环境验证
+   - 包含基础的 truthy 测试和 jsdom 环境测试
+   - 验证 @testing-library/react 和 jest-dom 的集成
+
+5. Dockerfile 优化:
+   - 更新根目录 Dockerfile 和 backend/Dockerfile
+   - 优化构建流程和依赖安装
+
+6. 清理:
+   - 删除 AnnouncementProvider.refactored.example.tsx 示例文件
+   - 更新 .gitignore 规则
+
+**技术要点**:
+
+- Framer Motion 提供更强大的动画能力和更好的性能
+- Tailwind CSS 减少运行时 CSS-in-JS 的性能开销
+- Vitest 提供快速的单元测试执行和 Vite 原生集成
+- jsdom 提供完整的浏览器 DOM 模拟环境
+
+**涉及文件**:
+- .gitignore (修改)
+- Dockerfile (修改)
+- backend/Dockerfile (修改)
+- frontend/package.json (修改)
+- frontend/pnpm-lock.yaml (修改)
+- frontend/src/components/AnnouncementProvider.refactored.example.tsx (删除)
+- frontend/src/components/BubbleLoader.tsx (重构)
+- frontend/src/components/__tests__/Env.test.tsx (新增)
+- frontend/src/test/setup.ts (新增)
+- frontend/vite.config.ts (修改)

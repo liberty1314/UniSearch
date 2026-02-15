@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -6,8 +7,13 @@ import tsconfigPaths from "vite-tsconfig-paths";
 export default defineConfig(() => {
   const enableLocator = process.env.VITE_ENABLE_LOCATOR === '1'
   return {
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: './src/test/setup.ts',
+    },
     build: {
-      sourcemap: 'hidden' as const, 
+      sourcemap: 'hidden' as const,
     },
     server: {
       proxy: {

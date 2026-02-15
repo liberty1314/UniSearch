@@ -24,10 +24,11 @@ COPY . .
 ARG VERSION=dev
 ARG BUILD_DATE=unknown
 ARG VCS_REF=unknown
+ARG TARGETARCH
 
 # 构建应用
 # 使用静态编译，确保在不同环境下都能运行
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags '-static'" -o unisearch .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -ldflags="-s -w -extldflags '-static'" -o unisearch .
 
 # 运行阶段
 # 这一阶段会根据 buildx 的 --platform 参数选择正确的基础镜像 (例如 linux/arm64 会拉取 arm64/alpine)
