@@ -716,3 +716,30 @@ pnpm-lock.yaml (已删除)
 - frontend/src/components/admin/PluginManageDialog.tsx (修改)
 - frontend/src/components/admin/SystemInfoView.tsx (修改)
 - frontend/src/types/api.ts (修改)
+
+
+---
+
+## 2026-02-17 16:33:34
+
+**Commit**: `refactor(announcement): 优化公告对话框和面板组件代码结构`
+
+**详细说明**:
+
+重构 AnnouncementDialog 和 AnnouncementPanel 组件，优化代码格式和结构。统一缩进和换行风格，提升代码可读性和维护性。
+
+**主要改动**:
+
+1. AnnouncementDialog 组件优化:
+   - 统一代码缩进和换行格式
+   - 优化 JSX 结构和属性排列
+   - 改进代码可读性
+
+2. AnnouncementPanel 组件优化:
+   - 统一代码格式和风格
+   - 优化组件结构
+   - 提升代码一致性
+
+**涉及文件**:
+- frontend/src/components/AnnouncementDialog.tsx (修改)
+- frontend/src/components/AnnouncementPanel.tsx (修改)

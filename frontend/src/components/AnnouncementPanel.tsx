@@ -94,49 +94,42 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
       onClick={() => handleAnnouncementClick(announcement)}
       className={cn(
         'w-full text-left p-4 rounded-xl transition-all duration-200',
-        'border hover:shadow-md group relative overflow-hidden',
+        'border group relative overflow-hidden',
         isUnread
-          ? 'bg-gradient-to-br from-nebula-50/80 to-cosmic-50/50 dark:from-nebula-900/20 dark:to-cosmic-900/10 border-nebula-100 dark:border-nebula-800'
-          : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+          ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800'
+          : 'bg-white dark:bg-[#1C1C1E] border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'
       )}
     >
-      {isUnread && (
-        <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-nebula-500/10 to-transparent -mr-8 -mt-8 rounded-full blur-xl pointer-events-none"></div>
-      )}
       <div className="flex items-start justify-between gap-3 relative z-10">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
             <h3 className={cn(
-              'font-semibold text-sm truncate',
+              'font-semibold text-[15px] truncate', // iOS 字体大小
               isUnread
                 ? 'text-gray-900 dark:text-white'
-                : 'text-gray-600 dark:text-gray-300'
+                : 'text-gray-600 dark:text-gray-400'
             )}>
               {announcement.title}
             </h3>
             {isUnread && (
-              <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-nebula-100 text-nebula-600 dark:bg-nebula-900/40 dark:text-nebula-400">
-                NEW
-              </span>
+              <span className="flex-shrink-0 w-2 h-2 rounded-full bg-[#007AFF]"></span>
             )}
           </div>
           <p className={cn(
-            'text-xs line-clamp-2 leading-relaxed',
+            'text-[13px] line-clamp-2 leading-relaxed',
             isUnread
               ? 'text-gray-600 dark:text-gray-300'
               : 'text-gray-400 dark:text-gray-500'
           )}>
             {announcement.content.replace(/<[^>]*>/g, '').substring(0, 80)}...
           </p>
-          <div className="mt-2 text-[10px] text-gray-400 dark:text-gray-600">
+          <div className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
             {new Date(announcement.created_at).toLocaleDateString()}
           </div>
         </div>
         <ChevronRight className={cn(
-          'w-4 h-4 flex-shrink-0 transition-all duration-200 group-hover:translate-x-1 mt-1',
-          isUnread
-            ? 'text-nebula-500'
-            : 'text-gray-300 dark:text-gray-600 group-hover:text-gray-400'
+          'w-4 h-4 flex-shrink-0 transition-all duration-200 group-hover:translate-x-0.5 mt-0.5',
+          'text-gray-300 dark:text-gray-600'
         )} />
       </div>
     </motion.button>
@@ -163,62 +156,70 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+              className="absolute inset-0 bg-transparent" // 面板通常不需要强遮罩，或者使用透明遮罩点击关闭
               onClick={handleBackdropClick}
             />
 
             {/* 公告面板 */}
             <motion.div
-              initial={{ opacity: 0, x: 300, scale: 0.95 }}
+              initial={{ opacity: 0, x: 20, scale: 0.95 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 300, scale: 0.95 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className="relative w-full max-w-md max-h-[calc(100vh-6rem)] glass-panel rounded-2xl shadow-nebula border border-nebula-100 dark:border-nebula-800 overflow-hidden"
+              exit={{ opacity: 0, x: 20, scale: 0.95 }}
+              transition={{ duration: 0.3, type: "spring", damping: 25, stiffness: 300 }}
+              className={cn(
+                "relative w-full max-w-sm max-h-[calc(100vh-6rem)]",
+                "bg-white/90 dark:bg-[#1C1C1E]/90", // 高模糊背景
+                "backdrop-blur-xl",
+                "rounded-2xl shadow-2xl shadow-black/10",
+                "border border-white/20 dark:border-white/10",
+                "overflow-hidden flex flex-col"
+              )}
             >
               {/* 头部 */}
-              <div className="sticky top-0 z-10 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 px-6 py-4">
+              <div className="flex-shrink-0 bg-white/50 dark:bg-white/5 border-b border-gray-200/50 dark:border-gray-700/50 px-5 py-4 backdrop-blur-md">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-nebula-500 to-cosmic-500 flex items-center justify-center shadow-lg">
-                      <Bell className="w-5 h-5 text-white" />
+                    <div className={cn(
+                      'w-9 h-9 rounded-xl',
+                      'bg-gradient-to-b from-blue-400 to-blue-600',
+                      'flex items-center justify-center',
+                      'shadow-sm shadow-blue-500/20'
+                    )}>
+                      <Bell className="w-4.5 h-4.5 text-white" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                      <h2 className="text-[17px] font-semibold text-gray-900 dark:text-white">
                         系统公告
                       </h2>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {activeAnnouncements.length} 条公告
-                      </p>
                     </div>
                   </div>
                   <button
                     onClick={() => onOpenChange(false)}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100/80 dark:bg-gray-700/80 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-110 active:scale-95"
+                    className="w-7 h-7 rounded-full flex items-center justify-center bg-gray-100/80 dark:bg-gray-700/80 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                   >
-                    <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                    <X className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
                   </button>
                 </div>
               </div>
 
               {/* 公告列表 */}
-              <div className="overflow-y-auto max-h-[calc(100vh-12rem)] p-4">
+              <div className="flex-1 overflow-y-auto p-4 min-h-0">
                 {isLoading ? (
                   <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-nebula-500 border-t-transparent"></div>
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
                   </div>
                 ) : activeAnnouncements.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <Bell className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
-                    <p className="text-gray-500 dark:text-gray-400">暂无公告</p>
+                    <Bell className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400">暂无公告</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
                     {/* 未读公告区域 */}
                     {unreadList.length > 0 && (
-                      <div className="space-y-3">
-                        <h3 className="text-xs font-semibold text-nebula-600 dark:text-nebula-400 uppercase tracking-wider px-1 flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-nebula-500 animate-pulse"></span>
-                          未读消息 ({unreadList.length})
+                      <div className="space-y-2">
+                        <h3 className="text-[11px] font-medium text-gray-400 uppercase tracking-wider px-1">
+                          未读消息
                         </h3>
                         {unreadList.map((announcement, index) => renderAnnouncementCard(announcement, index, true))}
                       </div>
@@ -226,8 +227,8 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
 
                     {/* 已读公告区域 */}
                     {readList.length > 0 && (
-                      <div className="space-y-3">
-                        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-1">
+                      <div className="space-y-2">
+                        <h3 className="text-[11px] font-medium text-gray-400 uppercase tracking-wider px-1">
                           历史消息
                         </h3>
                         {readList.map((announcement, index) => renderAnnouncementCard(announcement, index, false))}
