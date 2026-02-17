@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import Navbar from '@/components/Navbar';
 import { AnnouncementProvider } from '@/components/AnnouncementProvider';
@@ -90,6 +90,31 @@ const AdminGuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) 
   return <>{children}</>;
 };
 
+/**
+ * 滚动到顶部组件
+ * 监听路由变化，每次路由切换或页面刷新时自动滚动到页面顶部
+ */
+const ScrollToTop: React.FC = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    // 禁用浏览器的自动滚动恢复功能
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+
+    // 强制滚动到顶部
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  // 组件挂载时也执行一次（处理页面刷新的情况）
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  return null;
+};
+
 const App: React.FC = () => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
@@ -133,6 +158,9 @@ const App: React.FC = () => {
 
       <Router>
         <div className="bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+          {/* 路由变化时自动滚动到顶部 */}
+          <ScrollToTop />
+          
           <Navbar />
 
           {/* 系统公告提供者 - 用户登录后自动检查并显示公告 */}

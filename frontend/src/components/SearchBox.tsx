@@ -205,7 +205,9 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   return (
     <div className={cn('relative w-full max-w-2xl mx-auto group', className)}>
       {/* 搜索框容器 */}
-      <div className="relative glass-panel rounded-2xl group-focus-within:border-nebula-500/60 group-focus-within:focus-glow-nebula hover-lift">
+      <div className="relative glass-card-3d rounded-2xl group-focus-within:ring-2 group-focus-within:ring-nebula-500/30 transition-all duration-300 hover-lift">
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-nebula-500/5 to-cosmic-500/5 opacity-0 group-focus-within:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
         <svg className="absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-nebula-500 w-6 h-6 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
@@ -218,27 +220,27 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholder={placeholder}
-          className="w-full pl-12 sm:pl-14 pr-20 sm:pr-24 py-4 sm:py-5 text-base sm:text-lg bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none transition-all duration-300"
+          className="w-full pl-14 pr-28 sm:pr-32 py-4 sm:py-5 text-base sm:text-lg bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none relative z-10"
         />
 
         {/* 清空按钮 */}
         {inputValue && (
           <button
             onClick={handleClear}
-            className="absolute right-[90px] sm:right-[116px] top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95"
+            className="absolute right-[100px] sm:right-[120px] top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 z-20"
             aria-label="清空输入"
           >
             <IoCloseOutline className="w-5 h-5" />
           </button>
         )}
 
-        {/* 搜索按钮：StatefulButton */}
-        <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+        {/* 搜索按钮 */}
+        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-20">
           <StatefulButton
             ref={buttonRef}
             onClick={handleSearch}
             disabled={!inputValue.trim() || isLoading}
-            className="min-w-[100px] hover-lift"
+            className="min-w-[90px] h-[42px] hover-lift shadow-nebula hover:shadow-nebula-hover rounded-xl"
           >
             搜索
           </StatefulButton>

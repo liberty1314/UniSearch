@@ -1,161 +1,171 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, memo } from 'react';
+import { motion, LayoutGroup } from 'framer-motion';
+import { IoCheckmarkCircle, IoEllipseOutline } from 'react-icons/io5';
 import { CloudType, CloudTypeValue } from '@/types/api';
 import { useSearchStore } from '@/stores/searchStore';
 import { cn } from '@/lib/utils';
-import IconButton from './IconButton';
-import TagButton from './TagButton';
 import { CoolMode } from '@/components/magicui/cool-mode';
 
+// --- Sub-components ---
+
+interface CloudTypeTagProps {
+  config: {
+    type: string;
+    name: string;
+    color: string;
+    shadow: string;
+  };
+  isSelected: boolean;
+  onToggle: (type: CloudTypeValue) => void;
+}
+
+const CloudTypeTag = memo(({ config, isSelected, onToggle }: CloudTypeTagProps) => {
+  return (
+    <CoolMode options={{ particleCount: 12, speedHorz: 5, speedUp: 15 }}>
+      <motion.button
+        layout
+        onClick={() => onToggle(config.type as CloudTypeValue)}
+        whileHover={{ scale: 1.05, y: -2 }}
+        whileTap={{ scale: 0.95 }}
+        className={cn(
+          "relative flex items-center px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 border box-border",
+          isSelected
+            ? `bg-gradient-to-r ${config.color} text-white border-transparent ${config.shadow} shadow-lg ring-2 ring-white/20 dark:ring-black/20`
+            : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm"
+        )}
+      >
+
+
+        {/* 文本内容 */}
+        <span>{config.name}</span>
+      </motion.button>
+    </CoolMode>
+  );
+});
+
+CloudTypeTag.displayName = 'CloudTypeTag';
+
+// --- Main Component ---
+
 /**
- * 网盘类型筛选器组件
- * 提供标签按钮形式的网盘类型筛选功能
+ * 网盘类型筛选器组件 - Premium Design & Zero Layout Shift
  */
 const CloudTypeFilter: React.FC = () => {
   const { searchParams, setSearchParams } = useSearchStore();
 
-  // 网盘类型配置映射
   const cloudTypeConfigs = [
-    { type: CloudType.BAIDU, name: '百度网盘', color: 'bg-blue-500 hover:bg-blue-600' },
-    { type: CloudType.ALIYUN, name: '阿里云盘', color: 'bg-orange-500 hover:bg-orange-600' },
-    { type: CloudType.QUARK, name: '夸克网盘', color: 'bg-purple-500 hover:bg-purple-600' },
-    { type: CloudType.TIANYI, name: '天翼云盘', color: 'bg-cyan-500 hover:bg-cyan-600' },
-    { type: CloudType.UC, name: 'UC网盘', color: 'bg-green-500 hover:bg-green-600' },
-    { type: CloudType.MOBILE, name: '移动云盘', color: 'bg-indigo-500 hover:bg-indigo-600' },
-    { type: CloudType.ONE_ONE_FIVE, name: '115网盘', color: 'bg-red-500 hover:bg-red-600' },
-    { type: CloudType.XUNLEI, name: '迅雷网盘', color: 'bg-yellow-500 hover:bg-yellow-600' },
-    { type: CloudType.ONE_TWO_THREE, name: '123网盘', color: 'bg-teal-500 hover:bg-teal-600' },
-    { type: CloudType.MAGNET, name: '磁力链接', color: 'bg-gray-600 hover:bg-gray-700' },
-    { type: CloudType.LANZOU, name: '蓝奏云', color: 'bg-blue-600 hover:bg-blue-700' },
+    { type: CloudType.BAIDU, name: '百度网盘', color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/30' },
+    { type: CloudType.ALIYUN, name: '阿里云盘', color: 'from-orange-500 to-orange-600', shadow: 'shadow-orange-500/30' },
+    { type: CloudType.QUARK, name: '夸克网盘', color: 'from-purple-500 to-purple-600', shadow: 'shadow-purple-500/30' },
+    { type: CloudType.TIANYI, name: '天翼云盘', color: 'from-cyan-500 to-cyan-600', shadow: 'shadow-cyan-500/30' },
+    { type: CloudType.UC, name: 'UC网盘', color: 'from-green-500 to-green-600', shadow: 'shadow-green-500/30' },
+    { type: CloudType.MOBILE, name: '移动云盘', color: 'from-indigo-500 to-indigo-600', shadow: 'shadow-indigo-500/30' },
+    { type: CloudType.ONE_ONE_FIVE, name: '115网盘', color: 'from-red-500 to-red-600', shadow: 'shadow-red-500/30' },
+    { type: CloudType.XUNLEI, name: '迅雷网盘', color: 'from-yellow-500 to-yellow-600', shadow: 'shadow-yellow-500/30' },
+    { type: CloudType.ONE_TWO_THREE, name: '123网盘', color: 'from-teal-500 to-teal-600', shadow: 'shadow-teal-500/30' },
+    { type: CloudType.MAGNET, name: '磁力链接', color: 'from-gray-600 to-gray-700', shadow: 'shadow-gray-500/30' },
+    { type: CloudType.LANZOU, name: '蓝奏云', color: 'from-blue-600 to-blue-700', shadow: 'shadow-blue-600/30' },
   ];
 
-  // 获取所有有效的网盘类型（从配置中提取，确保只有11个）
   const allTypes = cloudTypeConfigs.map(config => config.type as CloudTypeValue);
 
-  // 初始化时默认全选所有类型，并清理无效的类型
   useEffect(() => {
     const currentTypes = searchParams.cloudTypes || [];
-
-    // 过滤掉无效的网盘类型（已被移除的类型）
     const validTypes = currentTypes.filter(type => allTypes.includes(type));
 
-    // 强制清理：如果当前类型数量不等于11个，或者包含无效类型，则重置
-    if (currentTypes.length === 0) {
-      // 默认全选所有类型
-      setSearchParams({ cloudTypes: allTypes });
-    } else if (validTypes.length !== currentTypes.length || currentTypes.length !== allTypes.length) {
-      // 清理无效类型或重置为全部有效类型
+    if (currentTypes.length === 0 || validTypes.length !== currentTypes.length || currentTypes.length !== allTypes.length) {
       setSearchParams({ cloudTypes: allTypes });
     }
   }, []);
 
-  // 获取当前选中的网盘类型
   const selectedTypes = searchParams.cloudTypes || [];
-
-  // 是否全选状态 - 只有当包含所有类型时才是全选状态
   const isAllSelected = selectedTypes.length === cloudTypeConfigs.length;
 
-  // 切换类型选择状态
   const handleTypeToggle = (type: CloudTypeValue) => {
     const currentTypes = searchParams.cloudTypes || [];
     let newTypes: CloudTypeValue[];
 
     if (currentTypes.includes(type)) {
-      // 取消选择
       newTypes = currentTypes.filter(t => t !== type);
     } else {
-      // 添加选择
       newTypes = [...currentTypes, type];
     }
-
     setSearchParams({ cloudTypes: newTypes });
   };
 
-  /**
-   * 处理全选/取消全选
-   */
   const handleSelectAll = () => {
     if (isAllSelected) {
-      // 当前是全选状态，清空选择（真正取消所有选择）
       setSearchParams({ cloudTypes: [] });
     } else {
-      // 当前不是全选状态，选择全部
-      const allTypes = cloudTypeConfigs.map(config => config.type as CloudTypeValue);
       setSearchParams({ cloudTypes: allTypes });
     }
   };
 
-  // 检查类型是否被选中
-  const isTypeSelected = (type: CloudTypeValue): boolean => {
-    // 当 cloudTypes 为空数组时，表示未选择任何类型
-    if (searchParams.cloudTypes?.length === 0) {
-      return false;
-    }
-    return searchParams.cloudTypes?.includes(type) ?? false;
-  };
+  const isTypeSelected = (type: CloudTypeValue) => searchParams.cloudTypes?.includes(type) ?? false;
 
   return (
-    <div className="w-full max-w-4xl mx-auto mt-4">
-      {/* 筛选器容器 */}
-      <div className="relative">
-        {/* 背景装饰 */}
-        <div className="absolute inset-x-0 -inset-y-3 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl shadow-apple blur-sm transform scale-105"></div>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="w-full max-w-5xl mx-auto mt-6"
+    >
+      <div className="relative group">
+        {/* 背景光晕 */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 rounded-3xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity duration-500" />
 
-        {/* 筛选器内容 */}
-        <div className="relative glass-card-3d rounded-2xl p-6 hover-lift">
-          {/* 标题和全选按钮 */}
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              网盘类型筛选
-            </h3>
-            <CoolMode options={{ particleCount: 18, speedHorz: 8, speedUp: 18 }}>
-              <IconButton
-                onClick={handleSelectAll}
-                aria-label={isAllSelected ? '取消全选' : '全选'}
-                className={cn(
-                  'px-4 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 hover-lift',
-                  isAllSelected
-                    ? 'bg-apple-blue text-white hover:bg-apple-blue/90'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                )}
-              >
-                {isAllSelected ? '取消全选' : '全选'}
-              </IconButton>
-            </CoolMode>
+        {/* 内容容器 */}
+        <div className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 dark:border-gray-700/50 shadow-glass">
+
+          {/* 顶部栏：标题与全选 */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-500 dark:text-blue-400 flex-shrink-0">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+              </div>
+              <div className="min-w-[150px]">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">来源筛选</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                  {isAllSelected ? '已展示全网资源' : `已选中 ${selectedTypes.length} 个来源`}
+                </p>
+              </div>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleSelectAll}
+              className={cn(
+                "px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center gap-2 shadow-sm flex-shrink-0",
+                isAllSelected
+                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 shadow-lg"
+                  : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+              )}
+            >
+              <div className="w-5 h-5 flex items-center justify-center">
+                {isAllSelected ? <IoCheckmarkCircle className="w-5 h-5" /> : <IoEllipseOutline className="w-5 h-5" />}
+              </div>
+              <span className="min-w-[4em] text-center">{isAllSelected ? '全选状态' : '选择全部'}</span>
+            </motion.button>
           </div>
 
-          {/* 网盘类型标签 */}
-          <div className="flex flex-wrap gap-3">
-            {cloudTypeConfigs.map((config) => {
-              const isSelected = isTypeSelected(config.type as CloudTypeValue);
-              return (
-                <CoolMode options={{ particleCount: 14, speedHorz: 8, speedUp: 18 }}>
-                  <TagButton
-                    key={config.type}
-                    active={isSelected}
-                    colorActive={`${config.color} text-white`}
-                    onClick={() => handleTypeToggle(config.type as CloudTypeValue)}
-                    className="hover-lift"
-                  >
-                    {config.name}
-                  </TagButton>
-                </CoolMode>
-              );
-            })}
-          </div>
-
-          {/* 选择状态提示 */}
-          <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-            {selectedTypes.length === 0 ? (
-              '未选择任何网盘类型'
-            ) : selectedTypes.length === cloudTypeConfigs.length ? (
-              '已选择全部网盘类型'
-            ) : (
-              `已选择 ${selectedTypes.length} 个网盘类型`
-            )}
-          </div>
+          {/* 筛选标签网格 */}
+          <LayoutGroup>
+            <motion.div layout className="flex flex-wrap gap-3">
+              {cloudTypeConfigs.map((config) => (
+                <CloudTypeTag
+                  key={config.type}
+                  config={config}
+                  isSelected={isTypeSelected(config.type as CloudTypeValue)}
+                  onToggle={handleTypeToggle}
+                />
+              ))}
+            </motion.div>
+          </LayoutGroup>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

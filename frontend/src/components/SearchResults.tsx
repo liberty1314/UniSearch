@@ -3,8 +3,13 @@ import {
   IoGridOutline,
   IoListOutline,
   IoAlertCircleOutline,
-  IoSearchOutline
+  IoSearchOutline,
+  IoCopyOutline,
+  IoOpenOutline,
+  IoKeyOutline,
+  IoTimeOutline
 } from 'react-icons/io5';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchStore } from '@/stores/searchStore';
 import { CloudType, CloudTypeValue } from '@/types/api';
 import { cn } from '@/lib/utils';
@@ -17,6 +22,29 @@ interface SearchResultsProps {
 }
 
 type ViewMode = 'list' | 'grid';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      stiffness: 100,
+      damping: 15
+    }
+  }
+} as const;
 
 const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   const {
@@ -71,19 +99,91 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
 
   const getCloudTypeInfo = (cloudType: CloudTypeValue) => {
     const cloudTypeMap = {
-      [CloudType.BAIDU]: { name: '百度网盘', color: 'bg-blue-500', textColor: 'text-blue-700' },
-      [CloudType.ALIYUN]: { name: '阿里云盘', color: 'bg-orange-500', textColor: 'text-orange-700' },
-      [CloudType.QUARK]: { name: '夸克网盘', color: 'bg-purple-500', textColor: 'text-purple-700' },
-      [CloudType.TIANYI]: { name: '天翼云盘', color: 'bg-cyan-500', textColor: 'text-cyan-700' },
-      [CloudType.UC]: { name: 'UC网盘', color: 'bg-green-500', textColor: 'text-green-700' },
-      [CloudType.MOBILE]: { name: '移动云盘', color: 'bg-indigo-500', textColor: 'text-indigo-700' },
-      [CloudType.ONE_ONE_FIVE]: { name: '115网盘', color: 'bg-red-500', textColor: 'text-red-700' },
-      [CloudType.XUNLEI]: { name: '迅雷网盘', color: 'bg-yellow-500', textColor: 'text-yellow-700' },
-      [CloudType.ONE_TWO_THREE]: { name: '123网盘', color: 'bg-teal-500', textColor: 'text-teal-700' },
-      [CloudType.LANZOU]: { name: '蓝奏云', color: 'bg-blue-600', textColor: 'text-blue-700' },
-      [CloudType.MAGNET]: { name: '磁力链接', color: 'bg-gray-600', textColor: 'text-gray-700' },
+      [CloudType.BAIDU]: {
+        name: '百度网盘',
+        bg: 'bg-blue-500/10 dark:bg-blue-500/20',
+        text: 'text-blue-600 dark:text-blue-400',
+        border: 'border-blue-200/50 dark:border-blue-700/50',
+        icon: 'text-blue-500'
+      },
+      [CloudType.ALIYUN]: {
+        name: '阿里云盘',
+        bg: 'bg-orange-500/10 dark:bg-orange-500/20',
+        text: 'text-orange-600 dark:text-orange-400',
+        border: 'border-orange-200/50 dark:border-orange-700/50',
+        icon: 'text-orange-500'
+      },
+      [CloudType.QUARK]: {
+        name: '夸克网盘',
+        bg: 'bg-purple-500/10 dark:bg-purple-500/20',
+        text: 'text-purple-600 dark:text-purple-400',
+        border: 'border-purple-200/50 dark:border-purple-700/50',
+        icon: 'text-purple-500'
+      },
+      [CloudType.TIANYI]: {
+        name: '天翼云盘',
+        bg: 'bg-cyan-500/10 dark:bg-cyan-500/20',
+        text: 'text-cyan-600 dark:text-cyan-400',
+        border: 'border-cyan-200/50 dark:border-cyan-700/50',
+        icon: 'text-cyan-500'
+      },
+      [CloudType.UC]: {
+        name: 'UC网盘',
+        bg: 'bg-green-500/10 dark:bg-green-500/20',
+        text: 'text-green-600 dark:text-green-400',
+        border: 'border-green-200/50 dark:border-green-700/50',
+        icon: 'text-green-500'
+      },
+      [CloudType.MOBILE]: {
+        name: '移动云盘',
+        bg: 'bg-indigo-500/10 dark:bg-indigo-500/20',
+        text: 'text-indigo-600 dark:text-indigo-400',
+        border: 'border-indigo-200/50 dark:border-indigo-700/50',
+        icon: 'text-indigo-500'
+      },
+      [CloudType.ONE_ONE_FIVE]: {
+        name: '115网盘',
+        bg: 'bg-red-500/10 dark:bg-red-500/20',
+        text: 'text-red-600 dark:text-red-400',
+        border: 'border-red-200/50 dark:border-red-700/50',
+        icon: 'text-red-500'
+      },
+      [CloudType.XUNLEI]: {
+        name: '迅雷网盘',
+        bg: 'bg-yellow-500/10 dark:bg-yellow-500/20',
+        text: 'text-yellow-600 dark:text-yellow-400',
+        border: 'border-yellow-200/50 dark:border-yellow-700/50',
+        icon: 'text-yellow-500'
+      },
+      [CloudType.ONE_TWO_THREE]: {
+        name: '123网盘',
+        bg: 'bg-teal-500/10 dark:bg-teal-500/20',
+        text: 'text-teal-600 dark:text-teal-400',
+        border: 'border-teal-200/50 dark:border-teal-700/50',
+        icon: 'text-teal-500'
+      },
+      [CloudType.LANZOU]: {
+        name: '蓝奏云',
+        bg: 'bg-blue-600/10 dark:bg-blue-600/20',
+        text: 'text-blue-700 dark:text-blue-300',
+        border: 'border-blue-300/50 dark:border-blue-600/50',
+        icon: 'text-blue-600'
+      },
+      [CloudType.MAGNET]: {
+        name: '磁力链接',
+        bg: 'bg-gray-600/10 dark:bg-gray-600/20',
+        text: 'text-gray-700 dark:text-gray-300',
+        border: 'border-gray-300/50 dark:border-gray-600/50',
+        icon: 'text-gray-600'
+      },
     };
-    return cloudTypeMap[cloudType] || { name: '未知类型', color: 'bg-gray-500', textColor: 'text-gray-700' };
+    return cloudTypeMap[cloudType] || {
+      name: '未知类型',
+      bg: 'bg-gray-500/10',
+      text: 'text-gray-600',
+      border: 'border-gray-200',
+      icon: 'text-gray-500'
+    };
   };
 
   // 处理并排序所有搜索结果（全量数据）
@@ -102,14 +202,15 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       });
     });
 
-    // 按优先级和时间排序
+    // 按时间降序排列（最新优先）
     return allResults.sort((a, b) => {
-      // 首先按网盘类型优先级排序
-      if (a.priority !== b.priority) {
-        return a.priority - b.priority;
+      // 首先按照时间排序 (最新优先)
+      if (Math.abs(b.datetime - a.datetime) > 1000) { // 稍微忽略毫秒级的完全一致，如果需要精确对比则去掉Math.abs
+        return b.datetime - a.datetime;
       }
-      // 同优先级内按时间降序排列（最新优先）
-      return b.datetime - a.datetime;
+
+      // 时间相同时，按网盘类型优先级排序
+      return a.priority - b.priority;
     });
   }, [searchResults]);
 
@@ -146,14 +247,29 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     };
   }, [hasMore, isLoading, loadMore]);
 
-  const renderResultItem = (item: { link: any; cloudType: string }, index: number) => {
+  // 格式化时间，处理无效日期
+  const formatResultTime = (timestamp: number) => {
+    if (!timestamp) return '未知时间';
+    const date = new Date(timestamp);
+    // 过滤无效日期 (比如 0001-01-01) 和过早的日期
+    // 网盘资源如果不可能是 2000 年以前的，这里作为一个简单的过滤器
+    if (date.getFullYear() < 2000) {
+      return '未知时间';
+    }
+    return date.toLocaleDateString();
+  };
+
+  const renderResultItem = (item: { link: any; cloudType: string; datetime: number }, index: number) => {
     const { link, cloudType } = item;
     const linkId = `${cloudType}-${link.url}`;
     const cloudInfo = getCloudTypeInfo(cloudType as CloudTypeValue);
     const hasPassword = link.password && link.password.trim() !== '';
 
     // 处理链接点击
-    const handleLinkClick = () => {
+    const handleLinkClick = (e: React.MouseEvent) => {
+      // 阻止冒泡，防止触发其他点击事件(如果有)
+      e.stopPropagation();
+
       if (hasPassword) {
         // 如果有密码，显示密码弹窗
         setPasswordModal({
@@ -168,194 +284,282 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       }
     };
 
+    // 复制链接功能
+    const handleCopyLink = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      navigator.clipboard.writeText(link.url).then(() => {
+        // 可以添加一个toast提示
+        // toast.success('链接已复制');
+      });
+    };
+
     if (viewMode === 'grid') {
       return (
-        <div
+        <motion.div
           key={linkId}
-          className="group relative p-5 md:p-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-3xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-xl hover:shadow-blue-200/50 dark:hover:shadow-blue-500/20 hover:-translate-y-1 transition-all duration-300 animate-fade-in cursor-pointer h-full glass-card-3d"
-          style={{ animationDelay: `${(index % 48) * 50}ms` }}
+          variants={itemVariants}
+          whileHover={{ y: -5, scale: 1.02 }}
+          className="group relative h-full"
           onClick={handleLinkClick}
         >
-          {/* 卡片内容布局 */}
-          <div className="flex flex-col h-full">
-            {/* 标题区域 - 占75%高度 */}
-            <div className="flex-1 mb-3 min-h-0">
-              <h3 className="font-bold text-gray-900 dark:text-white text-lg line-clamp-2 leading-tight group-hover:text-apple-blue transition-colors duration-300 h-full">
-                {link.note || '网盘资源'}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-gray-800/40 dark:to-gray-900/10 rounded-[1.5rem] blur opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10" />
+
+          <div className="h-full flex flex-col p-5 bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl rounded-[1.5rem] border border-white/50 dark:border-gray-700/50 shadow-sm hover:shadow-xl hover:shadow-blue-200/20 dark:hover:shadow-blue-900/20 transition-all duration-300 cursor-pointer overflow-hidden">
+            {/* 顶部装饰条 */}
+            <div className={cn("absolute top-0 left-0 right-0 h-1 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+              cloudInfo.text.includes("blue") ? "from-blue-400 to-cyan-300" :
+                cloudInfo.text.includes("orange") ? "from-orange-400 to-yellow-300" :
+                  cloudInfo.text.includes("purple") ? "from-purple-400 to-pink-300" :
+                    "from-gray-400 to-gray-300"
+            )} />
+
+            {/* 标题区域 */}
+            <div className="flex-1 mb-4 min-h-[3.5rem]">
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg line-clamp-2 leading-snug group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-purple-600 dark:group-hover:from-blue-400 dark:group-hover:to-purple-400 transition-all duration-300">
+                {link.note || '未命名资源'}
               </h3>
             </div>
 
-            {/* 底部信息区域 - 占25%高度 */}
-            <div className="flex items-center justify-between flex-shrink-0">
-              {/* 左下角：网盘类别 */}
-              <div className={cn('px-3 py-1.5 rounded-full text-white text-sm font-bold shadow-sm', cloudInfo.color)}>
-                {cloudInfo.name}
+            {/* 元数据行 */}
+            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-4 px-1">
+              <div className="flex items-center gap-1.5">
+                <IoTimeOutline className="w-3.5 h-3.5" />
+                <span>{formatResultTime(item.datetime)}</span>
               </div>
-
-              {/* 右下角：访问码提示 */}
-              {hasPassword && (
-                <div className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-medium rounded-full">
-                  有访问码
+              {link.size && (
+                <div className="bg-gray-100 dark:bg-gray-700/50 px-2 py-0.5 rounded-full">
+                  {link.size}
                 </div>
               )}
             </div>
+
+            {/* 底部功能区 */}
+            <div className="mt-auto pt-3 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
+              {/* 网盘类型 */}
+              <div className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+                cloudInfo.bg,
+                cloudInfo.text,
+                cloudInfo.border
+              )}>
+                {cloudInfo.name}
+              </div>
+
+              {/* 操作按钮 */}
+              <div className="flex items-center gap-2">
+                {hasPassword && (
+                  <div className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs font-medium rounded-full border border-green-200/50 dark:border-green-800/30" title="需要访问码">
+                    <IoKeyOutline className="w-3 h-3" />
+                    <span>有码</span>
+                  </div>
+                )}
+
+
+              </div>
+            </div>
           </div>
-        </div>
+        </motion.div>
       );
     }
 
     // 列表视图
     return (
-      <div
+      <motion.div
         key={linkId}
-        className="group relative p-4 md:p-5 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-lg hover:shadow-blue-200/50 dark:hover:shadow-blue-500/20 hover:border-apple-blue/30 transition-all duration-300 animate-fade-in cursor-pointer glass-card-3d"
-        style={{ animationDelay: `${(index % 48) * 30}ms` }}
+        variants={itemVariants}
+        whileHover={{ x: 5 }}
         onClick={handleLinkClick}
+        className="group relative p-4 bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl border border-white/50 dark:border-gray-700/50 shadow-sm hover:shadow-lg hover:shadow-blue-200/10 dark:hover:shadow-blue-900/10 cursor-pointer overflow-hidden transition-all duration-300"
       >
         <div className="flex items-center gap-5">
-          {/* 文件信息 */}
-          <div className="flex-1 min-w-0 space-y-2">
-            <h3 className="font-bold text-gray-900 dark:text-white text-lg line-clamp-1 group-hover:text-apple-blue transition-colors duration-300 leading-tight">
-              {link.note || '网盘资源'}
-            </h3>
-            <div className="flex items-center gap-3">
-              {/* 左下角：网盘类别 */}
-              <div className={cn('px-3 py-1.5 rounded-full text-white text-sm font-bold shadow-sm', cloudInfo.color)}>
-                {cloudInfo.name}
-              </div>
+          {/* 左侧图标/类型 */}
+          <div className={cn(
+            "w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-inner",
+            cloudInfo.bg,
+            cloudInfo.text
+          )}>
+            <span className="font-bold">{cloudInfo.name.charAt(0)}</span>
+          </div>
 
-              {/* 网盘类别右边：访问码提示 */}
-              {hasPassword && (
-                <div className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-medium rounded-full">
-                  有访问码
-                </div>
-              )}
+          {/* 中间信息 */}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg line-clamp-1 mb-1 group-hover:text-apple-blue transition-colors">
+              {link.note || '未命名资源'}
+            </h3>
+            <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+              <span className={cn("px-2 py-0.5 rounded-md text-xs font-medium bg-opacity-50", cloudInfo.bg, cloudInfo.text)}>
+                {cloudInfo.name}
+              </span>
+              <span className="flex items-center gap-1">
+                <IoTimeOutline className="w-3.5 h-3.5" />
+                {formatResultTime(item.datetime)}
+              </span>
+              {link.size && <span>• {link.size}</span>}
             </div>
           </div>
+
+          {/* 右侧操作 */}
+          <div className="flex items-center gap-3">
+            {hasPassword && (
+              <div className="px-2.5 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs font-medium rounded-full border border-green-200/50 dark:border-green-800/30 flex items-center gap-1">
+                <IoKeyOutline className="w-3.5 h-3.5" />
+                <span>访问码</span>
+              </div>
+            )}
+
+          </div>
         </div>
-      </div>
+      </motion.div>
     );
   };
 
   if (error) {
     return (
-      <div className="text-center py-16">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center py-16"
+      >
         <div className="relative mb-6">
           <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-pink-500/20 rounded-full blur-xl"></div>
-          <div className="relative text-red-500 bg-red-50 dark:bg-red-900/20 rounded-full p-6 w-24 h-24 mx-auto flex items-center justify-center">
+          <div className="relative text-red-500 bg-red-50 dark:bg-red-900/20 rounded-full p-6 w-24 h-24 mx-auto flex items-center justify-center shadow-lg border border-red-100 dark:border-red-900/30">
             <IoAlertCircleOutline className="w-12 h-12" />
           </div>
         </div>
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">搜索出错</h3>
-        <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto leading-relaxed">{error}</p>
+        <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto leading-relaxed mb-6">{error}</p>
         <button
           onClick={() => performSearch(searchParams)}
-          className="mt-6 inline-flex items-center px-4 py-2 bg-gradient-to-r from-apple-blue to-apple-blue/90 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+          className="px-6 py-2.5 bg-gradient-to-r from-apple-blue to-purple-600 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 transform hover:scale-105 active:scale-95"
         >
           重新尝试
         </button>
-      </div>
+      </motion.div>
     );
   }
 
   if (!isLoading && allSortedResults.length === 0 && searchParams.keyword) {
     return (
-      <div className={cn('text-center py-20', className)}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className={cn('text-center py-20', className)}
+      >
         <div className="relative mb-8">
           <div className="absolute inset-0 bg-gradient-to-r from-gray-400/20 to-gray-500/20 rounded-full blur-xl"></div>
-          <div className="relative text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-full p-8 w-32 h-32 mx-auto flex items-center justify-center">
+          <div className="relative text-gray-400 bg-white dark:bg-gray-800/50 rounded-full p-8 w-32 h-32 mx-auto flex items-center justify-center shadow-lg border border-white/50 dark:border-gray-700/50 backdrop-blur-sm">
             <IoSearchOutline className="w-16 h-16" />
           </div>
         </div>
         <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">未找到相关资源</h3>
         <p className="text-gray-500 dark:text-gray-400 max-w-lg mx-auto leading-relaxed mb-8">
-          很抱歉，没有找到与您搜索关键词相关的资源。请尝试使用不同的关键词或检查拼写。
+          很抱歉，没有找到与您搜索关键词"<span className="text-apple-blue">{searchParams.keyword}</span>"相关的资源。
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            搜索建议：
+            热门搜索：
           </div>
           <div className="flex flex-wrap gap-2 justify-center">
             {['电影', '音乐', '软件', '电子书', '游戏'].map((keyword) => (
               <button
                 key={keyword}
-                className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:bg-apple-blue hover:text-white transition-all duration-300 transform hover:scale-105"
+                onClick={() => performSearch({ ...searchParams, keyword })}
+                className="px-4 py-1.5 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:bg-apple-blue hover:text-white hover:border-apple-blue transition-all duration-300"
               >
                 {keyword}
               </button>
             ))}
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   if (!searchParams.keyword) {
     return (
       <div className={cn('text-center py-12', className)}>
-        <div className="text-gray-500 dark:text-gray-400 mb-2">开始搜索</div>
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-400 mb-4">
+          <IoSearchOutline className="w-8 h-8" />
+        </div>
+        <div className="text-gray-500 dark:text-gray-400 mb-2 font-medium">开始您的探索之旅</div>
         <div className="text-gray-400 dark:text-gray-500 text-sm">
-          输入关键词开始搜索网盘资源
+          输入关键词搜索全网优质网盘资源
         </div>
       </div>
     );
   }
 
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn('space-y-6', className)}>
       {/* 结果头部 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {allSortedResults.length > 0 && (
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              找到 <span className="font-medium text-gray-900 dark:text-white">{allSortedResults.length}</span> 个结果
+      {allSortedResults.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between bg-white/50 dark:bg-gray-900/50 backdrop-blur-md p-4 rounded-2xl border border-white/50 dark:border-gray-700/30 shadow-sm"
+        >
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-apple-blue/10 text-apple-blue text-xs font-bold">
+                {allSortedResults.length}
+              </span>
+              <span>个结果</span>
               {displayedResults.length < allSortedResults.length && (
-                <span className="ml-2">
-                  (已显示 {displayedResults.length} 个)
+                <span className="text-gray-400 text-xs">
+                  (已显示 {displayedResults.length})
                 </span>
               )}
             </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-            <button
-              onClick={() => setViewMode('list')}
-              className={cn(
-                'p-2 transition-colors',
-                viewMode === 'list'
-                  ? 'bg-apple-blue text-white'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-              )}
-            >
-              <IoListOutline className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('grid')}
-              className={cn(
-                'p-2 transition-colors',
-                viewMode === 'grid'
-                  ? 'bg-apple-blue text-white'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-              )}
-            >
-              <IoGridOutline className="w-4 h-4" />
-            </button>
           </div>
-        </div>
-      </div>
+
+          <div className="flex items-center gap-3">
+            <div className="bg-gray-100/50 dark:bg-gray-800/50 p-1 rounded-xl flex items-center border border-gray-200/50 dark:border-gray-700/50">
+              <button
+                onClick={() => setViewMode('list')}
+                className={cn(
+                  'p-2 rounded-lg transition-all duration-300',
+                  viewMode === 'list'
+                    ? 'bg-white dark:bg-gray-700 text-apple-blue shadow-sm scale-105'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                )}
+                title="列表视图"
+              >
+                <IoListOutline className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={cn(
+                  'p-2 rounded-lg transition-all duration-300',
+                  viewMode === 'grid'
+                    ? 'bg-white dark:bg-gray-700 text-apple-blue shadow-sm scale-105'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                )}
+                title="网格视图"
+              >
+                <IoGridOutline className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* 搜索结果 */}
-      <div className={cn(
-        viewMode === 'grid'
-          ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6'
-          : 'space-y-4 sm:space-y-6'
-      )}>
-        {displayedResults.map((item, index) =>
-          renderResultItem(item, index)
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className={cn(
+          viewMode === 'grid'
+            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5'
+            : 'space-y-4'
         )}
-      </div>
+      >
+        <AnimatePresence mode='popLayout'>
+          {displayedResults.map((item, index) =>
+            renderResultItem(item, index)
+          )}
+        </AnimatePresence>
+      </motion.div>
 
       {/* 无限滚动触发器 */}
       {hasMore && (
@@ -363,15 +567,22 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           ref={observerTarget}
           className="flex justify-center items-center py-8"
         >
-          <LoadingState type="inline" size="sm" message="正在加载更多..." />
+          <LoadingState type="inline" size="sm" message="正在加载更多优质资源..." />
         </div>
       )}
 
       {/* 已加载全部提示 */}
       {!hasMore && displayedResults.length > 0 && (
-        <div className="text-center py-6 text-sm text-gray-500 dark:text-gray-400">
-          已加载全部 {allSortedResults.length} 条结果
-        </div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          className="text-center py-8"
+        >
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100/50 dark:bg-gray-800/50 rounded-full text-xs text-gray-500 dark:text-gray-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+            已加载全部 {allSortedResults.length} 条结果
+          </div>
+        </motion.div>
       )}
 
       {/* 初次加载状态 */}
