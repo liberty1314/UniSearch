@@ -39,12 +39,7 @@ const Home: React.FC = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="text-center mb-20 relative z-10"
         >
-          {/* 背景装饰 - 极光效果 */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-4xl -z-10 pointer-events-none opacity-40 dark:opacity-30">
-            <div className="absolute top-0 left-1/4 w-72 h-72 bg-purple-300 dark:bg-purple-900 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob" />
-            <div className="absolute top-0 right-1/4 w-72 h-72 bg-yellow-300 dark:bg-blue-900 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000" />
-            <div className="absolute -bottom-8 left-1/3 w-72 h-72 bg-pink-300 dark:bg-pink-900 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000" />
-          </div>
+
 
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -54,7 +49,7 @@ const Home: React.FC = () => {
 
 
             <SparklesText>
-              <h1 className="text-6xl md:text-8xl font-bold mb-6 tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-gray-900 via-purple-700 to-gray-900 dark:from-white dark:via-purple-300 dark:to-white animate-gradient">
+              <h1 className="text-6xl md:text-8xl font-black mb-6 tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-purple-600 to-fuchsia-600 dark:from-indigo-400 dark:via-purple-400 dark:to-fuchsia-400 animate-gradient-breath drop-shadow-[0_0_30px_rgba(99,102,241,0.35)] dark:drop-shadow-[0_0_40px_rgba(139,92,246,0.5)]">
                 UniSearch
               </h1>
             </SparklesText>
@@ -63,7 +58,7 @@ const Home: React.FC = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.6 }}
-              className="text-2xl sm:text-3xl text-gray-700 dark:text-gray-200 font-medium tracking-tight mb-4"
+              className="text-2xl sm:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-slate-700 via-indigo-600 to-slate-700 dark:from-slate-300 dark:via-indigo-300 dark:to-slate-300 font-bold tracking-tight mb-4 animate-gradient-breath-slow"
             >
               智能网盘资源搜索引擎
             </motion.h2>
@@ -72,7 +67,7 @@ const Home: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.6 }}
-              className="text-base sm:text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed"
+              className="text-base sm:text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed"
             >
               快速找到您需要的文件，支持多平台一站式聚合搜索
             </motion.p>
@@ -88,7 +83,7 @@ const Home: React.FC = () => {
             className="relative max-w-4xl w-full z-20"
           >
             {/* 搜索框背景光晕 - 更强的动态光效 */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-[2rem] blur-3xl transform scale-105 opacity-50 dark:opacity-30 animate-pulse-slow" />
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-fuchsia-500/20 rounded-[2rem] blur-3xl transform scale-105 opacity-50 dark:opacity-30 animate-pulse-slow" />
 
             <SearchBox className="w-full" />
 

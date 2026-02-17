@@ -797,3 +797,37 @@ pnpm-lock.yaml (已删除)
 - frontend/src/components/SearchResults.tsx (修改)
 - frontend/src/index.css (修改)
 - frontend/src/pages/Home.tsx (修改)
+
+
+---
+
+## 2026-02-17 21:15:32
+
+**Commit**: `style(home): 优化首页标题渐变动画和视觉效果`
+
+**详细说明**:
+
+优化首页标题和副标题的视觉呈现，移除背景极光装饰效果，简化视觉层次。新增 gradient-breath 和 gradient-breath-slow 呼吸动画，提升标题的动态效果。调整渐变色方案为 indigo-purple-fuchsia，增强发光效果。优化搜索框背景光晕配色，提升整体视觉一致性。
+
+**主要改动**:
+
+1. 首页视觉优化:
+   - 移除背景极光装饰效果（三个浮动的彩色圆球）
+   - 优化标题渐变色方案：from-indigo-700 via-purple-600 to-fuchsia-600
+   - 新增标题发光效果：drop-shadow-[0_0_30px_rgba(99,102,241,0.35)]
+   - 调整副标题为渐变文字效果，使用 bg-clip-text
+   - 优化搜索框背景光晕配色：from-indigo-500/20 via-purple-500/20 to-fuchsia-500/20
+
+2. CSS 动画新增:
+   - 新增 gradient-breath 动画（4s ease-in-out infinite）
+   - 新增 gradient-breath-slow 动画（6s ease-in-out infinite）
+   - 支持背景位置和透明度的呼吸效果
+
+3. Tailwind 配置更新:
+   - 在 tailwind.config.js 中注册新动画
+   - 定义动画关键帧和过渡效果
+
+**涉及文件**:
+- frontend/src/index.css (修改)
+- frontend/src/pages/Home.tsx (修改)
+- frontend/tailwind.config.js (修改)
