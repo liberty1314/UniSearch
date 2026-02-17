@@ -49,9 +49,14 @@ const Home: React.FC = () => {
 
 
             <SparklesText>
-              <h1 className="text-6xl md:text-8xl font-black mb-6 tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-purple-600 to-fuchsia-600 dark:from-indigo-400 dark:via-purple-400 dark:to-fuchsia-400 animate-gradient-breath drop-shadow-[0_0_30px_rgba(99,102,241,0.35)] dark:drop-shadow-[0_0_40px_rgba(139,92,246,0.5)]">
+              <GradientText
+                className="text-5xl md:text-7xl font-bold mb-6 tracking-tight"
+                colors={["#3b82f6", "#8b5cf6", "#3b82f6"]}
+                animationSpeed={6}
+                showBorder={false}
+              >
                 UniSearch
-              </h1>
+              </GradientText>
             </SparklesText>
 
             <motion.h2

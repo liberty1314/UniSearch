@@ -831,3 +831,31 @@ pnpm-lock.yaml (已删除)
 - frontend/src/index.css (修改)
 - frontend/src/pages/Home.tsx (修改)
 - frontend/tailwind.config.js (修改)
+
+
+---
+
+## 2026-02-17 22:05:18
+
+**Commit**: `refactor(home): 使用 GradientText 组件替换标题渐变实现`
+
+**详细说明**:
+
+将首页标题从原生 CSS 渐变改为使用 GradientText 组件实现，提供更流畅的动画效果和更好的可配置性。调整字体大小和样式，优化视觉呈现。
+
+**主要改动**:
+
+1. 组件替换:
+   - 移除原有的 h1 标签和复杂的 Tailwind CSS 渐变类名
+   - 使用 GradientText 组件替代，提供更好的动画控制
+   - 配置渐变颜色：["#3b82f6", "#8b5cf6", "#3b82f6"]（蓝色-紫色-蓝色）
+   - 设置动画速度为 6 秒，提供平滑的渐变过渡
+
+2. 样式调整:
+   - 字体大小从 text-6xl md:text-8xl 调整为 text-5xl md:text-7xl
+   - 字重从 font-black 调整为 font-bold
+   - 保持 tracking-tight 字间距
+   - 禁用边框效果（showBorder={false}）
+
+**涉及文件**:
+- frontend/src/pages/Home.tsx (修改)
