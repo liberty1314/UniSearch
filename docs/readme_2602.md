@@ -859,3 +859,53 @@ pnpm-lock.yaml (已删除)
 
 **涉及文件**:
 - frontend/src/pages/Home.tsx (修改)
+
+
+---
+
+## 2026-02-17 22:25:43
+
+**Commit**: `refactor(home): 优化特性卡片为 Apple 风格并简化动画`
+
+**详细说明**:
+
+重构首页特性卡片，采用 Apple 风格设计语言。简化卡片结构和动画效果，使用渐变背景和悬停效果。优化图标、标题和描述的布局，提升视觉一致性和交互体验。移除复杂的 3D 玻璃效果，改用简洁的毛玻璃和阴影效果。
+
+**主要改动**:
+
+1. 卡片结构优化:
+   - 移除复杂的 glass-card-3d 和多层嵌套结构
+   - 采用简洁的双层背景设计（渐变光晕 + 毛玻璃卡片）
+   - 使用 backdrop-blur-apple 实现 Apple 风格毛玻璃效果
+   - 优化边框和阴影效果（shadow-card / shadow-hover）
+
+2. 动画简化:
+   - 简化 motion.div 的 animate 属性配置
+   - 统一使用 transition 属性控制动画时长
+   - 优化悬停动画：-translate-y-3、scale-125、rotate-3
+   - 移除冗余的内部装饰光效果
+
+3. 图标优化:
+   - 图标容器改用渐变背景（from-apple-blue to-apple-green 等）
+   - 图标居中显示（mx-auto）
+   - 悬停时图标放大并旋转（scale-125 rotate-3）
+   - 添加阴影效果增强立体感
+
+4. 文字布局优化:
+   - 标题和描述改为居中对齐（text-center）
+   - 标题悬停时改变颜色（text-apple-blue / text-apple-purple / text-apple-orange）
+   - 描述文字悬停时颜色加深，提升可读性
+   - 标题和描述添加 -translate-y-1 悬停动画
+
+5. 配色方案:
+   - 多平台搜索：apple-blue / apple-green 渐变
+   - 智能匹配：apple-purple / apple-pink 渐变
+   - 实时更新：apple-orange / apple-yellow 渐变
+
+6. 内容精简:
+   - 简化卡片标题文字（"多平台聚合" → "多平台搜索"）
+   - 精简描述内容，更加简洁明了
+   - 移除冗余的装饰元素
+
+**涉及文件**:
+- frontend/src/pages/Home.tsx (修改)

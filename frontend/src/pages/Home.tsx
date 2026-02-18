@@ -131,94 +131,76 @@ const Home: React.FC = () => {
                 {isPageLoading ? (
                   <FeatureCardsSkeleton />
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {/* 多平台搜索 */}
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
-                      animate={{
-                        opacity: 1,
-                        y: 0,
-                        transition: { delay: 1.0, duration: 0.5 }
-                      }}
-                      className="h-full"
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.0, duration: 0.5 }}
+                      className="group relative cursor-pointer"
                     >
-                      <div className="group relative h-full glass-card-3d rounded-[2rem] p-1 transition-all duration-300 hover:shadow-nebula-hover hover:-translate-y-2">
-                        <div className="relative h-full bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl rounded-[1.8rem] p-8 overflow-hidden">
-                          {/* 内部装饰光 */}
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl -mr-16 -mt-16 transition-all duration-500 group-hover:bg-blue-500/20" />
-
-                          <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-800/30 rounded-2xl flex items-center justify-center mb-6 shadow-inner border border-white/50 dark:border-white/10 group-hover:scale-110 transition-transform duration-300">
-                            <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                            </svg>
-                          </div>
-                          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
-                            多平台聚合
-                          </h3>
-                          <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
-                            一键连接阿里云盘、百度网盘、夸克网盘等多个平台，打破信息孤岛，实现全网资源一站式搜索。
-                          </p>
+                      <div className="absolute inset-0 bg-gradient-to-r from-apple-blue/10 to-apple-green/10 rounded-2xl blur-xl group-hover:blur-2xl group-hover:scale-110 transition-all duration-500"></div>
+                      <div className="absolute inset-0 bg-gradient-to-r from-apple-blue/5 to-apple-green/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                      <div className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-apple rounded-2xl p-8 shadow-card hover:shadow-hover transition-all duration-500 border border-gray-200/50 dark:border-gray-700/50 group-hover:-translate-y-3 group-hover:border-apple-blue/30">
+                        <div className="w-16 h-16 bg-gradient-to-r from-apple-blue to-apple-green rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:scale-125 group-hover:rotate-3 transition-all duration-500 group-hover:shadow-lg">
+                          <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                          </svg>
                         </div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center group-hover:text-apple-blue group-hover:-translate-y-1 transition-all duration-300">
+                          多平台搜索
+                        </h3>
+                        <p className="text-gray-600 dark:text-gray-300 text-center leading-relaxed group-hover:text-gray-700 dark:group-hover:text-gray-200 group-hover:-translate-y-1 transition-all duration-300">
+                          支持百度网盘、阿里云盘、夸克网盘等多个主流网盘平台，一站式搜索体验
+                        </p>
                       </div>
                     </motion.div>
 
                     {/* 智能匹配 */}
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
-                      animate={{
-                        opacity: 1,
-                        y: 0,
-                        transition: { delay: 1.1, duration: 0.5 }
-                      }}
-                      className="h-full"
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.1, duration: 0.5 }}
+                      className="group relative cursor-pointer"
                     >
-                      <div className="group relative h-full glass-card-3d rounded-[2rem] p-1 transition-all duration-300 hover:shadow-nebula-hover hover:-translate-y-2">
-                        <div className="relative h-full bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl rounded-[1.8rem] p-8 overflow-hidden">
-                          {/* 内部装饰光 */}
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl -mr-16 -mt-16 transition-all duration-500 group-hover:bg-purple-500/20" />
-
-                          <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/30 dark:to-purple-800/30 rounded-2xl flex items-center justify-center mb-6 shadow-inner border border-white/50 dark:border-white/10 group-hover:scale-110 transition-transform duration-300">
-                            <svg className="w-8 h-8 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                            </svg>
-                          </div>
-                          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
-                            智能语义匹配
-                          </h3>
-                          <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
-                            内置先进的语义分析引擎，不仅匹配关键词，更能理解您的搜索意图，为您精准推荐最相关的资源。
-                          </p>
+                      <div className="absolute inset-0 bg-gradient-to-r from-apple-purple/10 to-apple-pink/10 rounded-2xl blur-xl group-hover:blur-2xl group-hover:scale-110 transition-all duration-500"></div>
+                      <div className="absolute inset-0 bg-gradient-to-r from-apple-purple/5 to-apple-pink/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                      <div className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-apple rounded-2xl p-8 shadow-card hover:shadow-hover transition-all duration-500 border border-gray-200/50 dark:border-gray-700/50 group-hover:-translate-y-3 group-hover:border-apple-purple/30">
+                        <div className="w-16 h-16 bg-gradient-to-r from-apple-purple to-apple-pink rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:scale-125 group-hover:rotate-3 transition-all duration-500 group-hover:shadow-lg">
+                          <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                          </svg>
                         </div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center group-hover:text-apple-purple group-hover:-translate-y-1 transition-all duration-300">
+                          智能匹配
+                        </h3>
+                        <p className="text-gray-600 dark:text-gray-300 text-center leading-relaxed group-hover:text-gray-700 dark:group-hover:text-gray-200 group-hover:-translate-y-1 transition-all duration-300">
+                          采用先进的搜索算法和AI技术，精准匹配您的搜索需求，提高搜索效率
+                        </p>
                       </div>
                     </motion.div>
 
                     {/* 实时更新 */}
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
-                      animate={{
-                        opacity: 1,
-                        y: 0,
-                        transition: { delay: 1.2, duration: 0.5 }
-                      }}
-                      className="h-full"
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.2, duration: 0.5 }}
+                      className="group relative cursor-pointer"
                     >
-                      <div className="group relative h-full glass-card-3d rounded-[2rem] p-1 transition-all duration-300 hover:shadow-nebula-hover hover:-translate-y-2">
-                        <div className="relative h-full bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl rounded-[1.8rem] p-8 overflow-hidden">
-                          {/* 内部装饰光 */}
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-2xl -mr-16 -mt-16 transition-all duration-500 group-hover:bg-orange-500/20" />
-
-                          <div className="w-16 h-16 bg-gradient-to-br from-orange-100 to-orange-50 dark:from-orange-900/30 dark:to-orange-800/30 rounded-2xl flex items-center justify-center mb-6 shadow-inner border border-white/50 dark:border-white/10 group-hover:scale-110 transition-transform duration-300">
-                            <svg className="w-8 h-8 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                          </div>
-                          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
-                            实时索引更新
-                          </h3>
-                          <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
-                            资源库毫秒级实时更新索引，确保您永远获取到最新发布的一手资料，告别失效链接。
-                          </p>
+                      <div className="absolute inset-0 bg-gradient-to-r from-apple-orange/10 to-apple-yellow/10 rounded-2xl blur-xl group-hover:blur-2xl group-hover:scale-110 transition-all duration-500"></div>
+                      <div className="absolute inset-0 bg-gradient-to-r from-apple-orange/5 to-apple-yellow/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                      <div className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-apple rounded-2xl p-8 shadow-card hover:shadow-hover transition-all duration-500 border border-gray-200/50 dark:border-gray-700/50 group-hover:-translate-y-3 group-hover:border-apple-orange/30">
+                        <div className="w-16 h-16 bg-gradient-to-r from-apple-orange to-apple-yellow rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:scale-125 group-hover:rotate-3 transition-all duration-500 group-hover:shadow-lg">
+                          <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
                         </div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center group-hover:text-apple-orange group-hover:-translate-y-1 transition-all duration-300">
+                          实时更新
+                        </h3>
+                        <p className="text-gray-600 dark:text-gray-300 text-center leading-relaxed group-hover:text-gray-700 dark:group-hover:text-gray-200 group-hover:-translate-y-1 transition-all duration-300">
+                          资源库实时更新维护，确保您获得最新最全的搜索结果和资源信息
+                        </p>
                       </div>
                     </motion.div>
                   </div>
