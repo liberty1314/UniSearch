@@ -909,3 +909,17 @@ pnpm-lock.yaml (已删除)
 
 **涉及文件**:
 - frontend/src/pages/Home.tsx (修改)
+
+
+---
+
+## 2026-02-19 03:17:55
+
+**Commit**: `feat(scripts): 新增备份管理和更新部署脚本`
+
+**改动说明**:
+新增两个生产环境运维脚本：backup-manager.sh 提供完整的数据备份和恢复功能（支持增量/完整备份、定时任务配置、状态检查），deploy-update.sh 实现滚动更新部署流程（包含备份、镜像拉取、容器更新、服务验证和回滚机制）。
+
+**涉及文件**:
+- scripts/backup-manager.sh
+- scripts/deploy-update.sh
