@@ -923,3 +923,61 @@ pnpm-lock.yaml (已删除)
 **涉及文件**:
 - scripts/backup-manager.sh
 - scripts/deploy-update.sh
+
+
+---
+
+## 2026-02-18 16:32:15
+
+**Commit**: `refactor(search): 优化搜索历史下拉菜单为 Apple 风格`
+
+**详细说明**:
+
+重构搜索历史下拉菜单，采用 Apple 风格设计语言。优化毛玻璃效果、阴影和边框样式，提升视觉层次感。改进历史记录 chip 的交互体验，新增悬停动画和删除按钮。简化标题样式，使用更现代的排版设计。
+
+**主要改动**:
+
+1. 下拉菜单容器优化:
+   - 背景透明度调整：bg-white/70 dark:bg-gray-900/70
+   - 增强毛玻璃效果：backdrop-blur-2xl
+   - 使用 ring 替代 border：ring-1 ring-black/5 dark:ring-white/10
+   - 优化阴影效果：shadow-[0_8px_32px_rgba(0,0,0,0.08)]
+   - 增加最大高度：max-h-72
+   - 使用 Tailwind 动画类：animate-in fade-in slide-in-from-top-4
+
+2. 标题栏优化:
+   - 简化布局和样式
+   - 标题改为小写字母 + 大写样式：text-xs uppercase tracking-wider
+   - 标题文字：text-gray-500 dark:text-gray-400
+   - 背景色：bg-black/[0.02] dark:bg-white/[0.02]
+   - 边框：border-black/5 dark:border-white/5
+   - 清空按钮优化：opacity-60 hover:opacity-100
+
+3. 历史记录 chip 重构:
+   - 从 button 改为 div + button 结构，提升语义化
+   - 圆角从 rounded-2xl 改为 rounded-full
+   - 背景和悬停效果：
+     - bg-white/50 hover:bg-nebula-50/80
+     - dark:bg-gray-800/50 dark:hover:bg-nebula-500/20
+   - 边框优化：border-black/5 hover:border-nebula-200/80
+   - 阴影效果：shadow-sm hover:shadow-md hover:shadow-nebula-500/10
+   - 悬停动画：hover:scale-105 active:scale-95
+   - 文字颜色悬停变化：group-hover/chip:text-nebula-600
+
+4. 删除按钮优化:
+   - 位置从左上角改为右上角（-top-1.5 -right-1.5）
+   - 独立的 button 元素，提升可访问性
+   - 背景：bg-white/90 dark:bg-gray-800/90
+   - 边框：border-black/5 dark:border-white/10
+   - 初始状态：opacity-0 scale-75
+   - 悬停显示：group-hover/chip:opacity-100 group-hover/chip:scale-100
+   - 悬停变红：hover:text-red-500 hover:border-red-200
+   - 添加 aria-label 提升可访问性
+
+5. 动画优化:
+   - chip 动画延迟从 40ms 调整为 30ms
+   - 使用 Tailwind 内置动画类替代自定义动画
+   - 优化过渡效果的 duration 和 ease
+
+**涉及文件**:
+- frontend/src/components/SearchBox.tsx (修改)
