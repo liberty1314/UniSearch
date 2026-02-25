@@ -226,6 +226,8 @@ type SystemStatsResponse struct {
 	ChannelCount      int  `json:"channel_count"`
 	CacheEnabled      bool `json:"cache_enabled"`
 	ProxyEnabled      bool `json:"proxy_enabled"`
+	DAU               int  `json:"dau"`
+	MAU               int  `json:"mau"`
 }
 
 // SystemConfigResponse 系统配置响应
@@ -254,8 +256,8 @@ type SystemConfigResponse struct {
 	Channels []string `json:"channels"`
 }
 
-// GetSystemInfoHandler 获取系统信息（插件状态 + 系统配置）
-func GetSystemInfoHandler(searchService *service.SearchService) gin.HandlerFunc {
+// GetSystemInfoHandler 获取系统信息（插件状态 + 系统配置 + 用户活跃度统计）
+func GetSystemInfoHandler(searchService *service.SearchService, userService *service.UserService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取插件管理器
 		pluginManager := searchService.GetPluginManager()
@@ -293,6 +295,17 @@ func GetSystemInfoHandler(searchService *service.SearchService) gin.HandlerFunc 
 			})
 		}
 
+		// 获取日活/月活统计
+		var dau, mau int64
+		if userService != nil {
+			if d, err := userService.GetDAU(); err == nil {
+				dau = d
+			}
+			if m, err := userService.GetMAU(); err == nil {
+				mau = m
+			}
+		}
+
 		// 构建系统统计信息
 		stats := SystemStatsResponse{
 			PluginCount:       len(pluginInfos),
@@ -300,6 +313,8 @@ func GetSystemInfoHandler(searchService *service.SearchService) gin.HandlerFunc 
 			ChannelCount:      len(config.AppConfig.DefaultChannels),
 			CacheEnabled:      config.AppConfig.CacheEnabled,
 			ProxyEnabled:      config.AppConfig.UseProxy,
+			DAU:               int(dau),
+			MAU:               int(mau),
 		}
 
 		// 构建系统配置信息

@@ -17,7 +17,9 @@ import {
     CheckCircle2,
     Layers,
     Radio,
-    Edit
+    Edit,
+    Users,
+    TrendingUp
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import type { SystemInfoResponse } from '@/types/api';
@@ -125,7 +127,7 @@ export const SystemInfoView: React.FC = () => {
             className="space-y-6"
         >
             {/* 统计卡片 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <StatsCard
                     title="插件总数"
                     value={systemInfo.stats.plugin_count}
@@ -153,6 +155,20 @@ export const SystemInfoView: React.FC = () => {
                     icon={Database}
                     color={systemInfo.stats.cache_enabled ? 'emerald' : 'amber'}
                     index={3}
+                />
+                <StatsCard
+                    title="今日活跃"
+                    value={systemInfo.stats.dau}
+                    icon={Users}
+                    color="emerald"
+                    index={4}
+                />
+                <StatsCard
+                    title="月活跃"
+                    value={systemInfo.stats.mau}
+                    icon={TrendingUp}
+                    color="purple"
+                    index={5}
                 />
             </div>
 

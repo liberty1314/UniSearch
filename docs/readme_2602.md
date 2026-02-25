@@ -1055,3 +1055,25 @@ pnpm-lock.yaml (已删除)
 - frontend/src/pages/Admin.tsx (修改)
 - frontend/src/services/authService.ts (修改)
 - frontend/src/types/api.ts (修改)
+
+---
+## 2026-02-26 23:45
+
+**Commit**: `feat(admin): 新增日活月活统计功能并优化系统信息展示`
+
+**详细说明**:
+- 后端新增 DAU/MAU 统计逻辑，统计 users 表和 api_keys 表的活跃用户
+- 在系统信息接口中返回日活/月活数据
+- 前端新增两个统计卡片展示日活和月活数据
+- 优化登录流程，更新 API Key 最后登录时间
+- 更新 API 文档，补充 DAU/MAU 字段说明
+
+**涉及文件**:
+- backend/api/admin_handler.go
+- backend/api/controller/auth_controller.go
+- backend/api/refresh_token_handler.go
+- backend/api/router.go
+- backend/service/user_service.go
+- docs/api_reference.md
+- frontend/src/components/admin/SystemInfoView.tsx
+- frontend/src/types/api.ts

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"time"
 
 	"unisearch/model"
 
@@ -521,4 +522,40 @@ func (s *UserService) BatchUpdateRole(userIDs []uint, role string, currentUserID
 	}
 
 	return result, nil
+}
+
+// GetDAU 获取日活跃用户数（今日0点起登录的用户数）
+// 统计来源：
+//   1. users 表：通过用户名密码登录的用户
+//   2. api_keys 表：通过 API Key 登录的用户（仅统计未绑定用户账号的 API Key，避免重复计数）
+func (s *UserService) GetDAU() (int64, error) {
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	return s.countActiveUsers(todayStart)
+}
+
+// GetMAU 获取月活跃用户数（本月1号起登录的用户数）
+func (s *UserService) GetMAU() (int64, error) {
+	now := time.Now()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	return s.countActiveUsers(monthStart)
+}
+
+// countActiveUsers 统计指定时间段内的活跃用户数
+func (s *UserService) countActiveUsers(since time.Time) (int64, error) {
+	// 1. 统计 users 表中的活跃用户（排除管理员）
+	var userCount int64
+	if err := s.db.Model(&model.User{}).Where("last_login_at >= ? AND role != ?", since, "admin").Count(&userCount).Error; err != nil {
+		return 0, fmt.Errorf("统计活跃用户数失败: %w", err)
+	}
+
+	// 2. 统计 api_keys 表中的活跃 API Key（未绑定用户账号的，避免与 users 表重复计数）
+	var apiKeyCount int64
+	if err := s.db.Model(&model.APIKey{}).
+		Where("last_login_at >= ? AND (user_id IS NULL) AND deleted_at IS NULL", since).
+		Count(&apiKeyCount).Error; err != nil {
+		return 0, fmt.Errorf("统计活跃 API Key 用户数失败: %w", err)
+	}
+
+	return userCount + apiKeyCount, nil
 }

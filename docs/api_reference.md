@@ -879,7 +879,9 @@ curl -X GET http://localhost:8888/api/admin/system-info \
     "active_plugin_count": 21,
     "channel_count": 5,
     "cache_enabled": true,
-    "proxy_enabled": false
+    "proxy_enabled": false,
+    "dau": 1,
+    "mau": 1
   },
   "config": {
     "cache_path": "./cache",
@@ -917,6 +919,8 @@ curl -X GET http://localhost:8888/api/admin/system-info \
 - `channel_count`: Telegram 频道数量
 - `cache_enabled`: 缓存是否启用
 - `proxy_enabled`: 代理是否启用
+- `dau`: 日活跃用户数（过去24小时内登录的用户数）
+- `mau`: 月活跃用户数（过去30天内登录的用户数）
 
 **config** (系统配置):
 - `cache_path`: 缓存路径

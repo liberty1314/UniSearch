@@ -178,7 +178,7 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			admin.POST("/keys/batch-extend", BatchExtendAPIKeysHandler(apiKeyService)) // 新增：批量延长
 			admin.POST("/keys/batch-create", BatchCreateAPIKeysHandler(apiKeyService)) // 新增：批量创建
 			admin.POST("/keys/batch-delete", BatchDeleteAPIKeysHandler(apiKeyService)) // 新增：批量删除
-			admin.GET("/system-info", GetSystemInfoHandler(searchService))             // 更新：获取系统信息（包含插件状态）
+			admin.GET("/system-info", GetSystemInfoHandler(searchService, userService))             // 更新：获取系统信息（包含插件状态 + 用户活跃度）
 			admin.POST("/plugins/:pluginName/test", TestPluginHandler(searchService))  // 新增：测试插件
 			admin.POST("/plugins", CreatePluginHandler())                              // 新增：创建插件
 			admin.PUT("/plugins/:pluginName", UpdatePluginHandler())                   // 新增：更新插件

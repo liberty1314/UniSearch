@@ -252,6 +252,11 @@ func (ctrl *AuthController) handleAPIKeyLogin(c *gin.Context, req LoginRequest) 
 		return
 	}
 
+	// 更新 API Key 最后登录时间
+	if err := apiKeyService.UpdateLastLoginAt(req.Password); err != nil {
+		log.Printf("⚠ 更新 API Key 最后登录时间失败: %v", err)
+	}
+
 	// 构建响应数据
 	loginData := LoginData{
 		AccessToken: accessToken,

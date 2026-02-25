@@ -170,6 +170,12 @@ func UserLoginWithRememberHandler(apiKeyService *service.APIKeyService, refreshT
 				return
 			}
 
+			// 更新 API Key 最后登录时间
+			if err := apiKeyService.UpdateLastLoginAt(req.Password); err != nil {
+				// 仅记录日志，不影响登录流程
+				println("警告: 更新 API Key 最后登录时间失败:", err.Error())
+			}
+
 			response := LoginWithRememberResponse{
 				AccessToken: accessToken,
 				ExpiresAt:   time.Now().Add(config.AppConfig.AuthTokenExpiry).Unix(),

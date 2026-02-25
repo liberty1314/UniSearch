@@ -549,6 +549,8 @@ export interface SystemStats {
   channel_count: number;
   cache_enabled: boolean;
   proxy_enabled: boolean;
+  dau: number;  // 日活跃用户数
+  mau: number;  // 月活跃用户数
 }
 
 /**
