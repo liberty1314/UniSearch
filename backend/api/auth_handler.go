@@ -65,6 +65,12 @@ func LoginHandler(apiKeyService *service.APIKeyService) gin.HandlerFunc {
 				return
 			}
 
+			// 更新最后登录时间
+			if err := apiKeyService.UpdateLastLoginAt(req.Password); err != nil {
+				// 仅记录日志，不影响登录流程
+				fmt.Printf("警告: 更新 API Key 最后登录时间失败: %v\n", err)
+			}
+
 			// 返回 token 和过期时间
 			expiresAt := time.Now().Add(config.AppConfig.AuthTokenExpiry).Unix()
 			c.JSON(200, LoginResponse{

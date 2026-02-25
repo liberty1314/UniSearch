@@ -144,15 +144,55 @@ export function AppleTable<T>({
    * 渲染加载状态
    */
   const renderLoading = () => (
-    <div className="flex items-center justify-center py-16">
-      <div className="flex flex-col items-center gap-3">
-        <div className="relative w-12 h-12">
-          <div className="absolute inset-0 rounded-full border-4 border-gray-200/50 dark:border-gray-700/50" />
-          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-apple-blue animate-spin" />
-        </div>
-        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-          加载中...
-        </p>
+    <div className="flex items-center justify-center py-20 min-h-[300px]">
+      <div className="flex flex-col items-center gap-4">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+          className="relative w-10 h-10"
+        >
+          <svg className="w-10 h-10 text-gray-200 dark:text-gray-700/50" viewBox="0 0 50 50">
+            <circle
+              cx="25"
+              cy="25"
+              r="20"
+              fill="none"
+              strokeWidth="4"
+              stroke="currentColor"
+            />
+          </svg>
+          <svg
+            className="w-10 h-10 absolute inset-0 text-[#0066cc] dark:text-[#2997ff] stroke-current"
+            viewBox="0 0 50 50"
+          >
+            <motion.circle
+              cx="25"
+              cy="25"
+              r="20"
+              fill="none"
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeDasharray="1, 200"
+              strokeDashoffset="0"
+              animate={{
+                strokeDasharray: ["1, 200", "89, 200", "89, 200"],
+                strokeDashoffset: ["0", "-35", "-124"],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+          </svg>
+        </motion.div>
+        <motion.p
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          className="text-xs font-semibold tracking-[0.2em] text-gray-400 dark:text-gray-500 uppercase"
+        >
+          加载数据
+        </motion.p>
       </div>
     </div>
   );
@@ -198,7 +238,7 @@ export function AppleTable<T>({
                 key={column.key}
                 className={cn(
                   'px-6 py-4 text-left',
-                  'text-xs font-medium uppercase tracking-wider',
+                  'text-xs font-medium uppercase tracking-wider whitespace-nowrap',
                   'text-gray-500 dark:text-gray-400',
                   column.align === 'center' && 'text-center',
                   column.align === 'right' && 'text-right',
@@ -208,8 +248,12 @@ export function AppleTable<T>({
                 onClick={() => column.sortable && handleSort(column.key)}
                 role="columnheader"
               >
-                <div className="flex items-center gap-2">
-                  <span>{column.title}</span>
+                <div className={cn(
+                  "flex items-center gap-2",
+                  column.align === 'center' && "justify-center",
+                  column.align === 'right' && "justify-end"
+                )}>
+                  <span className="whitespace-nowrap">{column.title}</span>
                   {column.sortable && (
                     <div className="flex flex-col">
                       <ChevronUp
@@ -240,14 +284,13 @@ export function AppleTable<T>({
             {sortedData.map((item, index) => (
               <motion.tr
                 key={rowKey(item)}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, filter: 'blur(8px)', y: 15 }}
+                animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
+                exit={{ opacity: 0, filter: 'blur(8px)', y: -15 }}
                 transition={{
-                  type: 'spring',
-                  stiffness: 500,
-                  damping: 30,
-                  delay: index * 0.02,
+                  duration: 0.4,
+                  ease: [0.23, 1, 0.32, 1],
+                  delay: index * 0.03,
                 }}
                 className={cn(
                   'border-b border-gray-100/50 dark:border-gray-800/50',
@@ -291,14 +334,13 @@ export function AppleTable<T>({
         {sortedData.map((item, index) => (
           <motion.div
             key={rowKey(item)}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, filter: 'blur(8px)', scale: 0.98, y: 10 }}
+            animate={{ opacity: 1, filter: 'blur(0px)', scale: 1, y: 0 }}
+            exit={{ opacity: 0, filter: 'blur(8px)', scale: 0.98, y: -10 }}
             transition={{
-              type: 'spring',
-              stiffness: 400,
-              damping: 25,
-              delay: index * 0.03,
+              duration: 0.4,
+              ease: [0.23, 1, 0.32, 1],
+              delay: index * 0.04,
             }}
             className={cn(
               'relative overflow-hidden',

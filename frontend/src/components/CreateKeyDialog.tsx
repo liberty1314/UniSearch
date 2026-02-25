@@ -31,12 +31,12 @@ interface CreateKeyDialogProps {
 
 // 预设的有效期和默认每日搜索次数
 const TTL_PRESETS = [
-    { label: '1 天', hours: 24, defaultDailyLimit: 3 },
+    { label: '1 天', hours: 24, defaultDailyLimit: 5 },
     { label: '7 天', hours: 168, defaultDailyLimit: 5 },
-    { label: '30 天', hours: 720, defaultDailyLimit: 10 },
-    { label: '90 天', hours: 2160, defaultDailyLimit: 15 },
-    { label: '1 年', hours: 8760, defaultDailyLimit: 20 },
-    { label: '自定义', hours: 0, defaultDailyLimit: 10 },
+    { label: '30 天', hours: 720, defaultDailyLimit: 5 },
+    { label: '90 天', hours: 2160, defaultDailyLimit: 5 },
+    { label: '1 年', hours: 8760, defaultDailyLimit: 5 },
+    { label: '自定义', hours: 0, defaultDailyLimit: 5 },
 ];
 
 /**
@@ -45,7 +45,7 @@ const TTL_PRESETS = [
 export function CreateKeyDialog({ open, onOpenChange, onSuccess }: CreateKeyDialogProps) {
     const [ttlPreset, setTtlPreset] = useState<string>('720');
     const [customDays, setCustomDays] = useState<number>(30);
-    const [dailySearchLimit, setDailySearchLimit] = useState<number>(10);
+    const [dailySearchLimit, setDailySearchLimit] = useState<number>(5);
     const [description, setDescription] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -70,7 +70,7 @@ export function CreateKeyDialog({ open, onOpenChange, onSuccess }: CreateKeyDial
      */
     const handleCreate = async () => {
         const ttlHours = getActualTtlHours();
-        
+
         if (ttlHours <= 0) {
             toast.error('请输入有效的天数');
             return;
@@ -102,7 +102,7 @@ export function CreateKeyDialog({ open, onOpenChange, onSuccess }: CreateKeyDial
         setDescription('');
         setTtlPreset('720');
         setCustomDays(30);
-        setDailySearchLimit(10);
+        setDailySearchLimit(5);
     };
 
     const handleClose = () => {

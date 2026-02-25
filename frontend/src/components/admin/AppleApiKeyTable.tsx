@@ -2,7 +2,7 @@ import React from 'react';
 import { AppleTable, AppleTableColumn } from '@/components/AppleTable';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Copy, Edit, Trash2, CheckCircle2, X, Clock, Shield } from 'lucide-react';
+import { Copy, Edit, Trash2, CheckCircle2, X, Clock, Shield, Power, PowerOff } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { APIKeyInfo } from '@/types/api';
@@ -15,6 +15,7 @@ interface AppleApiKeyTableProps {
   onCopyKey: (key: string) => void;
   onEditClick: (key: APIKeyInfo) => void;
   onDeleteClick: (key: string) => void;
+  onToggleStatus: (key: APIKeyInfo, isEnabled: boolean) => void;
   isDeleting: boolean;
   isBatchOperating: boolean;
   isLoading: boolean;
@@ -31,6 +32,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
   onCopyKey,
   onEditClick,
   onDeleteClick,
+  onToggleStatus,
   isDeleting,
   isBatchOperating,
   isLoading,
@@ -122,13 +124,17 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
       key: 'description',
       title: '描述',
       hideOnMobile: true,
-      render: (key) => (
-        <div className="flex items-center gap-2 max-w-[200px]">
-          <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2" title={key.description || '-'}>
-            {key.description || '-'}
-          </span>
-        </div>
-      ),
+      render: (key) => {
+        const desc = key.description || '-';
+        const displayDesc = desc.length > 4 ? `${desc.substring(0, 4)}...` : desc;
+        return (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap" title={desc}>
+              {displayDesc}
+            </span>
+          </div>
+        );
+      },
     },
     {
       key: 'created_at',
@@ -148,6 +154,28 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
           </span>
         </div>
       ),
+    },
+    {
+      key: 'last_login_at',
+      title: '最后登录',
+      sortable: true,
+      hideOnMobile: true,
+      render: (key) =>
+        key.last_login_at ? (
+          <div className="flex flex-col min-w-[100px]">
+            <span className="text-sm whitespace-nowrap">
+              {new Date(key.last_login_at).toLocaleDateString('zh-CN')}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              {formatDistanceToNow(new Date(key.last_login_at), {
+                addSuffix: true,
+                locale: zhCN,
+              })}
+            </span>
+          </div>
+        ) : (
+          <span className="text-sm text-gray-400 dark:text-gray-600">从未登录</span>
+        ),
     },
     {
       key: 'expires_at',
@@ -272,6 +300,19 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
             size="sm"
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
+              onToggleStatus(key, !key.is_enabled);
+            }}
+            disabled={isDeleting || isBatchOperating || key.is_permanent}
+            className="hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-600"
+            title={key.is_permanent ? '管理员永久密钥不可修改状态' : (key.is_enabled ? '禁用' : '启用')}
+          >
+            {key.is_enabled ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
               onDeleteClick(key.key);
             }}
             disabled={isDeleting || isBatchOperating || key.is_permanent}
@@ -361,6 +402,18 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
+                onToggleStatus(key, !key.is_enabled);
+              }}
+              disabled={isDeleting || isBatchOperating || key.is_permanent}
+              className="h-8 w-8 p-0 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+            >
+              {key.is_enabled ? <PowerOff className="w-4 h-4 text-purple-600" /> : <Power className="w-4 h-4 text-purple-600" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
                 onDeleteClick(key.key);
               }}
               disabled={isDeleting || isBatchOperating || key.is_permanent}
@@ -386,6 +439,18 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
           >
             <Copy className="w-4 h-4 text-gray-500" />
           </button>
+        </div>
+
+        {/* Content: Stats */}
+        <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 p-2 rounded-lg">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] uppercase tracking-wider opacity-70">创建时间</span>
+            <span>{new Date(key.created_at).toLocaleDateString('zh-CN')}</span>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] uppercase tracking-wider opacity-70">最后登录</span>
+            <span>{key.last_login_at ? formatDistanceToNow(new Date(key.last_login_at), { addSuffix: true, locale: zhCN }) : '从未登录'}</span>
+          </div>
         </div>
 
         {/* Footer: Description & Time */}

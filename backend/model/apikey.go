@@ -19,6 +19,7 @@ type APIKey struct {
 	DailySearchLimit int            `gorm:"default:0" json:"daily_search_limit"`                    // 每日搜索次数限制（0表示不限制）
 	TodaySearchCount int            `gorm:"default:0" json:"today_search_count"`                    // 今日已搜索次数
 	LastSearchDate   string         `gorm:"size:10" json:"last_search_date"`                        // 上次搜索日期（格式：2006-01-02）
+	LastLoginAt      *time.Time     `json:"last_login_at"`                                          // 最后登录时间
 	IsPermanent      bool           `gorm:"default:false" json:"is_permanent"`                      // 是否为永久密钥（管理员专用）
 	IsUnlimited      bool           `gorm:"default:false" json:"is_unlimited"`                      // 是否无限制（无搜索次数限制）
 	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`                                         // 软删除时间（索引，不在JSON中序列化）

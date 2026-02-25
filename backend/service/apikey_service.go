@@ -168,6 +168,23 @@ func (s *APIKeyService) UpdateAPIKeyUsage(key string) error {
 	return nil
 }
 
+// UpdateLastLoginAt 更新 API Key 的最后登录时间
+// key: API Key
+func (s *APIKeyService) UpdateLastLoginAt(key string) error {
+	var apiKey model.APIKey
+	if err := s.db.Where("api_key = ?", key).First(&apiKey).Error; err != nil {
+		return fmt.Errorf("查询 API Key 失败: %w", err)
+	}
+
+	now := time.Now()
+	apiKey.LastLoginAt = &now
+	if err := s.db.Model(&apiKey).Update("last_login_at", now).Error; err != nil {
+		return fmt.Errorf("更新最后登录时间失败: %w", err)
+	}
+
+	return nil
+}
+
 // CheckAndResetDailyCount 检查并重置每日搜索计数
 // apiKey: API Key 对象
 // 如果 last_search_date 不是今天，则重置 today_search_count 为 0

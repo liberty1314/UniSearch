@@ -981,3 +981,77 @@ pnpm-lock.yaml (已删除)
 
 **涉及文件**:
 - frontend/src/components/SearchBox.tsx (修改)
+
+
+---
+
+## 2026-02-18 16:35:27
+
+**Commit**: `feat(admin): 新增 API Key 状态切换和最后登录时间功能`
+
+**详细说明**:
+
+新增 API Key 启用/禁用状态切换功能，支持管理员快速控制密钥可用性。新增最后登录时间字段，记录 API Key 的登录活动。优化管理表格，新增状态切换按钮和最后登录时间列。更新后端服务和前端接口，完善 API Key 管理功能。
+
+**主要改动**:
+
+1. 后端功能新增:
+   - 在 APIKey 模型中新增 last_login_at 字段，记录最后登录时间
+   - 新增 UpdateLastLoginAt 方法，更新 API Key 的最后登录时间
+   - 在 auth_handler.go 中调用更新最后登录时间的逻辑
+   - 更新 Go 依赖包（go.mod / go.sum）
+
+2. 前端类型定义:
+   - 在 APIKeyInfo 接口中新增 id 和 last_login_at 字段
+   - 完善类型定义，支持新功能的数据结构
+
+3. 前端服务层:
+   - 新增 updateApiKeyStatus 方法，支持启用/禁用 API Key
+   - 优化代码格式和缩进
+   - 完善错误处理
+
+4. 管理表格优化:
+   - AppleApiKeyTable 新增"最后登录"列，显示登录时间和相对时间
+   - 新增状态切换按钮（Power / PowerOff 图标）
+   - 优化描述列显示，超过 4 个字符时截断并显示省略号
+   - 移动端卡片新增最后登录时间展示
+   - 优化按钮布局和交互体验
+   - 永久密钥不可修改状态（禁用状态切换按钮）
+
+5. AppleTable 组件优化:
+   - 优化表格列的响应式显示逻辑
+   - 改进排序和筛选功能
+   - 提升表格性能和用户体验
+
+6. Admin 页面优化:
+   - 集成状态切换功能，新增 handleToggleStatus 方法
+   - 优化 API Key 管理流程
+   - 改进加载状态和错误处理
+
+7. 其他组件优化:
+   - CreateKeyDialog: 优化对话框样式和交互
+   - BatchCreateDialog: 改进批量创建流程
+   - ApplePagination: 优化分页组件
+
+**功能特性**:
+
+- 管理员可快速启用/禁用 API Key，无需删除
+- 记录并展示 API Key 的最后登录时间
+- 支持按最后登录时间排序
+- 永久密钥受保护，不可修改状态
+- 移动端完整支持新功能
+
+**涉及文件**:
+- backend/api/auth_handler.go (修改)
+- backend/go.mod (修改)
+- backend/go.sum (修改)
+- backend/model/apikey.go (修改)
+- backend/service/apikey_service.go (修改)
+- frontend/src/components/AppleTable.tsx (修改)
+- frontend/src/components/CreateKeyDialog.tsx (修改)
+- frontend/src/components/admin/AppleApiKeyTable.tsx (修改)
+- frontend/src/components/admin/ApplePagination.tsx (修改)
+- frontend/src/components/admin/BatchCreateDialog.tsx (修改)
+- frontend/src/pages/Admin.tsx (修改)
+- frontend/src/services/authService.ts (修改)
+- frontend/src/types/api.ts (修改)

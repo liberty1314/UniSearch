@@ -53,7 +53,7 @@ export function BatchCreateDialog({
     const [count, setCount] = useState<string>('10'); // 默认创建 10 个
     const [ttlHours, setTtlHours] = useState<string>('720'); // 默认 30 天
     const [descriptionPrefix, setDescriptionPrefix] = useState<string>('批量生成-');
-    const [dailySearchLimit, setDailySearchLimit] = useState<string>('10'); // 默认每日10次
+    const [dailySearchLimit, setDailySearchLimit] = useState<string>('5'); // 默认每日5次
 
     // 加载状态
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -77,7 +77,7 @@ export function BatchCreateDialog({
             setCount('10');
             setTtlHours('720');
             setDescriptionPrefix('批量生成-');
-            setDailySearchLimit('10');
+            setDailySearchLimit('5');
             setCreatedKeys([]);
             setShowResults(false);
             setShowConfirm(false);
@@ -224,17 +224,17 @@ export function BatchCreateDialog({
 
         try {
             let formattedKeys: string;
-            
+
             if (enableCopyFormat && copyFormatTemplate.trim()) {
                 // 使用自定义格式模板，将 {key} 替换为实际的 API Key
-                formattedKeys = createdKeys.map(key => 
+                formattedKeys = createdKeys.map(key =>
                     copyFormatTemplate.replace(/{key}/g, key.key)
                 ).join('\n');
             } else {
                 // 不使用格式，直接复制 API Key
                 formattedKeys = createdKeys.map(key => key.key).join('\n');
             }
-            
+
             // 复制到剪贴板
             navigator.clipboard.writeText(formattedKeys).then(() => {
                 toast.success(`已复制 ${createdKeys.length} 个 API Key`);
@@ -433,7 +433,7 @@ export function BatchCreateDialog({
                                                     {key.description}
                                                 </TableCell>
                                                 <TableCell className="text-sm">
-                                                    {key.first_used_at 
+                                                    {key.first_used_at
                                                         ? formatDateTime(key.expires_at)
                                                         : '待激活'
                                                     }

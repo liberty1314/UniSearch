@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ApplePaginationProps {
   currentPage: number;
@@ -111,7 +111,7 @@ export const ApplePagination: React.FC<ApplePaginationProps> = ({
       </div>
 
       {/* 右侧：分页按钮 */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         {/* 上一页按钮 */}
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button
@@ -122,86 +122,81 @@ export const ApplePagination: React.FC<ApplePaginationProps> = ({
               (e.target as HTMLElement).blur();
             }}
             disabled={currentPage === 1 || isLoading}
-            className="h-9 px-3 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none focus:ring-0"
+            className="h-9 px-3 border-transparent dark:border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-0 rounded-full"
           >
-            <ChevronLeft className="w-4 h-4 mr-1" />
+            <ChevronLeft className="w-4 h-4 sm:mr-1" />
             <span className="hidden sm:inline">上一页</span>
           </Button>
         </motion.div>
 
-        {/* 页码按钮 */}
-        <div className="flex items-center gap-1">
-          {/* 第一页（如果不在显示范围内） */}
-          {pageNumbers[0] > 1 && (
-            <>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    onPageChange(1);
-                    (e.target as HTMLElement).blur();
-                  }}
+        {/* 页码按钮与胶囊背景 */}
+        <motion.div layout className="flex items-center gap-1 p-1 bg-slate-100/80 dark:bg-slate-800/50 backdrop-blur-sm rounded-full shadow-inner border border-slate-200/50 dark:border-slate-700/50">
+          <AnimatePresence mode="popLayout" initial={false}>
+            {/* 第一页（如果不在显示范围内） */}
+            {pageNumbers[0] > 1 && (
+              <motion.div key="first-page" layout initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="flex items-center">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => onPageChange(1)}
                   disabled={isLoading}
-                  className="h-9 w-9 p-0 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none focus:ring-0"
+                  className="relative h-8 w-8 flex items-center justify-center rounded-full text-sm font-medium transition-colors text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                 >
                   1
-                </Button>
+                </motion.button>
+                {pageNumbers[0] > 2 && (
+                  <span className="px-1 text-slate-400">...</span>
+                )}
               </motion.div>
-              {pageNumbers[0] > 2 && (
-                <span className="px-2 text-slate-400">...</span>
-              )}
-            </>
-          )}
+            )}
 
-          {/* 中间页码 */}
-          {pageNumbers.map((pageNum) => (
-            <motion.div
-              key={pageNum}
-              whileHover={{ scale: currentPage === pageNum ? 1 : 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button
-                variant={currentPage === pageNum ? 'default' : 'outline'}
-                size="sm"
-                onClick={(e) => {
-                  onPageChange(pageNum);
-                  (e.target as HTMLElement).blur();
-                }}
+            {/* 中间页码 */}
+            {pageNumbers.map((pageNum) => (
+              <motion.button
+                key={`page-${pageNum}`}
+                layout
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                whileHover={{ scale: currentPage === pageNum ? 1 : 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onPageChange(pageNum)}
                 disabled={isLoading}
-                className={`h-9 w-9 p-0 focus:outline-none focus:ring-0 ${currentPage === pageNum
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
-                    : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+                className={`relative h-8 w-8 flex items-center justify-center rounded-full text-sm font-medium transition-colors z-10 ${currentPage === pageNum
+                  ? 'text-white'
+                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
                   }`}
               >
-                {pageNum}
-              </Button>
-            </motion.div>
-          ))}
+                {currentPage === pageNum && (
+                  <motion.div
+                    layoutId="activePageIndicator"
+                    className="absolute inset-0 bg-blue-500 shadow-md rounded-full pointer-events-none"
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-10">{pageNum}</span>
+              </motion.button>
+            ))}
 
-          {/* 最后一页（如果不在显示范围内） */}
-          {pageNumbers[pageNumbers.length - 1] < totalPages && (
-            <>
-              {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && (
-                <span className="px-2 text-slate-400">...</span>
-              )}
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    onPageChange(totalPages);
-                    (e.target as HTMLElement).blur();
-                  }}
+            {/* 最后一页（如果不在显示范围内） */}
+            {pageNumbers[pageNumbers.length - 1] < totalPages && (
+              <motion.div key="last-page" layout initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="flex items-center">
+                {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && (
+                  <span className="px-1 text-slate-400">...</span>
+                )}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => onPageChange(totalPages)}
                   disabled={isLoading}
-                  className="h-9 w-9 p-0 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none focus:ring-0"
+                  className="relative h-8 w-8 flex items-center justify-center rounded-full text-sm font-medium transition-colors text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                 >
                   {totalPages}
-                </Button>
+                </motion.button>
               </motion.div>
-            </>
-          )}
-        </div>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         {/* 下一页按钮 */}
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -213,10 +208,10 @@ export const ApplePagination: React.FC<ApplePaginationProps> = ({
               (e.target as HTMLElement).blur();
             }}
             disabled={currentPage === totalPages || isLoading}
-            className="h-9 px-3 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none focus:ring-0"
+            className="h-9 px-3 border-transparent dark:border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-0 rounded-full"
           >
             <span className="hidden sm:inline">下一页</span>
-            <ChevronRight className="w-4 h-4 ml-1" />
+            <ChevronRight className="w-4 h-4 ml-0 sm:ml-1" />
           </Button>
         </motion.div>
       </div>

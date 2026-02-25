@@ -215,25 +215,25 @@ export class AuthService {
          * 获取用户 API Key 详情
          * @returns API Key 详细信息
          */
-        static async getUserApiKeyInfo(): Promise<APIKeyInfoResponse> {
-            const response = await apiClient.get<APIKeyInfoResponse>('/user/apikey');
+    static async getUserApiKeyInfo(): Promise<APIKeyInfoResponse> {
+        const response = await apiClient.get<APIKeyInfoResponse>('/user/apikey');
 
-            if (!response) {
-                throw new Error('获取 API Key 信息失败：服务器未返回有效数据');
-            }
-
-            return response;
+        if (!response) {
+            throw new Error('获取 API Key 信息失败：服务器未返回有效数据');
         }
 
-        /**
-         * 解绑用户 API Key
-         * 发送 DELETE 请求到 /user/apikey 以解除当前用户的 API Key 绑定
-         * @returns Promise<void> 解绑成功时返回
-         * @throws Error 当解绑失败时抛出错误
-         */
-        static async unbindApiKey(): Promise<void> {
-            await apiClient.delete('/user/apikey');
-        }
+        return response;
+    }
+
+    /**
+     * 解绑用户 API Key
+     * 发送 DELETE 请求到 /user/apikey 以解除当前用户的 API Key 绑定
+     * @returns Promise<void> 解绑成功时返回
+     * @throws Error 当解绑失败时抛出错误
+     */
+    static async unbindApiKey(): Promise<void> {
+        await apiClient.delete('/user/apikey');
+    }
 
 
     /**
@@ -319,6 +319,15 @@ export class AuthService {
 
         // 后端返回的是 {key: {...}}，需要提取 key 字段
         return (response as any).key;
+    }
+
+    /**
+     * 更新 API Key 状态（启用/禁用）（管理员权限）
+     * @param id API Key ID
+     * @param isEnabled 是否启用
+     */
+    static async updateApiKeyStatus(id: number, isEnabled: boolean): Promise<void> {
+        await apiClient.put(`/admin/apikey/${id}/status`, { is_enabled: isEnabled });
     }
 
     /**

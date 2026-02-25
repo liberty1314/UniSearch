@@ -442,6 +442,7 @@ export interface RevokeRefreshTokenRequest {
  * API Key 信息
  */
 export interface APIKeyInfo {
+  id: number;
   key: string;
   created_at: string;
   first_used_at: string | null; // 首次使用时间，null 表示未使用
@@ -452,6 +453,7 @@ export interface APIKeyInfo {
   daily_search_limit: number; // 每日搜索次数限制（0表示不限制）
   today_search_count: number; // 今日已搜索次数
   last_search_date: string; // 上次搜索日期
+  last_login_at: string | null; // 最后登录时间
   is_permanent: boolean; // 是否为永久密钥（管理员专用，不可编辑删除）
   is_unlimited: boolean; // 是否无限制（无搜索次数限制）
 }
