@@ -107,10 +107,10 @@ const Admin: React.FC = () => {
     // 批量操作加载状态
     const [isBatchOperating, setIsBatchOperating] = useState<boolean>(false);
 
-    // 搜索关键词（原始值）
-    const [searchKeyword, setSearchKeyword] = useState<string>('');
-    // 防抖后的搜索关键词（500ms），用于触发请求
-    const debouncedApiKeySearchKeyword = useDebouncedValue(searchKeyword, 500);
+    // API Key 搜索框当前的输入内容
+    const [apiKeySearchInput, setApiKeySearchInput] = useState<string>('');
+    // 实际用来触发请求和配合分页的 API Key 搜索关键词
+    const [apiKeySearchKeyword, setApiKeySearchKeyword] = useState<string>('');
 
     // 状态筛选（单选，空字符串表示不筛选）
     const [statusFilter, setStatusFilter] = useState<string>('');
@@ -125,8 +125,8 @@ const Admin: React.FC = () => {
     const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
 
     // 搜索和筛选
-    const [userSearchKeyword, setUserSearchKeyword] = useState<string>('');
-    const debouncedUserSearchKeyword = useDebouncedValue(userSearchKeyword, 500); // 500ms 防抖
+    const [userSearchInput, setUserSearchInput] = useState<string>('');
+    const [userActiveSearchKeyword, setUserActiveSearchKeyword] = useState<string>('');
     const [userRoleFilter, setUserRoleFilter] = useState<string[]>([]);
     const [userStatusFilter, setUserStatusFilter] = useState<string[]>([]);
 
@@ -210,7 +210,7 @@ const Admin: React.FC = () => {
             const result = await AuthService.listApiKeysPaginated(
                 page ?? apiKeyCurrentPage,
                 size ?? apiKeyPageSize,
-                keyword !== undefined ? keyword : debouncedApiKeySearchKeyword,
+                keyword !== undefined ? keyword : apiKeySearchKeyword,
                 status !== undefined ? status : statusFilter
             );
             setPagedApiKeys(result.keys);
@@ -233,7 +233,7 @@ const Admin: React.FC = () => {
         } finally {
             setIsLoadingKeys(false);
         }
-    }, [apiKeyCurrentPage, apiKeyPageSize, debouncedApiKeySearchKeyword, statusFilter, logout, navigate]);
+    }, [apiKeyCurrentPage, apiKeyPageSize, apiKeySearchKeyword, statusFilter, logout, navigate]);
 
     /**
      * 加载用户列表
@@ -254,7 +254,7 @@ const Admin: React.FC = () => {
             const response = await UserService.listUsers(
                 targetPage,
                 pageSize,
-                debouncedUserSearchKeyword.trim() || undefined,
+                userActiveSearchKeyword.trim() || undefined,
                 roleFilter
             );
 
@@ -281,7 +281,7 @@ const Admin: React.FC = () => {
         } finally {
             setIsLoadingUsers(false);
         }
-    }, [currentPage, pageSize, debouncedUserSearchKeyword, userRoleFilter, logout, navigate]);
+    }, [currentPage, pageSize, userActiveSearchKeyword, userRoleFilter, logout, navigate]);
 
     /**
      * 初始加载数据
@@ -299,17 +299,17 @@ const Admin: React.FC = () => {
     useEffect(() => {
         if (isAdmin && currentView === 'api-keys') {
             setApiKeyCurrentPage(1);
-            loadApiKeys(1, apiKeyPageSize, debouncedApiKeySearchKeyword, statusFilter);
+            loadApiKeys(1, apiKeyPageSize, apiKeySearchKeyword, statusFilter);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [debouncedApiKeySearchKeyword, statusFilter]);
+    }, [apiKeySearchKeyword, statusFilter]);
 
     /**
      * 翻页时重新加载（保持当前筛选条件）
      */
     useEffect(() => {
         if (isAdmin && currentView === 'api-keys') {
-            loadApiKeys(apiKeyCurrentPage, apiKeyPageSize, debouncedApiKeySearchKeyword, statusFilter);
+            loadApiKeys(apiKeyCurrentPage, apiKeyPageSize, apiKeySearchKeyword, statusFilter);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [apiKeyCurrentPage, apiKeyPageSize]);
@@ -321,7 +321,7 @@ const Admin: React.FC = () => {
         if (isAdmin && currentView === 'user-management') {
             loadUsers(1); // 条件变化时重置到第一页
         }
-    }, [isAdmin, currentView, debouncedUserSearchKeyword, userRoleFilter, loadUsers]);
+    }, [isAdmin, currentView, userActiveSearchKeyword, userRoleFilter, loadUsers]);
 
     /**
      * 处理创建 Key 成功
@@ -521,7 +521,7 @@ const Admin: React.FC = () => {
      * 判断是否有任何筛选条件
      */
     const hasAnyFilter = (): boolean => {
-        return !!statusFilter || !!searchKeyword.trim();
+        return !!statusFilter || !!apiKeySearchKeyword.trim();
     };
 
     /**
@@ -529,7 +529,8 @@ const Admin: React.FC = () => {
      */
     const handleClearAllFilters = () => {
         setStatusFilter('');
-        setSearchKeyword('');
+        setApiKeySearchInput('');
+        setApiKeySearchKeyword('');
         setApiKeyCurrentPage(1);
     };
 
@@ -924,12 +925,23 @@ const Admin: React.FC = () => {
                                                 >
                                                     {/* 搜索框 */}
                                                     <div className="relative">
-                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10 pointer-events-none" />
                                                         <Input
                                                             type="text"
                                                             placeholder="搜索 API Key..."
-                                                            value={searchKeyword}
-                                                            onChange={(e) => setSearchKeyword(e.target.value)}
+                                                            value={apiKeySearchInput}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                setApiKeySearchInput(val);
+                                                                if (val === '') {
+                                                                    setApiKeySearchKeyword('');
+                                                                }
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    setApiKeySearchKeyword(apiKeySearchInput);
+                                                                }
+                                                            }}
                                                             className="pl-9 w-full sm:w-48 h-9 text-sm border-slate-200 dark:border-slate-700"
                                                         />
                                                     </div>
@@ -1192,12 +1204,23 @@ const Admin: React.FC = () => {
                                                 >
                                                     {/* 搜索框 */}
                                                     <div className="relative">
-                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10 pointer-events-none" />
                                                         <Input
                                                             type="text"
                                                             placeholder="搜索用户名..."
-                                                            value={userSearchKeyword}
-                                                            onChange={(e) => setUserSearchKeyword(e.target.value)}
+                                                            value={userSearchInput}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                setUserSearchInput(val);
+                                                                if (val === '') {
+                                                                    setUserActiveSearchKeyword('');
+                                                                }
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    setUserActiveSearchKeyword(userSearchInput);
+                                                                }
+                                                            }}
                                                             className="pl-9 w-full sm:w-48 h-9 text-sm border-slate-200 dark:border-slate-700"
                                                         />
                                                     </div>
@@ -1265,11 +1288,11 @@ const Admin: React.FC = () => {
                                                 <Users className="w-8 h-8 text-slate-400" />
                                             </div>
                                             <p className="text-slate-500 dark:text-slate-400 mb-4">
-                                                {userSearchKeyword || userRoleFilter.length > 0
+                                                {userActiveSearchKeyword || userRoleFilter.length > 0
                                                     ? '没有找到匹配的用户'
                                                     : '暂无用户'}
                                             </p>
-                                            {!userSearchKeyword && userRoleFilter.length === 0 && (
+                                            {!userActiveSearchKeyword && userRoleFilter.length === 0 && (
                                                 <Button
                                                     onClick={handleCreateUser}
                                                     className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"

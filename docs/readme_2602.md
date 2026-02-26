@@ -1096,3 +1096,18 @@ pnpm-lock.yaml (已删除)
 - backend/service/user_service.go
 - frontend/src/pages/Admin.tsx
 - frontend/src/services/authService.ts
+
+
+---
+## 2026-02-27 00:02
+
+**Commit**: `refactor(admin): 优化搜索交互为手动触发模式`
+
+**详细说明**:
+- 将 API Key 和用户管理的搜索功能从防抖自动触发改为手动按回车触发
+- 搜索框清空时立即清除搜索条件
+- 优化搜索图标样式，添加 z-10 和 pointer-events-none 防止遮挡输入
+- 提升用户对搜索时机的控制感，减少不必要的 API 请求
+
+**涉及文件**:
+- frontend/src/pages/Admin.tsx
