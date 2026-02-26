@@ -201,12 +201,14 @@ func (s *APIKeyService) CheckAndResetDailyCount(apiKey *model.APIKey) error {
 	return nil
 }
 
-// ListAPIKeys 列出所有 API Keys（管理员功能，支持分页）
+// ListAPIKeys 列出所有 API Keys（管理员功能，支持分页+搜索+状态筛选）
 // page: 页码（从 1 开始）
 // pageSize: 每页数量
+// keyword: 关键词（模糊匹配 api_key 和 description，空字符串表示不筛选）
+// status: 状态筛选（enabled/disabled/pending/expired，空字符串表示不筛选）
 // 返回: API Key 列表和总数
 // 验证需求：管理员接口
-func (s *APIKeyService) ListAPIKeys(page, pageSize int) ([]model.APIKey, int64, error) {
+func (s *APIKeyService) ListAPIKeys(page, pageSize int, keyword, status string) ([]model.APIKey, int64, error) {
 	// 初始化为空切片而不是 nil，确保 JSON 序列化时返回 [] 而不是 null
 	keys := make([]model.APIKey, 0)
 	var total int64
@@ -214,13 +216,39 @@ func (s *APIKeyService) ListAPIKeys(page, pageSize int) ([]model.APIKey, int64, 
 	// 计算偏移量
 	offset := (page - 1) * pageSize
 
-	// 查询总数
-	if err := s.db.Model(&model.APIKey{}).Count(&total).Error; err != nil {
+	// 构建基础查询（复用过滤条件）
+	baseQuery := s.db.Model(&model.APIKey{})
+
+	// 关键词过滤：模糊匹配 api_key 和 description
+	if keyword != "" {
+		like := "%" + keyword + "%"
+		baseQuery = baseQuery.Where("api_key LIKE ? OR description LIKE ?", like, like)
+	}
+
+	// 状态过滤
+	now := time.Now()
+	switch status {
+	case "enabled":
+		// 正常：已启用 + 已激活（first_used_at 不为空）+ 未过期
+		baseQuery = baseQuery.Where("is_enabled = ? AND first_used_at IS NOT NULL AND (expires_at IS NULL OR expires_at > ?)", true, now)
+	case "disabled":
+		// 已禁用
+		baseQuery = baseQuery.Where("is_enabled = ?", false)
+	case "pending":
+		// 待激活：已启用但从未使用（first_used_at 为空）
+		baseQuery = baseQuery.Where("is_enabled = ? AND first_used_at IS NULL", true)
+	case "expired":
+		// 已过期：expires_at 不为空且已过期
+		baseQuery = baseQuery.Where("expires_at IS NOT NULL AND expires_at <= ?", now)
+	}
+
+	// 查询符合条件的总数
+	if err := baseQuery.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询 API Key 总数失败: %w", err)
 	}
 
-	// 查询分页数据
-	if err := s.db.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&keys).Error; err != nil {
+	// 查询分页数据（按最后登录时间降序排序，未登录的排在后面，再按创建时间降序）
+	if err := baseQuery.Offset(offset).Limit(pageSize).Order("last_login_at IS NULL ASC, last_login_at DESC, created_at DESC").Find(&keys).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询 API Key 列表失败: %w", err)
 	}
 
@@ -343,7 +371,7 @@ func (s *APIKeyService) CanSearch(key string) (bool, error) {
 func (s *APIKeyService) ListKeys() ([]model.APIKey, error) {
 	// 初始化为空切片而不是 nil，确保 JSON 序列化时返回 [] 而不是 null
 	keys := make([]model.APIKey, 0)
-	if err := s.db.Order("created_at DESC").Find(&keys).Error; err != nil {
+	if err := s.db.Order("last_login_at IS NULL ASC, last_login_at DESC, created_at DESC").Find(&keys).Error; err != nil {
 		return nil, fmt.Errorf("查询 API Key 列表失败: %w", err)
 	}
 	return keys, nil

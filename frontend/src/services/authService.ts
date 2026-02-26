@@ -252,6 +252,37 @@ export class AuthService {
     }
 
     /**
+     * 获取 API Keys 分页列表（管理员权限）— 真实服务端分页
+     * @param page 页码（从 1 开始）
+     * @param size 每页条数
+     * @param keyword 搜索关键词（可选）
+     * @param status 状态筛选（enabled/disabled/pending/expired，可选）
+     * @returns 分页数据 { keys, total, page, size }
+     */
+    static async listApiKeysPaginated(
+        page: number,
+        size: number,
+        keyword?: string,
+        status?: string
+    ): Promise<{ keys: APIKeyInfo[]; total: number; page: number; size: number }> {
+        const params = new URLSearchParams();
+        params.set('page', String(page));
+        params.set('size', String(size));
+        if (keyword) params.set('keyword', keyword);
+        if (status) params.set('status', status);
+
+        const response = await apiClient.get<{ keys: APIKeyInfo[]; total: number; page: number; size: number }>(
+            `/admin/apikey/list?${params.toString()}`
+        );
+
+        if (!response) {
+            throw new Error('获取 API Keys 失败：服务器未返回有效数据');
+        }
+
+        return response as any;
+    }
+
+    /**
      * 创建新的 API Key（管理员权限）
      * @param ttlHours 有效期（小时）
      * @param description 描述信息

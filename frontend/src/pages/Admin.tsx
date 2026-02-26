@@ -68,8 +68,9 @@ const Admin: React.FC = () => {
 
 
 
-    // API Keys 列表
-    const [apiKeys, setApiKeys] = useState<APIKeyInfo[]>([]);
+    // API Keys 列表（当前页数据）
+    const [pagedApiKeys, setPagedApiKeys] = useState<APIKeyInfo[]>([]);
+    const [totalApiKeys, setTotalApiKeys] = useState<number>(0);
     const [isLoadingKeys, setIsLoadingKeys] = useState<boolean>(true);
 
     // API Keys 分页状态
@@ -106,12 +107,13 @@ const Admin: React.FC = () => {
     // 批量操作加载状态
     const [isBatchOperating, setIsBatchOperating] = useState<boolean>(false);
 
-    // 搜索关键词
+    // 搜索关键词（原始值）
     const [searchKeyword, setSearchKeyword] = useState<string>('');
+    // 防抖后的搜索关键词（500ms），用于触发请求
+    const debouncedApiKeySearchKeyword = useDebouncedValue(searchKeyword, 500);
 
-    // 筛选状态
-    const [statusFilter, setStatusFilter] = useState<string[]>([]);
-    const [remainingTimeFilter, setRemainingTimeFilter] = useState<string[]>([]);
+    // 状态筛选（单选，空字符串表示不筛选）
+    const [statusFilter, setStatusFilter] = useState<string>('');
 
     // ============ 用户管理状态 ============
 
@@ -157,114 +159,16 @@ const Admin: React.FC = () => {
         return new Date(expiresAt) < new Date();
     };
 
-    // 过滤后的 API Keys
-    const filteredApiKeys = React.useMemo(() => {
-        // 首先过滤掉管理员的永久密钥（不显示）
-        let filtered = apiKeys.filter(key => !key.is_permanent);
+    // 固定状态筛选选项（服务端过滤，无需动态计算）
+    const availableStatusOptions = [
+        { label: '正常', value: 'enabled', color: '#10b981' },
+        { label: '待激活', value: 'pending', color: '#3b82f6' },
+        { label: '已禁用', value: 'disabled', color: '#6b7280' },
+        { label: '已过期', value: 'expired', color: '#ef4444' },
+    ];
 
-        // 关键词搜索
-        if (searchKeyword.trim()) {
-            const keyword = searchKeyword.toLowerCase().trim();
-            filtered = filtered.filter(key =>
-                key.key.toLowerCase().includes(keyword) ||
-                (key.description && key.description.toLowerCase().includes(keyword))
-            );
-        }
-
-        // 状态筛选
-        if (statusFilter.length > 0) {
-            filtered = filtered.filter(key => {
-                if (statusFilter.includes('enabled') && key.is_enabled && key.first_used_at && !isKeyExpired(key.expires_at)) {
-                    return true;
-                }
-                if (statusFilter.includes('disabled') && !key.is_enabled) {
-                    return true;
-                }
-                if (statusFilter.includes('pending') && key.is_enabled && !key.first_used_at) {
-                    return true;
-                }
-                if (statusFilter.includes('expired') && isKeyExpired(key.expires_at)) {
-                    return true;
-                }
-                return false;
-            });
-        }
-
-        // 剩余时间筛选
-        if (remainingTimeFilter.length > 0) {
-            filtered = filtered.filter(key => {
-                const now = new Date();
-                const expiry = new Date(key.expires_at);
-                const diffMs = expiry.getTime() - now.getTime();
-                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-                if (remainingTimeFilter.includes('expired') && diffDays < 0) {
-                    return true;
-                }
-                if (remainingTimeFilter.includes('1day') && diffDays >= 0 && diffDays <= 1) {
-                    return true;
-                }
-                if (remainingTimeFilter.includes('7days') && diffDays > 1 && diffDays <= 7) {
-                    return true;
-                }
-                if (remainingTimeFilter.includes('30days') && diffDays > 7 && diffDays <= 30) {
-                    return true;
-                }
-                if (remainingTimeFilter.includes('more') && diffDays > 30) {
-                    return true;
-                }
-                return false;
-            });
-        }
-
-        return filtered;
-    }, [apiKeys, searchKeyword, statusFilter, remainingTimeFilter]);
-
-    /**
-     * 动态计算可用的状态筛选选项（只显示实际存在的状态）
-     */
-    const availableStatusOptions = React.useMemo(() => {
-        // 排除永久密钥后的所有 API Keys
-        const nonPermanentKeys = apiKeys.filter(key => !key.is_permanent);
-
-        const statusMap = {
-            enabled: false,
-            pending: false,
-            disabled: false,
-            expired: false,
-        };
-
-        nonPermanentKeys.forEach(key => {
-            if (!key.is_enabled) {
-                statusMap.disabled = true;
-            } else if (!key.first_used_at) {
-                statusMap.pending = true;
-            } else if (isKeyExpired(key.expires_at)) {
-                statusMap.expired = true;
-            } else {
-                statusMap.enabled = true;
-            }
-        });
-
-        const allOptions = [
-            { label: '正常', value: 'enabled', color: '#10b981' },
-            { label: '待激活', value: 'pending', color: '#3b82f6' },
-            { label: '已禁用', value: 'disabled', color: '#6b7280' },
-            { label: '已过期', value: 'expired', color: '#ef4444' },
-        ];
-
-        return allOptions.filter(option => statusMap[option.value as keyof typeof statusMap]);
-    }, [apiKeys]);
-
-    // 分页后的 API Keys
-    const paginatedApiKeys = React.useMemo(() => {
-        const startIndex = (apiKeyCurrentPage - 1) * apiKeyPageSize;
-        const endIndex = startIndex + apiKeyPageSize;
-        return filteredApiKeys.slice(startIndex, endIndex);
-    }, [filteredApiKeys, apiKeyCurrentPage, apiKeyPageSize]);
-
-    // API Keys 总页数
-    const apiKeyTotalPages = Math.ceil(filteredApiKeys.length / apiKeyPageSize);
+    // API Keys 总页数（基于服务端返回的 total）
+    const apiKeyTotalPages = Math.ceil(totalApiKeys / apiKeyPageSize);
 
     /**
      * 检查管理员权限
@@ -289,13 +193,28 @@ const Admin: React.FC = () => {
     }, []);
 
     /**
-     * 加载 API Keys 列表
+     * 加载 API Keys 列表（服务端真实分页）
+     * @param page 页码，默认使用当前页
+     * @param size 每页条数，默认使用当前设置
+     * @param keyword 搜索关键词
+     * @param status 状态筛选
      */
-    const loadApiKeys = useCallback(async () => {
+    const loadApiKeys = useCallback(async (
+        page?: number,
+        size?: number,
+        keyword?: string,
+        status?: string
+    ) => {
         setIsLoadingKeys(true);
         try {
-            const keys = await AuthService.listApiKeys();
-            setApiKeys(keys);
+            const result = await AuthService.listApiKeysPaginated(
+                page ?? apiKeyCurrentPage,
+                size ?? apiKeyPageSize,
+                keyword !== undefined ? keyword : debouncedApiKeySearchKeyword,
+                status !== undefined ? status : statusFilter
+            );
+            setPagedApiKeys(result.keys);
+            setTotalApiKeys(result.total);
         } catch (error: unknown) {
             console.error('加载 API Keys 失败:', error);
 
@@ -314,7 +233,7 @@ const Admin: React.FC = () => {
         } finally {
             setIsLoadingKeys(false);
         }
-    }, [logout, navigate]);
+    }, [apiKeyCurrentPage, apiKeyPageSize, debouncedApiKeySearchKeyword, statusFilter, logout, navigate]);
 
     /**
      * 加载用户列表
@@ -369,9 +288,31 @@ const Admin: React.FC = () => {
      */
     useEffect(() => {
         if (isAdmin) {
-            loadApiKeys();
+            loadApiKeys(1);
         }
-    }, [isAdmin, loadApiKeys]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAdmin]);
+
+    /**
+     * 防抖关键词/状态/分页变化时重新加载（重置到第 1 页）
+     */
+    useEffect(() => {
+        if (isAdmin && currentView === 'api-keys') {
+            setApiKeyCurrentPage(1);
+            loadApiKeys(1, apiKeyPageSize, debouncedApiKeySearchKeyword, statusFilter);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [debouncedApiKeySearchKeyword, statusFilter]);
+
+    /**
+     * 翻页时重新加载（保持当前筛选条件）
+     */
+    useEffect(() => {
+        if (isAdmin && currentView === 'api-keys') {
+            loadApiKeys(apiKeyCurrentPage, apiKeyPageSize, debouncedApiKeySearchKeyword, statusFilter);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [apiKeyCurrentPage, apiKeyPageSize]);
 
     /**
      * 加载用户数据（当视图切换到用户管理或搜索/筛选条件变化时）
@@ -473,18 +414,18 @@ const Admin: React.FC = () => {
     };
 
     /**
-     * 处理全选/取消全选（仅选择当前筛选结果中的可选择 Keys，排除永久密钥）
+     * 处理全选/取消全选（仅选择当前页的可选择 Keys，排除永久密钥）
      */
     const handleSelectAll = useCallback((checked: boolean) => {
         if (checked) {
-            // 全选：只选中当前筛选结果中的非永久密钥
-            const selectableKeys = paginatedApiKeys.map(key => key.key);
+            // 全选：只选中当前页的非永久密钥
+            const selectableKeys = pagedApiKeys.filter(k => !k.is_permanent).map(key => key.key);
             setSelectedKeys(new Set(selectableKeys));
         } else {
             // 取消全选
             setSelectedKeys(new Set());
         }
-    }, [paginatedApiKeys]);
+    }, [pagedApiKeys]);
 
     /**
      * 处理单个选择
@@ -580,16 +521,16 @@ const Admin: React.FC = () => {
      * 判断是否有任何筛选条件
      */
     const hasAnyFilter = (): boolean => {
-        return statusFilter.length > 0 || remainingTimeFilter.length > 0;
+        return !!statusFilter || !!searchKeyword.trim();
     };
 
     /**
      * 清除所有筛选
      */
     const handleClearAllFilters = () => {
-        setStatusFilter([]);
-        setRemainingTimeFilter([]);
-        setApiKeyCurrentPage(1); // 重置到第一页
+        setStatusFilter('');
+        setSearchKeyword('');
+        setApiKeyCurrentPage(1);
     };
 
     /**
@@ -608,10 +549,11 @@ const Admin: React.FC = () => {
     };
 
     /**
-     * 判断是否全选
+     * 判断是否全选（仅针对当前页）
      */
     const isAllSelected = (): boolean => {
-        return apiKeys.length > 0 && apiKeys.every(key => selectedKeys.has(key.key));
+        const selectable = pagedApiKeys.filter(k => !k.is_permanent);
+        return selectable.length > 0 && selectable.every(key => selectedKeys.has(key.key));
     };
 
     // ============ 用户管理操作处理函数 ============
@@ -862,22 +804,22 @@ const Admin: React.FC = () => {
                             {/* 统计卡片 */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <StatsCard
-                                    title="总密钥数"
-                                    value={apiKeys.filter(k => !k.is_permanent).length}
+                                    title="总密鑰数"
+                                    value={totalApiKeys}
                                     icon={Key}
                                     color="nebula"
                                     index={0}
                                 />
                                 <StatsCard
-                                    title="活跃密钥"
-                                    value={apiKeys.filter(k => !k.is_permanent && k.is_enabled && !isKeyExpired(k.expires_at)).length}
+                                    title="活跃密鑰"
+                                    value={pagedApiKeys.filter(k => !k.is_permanent && k.is_enabled && !isKeyExpired(k.expires_at)).length}
                                     icon={CheckCircle2}
                                     color="emerald"
                                     index={1}
                                 />
                                 <StatsCard
                                     title="即将过期"
-                                    value={apiKeys.filter(k => {
+                                    value={pagedApiKeys.filter(k => {
                                         if (k.is_permanent) return false;
                                         const daysLeft = Math.floor((new Date(k.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
                                         return daysLeft >= 0 && daysLeft <= 7;
@@ -888,7 +830,7 @@ const Admin: React.FC = () => {
                                 />
                                 <StatsCard
                                     title="已过期"
-                                    value={apiKeys.filter(k => !k.is_permanent && isKeyExpired(k.expires_at)).length}
+                                    value={pagedApiKeys.filter(k => !k.is_permanent && isKeyExpired(k.expires_at)).length}
                                     icon={Activity}
                                     color="purple"
                                     index={3}
@@ -909,10 +851,10 @@ const Admin: React.FC = () => {
                                                     <span className="flex items-center gap-2">
                                                         <Filter className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                                                         <span className="text-blue-700 dark:text-blue-300 font-medium">
-                                                            已应用 {statusFilter.length + remainingTimeFilter.length} 个筛选条件
+                                                            已应用筛选条件
                                                         </span>
                                                         <span className="text-slate-500 dark:text-slate-400">
-                                                            · 显示 {filteredApiKeys.length} / {apiKeys.filter(k => !k.is_permanent).length} 条记录
+                                                            · 共 {totalApiKeys} 条记录
                                                         </span>
                                                     </span>
                                                 ) : (
@@ -954,10 +896,10 @@ const Admin: React.FC = () => {
                                                     <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                                                         <Filter className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                                                         <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                                                            已应用 {statusFilter.length + remainingTimeFilter.length} 个筛选条件
+                                                            已应用筛选条件
                                                         </span>
                                                         <span className="text-sm text-slate-500 dark:text-slate-400">
-                                                            · 显示 {filteredApiKeys.length} / {apiKeys.filter(k => !k.is_permanent).length} 条
+                                                            · 共 {totalApiKeys} 条
                                                         </span>
                                                     </div>
                                                     {/* 清除筛选按钮 */}
@@ -995,9 +937,9 @@ const Admin: React.FC = () => {
                                                     {/* 状态筛选 */}
                                                     <TableFilterDropdown
                                                         options={availableStatusOptions}
-                                                        selectedValues={statusFilter}
-                                                        onSelectionChange={setStatusFilter}
-                                                        multiSelect={true}
+                                                        selectedValues={statusFilter ? [statusFilter] : []}
+                                                        onSelectionChange={(values: string[]) => setStatusFilter(values[values.length - 1] ?? '')}
+                                                        multiSelect={false}
                                                         icon={<Filter className="w-3.5 h-3.5" />}
                                                     />
                                                     {/* 清除筛选按钮（有筛选时显示） */}
@@ -1024,7 +966,7 @@ const Admin: React.FC = () => {
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            onClick={loadApiKeys}
+                                                            onClick={() => loadApiKeys()}
                                                             disabled={isLoadingKeys || isBatchOperating}
                                                             className="border-slate-200 dark:border-slate-700"
                                                         >
@@ -1072,7 +1014,7 @@ const Admin: React.FC = () => {
                                             </motion.div>
                                             <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
                                         </div>
-                                    ) : apiKeys.length === 0 ? (
+                                    ) : pagedApiKeys.length === 0 ? (
                                         <motion.div
                                             initial={{ opacity: 0, scale: 0.95 }}
                                             animate={{ opacity: 1, scale: 1 }}
@@ -1096,7 +1038,7 @@ const Admin: React.FC = () => {
                                         <div className="space-y-4">
                                             {/* API Key 表格 */}
                                             <AppleApiKeyTable
-                                                apiKeys={paginatedApiKeys}
+                                                apiKeys={pagedApiKeys}
                                                 selectedKeys={selectedKeys}
                                                 onSelectKey={handleSelectKey}
                                                 onSelectAll={handleSelectAll}
@@ -1110,11 +1052,11 @@ const Admin: React.FC = () => {
                                             />
 
                                             {/* 分页控件 */}
-                                            {filteredApiKeys.length > 0 && (
+                                            {totalApiKeys > 0 && (
                                                 <ApplePagination
                                                     currentPage={apiKeyCurrentPage}
                                                     totalPages={apiKeyTotalPages}
-                                                    totalItems={filteredApiKeys.length}
+                                                    totalItems={totalApiKeys}
                                                     pageSize={apiKeyPageSize}
                                                     onPageChange={handleApiKeyPageChange}
                                                     onPageSizeChange={handleApiKeyPageSizeChange}
@@ -1442,7 +1384,7 @@ const Admin: React.FC = () => {
             <BatchExportDialog
                 open={isBatchExportDialogOpen}
                 onOpenChange={setIsBatchExportDialogOpen}
-                selectedKeys={apiKeys.filter(key => selectedKeys.has(key.key))}
+                selectedKeys={pagedApiKeys.filter(key => selectedKeys.has(key.key))}
             />
 
             {/* 删除确认对话框 */}

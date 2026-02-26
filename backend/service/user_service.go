@@ -75,10 +75,10 @@ func (s *UserService) ListUsers(page, pageSize int, keyword, role string) (*User
 	// 计算总页数
 	totalPages := int((total + int64(pageSize) - 1) / int64(pageSize))
 
-	// 分页查询
+	// 分页查询（按最后登录时间降序排序，未登录的排在后面，再按创建时间降序）
 	var users []model.User
 	offset := (page - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&users).Error; err != nil {
+	if err := query.Offset(offset).Limit(pageSize).Order("last_login_at IS NULL ASC, last_login_at DESC, created_at DESC").Find(&users).Error; err != nil {
 		return nil, fmt.Errorf("查询用户列表失败: %w", err)
 	}
 

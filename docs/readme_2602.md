@@ -1077,3 +1077,22 @@ pnpm-lock.yaml (已删除)
 - docs/api_reference.md
 - frontend/src/components/admin/SystemInfoView.tsx
 - frontend/src/types/api.ts
+
+
+---
+## 2026-02-26 23:58
+
+**Commit**: `feat(admin): 新增 API Key 搜索和状态筛选功能并优化分页逻辑`
+
+**详细说明**:
+- 后端新增关键词搜索（模糊匹配 api_key 和 description）和状态筛选（enabled/disabled/pending/expired）
+- 前端改为服务端真实分页，移除客户端过滤逻辑，新增防抖搜索（500ms）
+- 优化排序规则：按最后登录时间降序，未登录的排在后面
+- 修复统计卡片数据源，确保与分页数据一致
+
+**涉及文件**:
+- backend/api/controller/apikey_controller.go
+- backend/service/apikey_service.go
+- backend/service/user_service.go
+- frontend/src/pages/Admin.tsx
+- frontend/src/services/authService.ts

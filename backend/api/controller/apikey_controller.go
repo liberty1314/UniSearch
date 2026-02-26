@@ -156,6 +156,8 @@ func (ctrl *APIKeyController) GenerateAPIKey(c *gin.Context) {
 // ListAPIKeys 列出所有 API Keys（管理员）
 // GET /api/admin/apikey/list
 // 支持分页：?page=1&size=10
+// 支持搜索：?keyword=xxx
+// 支持状态筛选：?status=enabled|disabled|pending|expired
 // 验证需求：管理员接口
 func (ctrl *APIKeyController) ListAPIKeys(c *gin.Context) {
 	// 获取分页参数
@@ -172,8 +174,18 @@ func (ctrl *APIKeyController) ListAPIKeys(c *gin.Context) {
 		size = 10
 	}
 
+	// 获取搜索和筛选参数
+	keyword := strings.TrimSpace(c.Query("keyword"))
+	status := strings.TrimSpace(c.Query("status"))
+
+	// 校验 status 参数值
+	validStatuses := map[string]bool{"": true, "enabled": true, "disabled": true, "pending": true, "expired": true}
+	if !validStatuses[status] {
+		status = ""
+	}
+
 	// 调用服务层查询 API Keys
-	keys, total, err := ctrl.apiKeyService.ListAPIKeys(page, size)
+	keys, total, err := ctrl.apiKeyService.ListAPIKeys(page, size, keyword, status)
 	if err != nil {
 		log.Printf("✗ 查询 API Key 列表失败: %v", err)
 		c.JSON(500, ListAPIKeysResponse{
