@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, Easing } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { toStyleVars } from '@/lib/styleVars';
 
 interface BubbleLoaderProps {
     size?: number;
@@ -27,8 +28,10 @@ const BubbleLoader: React.FC<BubbleLoaderProps> = ({ size = 130, className }) =>
 
     return (
         <div
-            className={cn("relative flex items-center justify-center", className)}
-            style={{ width: size, height: size }}
+            className={cn('relative flex items-center justify-center bubble-loader-size', className)}
+            style={toStyleVars({
+                '--bubble-loader-size': `${size}px`,
+            })}
         >
             {/* Strich1 Container - Rotated 45deg */}
             <div className="relative flex items-center justify-center w-[130px] h-[50px] rotate-45">
@@ -43,8 +46,8 @@ const BubbleLoader: React.FC<BubbleLoaderProps> = ({ size = 130, className }) =>
                     {/* Bubbles are inside Strich2, so they follow its coordinate system */}
                     {/* bubble */}
                     <motion.div
-                        className={cn(bubbleBaseClass, "left-[15px]")}
-                        style={{ background: "radial-gradient(circle at 30% 30%, #a78bfa, #8b5cf6, #7c3aed)" }} // Nebula Purple
+                        // Nebula Purple
+                        className={cn(bubbleBaseClass, "left-[15px] bg-[radial-gradient(circle_at_30%_30%,#a78bfa,#8b5cf6,#7c3aed)]")}
                         variants={dropAndShift}
                         animate="animate"
                         transition={transition(5)}
@@ -52,8 +55,8 @@ const BubbleLoader: React.FC<BubbleLoaderProps> = ({ size = 130, className }) =>
 
                     {/* bubble1 */}
                     <motion.div
-                        className={cn(bubbleBaseClass, "left-[8px] z-20")}
-                        style={{ background: "radial-gradient(circle at 30% 30%, #38bdf8, #0ea5e9, #0284c7)" }} // Cosmic Blue
+                        // Cosmic Blue
+                        className={cn(bubbleBaseClass, "left-[8px] z-20 bg-[radial-gradient(circle_at_30%_30%,#38bdf8,#0ea5e9,#0284c7)]")}
                         variants={dropAndShift}
                         animate="animate"
                         transition={transition(6)}
@@ -61,8 +64,8 @@ const BubbleLoader: React.FC<BubbleLoaderProps> = ({ size = 130, className }) =>
 
                     {/* bubble2 */}
                     <motion.div
-                        className={cn(bubbleBaseClass, "left-[12px] z-30")}
-                        style={{ background: "radial-gradient(circle at 30% 30%, #f472b6, #db2777, #be185d)" }} // Starlight Pink
+                        // Starlight Pink
+                        className={cn(bubbleBaseClass, "left-[12px] z-30 bg-[radial-gradient(circle_at_30%_30%,#f472b6,#db2777,#be185d)]")}
                         variants={dropAndShift}
                         animate="animate"
                         transition={transition(4)}
@@ -70,8 +73,8 @@ const BubbleLoader: React.FC<BubbleLoaderProps> = ({ size = 130, className }) =>
 
                     {/* bubble3 */}
                     <motion.div
-                        className={cn(bubbleBaseClass, "left-[10px] z-40")}
-                        style={{ background: "radial-gradient(circle at 30% 30%, #818cf8, #6366f1, #4f46e5)" }} // Indigo
+                        // Indigo
+                        className={cn(bubbleBaseClass, "left-[10px] z-40 bg-[radial-gradient(circle_at_30%_30%,#818cf8,#6366f1,#4f46e5)]")}
                         variants={dropAndShift}
                         animate="animate"
                         transition={transition(7)}

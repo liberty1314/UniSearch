@@ -35,10 +35,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
     const items = Array.from({ length: count }, (_, i) => (
         <motion.div
             key={i}
-            className={cn(baseClasses, variants[variant], className)}
-            style={{
-                backgroundSize: '200% 100%',
-            }}
+            className={cn(baseClasses, variants[variant], 'skeleton-shimmer-size', className)}
             animate={shimmerAnimation}
             transition={{
                 duration: 1.5,

@@ -10,13 +10,16 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { User, Lock, Sparkles, LogIn, Eye, EyeOff, ArrowRight, Key } from 'lucide-react';
 import PageLoader from '@/components/PageLoader';
+import AuthBackground from '@/components/auth/AuthBackground';
+import AuthCardShell from '@/components/auth/AuthCardShell';
+import { authVisualPresets } from '@/components/auth/authVisualPresets';
+import { useAuthParticles } from '@/components/auth/useAuthParticles';
 
 const LoginPage: React.FC = () => {
     const navigate = useNavigate();
     const { setToken } = useAuthStore();
 
     // System Settings
-    const [enableUserLogin, setEnableUserLogin] = useState<boolean>(true);
     const [enableUserSignup, setEnableUserSignup] = useState<boolean>(true);
     const [isLoadingSettings, setIsLoadingSettings] = useState<boolean>(true);
 
@@ -28,14 +31,13 @@ const LoginPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     // Animation State
-    const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; delay: number; duration: number }>>([]);
+    const particles = useAuthParticles();
 
     // Load Settings
     useEffect(() => {
         const loadSettings = async () => {
             try {
                 const settings = await SystemSettingsService.getSettings();
-                setEnableUserLogin(settings.enable_user_login);
                 setEnableUserSignup(settings.enable_user_signup);
 
                 if (!settings.enable_user_auth) {
@@ -58,17 +60,6 @@ const LoginPage: React.FC = () => {
         };
         loadSettings();
     }, [navigate]);
-
-    // Particles
-    useEffect(() => {
-        setParticles(Array.from({ length: 20 }, (_, i) => ({
-            id: i,
-            x: Math.random() * 100,
-            y: Math.random() * 100,
-            delay: Math.random() * 5,
-            duration: 10 + Math.random() * 10,
-        })));
-    }, []);
 
     const handleLogin = async () => {
         if (!username.trim() || !password.trim()) {
@@ -110,31 +101,10 @@ const LoginPage: React.FC = () => {
 
     return (
         <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 pt-20 overflow-y-auto relative">
-            {/* Background Decoration */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-nebula-400/30 to-cosmic-400/30 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-green-400/30 to-blue-400/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-                {particles.map((particle) => (
-                    <div
-                        key={particle.id}
-                        className="absolute w-2 h-2 bg-nebula-400/30 rounded-full"
-                        style={{
-                            left: `${particle.x}%`,
-                            top: `${particle.y}%`,
-                            animation: `float ${particle.duration}s ease-in-out infinite`,
-                            animationDelay: `${particle.delay}s`,
-                        }}
-                    />
-                ))}
-            </div>
-
-            {/* Grid Background */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
+            <AuthBackground preset={authVisualPresets.loginPage} particles={particles} />
 
             {/* Login Card */}
-            <div className="relative z-10 w-full max-w-md">
-                <div className="absolute -inset-1 bg-gradient-to-r from-nebula-500 via-cosmic-500 to-purple-500 rounded-2xl blur-2xl opacity-20 animate-pulse"></div>
-
+            <AuthCardShell glowClassName={authVisualPresets.loginPage.cardGlowGradientClass}>
                 <Card className="relative glass-panel shadow-2xl animate-slide-up border-nebula-200 dark:border-nebula-800">
                     <CardHeader className="space-y-3 pb-6">
                         <div className="flex justify-center mb-2">
@@ -145,7 +115,7 @@ const LoginPage: React.FC = () => {
                                 <Sparkles className="absolute -top-2 -right-2 w-5 h-5 text-yellow-400 animate-ping" />
                             </div>
                         </div>
-                        <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-nebula-600 via-cosmic-600 to-purple-600 bg-clip-text text-transparent animate-gradient">
+                        <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-nebula-600 via-cosmic-600 to-purple-600 bg-clip-text text-transparent animate-auth-gradient">
                             欢迎回来
                         </CardTitle>
                         <CardDescription className="text-center text-base">
@@ -236,22 +206,7 @@ const LoginPage: React.FC = () => {
                         </div>
                     </CardContent>
                 </Card>
-            </div>
-
-            <style>{`
-                @keyframes float {
-                    0%, 100% { transform: translateY(0) translateX(0); }
-                    50% { transform: translateY(-20px) translateX(10px); }
-                }
-                .animate-gradient {
-                    background-size: 200% auto;
-                    animation: gradient 3s ease infinite;
-                }
-                @keyframes gradient {
-                    0%, 100% { background-position: 0% 50%; }
-                    50% { background-position: 100% 50%; }
-                }
-            `}</style>
+            </AuthCardShell>
         </div>
     );
 };

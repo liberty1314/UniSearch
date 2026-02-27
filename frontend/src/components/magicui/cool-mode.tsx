@@ -68,6 +68,8 @@ const applyParticleEffect = (
 
   const container = getContainer();
 
+  // Controlled exception: this particle engine intentionally uses inline DOM styles
+  // because positions/markup are generated and updated on every animation frame.
   function generateParticle() {
     const size =
       options?.size || sizes[Math.floor(Math.random() * sizes.length)];

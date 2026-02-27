@@ -1130,3 +1130,59 @@ pnpm-lock.yaml (已删除)
 - frontend/src/lib/api.ts
 - frontend/src/lib/authRefreshManager.ts
 - frontend/src/utils/deviceFingerprint.ts
+
+
+---
+## 2026-02-28 (周六)
+
+**Commit**: `refactor(frontend): 重构认证组件并清理冗余代码`
+
+**Body**: 
+1. 重构认证相关组件，拆分 AuthBackground 和 AuthCardShell 为独立可复用组件
+2. 清理大量冗余和示例文件（AnimatedButton、SearchButton、TagButton、AddPluginDialog、AdminLayout 等）
+3. 简化登录/注册页面代码，移除重复的 UserAuth 和 Login 页面
+4. 删除未使用的工具函数和配置文件（animations.ts、useButtonAnimation.ts、text.ts 等）
+5. 优化 CSS 样式，新增认证相关动画和视觉预设
+6. 新增单元测试文件和样式变量管理
+7. 代码行数从 3420 行减少到 633 行，净减少约 2787 行
+
+**Files**:
+- .gitignore (修改)
+- frontend/src/components/AnimatedButton.tsx (删除)
+- frontend/src/components/AppleTable.tsx (修改)
+- frontend/src/components/BubbleLoader.tsx (修改)
+- frontend/src/components/GradientText.tsx (修改)
+- frontend/src/components/LoadingSpinner.tsx (修改)
+- frontend/src/components/LoadingState.tsx (修改)
+- frontend/src/components/PageLoader.tsx (修改)
+- frontend/src/components/SearchBox.tsx (修改)
+- frontend/src/components/SearchButton.tsx (删除)
+- frontend/src/components/SkeletonLoader.tsx (修改)
+- frontend/src/components/TagButton.tsx (删除)
+- frontend/src/components/admin/AddPluginDialog.tsx (删除)
+- frontend/src/components/admin/AdminLayout.tsx (删除)
+- frontend/src/components/admin/AppleApiKeyTable.refactored.example.tsx (删除)
+- frontend/src/components/admin/BatchActionsBar.refactored.example.tsx (删除)
+- frontend/src/components/admin/TableFilterDropdown.tsx (修改)
+- frontend/src/components/auth/AuthBackground.tsx (新增)
+- frontend/src/components/auth/AuthCardShell.tsx (新增)
+- frontend/src/components/auth/__tests__/AuthBackground.test.tsx (新增)
+- frontend/src/components/auth/authVisualPresets.ts (新增)
+- frontend/src/components/auth/useAuthParticles.ts (新增)
+- frontend/src/components/magicui/cool-mode.tsx (修改)
+- frontend/src/components/magicui/sparkles-text.tsx (修改)
+- frontend/src/components/ui/stateful-button.tsx (修改)
+- frontend/src/config/animations.ts (删除)
+- frontend/src/hooks/useButtonAnimation.ts (删除)
+- frontend/src/hooks/useClickOutside.ts (删除)
+- frontend/src/hooks/useEscapeKey.ts (删除)
+- frontend/src/index.css (修改)
+- frontend/src/lib/__tests__/styleVars.test.ts (新增)
+- frontend/src/lib/styleVars.ts (新增)
+- frontend/src/pages/AdminLogin.tsx (修改)
+- frontend/src/pages/ApiKeyLoginPage.tsx (修改)
+- frontend/src/pages/Login.tsx (删除)
+- frontend/src/pages/LoginPage.tsx (修改)
+- frontend/src/pages/RegisterPage.tsx (修改)
+- frontend/src/pages/UserAuth.tsx (删除)
+- frontend/src/utils/text.ts (删除)

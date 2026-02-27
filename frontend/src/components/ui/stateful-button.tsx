@@ -1,7 +1,7 @@
 "use client";
 import { cn } from "@/lib/utils";
 import React, { useImperativeHandle } from "react";
-import { motion, AnimatePresence, useAnimate } from "motion/react";
+import { motion, useAnimate } from "motion/react";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   className?: string;
@@ -105,15 +105,15 @@ export const Button = React.forwardRef<StatefulButtonHandle, ButtonProps>(({ cla
     await run(() => props.onClick?.(event));
   };
 
-  const {
-    onClick,
-    onDrag,
-    onDragStart,
-    onDragEnd,
-    onAnimationStart,
-    onAnimationEnd,
-    ...buttonProps
-  } = props;
+  const buttonProps = {
+    ...props,
+    onClick: undefined,
+    onDrag: undefined,
+    onDragStart: undefined,
+    onDragEnd: undefined,
+    onAnimationStart: undefined,
+    onAnimationEnd: undefined,
+  };
 
   return (
     <motion.button
@@ -147,10 +147,6 @@ const Loader = () => {
         width: 0,
         display: "none",
       }}
-      style={{
-        scale: 0.5,
-        display: "none",
-      }}
       transition={{
         duration: 0.3,
         repeat: Infinity,
@@ -165,7 +161,7 @@ const Loader = () => {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="loader text-white"
+      className="loader text-white hidden"
     >
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
       <path d="M12 3a9 9 0 1 0 9 9" />
@@ -181,10 +177,6 @@ const CheckIcon = () => {
         width: 0,
         display: "none",
       }}
-      style={{
-        scale: 0.5,
-        display: "none",
-      }}
       xmlns="http://www.w3.org/2000/svg"
       width="24"
       height="24"
@@ -194,7 +186,7 @@ const CheckIcon = () => {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="check text-white"
+      className="check text-white hidden"
     >
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
       <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />

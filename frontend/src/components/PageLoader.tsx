@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { cn } from '@/lib/utils';
+import { toStyleVars } from '@/lib/styleVars';
 
 interface PageLoaderProps {
     isLoading: boolean;
@@ -63,20 +65,12 @@ const PageLoader: React.FC<PageLoaderProps> = ({ isLoading, onComplete }) => {
         }
     }, [visible, onComplete]);
 
-    // 已完全退出，不再渲染
-    if (!visible && progress >= 100) {
-        // 使用 onTransitionEnd 触发，但加一个安全兜底
-        // eslint-disable-next-line react-hooks/rules-of-hooks
-    }
-
     return (
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900"
-            style={{
-                opacity: visible ? 1 : 0,
-                transition: 'opacity 0.4s ease-out',
-                pointerEvents: visible ? 'auto' : 'none',
-            }}
+            className={cn(
+                'fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-opacity duration-500 ease-out',
+                visible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            )}
             onTransitionEnd={handleTransitionEnd}
         >
             {/* 背景装饰 - 纯 opacity 动画，无 transform */}
@@ -85,9 +79,9 @@ const PageLoader: React.FC<PageLoaderProps> = ({ isLoading, onComplete }) => {
                     className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-400/30 to-purple-400/30 rounded-full blur-3xl animate-pulse"
                 />
                 <div
-                    className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400/30 to-pink-400/30 rounded-full blur-3xl animate-pulse"
-                    style={{ animationDelay: '1s' }}
-                />
+                    className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400/30 to-pink-400/30 rounded-full blur-3xl animate-pulse auth-delay-1000"
+                >
+                </div>
             </div>
 
             {/* 网格背景 */}
@@ -117,11 +111,10 @@ const PageLoader: React.FC<PageLoaderProps> = ({ isLoading, onComplete }) => {
                 {/* 进度条 */}
                 <div className="w-64 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div
-                        className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full"
-                        style={{
-                            width: `${progress}%`,
-                            transition: 'width 0.3s ease-out',
-                        }}
+                        className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full transition-[width] duration-300 ease-out page-loader-progress"
+                        style={toStyleVars({
+                            '--page-loader-progress': `${progress}%`,
+                        })}
                     />
                 </div>
 

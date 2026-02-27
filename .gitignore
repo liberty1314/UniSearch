@@ -346,6 +346,7 @@ logs/
 .cursor/
 .claude/
 .agent/
+.codex/
 
 # 测试文件
 testsprite_tests/

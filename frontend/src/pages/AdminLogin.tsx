@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
@@ -8,6 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, Lock, Shield, User } from 'lucide-react';
+import AuthBackground from '@/components/auth/AuthBackground';
+import AuthCardShell from '@/components/auth/AuthCardShell';
+import { authVisualPresets } from '@/components/auth/authVisualPresets';
+import { useAuthParticles } from '@/components/auth/useAuthParticles';
+import { toStyleVars } from '@/lib/styleVars';
 
 /**
  * 管理员登录页面组件
@@ -29,22 +34,8 @@ const AdminLogin: React.FC = () => {
     const [isAdminLoading, setIsAdminLoading] = useState(false);
 
     // 动态效果状态
-    const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; delay: number; duration: number }>>([]);
+    const particles = useAuthParticles();
     const [buttonRipples, setButtonRipples] = useState<Array<{ id: number; x: number; y: number }>>([]);
-
-    /**
-     * 生成随机粒子
-     */
-    useEffect(() => {
-        const newParticles = Array.from({ length: 20 }, (_, i) => ({
-            id: i,
-            x: Math.random() * 100,
-            y: Math.random() * 100,
-            delay: Math.random() * 5,
-            duration: 10 + Math.random() * 10,
-        }));
-        setParticles(newParticles);
-    }, []);
 
     /**
      * 处理管理员登录（用户名+密码）
@@ -127,35 +118,10 @@ const AdminLogin: React.FC = () => {
 
     return (
         <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 pt-16 overflow-hidden relative">
-            {/* 背景装饰 - 动态渐变球（管理员主题：橙色/红色） */}
-            <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-nebula-400/30 to-cosmic-400/30 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-cosmic-400/30 to-purple-400/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-nebula-400/20 to-cosmic-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-
-                {/* 浮动粒子 */}
-                {particles.map((particle) => (
-                    <div
-                        key={particle.id}
-                        className="absolute w-2 h-2 bg-nebula-400/30 rounded-full"
-                        style={{
-                            left: `${particle.x}%`,
-                            top: `${particle.y}%`,
-                            animation: `float ${particle.duration}s ease-in-out infinite`,
-                            animationDelay: `${particle.delay}s`,
-                        }}
-                    />
-                ))}
-            </div>
-
-            {/* 网格背景 */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+            <AuthBackground preset={authVisualPresets.adminLogin} particles={particles} />
 
             {/* 登录卡片 */}
-            <div className="relative z-10 w-full max-w-md">
-                {/* 卡片光晕效果 */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-nebula-500 via-cosmic-500 to-purple-500 rounded-2xl blur-2xl opacity-20 animate-pulse"></div>
-
+            <AuthCardShell glowClassName={authVisualPresets.adminLogin.cardGlowGradientClass}>
                 <Card className="relative glass-panel shadow-2xl animate-slide-up border-nebula-200 dark:border-nebula-800">
                     <CardHeader className="space-y-3 pb-6">
                         {/* Logo 或图标 */}
@@ -167,23 +133,23 @@ const AdminLogin: React.FC = () => {
                                 <div className="absolute inset-0 bg-gradient-to-br from-nebula-500 to-cosmic-600 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
                                 {/* 闪烁盾牌 */}
                                 <Shield className="absolute -top-2 -right-2 w-5 h-5 text-yellow-400 animate-ping" />
-                                <Shield className="absolute -bottom-2 -left-2 w-4 h-4 text-nebula-400 animate-ping" style={{ animationDelay: '0.5s' }} />
+                                <Shield className="absolute -bottom-2 -left-2 w-4 h-4 text-nebula-400 animate-ping auth-delay-500" />
                             </div>
                         </div>
 
-                        <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-nebula-600 via-cosmic-600 to-purple-600 bg-clip-text text-transparent animate-gradient">
+                        <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-nebula-600 via-cosmic-600 to-purple-600 bg-clip-text text-transparent animate-auth-gradient">
                             管理员登录
                         </CardTitle>
-                        <CardDescription className="text-center text-base animate-fade-in" style={{ animationDelay: '0.2s' }}>
+                        <CardDescription className="text-center text-base animate-fade-in auth-delay-200">
                             使用管理员密码访问后台系统
                         </CardDescription>
                     </CardHeader>
 
                     <CardContent className="space-y-6">
                         <form onSubmit={(e) => { e.preventDefault(); handleAdminLogin(); }} className="space-y-6">
-                            <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+                            <div className="space-y-3 animate-fade-in auth-delay-300">
                                 <Label htmlFor="username" className="flex items-center gap-2 text-sm font-medium">
-                                    <User className="w-4 h-4 text-nebula-500 animate-bounce" style={{ animationDuration: '2s' }} />
+                                    <User className="w-4 h-4 text-nebula-500 animate-bounce auth-duration-2000" />
                                     用户名
                                 </Label>
                                 <div className="relative group">
@@ -209,9 +175,9 @@ const AdminLogin: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.35s' }}>
+                            <div className="space-y-3 animate-fade-in auth-delay-350">
                                 <Label htmlFor="password" className="flex items-center gap-2 text-sm font-medium">
-                                    <Lock className="w-4 h-4 text-nebula-500 animate-bounce" style={{ animationDuration: '2s', animationDelay: '0.1s' }} />
+                                    <Lock className="w-4 h-4 text-nebula-500 animate-bounce auth-duration-2000 auth-delay-100" />
                                     管理员密码
                                 </Label>
                                 <div className="relative group">
@@ -250,7 +216,7 @@ const AdminLogin: React.FC = () => {
                             </div>
 
                             {/* 记住我复选框 */}
-                            <div className="flex items-center space-x-2 animate-fade-in" style={{ animationDelay: '0.38s' }}>
+                            <div className="flex items-center space-x-2 animate-fade-in auth-delay-380">
                                 <input
                                     type="checkbox"
                                     id="rememberMe"
@@ -266,7 +232,7 @@ const AdminLogin: React.FC = () => {
                                 </Label>
                             </div>
 
-                            <div className="animate-fade-in" style={{ animationDelay: '0.4s' }}>
+                            <div className="animate-fade-in auth-delay-400">
                                 <Button
                                     type="submit"
                                     onClick={handleButtonClick}
@@ -280,25 +246,24 @@ const AdminLogin: React.FC = () => {
                                     {buttonRipples.map((ripple) => (
                                         <span
                                             key={ripple.id}
-                                            className="absolute bg-white/30 rounded-full animate-ripple pointer-events-none"
-                                            style={{
-                                                left: ripple.x,
-                                                top: ripple.y,
-                                                width: 0,
-                                                height: 0,
-                                            }}
+                                            className="absolute bg-white/30 rounded-full animate-auth-ripple auth-ripple pointer-events-none"
+                                            style={toStyleVars({
+                                                '--auth-ripple-left': `${ripple.x}px`,
+                                                '--auth-ripple-top': `${ripple.y}px`,
+                                                '--auth-ripple-size': '0px',
+                                            })}
                                         />
                                     ))}
 
                                     {/* 脉冲波效果 */}
                                     <div className="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                        <div className="absolute inset-0 rounded-md bg-white/10 animate-ping" style={{ animationDuration: '1.5s' }}></div>
+                                        <div className="absolute inset-0 rounded-md bg-white/10 animate-ping auth-duration-1500"></div>
                                     </div>
 
                                     {/* 边框光效 */}
                                     <div className="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-white to-transparent animate-border-flow"></div>
-                                        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-white to-transparent animate-border-flow" style={{ animationDelay: '0.5s' }}></div>
+                                        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-white to-transparent animate-auth-border-flow"></div>
+                                        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-white to-transparent animate-auth-border-flow auth-delay-500"></div>
                                     </div>
 
                                     <span className="relative z-10">
@@ -324,71 +289,7 @@ const AdminLogin: React.FC = () => {
                         </form>
                     </CardContent>
                 </Card>
-            </div>
-
-            {/* CSS 动画定义 */}
-            <style>{`
-                @keyframes float {
-                    0%, 100% {
-                        transform: translateY(0) translateX(0);
-                    }
-                    25% {
-                        transform: translateY(-20px) translateX(10px);
-                    }
-                    50% {
-                        transform: translateY(-10px) translateX(-10px);
-                    }
-                    75% {
-                        transform: translateY(-30px) translateX(5px);
-                    }
-                }
-                
-                @keyframes gradient {
-                    0%, 100% {
-                        background-position: 0% 50%;
-                    }
-                    50% {
-                        background-position: 100% 50%;
-                    }
-                }
-
-                @keyframes ripple {
-                    0% {
-                        width: 0;
-                        height: 0;
-                        opacity: 0.5;
-                    }
-                    100% {
-                        width: 500px;
-                        height: 500px;
-                        margin-left: -250px;
-                        margin-top: -250px;
-                        opacity: 0;
-                    }
-                }
-
-                @keyframes border-flow {
-                    0% {
-                        transform: translateX(-100%);
-                    }
-                    100% {
-                        transform: translateX(100%);
-                    }
-                }
-                
-                .animate-gradient {
-                    background-size: 200% auto;
-                    animation: gradient 3s ease infinite;
-                }
-
-                .animate-ripple {
-                    animation: ripple 1s ease-out;
-                }
-
-                .animate-border-flow {
-                    animation: border-flow 2s linear infinite;
-                }
-            `}</style>
+            </AuthCardShell>
         </div>
     );
 };

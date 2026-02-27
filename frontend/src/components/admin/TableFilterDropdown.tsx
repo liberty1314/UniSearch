@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Filter, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toStyleVars } from '@/lib/styleVars';
 
 export interface FilterOption {
     label: string;
@@ -112,13 +113,11 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -8, scale: 0.95 }}
                             transition={{ duration: 0.15 }}
-                            style={{
-                                position: 'fixed',
-                                top: `${dropdownPosition.top}px`,
-                                left: `${dropdownPosition.left}px`,
-                                zIndex: 9999,
-                            }}
-                            className="w-[140px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl overflow-hidden"
+                            style={toStyleVars({
+                                '--dropdown-top': `${dropdownPosition.top}px`,
+                                '--dropdown-left': `${dropdownPosition.left}px`,
+                            })}
+                            className="fixed z-[9999] table-filter-dropdown w-[140px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl overflow-hidden"
                         >
                             <div className="p-2 space-y-0.5">
                                 {options.map((option, index) => {
@@ -146,8 +145,8 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
                                             <span className="flex items-center gap-2">
                                                 {option.color && (
                                                     <span
-                                                        className="w-2 h-2 rounded-full"
-                                                        style={{ backgroundColor: option.color }}
+                                                        className="w-2 h-2 rounded-full filter-option-color"
+                                                        style={toStyleVars({ '--filter-option-color': option.color })}
                                                     />
                                                 )}
                                                 {option.label}

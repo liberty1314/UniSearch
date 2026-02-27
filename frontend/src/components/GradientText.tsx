@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react';
+import { toStyleVars } from '@/lib/styleVars';
 
 interface GradientTextProps {
     children: ReactNode;
@@ -15,10 +16,11 @@ export default function GradientText({
     animationSpeed = 8,
     showBorder = false,
 }: GradientTextProps) {
-    const gradientStyle = {
-        backgroundImage: `linear-gradient(to right, ${colors.join(", ")})`,
-        animationDuration: `${animationSpeed}s`,
-    };
+    const gradientStyle = toStyleVars({
+        '--gradient-text-image': `linear-gradient(to right, ${colors.join(', ')})`,
+        '--gradient-text-duration': `${animationSpeed}s`,
+        '--gradient-text-size': '300% 100%',
+    });
 
     return (
         <div
@@ -26,32 +28,17 @@ export default function GradientText({
         >
             {showBorder && (
                 <div
-                    className="absolute inset-0 bg-cover z-0 pointer-events-none animate-gradient"
-                    style={{
-                        ...gradientStyle,
-                        backgroundSize: "300% 100%",
-                    }}
+                    className="absolute inset-0 bg-cover z-0 pointer-events-none animate-gradient gradient-text-dynamic"
+                    style={gradientStyle}
                 >
                     <div
-                        className="absolute inset-0 bg-white dark:bg-gray-900 rounded-[1.25rem] z-[-1]"
-                        style={{
-                            width: "calc(100% - 2px)",
-                            height: "calc(100% - 2px)",
-                            left: "50%",
-                            top: "50%",
-                            transform: "translate(-50%, -50%)",
-                        }}
+                        className="absolute inset-0 bg-white dark:bg-gray-900 rounded-[1.25rem] z-[-1] gradient-text-mask-inner"
                     ></div>
                 </div>
             )}
             <div
-                className="inline-block relative z-10 text-transparent bg-cover animate-gradient"
-                style={{
-                    ...gradientStyle,
-                    backgroundClip: "text",
-                    WebkitBackgroundClip: "text",
-                    backgroundSize: "300% 100%",
-                }}
+                className="inline-block relative z-10 text-transparent bg-cover bg-clip-text animate-gradient gradient-text-dynamic"
+                style={gradientStyle}
             >
                 {children}
             </div>

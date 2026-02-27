@@ -14,6 +14,10 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   color = 'primary',
   className,
 }) => {
+  const dotDelayClasses = ['', 'spinner-delay-200', 'spinner-delay-400'];
+  const bounceDelayClasses = ['', 'spinner-delay-100', 'spinner-delay-200'];
+  const rippleDelayClasses = ['', 'spinner-delay-200', 'spinner-delay-400'];
+
   // 尺寸样式
   const getSizeStyles = () => {
     switch (size) {
@@ -51,12 +55,11 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
         return (
           <div
             className={cn(
-              'animate-spin rounded-full border-2 border-gray-300',
+              'animate-spin rounded-full border-2 border-gray-300 spinner-border-top-current',
               getColorStyles(),
               getSizeStyles(),
               className
             )}
-            style={{ borderTopColor: 'currentColor' }}
           />
         );
 
@@ -69,9 +72,9 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
                 className={cn(
                   'rounded-full animate-pulse',
                   getColorStyles().replace('border-', 'bg-'),
-                  size === 'sm' ? 'w-1.5 h-1.5' : size === 'md' ? 'w-2 h-2' : size === 'lg' ? 'w-2.5 h-2.5' : 'w-3 h-3'
+                  size === 'sm' ? 'w-1.5 h-1.5' : size === 'md' ? 'w-2 h-2' : size === 'lg' ? 'w-2.5 h-2.5' : 'w-3 h-3',
+                  dotDelayClasses[i]
                 )}
-                style={{ animationDelay: `${i * 0.2}s` }}
               />
             ))}
           </div>
@@ -98,9 +101,9 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
                 className={cn(
                   'rounded-full animate-bounce',
                   getColorStyles().replace('border-', 'bg-'),
-                  size === 'sm' ? 'w-1.5 h-1.5' : size === 'md' ? 'w-2 h-2' : size === 'lg' ? 'w-2.5 h-2.5' : 'w-3 h-3'
+                  size === 'sm' ? 'w-1.5 h-1.5' : size === 'md' ? 'w-2 h-2' : size === 'lg' ? 'w-2.5 h-2.5' : 'w-3 h-3',
+                  bounceDelayClasses[i]
                 )}
-                style={{ animationDelay: `${i * 0.1}s` }}
               />
             ))}
           </div>
@@ -113,13 +116,10 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
               <div
                 key={i}
                 className={cn(
-                  'absolute inset-0 rounded-full border-2 animate-ripple',
-                  getColorStyles()
+                  'absolute inset-0 rounded-full border-2 animate-ripple spinner-duration-1400',
+                  getColorStyles(),
+                  rippleDelayClasses[i]
                 )}
-                style={{
-                  animationDelay: `${i * 0.2}s`,
-                  animationDuration: '1.4s',
-                }}
               />
             ))}
           </div>
@@ -129,12 +129,11 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
         return (
           <div
             className={cn(
-              'animate-spin rounded-full border-2 border-gray-300',
+              'animate-spin rounded-full border-2 border-gray-300 spinner-border-top-current',
               getColorStyles(),
               getSizeStyles(),
               className
             )}
-            style={{ borderTopColor: 'currentColor' }}
           />
         );
     }

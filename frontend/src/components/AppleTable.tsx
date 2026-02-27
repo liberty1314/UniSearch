@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toStyleVars } from '@/lib/styleVars';
 
 /**
  * 表格列配置接口
@@ -238,13 +239,14 @@ export function AppleTable<T>({
                 key={column.key}
                 className={cn(
                   'px-6 py-4 text-left',
+                  'table-column-width',
                   'text-xs font-medium uppercase tracking-wider whitespace-nowrap',
                   'text-gray-500 dark:text-gray-400',
                   column.align === 'center' && 'text-center',
                   column.align === 'right' && 'text-right',
                   column.sortable && 'cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-300 transition-colors'
                 )}
-                style={{ width: column.width }}
+                style={toStyleVars({ '--table-column-width': column.width })}
                 onClick={() => column.sortable && handleSort(column.key)}
                 role="columnheader"
               >

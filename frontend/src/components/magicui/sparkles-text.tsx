@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "motion/react";
-import { CSSProperties, ReactElement, useEffect, useState } from "react";
+import { ReactElement, useEffect, useState } from "react";
 
+import { toStyleVars } from "@/lib/styleVars";
 import { cn } from "@/lib/utils";
 
 interface Sparkle {
@@ -132,12 +133,10 @@ export const SparklesText: React.FC<SparklesTextProps> = ({
     <div
       className={cn("text-6xl font-bold", className)}
       {...props}
-      style={
-        {
-          "--sparkles-first-color": `${colors.first}`,
-          "--sparkles-second-color": `${colors.second}`,
-        } as CSSProperties
-      }
+      style={toStyleVars({
+        "--sparkles-first-color": colors.first,
+        "--sparkles-second-color": colors.second,
+      })}
     >
       <span className="relative inline-block">
         {sparkles.map((sparkle) => (

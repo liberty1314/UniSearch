@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useSearchStore, useSearchHistory } from '@/stores/searchStore';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { toStyleVars } from '@/lib/styleVars';
 import { Button as StatefulButton, StatefulButtonHandle } from '@/components/ui/stateful-button';
 import { twMerge } from "tailwind-merge";
 
@@ -278,9 +279,9 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
                   className="group/chip relative inline-flex items-center px-4 py-2 rounded-full cursor-pointer transition-all duration-300 ease-out 
                              bg-white/50 hover:bg-nebula-50/80 dark:bg-gray-800/50 dark:hover:bg-nebula-500/20 
                              border border-black/5 dark:border-white/5 hover:border-nebula-200/80 dark:hover:border-nebula-500/40
-                             shadow-sm hover:shadow-md hover:shadow-nebula-500/10 dark:shadow-black/20 
+                             shadow-sm hover:shadow-md hover:shadow-nebula-500/10 dark:shadow-black/20 history-chip-delay
                              backdrop-blur-md hover:scale-105 active:scale-95"
-                  style={{ animationDelay: `${index * 30}ms` }}
+                  style={toStyleVars({ '--history-chip-delay': `${index * 30}ms` })}
                 >
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover/chip:text-nebula-600 dark:group-hover/chip:text-nebula-300 transition-colors truncate max-w-[12rem]">
                     {keyword}
