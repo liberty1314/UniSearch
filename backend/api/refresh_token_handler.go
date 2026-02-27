@@ -3,6 +3,7 @@ package api
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"log"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -352,13 +353,8 @@ func RefreshAccessTokenHandler(refreshTokenService *service.RefreshTokenService)
 			return
 		}
 
-		// 生成新的 Access Token
-		accessToken, err := util.GenerateToken(
-			token.Username,
-			token.IsAdmin,
-			config.AppConfig.AuthJWTSecret,
-			config.AppConfig.AuthTokenExpiry,
-		)
+		// 生成新的 Access Token（使用新版 JWT Claims）
+		accessToken, err := generateAccessTokenFromRefreshRecord(token.Username, token.IsAdmin)
 		if err != nil {
 			c.JSON(500, gin.H{
 				"error": "生成访问令牌失败",
@@ -399,6 +395,66 @@ func RefreshAccessTokenHandler(refreshTokenService *service.RefreshTokenService)
 			RefreshToken: encryptedNewToken,
 		})
 	}
+}
+
+// generateAccessTokenFromRefreshRecord 根据刷新令牌记录生成新版 JWT Token
+// 映射规则：
+// 1. API Key 登录用户（username=apikey_user）-> user_id=0, username=user, role=user
+// 2. 数据库用户 -> 使用真实 user_id/username/role
+// 3. 兼容兜底（历史/配置用户）-> user_id=0，role 根据 isAdmin 推导
+func generateAccessTokenFromRefreshRecord(username string, isAdmin bool) (string, error) {
+	if username == "apikey_user" {
+		return util.GenerateJWTToken(
+			0,
+			"user",
+			"user",
+			config.AppConfig.AuthJWTSecret,
+			config.AppConfig.AuthTokenExpiry,
+		)
+	}
+
+	authService := service.NewAuthService()
+	dbUser, err := authService.GetUserByUsername(username)
+	if err == nil && dbUser != nil {
+		role := dbUser.Role
+		if role == "" {
+			if dbUser.IsAdmin() {
+				role = "admin"
+			} else {
+				role = "user"
+			}
+		}
+
+		return util.GenerateJWTToken(
+			dbUser.ID,
+			dbUser.Username,
+			role,
+			config.AppConfig.AuthJWTSecret,
+			config.AppConfig.AuthTokenExpiry,
+		)
+	}
+
+	// 兼容兜底：处理历史 refresh token（如配置文件用户）
+	role := "user"
+	if isAdmin {
+		role = "admin"
+	}
+	if username == "" {
+		if isAdmin {
+			username = "admin"
+		} else {
+			username = "user"
+		}
+	}
+	log.Printf("⚠ refresh token 用户映射降级: username=%s role=%s", username, role)
+
+	return util.GenerateJWTToken(
+		0,
+		username,
+		role,
+		config.AppConfig.AuthJWTSecret,
+		config.AppConfig.AuthTokenExpiry,
+	)
 }
 
 // RevokeRefreshTokenHandler 撤销刷新令牌（用户登出）

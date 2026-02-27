@@ -1,6 +1,24 @@
-import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import axios from 'axios';
+import type { AxiosInstance, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import type { ApiResponse } from '@/types/api';
 import { useAuthStore } from '@/stores/authStore';
+import { refreshAuthTokenSingleFlight } from '@/lib/authRefreshManager';
+
+type RetryableRequestConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
+  skipAuthRefresh?: boolean;
+};
+
+const AUTH_ENDPOINTS_EXCLUDED_FROM_REFRESH = [
+  '/auth/login',
+  '/auth/login-legacy',
+  '/auth/login-remember',
+  '/auth/register',
+  '/auth/refresh',
+  '/auth/revoke',
+  '/admin/login',
+  '/admin/login-remember',
+];
 
 /**
  * API 客户端类
@@ -81,17 +99,47 @@ class ApiClient {
         // 非标准格式，直接返回原始响应
         return response;
       },
-      (error: AxiosError<ApiResponse>) => {
-        // 处理 401 未授权错误
-        if (error.response?.status === 401) {
-          // 清除认证状态
-          const authStore = useAuthStore.getState();
-          authStore.logout();
+      async (error: AxiosError<ApiResponse>) => {
+        const originalRequest = error.config as RetryableRequestConfig | undefined;
 
-          // 跳转到登录页（避免在登录页和认证相关页面重复跳转）
-          const currentPath = window.location.pathname;
-          if (!currentPath.includes('/login') && !currentPath.includes('/auth')) {
-            window.location.href = '/login';
+        // 处理 401 未授权错误：先尝试刷新并重试一次，失败再登出
+        if (error.response?.status === 401 && originalRequest) {
+          const requestURL = this.normalizeRequestURL(originalRequest.url);
+          const isExcludedAuthEndpoint = this.isExcludedAuthEndpoint(requestURL);
+          const skipAuthRefresh = originalRequest.skipAuthRefresh === true;
+
+          if (!isExcludedAuthEndpoint && !skipAuthRefresh && !originalRequest._retry) {
+            const authStore = useAuthStore.getState();
+            if (authStore.refreshToken) {
+              originalRequest._retry = true;
+              try {
+                await refreshAuthTokenSingleFlight();
+
+                const latestToken = useAuthStore.getState().token;
+                if (latestToken) {
+                  if (!originalRequest.headers) {
+                    originalRequest.headers = {} as any;
+                  }
+                  (originalRequest.headers as any).Authorization = `Bearer ${latestToken}`;
+                }
+
+                return this.instance(originalRequest);
+              } catch (refreshError) {
+                // 刷新失败，走后续登出逻辑
+              }
+            }
+          }
+
+          // 登录相关接口 401 不触发全局登出
+          if (!isExcludedAuthEndpoint) {
+            const authStore = useAuthStore.getState();
+            authStore.logout();
+
+            // 跳转到登录页（避免在登录页和认证相关页面重复跳转）
+            const currentPath = window.location.pathname;
+            if (!currentPath.includes('/login') && !currentPath.includes('/auth')) {
+              window.location.href = '/login';
+            }
           }
         }
 
@@ -111,6 +159,19 @@ class ApiClient {
           data: error.response?.data,
         });
       }
+    );
+  }
+
+  private normalizeRequestURL(url?: string): string {
+    if (!url) {
+      return '';
+    }
+    return url.startsWith('/api') ? url.slice(4) : url;
+  }
+
+  private isExcludedAuthEndpoint(url: string): boolean {
+    return AUTH_ENDPOINTS_EXCLUDED_FROM_REFRESH.some((endpoint) =>
+      url.startsWith(endpoint)
     );
   }
 

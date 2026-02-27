@@ -83,15 +83,16 @@ async function hashString(str: string): Promise<string> {
 
 /**
  * 获取或生成设备指纹（带缓存）
- * 首次生成后会缓存到 sessionStorage
+ * 首次生成后会缓存到 localStorage（跨重启保持稳定）
  */
 export async function getDeviceFingerprint(): Promise<string> {
-    const cached = sessionStorage.getItem('device_fingerprint');
+    const fingerprintStorageKey = 'device_fingerprint_v1';
+    const cached = localStorage.getItem(fingerprintStorageKey);
     if (cached) {
         return cached;
     }
 
     const fingerprint = await generateDeviceFingerprint();
-    sessionStorage.setItem('device_fingerprint', fingerprint);
+    localStorage.setItem(fingerprintStorageKey, fingerprint);
     return fingerprint;
 }

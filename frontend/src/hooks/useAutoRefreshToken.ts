@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAuthStore } from '@/stores/authStore';
-import { AuthService } from '@/services/authService';
+import { refreshAuthTokenSingleFlight } from '@/lib/authRefreshManager';
 
 /**
  * 解析 JWT Token 获取过期时间
@@ -49,7 +49,7 @@ const isTokenExpiredOrExpiring = (token: string, bufferMinutes: number = 5): boo
  * 3. 支持长时间未访问后的自动恢复登录状态（30天内）
  */
 export function useAutoRefreshToken() {
-    const { token, refreshToken, setToken, logout, username, isAdmin } = useAuthStore();
+    const { token, refreshToken, logout } = useAuthStore();
     const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
     const isRefreshingRef = useRef(false); // 防止重复刷新
 
@@ -107,16 +107,7 @@ export function useAutoRefreshToken() {
         isRefreshingRef.current = true;
 
         try {
-            const response = await AuthService.refreshAccessToken(refreshToken);
-
-            // 更新 Token 和 Refresh Token
-            setToken(
-                response.access_token,
-                username || 'user',
-                isAdmin,
-                null,
-                response.refresh_token
-            );
+            await refreshAuthTokenSingleFlight();
 
             console.log('✅ Token 自动刷新成功');
         } catch (error) {

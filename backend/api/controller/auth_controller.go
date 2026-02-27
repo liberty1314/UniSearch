@@ -383,7 +383,7 @@ func (ctrl *AuthController) generateRefreshToken(c *gin.Context, username string
 		username,
 		isAdmin,
 		deviceFingerprint,
-		720*time.Hour, // 30 天
+		config.AppConfig.RefreshTokenTTL,
 	)
 	if err != nil {
 		log.Printf("⚠ 创建刷新令牌失败: %v", err)

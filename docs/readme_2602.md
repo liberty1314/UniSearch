@@ -1111,3 +1111,22 @@ pnpm-lock.yaml (已删除)
 
 **涉及文件**:
 - frontend/src/pages/Admin.tsx
+
+
+---
+## 2026-02-28 (周六)
+
+**Commit**: `feat(auth): 优化令牌刷新机制并统一 JWT Claims 结构`
+
+**Body**: 
+1. 后端：统一刷新令牌生成新 Access Token 时的 JWT Claims 结构（user_id/username/role），兼容 API Key 用户、数据库用户和历史配置用户
+2. 前端：引入 Single-Flight 模式防止并发刷新，优化 401 拦截器自动重试逻辑，设备指纹改用 localStorage 持久化
+3. 修复刷新令牌 TTL 配置化，移除硬编码的 30 天过期时间
+
+**Files**:
+- backend/api/controller/auth_controller.go
+- backend/api/refresh_token_handler.go
+- frontend/src/hooks/useAutoRefreshToken.ts
+- frontend/src/lib/api.ts
+- frontend/src/lib/authRefreshManager.ts
+- frontend/src/utils/deviceFingerprint.ts
