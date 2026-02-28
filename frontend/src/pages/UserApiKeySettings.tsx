@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { apiClient } from '@/lib/api';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { Eye, EyeOff, Copy, ArrowLeft, Lightbulb, CheckCircle2, XCircle } from 'lucide-react';
+import { Eye, EyeOff, Copy, ArrowLeft, Lightbulb, CheckCircle2, XCircle, RefreshCw } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -26,7 +25,7 @@ interface APIKeyInfo {
     is_valid: boolean;
 }
 
-const API_KEY_INFO_CACHE_TTL_MS = 1500;
+const API_KEY_INFO_CACHE_TTL_MS = 30000;
 
 let apiKeyInfoRequestInFlight: Promise<APIKeyInfo | null> | null = null;
 let apiKeyInfoCache: { value: APIKeyInfo | null; expiresAt: number } | null = null;
@@ -35,11 +34,18 @@ const invalidateApiKeyInfoCache = () => {
     apiKeyInfoCache = null;
 };
 
-const fetchApiKeyInfoSingleFlight = async (force = false): Promise<APIKeyInfo | null> => {
+const getApiKeyInfoCacheSnapshot = (): { hit: boolean; value: APIKeyInfo | null } => {
     const now = Date.now();
+    if (!apiKeyInfoCache || apiKeyInfoCache.expiresAt <= now) {
+        return { hit: false, value: null };
+    }
+    return { hit: true, value: apiKeyInfoCache.value };
+};
 
-    if (!force && apiKeyInfoCache && apiKeyInfoCache.expiresAt > now) {
-        return apiKeyInfoCache.value;
+const fetchApiKeyInfoSingleFlight = async (force = false): Promise<APIKeyInfo | null> => {
+    const cached = getApiKeyInfoCacheSnapshot();
+    if (!force && cached.hit) {
+        return cached.value;
     }
 
     if (!force && apiKeyInfoRequestInFlight) {
@@ -51,10 +57,10 @@ const fetchApiKeyInfoSingleFlight = async (force = false): Promise<APIKeyInfo | 
             const data = await apiClient.get<APIKeyInfo>('/user/apikey');
             return data;
         } catch (error) {
-            if (getErrorCode(error) !== 404) {
-                console.error('加载 API Key 信息失败:', error);
+            if (getErrorCode(error) === 404) {
+                return null;
             }
-            return null;
+            throw error;
         }
     })();
 
@@ -70,26 +76,133 @@ const fetchApiKeyInfoSingleFlight = async (force = false): Promise<APIKeyInfo | 
     }
 };
 
+interface LoadAPIKeyOptions {
+    force?: boolean;
+    background?: boolean;
+    holdOnError?: boolean;
+    showErrorToast?: boolean;
+    isCancelled?: () => boolean;
+}
+
+interface ApiKeySettingsSkeletonProps {
+    holdOnError: boolean;
+    isRetrying: boolean;
+    onRetry: () => void;
+}
+
+const ApiKeySettingsSkeleton: React.FC<ApiKeySettingsSkeletonProps> = ({ holdOnError, isRetrying, onRetry }) => {
+    return (
+        <div className="space-y-6">
+            <div className="bg-white dark:bg-slate-900/80 rounded-[20px] shadow-sm overflow-hidden border border-transparent dark:border-white/5 animate-pulse">
+                <div className="px-5 py-4 border-b border-gray-100 dark:border-white/10">
+                    <div className="h-5 w-36 bg-gray-200 dark:bg-slate-700 rounded" />
+                </div>
+                <div className="p-5">
+                    <div className="h-12 w-full bg-gray-200 dark:bg-slate-700 rounded-xl" />
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                {Array.from({ length: 4 }).map((_, idx) => (
+                    <div
+                        key={idx}
+                        className="bg-white dark:bg-slate-900/80 p-5 rounded-[20px] shadow-sm h-32 border border-transparent dark:border-white/5 animate-pulse"
+                    >
+                        <div className="h-3 w-20 bg-gray-200 dark:bg-slate-700 rounded mb-5" />
+                        <div className="h-8 w-16 bg-gray-200 dark:bg-slate-700 rounded mb-3" />
+                        <div className="h-3 w-12 bg-gray-200 dark:bg-slate-700 rounded" />
+                    </div>
+                ))}
+            </div>
+
+            {holdOnError && (
+                <div className="bg-white dark:bg-slate-900/80 rounded-[20px] shadow-sm border border-transparent dark:border-white/5 p-6 text-center">
+                    <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">加载失败，请重试</p>
+                    <button
+                        onClick={onRetry}
+                        disabled={isRetrying}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isRetrying ? 'animate-spin' : ''}`} />
+                        重试加载
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const UserApiKeySettings: React.FC = () => {
     const navigate = useNavigate();
     const { token, apiKey, isAuthenticated } = useAuthStore();
-    const isMountedRef = useRef(false);
 
     const [apiKeyInfo, setApiKeyInfo] = useState<APIKeyInfo | null>(null);
     const [newApiKey, setNewApiKey] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isHoldLoadingOnError, setIsHoldLoadingOnError] = useState(false);
+    const [hasResolvedData, setHasResolvedData] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showKey, setShowKey] = useState(false);
     const [showUnbindDialog, setShowUnbindDialog] = useState(false);
 
-    useEffect(() => {
-        isMountedRef.current = true;
-        return () => {
-            isMountedRef.current = false;
-        };
+    const loadAPIKeyInfo = useCallback(async ({
+        force = false,
+        background = false,
+        holdOnError = false,
+        showErrorToast = true,
+        isCancelled,
+    }: LoadAPIKeyOptions = {}): Promise<APIKeyInfo | null> => {
+        const cancelled = () => isCancelled?.() ?? false;
+
+        if (!background && !cancelled()) {
+            setIsInitialLoading(true);
+            if (!holdOnError) {
+                setIsHoldLoadingOnError(false);
+            }
+        }
+
+        if (background && !cancelled()) {
+            setIsRefreshing(true);
+        }
+
+        try {
+            const data = await fetchApiKeyInfoSingleFlight(force);
+            if (cancelled()) {
+                return null;
+            }
+
+            setApiKeyInfo(data);
+            setHasResolvedData(true);
+            setIsHoldLoadingOnError(false);
+            return data;
+        } catch (error) {
+            if (cancelled()) {
+                return null;
+            }
+
+            if (showErrorToast) {
+                toast.error(getErrorMessage(error, '加载 API Key 信息失败'));
+            }
+
+            if (holdOnError) {
+                setIsHoldLoadingOnError(true);
+            }
+
+            return null;
+        } finally {
+            if (cancelled()) {
+                return null;
+            }
+
+            if (background) {
+                setIsRefreshing(false);
+            } else {
+                setIsInitialLoading(false);
+            }
+        }
     }, []);
 
-    // 检查认证状态（支持 token 或 apiKey 登录）
     useEffect(() => {
         if (!isAuthenticated || (!token && !apiKey)) {
             toast.error('请先登录');
@@ -97,29 +210,49 @@ const UserApiKeySettings: React.FC = () => {
         }
     }, [isAuthenticated, token, apiKey, navigate]);
 
-    // 加载 API Key 信息（只要已认证即可）
     useEffect(() => {
-        if (isAuthenticated) {
-            loadAPIKeyInfo();
-        }
-    }, [isAuthenticated]);
-
-    const loadAPIKeyInfo = async (force = false) => {
-        if (isMountedRef.current) {
-            setIsLoading(true);
+        if (!isAuthenticated || (!token && !apiKey)) {
+            return;
         }
 
-        try {
-            const data = await fetchApiKeyInfoSingleFlight(force);
-            if (isMountedRef.current) {
-                setApiKeyInfo(data);
+        let cancelled = false;
+
+        const bootstrap = async () => {
+            const cacheSnapshot = getApiKeyInfoCacheSnapshot();
+
+            if (cacheSnapshot.hit) {
+                if (cancelled) {
+                    return;
+                }
+
+                setApiKeyInfo(cacheSnapshot.value);
+                setHasResolvedData(true);
+                setIsInitialLoading(false);
+                setIsHoldLoadingOnError(false);
+
+                await loadAPIKeyInfo({
+                    force: false,
+                    background: true,
+                    holdOnError: false,
+                    isCancelled: () => cancelled,
+                });
+                return;
             }
-        } finally {
-            if (isMountedRef.current) {
-                setIsLoading(false);
-            }
-        }
-    };
+
+            await loadAPIKeyInfo({
+                force: false,
+                background: false,
+                holdOnError: true,
+                isCancelled: () => cancelled,
+            });
+        };
+
+        bootstrap();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isAuthenticated, token, apiKey, loadAPIKeyInfo]);
 
     const handleBindAPIKey = async () => {
         if (!newApiKey.trim()) {
@@ -141,7 +274,11 @@ const UserApiKeySettings: React.FC = () => {
             toast.success('绑定成功');
             setNewApiKey('');
             invalidateApiKeyInfoCache();
-            await loadAPIKeyInfo(true);
+            await loadAPIKeyInfo({
+                force: true,
+                background: false,
+                holdOnError: true,
+            });
         } catch (error) {
             console.error('绑定 API Key 失败:', error);
             toast.error(getErrorMessage(error, '绑定失败'));
@@ -158,7 +295,15 @@ const UserApiKeySettings: React.FC = () => {
             toast.success('解绑成功');
             invalidateApiKeyInfoCache();
             setApiKeyInfo(null);
+            setHasResolvedData(true);
             setShowUnbindDialog(false);
+
+            await loadAPIKeyInfo({
+                force: true,
+                background: true,
+                holdOnError: false,
+                showErrorToast: false,
+            });
         } catch (error) {
             console.error('解绑 API Key 失败:', error);
             toast.error(getErrorMessage(error, '解绑失败'));
@@ -173,13 +318,7 @@ const UserApiKeySettings: React.FC = () => {
         return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
     };
 
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center">
-                <LoadingSpinner />
-            </div>
-        );
-    }
+    const showContentSkeleton = isInitialLoading || isHoldLoadingOnError;
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-slate-950 font-sans selection:bg-blue-500/30">
@@ -199,22 +338,43 @@ const UserApiKeySettings: React.FC = () => {
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-8"
+                    className="mb-8 flex items-start justify-between gap-4"
                 >
-                    <h1 className="text-[34px] font-bold text-black dark:text-white tracking-tight leading-tight">
-                        API Key
-                    </h1>
-                    <p className="mt-1 text-[17px] text-gray-500 dark:text-slate-400 font-normal">
-                        管理您的个人的搜索访问密钥
-                    </p>
+                    <div>
+                        <h1 className="text-[34px] font-bold text-black dark:text-white tracking-tight leading-tight">
+                            API Key
+                        </h1>
+                        <p className="mt-1 text-[17px] text-gray-500 dark:text-slate-400 font-normal">
+                            管理您的个人的搜索访问密钥
+                        </p>
+                    </div>
+
+                    {isRefreshing && (
+                        <span className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-medium whitespace-nowrap">
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            同步中
+                        </span>
+                    )}
                 </motion.div>
 
                 {/* 当前绑定状态 */}
-                {apiKeyInfo ? (
+                {showContentSkeleton ? (
+                    <ApiKeySettingsSkeleton
+                        holdOnError={isHoldLoadingOnError}
+                        isRetrying={isInitialLoading}
+                        onRetry={() => {
+                            void loadAPIKeyInfo({
+                                force: true,
+                                background: false,
+                                holdOnError: true,
+                            });
+                        }}
+                    />
+                ) : apiKeyInfo ? (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                        transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
                         className="space-y-6"
                     >
                         {/* 状态概览卡片 */}
@@ -304,46 +464,49 @@ const UserApiKeySettings: React.FC = () => {
                             <motion.button
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => setShowUnbindDialog(true)}
-                                className="w-full py-3.5 bg-white dark:bg-slate-900/80 text-red-500 text-[17px] font-medium rounded-[14px] shadow-sm hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors border border-transparent dark:border-white/5"
+                                disabled={isSubmitting}
+                                className="w-full py-3.5 bg-white dark:bg-slate-900/80 text-red-500 text-[17px] font-medium rounded-[14px] shadow-sm hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors border border-transparent dark:border-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 解除绑定
                             </motion.button>
                         )}
                     </motion.div>
                 ) : (
-                    /* 绑定表单 */
-                    <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white dark:bg-slate-900/80 rounded-[20px] shadow-sm overflow-hidden border border-transparent dark:border-white/5"
-                    >
-                        <div className="p-6">
-                            <label className="block text-[13px] font-medium text-gray-500 dark:text-slate-400 mb-2 uppercase tracking-wide ml-1">
-                                输入密钥
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="sk-..."
-                                value={newApiKey}
-                                onChange={(e) => setNewApiKey(e.target.value)}
-                                className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-800/80 rounded-xl text-[17px] text-black dark:text-white placeholder-gray-400 border-none focus:ring-2 focus:ring-blue-500/50 transition-all font-mono"
-                                autoFocus
-                            />
-                            <p className="mt-3 ml-1 text-[13px] text-gray-400">
-                                请输入以 <code className="bg-gray-100 dark:bg-slate-800/80 px-1 rounded text-gray-600 dark:text-slate-300">sk-</code> 开头的 43 位密钥
-                            </p>
+                    hasResolvedData && (
+                        /* 绑定表单 */
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white dark:bg-slate-900/80 rounded-[20px] shadow-sm overflow-hidden border border-transparent dark:border-white/5"
+                        >
+                            <div className="p-6">
+                                <label className="block text-[13px] font-medium text-gray-500 dark:text-slate-400 mb-2 uppercase tracking-wide ml-1">
+                                    输入密钥
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="sk-..."
+                                    value={newApiKey}
+                                    onChange={(e) => setNewApiKey(e.target.value)}
+                                    className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-800/80 rounded-xl text-[17px] text-black dark:text-white placeholder-gray-400 border-none focus:ring-2 focus:ring-blue-500/50 transition-all font-mono"
+                                    autoFocus
+                                />
+                                <p className="mt-3 ml-1 text-[13px] text-gray-400">
+                                    请输入以 <code className="bg-gray-100 dark:bg-slate-800/80 px-1 rounded text-gray-600 dark:text-slate-300">sk-</code> 开头的 43 位密钥
+                                </p>
 
-                            <div className="mt-8">
-                                <button
-                                    onClick={handleBindAPIKey}
-                                    disabled={isSubmitting || !newApiKey.trim()}
-                                    className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 text-white text-[17px] font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20 active:scale-[0.98]"
-                                >
-                                    {isSubmitting ? '验证并绑定...' : '绑定 API Key'}
-                                </button>
+                                <div className="mt-8">
+                                    <button
+                                        onClick={handleBindAPIKey}
+                                        disabled={isSubmitting || !newApiKey.trim()}
+                                        className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 text-white text-[17px] font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20 active:scale-[0.98]"
+                                    >
+                                        {isSubmitting ? '验证并绑定...' : '绑定 API Key'}
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    </motion.div>
+                        </motion.div>
+                    )
                 )}
 
                 {/* 说明文本 */}
@@ -372,12 +535,14 @@ const UserApiKeySettings: React.FC = () => {
                     <div className="flex border-t border-gray-200/50 dark:border-white/10 divide-x divide-gray-200/50 dark:divide-white/10">
                         <AlertDialogCancel
                             className="flex-1 h-12 bg-transparent hover:bg-gray-100 dark:hover:bg-white/5 border-none rounded-none text-[17px] text-blue-500 font-normal m-0"
+                            disabled={isSubmitting}
                         >
                             取消
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleUnbindAPIKey}
                             className="flex-1 h-12 bg-transparent hover:bg-gray-100 dark:hover:bg-white/5 border-none rounded-none text-[17px] text-red-500 font-semibold m-0 shadow-none hover:shadow-none"
+                            disabled={isSubmitting}
                         >
                             解除绑定
                         </AlertDialogAction>

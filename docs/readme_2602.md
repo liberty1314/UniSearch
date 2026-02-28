@@ -1278,3 +1278,22 @@ pnpm-lock.yaml (已删除)
 - frontend/src/utils/deviceFingerprint.ts
 
 **Stats**: 74 files changed, 1771 insertions(+), 1157 deletions(-)
+
+---
+## 2026-02-28 19:19:31
+
+**Commit**: `refactor(user): 优化 API Key 设置页面加载和错误处理机制`
+
+**Body**: 
+1. 优化缓存策略：将 API Key 信息缓存时间从 1.5 秒延长至 30 秒
+2. 新增缓存快照函数（getApiKeyInfoCacheSnapshot）提升缓存命中判断效率
+3. 改进错误处理逻辑：404 错误直接返回 null，其他错误向上抛出
+4. 新增 LoadAPIKeyOptions 接口，支持更灵活的加载配置（force、background、holdOnError 等）
+5. 新增 ApiKeySettingsSkeleton 骨架屏组件，优化加载状态展示
+6. 新增重试机制（RefreshCw 图标），提升用户体验
+7. 移除未使用的 LoadingSpinner 和 useRef 依赖，改用 useCallback
+
+**Files**:
+- frontend/src/pages/UserApiKeySettings.tsx
+
+**Stats**: 1 file changed, 251 insertions(+), 86 deletions(-)
