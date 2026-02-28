@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,57 @@ import { useAuthStore } from '@/stores/authStore';
 import type { SystemInfoResponse } from '@/types/api';
 import { toast } from 'sonner';
 
+const SYSTEM_INFO_CACHE_TTL_MS = 1500;
+
+let systemInfoRequestInFlight: Promise<SystemInfoResponse | null> | null = null;
+let systemInfoCache: { value: SystemInfoResponse | null; expiresAt: number; token: string | null } | null = null;
+
+const fetchSystemInfoSingleFlight = async (token: string | null, force = false): Promise<SystemInfoResponse | null> => {
+    if (!token) {
+        return null;
+    }
+
+    const now = Date.now();
+    const hasFreshCache =
+        systemInfoCache &&
+        systemInfoCache.token === token &&
+        systemInfoCache.expiresAt > now;
+
+    if (!force && hasFreshCache) {
+        return systemInfoCache.value;
+    }
+
+    if (!force && systemInfoRequestInFlight) {
+        return systemInfoRequestInFlight;
+    }
+
+    systemInfoRequestInFlight = (async () => {
+        const response = await fetch('/api/admin/system-info', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('获取系统信息失败');
+        }
+
+        return (await response.json()) as SystemInfoResponse;
+    })();
+
+    try {
+        const result = await systemInfoRequestInFlight;
+        systemInfoCache = {
+            value: result,
+            expiresAt: Date.now() + SYSTEM_INFO_CACHE_TTL_MS,
+            token,
+        };
+        return result;
+    } finally {
+        systemInfoRequestInFlight = null;
+    }
+};
+
 /**
  * 系统监控视图组件
  * 
@@ -39,39 +90,44 @@ export const SystemInfoView: React.FC = () => {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [isManageDialogOpen, setIsManageDialogOpen] = useState<boolean>(false);
     const [isChannelDialogOpen, setIsChannelDialogOpen] = useState<boolean>(false);
+    const isMountedRef = useRef(false);
+
+    useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
 
     /**
      * 加载系统信息
      */
-    const loadSystemInfo = async () => {
-        setIsLoading(true);
-        try {
-            const response = await fetch('/api/admin/system-info', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
+    const loadSystemInfo = useCallback(async (force = false) => {
+        if (isMountedRef.current) {
+            setIsLoading(true);
+        }
 
-            if (response.ok) {
-                const data = await response.json();
+        try {
+            const data = await fetchSystemInfoSingleFlight(token, force);
+            if (isMountedRef.current) {
                 setSystemInfo(data);
-            } else {
-                throw new Error('获取系统信息失败');
             }
         } catch (error: unknown) {
             console.error('加载系统信息失败:', error);
             toast.error('加载系统信息失败');
         } finally {
-            setIsLoading(false);
+            if (isMountedRef.current) {
+                setIsLoading(false);
+            }
         }
-    };
+    }, [token]);
 
     /**
      * 初始加载
      */
     useEffect(() => {
         loadSystemInfo();
-    }, []);
+    }, [loadSystemInfo]);
 
     /**
      * 格式化代理 URL（隐藏敏感信息）
@@ -93,7 +149,7 @@ export const SystemInfoView: React.FC = () => {
      * 插件管理成功后的回调
      */
     const handleManageSuccess = () => {
-        loadSystemInfo(); // 重新加载系统信息
+        loadSystemInfo(true); // 重新加载系统信息
     };
 
     if (isLoading) {
@@ -173,8 +229,8 @@ export const SystemInfoView: React.FC = () => {
             </div>
 
             {/* 频道列表 - 独立卡片 */}
-            <Card className="border-gray-100 dark:border-gray-700/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50">
+            <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+                <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/50">
                     <div className="flex items-center justify-between">
                         <div>
                             <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
@@ -219,8 +275,8 @@ export const SystemInfoView: React.FC = () => {
             </Card>
 
             {/* 插件列表 */}
-            <Card className="border-gray-100 dark:border-gray-700/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50">
+            <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+                <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/50">
                     <div className="flex items-center justify-between">
                         <div>
                             <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
@@ -253,8 +309,8 @@ export const SystemInfoView: React.FC = () => {
             </Card>
 
             {/* 系统配置 */}
-            <Card className="border-gray-100 dark:border-gray-700/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50">
+            <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+                <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/50">
                     <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
                         <Server className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                         系统配置

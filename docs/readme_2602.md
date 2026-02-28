@@ -1186,3 +1186,95 @@ pnpm-lock.yaml (已删除)
 - frontend/src/pages/RegisterPage.tsx (修改)
 - frontend/src/pages/UserAuth.tsx (删除)
 - frontend/src/utils/text.ts (删除)
+
+---
+## 2026-02-28 17:47:21
+
+**Commit**: `refactor(ui): 重构 UI 组件并新增认证路由动画系统`
+
+**Body**: 
+1. 新增认证页面路由切换动画系统（AuthSwitchMotion、AuthEntryLink、authRouteMotion）
+2. 提取 button-variants 为独立模块，统一按钮样式管理
+3. 新增统一错误处理模块（error.ts）
+4. 优化系统信息视图（SystemInfoView）展示逻辑
+5. 重构多个 UI 组件（AppleButton、AppleCard、AppleInput 等）以提升一致性
+6. 优化认证页面（Login、Register、ApiKeyLogin）的交互体验
+7. 改进令牌自动刷新机制（useAutoRefreshToken）
+
+**Files**:
+- frontend/eslint.config.js
+- frontend/index.html
+- frontend/src/App.tsx
+- frontend/src/components/AnnouncementDialog.tsx
+- frontend/src/components/AnnouncementPanel.tsx
+- frontend/src/components/AppleTable.tsx
+- frontend/src/components/CloudTypeFilter.tsx
+- frontend/src/components/CreateKeyDialog.tsx
+- frontend/src/components/GradientText.tsx
+- frontend/src/components/IconButton.tsx
+- frontend/src/components/LoadingState.tsx
+- frontend/src/components/MobileMenu.tsx
+- frontend/src/components/Navbar.tsx
+- frontend/src/components/PageLoader.tsx
+- frontend/src/components/PageTransition.tsx
+- frontend/src/components/PasswordModal.tsx
+- frontend/src/components/SearchBox.tsx
+- frontend/src/components/SearchResults.tsx
+- frontend/src/components/SkeletonLoader.tsx
+- frontend/src/components/__tests__/Env.test.tsx
+- frontend/src/components/admin/AnnouncementManagement.tsx
+- frontend/src/components/admin/AppleApiKeyTable.tsx
+- frontend/src/components/admin/ApplePluginTable.tsx
+- frontend/src/components/admin/AppleUserTable.tsx
+- frontend/src/components/admin/BatchCreateDialog.tsx
+- frontend/src/components/admin/BatchDeleteDialog.tsx
+- frontend/src/components/admin/BatchDeleteKeysDialog.tsx
+- frontend/src/components/admin/BatchExportDialog.tsx
+- frontend/src/components/admin/BatchExtendDialog.tsx
+- frontend/src/components/admin/BatchUpdateRoleDialog.tsx
+- frontend/src/components/admin/ChannelManageDialog.tsx
+- frontend/src/components/admin/CreateUserDialog.tsx
+- frontend/src/components/admin/EditKeyDialog.tsx
+- frontend/src/components/admin/EditUserDialog.tsx
+- frontend/src/components/admin/PluginManageDialog.tsx
+- frontend/src/components/admin/ResetPasswordDialog.tsx
+- frontend/src/components/admin/Sidebar.tsx
+- frontend/src/components/admin/SystemInfoView.tsx
+- frontend/src/components/admin/SystemSettingsView.tsx
+- frontend/src/components/auth/AuthEntryLink.tsx (新增)
+- frontend/src/components/auth/AuthSwitchMotion.tsx (新增)
+- frontend/src/components/auth/__tests__/authRouteMotion.test.ts (新增)
+- frontend/src/components/auth/authRouteMotion.ts (新增)
+- frontend/src/components/auth/authVisualPresets.ts
+- frontend/src/components/magicui/animated-theme-toggler.tsx
+- frontend/src/components/ui/AppleButton.tsx
+- frontend/src/components/ui/AppleCard.tsx
+- frontend/src/components/ui/AppleInput.tsx
+- frontend/src/components/ui/alert-dialog.tsx
+- frontend/src/components/ui/badge.tsx
+- frontend/src/components/ui/button-variants.ts (新增)
+- frontend/src/components/ui/button.tsx
+- frontend/src/components/ui/dialog.tsx
+- frontend/src/components/ui/input.tsx
+- frontend/src/components/ui/stateful-button.tsx
+- frontend/src/components/ui/textarea.tsx
+- frontend/src/hooks/useAutoRefreshToken.ts
+- frontend/src/index.css
+- frontend/src/lib/api.ts
+- frontend/src/lib/error.ts (新增)
+- frontend/src/pages/Admin.tsx
+- frontend/src/pages/AdminLogin.tsx
+- frontend/src/pages/ApiKeyLoginPage.tsx
+- frontend/src/pages/Home.tsx
+- frontend/src/pages/LoginPage.tsx
+- frontend/src/pages/RegisterPage.tsx
+- frontend/src/pages/UserApiKeySettings.tsx
+- frontend/src/services/announcementService.ts
+- frontend/src/services/authService.ts
+- frontend/src/services/searchService.ts
+- frontend/src/stores/announcementStore.ts
+- frontend/src/stores/searchStore.ts
+- frontend/src/types/api.ts
+- frontend/src/utils/deviceFingerprint.ts
+
+**Stats**: 74 files changed, 1771 insertions(+), 1157 deletions(-)

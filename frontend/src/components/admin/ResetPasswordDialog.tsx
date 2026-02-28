@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { UserService } from '../../services/userService';
 import type { UserInfo } from '../../types/api';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { getErrorDataError } from '@/lib/error';
 
 interface ResetPasswordDialogProps {
   open: boolean;
@@ -141,9 +142,9 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
       toast.success('密码重置成功');
       onOpenChange(false);
       onSuccess();
-    } catch (error: any) {
+    } catch (error) {
       console.error('重置密码失败:', error);
-      const errorMessage = error.response?.data?.error || '重置密码失败，请稍后重试';
+      const errorMessage = getErrorDataError(error) || '重置密码失败，请稍后重试';
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);

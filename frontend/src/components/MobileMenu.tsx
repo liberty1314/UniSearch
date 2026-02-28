@@ -17,7 +17,7 @@ import { AnimatedThemeToggler } from '@/components/magicui/animated-theme-toggle
 interface MobileMenuProps {
     isOpen: boolean;
     onClose: () => void;
-    navItems: Array<{ path: string; label: string; icon: any }>;
+    navItems: Array<{ path: string; label: string; icon: React.ComponentType<{ className?: string }> }>;
 }
 
 export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItems }) => {
@@ -86,7 +86,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                             <span className="font-bold text-lg text-gray-900 dark:text-white bg-gradient-to-r from-nebula-600 to-cosmic-500 bg-clip-text text-transparent">菜单</span>
                             <button
                                 onClick={onClose}
-                                className="p-2 -mr-2 text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                className="p-2 -mr-2 text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
                             >
                                 <IoCloseOutline className="w-6 h-6" />
                             </button>
@@ -96,15 +96,15 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-6">
                             {/* User Info Section */}
                             {isAuthenticated ? (
-                                <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-gray-800/50 rounded-xl border border-white/20 dark:border-white/10">
-                                    <div className="p-2 bg-white dark:bg-gray-700 rounded-full shadow-sm">
+                                <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-slate-800/50 rounded-xl border border-white/20 dark:border-white/10">
+                                    <div className="p-2 bg-white dark:bg-slate-700 rounded-full shadow-sm">
                                         <IoPersonCircleOutline className="w-8 h-8 text-gray-400" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="font-medium text-gray-900 dark:text-white truncate">
                                             {username}
                                         </p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        <p className="text-xs text-gray-500 dark:text-slate-400">
                                             {isAdmin ? '管理员' : '普通用户'}
                                         </p>
                                     </div>
@@ -129,7 +129,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                                             key={item.path}
                                             to={item.path}
                                             onClick={onClose}
-                                            className="flex items-center gap-3 p-3 text-gray-600 dark:text-gray-400 hover:text-apple-blue dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl transition-colors"
+                                            className="flex items-center gap-3 p-3 text-gray-600 dark:text-slate-400 hover:text-apple-blue dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors"
                                         >
                                             <Icon className="w-5 h-5" />
                                             <span className="font-medium">{item.label}</span>
@@ -140,7 +140,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
 
                             {/* Settings Links */}
                             {isAuthenticated && (
-                                <div className="space-y-1 pt-4 border-t border-gray-100 dark:border-gray-800">
+                                <div className="space-y-1 pt-4 border-t border-gray-100 dark:border-white/5">
                                     <div className="px-3 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                                         设置
                                     </div>
@@ -149,7 +149,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                                         <Link
                                             to="/admin"
                                             onClick={onClose}
-                                            className="flex items-center gap-3 p-3 text-gray-600 dark:text-gray-400 hover:text-apple-blue dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl transition-colors"
+                                            className="flex items-center gap-3 p-3 text-gray-600 dark:text-slate-400 hover:text-apple-blue dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors"
                                         >
                                             <IoSettingsOutline className="w-5 h-5" />
                                             <span className="font-medium">后台管理</span>
@@ -158,7 +158,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                                         <Link
                                             to="/settings/apikey"
                                             onClick={onClose}
-                                            className="flex items-center gap-3 p-3 text-gray-600 dark:text-gray-400 hover:text-apple-blue dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl transition-colors"
+                                            className="flex items-center gap-3 p-3 text-gray-600 dark:text-slate-400 hover:text-apple-blue dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors"
                                         >
                                             <IoKeyOutline className="w-5 h-5" />
                                             <span className="font-medium">API Key 设置</span>
@@ -172,7 +172,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                         <div className="p-4 border-t border-white/10 dark:border-white/5 space-y-4">
                             {/* Theme Toggler */}
                             <div className="flex items-center justify-between px-3">
-                                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">深色模式</span>
+                                <span className="text-sm font-medium text-gray-600 dark:text-slate-400">深色模式</span>
                                 <AnimatedThemeToggler />
                             </div>
 

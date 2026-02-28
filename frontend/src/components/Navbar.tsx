@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Sun, Moon, ArrowRight, User, Settings, LogOut, LayoutDashboard, Key } from 'lucide-react';
+import { Menu, ArrowRight, User, LogOut, LayoutDashboard, Key } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import IconButton from './IconButton';
 import { MobileMenu } from '@/components/MobileMenu';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { useAuthStore } from '@/stores/authStore';
@@ -77,7 +76,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
     setIsUserMenuOpen(false);
   };
 
-  const navItems = [
+  const navItems: Array<{ path: string; label: string; icon: React.ComponentType<{ className?: string }> }> = [
     // Add nav items if needed
   ];
 
@@ -119,7 +118,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
             {isAuthenticated && (
               <button
                 onClick={() => setIsAnnouncementPanelOpen(true)}
-                className="relative p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-white/10 transition-all duration-300"
+                className="relative p-2 rounded-xl text-gray-600 dark:text-slate-300 hover:bg-gray-100/50 dark:hover:bg-white/10 transition-all duration-300"
               >
                 <IoNotificationsOutline className="w-5 h-5" />
                 {unreadAnnouncements.length > 0 && (
@@ -129,7 +128,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
             )}
 
             {/* Theme Toggle */}
-            <AnimatedThemeToggler className="relative p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-white/10 transition-all duration-300" />
+            <AnimatedThemeToggler className="relative p-2 rounded-xl text-gray-600 dark:text-slate-300 hover:bg-gray-100/50 dark:hover:bg-white/10 transition-all duration-300" />
 
             {/* Desktop Menu Items */}
             <div className="hidden md:flex items-center gap-3">
@@ -159,11 +158,11 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                         transition={{ duration: 0.2 }}
                         className="absolute right-0 mt-2 w-56 rounded-xl glass-panel shadow-xl overflow-hidden z-50"
                       >
-                        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700/50">
+                        <div className="px-4 py-3 border-b border-gray-100 dark:border-white/10">
                           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                             {username || 'User'}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-xs text-gray-500 dark:text-slate-400">
                             {isAdmin ? '管理员' : '普通用户'}
                           </p>
                         </div>
@@ -190,7 +189,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                           )}
                         </div>
 
-                        <div className="border-t border-gray-100 dark:border-gray-700/50 p-1">
+                        <div className="border-t border-gray-100 dark:border-white/10 p-1">
                           <button
                             onClick={handleLogout}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
@@ -223,7 +222,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
             <div className="md:hidden">
               <button
                 onClick={() => isAdminPage ? toggleMobileSidebar() : setIsMobileMenuOpen(true)}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-white/10 rounded-xl transition-colors"
+                className="p-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100/50 dark:hover:bg-white/10 rounded-xl transition-colors"
               >
                 <Menu className="w-6 h-6" />
               </button>
@@ -236,7 +235,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
       <MobileMenu
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
-        navItems={navItems as any[]}
+        navItems={navItems}
       />
 
       {/* Announcement Panel */}

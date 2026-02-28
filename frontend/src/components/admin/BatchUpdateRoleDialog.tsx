@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { UserService } from '../../services/userService';
 import type { UserInfo } from '../../types/api';
+import { getErrorDataError } from '@/lib/error';
 import { Loader2, CheckCircle2, XCircle, AlertTriangle, Shield, User } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 
@@ -110,9 +111,9 @@ export const BatchUpdateRoleDialog: React.FC<BatchUpdateRoleDialogProps> = ({
       if (operationResult.success_count > 0) {
         onSuccess();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('批量修改角色失败:', error);
-      const errorMessage = error.response?.data?.error || '批量修改角色失败，请稍后重试';
+      const errorMessage = getErrorDataError(error) || '批量修改角色失败，请稍后重试';
       toast.error(errorMessage);
       setIsSubmitting(false);
     } finally {

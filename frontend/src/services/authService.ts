@@ -201,7 +201,7 @@ export class AuthService {
                 headers: { 'X-API-Key': apiKey },
             });
             return true;
-        } catch (error) {
+        } catch {
             // 如果请求失败，说明 API Key 无效
             return false;
         }
@@ -248,7 +248,7 @@ export class AuthService {
         }
 
         // 后端返回的是 {keys: [...]}，需要提取 keys 字段
-        return (response as any).keys || [];
+        return response.keys || [];
     }
 
     /**
@@ -279,7 +279,7 @@ export class AuthService {
             throw new Error('获取 API Keys 失败：服务器未返回有效数据');
         }
 
-        return response as any;
+        return response;
     }
 
     /**
@@ -303,7 +303,7 @@ export class AuthService {
         }
 
         // 后端返回的是 {key: {...}}，需要提取 key 字段
-        return (response as any).key;
+        return response.key;
     }
 
     /**
@@ -349,7 +349,7 @@ export class AuthService {
         }
 
         // 后端返回的是 {key: {...}}，需要提取 key 字段
-        return (response as any).key;
+        return response.key;
     }
 
     /**

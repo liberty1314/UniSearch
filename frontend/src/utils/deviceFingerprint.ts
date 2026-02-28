@@ -38,7 +38,7 @@ export async function generateDeviceFingerprint(): Promise<string> {
             ctx.fillText('UniSearch', 2, 15);
             components.push(canvas.toDataURL());
         }
-    } catch (e) {
+    } catch {
         // Canvas 指纹生成失败，跳过
     }
 
@@ -53,7 +53,7 @@ export async function generateDeviceFingerprint(): Promise<string> {
                 components.push(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL));
             }
         }
-    } catch (e) {
+    } catch {
         // WebGL 指纹生成失败，跳过
     }
 
@@ -61,8 +61,9 @@ export async function generateDeviceFingerprint(): Promise<string> {
     components.push(String(navigator.hardwareConcurrency || 0));
 
     // 9. 设备内存（如果可用）
-    if ('deviceMemory' in navigator) {
-        components.push(String((navigator as any).deviceMemory));
+    const navigatorWithMemory = navigator as Navigator & { deviceMemory?: number };
+    if (typeof navigatorWithMemory.deviceMemory === 'number') {
+        components.push(String(navigatorWithMemory.deviceMemory));
     }
 
     // 组合所有特征并生成哈希

@@ -6,7 +6,7 @@
  * 所有后端 API 接口都遵循此统一响应格式，包含状态码、消息和数据三部分。
  * 前端响应拦截器会自动解包 `data` 字段，使 Service 层直接获得业务数据对象。
  * 
- * @template T - 响应数据的类型，默认为 any
+ * @template T - 响应数据的类型，默认为 unknown
  * 
  * @property {number} code - HTTP 状态码（200 表示成功，4xx 表示客户端错误，5xx 表示服务器错误）
  * @property {string} message - 响应消息，成功时为操作描述，失败时为错误描述（中文）
@@ -28,7 +28,7 @@
  *   data: { field: "username", constraint: "unique" }
  * }
  */
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   code: number;
   message: string;
   data?: T;
@@ -84,7 +84,7 @@ export interface SearchRequest {
   res?: 'all' | 'results' | 'merge';
   conc?: number;
   refresh?: boolean;
-  ext?: Record<string, any>;
+  ext?: Record<string, unknown>;
   filter?: FilterConfig; // 过滤配置
 }
 
@@ -100,7 +100,7 @@ export interface SearchParams {
   resultType?: 'all' | 'results' | 'merge';
   concurrency?: number;
   refresh?: boolean;
-  ext?: Record<string, any>;
+  ext?: Record<string, unknown>;
   filter?: FilterConfig; // 过滤配置
 }
 

@@ -1,5 +1,12 @@
 import axios from 'axios';
-import type { AxiosInstance, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import type {
+  AxiosInstance,
+  AxiosResponse,
+  AxiosError,
+  AxiosRequestConfig,
+  AxiosRequestHeaders,
+  InternalAxiosRequestConfig,
+} from 'axios';
 import type { ApiResponse } from '@/types/api';
 import { useAuthStore } from '@/stores/authStore';
 import { refreshAuthTokenSingleFlight } from '@/lib/authRefreshManager';
@@ -117,14 +124,13 @@ class ApiClient {
 
                 const latestToken = useAuthStore.getState().token;
                 if (latestToken) {
-                  if (!originalRequest.headers) {
-                    originalRequest.headers = {} as any;
-                  }
-                  (originalRequest.headers as any).Authorization = `Bearer ${latestToken}`;
+                  const headers: AxiosRequestHeaders = (originalRequest.headers ?? {}) as AxiosRequestHeaders;
+                  headers.Authorization = `Bearer ${latestToken}`;
+                  originalRequest.headers = headers;
                 }
 
                 return this.instance(originalRequest);
-              } catch (refreshError) {
+              } catch {
                 // 刷新失败，走后续登出逻辑
               }
             }
@@ -220,7 +226,7 @@ class ApiClient {
    * GET 请求
    * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async get<T = any>(url: string, config?: any): Promise<T> {
+  async get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.instance.get<T>(url, config);
     return response.data;
   }
@@ -229,7 +235,7 @@ class ApiClient {
    * POST 请求
    * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async post<T = any>(url: string, data?: any): Promise<T> {
+  async post<T = unknown>(url: string, data?: unknown): Promise<T> {
     const response = await this.instance.post<T>(url, data);
     return response.data;
   }
@@ -238,7 +244,7 @@ class ApiClient {
    * PUT 请求
    * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async put<T = any>(url: string, data?: any): Promise<T> {
+  async put<T = unknown>(url: string, data?: unknown): Promise<T> {
     const response = await this.instance.put<T>(url, data);
     return response.data;
   }
@@ -247,7 +253,7 @@ class ApiClient {
    * PATCH 请求
    * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async patch<T = any>(url: string, data?: any): Promise<T> {
+  async patch<T = unknown>(url: string, data?: unknown): Promise<T> {
     const response = await this.instance.patch<T>(url, data);
     return response.data;
   }
@@ -256,7 +262,7 @@ class ApiClient {
    * DELETE 请求
    * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async delete<T = any>(url: string): Promise<T> {
+  async delete<T = unknown>(url: string): Promise<T> {
     const response = await this.instance.delete<T>(url);
     return response.data;
   }

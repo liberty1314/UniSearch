@@ -157,10 +157,10 @@ const App: React.FC = () => {
       <PageLoader isLoading={isInitialLoading} />
 
       <Router>
-        <div className="bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+        <div className="bg-gray-50 dark:bg-slate-950 transition-colors duration-200">
           {/* 路由变化时自动滚动到顶部 */}
           <ScrollToTop />
-          
+
           <Navbar />
 
           {/* 系统公告提供者 - 用户登录后自动检查并显示公告 */}
@@ -201,10 +201,10 @@ const App: React.FC = () => {
                   <div className="min-h-screen flex items-center justify-center pt-16">
                     <div className="text-center">
                       <h1 className="text-6xl font-bold text-gray-300 dark:text-gray-600 mb-4">404</h1>
-                      <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-4">
+                      <h2 className="text-2xl font-semibold text-gray-700 dark:text-slate-300 mb-4">
                         页面未找到
                       </h2>
-                      <p className="text-gray-500 dark:text-gray-400 mb-8">
+                      <p className="text-gray-500 dark:text-slate-400 mb-8">
                         抱歉，您访问的页面不存在。
                       </p>
                       <Link

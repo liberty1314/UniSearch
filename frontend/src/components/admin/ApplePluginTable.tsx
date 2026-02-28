@@ -68,7 +68,7 @@ export const ApplePluginTable: React.FC<ApplePluginTableProps> = ({
               : plugin.status === 'inactive'
                 ? {
                   text: '不活跃',
-                  color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+                  color: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',
                   dotColor: 'bg-gray-400',
                 }
                 : {

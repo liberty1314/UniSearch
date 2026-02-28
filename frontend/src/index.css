@@ -385,7 +385,9 @@ body {
 }
 
 .auth-bg-grid {
-  @apply absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none;
+  @apply absolute inset-0 pointer-events-none;
+  background-image: linear-gradient(to right, #80808012 1px, transparent 1px), linear-gradient(to bottom, #80808012 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 .auth-bg-particle {
@@ -501,7 +503,44 @@ body {
   animation: auth-fade-in-up 0.4s ease-out forwards;
 }
 
+.auth-switch-stage {
+  transform-origin: center;
+  will-change: transform, opacity, filter;
+}
+
+.auth-switch-sheen-track {
+  @apply absolute inset-0 pointer-events-none overflow-hidden rounded-2xl;
+  z-index: 20;
+  mix-blend-mode: screen;
+}
+
+.auth-switch-sheen {
+  position: absolute;
+  top: -35%;
+  left: -40%;
+  width: 36%;
+  height: 170%;
+  transform: skewX(-22deg);
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.08) 30%,
+      rgba(255, 255, 255, 0.42) 50%,
+      rgba(255, 255, 255, 0.12) 70%,
+      rgba(255, 255, 255, 0) 100%);
+  filter: blur(2px);
+}
+
+.auth-icon-intro {
+  animation: auth-icon-intro 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.auth-sparkle-intro {
+  animation: auth-sparkle-intro 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.08s;
+}
+
 @keyframes auth-float {
+
   0%,
   100% {
     transform: translateY(0) translateX(0);
@@ -521,6 +560,7 @@ body {
 }
 
 @keyframes auth-gradient {
+
   0%,
   100% {
     background-position: 0% 50%;
@@ -566,6 +606,40 @@ body {
   100% {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes auth-icon-intro {
+  0% {
+    opacity: 0;
+    transform: scale(0.86) translateY(4px);
+  }
+
+  70% {
+    opacity: 1;
+    transform: scale(1.05) translateY(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes auth-sparkle-intro {
+  0% {
+    opacity: 0;
+    transform: scale(0.7) rotate(-12deg);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scale(1.08) rotate(4deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
   }
 }
 
@@ -754,7 +828,7 @@ body {
 }
 
 .dark .glass-card-3d {
-  background: rgba(17, 24, 39, 0.7);
+  background: rgba(15, 23, 42, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow:
     0 12px 30px rgba(0, 0, 0, 0.35),
@@ -789,7 +863,7 @@ body {
 }
 
 .dark .glass {
-  background: rgba(17, 24, 39, 0.6);
+  background: rgba(30, 41, 59, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -802,7 +876,7 @@ body {
 }
 
 .dark .glass-panel {
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(30, 41, 59, 0.6);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -813,6 +887,22 @@ body {
 
 .dark .focus-glow-nebula {
   box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-switch-stage {
+    filter: none !important;
+    transform: none !important;
+  }
+
+  .auth-switch-sheen-track {
+    display: none !important;
+  }
+
+  .auth-icon-intro,
+  .auth-sparkle-intro {
+    animation: none !important;
+  }
 }
 
 /* Toast 样式自定义 */

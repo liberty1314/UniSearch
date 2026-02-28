@@ -11,6 +11,7 @@ import {
 } from '../ui/alert-dialog';
 import { toast } from 'sonner';
 import { AuthService } from '../../services/authService';
+import { getErrorDataError } from '@/lib/error';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 
@@ -63,9 +64,9 @@ export const BatchDeleteKeysDialog: React.FC<BatchDeleteKeysDialogProps> = ({
       // 直接关闭对话框
       setIsSubmitting(false);
       onOpenChange(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error('批量删除 API Key 失败:', error);
-      const errorMessage = error.response?.data?.error || '批量删除失败，请稍后重试';
+      const errorMessage = getErrorDataError(error) || '批量删除失败，请稍后重试';
       toast.error(errorMessage);
       setIsSubmitting(false);
     }

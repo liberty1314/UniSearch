@@ -65,22 +65,22 @@ export const AppleButton = forwardRef<HTMLButtonElement, AppleButtonProps>(
       ),
       secondary: cn(
         'bg-gray-100 hover:bg-gray-200',
-        'dark:bg-gray-800 dark:hover:bg-gray-700',
+        'dark:bg-slate-800 dark:hover:bg-slate-700',
         'text-gray-900 dark:text-gray-100',
-        'border border-gray-200 dark:border-gray-700',
+        'border border-gray-200 dark:border-slate-700',
         'focus:ring-gray-500/20 dark:focus:ring-gray-400/20'
       ),
       outline: cn(
         'bg-transparent hover:bg-gray-100',
-        'dark:hover:bg-gray-800',
-        'text-gray-700 dark:text-gray-300',
-        'border border-gray-300 dark:border-gray-600',
+        'dark:hover:bg-slate-800',
+        'text-gray-700 dark:text-slate-300',
+        'border border-gray-300 dark:border-slate-700',
         'focus:ring-gray-500/20 dark:focus:ring-gray-400/20'
       ),
       ghost: cn(
         'bg-transparent hover:bg-gray-100',
-        'dark:hover:bg-gray-800',
-        'text-gray-700 dark:text-gray-300',
+        'dark:hover:bg-slate-800',
+        'text-gray-700 dark:text-slate-300',
         'focus:ring-gray-500/20 dark:focus:ring-gray-400/20'
       ),
       destructive: cn(
@@ -100,24 +100,24 @@ export const AppleButton = forwardRef<HTMLButtonElement, AppleButtonProps>(
       lg: 'px-8 py-4 text-lg min-h-[52px]',
     };
 
-    const MotionButton = motion.button;
-
     return (
-      <MotionButton
-        ref={ref}
-        type={type}
-        disabled={isDisabled}
+      <motion.div
         whileTap={!isDisabled ? { scale: 0.95 } : undefined}
         whileHover={!isDisabled ? { scale: 1.02 } : undefined}
         transition={{ duration: 0.15, ease: 'easeOut' }}
-        className={cn(
-          baseStyles,
-          variantStyles[variant],
-          sizeStyles[size],
-          className
-        )}
-        {...(props as any)}
       >
+        <button
+          ref={ref}
+          type={type}
+          disabled={isDisabled}
+          className={cn(
+            baseStyles,
+            variantStyles[variant],
+            sizeStyles[size],
+            className
+          )}
+          {...props}
+        >
         {/* Loading 状态 */}
         {loading && (
           <motion.div
@@ -138,7 +138,8 @@ export const AppleButton = forwardRef<HTMLButtonElement, AppleButtonProps>(
         >
           {children}
         </span>
-      </MotionButton>
+        </button>
+      </motion.div>
     );
   }
 );

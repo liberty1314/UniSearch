@@ -4,13 +4,12 @@ import {
   IoListOutline,
   IoAlertCircleOutline,
   IoSearchOutline,
-  IoCopyOutline,
-  IoOpenOutline,
   IoKeyOutline,
   IoTimeOutline
 } from 'react-icons/io5';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchStore } from '@/stores/searchStore';
+import type { MergedLink } from '@/types/api';
 import { CloudType, CloudTypeValue } from '@/types/api';
 import { cn } from '@/lib/utils';
 import PasswordModal from './PasswordModal';
@@ -22,6 +21,10 @@ interface SearchResultsProps {
 }
 
 type ViewMode = 'list' | 'grid';
+
+interface SearchResultLink extends MergedLink {
+  size?: number | string;
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -172,8 +175,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       [CloudType.MAGNET]: {
         name: '磁力链接',
         bg: 'bg-gray-600/10 dark:bg-gray-600/20',
-        text: 'text-gray-700 dark:text-gray-300',
-        border: 'border-gray-300/50 dark:border-gray-600/50',
+        text: 'text-gray-700 dark:text-slate-300',
+        border: 'border-gray-300/50 dark:border-slate-700/50',
         icon: 'text-gray-600'
       },
     };
@@ -190,13 +193,13 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   const allSortedResults = useMemo(() => {
     if (!searchResults?.merged_by_type) return [];
 
-    const allResults: Array<{ link: any; cloudType: string; priority: number; datetime: number }> = [];
+    const allResults: Array<{ link: SearchResultLink; cloudType: string; priority: number; datetime: number }> = [];
 
     // 收集所有结果并添加优先级和时间信息
     Object.entries(searchResults.merged_by_type).forEach(([cloudType, links]) => {
       const priority = getCloudTypePriority(cloudType as CloudTypeValue);
 
-      links.forEach((link: any) => {
+      links.forEach((link: SearchResultLink) => {
         const datetime = link.datetime ? new Date(link.datetime).getTime() : 0;
         allResults.push({ link, cloudType, priority, datetime });
       });
@@ -259,7 +262,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     return date.toLocaleDateString();
   };
 
-  const renderResultItem = (item: { link: any; cloudType: string; datetime: number }, index: number) => {
+  const renderResultItem = (item: { link: SearchResultLink; cloudType: string; datetime: number }) => {
     const { link, cloudType } = item;
     const linkId = `${cloudType}-${link.url}`;
     const cloudInfo = getCloudTypeInfo(cloudType as CloudTypeValue);
@@ -284,15 +287,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       }
     };
 
-    // 复制链接功能
-    const handleCopyLink = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      navigator.clipboard.writeText(link.url).then(() => {
-        // 可以添加一个toast提示
-        // toast.success('链接已复制');
-      });
-    };
-
     if (viewMode === 'grid') {
       return (
         <motion.div
@@ -304,7 +298,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         >
           <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-gray-800/40 dark:to-gray-900/10 rounded-[1.5rem] blur opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10" />
 
-          <div className="h-full flex flex-col p-5 bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl rounded-[1.5rem] border border-white/50 dark:border-gray-700/50 shadow-sm hover:shadow-xl hover:shadow-blue-200/20 dark:hover:shadow-blue-900/20 transition-all duration-300 cursor-pointer overflow-hidden">
+          <div className="h-full flex flex-col p-5 bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-[1.5rem] border border-white/50 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-blue-200/20 dark:hover:shadow-blue-900/20 transition-all duration-300 cursor-pointer overflow-hidden">
             {/* 顶部装饰条 */}
             <div className={cn("absolute top-0 left-0 right-0 h-1 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300",
               cloudInfo.text.includes("blue") ? "from-blue-400 to-cyan-300" :
@@ -321,20 +315,20 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
             </div>
 
             {/* 元数据行 */}
-            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-4 px-1">
+            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-slate-400 mb-4 px-1">
               <div className="flex items-center gap-1.5">
                 <IoTimeOutline className="w-3.5 h-3.5" />
                 <span>{formatResultTime(item.datetime)}</span>
               </div>
               {link.size && (
-                <div className="bg-gray-100 dark:bg-gray-700/50 px-2 py-0.5 rounded-full">
+                <div className="bg-gray-100 dark:bg-slate-800/50 px-2 py-0.5 rounded-full">
                   {link.size}
                 </div>
               )}
             </div>
 
             {/* 底部功能区 */}
-            <div className="mt-auto pt-3 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
+            <div className="mt-auto pt-3 border-t border-gray-100 dark:border-white/10 flex items-center justify-between">
               {/* 网盘类型 */}
               <div className={cn(
                 "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
@@ -369,7 +363,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         variants={itemVariants}
         whileHover={{ x: 5 }}
         onClick={handleLinkClick}
-        className="group relative p-4 bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl border border-white/50 dark:border-gray-700/50 shadow-sm hover:shadow-lg hover:shadow-blue-200/10 dark:hover:shadow-blue-900/10 cursor-pointer overflow-hidden transition-all duration-300"
+        className="group relative p-4 bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/50 dark:border-white/10 shadow-sm hover:shadow-lg hover:shadow-blue-200/10 dark:hover:shadow-blue-900/10 cursor-pointer overflow-hidden transition-all duration-300"
       >
         <div className="flex items-center gap-5">
           {/* 左侧图标/类型 */}
@@ -386,7 +380,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
             <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg line-clamp-1 mb-1 group-hover:text-apple-blue transition-colors">
               {link.note || '未命名资源'}
             </h3>
-            <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-slate-400">
               <span className={cn("px-2 py-0.5 rounded-md text-xs font-medium bg-opacity-50", cloudInfo.bg, cloudInfo.text)}>
                 {cloudInfo.name}
               </span>
@@ -427,7 +421,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           </div>
         </div>
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">搜索出错</h3>
-        <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto leading-relaxed mb-6">{error}</p>
+        <p className="text-gray-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed mb-6">{error}</p>
         <button
           onClick={() => performSearch(searchParams)}
           className="px-6 py-2.5 bg-gradient-to-r from-apple-blue to-purple-600 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 transform hover:scale-105 active:scale-95"
@@ -447,16 +441,16 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       >
         <div className="relative mb-8">
           <div className="absolute inset-0 bg-gradient-to-r from-gray-400/20 to-gray-500/20 rounded-full blur-xl"></div>
-          <div className="relative text-gray-400 bg-white dark:bg-gray-800/50 rounded-full p-8 w-32 h-32 mx-auto flex items-center justify-center shadow-lg border border-white/50 dark:border-gray-700/50 backdrop-blur-sm">
+          <div className="relative text-gray-400 bg-white dark:bg-slate-800/50 rounded-full p-8 w-32 h-32 mx-auto flex items-center justify-center shadow-lg border border-white/50 dark:border-white/10 backdrop-blur-sm">
             <IoSearchOutline className="w-16 h-16" />
           </div>
         </div>
         <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">未找到相关资源</h3>
-        <p className="text-gray-500 dark:text-gray-400 max-w-lg mx-auto leading-relaxed mb-8">
+        <p className="text-gray-500 dark:text-slate-400 max-w-lg mx-auto leading-relaxed mb-8">
           很抱歉，没有找到与您搜索关键词"<span className="text-apple-blue">{searchParams.keyword}</span>"相关的资源。
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <div className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="text-sm text-gray-500 dark:text-slate-400">
             热门搜索：
           </div>
           <div className="flex flex-wrap gap-2 justify-center">
@@ -464,7 +458,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
               <button
                 key={keyword}
                 onClick={() => performSearch({ ...searchParams, keyword })}
-                className="px-4 py-1.5 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:bg-apple-blue hover:text-white hover:border-apple-blue transition-all duration-300"
+                className="px-4 py-1.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 rounded-lg text-sm hover:bg-apple-blue hover:text-white hover:border-apple-blue transition-all duration-300"
               >
                 {keyword}
               </button>
@@ -478,11 +472,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   if (!searchParams.keyword) {
     return (
       <div className={cn('text-center py-12', className)}>
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-400 mb-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gray-100 dark:bg-slate-800 text-gray-400 mb-4">
           <IoSearchOutline className="w-8 h-8" />
         </div>
-        <div className="text-gray-500 dark:text-gray-400 mb-2 font-medium">开始您的探索之旅</div>
-        <div className="text-gray-400 dark:text-gray-500 text-sm">
+        <div className="text-gray-500 dark:text-slate-400 mb-2 font-medium">开始您的探索之旅</div>
+        <div className="text-gray-400 dark:text-slate-500 text-sm">
           输入关键词搜索全网优质网盘资源
         </div>
       </div>
@@ -496,10 +490,10 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between bg-white/50 dark:bg-gray-900/50 backdrop-blur-md p-4 rounded-2xl border border-white/50 dark:border-gray-700/30 shadow-sm"
+          className="flex items-center justify-between bg-white/50 dark:bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/50 dark:border-white/5 shadow-sm"
         >
           <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+            <div className="text-sm text-gray-600 dark:text-slate-400 flex items-center gap-2">
               <span className="flex items-center justify-center w-6 h-6 rounded-full bg-apple-blue/10 text-apple-blue text-xs font-bold">
                 {allSortedResults.length}
               </span>
@@ -513,14 +507,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="bg-gray-100/50 dark:bg-gray-800/50 p-1 rounded-xl flex items-center border border-gray-200/50 dark:border-gray-700/50">
+            <div className="bg-gray-100/50 dark:bg-slate-800/50 p-1 rounded-xl flex items-center border border-gray-200/50 dark:border-white/10">
               <button
                 onClick={() => setViewMode('list')}
                 className={cn(
                   'p-2 rounded-lg transition-all duration-300',
                   viewMode === 'list'
-                    ? 'bg-white dark:bg-gray-700 text-apple-blue shadow-sm scale-105'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    ? 'bg-white dark:bg-slate-700 text-apple-blue shadow-sm scale-105'
+                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-gray-200'
                 )}
                 title="列表视图"
               >
@@ -531,8 +525,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
                 className={cn(
                   'p-2 rounded-lg transition-all duration-300',
                   viewMode === 'grid'
-                    ? 'bg-white dark:bg-gray-700 text-apple-blue shadow-sm scale-105'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    ? 'bg-white dark:bg-slate-700 text-apple-blue shadow-sm scale-105'
+                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-gray-200'
                 )}
                 title="网格视图"
               >
@@ -555,8 +549,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         )}
       >
         <AnimatePresence mode='popLayout'>
-          {displayedResults.map((item, index) =>
-            renderResultItem(item, index)
+          {displayedResults.map((item) =>
+            renderResultItem(item)
           )}
         </AnimatePresence>
       </motion.div>
@@ -578,7 +572,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           whileInView={{ opacity: 1 }}
           className="text-center py-8"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100/50 dark:bg-gray-800/50 rounded-full text-xs text-gray-500 dark:text-gray-400">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100/50 dark:bg-slate-800/50 rounded-full text-xs text-gray-500 dark:text-slate-400">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
             已加载全部 {allSortedResults.length} 条结果
           </div>

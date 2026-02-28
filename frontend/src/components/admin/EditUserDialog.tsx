@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import type { UserInfo } from '@/types/api';
+import { getErrorDataError, getErrorMessage, getErrorStatus } from '@/lib/error';
 
 /**
  * 编辑用户对话框组件属性
@@ -131,24 +132,25 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }: EditUser
 
             // 关闭对话框
             onOpenChange(false);
-        } catch (error: any) {
+        } catch (error) {
             console.error('更新用户失败:', error);
 
             // 显示错误提示
-            if (error.response?.status === 401) {
+            const status = getErrorStatus(error);
+            if (status === 401) {
                 toast.error('未授权：请重新登录');
-            } else if (error.response?.status === 403) {
-                const errorMsg = error.response?.data?.error || '权限不足';
+            } else if (status === 403) {
+                const errorMsg = getErrorDataError(error) || '权限不足';
                 toast.error(errorMsg);
-            } else if (error.response?.status === 404) {
+            } else if (status === 404) {
                 toast.error('用户不存在');
-            } else if (error.response?.status === 409) {
+            } else if (status === 409) {
                 toast.error('用户名已存在，请使用其他用户名');
-            } else if (error.response?.status === 400) {
-                const errorMsg = error.response?.data?.error || '请检查输入';
+            } else if (status === 400) {
+                const errorMsg = getErrorDataError(error) || '请检查输入';
                 toast.error('参数错误：' + errorMsg);
             } else {
-                toast.error('更新失败：' + (error.message || '未知错误'));
+                toast.error('更新失败：' + getErrorMessage(error));
             }
         } finally {
             setIsLoading(false);
@@ -232,26 +234,26 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }: EditUser
                                 不能修改自己的角色
                             </p>
                         ) : (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                            <p className="text-xs text-gray-500 dark:text-slate-400">
                                 管理员拥有系统管理权限，普通用户只能使用搜索功能
                             </p>
                         )}
                     </div>
 
                     {/* 用户信息显示 */}
-                    <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-slate-700">
                         <div className="flex justify-between text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">用户 ID:</span>
+                            <span className="text-gray-500 dark:text-slate-400">用户 ID:</span>
                             <span className="font-medium">{user.id}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">创建时间:</span>
+                            <span className="text-gray-500 dark:text-slate-400">创建时间:</span>
                             <span className="font-medium">
                                 {new Date(user.created_at).toLocaleString('zh-CN')}
                             </span>
                         </div>
                         <div className="flex justify-between text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">最后登录:</span>
+                            <span className="text-gray-500 dark:text-slate-400">最后登录:</span>
                             <span className="font-medium">
                                 {user.last_login_at
                                     ? new Date(user.last_login_at).toLocaleString('zh-CN')

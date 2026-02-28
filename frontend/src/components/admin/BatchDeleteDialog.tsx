@@ -12,6 +12,7 @@ import {
 import { toast } from 'sonner';
 import { UserService } from '../../services/userService';
 import type { UserInfo } from '../../types/api';
+import { getErrorDataError } from '@/lib/error';
 import { Loader2, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 
@@ -95,9 +96,9 @@ export const BatchDeleteDialog: React.FC<BatchDeleteDialogProps> = ({
       if (operationResult.success_count > 0) {
         onSuccess();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('批量删除用户失败:', error);
-      const errorMessage = error.response?.data?.error || '批量删除失败，请稍后重试';
+      const errorMessage = getErrorDataError(error) || '批量删除失败，请稍后重试';
       toast.error(errorMessage);
       setIsSubmitting(false);
     } finally {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Key, Activity, X, Menu, Users, Settings, Megaphone } from 'lucide-react';
+import { Key, Activity, X, Users, Settings, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { useAdminStore } from '@/stores/adminStore';
@@ -151,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                                     UniSearch
                                 </h2>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                <p className="text-xs text-gray-500 dark:text-slate-400">
                                     管理后台
                                 </p>
                             </div>
@@ -162,7 +162,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                         {/* 导航列表 */}
                         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto relative">
-                            {navItems.map((item, index) => {
+                            {navItems.map((item) => {
                                 const isActive = currentView === item.id;
 
                                 return (
@@ -174,7 +174,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             transition-colors duration-300
                                             ${isActive
                                                 ? 'text-white font-medium'
-                                                : 'text-gray-600 dark:text-gray-400 hover:text-nebula-600 dark:hover:text-nebula-300'
+                                                : 'text-gray-600 dark:text-slate-400 hover:text-nebula-600 dark:hover:text-nebula-300'
                                             }
                                         `}
                                         initial={false}
@@ -245,7 +245,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                         {/* 侧边栏底部信息 */}
                         <div className="flex-shrink-0 p-4 pt-2">
-                            <div className="text-xs text-gray-500 dark:text-gray-400 text-center space-y-1">
+                            <div className="text-xs text-gray-500 dark:text-slate-400 text-center space-y-1">
                                 <p className="font-medium">UniSearch v1.0.0</p>
                                 <p className="text-[10px]">© 2026 All Rights Reserved</p>
                             </div>
@@ -261,7 +261,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className="
                         lg:hidden
                         w-64 h-full
-                        bg-white dark:bg-gray-900
+                        bg-white dark:bg-slate-950
                         glass-panel
                         border-r border-white/20 dark:border-white/10
                         flex flex-col
@@ -283,7 +283,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                                     UniSearch
                                 </h2>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                <p className="text-xs text-gray-500 dark:text-slate-400">
                                     管理后台
                                 </p>
                             </div>
@@ -302,7 +302,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                     {/* 导航列表 */}
                     <nav className="flex-1 p-4 space-y-2 overflow-y-auto relative">
-                        {navItems.map((item, index) => {
+                        {navItems.map((item) => {
                             const isActive = currentView === item.id;
 
                             return (
@@ -314,7 +314,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         transition-colors duration-300
                                         ${isActive
                                             ? 'text-white font-medium'
-                                            : 'text-gray-600 dark:text-gray-400 hover:text-nebula-600 dark:hover:text-nebula-300'
+                                            : 'text-gray-600 dark:text-slate-400 hover:text-nebula-600 dark:hover:text-nebula-300'
                                         }
                                     `}
                                     initial={false}
@@ -379,7 +379,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                     {/* 侧边栏底部信息 */}
                     <div className="flex-shrink-0 p-4 border-t border-white/10 dark:border-white/5">
-                        <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                        <div className="text-xs text-gray-500 dark:text-slate-400 text-center">
                             <p>UniSearch v1.0.0</p>
                             <p className="mt-1">© 2026 All Rights Reserved</p>
                         </div>

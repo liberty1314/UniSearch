@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthService } from '@/services/authService';
 import { UserService } from '@/services/userService';
 import { useAuthStore } from '@/stores/authStore';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import type { APIKeyInfo, UserInfo } from '@/types/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -38,7 +37,7 @@ import { SystemInfoView } from '@/components/admin/SystemInfoView';
 import { SystemSettingsView } from '@/components/admin/SystemSettingsView';
 import { AnnouncementManagement } from '@/components/admin/AnnouncementManagement';
 import { TableFilterDropdown } from '@/components/admin/TableFilterDropdown';
-import { Plus, RefreshCw, Key, AlertCircle, CheckCircle2, Activity, Search, Filter, X, Clock, Users, Shield, UserCheck, UserX } from 'lucide-react';
+import { Plus, RefreshCw, Key, AlertCircle, CheckCircle2, Activity, Search, Filter, X, Users, Shield, UserCheck, UserX } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { AppleApiKeyTable } from '@/components/admin/AppleApiKeyTable';
 import { ApplePagination } from '@/components/admin/ApplePagination';
@@ -128,7 +127,6 @@ const Admin: React.FC = () => {
     const [userSearchInput, setUserSearchInput] = useState<string>('');
     const [userActiveSearchKeyword, setUserActiveSearchKeyword] = useState<string>('');
     const [userRoleFilter, setUserRoleFilter] = useState<string[]>([]);
-    const [userStatusFilter, setUserStatusFilter] = useState<string[]>([]);
 
     // 分页状态
     const [currentPage, setCurrentPage] = useState<number>(1);
@@ -170,6 +168,17 @@ const Admin: React.FC = () => {
     // API Keys 总页数（基于服务端返回的 total）
     const apiKeyTotalPages = Math.ceil(totalApiKeys / apiKeyPageSize);
 
+    // 提供给稳定回调的最新值引用，避免将 loadApiKeys 绑定到可变筛选状态
+    const apiKeyCurrentPageRef = useRef(apiKeyCurrentPage);
+    const apiKeyPageSizeRef = useRef(apiKeyPageSize);
+    const apiKeySearchKeywordRef = useRef(apiKeySearchKeyword);
+    const statusFilterRef = useRef(statusFilter);
+
+    apiKeyCurrentPageRef.current = apiKeyCurrentPage;
+    apiKeyPageSizeRef.current = apiKeyPageSize;
+    apiKeySearchKeywordRef.current = apiKeySearchKeyword;
+    statusFilterRef.current = statusFilter;
+
     /**
      * 检查管理员权限
      */
@@ -208,10 +217,10 @@ const Admin: React.FC = () => {
         setIsLoadingKeys(true);
         try {
             const result = await AuthService.listApiKeysPaginated(
-                page ?? apiKeyCurrentPage,
-                size ?? apiKeyPageSize,
-                keyword !== undefined ? keyword : apiKeySearchKeyword,
-                status !== undefined ? status : statusFilter
+                page ?? apiKeyCurrentPageRef.current,
+                size ?? apiKeyPageSizeRef.current,
+                keyword !== undefined ? keyword : apiKeySearchKeywordRef.current,
+                status !== undefined ? status : statusFilterRef.current
             );
             setPagedApiKeys(result.keys);
             setTotalApiKeys(result.total);
@@ -233,7 +242,7 @@ const Admin: React.FC = () => {
         } finally {
             setIsLoadingKeys(false);
         }
-    }, [apiKeyCurrentPage, apiKeyPageSize, apiKeySearchKeyword, statusFilter, logout, navigate]);
+    }, [logout, navigate]);
 
     /**
      * 加载用户列表
@@ -290,8 +299,7 @@ const Admin: React.FC = () => {
         if (isAdmin) {
             loadApiKeys(1);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAdmin]);
+    }, [isAdmin, loadApiKeys]);
 
     /**
      * 防抖关键词/状态/分页变化时重新加载（重置到第 1 页）
@@ -301,8 +309,7 @@ const Admin: React.FC = () => {
             setApiKeyCurrentPage(1);
             loadApiKeys(1, apiKeyPageSize, apiKeySearchKeyword, statusFilter);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [apiKeySearchKeyword, statusFilter]);
+    }, [apiKeySearchKeyword, statusFilter, isAdmin, currentView, apiKeyPageSize, loadApiKeys]);
 
     /**
      * 翻页时重新加载（保持当前筛选条件）
@@ -311,8 +318,7 @@ const Admin: React.FC = () => {
         if (isAdmin && currentView === 'api-keys') {
             loadApiKeys(apiKeyCurrentPage, apiKeyPageSize, apiKeySearchKeyword, statusFilter);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [apiKeyCurrentPage, apiKeyPageSize]);
+    }, [apiKeyCurrentPage, apiKeyPageSize, isAdmin, currentView, apiKeySearchKeyword, statusFilter, loadApiKeys]);
 
     /**
      * 加载用户数据（当视图切换到用户管理或搜索/筛选条件变化时）
@@ -549,14 +555,6 @@ const Admin: React.FC = () => {
         setApiKeyCurrentPage(1); // 重置到第一页
     };
 
-    /**
-     * 判断是否全选（仅针对当前页）
-     */
-    const isAllSelected = (): boolean => {
-        const selectable = pagedApiKeys.filter(k => !k.is_permanent);
-        return selectable.length > 0 && selectable.every(key => selectedKeys.has(key.key));
-    };
-
     // ============ 用户管理操作处理函数 ============
 
     /**
@@ -688,24 +686,6 @@ const Admin: React.FC = () => {
     }, []);
 
     /**
-     * 处理全选/取消全选用户
-     * 验证需求: 7.1
-     */
-    const handleSelectAllUsers = useCallback((checked: boolean) => {
-        if (checked) {
-            // 全选：选中所有用户（排除当前用户）
-            const currentUsername = useAuthStore.getState().username;
-            const selectableUserIds = users
-                .filter(u => u.username !== currentUsername)
-                .map(u => u.id);
-            setSelectedUsers(new Set(selectableUserIds));
-        } else {
-            // 取消全选
-            setSelectedUsers(new Set());
-        }
-    }, [users]);
-
-    /**
      * 处理批量删除用户
      * 验证需求: 7.2
      */
@@ -781,7 +761,7 @@ const Admin: React.FC = () => {
     };
 
     return (
-        <div className="fixed inset-0 top-16 flex w-full bg-gradient-to-br from-gray-50 via-gray-50 to-nebula-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-nebula-950/20">
+        <div className="fixed inset-0 top-16 flex w-full bg-gradient-to-br from-gray-50 via-gray-50 to-nebula-50/30 dark:from-slate-950 dark:via-slate-950 dark:to-nebula-950/20">
             {/* 侧边栏占位容器 - 桌面端 */}
             <div className="hidden lg:block flex-shrink-0 w-[288px]" />
 
@@ -839,8 +819,8 @@ const Admin: React.FC = () => {
                             </div>
 
                             {/* API Key 管理卡片 */}
-                            <Card className="border-gray-100 dark:border-gray-700/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-                                <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50 min-h-[88px]">
+                            <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+                                <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/50 min-h-[88px]">
                                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                                         <div className="flex-shrink-0">
                                             <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
@@ -1124,8 +1104,8 @@ const Admin: React.FC = () => {
                             </div>
 
                             {/* 用户管理卡片 */}
-                            <Card className="border-gray-100 dark:border-gray-700/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-                                <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50 min-h-[88px]">
+                            <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+                                <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/50 min-h-[88px]">
                                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                                         <div className="flex-shrink-0">
                                             <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">

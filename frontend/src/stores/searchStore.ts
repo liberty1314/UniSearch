@@ -5,6 +5,7 @@ import type {
   SearchResponse,
 } from '@/types/api';
 import { SearchService } from '@/services/searchService';
+import { getErrorCode, getErrorMessage } from '@/lib/error';
 
 /**
  * 搜索状态接口
@@ -130,11 +131,12 @@ export const useSearchStore = create<SearchState>()(devtools(
         if (finalParams.keyword) {
           get().addToHistory(finalParams.keyword);
         }
-      } catch (error: any) {
+      } catch (error) {
         // 特殊处理：如果是 401 错误且提示需要绑定 API Key
-        if (error.code === 401 || error.code === 404) {
+        const errorCode = getErrorCode(error);
+        if (errorCode === 401 || errorCode === 404) {
           set({
-            error: error.message || '搜索失败',
+            error: getErrorMessage(error, '搜索失败'),
             isLoading: false,
             searchResults: null,
           });
@@ -143,7 +145,7 @@ export const useSearchStore = create<SearchState>()(devtools(
         }
 
         set({
-          error: error.message || '搜索失败',
+          error: getErrorMessage(error, '搜索失败'),
           isLoading: false,
           searchResults: null,
         });

@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { IoCloseOutline, IoTimeOutline } from 'react-icons/io5';
+import { IoCloseOutline } from 'react-icons/io5';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useSearchStore, useSearchHistory } from '@/stores/searchStore';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 import { toStyleVars } from '@/lib/styleVars';
+import { getErrorCode, getErrorMessage } from '@/lib/error';
 import { Button as StatefulButton, StatefulButtonHandle } from '@/components/ui/stateful-button';
-import { twMerge } from "tailwind-merge";
 
 interface SearchBoxProps {
   className?: string;
@@ -85,9 +85,10 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
       await buttonRef.current?.run(() => performSearch({ keyword }));
       onSearch?.(keyword);
       setShowHistory(false);
-    } catch (error: any) {
+    } catch (error) {
       // 处理搜索错误
-      if (error.code === 401 || error.code === 404) {
+      const errorCode = getErrorCode(error);
+      if (errorCode === 401 || errorCode === 404) {
         // 401/404 错误：需要绑定 API Key
         toast.warning('请先绑定 API Key 后再进行搜索', {
           duration: 3000,
@@ -95,7 +96,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
         navigate('/settings/apikey');
       } else {
         // 其他错误
-        toast.error(error.message || '搜索失败');
+        toast.error(getErrorMessage(error, '搜索失败'));
       }
     }
   };
@@ -176,15 +177,16 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     try {
       await buttonRef.current?.run(() => performSearch({ keyword }));
       onSearch?.(keyword);
-    } catch (error: any) {
+    } catch (error) {
       // 处理搜索错误
-      if (error.code === 401 || error.code === 404) {
+      const errorCode = getErrorCode(error);
+      if (errorCode === 401 || errorCode === 404) {
         toast.warning('请先绑定 API Key 后再进行搜索', {
           duration: 3000,
         });
         navigate('/settings/apikey');
       } else {
-        toast.error(error.message || '搜索失败');
+        toast.error(getErrorMessage(error, '搜索失败'));
       }
     }
     // 选择历史后保持下拉框打开，便于继续点击其他记录
@@ -228,7 +230,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
         {inputValue && (
           <button
             onClick={handleClear}
-            className="absolute right-[100px] sm:right-[120px] top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 z-20"
+            className="absolute right-[100px] sm:right-[120px] top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 z-20"
             aria-label="清空输入"
           >
             <IoCloseOutline className="w-5 h-5" />
@@ -251,7 +253,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
       {/* 搜索历史下拉菜单 */}
       {showHistory && searchHistory.length > 0 && (
         <div
-          className="absolute top-full left-0 right-0 mt-3 bg-white/70 dark:bg-gray-900/70 backdrop-blur-2xl ring-1 ring-black/5 dark:ring-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 max-h-72 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300"
+          className="absolute top-full left-0 right-0 mt-3 bg-white/70 dark:bg-slate-900/60 backdrop-blur-2xl ring-1 ring-black/5 dark:ring-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 max-h-72 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300"
           onMouseEnter={() => setIsHoveringHistory(true)}
           onMouseLeave={() => {
             setIsHoveringHistory(false);
@@ -259,7 +261,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           }}
         >
           <div className="px-5 py-3 border-b border-black/5 dark:border-white/5 flex items-center justify-between bg-black/[0.02] dark:bg-white/[0.02]">
-            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wider uppercase">
+            <span className="text-xs font-semibold text-gray-500 dark:text-slate-400 tracking-wider uppercase">
               最近搜索
             </span>
             <button
@@ -277,20 +279,20 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
                   key={index}
                   onClick={() => handleSelectHistory(keyword)}
                   className="group/chip relative inline-flex items-center px-4 py-2 rounded-full cursor-pointer transition-all duration-300 ease-out 
-                             bg-white/50 hover:bg-nebula-50/80 dark:bg-gray-800/50 dark:hover:bg-nebula-500/20 
+                             bg-white/50 hover:bg-nebula-50/80 dark:bg-slate-800/50 dark:hover:bg-nebula-500/20 
                              border border-black/5 dark:border-white/5 hover:border-nebula-200/80 dark:hover:border-nebula-500/40
                              shadow-sm hover:shadow-md hover:shadow-nebula-500/10 dark:shadow-black/20 history-chip-delay
                              backdrop-blur-md hover:scale-105 active:scale-95"
                   style={toStyleVars({ '--history-chip-delay': `${index * 30}ms` })}
                 >
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover/chip:text-nebula-600 dark:group-hover/chip:text-nebula-300 transition-colors truncate max-w-[12rem]">
+                  <span className="text-sm font-medium text-gray-700 dark:text-slate-300 group-hover/chip:text-nebula-600 dark:group-hover/chip:text-nebula-300 transition-colors truncate max-w-[12rem]">
                     {keyword}
                   </span>
 
                   {/* 右上角删除按钮 */}
                   <button
                     onClick={(e) => handleDeleteHistoryItem(e, keyword)}
-                    className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-white/90 dark:bg-gray-800/90 border border-black/5 dark:border-white/10 shadow-sm text-gray-400 opacity-0 scale-75 group-hover/chip:opacity-100 group-hover/chip:scale-100 hover:text-red-500 hover:border-red-200 dark:hover:border-red-800 transition-all duration-200 backdrop-blur-md"
+                    className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-white/90 dark:bg-slate-800/80 border border-black/5 dark:border-white/10 shadow-sm text-gray-400 opacity-0 scale-75 group-hover/chip:opacity-100 group-hover/chip:scale-100 hover:text-red-500 hover:border-red-200 dark:hover:border-red-800 transition-all duration-200 backdrop-blur-md"
                     aria-label="删除该条记录"
                   >
                     <IoCloseOutline className="w-3.5 h-3.5" />

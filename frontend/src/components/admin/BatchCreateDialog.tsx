@@ -371,9 +371,9 @@ export function BatchCreateDialog({
 
                             {/* 操作进度提示 */}
                             {isLoading && (
-                                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+                                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-800 rounded-md">
                                     <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                                    <span className="text-sm text-gray-600 dark:text-slate-400">
                                         正在创建，请稍候...
                                     </span>
                                 </div>
@@ -445,7 +445,7 @@ export function BatchCreateDialog({
                             </div>
 
                             {/* 复制格式设置 */}
-                            <div className="space-y-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-md border">
+                            <div className="space-y-3 p-4 bg-gray-50 dark:bg-slate-800/50 rounded-md border">
                                 <div className="flex items-center gap-2">
                                     <input
                                         type="checkbox"
@@ -461,7 +461,7 @@ export function BatchCreateDialog({
 
                                 {enableCopyFormat && (
                                     <div className="space-y-2">
-                                        <label className="text-sm text-gray-600 dark:text-gray-400">
+                                        <label className="text-sm text-gray-600 dark:text-slate-400">
                                             自定义格式模板（使用 {'{key}'} 作为占位符）
                                         </label>
                                         <input
@@ -469,7 +469,7 @@ export function BatchCreateDialog({
                                             value={copyFormatTemplate}
                                             onChange={(e) => setCopyFormatTemplate(e.target.value)}
                                             placeholder="卡密：{key}，网址：https://unisearchso.xyz/"
-                                            className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                                            className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-700"
                                         />
                                         <p className="text-xs text-gray-500">
                                             示例：卡密：{formatKeyDisplay(createdKeys[0]?.key || 'sk-xxx')}，网址：https://unisearchso.xyz/

@@ -1,5 +1,5 @@
 import React from 'react';
-import { IoReloadOutline, IoSearchOutline, IoWifiOutline, IoAlertCircleOutline } from 'react-icons/io5';
+import { IoReloadOutline, IoWifiOutline, IoAlertCircleOutline } from 'react-icons/io5';
 import { cn } from '@/lib/utils';
 import { toStyleVars } from '@/lib/styleVars';
 import BubbleLoader from '@/components/BubbleLoader';
@@ -84,7 +84,7 @@ const LoadingState: React.FC<LoadingStateProps> = ({
     return (
       <div className={cn('flex items-center gap-2', className)}>
         {renderIcon()}
-        <span className={cn('text-gray-600 dark:text-gray-400', currentSize.text)}>
+        <span className={cn('text-gray-600 dark:text-slate-400', currentSize.text)}>
           {displayMessage}
         </span>
       </div>
@@ -102,20 +102,20 @@ const LoadingState: React.FC<LoadingStateProps> = ({
       </div>
 
       <div className={cn(
-        'text-gray-600 dark:text-gray-400 font-medium',
+        'text-gray-600 dark:text-slate-400 font-medium',
         currentSize.text
       )}>
         {displayMessage}
       </div>
 
       {type === 'network' && (
-        <div className="mt-2 text-sm text-gray-500 dark:text-gray-500">
+        <div className="mt-2 text-sm text-gray-500 dark:text-slate-500">
           正在连接到服务器...
         </div>
       )}
 
       {type === 'error' && (
-        <div className="mt-2 text-sm text-gray-500 dark:text-gray-500">
+        <div className="mt-2 text-sm text-gray-500 dark:text-slate-500">
           请检查网络连接或稍后重试
         </div>
       )}

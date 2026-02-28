@@ -11,9 +11,9 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { AppleInput } from '@/components/ui/AppleInput';
-import { Label } from '@/components/ui/label';
 import { AppleButton } from '@/components/ui/AppleButton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getErrorDataError, getErrorMessage, getErrorStatus } from '@/lib/error';
 
 /**
  * 编辑 API Key 对话框组件属性
@@ -142,18 +142,19 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
 
             // 关闭对话框
             onOpenChange(false);
-        } catch (error: any) {
+        } catch (error) {
             console.error('更新 API Key 失败:', error);
 
             // 显示错误提示
-            if (error.response?.status === 401) {
+            const status = getErrorStatus(error);
+            if (status === 401) {
                 toast.error('未授权：请重新登录');
-            } else if (error.response?.status === 403) {
+            } else if (status === 403) {
                 toast.error('权限不足：需要管理员权限');
-            } else if (error.response?.status === 400) {
-                toast.error('参数错误：' + (error.response?.data?.error || '请检查输入'));
+            } else if (status === 400) {
+                toast.error('参数错误：' + (getErrorDataError(error) || '请检查输入'));
             } else {
-                toast.error('更新失败：' + (error.message || '未知错误'));
+                toast.error('更新失败：' + getErrorMessage(error));
             }
         } finally {
             setIsLoading(false);
@@ -181,15 +182,15 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
 
                 <div className="space-y-4 py-4">
                     {/* 显示当前信息 */}
-                    <div className="space-y-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+                    <div className="space-y-2 p-3 bg-gray-50 dark:bg-slate-800 rounded-md">
                         <div className="text-sm">
-                            <span className="text-gray-600 dark:text-gray-400">API Key: </span>
+                            <span className="text-gray-600 dark:text-slate-400">API Key: </span>
                             <span className="font-mono text-xs">
                                 {apiKey.key.substring(0, 10)}...{apiKey.key.substring(apiKey.key.length - 10)}
                             </span>
                         </div>
                         <div className="text-sm">
-                            <span className="text-gray-600 dark:text-gray-400">当前过期时间: </span>
+                            <span className="text-gray-600 dark:text-slate-400">当前过期时间: </span>
                             <span className="font-medium">
                                 {apiKey.first_used_at 
                                     ? formatDateTime(apiKey.expires_at)
@@ -198,7 +199,7 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
                             </span>
                         </div>
                         <div className="text-sm">
-                            <span className="text-gray-600 dark:text-gray-400">当前每日限额: </span>
+                            <span className="text-gray-600 dark:text-slate-400">当前每日限额: </span>
                             <span className="font-medium">
                                 {apiKey.daily_search_limit > 0 ? apiKey.daily_search_limit : '无限制'}
                             </span>

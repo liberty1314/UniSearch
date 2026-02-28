@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { UserService } from '@/services/userService';
+import { getErrorDataError, getErrorMessage, getErrorStatus } from '@/lib/error';
 import {
     Dialog,
     DialogContent,
@@ -138,21 +139,22 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
 
             // 关闭对话框
             onOpenChange(false);
-        } catch (error: any) {
+        } catch (error) {
             console.error('创建用户失败:', error);
 
             // 显示错误提示
-            if (error.response?.status === 401) {
+            const status = getErrorStatus(error);
+            if (status === 401) {
                 toast.error('未授权：请重新登录');
-            } else if (error.response?.status === 403) {
+            } else if (status === 403) {
                 toast.error('权限不足：需要管理员权限');
-            } else if (error.response?.status === 409) {
+            } else if (status === 409) {
                 toast.error('用户名已存在，请使用其他用户名');
-            } else if (error.response?.status === 400) {
-                const errorMsg = error.response?.data?.error || '请检查输入';
+            } else if (status === 400) {
+                const errorMsg = getErrorDataError(error) || '请检查输入';
                 toast.error('参数错误：' + errorMsg);
             } else {
-                toast.error('创建失败：' + (error.message || '未知错误'));
+                toast.error('创建失败：' + getErrorMessage(error));
             }
         } finally {
             setIsLoading(false);
@@ -251,7 +253,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
                                 <SelectItem value="admin">管理员</SelectItem>
                             </SelectContent>
                         </Select>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-gray-500 dark:text-slate-400">
                             管理员拥有系统管理权限，普通用户只能使用搜索功能
                         </p>
                     </div>

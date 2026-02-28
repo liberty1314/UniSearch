@@ -9,6 +9,14 @@ type props = {
   className?: string;
 };
 
+type ViewTransitionHandle = {
+  ready: Promise<void>;
+};
+
+type DocumentWithViewTransition = Document & {
+  startViewTransition?: (callback: () => void) => ViewTransitionHandle;
+};
+
 export const AnimatedThemeToggler = ({ className }: props) => {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -23,6 +31,7 @@ export const AnimatedThemeToggler = ({ className }: props) => {
   }, []);
   const changeTheme = async () => {
     if (!buttonRef.current) return;
+    const doc = document as DocumentWithViewTransition;
 
     const perform = () => {
       flushSync(() => {
@@ -33,17 +42,14 @@ export const AnimatedThemeToggler = ({ className }: props) => {
     };
 
     // Support browsers without View Transitions API
-    // @ts-ignore
-    if (document.startViewTransition) {
-      // @ts-ignore
-      await document.startViewTransition(perform).ready;
+    if (doc.startViewTransition) {
+      await doc.startViewTransition(perform).ready;
     } else {
       perform();
     }
 
     // Run ripple reveal only when View Transitions API is available
-    // @ts-ignore
-    if (document.startViewTransition) {
+    if (doc.startViewTransition) {
       const { top, left, width, height } =
         buttonRef.current.getBoundingClientRect();
       const y = top + height / 2;

@@ -32,7 +32,7 @@ export default function GradientText({
                     style={gradientStyle}
                 >
                     <div
-                        className="absolute inset-0 bg-white dark:bg-gray-900 rounded-[1.25rem] z-[-1] gradient-text-mask-inner"
+                        className="absolute inset-0 bg-white dark:bg-slate-900 rounded-[1.25rem] z-[-1] gradient-text-mask-inner"
                     ></div>
                 </div>
             )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { AnnouncementService } from '@/services/announcementService';
 import type { Announcement, AnnouncementPriority, CreateAnnouncementRequest, UpdateAnnouncementRequest } from '@/types/api';
+import { getErrorMessage } from '@/lib/error';
 
 /**
  * 公告表单数据
@@ -78,24 +79,24 @@ export const AnnouncementManagement: React.FC = () => {
   /**
    * 加载公告功能状态
    */
-  const loadFeatureStatus = async () => {
+  const loadFeatureStatus = useCallback(async () => {
     setIsLoading(true);
     try {
       const enabled = await AnnouncementService.getAnnouncementFeatureEnabled();
       setFeatureEnabled(enabled);
       setOriginalFeatureEnabled(enabled);
-    } catch (error: any) {
+    } catch (error) {
       console.error('加载公告功能状态失败:', error);
-      toast.error('加载功能状态失败：' + (error.message || '未知错误'));
+      toast.error('加载功能状态失败：' + getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   /**
    * 加载公告列表
    */
-  const loadAnnouncements = async () => {
+  const loadAnnouncements = useCallback(async () => {
     try {
       const response = await AnnouncementService.listAnnouncements(
         currentPage,
@@ -105,11 +106,11 @@ export const AnnouncementManagement: React.FC = () => {
       );
       setAnnouncements(response.announcements);
       setTotalPages(response.total_pages);
-    } catch (error: any) {
+    } catch (error) {
       console.error('加载公告列表失败:', error);
-      toast.error('加载公告列表失败：' + (error.message || '未知错误'));
+      toast.error('加载公告列表失败：' + getErrorMessage(error));
     }
-  };
+  }, [currentPage, pageSize]);
 
   /**
    * 处理功能开关变化
@@ -122,10 +123,10 @@ export const AnnouncementManagement: React.FC = () => {
       await AnnouncementService.setAnnouncementFeatureEnabled(checked);
       setOriginalFeatureEnabled(checked);
       toast.success(checked ? '已启用系统公告功能' : '已禁用系统公告功能');
-    } catch (error: any) {
+    } catch (error) {
       console.error('保存功能状态失败:', error);
       setFeatureEnabled(originalFeatureEnabled);
-      toast.error('保存失败：' + (error.message || '未知错误'));
+      toast.error('保存失败：' + getErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -209,9 +210,9 @@ export const AnnouncementManagement: React.FC = () => {
 
       setIsFormOpen(false);
       loadAnnouncements();
-    } catch (error: any) {
+    } catch (error) {
       console.error('保存公告失败:', error);
-      toast.error('保存失败：' + (error.message || '未知错误'));
+      toast.error('保存失败：' + getErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -237,9 +238,9 @@ export const AnnouncementManagement: React.FC = () => {
       setDeleteDialogOpen(false);
       setDeletingAnnouncement(null);
       loadAnnouncements();
-    } catch (error: any) {
+    } catch (error) {
       console.error('删除公告失败:', error);
-      toast.error('删除失败：' + (error.message || '未知错误'));
+      toast.error('删除失败：' + getErrorMessage(error));
     }
   };
 
@@ -251,16 +252,16 @@ export const AnnouncementManagement: React.FC = () => {
       await AnnouncementService.setAnnouncementStatus(announcement.id, !announcement.is_enabled);
       toast.success(announcement.is_enabled ? '已禁用公告' : '已启用公告');
       loadAnnouncements();
-    } catch (error: any) {
+    } catch (error) {
       console.error('切换公告状态失败:', error);
-      toast.error('操作失败：' + (error.message || '未知错误'));
+      toast.error('操作失败：' + getErrorMessage(error));
     }
   };
 
   useEffect(() => {
     loadFeatureStatus();
     loadAnnouncements();
-  }, [currentPage]);
+  }, [currentPage, loadFeatureStatus, loadAnnouncements]);
 
   /**
    * 获取优先级显示文本
@@ -290,7 +291,7 @@ export const AnnouncementManagement: React.FC = () => {
       case 'low':
         return 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30';
       default:
-        return 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-900/30';
+        return 'text-gray-600 dark:text-slate-400 bg-gray-100 dark:bg-slate-800/40';
     }
   };
 
@@ -315,7 +316,7 @@ export const AnnouncementManagement: React.FC = () => {
     <button
       onClick={() => onChange(!checked)}
       disabled={disabled}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${checked ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${checked ? 'bg-blue-600' : 'bg-gray-300 dark:bg-slate-600'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
     >
       <span
@@ -346,8 +347,8 @@ export const AnnouncementManagement: React.FC = () => {
       </div>
 
       {/* 功能开关卡片 */}
-      <Card className="border-gray-100 dark:border-gray-700/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-        <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50">
+      <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+        <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/80">
           <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
             <Megaphone className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             公告功能设置
@@ -369,7 +370,7 @@ export const AnnouncementManagement: React.FC = () => {
               <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
             </div>
           ) : (
-            <div className="flex items-start justify-between p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50">
+            <div className="flex items-start justify-between p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80">
               <div className="flex-1">
                 <Label className="text-base font-medium text-slate-800 dark:text-white flex items-center gap-2">
                   <Megaphone className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -404,8 +405,8 @@ export const AnnouncementManagement: React.FC = () => {
       </Card>
 
       {/* 公告列表卡片 */}
-      <Card className="border-gray-100 dark:border-gray-700/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-        <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50">
+      <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+        <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/80">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
@@ -465,7 +466,7 @@ export const AnnouncementManagement: React.FC = () => {
                             已启用
                           </span>
                         ) : (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400">
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-slate-800/40 dark:text-slate-400">
                             已禁用
                           </span>
                         )}
@@ -646,7 +647,7 @@ export const AnnouncementManagement: React.FC = () => {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setFormData({ ...formData, is_enabled: !formData.is_enabled })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${formData.is_enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${formData.is_enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-slate-600'
                   }`}
               >
                 <span

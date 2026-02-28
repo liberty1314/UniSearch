@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DOMPurify from 'dompurify';
 import { X, Bell } from 'lucide-react';
@@ -63,7 +63,7 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
       ALLOWED_ATTR: [
         'href', 'target', 'rel', 'src', 'alt', 'title', 'class', 'style',
       ],
-      ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+      ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.-]+(?:[^a-z+.:-]|$))/i,
     });
   }, [announcement.content]);
 
@@ -71,6 +71,7 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
    * 处理弹窗关闭
    */
   const handleClose = () => {
+    onOpenChange(false);
     // 用户点击关闭或我知道了，直接标记为已读（不再提示）
     onDismiss(announcement.id, true);
   };
@@ -141,7 +142,7 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
                     'backdrop-blur-sm'
                   )}
                 >
-                  <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <X className="w-4 h-4 text-gray-500 dark:text-slate-400" />
                 </button>
 
                 {/* 图标 - Nebula Style */}
@@ -187,7 +188,7 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
                     <div
                       className={cn(
                         'prose prose-sm dark:prose-invert max-w-none text-center',
-                        'text-gray-600 dark:text-gray-300',
+                        'text-gray-600 dark:text-slate-300',
                         'leading-relaxed'
                       )}
                       dangerouslySetInnerHTML={{ __html: sanitizedContent }}
@@ -223,4 +224,3 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
     </AnimatePresence>
   );
 };
-

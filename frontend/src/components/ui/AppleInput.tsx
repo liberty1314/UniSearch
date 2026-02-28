@@ -35,7 +35,7 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
           <label
             htmlFor={inputId}
             className={cn(
-              'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2',
+              'block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2',
               'transition-colors duration-200',
               labelClassName
             )}
@@ -55,8 +55,8 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
             className={cn(
               // 基础样式
               'w-full px-4 py-3 text-base rounded-xl',
-              'bg-white/80 dark:bg-gray-800/80',
-              'border border-gray-200 dark:border-gray-700',
+              'bg-white/80 dark:bg-slate-800/80',
+              'border border-gray-200 dark:border-slate-700',
               'backdrop-blur-sm',
               
               // 字体与文本
@@ -119,7 +119,7 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
         {!error && helperText && (
           <p
             id={helperId}
-            className="mt-2 text-sm text-gray-500 dark:text-gray-400"
+            className="mt-2 text-sm text-gray-500 dark:text-slate-400"
           >
             {helperText}
           </p>

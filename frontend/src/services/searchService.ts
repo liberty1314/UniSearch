@@ -4,8 +4,9 @@ import type {
   SearchRequest,
   SearchResponse,
   HealthResponse,
-  ApiResponse,
+  CloudTypeValue,
 } from '@/types/api';
+import { getErrorMessage } from '@/lib/error';
 
 /**
  * 搜索服务类
@@ -32,7 +33,7 @@ export class SearchService {
 
     // 移除空值参数
     const cleanedData = Object.fromEntries(
-      Object.entries(requestData).filter(([_, value]) => {
+      Object.entries(requestData).filter(([, value]) => {
         if (Array.isArray(value)) {
           return value.length > 0;
         }
@@ -48,9 +49,9 @@ export class SearchService {
       } else {
         throw new Error('搜索失败');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Search error:', error);
-      throw new Error(error.message || '搜索请求失败');
+      throw new Error(getErrorMessage(error, '搜索请求失败'));
     }
   }
 
@@ -67,9 +68,9 @@ export class SearchService {
       } else {
         throw new Error('获取系统状态失败');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Health check error:', error);
-      throw new Error(error.message || '健康检查请求失败');
+      throw new Error(getErrorMessage(error, '健康检查请求失败'));
     }
   }
 
@@ -81,7 +82,7 @@ export class SearchService {
     try {
       const healthData = await this.getHealth();
       return healthData.plugins || [];
-    } catch (error: any) {
+    } catch (error) {
       console.error('Get plugins error:', error);
       return [];
     }
@@ -95,7 +96,7 @@ export class SearchService {
     try {
       const healthData = await this.getHealth();
       return healthData.channels || [];
-    } catch (error: any) {
+    } catch (error) {
       console.error('Get channels error:', error);
       return [];
     }
@@ -187,7 +188,7 @@ export class SearchService {
 
     const cloudTypes = searchParams.get('types');
     if (cloudTypes) {
-      params.cloudTypes = cloudTypes.split(',').filter(Boolean) as any;
+      params.cloudTypes = cloudTypes.split(',').filter(Boolean) as CloudTypeValue[];
     }
 
     const channels = searchParams.get('channels');

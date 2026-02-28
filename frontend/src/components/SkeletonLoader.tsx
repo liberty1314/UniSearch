@@ -67,7 +67,7 @@ export const SearchResultsSkeleton: React.FC<{ viewMode?: 'grid' | 'list' }> = (
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05, duration: 0.3 }}
-                    className="p-6 bg-white/95 dark:bg-gray-800/95 backdrop-blur-apple rounded-3xl border border-gray-200/60 dark:border-gray-700/60"
+                    className="p-6 bg-white/95 dark:bg-slate-800/95 backdrop-blur-apple rounded-3xl border border-gray-200/60 dark:border-white/10"
                 >
                     <div className="space-y-4">
                         {/* 标题骨架 */}
@@ -100,7 +100,7 @@ export const FeatureCardsSkeleton: React.FC = () => {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.1, duration: 0.4 }}
-                    className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-apple rounded-2xl p-8 border border-gray-200/50 dark:border-gray-700/50"
+                    className="relative bg-white/90 dark:bg-slate-800/80 backdrop-blur-apple rounded-2xl p-8 border border-gray-200/50 dark:border-white/10"
                 >
                     <div className="space-y-6">
                         {/* 图标骨架 */}

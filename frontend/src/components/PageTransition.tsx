@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
+import { isAuthRoute } from '@/components/auth/authRouteMotion';
 
 interface PageTransitionProps {
     children: React.ReactNode;
@@ -12,17 +13,26 @@ interface PageTransitionProps {
  */
 const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
     const location = useLocation();
+    const previousPathRef = React.useRef(location.pathname);
+    const previousPath = previousPathRef.current;
+
+    const isAuthToAuthTransition =
+        previousPath !== location.pathname &&
+        isAuthRoute(previousPath) &&
+        isAuthRoute(location.pathname);
+
+    React.useEffect(() => {
+        previousPathRef.current = location.pathname;
+    }, [location.pathname]);
 
     const pageVariants = {
-        initial: {
-            opacity: 0,
-        },
-        animate: {
-            opacity: 1,
-        },
-        exit: {
-            opacity: 0,
-        },
+        initial: isAuthToAuthTransition
+            ? { opacity: 0.98 }
+            : { opacity: 0 },
+        animate: { opacity: 1 },
+        exit: isAuthToAuthTransition
+            ? { opacity: 0.98 }
+            : { opacity: 0 },
     };
 
     return (
@@ -35,8 +45,8 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
                 animate="animate"
                 exit="exit"
                 transition={{
-                    duration: 0.5,
-                    ease: [0.22, 1, 0.36, 1], // Custom cubic-bezier for "premium" feel
+                    duration: isAuthToAuthTransition ? 0.08 : 0.5,
+                    ease: isAuthToAuthTransition ? 'linear' : [0.22, 1, 0.36, 1], // Custom cubic-bezier for "premium" feel
                 }}
             >
                 {children}

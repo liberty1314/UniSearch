@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { Announcement, AnnouncementReadStatus } from '@/types/api';
 import { AnnouncementService } from '@/services/announcementService';
+import { getErrorMessage } from '@/lib/error';
 
 /**
  * 本地存储键名
@@ -98,10 +99,10 @@ export const useAnnouncementStore = create<AnnouncementState>()(
             activeAnnouncements: announcements,
             isLoading: false,
           });
-        } catch (error: any) {
+        } catch (error) {
           console.error('加载有效公告失败:', error);
           set({
-            error: error.message || '加载公告失败',
+            error: getErrorMessage(error, '加载公告失败'),
             isLoading: false,
             activeAnnouncements: [], // 失败时设置为空数组，不阻塞用户操作
           });
@@ -158,7 +159,7 @@ export const useAnnouncementStore = create<AnnouncementState>()(
         try {
           const enabled = await AnnouncementService.getAnnouncementFeatureEnabled();
           set({ featureEnabled: enabled });
-        } catch (error: any) {
+        } catch (error) {
           console.error('加载公告功能状态失败:', error);
           // 失败时默认为禁用
           set({ featureEnabled: false });

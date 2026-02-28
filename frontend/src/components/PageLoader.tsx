@@ -104,12 +104,12 @@ const PageLoader: React.FC<PageLoaderProps> = ({ isLoading, onComplete }) => {
                 </h1>
 
                 {/* 加载文字 */}
-                <p className="text-gray-600 dark:text-gray-400 text-lg mb-8">
+                <p className="text-gray-600 dark:text-slate-400 text-lg mb-8">
                     {progress >= 100 ? '加载完成' : '正在加载...'}
                 </p>
 
                 {/* 进度条 */}
-                <div className="w-64 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div className="w-64 h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
                     <div
                         className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full transition-[width] duration-300 ease-out page-loader-progress"
                         style={toStyleVars({
@@ -119,7 +119,7 @@ const PageLoader: React.FC<PageLoaderProps> = ({ isLoading, onComplete }) => {
                 </div>
 
                 {/* 进度百分比 */}
-                <div className="mt-4 text-sm font-medium text-gray-500 dark:text-gray-400">
+                <div className="mt-4 text-sm font-medium text-gray-500 dark:text-slate-400">
                     {Math.round(progress)}%
                 </div>
             </div>

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { refreshAuthTokenSingleFlight } from '@/lib/authRefreshManager';
 
@@ -16,7 +16,7 @@ const parseJWT = (token: string) => {
                 .join('')
         );
         return JSON.parse(jsonPayload);
-    } catch (e) {
+    } catch {
         return null;
     }
 };
@@ -52,6 +52,27 @@ export function useAutoRefreshToken() {
     const { token, refreshToken, logout } = useAuthStore();
     const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
     const isRefreshingRef = useRef(false); // 防止重复刷新
+
+    // 刷新令牌处理函数
+    const handleRefresh = useCallback(async () => {
+        if (!refreshToken || isRefreshingRef.current) {
+            return;
+        }
+
+        isRefreshingRef.current = true;
+
+        try {
+            await refreshAuthTokenSingleFlight();
+
+            console.log('✅ Token 自动刷新成功');
+        } catch (error) {
+            console.error('❌ 自动刷新令牌失败:', error);
+            // 刷新失败，清除认证状态（Refresh Token 可能已过期）
+            logout();
+        } finally {
+            isRefreshingRef.current = false;
+        }
+    }, [refreshToken, logout]);
 
     useEffect(() => {
         // 如果没有刷新令牌，不启用自动刷新
@@ -96,26 +117,5 @@ export function useAutoRefreshToken() {
                 clearTimeout(refreshTimerRef.current);
             }
         };
-    }, [token, refreshToken]);
-
-    // 刷新令牌处理函数
-    const handleRefresh = async () => {
-        if (!refreshToken || isRefreshingRef.current) {
-            return;
-        }
-
-        isRefreshingRef.current = true;
-
-        try {
-            await refreshAuthTokenSingleFlight();
-
-            console.log('✅ Token 自动刷新成功');
-        } catch (error) {
-            console.error('❌ 自动刷新令牌失败:', error);
-            // 刷新失败，清除认证状态（Refresh Token 可能已过期）
-            logout();
-        } finally {
-            isRefreshingRef.current = false;
-        }
-    };
+    }, [token, refreshToken, handleRefresh]);
 }

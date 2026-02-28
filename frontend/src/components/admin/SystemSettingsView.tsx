@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Settings, RefreshCw, Shield, Key, LogIn, UserPlus } from 'lucide-react';
 import { SystemSettingsService } from '@/services/systemSettingsService';
 import { useAuthStore } from '@/stores/authStore';
+import { getErrorDataError, getErrorMessage } from '@/lib/error';
 
 /**
  * 系统设置视图组件
@@ -31,7 +32,7 @@ export const SystemSettingsView: React.FC = () => {
     /**
      * 加载系统设置
      */
-    const loadSettings = async () => {
+    const loadSettings = useCallback(async () => {
         if (!token) return;
 
         setIsLoading(true);
@@ -45,13 +46,13 @@ export const SystemSettingsView: React.FC = () => {
                 enableUserLogin: settings.enable_user_login,
                 enableUserSignup: settings.enable_user_signup,
             });
-        } catch (error: any) {
+        } catch (error) {
             console.error('加载系统设置失败:', error);
-            toast.error('加载系统设置失败：' + (error.response?.data?.error || error.message || '未知错误'));
+            toast.error('加载系统设置失败：' + (getErrorDataError(error) || getErrorMessage(error)));
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [token]);
 
     /**
      * 处理主开关变化
@@ -74,10 +75,10 @@ export const SystemSettingsView: React.FC = () => {
             }
             
             toast.success(checked ? '已启用用户登录注册功能' : '已禁用用户登录注册功能，仅保留 API Key 登录');
-        } catch (error: any) {
+        } catch (error) {
             console.error('保存系统设置失败:', error);
             setEnableUserAuth(originalValues.enableUserAuth);
-            toast.error('保存失败：' + (error.response?.data?.error || error.message || '未知错误'));
+            toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
         } finally {
             setIsSaving(null);
         }
@@ -98,10 +99,10 @@ export const SystemSettingsView: React.FC = () => {
             });
             setOriginalValues(prev => ({ ...prev, enableUserLogin: checked }));
             toast.success(checked ? '已启用用户登录功能' : '已禁用用户登录功能');
-        } catch (error: any) {
+        } catch (error) {
             console.error('保存系统设置失败:', error);
             setEnableUserLogin(originalValues.enableUserLogin);
-            toast.error('保存失败：' + (error.response?.data?.error || error.message || '未知错误'));
+            toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
         } finally {
             setIsSaving(null);
         }
@@ -122,10 +123,10 @@ export const SystemSettingsView: React.FC = () => {
             });
             setOriginalValues(prev => ({ ...prev, enableUserSignup: checked }));
             toast.success(checked ? '已启用用户注册功能' : '已禁用用户注册功能');
-        } catch (error: any) {
+        } catch (error) {
             console.error('保存系统设置失败:', error);
             setEnableUserSignup(originalValues.enableUserSignup);
-            toast.error('保存失败：' + (error.response?.data?.error || error.message || '未知错误'));
+            toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
         } finally {
             setIsSaving(null);
         }
@@ -133,7 +134,7 @@ export const SystemSettingsView: React.FC = () => {
 
     useEffect(() => {
         loadSettings();
-    }, [token]);
+    }, [loadSettings]);
 
     const renderToggle = (checked: boolean, onChange: (checked: boolean) => void, disabled: boolean) => (
         <button
@@ -159,8 +160,8 @@ export const SystemSettingsView: React.FC = () => {
                 </div>
             </div>
 
-            <Card className="border-gray-100 dark:border-gray-700/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-700/50 bg-slate-50/50 dark:bg-slate-800/50">
+            <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+                <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/50">
                     <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
                         <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                         登录认证设置

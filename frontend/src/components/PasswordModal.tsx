@@ -1,6 +1,5 @@
 import React from 'react';
 import { IoCloseOutline, IoCopyOutline, IoOpenOutline } from 'react-icons/io5';
-import { cn } from '@/lib/utils';
 import { Copy } from 'lucide-react';
 
 interface PasswordModalProps {
@@ -44,7 +43,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
       />
       
       {/* 弹窗内容 */}
-      <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 animate-fade-in">
+      <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 animate-fade-in">
         {/* 关闭按钮 */}
         <button
           onClick={onClose}
@@ -58,14 +57,14 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
             访问码提示
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-gray-600 dark:text-slate-400">
             该资源需要访问码才能访问
           </p>
         </div>
 
         {/* 网盘类型 */}
         <div className="mb-4">
-          <span className="text-sm text-gray-500 dark:text-gray-400">网盘类型：</span>
+          <span className="text-sm text-gray-500 dark:text-slate-400">网盘类型：</span>
           <span className="ml-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-full">
             {cloudType}
           </span>
@@ -73,7 +72,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
 
         {/* 访问码 */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
             访问码
           </label>
           <div className="flex items-center gap-2">
@@ -81,7 +80,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
               type="text"
               value={password}
               readOnly
-              className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-mono text-sm"
+              className="flex-1 px-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white font-mono text-sm"
             />
             <button
               onClick={handleCopyPassword}
@@ -95,7 +94,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
 
         {/* 链接 */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
             链接地址
           </label>
           <div className="flex items-center gap-2">
@@ -103,7 +102,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
               type="text"
               value={url}
               readOnly
-              className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white text-sm"
+              className="flex-1 px-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white text-sm"
             />
             <button
               onClick={handleCopyUrl}
@@ -126,7 +125,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-800 no-tap-highlight"
+            className="px-4 py-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-slate-300 font-medium rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-800 no-tap-highlight"
           >
             关闭
           </button>

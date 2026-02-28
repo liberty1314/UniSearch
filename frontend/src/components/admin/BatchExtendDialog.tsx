@@ -194,9 +194,9 @@ export function BatchExtendDialog({
 
                     {/* 操作进度提示 */}
                     {isLoading && (
-                        <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+                        <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-800 rounded-md">
                             <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                            <span className="text-sm text-gray-600 dark:text-slate-400">
                                 正在处理，请稍候...
                             </span>
                         </div>

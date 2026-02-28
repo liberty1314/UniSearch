@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Zap, Trash2, Loader2, CheckCircle2, XCircle, AlertCircle, Eye, Edit3, Save, ChevronDown, ChevronUp, PlayCircle } from 'lucide-react';
+import { X, Plus, Zap, Trash2, Loader2, CheckCircle2, XCircle, AlertCircle, Eye, Edit3, Save, ChevronUp, PlayCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -74,7 +74,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                 ));
                 toast.error(`插件 ${pluginName} 连通性测试失败`);
             }
-        } catch (error) {
+        } catch {
             setTestingStatus(prev => ({ ...prev, [pluginName]: 'error' }));
             toast.error(`插件 ${pluginName} 测试出错`);
         }
@@ -169,7 +169,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
             } else {
                 toast.error(`删除插件失败`);
             }
-        } catch (error) {
+        } catch {
             toast.error('删除插件出错');
         }
     };
@@ -214,7 +214,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
             } else {
                 toast.error('更新插件失败');
             }
-        } catch (error) {
+        } catch {
             toast.error('更新插件出错');
         }
     };
@@ -245,7 +245,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
             } else {
                 toast.error('添加插件失败');
             }
-        } catch (error) {
+        } catch {
             toast.error('添加插件出错');
         } finally {
             setIsSubmitting(false);
@@ -284,7 +284,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                     description: result.message || '无法连接',
                 });
             }
-        } catch (error) {
+        } catch {
             setNewUrlTestStatus('error');
             toast.error('测试请求失败', {
                 description: '网络错误或服务器无响应',

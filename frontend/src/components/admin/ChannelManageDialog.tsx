@@ -309,13 +309,6 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
         onClose();
     };
 
-    // 键盘事件：回车添加
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !isAdding) {
-            handleAddChannel();
-        }
-    };
-
     const enabledCount = channels.filter(ch => ch.is_enabled).length;
 
     if (!isOpen) return null;

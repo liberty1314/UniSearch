@@ -34,7 +34,7 @@ export class AnnouncementService {
     sortBy?: string,
     sortOrder?: 'asc' | 'desc'
   ): Promise<ListAnnouncementsResponse> {
-    const params: Record<string, any> = {
+    const params: Record<string, unknown> = {
       page,
       page_size: pageSize,
     };

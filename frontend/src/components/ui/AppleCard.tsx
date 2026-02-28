@@ -49,20 +49,20 @@ export const AppleCard = React.forwardRef<HTMLElement, AppleCardProps>(
         onKeyDown={
           isInteractive
             ? (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onClick?.();
-                }
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick?.();
               }
+            }
             : undefined
         }
         className={cn(
           // 基础样式 - 添加暗色主题支持
           'group relative overflow-hidden rounded-3xl',
-          'bg-white dark:bg-slate-800/50',
-          'border border-gray-200/80 dark:border-slate-700/50',
+          'bg-white dark:bg-slate-800/80',
+          'border border-gray-200/80 dark:border-white/5',
           'shadow-sm dark:shadow-slate-900/20',
-          
+
           // 桌面端 3D 悬浮效果
           !disableHover && [
             'transition-all duration-300 ease-out',
@@ -70,18 +70,18 @@ export const AppleCard = React.forwardRef<HTMLElement, AppleCardProps>(
             'hover:-translate-y-2 hover:scale-[1.02]',
             'hover:border-gray-300/60 dark:hover:border-slate-600/60',
           ],
-          
+
           // 移动端优化 (禁用 hover，启用 active)
           'active:scale-[0.98] active:shadow-md',
           'md:active:scale-100', // 桌面端取消 active 缩放
-          
+
           // 键盘焦点样式
           'focus-visible:outline-none focus-visible:ring-2',
           'focus-visible:ring-blue-500 focus-visible:ring-offset-2',
-          
+
           // 交互光标
           isInteractive && 'cursor-pointer',
-          
+
           className
         )}
       >

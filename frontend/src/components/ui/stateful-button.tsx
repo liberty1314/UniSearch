@@ -17,7 +17,7 @@ export const Button = React.forwardRef<StatefulButtonHandle, ButtonProps>(({ cla
   const [scope, animate] = useAnimate();
   const cancelledRef = React.useRef(false);
 
-  const animateLoading = async () => {
+  const animateLoading = React.useCallback(async () => {
     await animate(
       ".loader",
       {
@@ -29,9 +29,9 @@ export const Button = React.forwardRef<StatefulButtonHandle, ButtonProps>(({ cla
         duration: 0.2,
       },
     );
-  };
+  }, [animate]);
 
-  const animateSuccess = async () => {
+  const animateSuccess = React.useCallback(async () => {
     await animate(
       ".loader",
       {
@@ -67,9 +67,9 @@ export const Button = React.forwardRef<StatefulButtonHandle, ButtonProps>(({ cla
         duration: 0.2,
       },
     );
-  };
+  }, [animate]);
 
-  const run = async (fn?: () => void | Promise<void>) => {
+  const run = React.useCallback(async (fn?: () => void | Promise<void>) => {
     cancelledRef.current = false;
     await animateLoading();
     if (fn) {
@@ -86,9 +86,9 @@ export const Button = React.forwardRef<StatefulButtonHandle, ButtonProps>(({ cla
       return;
     }
     await animateSuccess();
-  };
+  }, [animateLoading, animateSuccess, animate]);
 
-  const reset = () => {
+  const reset = React.useCallback(() => {
     cancelledRef.current = true;
     // 立即复位到初始状态
     animate(
@@ -97,9 +97,9 @@ export const Button = React.forwardRef<StatefulButtonHandle, ButtonProps>(({ cla
         [".check", { width: "0px", scale: 0, display: "none" }, { duration: 0.01 }],
       ]
     );
-  };
+  }, [animate]);
 
-  useImperativeHandle(ref, () => ({ run, reset }), [animate]);
+  useImperativeHandle(ref, () => ({ run, reset }), [run, reset]);
 
   const handleClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
     await run(() => props.onClick?.(event));

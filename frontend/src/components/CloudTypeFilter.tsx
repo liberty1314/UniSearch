@@ -1,4 +1,4 @@
-import React, { useEffect, memo } from 'react';
+import React, { useEffect, memo, useRef } from 'react';
 import { motion, LayoutGroup } from 'framer-motion';
 import { IoCheckmarkCircle, IoEllipseOutline } from 'react-icons/io5';
 import { CloudType, CloudTypeValue } from '@/types/api';
@@ -31,7 +31,7 @@ const CloudTypeTag = memo(({ config, isSelected, onToggle }: CloudTypeTagProps) 
           "relative flex items-center px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 border box-border",
           isSelected
             ? `bg-gradient-to-r ${config.color} text-white border-transparent ${config.shadow} shadow-lg ring-2 ring-white/20 dark:ring-black/20`
-            : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm"
+            : "bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 shadow-sm"
         )}
       >
 
@@ -68,15 +68,22 @@ const CloudTypeFilter: React.FC = () => {
   ];
 
   const allTypes = cloudTypeConfigs.map(config => config.type as CloudTypeValue);
+  const hasInitializedCloudTypesRef = useRef(false);
 
   useEffect(() => {
+    if (hasInitializedCloudTypesRef.current) {
+      return;
+    }
+
     const currentTypes = searchParams.cloudTypes || [];
     const validTypes = currentTypes.filter(type => allTypes.includes(type));
 
-    if (currentTypes.length === 0 || validTypes.length !== currentTypes.length || currentTypes.length !== allTypes.length) {
+    if (currentTypes.length === 0 || validTypes.length !== currentTypes.length) {
       setSearchParams({ cloudTypes: allTypes });
     }
-  }, []);
+
+    hasInitializedCloudTypesRef.current = true;
+  }, [allTypes, searchParams.cloudTypes, setSearchParams]);
 
   const selectedTypes = searchParams.cloudTypes || [];
   const isAllSelected = selectedTypes.length === cloudTypeConfigs.length;
@@ -114,7 +121,7 @@ const CloudTypeFilter: React.FC = () => {
         <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 rounded-3xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity duration-500" />
 
         {/* 内容容器 */}
-        <div className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 dark:border-gray-700/50 shadow-glass">
+        <div className="relative bg-white/60 dark:bg-slate-800/60 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 dark:border-white/10 shadow-glass">
 
           {/* 顶部栏：标题与全选 */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
@@ -126,7 +133,7 @@ const CloudTypeFilter: React.FC = () => {
               </div>
               <div className="min-w-[150px]">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">来源筛选</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                <p className="text-sm text-gray-500 dark:text-slate-400 truncate">
                   {isAllSelected ? '已展示全网资源' : `已选中 ${selectedTypes.length} 个来源`}
                 </p>
               </div>
@@ -140,7 +147,7 @@ const CloudTypeFilter: React.FC = () => {
                 "px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center gap-2 shadow-sm flex-shrink-0",
                 isAllSelected
                   ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 shadow-lg"
-                  : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+                  : "bg-white dark:bg-slate-700 text-gray-600 dark:text-slate-300 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-gray-600"
               )}
             >
               <div className="w-5 h-5 flex items-center justify-center">

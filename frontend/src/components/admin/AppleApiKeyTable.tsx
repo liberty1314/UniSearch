@@ -104,7 +104,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
       sortable: true,
       render: (key) => (
         <div className="flex items-center gap-2 min-w-0">
-          <code className="text-sm font-mono text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-900 px-3 py-1 rounded-lg">
+          <code className="text-sm font-mono text-gray-900 dark:text-white bg-gray-100 dark:bg-slate-900 px-3 py-1 rounded-lg">
             {maskApiKey(key.key)}
           </code>
           <button
@@ -112,7 +112,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
               e.stopPropagation();
               onCopyKey(key.key);
             }}
-            className="flex-shrink-0 p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="flex-shrink-0 p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             title="复制完整密钥"
           >
             <Copy className="w-4 h-4 text-gray-500" />
@@ -129,7 +129,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
         const displayDesc = desc.length > 4 ? `${desc.substring(0, 4)}...` : desc;
         return (
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap" title={desc}>
+            <span className="text-sm text-gray-600 dark:text-slate-400 whitespace-nowrap" title={desc}>
               {displayDesc}
             </span>
           </div>
@@ -146,7 +146,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
           <span className="text-sm whitespace-nowrap">
             {new Date(key.created_at).toLocaleDateString('zh-CN')}
           </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+          <span className="text-xs text-gray-500 dark:text-slate-400 whitespace-nowrap">
             {formatDistanceToNow(new Date(key.created_at), {
               addSuffix: true,
               locale: zhCN,
@@ -166,7 +166,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
             <span className="text-sm whitespace-nowrap">
               {new Date(key.last_login_at).toLocaleDateString('zh-CN')}
             </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+            <span className="text-xs text-gray-500 dark:text-slate-400 whitespace-nowrap">
               {formatDistanceToNow(new Date(key.last_login_at), {
                 addSuffix: true,
                 locale: zhCN,
@@ -190,7 +190,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
               <span className="text-sm whitespace-nowrap text-purple-600 dark:text-purple-400 font-medium">
                 永不过期
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              <span className="text-xs text-gray-500 dark:text-slate-400 whitespace-nowrap">
                 管理员专用
               </span>
             </div>
@@ -204,7 +204,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
               <span className="text-sm whitespace-nowrap text-blue-600 dark:text-blue-400 font-medium">
                 待激活
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              <span className="text-xs text-gray-500 dark:text-slate-400 whitespace-nowrap">
                 首次使用时生效
               </span>
             </div>
@@ -217,7 +217,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
             <span className="text-sm whitespace-nowrap">
               {new Date(key.expires_at).toLocaleDateString('zh-CN')}
             </span>
-            <span className={`text-xs whitespace-nowrap ${expired ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
+            <span className={`text-xs whitespace-nowrap ${expired ? 'text-red-500' : 'text-gray-500 dark:text-slate-400'}`}>
               {expired
                 ? `已过期 ${formatDistanceToNow(new Date(key.expires_at), { addSuffix: true, locale: zhCN })}`
                 : `${formatDistanceToNow(new Date(key.expires_at), { addSuffix: true, locale: zhCN })}过期`
@@ -244,7 +244,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
         } else if (!key.is_enabled) {
           statusConfig = {
             text: '已禁用',
-            color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+            color: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',
             icon: <X className="w-4 h-4 flex-shrink-0" />,
           };
         } else if (!key.first_used_at) {
@@ -342,7 +342,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
     } else if (!key.is_enabled) {
       statusConfig = {
         text: '已禁用',
-        color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+        color: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',
         icon: <X className="w-3 h-3 flex-shrink-0" />,
       };
     } else if (!key.first_used_at) {
@@ -395,7 +395,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
               disabled={isDeleting || isBatchOperating || key.is_permanent}
               className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20"
             >
-              <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+              <Edit className="w-4 h-4 text-gray-600 dark:text-slate-300" />
             </Button>
             <Button
               variant="ghost"
@@ -425,7 +425,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
         </div>
 
         {/* Content: API Key */}
-        <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2.5 border border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-800/60 rounded-lg p-2.5 border border-gray-100 dark:border-slate-800">
           <div className="flex flex-col min-w-0 flex-1 mr-2">
             <span className="text-[10px] text-gray-400 uppercase tracking-widest mb-0.5">API KEY</span>
             <code className="text-sm font-mono text-gray-900 dark:text-gray-100 truncate">
@@ -434,7 +434,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); onCopyKey(key.key); }}
-            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
+            className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-md transition-colors"
             title="复制"
           >
             <Copy className="w-4 h-4 text-gray-500" />
@@ -442,7 +442,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
         </div>
 
         {/* Content: Stats */}
-        <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 p-2 rounded-lg">
+        <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-800/40 p-2 rounded-lg">
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] uppercase tracking-wider opacity-70">创建时间</span>
             <span>{new Date(key.created_at).toLocaleDateString('zh-CN')}</span>
@@ -454,7 +454,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
         </div>
 
         {/* Footer: Description & Time */}
-        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-1 border-t border-gray-100 dark:border-gray-800/50">
+        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-slate-400 pt-1 border-t border-gray-100 dark:border-slate-800/50">
           <span className="truncate max-w-[50%] mr-2" title={key.description || ''}>
             {key.description || '无描述'}
           </span>

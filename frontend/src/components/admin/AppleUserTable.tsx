@@ -112,7 +112,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
           <span className="text-sm">
             {new Date(user.created_at).toLocaleDateString('zh-CN')}
           </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-gray-500 dark:text-slate-400">
             {formatDistanceToNow(new Date(user.created_at), {
               addSuffix: true,
               locale: zhCN,
@@ -131,7 +131,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
             <span className="text-sm">
               {new Date(user.last_login_at).toLocaleDateString('zh-CN')}
             </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-xs text-gray-500 dark:text-slate-400">
               {formatDistanceToNow(new Date(user.last_login_at), {
                 addSuffix: true,
                 locale: zhCN,
@@ -155,7 +155,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
           }
           : {
             text: '已禁用',
-            color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+            color: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',
             icon: <PowerOff className="w-4 h-4" />,
           };
 
@@ -247,7 +247,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
       }
       : {
         text: '已禁用',
-        color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+        color: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',
         icon: <PowerOff className="w-3 h-3" />,
       };
 
@@ -269,7 +269,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
               </div>
               <div className="flex flex-col">
                 <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{user.username}</span>
-                <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                <span className="text-[10px] text-gray-500 dark:text-slate-400">
                   {user.role === 'admin' ? '管理员' : '普通用户'}
                 </span>
               </div>
@@ -283,7 +283,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
         </div>
 
         {/* Content: Stats */}
-        <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 p-2 rounded-lg">
+        <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-800/40 p-2 rounded-lg">
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] uppercase tracking-wider opacity-70">创建时间</span>
             <span>{new Date(user.created_at).toLocaleDateString('zh-CN')}</span>
@@ -295,7 +295,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
         </div>
 
         {/* Footer: Actions */}
-        <div className="flex items-center justify-end gap-1 pt-1 border-t border-gray-100 dark:border-gray-800/50">
+        <div className="flex items-center justify-end gap-1 pt-1 border-t border-gray-100 dark:border-slate-800/50">
           <Button
             variant="ghost"
             size="sm"
@@ -303,7 +303,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
             disabled={isDeleting || isBatchOperating}
             className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20"
           >
-            <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+            <Edit className="w-4 h-4 text-gray-600 dark:text-slate-300" />
           </Button>
           <Button
             variant="ghost"

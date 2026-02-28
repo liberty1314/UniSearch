@@ -97,7 +97,7 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
         'border group relative overflow-hidden',
         isUnread
           ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800'
-          : 'bg-white dark:bg-[#1C1C1E] border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'
+          : 'bg-white dark:bg-[#1C1C1E] border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-slate-800'
       )}
     >
       <div className="flex items-start justify-between gap-3 relative z-10">
@@ -107,7 +107,7 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
               'font-semibold text-[15px] truncate', // iOS 字体大小
               isUnread
                 ? 'text-gray-900 dark:text-white'
-                : 'text-gray-600 dark:text-gray-400'
+                : 'text-gray-600 dark:text-slate-400'
             )}>
               {announcement.title}
             </h3>
@@ -118,12 +118,12 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
           <p className={cn(
             'text-[13px] line-clamp-2 leading-relaxed',
             isUnread
-              ? 'text-gray-600 dark:text-gray-300'
-              : 'text-gray-400 dark:text-gray-500'
+              ? 'text-gray-600 dark:text-slate-300'
+              : 'text-gray-400 dark:text-slate-500'
           )}>
             {announcement.content.replace(/<[^>]*>/g, '').substring(0, 80)}...
           </p>
-          <div className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
+          <div className="mt-2 text-[11px] text-gray-400 dark:text-slate-500">
             {new Date(announcement.created_at).toLocaleDateString()}
           </div>
         </div>
@@ -176,7 +176,7 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
               )}
             >
               {/* 头部 */}
-              <div className="flex-shrink-0 bg-white/50 dark:bg-white/5 border-b border-gray-200/50 dark:border-gray-700/50 px-5 py-4 backdrop-blur-md">
+              <div className="flex-shrink-0 bg-white/50 dark:bg-white/5 border-b border-gray-200/50 dark:border-white/10 px-5 py-4 backdrop-blur-md">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className={cn(
@@ -195,9 +195,9 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
                   </div>
                   <button
                     onClick={() => onOpenChange(false)}
-                    className="w-7 h-7 rounded-full flex items-center justify-center bg-gray-100/80 dark:bg-gray-700/80 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    className="w-7 h-7 rounded-full flex items-center justify-center bg-gray-100/80 dark:bg-slate-700/80 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                   >
-                    <X className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                    <X className="w-3.5 h-3.5 text-gray-500 dark:text-slate-400" />
                   </button>
                 </div>
               </div>
@@ -211,7 +211,7 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
                 ) : activeAnnouncements.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Bell className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
-                    <p className="text-sm text-gray-500 dark:text-gray-400">暂无公告</p>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">暂无公告</p>
                   </div>
                 ) : (
                   <div className="space-y-6">

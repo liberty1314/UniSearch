@@ -59,7 +59,7 @@ export interface AppleTableProps<T> {
  * - 毛玻璃效果、细腻阴影、流畅动画
  * - 完整的可访问性支持
  */
-export function AppleTable<T>({
+export function AppleTable<T extends object>({
   data,
   columns,
   rowKey,
@@ -103,8 +103,10 @@ export function AppleTable<T>({
 
     return [...data].sort((a, b) => {
       // 获取要比较的值
-      const aValue = (a as any)[sortKey];
-      const bValue = (b as any)[sortKey];
+      const aRecord = a as Record<string, unknown>;
+      const bRecord = b as Record<string, unknown>;
+      const aValue = aRecord[sortKey];
+      const bValue = bRecord[sortKey];
 
       // 处理 null/undefined
       if (aValue === null || aValue === undefined) return 1;
@@ -128,11 +130,16 @@ export function AppleTable<T>({
       }
 
       // 尝试将字符串转换为日期进行比较
-      const aDate = new Date(aValue);
-      const bDate = new Date(bValue);
-      if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
-        const comparison = aDate.getTime() - bDate.getTime();
-        return sortDirection === 'asc' ? comparison : -comparison;
+      const canParseDate =
+        (typeof aValue === 'string' || typeof aValue === 'number' || aValue instanceof Date) &&
+        (typeof bValue === 'string' || typeof bValue === 'number' || bValue instanceof Date);
+      if (canParseDate) {
+        const aDate = new Date(aValue);
+        const bDate = new Date(bValue);
+        if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
+          const comparison = aDate.getTime() - bDate.getTime();
+          return sortDirection === 'asc' ? comparison : -comparison;
+        }
       }
 
       // 默认字符串比较
@@ -152,7 +159,7 @@ export function AppleTable<T>({
           transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
           className="relative w-10 h-10"
         >
-          <svg className="w-10 h-10 text-gray-200 dark:text-gray-700/50" viewBox="0 0 50 50">
+          <svg className="w-10 h-10 text-gray-200 dark:text-slate-700/50" viewBox="0 0 50 50">
             <circle
               cx="25"
               cy="25"
@@ -190,7 +197,7 @@ export function AppleTable<T>({
         <motion.p
           animate={{ opacity: [0.5, 1, 0.5] }}
           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          className="text-xs font-semibold tracking-[0.2em] text-gray-400 dark:text-gray-500 uppercase"
+          className="text-xs font-semibold tracking-[0.2em] text-gray-400 dark:text-slate-500 uppercase"
         >
           加载数据
         </motion.p>
@@ -204,9 +211,9 @@ export function AppleTable<T>({
   const renderEmpty = () => (
     <div className="flex items-center justify-center py-16">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+        <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
           <svg
-            className="w-8 h-8 text-gray-400 dark:text-gray-600"
+            className="w-8 h-8 text-gray-400 dark:text-slate-500"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -219,7 +226,7 @@ export function AppleTable<T>({
             />
           </svg>
         </div>
-        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+        <p className="text-sm font-medium text-gray-500 dark:text-slate-400">
           {emptyText}
         </p>
       </div>
@@ -233,7 +240,7 @@ export function AppleTable<T>({
     <div className="hidden md:block overflow-x-auto">
       <table className="w-full" role="table">
         <thead>
-          <tr className="border-b border-gray-200/50 dark:border-gray-700/50">
+          <tr className="border-b border-gray-200/50 dark:border-slate-800/50">
             {columns.map((column) => (
               <th
                 key={column.key}
@@ -241,7 +248,7 @@ export function AppleTable<T>({
                   'px-6 py-4 text-left',
                   'table-column-width',
                   'text-xs font-medium uppercase tracking-wider whitespace-nowrap',
-                  'text-gray-500 dark:text-gray-400',
+                  'text-gray-500 dark:text-slate-400',
                   column.align === 'center' && 'text-center',
                   column.align === 'right' && 'text-right',
                   column.sortable && 'cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-300 transition-colors'
@@ -263,7 +270,7 @@ export function AppleTable<T>({
                           'w-3 h-3 -mb-1 transition-colors',
                           sortKey === column.key && sortDirection === 'asc'
                             ? 'text-apple-blue'
-                            : 'text-gray-300 dark:text-gray-600'
+                            : 'text-gray-300 dark:text-slate-600'
                         )}
                       />
                       <ChevronDown
@@ -271,7 +278,7 @@ export function AppleTable<T>({
                           'w-3 h-3 transition-colors',
                           sortKey === column.key && sortDirection === 'desc'
                             ? 'text-apple-blue'
-                            : 'text-gray-300 dark:text-gray-600'
+                            : 'text-gray-300 dark:text-slate-600'
                         )}
                       />
                     </div>
@@ -295,10 +302,10 @@ export function AppleTable<T>({
                   delay: index * 0.03,
                 }}
                 className={cn(
-                  'border-b border-gray-100/50 dark:border-gray-800/50',
+                  'border-b border-gray-100/50 dark:border-slate-800/50',
                   'transition-all duration-200',
                   'max-h-[80px]', // 限制最大行高
-                  hoverable && 'hover:bg-gray-50/50 dark:hover:bg-gray-800/30',
+                  hoverable && 'hover:bg-gray-50/50 dark:hover:bg-slate-800/30',
                   onRowClick && 'cursor-pointer active:scale-[0.99]'
                 )}
                 onClick={() => onRowClick?.(item, index)}
@@ -346,10 +353,10 @@ export function AppleTable<T>({
             }}
             className={cn(
               'relative overflow-hidden',
-              'bg-white/80 dark:bg-gray-800/80',
+              'bg-white/80 dark:bg-slate-800/50',
               'backdrop-blur-xl',
               'rounded-2xl',
-              'border border-gray-200/50 dark:border-gray-700/50',
+              'border border-gray-200/50 dark:border-slate-800/50',
               'shadow-sm hover:shadow-md',
               'transition-all duration-300',
               onRowClick && 'active:scale-[0.98] cursor-pointer'
@@ -365,7 +372,7 @@ export function AppleTable<T>({
                   .filter((column) => !column.hideOnMobile)
                   .map((column) => (
                     <div key={column.key} className="flex flex-col gap-1">
-                      <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-400">
                         {column.title}
                       </span>
                       <div className="text-sm text-gray-900 dark:text-gray-100">
@@ -385,10 +392,10 @@ export function AppleTable<T>({
     <div
       className={cn(
         'relative overflow-hidden',
-        'bg-white/80 dark:bg-gray-800/80',
+        'bg-white/80 dark:bg-slate-800/50',
         'backdrop-blur-xl',
         'rounded-2xl',
-        'border border-gray-200/50 dark:border-gray-700/50',
+        'border border-gray-200/50 dark:border-white/5',
         'shadow-sm',
         className
       )}
