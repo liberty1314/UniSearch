@@ -79,6 +79,9 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
             toast.error(`插件 ${pluginName} 测试出错`);
         }
 
+        // 同步刷新系统监控面板中的插件状态摘要
+        onSuccess();
+
         // 5秒后重置状态
         setTimeout(() => {
             setTestingStatus(prev => ({ ...prev, [pluginName]: 'idle' }));
@@ -145,6 +148,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
         }
 
         setIsBatchTesting(false);
+        onSuccess();
 
         setTimeout(() => {
             setTestingStatus({});

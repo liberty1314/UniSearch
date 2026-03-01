@@ -135,7 +135,7 @@ func (p *MuouAsyncPlugin) searchImpl(client *http.Client, keyword string, ext ma
 	}
 
 	// 1. 构建搜索URL
-	searchURL := fmt.Sprintf("http://123.666291.xyz/index.php/vod/search/wd/%s.html", url.QueryEscape(keyword))
+	searchURL := fmt.Sprintf("https://666.666291.xyz/index.php/vod/search/wd/%s.html", url.QueryEscape(keyword))
 
 	// 2. 创建带超时的上下文
 	ctx, cancel := context.WithTimeout(context.Background(), DefaultTimeout)
@@ -154,7 +154,7 @@ func (p *MuouAsyncPlugin) searchImpl(client *http.Client, keyword string, ext ma
 	req.Header.Set("Connection", "keep-alive")
 	req.Header.Set("Upgrade-Insecure-Requests", "1")
 	req.Header.Set("Cache-Control", "max-age=0")
-	req.Header.Set("Referer", "http://123.666291.xyz/")
+	req.Header.Set("Referer", "https://666.666291.xyz/")
 
 	// 5. 发送请求（带重试机制）
 	resp, err := p.doRequestWithRetry(req, client)
@@ -257,6 +257,13 @@ func (p *MuouAsyncPlugin) parseSearchItem(s *goquery.Selection, keyword string) 
 	})
 	plot := strings.TrimSpace(plotElement.Find(".video-info-item").Text())
 
+	// 提取封面图片 (参考 Pan_mogg.js 的选择器)
+	var images []string
+	if picURL, exists := s.Find(".module-item-pic > img").Attr("data-src"); exists && picURL != "" {
+		images = append(images, picURL)
+	}
+	result.Images = images
+
 	// 构建内容描述
 	var contentParts []string
 	if quality != "" {
@@ -324,9 +331,14 @@ func (p *MuouAsyncPlugin) enhanceWithDetails(client *http.Client, results []mode
 			}
 			atomic.AddInt64(&cacheMisses, 1)
 
-			// 获取详情页链接
-			detailLinks := p.fetchDetailLinks(client, itemID)
+			// 获取详情页链接和图片
+			detailLinks, detailImages := p.fetchDetailLinksAndImages(client, itemID)
 			r.Links = detailLinks
+
+			// 合并图片：优先使用详情页的海报，如果没有则使用搜索结果的图片
+			if len(detailImages) > 0 {
+				r.Images = detailImages
+			}
 
 			// 缓存结果
 			detailCache.Store(itemID, r)
@@ -370,8 +382,8 @@ func (p *MuouAsyncPlugin) doRequestWithRetry(req *http.Request, client *http.Cli
 	return nil, fmt.Errorf("重试 %d 次后仍然失败: %w", maxRetries, lastErr)
 }
 
-// fetchDetailLinks 获取详情页的下载链接
-func (p *MuouAsyncPlugin) fetchDetailLinks(client *http.Client, itemID string) []model.Link {
+// fetchDetailLinksAndImages 获取详情页的下载链接和图片
+func (p *MuouAsyncPlugin) fetchDetailLinksAndImages(client *http.Client, itemID string) ([]model.Link, []string) {
 	// 性能统计
 	start := time.Now()
 	atomic.AddInt64(&detailPageRequests, 1)
@@ -380,7 +392,7 @@ func (p *MuouAsyncPlugin) fetchDetailLinks(client *http.Client, itemID string) [
 		atomic.AddInt64(&totalDetailTime, duration)
 	}()
 
-	detailURL := fmt.Sprintf("http://123.666291.xyz/index.php/vod/detail/id/%s.html", itemID)
+	detailURL := fmt.Sprintf("https://666.666291.xyz/index.php/vod/detail/id/%s.html", itemID)
 
 	// 创建带超时的上下文
 	ctx, cancel := context.WithTimeout(context.Background(), DetailTimeout)
@@ -389,7 +401,7 @@ func (p *MuouAsyncPlugin) fetchDetailLinks(client *http.Client, itemID string) [
 	// 创建请求
 	req, err := http.NewRequestWithContext(ctx, "GET", detailURL, nil)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 
 	// 设置请求头
@@ -397,25 +409,31 @@ func (p *MuouAsyncPlugin) fetchDetailLinks(client *http.Client, itemID string) [
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
 	req.Header.Set("Connection", "keep-alive")
-	req.Header.Set("Referer", "http://123.666291.xyz/")
+	req.Header.Set("Referer", "https://666.666291.xyz/")
 
 	// 发送请求（带重试）
 	resp, err := p.doRequestWithRetry(req, client)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return nil
+		return nil, nil
 	}
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 
 	var links []model.Link
+	var images []string
+
+	// 提取详情页的海报图片 (参考 Pan_mogg.js 的选择器)
+	if posterURL, exists := doc.Find(".mobile-play .lazyload").Attr("data-src"); exists && posterURL != "" {
+		images = append(images, posterURL)
+	}
 
 	// 查找下载链接区域
 	doc.Find("#download-list .module-row-one").Each(func(i int, s *goquery.Selection) {
@@ -463,6 +481,12 @@ func (p *MuouAsyncPlugin) fetchDetailLinks(client *http.Client, itemID string) [
 		})
 	})
 
+	return links, images
+}
+
+// fetchDetailLinks 获取详情页的下载链接（兼容性方法，仅返回链接）
+func (p *MuouAsyncPlugin) fetchDetailLinks(client *http.Client, itemID string) []model.Link {
+	links, _ := p.fetchDetailLinksAndImages(client, itemID)
 	return links
 }
 

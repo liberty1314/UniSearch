@@ -1297,3 +1297,111 @@ pnpm-lock.yaml (已删除)
 - frontend/src/pages/UserApiKeySettings.tsx
 
 **Stats**: 1 file changed, 251 insertions(+), 86 deletions(-)
+
+---
+## 2026-03-01 13:37:01
+
+**Commit**: `refactor(user): 优化 API Key 设置页面加载和错误处理机制`
+
+**Body**: 
+1. 优化缓存策略：将 API Key 信息缓存时间从 1.5 秒延长至 30 秒
+2. 新增缓存快照函数（getApiKeyInfoCacheSnapshot）提升缓存命中判断效率
+3. 改进错误处理逻辑：404 错误直接返回 null，其他错误向上抛出
+4. 新增 LoadAPIKeyOptions 接口，支持更灵活的加载配置（force、background、holdOnError 等）
+5. 新增 ApiKeySettingsSkeleton 骨架屏组件，优化加载状态展示
+6. 新增重试机制（RefreshCw 图标），提升用户体验
+7. 移除未使用的 LoadingSpinner 和 useRef 依赖，改用 useCallback
+
+**Files**:
+- frontend/src/pages/UserApiKeySettings.tsx
+
+**Stats**: 1 file changed, 251 insertions(+), 86 deletions(-)
+
+---
+## 2026-03-01 20:17:26
+
+**Commit**: `refactor(user): 优化 API Key 设置页面加载和错误处理机制`
+
+**Body**: 
+1. 优化缓存策略：将 API Key 信息缓存时间从 1.5 秒延长至 30 秒
+2. 新增缓存快照函数（getApiKeyInfoCacheSnapshot）提升缓存命中判断效率
+3. 改进错误处理逻辑：404 错误直接返回 null，其他错误向上抛出
+4. 新增 LoadAPIKeyOptions 接口，支持更灵活的加载配置（force、background、holdOnError 等）
+5. 新增 ApiKeySettingsSkeleton 骨架屏组件，优化加载状态展示
+6. 新增重试机制（RefreshCw 图标），提升用户体验
+7. 移除未使用的 LoadingSpinner 和 useRef 依赖，改用 useCallback
+
+**Files**:
+- frontend/src/pages/UserApiKeySettings.tsx
+
+**Stats**: 1 file changed, 251 insertions(+), 86 deletions(-)
+
+---
+## 2026-03-01 20:30:00
+
+**Commit**: `feat(admin): 新增插件和频道健康状态监控及预览功能`
+
+**Body**: 
+后端新增插件和频道健康状态模型、数据库迁移、服务层和 API 接口;
+前端重构系统信息页面,新增插件和频道预览对话框,支持搜索、筛选和分页;
+新增对应的单元测试以保证功能稳定性。
+
+**Files**:
+- .env.example
+- backend/api/admin_handler.go
+- backend/api/router.go
+- backend/api/tg_channel_handler.go
+- backend/database/migration.go
+- backend/go.mod
+- backend/go.sum
+- backend/main.go
+- backend/model/plugin_health_status.go
+- backend/model/tg_channel_health_status.go
+- backend/plugin/[多个插件文件]
+- backend/service/plugin_health_service.go
+- backend/service/tg_channel_health_service.go
+- backend/service/tg_channel_service.go
+- docs/readme_2602.md
+- frontend/src/components/admin/ChannelManageDialog.tsx
+- frontend/src/components/admin/ChannelPreviewDialog.tsx
+- frontend/src/components/admin/PluginManageDialog.tsx
+- frontend/src/components/admin/PluginPreviewDialog.tsx
+- frontend/src/components/admin/SystemInfoView.tsx
+- frontend/src/components/admin/__tests__/ChannelPreviewDialog.test.tsx
+- frontend/src/components/admin/__tests__/PluginPreviewDialog.test.tsx
+- frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
+- frontend/src/types/api.ts
+
+
+---
+## 2026-03-01 20:45:00
+
+**Commit**: `refactor(admin): 优化系统信息视图并新增预览对话框测试`
+
+**Body**: 
+重构系统信息视图组件，将管理对话框拆分为预览和编辑模式，新增插件和频道预览对话框及其单元测试，优化暗色主题配色方案（slate-950 → gray-900），统一认证页面和用户设置页面的视觉风格。
+
+**Files**:
+- backend/api/admin_handler.go
+- backend/api/router.go
+- backend/api/tg_channel_handler.go
+- backend/database/migration.go
+- backend/go.mod
+- backend/go.sum
+- backend/main.go
+- backend/model/plugin_health_status.go
+- backend/model/tg_channel_health_status.go
+- backend/plugin/*/（多个插件的 html/json 结构分析文档）
+- backend/service/plugin_health_service.go
+- backend/service/tg_channel_health_service.go
+- backend/service/tg_channel_service.go
+- docs/readme_2602.md
+- frontend/src/components/admin/ChannelManageDialog.tsx
+- frontend/src/components/admin/ChannelPreviewDialog.tsx
+- frontend/src/components/admin/PluginManageDialog.tsx
+- frontend/src/components/admin/PluginPreviewDialog.tsx
+- frontend/src/components/admin/SystemInfoView.tsx
+- frontend/src/components/admin/__tests__/（新增 3 个测试文件）
+- frontend/src/index.css
+- frontend/src/pages/（多个认证页面）
+- frontend/src/types/api.ts

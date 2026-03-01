@@ -99,7 +99,7 @@ const RegisterPage: React.FC = () => {
     if (isLoadingSettings) return <PageLoader isLoading={true} />;
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-slate-950 px-4 pt-20 overflow-y-auto relative">
+        <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 pt-20 overflow-y-auto relative">
             <AuthBackground preset={authVisualPresets.registerPage} particles={particles} />
 
             {/* Register Card */}
@@ -135,7 +135,7 @@ const RegisterPage: React.FC = () => {
                                             value={username}
                                             onChange={(e) => setUsername(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
-                                            className="pl-10 h-12 bg-white/50 dark:bg-white/5"
+                                            className="pl-10 h-12 bg-white/50 dark:bg-gray-900/50"
                                         />
                                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                     </div>
@@ -151,7 +151,7 @@ const RegisterPage: React.FC = () => {
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
-                                            className="pl-10 pr-10 h-12 bg-white/50 dark:bg-white/5"
+                                            className="pl-10 pr-10 h-12 bg-white/50 dark:bg-gray-900/50"
                                         />
                                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                         <button
@@ -174,7 +174,7 @@ const RegisterPage: React.FC = () => {
                                             value={confirmPassword}
                                             onChange={(e) => setConfirmPassword(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
-                                            className="pl-10 pr-10 h-12 bg-white/50 dark:bg-white/5"
+                                            className="pl-10 pr-10 h-12 bg-white/50 dark:bg-gray-900/50"
                                         />
                                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                         <button

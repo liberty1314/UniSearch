@@ -34,6 +34,18 @@ func (s *TGChannelService) GetAllChannels() ([]model.TGChannel, error) {
 	return channels, nil
 }
 
+// GetChannelByID 按 ID 获取单个频道
+func (s *TGChannelService) GetChannelByID(id uint) (*model.TGChannel, error) {
+	var channel model.TGChannel
+	if err := s.db.First(&channel, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("频道不存在 (ID: %d)", id)
+		}
+		return nil, fmt.Errorf("查询频道失败: %w", err)
+	}
+	return &channel, nil
+}
+
 // GetEnabledChannels 获取已启用的频道名称列表，按 sort_order 排序
 func (s *TGChannelService) GetEnabledChannels() ([]string, error) {
 	var channels []model.TGChannel
@@ -222,41 +234,72 @@ func (s *TGChannelService) TestChannel(name string) (bool, error) {
 	return true, nil
 }
 
-// MigrateFromEnv 将环境变量中的频道迁移到数据库（首次启动时调用）
+// MigrateFromEnv 将环境变量中的频道补齐到数据库
+// 只追加缺失频道，不覆盖已有频道配置
 func (s *TGChannelService) MigrateFromEnv() error {
-	// 检查数据库中是否已有频道记录
-	var count int64
-	s.db.Model(&model.TGChannel{}).Count(&count)
-	if count > 0 {
-		log.Printf("  - tg_channels 表已有 %d 条记录，跳过环境变量迁移", count)
-		return nil
-	}
-
-	// 从环境变量获取频道列表
 	channels := config.AppConfig.DefaultChannels
 	if len(channels) == 0 {
 		log.Println("  - 环境变量 CHANNELS 未设置，跳过迁移")
 		return nil
 	}
 
-	// 批量创建
-	for i, name := range channels {
-		name = strings.TrimSpace(name)
-		if name == "" {
-			continue
-		}
-		channel := &model.TGChannel{
-			Name:      name,
-			IsEnabled: true,
-			SortOrder: i,
-		}
-		if err := s.db.Create(channel).Error; err != nil {
-			log.Printf("  ⚠️  迁移频道 '%s' 失败: %v", name, err)
-			continue
+	// 加载数据库中现有频道名
+	var existing []model.TGChannel
+	if err := s.db.Select("name").Find(&existing).Error; err != nil {
+		return fmt.Errorf("查询现有频道失败: %w", err)
+	}
+	existingSet := make(map[string]struct{}, len(existing))
+	for _, ch := range existing {
+		trimmed := strings.TrimSpace(ch.Name)
+		if trimmed != "" {
+			existingSet[trimmed] = struct{}{}
 		}
 	}
 
-	log.Printf("✓ 成功将 %d 个频道从环境变量迁移到数据库", len(channels))
+	// 获取当前最大排序值，新增频道在末尾追加
+	maxOrder := -1
+	if err := s.db.Model(&model.TGChannel{}).Select("COALESCE(MAX(sort_order), -1)").Scan(&maxOrder).Error; err != nil {
+		return fmt.Errorf("查询频道最大排序失败: %w", err)
+	}
+
+	seenInEnv := make(map[string]struct{}, len(channels))
+	inserted := 0
+	skipped := 0
+	failed := 0
+
+	for _, name := range channels {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			skipped++
+			continue
+		}
+		if _, exists := seenInEnv[name]; exists {
+			skipped++
+			continue
+		}
+		seenInEnv[name] = struct{}{}
+
+		if _, exists := existingSet[name]; exists {
+			skipped++
+			continue
+		}
+
+		maxOrder++
+		channel := &model.TGChannel{
+			Name:      name,
+			IsEnabled: true,
+			SortOrder: maxOrder,
+		}
+		if err := s.db.Create(channel).Error; err != nil {
+			log.Printf("  ⚠️  迁移频道 '%s' 失败: %v", name, err)
+			failed++
+			continue
+		}
+		existingSet[name] = struct{}{}
+		inserted++
+	}
+
+	log.Printf("✓ TG 频道补齐完成：新增 %d 个，跳过 %d 个，失败 %d 个（env总数 %d）", inserted, skipped, failed, len(channels))
 	return nil
 }
 

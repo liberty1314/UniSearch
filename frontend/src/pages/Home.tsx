@@ -26,7 +26,7 @@ const Home: React.FC = () => {
   const hasSearched = searchParams.keyword || (searchResults?.results && searchResults.results.length > 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto px-4 py-8 pt-24">
         {/* 页面头部 - 增强品牌形象 */}
         <motion.div
@@ -137,7 +137,7 @@ const Home: React.FC = () => {
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-2xl blur-xl group-hover:blur-2xl group-hover:scale-110 transition-all duration-500"></div>
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                      <div className="relative bg-white/90 dark:bg-slate-800/80 backdrop-blur-apple rounded-2xl p-8 shadow-card hover:shadow-hover transition-all duration-500 border border-gray-200/50 dark:border-white/10 group-hover:-translate-y-3 group-hover:border-blue-500/30">
+                      <div className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-apple rounded-2xl p-8 shadow-card hover:shadow-hover transition-all duration-500 border border-gray-200/50 dark:border-white/10 group-hover:-translate-y-3 group-hover:border-blue-500/30">
                         <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:scale-125 group-hover:rotate-3 transition-all duration-500 group-hover:shadow-lg">
                           <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -159,15 +159,15 @@ const Home: React.FC = () => {
                       transition={{ delay: 1.1, duration: 0.5 }}
                       className="group relative cursor-pointer"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 rounded-2xl blur-xl group-hover:blur-2xl group-hover:scale-110 transition-all duration-500"></div>
-                      <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 to-fuchsia-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                      <div className="relative bg-white/90 dark:bg-slate-800/80 backdrop-blur-apple rounded-2xl p-8 shadow-card hover:shadow-hover transition-all duration-500 border border-gray-200/50 dark:border-white/10 group-hover:-translate-y-3 group-hover:border-violet-500/30">
-                        <div className="w-16 h-16 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:scale-125 group-hover:rotate-3 transition-all duration-500 group-hover:shadow-lg">
+                      <div className="absolute inset-0 bg-gradient-to-r from-teal-500/10 to-emerald-500/10 rounded-2xl blur-xl group-hover:blur-2xl group-hover:scale-110 transition-all duration-500"></div>
+                      <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 to-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                      <div className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-apple rounded-2xl p-8 shadow-card hover:shadow-hover transition-all duration-500 border border-gray-200/50 dark:border-white/10 group-hover:-translate-y-3 group-hover:border-teal-500/30">
+                        <div className="w-16 h-16 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:scale-125 group-hover:rotate-3 transition-all duration-500 group-hover:shadow-lg">
                           <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                           </svg>
                         </div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center group-hover:text-violet-500 group-hover:-translate-y-1 transition-all duration-300">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center group-hover:text-teal-500 group-hover:-translate-y-1 transition-all duration-300">
                           智能匹配
                         </h3>
                         <p className="text-gray-600 dark:text-slate-300 text-center leading-relaxed group-hover:text-gray-700 dark:group-hover:text-gray-200 group-hover:-translate-y-1 transition-all duration-300">
@@ -185,7 +185,7 @@ const Home: React.FC = () => {
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-2xl blur-xl group-hover:blur-2xl group-hover:scale-110 transition-all duration-500"></div>
                       <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-orange-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                      <div className="relative bg-white/90 dark:bg-slate-800/80 backdrop-blur-apple rounded-2xl p-8 shadow-card hover:shadow-hover transition-all duration-500 border border-gray-200/50 dark:border-white/10 group-hover:-translate-y-3 group-hover:border-amber-500/30">
+                      <div className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-apple rounded-2xl p-8 shadow-card hover:shadow-hover transition-all duration-500 border border-gray-200/50 dark:border-white/10 group-hover:-translate-y-3 group-hover:border-amber-500/30">
                         <div className="w-16 h-16 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:scale-125 group-hover:rotate-3 transition-all duration-500 group-hover:shadow-lg">
                           <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

@@ -27,27 +27,83 @@ import (
 
 	// 以下是插件的空导入，用于触发各插件的init函数，实现自动注册
 	// 添加新插件时，只需在此处添加对应的导入语句即可
+	_ "unisearch/plugin/ahhhhfs"
+	_ "unisearch/plugin/aikanzy"
+	_ "unisearch/plugin/alupan"
+	_ "unisearch/plugin/ash"
+	_ "unisearch/plugin/bixin"
+	_ "unisearch/plugin/cldi"
+	_ "unisearch/plugin/clmao"
+	_ "unisearch/plugin/clxiong"
 	_ "unisearch/plugin/cyg"
+	_ "unisearch/plugin/daishudj"
+	_ "unisearch/plugin/ddys"
+	_ "unisearch/plugin/discourse"
+	_ "unisearch/plugin/djgou"
 	_ "unisearch/plugin/duoduo"
+	_ "unisearch/plugin/dyyj"
+	_ "unisearch/plugin/erxiao"
+	_ "unisearch/plugin/feikuai"
 	_ "unisearch/plugin/fox4k"
+	_ "unisearch/plugin/gying"
+	_ "unisearch/plugin/haisou"
+	_ "unisearch/plugin/hdmoli"
 	_ "unisearch/plugin/hdr4k"
 	_ "unisearch/plugin/huban"
 	_ "unisearch/plugin/hunhepan"
+	_ "unisearch/plugin/javdb"
 	_ "unisearch/plugin/jikepan"
+	_ "unisearch/plugin/jsnoteclub"
+	_ "unisearch/plugin/jutoushe"
+	_ "unisearch/plugin/kkmao"
+	_ "unisearch/plugin/kkv"
 	_ "unisearch/plugin/labi"
+	_ "unisearch/plugin/leijing"
+	_ "unisearch/plugin/libvio"
+	_ "unisearch/plugin/lou1"
+	_ "unisearch/plugin/meitizy"
+	_ "unisearch/plugin/miaoso"
+	_ "unisearch/plugin/mikuclub"
+	_ "unisearch/plugin/mizixing"
 	_ "unisearch/plugin/muou"
+	_ "unisearch/plugin/nsgame"
+	_ "unisearch/plugin/nyaa"
 	_ "unisearch/plugin/ouge"
 	_ "unisearch/plugin/pan666"
 	_ "unisearch/plugin/pansearch"
 	_ "unisearch/plugin/panta"
+	_ "unisearch/plugin/panwiki"
 	_ "unisearch/plugin/panyq"
+	_ "unisearch/plugin/pianku"
+	_ "unisearch/plugin/qingying"
+	_ "unisearch/plugin/qqpd"
+	_ "unisearch/plugin/quark4k"
+	_ "unisearch/plugin/quarksoo"
+	_ "unisearch/plugin/qupanshe"
 	_ "unisearch/plugin/qupansou"
+	_ "unisearch/plugin/sdso"
 	_ "unisearch/plugin/shandian"
+	_ "unisearch/plugin/sousou"
 	_ "unisearch/plugin/susu"
 	_ "unisearch/plugin/thepiratebay"
+	_ "unisearch/plugin/u3c3"
 	_ "unisearch/plugin/wanou"
+	_ "unisearch/plugin/weibo"
+	_ "unisearch/plugin/wuji"
+	_ "unisearch/plugin/xb6v"
+	_ "unisearch/plugin/xdpan"
+	_ "unisearch/plugin/xdyh"
+	_ "unisearch/plugin/xiaoji"
+	_ "unisearch/plugin/xiaozhang"
+	_ "unisearch/plugin/xinjuc"
 	_ "unisearch/plugin/xuexizhinan"
+	_ "unisearch/plugin/xys"
+	_ "unisearch/plugin/yiove"
+	_ "unisearch/plugin/ypfxw"
+	_ "unisearch/plugin/yuhuage"
+	_ "unisearch/plugin/yunsou"
 	_ "unisearch/plugin/zhizhen"
+	_ "unisearch/plugin/zxzj"
 
 	"unisearch/model"
 )
@@ -178,8 +234,8 @@ func startServer() {
 	// 初始化插件管理器
 	pluginManager := plugin.NewPluginManager()
 
-	// 注册所有全局插件（通过init函数自动注册到全局注册表）
-	pluginManager.RegisterAllGlobalPlugins()
+	// 根据 ENABLED_PLUGINS 注册插件（显式启用机制）
+	pluginManager.RegisterGlobalPluginsWithFilter(config.AppConfig.EnabledPlugins)
 
 	// 更新默认并发数（使用实际插件数）
 	config.UpdateDefaultConcurrency(len(pluginManager.GetPlugins()))
@@ -260,8 +316,27 @@ func startServer() {
 	tgChannelService.SyncToConfig()
 	fmt.Println("TGChannel 服务已启动（Telegram 频道管理功能已启用）")
 
+	// 初始化插件健康状态服务（插件测试结果持久化）
+	pluginHealthService := service.NewPluginHealthService(database.GetDB())
+	fmt.Println("PluginHealth 服务已启动（插件健康状态持久化已启用）")
+
+	// 初始化 TG 频道健康状态服务（频道测试结果持久化）
+	tgChannelHealthService := service.NewTGChannelHealthService(database.GetDB())
+	fmt.Println("TGChannelHealth 服务已启动（TG 频道健康状态持久化已启用）")
+
 	// 设置路由
-	router := api.SetupRouter(searchService, apiKeyService, authService, refreshTokenService, userService, systemSettingsService, announcementService, tgChannelService)
+	router := api.SetupRouter(
+		searchService,
+		apiKeyService,
+		authService,
+		refreshTokenService,
+		userService,
+		systemSettingsService,
+		announcementService,
+		tgChannelService,
+		pluginHealthService,
+		tgChannelHealthService,
+	)
 
 	// 获取端口配置
 	port := config.AppConfig.Port

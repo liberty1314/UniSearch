@@ -12,7 +12,7 @@ import (
 
 // SetupRouter 设置路由
 // 验证需求：4.1, 5.1, 6.1, 7.1, 8.1, 10.1, 10.3
-func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService, systemSettingsService *service.SystemSettingsService, announcementService *service.AnnouncementService, tgChannelService *service.TGChannelService) *gin.Engine {
+func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService, systemSettingsService *service.SystemSettingsService, announcementService *service.AnnouncementService, tgChannelService *service.TGChannelService, pluginHealthService *service.PluginHealthService, tgChannelHealthService *service.TGChannelHealthService) *gin.Engine {
 	// 设置搜索服务
 	SetSearchService(searchService)
 	// 设置API Key服务
@@ -21,6 +21,7 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 	SetSystemSettingsService(systemSettingsService)
 	// 设置 TG 频道服务
 	SetTGChannelService(tgChannelService)
+	SetTGChannelHealthService(tgChannelHealthService)
 
 	// 创建控制器实例
 	authController := controller.NewAuthController(authService)
@@ -79,11 +80,11 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 		// ========== 系统设置接口（公开接口）==========
 		// 获取系统设置（用于登录页面判断是否显示用户登录选项）
 		api.GET("/system-settings", GetSystemSettingsHandler)
-		
+
 		// 获取公告功能启用状态（公开接口，用于前端判断是否显示公告）
 		// 需求: 13.1
 		api.GET("/system-settings/announcement-enabled", GetAnnouncementFeatureEnabledHandler(systemSettingsService))
-		
+
 		// 设置公告功能启用状态（需要管理员权限）
 		// 需求: 13.4
 		api.POST("/system-settings/announcement-enabled", JWTMiddleware(), AdminMiddleware(), SetAnnouncementFeatureEnabledHandler(systemSettingsService))
@@ -121,7 +122,7 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			// 获取当前用户信息
 			user.GET("/me", authController.GetCurrentUser)
 		}
-		
+
 		// ========== 公告接口（需要 JWT 认证）==========
 		// 验证需求：10.5
 		announcements := api.Group("/announcements")
@@ -174,16 +175,16 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			admin.GET("/keys", ListAPIKeysHandler(apiKeyService))
 			admin.POST("/keys", CreateAPIKeyHandler(apiKeyService))
 			admin.DELETE("/keys/:key", DeleteAPIKeyHandler(apiKeyService))
-			admin.PATCH("/keys/:key", UpdateAPIKeyHandler(apiKeyService))              // 新增：更新API Key
-			admin.POST("/keys/batch-extend", BatchExtendAPIKeysHandler(apiKeyService)) // 新增：批量延长
-			admin.POST("/keys/batch-create", BatchCreateAPIKeysHandler(apiKeyService)) // 新增：批量创建
-			admin.POST("/keys/batch-delete", BatchDeleteAPIKeysHandler(apiKeyService)) // 新增：批量删除
-			admin.GET("/system-info", GetSystemInfoHandler(searchService, userService))             // 更新：获取系统信息（包含插件状态 + 用户活跃度）
-			admin.POST("/plugins/:pluginName/test", TestPluginHandler(searchService))  // 新增：测试插件
-			admin.POST("/plugins", CreatePluginHandler())                              // 新增：创建插件
-			admin.PUT("/plugins/:pluginName", UpdatePluginHandler())                   // 新增：更新插件
-			admin.DELETE("/plugins/:pluginName", DeletePluginHandler())                // 新增：删除插件
-			admin.POST("/test-url", TestURLHandler())                                  // 新增：测试URL连通性
+			admin.PATCH("/keys/:key", UpdateAPIKeyHandler(apiKeyService))                                    // 新增：更新API Key
+			admin.POST("/keys/batch-extend", BatchExtendAPIKeysHandler(apiKeyService))                       // 新增：批量延长
+			admin.POST("/keys/batch-create", BatchCreateAPIKeysHandler(apiKeyService))                       // 新增：批量创建
+			admin.POST("/keys/batch-delete", BatchDeleteAPIKeysHandler(apiKeyService))                       // 新增：批量删除
+			admin.GET("/system-info", GetSystemInfoHandler(searchService, userService, pluginHealthService)) // 更新：获取系统信息（包含插件状态 + 用户活跃度）
+			admin.POST("/plugins/:pluginName/test", TestPluginHandler(searchService, pluginHealthService))   // 新增：测试插件
+			admin.POST("/plugins", CreatePluginHandler(pluginHealthService))                                 // 新增：创建插件
+			admin.PUT("/plugins/:pluginName", UpdatePluginHandler(pluginHealthService))                      // 新增：更新插件
+			admin.DELETE("/plugins/:pluginName", DeletePluginHandler(pluginHealthService))                   // 新增：删除插件
+			admin.POST("/test-url", TestURLHandler())                                                        // 新增：测试URL连通性
 
 			// 系统设置管理
 			admin.GET("/system-settings", GetSystemSettingsHandler)    // 获取系统设置
@@ -192,15 +193,15 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			// TG 频道管理
 			channels := admin.Group("/channels")
 			{
-				channels.GET("", ListTGChannelsHandler)                    // 获取频道列表
-				channels.POST("", AddTGChannelHandler)                     // 添加频道
-				channels.PUT("/batch", BatchUpdateTGChannelsHandler)       // 批量更新频道
-				channels.PUT("/:id", UpdateTGChannelHandler)               // 更新频道
-				channels.DELETE("/:id", DeleteTGChannelHandler)            // 删除频道
-				channels.POST("/:name/test", TestTGChannelHandler)         // 测试频道
+				channels.GET("", ListTGChannelsHandler)              // 获取频道列表
+				channels.POST("", AddTGChannelHandler)               // 添加频道
+				channels.PUT("/batch", BatchUpdateTGChannelsHandler) // 批量更新频道
+				channels.PUT("/:id", UpdateTGChannelHandler)         // 更新频道
+				channels.DELETE("/:id", DeleteTGChannelHandler)      // 删除频道
+				channels.POST("/:name/test", TestTGChannelHandler)   // 测试频道
 			}
 		}
-		
+
 		// ========== 公告管理接口（需要 JWT 认证 + 管理员权限）==========
 		// 验证需求：10.1, 10.2, 10.3, 10.4, 10.7
 		adminAnnouncements := api.Group("/announcements")
@@ -210,23 +211,23 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			// 创建公告
 			// 需求: 10.1
 			adminAnnouncements.POST("", CreateAnnouncementHandler(announcementService))
-			
+
 			// 更新公告
 			// 需求: 10.2
 			adminAnnouncements.PUT("/:id", UpdateAnnouncementHandler(announcementService))
-			
+
 			// 删除公告
 			// 需求: 10.3
 			adminAnnouncements.DELETE("/:id", DeleteAnnouncementHandler(announcementService))
-			
+
 			// 获取公告列表
 			// 需求: 10.4
 			adminAnnouncements.GET("", ListAnnouncementsHandler(announcementService))
-			
+
 			// 获取单个公告
 			// 需求: 10.4
 			adminAnnouncements.GET("/:id", GetAnnouncementHandler(announcementService))
-			
+
 			// 设置公告状态
 			// 需求: 10.7
 			adminAnnouncements.POST("/:id/status", SetAnnouncementStatusHandler(announcementService))

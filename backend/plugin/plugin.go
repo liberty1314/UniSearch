@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -45,6 +46,13 @@ type AsyncSearchPlugin interface {
 type PluginWithWebHandler interface {
 	// RegisterWebRoutes 注册Web路由
 	RegisterWebRoutes(group *gin.RouterGroup)
+}
+
+// InitializablePlugin 支持延迟初始化的插件接口
+// 插件可以选择实现该接口，在真正启用时执行初始化逻辑
+type InitializablePlugin interface {
+	AsyncSearchPlugin
+	Initialize() error
 }
 
 // RegisterGlobalPlugin 注册异步插件到全局注册表
@@ -100,6 +108,14 @@ func NewPluginManager() *PluginManager {
 
 // RegisterPlugin 注册异步插件
 func (pm *PluginManager) RegisterPlugin(plugin AsyncSearchPlugin) {
+	// 如果插件支持延迟初始化，先执行初始化，失败则跳过注册
+	if initPlugin, ok := plugin.(InitializablePlugin); ok {
+		if err := initPlugin.Initialize(); err != nil {
+			fmt.Printf("[PluginManager] 插件 %s 初始化失败: %v，跳过注册\n", plugin.Name(), err)
+			return
+		}
+	}
+
 	pm.plugins = append(pm.plugins, plugin)
 }
 
@@ -107,6 +123,36 @@ func (pm *PluginManager) RegisterPlugin(plugin AsyncSearchPlugin) {
 func (pm *PluginManager) RegisterAllGlobalPlugins() {
 	for _, plugin := range GetRegisteredPlugins() {
 		pm.RegisterPlugin(plugin)
+	}
+}
+
+// RegisterGlobalPluginsWithFilter 根据 ENABLED_PLUGINS 过滤注册全局插件
+// enabledPlugins 为 nil 或空切片时，不启用任何插件
+func (pm *PluginManager) RegisterGlobalPluginsWithFilter(enabledPlugins []string) {
+	if enabledPlugins == nil || len(enabledPlugins) == 0 {
+		fmt.Println("插件列表为空 (ENABLED_PLUGINS=\"\")，未加载任何插件")
+		return
+	}
+
+	allPlugins := GetRegisteredPlugins()
+	enabledMap := make(map[string]struct{}, len(enabledPlugins))
+	for _, name := range enabledPlugins {
+		name = strings.TrimSpace(name)
+		if name != "" {
+			enabledMap[name] = struct{}{}
+		}
+	}
+
+	loadedCount := 0
+	for _, p := range allPlugins {
+		if _, ok := enabledMap[p.Name()]; ok {
+			pm.RegisterPlugin(p)
+			loadedCount++
+		}
+	}
+
+	if loadedCount == 0 {
+		fmt.Printf("未匹配到任何已启用插件，请检查 ENABLED_PLUGINS 配置: %v\n", enabledPlugins)
 	}
 }
 

@@ -95,7 +95,7 @@ const ApiKeyLoginPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-slate-950 px-4 pt-20 overflow-y-auto relative">
+        <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 pt-20 overflow-y-auto relative">
             <AuthBackground preset={authVisualPresets.apiKeyPage} particles={particles} />
 
             {/* API Key Login Card */}
@@ -122,7 +122,7 @@ const ApiKeyLoginPage: React.FC = () => {
                         <CardContent className="space-y-6 relative">
                             {/* 加载时的遮罩与模糊层 */}
                             {isLoading && (
-                                <div className="absolute inset-x-0 -top-20 bottom-0 bg-white/5 dark:bg-slate-950/20 backdrop-blur-[2px] z-10 rounded-xl transition-all duration-300" />
+                                <div className="absolute inset-x-0 -top-20 bottom-0 bg-white/5 dark:bg-gray-900/20 backdrop-blur-[2px] z-10 rounded-xl transition-all duration-300" />
                             )}
 
                             <div className={cn("space-y-4 transition-all duration-300", isLoading && "opacity-60 scale-[0.98]")}>
@@ -136,7 +136,7 @@ const ApiKeyLoginPage: React.FC = () => {
                                             value={apiKey}
                                             onChange={(e) => setApiKey(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                                            className="pl-10 h-12 bg-white/50 dark:bg-white/5 font-mono text-sm"
+                                            className="pl-10 h-12 bg-white/50 dark:bg-gray-900/50 font-mono text-sm"
                                         />
                                         <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                     </div>

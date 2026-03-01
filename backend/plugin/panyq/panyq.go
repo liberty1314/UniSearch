@@ -35,7 +35,7 @@ const (
 	// 基础URL
 	BaseURL = "https://panyq.com"
 	// 请求来源控制默认为开启状态
-	EnableRefererCheck = true
+	EnableRefererCheck = false
 )
 
 // 动态Action ID的键名
@@ -204,7 +204,7 @@ func (p *PanyqPlugin) doSearch(client *http.Client, keyword string, ext map[stri
 	// 尝试获取或发现 Action ID
 	actionIDs, err := p.getOrDiscoverActionIDs()
 	if err != nil {
-		fmt.Println("panyq: failed to get Action IDs:", err)
+		// fmt.Println("panyq: failed to get Action IDs:", err)
 		return nil, fmt.Errorf("获取Action ID失败: %w", err)
 	}
 
@@ -212,7 +212,6 @@ func (p *PanyqPlugin) doSearch(client *http.Client, keyword string, ext map[stri
 	credentials, err := p.getCredentials(keyword, actionIDs[ActionIDKeys[0]], client)
 	if err != nil {
 		// 如果获取凭证失败，尝试刷新Action ID并重试
-		fmt.Println("panyq: failed to get credentials, refreshing Action IDs...")
 		actionIDs, err = p.discoverActionIDs()
 		if err != nil {
 			return nil, fmt.Errorf("刷新Action ID失败: %w", err)
@@ -262,7 +261,7 @@ func (p *PanyqPlugin) doSearch(client *http.Client, keyword string, ext map[stri
 
 				pageHits, _, err := p.getSearchResults(credentials.Sign, pageNum, client)
 				if err != nil {
-					fmt.Printf("panyq: failed to get page %d: %v\n", pageNum, err)
+					// fmt.Printf("panyq: failed to get page %d: %v\n", pageNum, err)
 					return
 				}
 
@@ -305,14 +304,14 @@ func (p *PanyqPlugin) doSearch(client *http.Client, keyword string, ext map[stri
 			// 步骤3: 执行中间状态确认
 			err := p.performIntermediateStep(actionIDs[ActionIDKeys[1]], credentials.Hash, credentials.Sha, item.EID, client)
 			if err != nil {
-				fmt.Println("panyq: intermediate step failed for", item.EID, ":", err)
+				// fmt.Println("panyq: intermediate step failed for", item.EID, ":", err)
 				return
 			}
 
 			// 步骤4: 获取最终链接
 			finalLink, err := p.getFinalLink(actionIDs[ActionIDKeys[2]], item.EID, client)
 			if err != nil {
-				fmt.Println("panyq: get final link failed for", item.EID, ":", err)
+				// fmt.Println("panyq: get final link failed for", item.EID, ":", err)
 				return
 			}
 
@@ -363,7 +362,7 @@ func (p *PanyqPlugin) doSearch(client *http.Client, keyword string, ext map[stri
 	}
 
 	// 使用关键词过滤结果
-	filteredResults := p.FilterResultsByKeyword(results, keyword)
+	filteredResults := plugin.FilterResultsByKeyword(results, keyword)
 
 	if DebugLog {
 		fmt.Println("panyq: returning", len(filteredResults), "filtered results")
@@ -429,7 +428,7 @@ func (p *PanyqPlugin) discoverActionIDs() (map[string]string, error) {
 	}
 
 	if DebugLog {
-		fmt.Printf("panyq: 找到 %d 个潜在的 Action ID\n", len(potentialIDs))
+		// fmt.Printf("panyq: 找到 %d 个潜在的 Action ID\n", len(potentialIDs))
 		if len(potentialIDs) > 0 {
 			fmt.Printf("panyq: 样例ID: %s\n", potentialIDs[0])
 		}

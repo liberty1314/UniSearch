@@ -536,7 +536,7 @@ export interface CloudTypeConfig {
 export interface PluginInfo {
   name: string;
   priority: number;
-  status: 'active' | 'inactive' | 'error';
+  status: 'active' | 'inactive' | 'error' | 'custom';
   description: string;
 }
 
@@ -602,6 +602,30 @@ export interface TGChannel {
   sort_order: number;
   created_at: string;
   updated_at: string;
+  health_status?: 'healthy' | 'error' | 'untested';
+  last_checked_at?: string | null;
+  last_error?: string;
+  check_source?: 'manual_test' | 'batch_test' | 'system' | string;
+}
+
+/**
+ * TG 频道健康汇总
+ */
+export interface ChannelHealthSummary {
+  total: number;
+  healthy: number;
+  error: number;
+  untested: number;
+  enabled_error: number;
+}
+
+/**
+ * TG 频道列表响应
+ */
+export interface ListTGChannelsResponse {
+  channels: TGChannel[];
+  total: number;
+  health_summary?: ChannelHealthSummary;
 }
 
 // ============ 用户管理相关类型 ============

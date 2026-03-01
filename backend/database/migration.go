@@ -18,13 +18,15 @@ func AutoMigrate() error {
 	// 使用 GORM AutoMigrate 自动创建或更新表结构
 	// 迁移顺序很重要：先迁移 User（父表），再迁移 APIKey（子表，包含外键）
 	err := DB.AutoMigrate(
-		&model.User{},           // 创建 users 表
-		&model.APIKey{},         // 创建 api_keys 表（包含外键 user_id）
-		&model.SystemSettings{}, // 创建 system_settings 表
-		&model.RefreshToken{},   // 创建 refresh_tokens 表（记住密码功能）
-		&model.Secret{},         // 创建 secrets 表（密钥管理）
-		&model.Announcement{},   // 创建 announcements 表（系统公告）
-		&model.TGChannel{},      // 创建 tg_channels 表（Telegram 频道管理）
+		&model.User{},                  // 创建 users 表
+		&model.APIKey{},                // 创建 api_keys 表（包含外键 user_id）
+		&model.SystemSettings{},        // 创建 system_settings 表
+		&model.RefreshToken{},          // 创建 refresh_tokens 表（记住密码功能）
+		&model.Secret{},                // 创建 secrets 表（密钥管理）
+		&model.Announcement{},          // 创建 announcements 表（系统公告）
+		&model.TGChannel{},             // 创建 tg_channels 表（Telegram 频道管理）
+		&model.PluginHealthStatus{},    // 创建 plugin_health_statuses 表（插件健康状态）
+		&model.TGChannelHealthStatus{}, // 创建 tg_channel_health_statuses 表（TG 频道健康状态）
 	)
 
 	if err != nil {
@@ -40,6 +42,8 @@ func AutoMigrate() error {
 	log.Println("  - secrets 表已创建/更新")
 	log.Println("  - announcements 表已创建/更新")
 	log.Println("  - tg_channels 表已创建/更新")
+	log.Println("  - plugin_health_statuses 表已创建/更新")
+	log.Println("  - tg_channel_health_statuses 表已创建/更新")
 	log.Println("  - 外键约束已创建（api_keys.user_id -> users.id）")
 
 	// 执行数据迁移：为现有管理员创建永久 Key

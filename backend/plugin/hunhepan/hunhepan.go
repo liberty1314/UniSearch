@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -13,6 +14,14 @@ import (
 	"unisearch/plugin"
 	"unisearch/util/json"
 )
+
+var debugEnabled = false
+
+func debugLog(format string, args ...interface{}) {
+	if debugEnabled {
+		log.Printf("[hunhepan DEBUG] "+format, args...)
+	}
+}
 
 // 在init函数中注册插件
 func init() {
@@ -25,6 +34,7 @@ const (
 	HunhepanAPI = "https://hunhepan.com/open/search/disk"
 	QkpansoAPI  = "https://qkpanso.com/v1/search/disk"
 	KuakeAPI    = "https://kuake8.com/v1/search/disk"
+	MisosoAPI   = "https://www.misoso.cc/v1/search/disk"
 
 	// 默认页大小
 	DefaultPageSize = 30
@@ -58,13 +68,15 @@ func (p *HunhepanAsyncPlugin) SearchWithResult(keyword string, ext map[string]in
 
 // doSearch 实际的搜索实现
 func (p *HunhepanAsyncPlugin) doSearch(client *http.Client, keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
+	debugLog("开始搜索，关键词: %s", keyword)
+
 	// 创建结果通道和错误通道
-	resultChan := make(chan []HunhepanItem, 3)
-	errChan := make(chan error, 3)
+	resultChan := make(chan []HunhepanItem, 4)
+	errChan := make(chan error, 4)
 
 	// 创建等待组
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(4)
 
 	// 并行请求三个API
 	go func() {
@@ -97,6 +109,19 @@ func (p *HunhepanAsyncPlugin) doSearch(client *http.Client, keyword string, ext 
 		resultChan <- items
 	}()
 
+	go func() {
+		defer wg.Done()
+		debugLog("调用 misoso API")
+		items, err := p.searchAPI(client, MisosoAPI, keyword)
+		if err != nil {
+			debugLog("misoso API 错误: %v", err)
+			errChan <- fmt.Errorf("misoso API error: %w", err)
+			return
+		}
+		debugLog("misoso API 返回 %d 条结果", len(items))
+		resultChan <- items
+	}()
+
 	// 启动一个goroutine等待所有请求完成并关闭通道
 	go func() {
 		wg.Wait()
@@ -118,6 +143,8 @@ func (p *HunhepanAsyncPlugin) doSearch(client *http.Client, keyword string, ext 
 		errors = append(errors, err)
 	}
 
+	debugLog("收集到 %d 条原始结果，%d 个错误", len(allItems), len(errors))
+
 	// 如果没有获取到任何结果且有错误，则返回第一个错误
 	if len(allItems) == 0 && len(errors) > 0 {
 		return nil, errors[0]
@@ -125,9 +152,11 @@ func (p *HunhepanAsyncPlugin) doSearch(client *http.Client, keyword string, ext 
 
 	// 去重处理
 	uniqueItems := p.deduplicateItems(allItems)
+	debugLog("去重后剩余 %d 条结果", len(uniqueItems))
 
 	// 转换为标准格式
 	results := p.convertResults(uniqueItems)
+	debugLog("转换后得到 %d 条最终结果", len(results))
 
 	return results, nil
 }
@@ -150,33 +179,43 @@ func (p *HunhepanAsyncPlugin) searchAPI(client *http.Client, apiURL, keyword str
 		go func(pageNum int) {
 			defer wg.Done()
 
-			// 构建请求体
+			// 构建请求体 - 根据1.txt的实际请求格式
 			reqBody := map[string]interface{}{
-				"q":       keyword,
-				"exact":   true,
-				"page":    pageNum,
-				"size":    DefaultPageSize,
-				"type":    "",
-				"time":    "",
-				"from":    "web",
-				"user_id": 0,
-				"filter":  true,
+				"page":         pageNum,
+				"q":            keyword,
+				"user":         "",
+				"exact":        false,
+				"format":       []string{},
+				"share_time":   "",
+				"size":         DefaultPageSize,
+				"type":         "",
+				"exclude_user": []string{},
+				"adv_params": map[string]interface{}{
+					"wechat_pwd": "",
+					"platform":   "pc",
+				},
 			}
 
 			jsonData, err := json.Marshal(reqBody)
 			if err != nil {
+				debugLog("序列化请求失败 (page %d): %v", pageNum, err)
 				errChan <- fmt.Errorf("marshal request failed (page %d): %w", pageNum, err)
 				return
 			}
 
+			debugLog("发送请求到 %s (page %d): %s", apiURL, pageNum, string(jsonData))
+
 			req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonData))
 			if err != nil {
+				debugLog("创建请求失败 (page %d): %v", pageNum, err)
 				errChan <- fmt.Errorf("create request failed (page %d): %w", pageNum, err)
 				return
 			}
 
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+			req.Header.Set("Accept", "application/json, text/plain, */*")
+			req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
 
 			// 根据不同的API设置不同的Referer
 			if strings.Contains(apiURL, "qkpanso.com") {
@@ -185,35 +224,48 @@ func (p *HunhepanAsyncPlugin) searchAPI(client *http.Client, apiURL, keyword str
 				req.Header.Set("Referer", "https://kuake8.com/search")
 			} else if strings.Contains(apiURL, "hunhepan.com") {
 				req.Header.Set("Referer", "https://hunhepan.com/search")
+			} else if strings.Contains(apiURL, "misoso.cc") {
+				req.Header.Set("Referer", "https://www.misoso.cc/search")
+				req.Header.Set("Origin", "https://www.misoso.cc")
 			}
 
 			// 发送请求
 			resp, err := client.Do(req)
 			if err != nil {
+				debugLog("请求失败 (page %d): %v", pageNum, err)
 				errChan <- fmt.Errorf("request failed (page %d): %w", pageNum, err)
 				return
 			}
 			defer resp.Body.Close()
 
+			debugLog("收到响应 (page %d), 状态码: %d", pageNum, resp.StatusCode)
+
 			// 读取响应体
 			respBody, err := io.ReadAll(resp.Body)
 			if err != nil {
+				debugLog("读取响应失败 (page %d): %v", pageNum, err)
 				errChan <- fmt.Errorf("read response body failed (page %d): %w", pageNum, err)
 				return
 			}
 
+			debugLog("响应内容 (page %d, 前500字符): %s", pageNum, string(respBody[:min(500, len(respBody))]))
+
 			// 解析响应
 			var apiResp HunhepanResponse
 			if err := json.Unmarshal(respBody, &apiResp); err != nil {
+				debugLog("JSON解析失败 (page %d): %v", pageNum, err)
 				errChan <- fmt.Errorf("decode response failed (page %d): %w", pageNum, err)
 				return
 			}
 
 			// 检查响应状态
 			if apiResp.Code != 200 {
+				debugLog("API返回错误 (page %d): code=%d, msg=%s", pageNum, apiResp.Code, apiResp.Msg)
 				errChan <- fmt.Errorf("API returned error (page %d): %s", pageNum, apiResp.Msg)
 				return
 			}
+
+			debugLog("成功获取第 %d 页数据，共 %d 条结果", pageNum, len(apiResp.Data.List))
 
 			// 将结果发送到通道
 			resultChan <- apiResp.Data.List
@@ -245,6 +297,13 @@ func (p *HunhepanAsyncPlugin) searchAPI(client *http.Client, apiURL, keyword str
 	}
 
 	return allItems, nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // deduplicateItems 去重处理
@@ -307,6 +366,12 @@ func (p *HunhepanAsyncPlugin) convertResults(items []HunhepanItem) []model.Searc
 	results := make([]model.SearchResult, 0, len(items))
 
 	for i, item := range items {
+		// 跳过无效链接的结果
+		if item.Link == "" {
+			debugLog("跳过无链接的结果: %s", item.DiskName)
+			continue
+		}
+
 		// 创建链接
 		link := model.Link{
 			URL:      item.Link,
@@ -318,7 +383,7 @@ func (p *HunhepanAsyncPlugin) convertResults(items []HunhepanItem) []model.Searc
 		uniqueID := fmt.Sprintf("hunhepan-%s", item.DiskID)
 		if item.DiskID == "" {
 			// 使用索引作为后备
-			uniqueID = fmt.Sprintf("hunhepan-%d", i)
+			uniqueID = fmt.Sprintf("hunhepan-%d-%d", time.Now().Unix(), i)
 		}
 
 		// 解析时间
@@ -328,6 +393,8 @@ func (p *HunhepanAsyncPlugin) convertResults(items []HunhepanItem) []model.Searc
 			parsedTime, err := time.Parse("2006-01-02 15:04:05", item.SharedTime)
 			if err == nil {
 				datetime = parsedTime
+			} else {
+				debugLog("时间解析失败: %s, err: %v", item.SharedTime, err)
 			}
 		}
 
@@ -343,8 +410,10 @@ func (p *HunhepanAsyncPlugin) convertResults(items []HunhepanItem) []model.Searc
 			Content:  item.Files,
 			Datetime: datetime,
 			Links:    []model.Link{link},
+			Channel:  "", // 插件搜索结果必须为空字符串
 		}
 
+		debugLog("转换结果: ID=%s, Title=%s, Type=%s, Link=%s", uniqueID, result.Title, link.Type, link.URL)
 		results = append(results, result)
 	}
 

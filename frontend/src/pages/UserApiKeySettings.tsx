@@ -93,12 +93,12 @@ interface ApiKeySettingsSkeletonProps {
 const ApiKeySettingsSkeleton: React.FC<ApiKeySettingsSkeletonProps> = ({ holdOnError, isRetrying, onRetry }) => {
     return (
         <div className="space-y-6">
-            <div className="bg-white dark:bg-slate-900/80 rounded-[20px] shadow-sm overflow-hidden border border-transparent dark:border-white/5 animate-pulse">
+            <div className="bg-white dark:bg-[#1C1C1E] rounded-[20px] shadow-sm overflow-hidden border border-transparent dark:border-white/5 animate-pulse">
                 <div className="px-5 py-4 border-b border-gray-100 dark:border-white/10">
-                    <div className="h-5 w-36 bg-gray-200 dark:bg-slate-700 rounded" />
+                    <div className="h-5 w-36 bg-gray-200 dark:bg-[#2C2C2E] rounded" />
                 </div>
                 <div className="p-5">
-                    <div className="h-12 w-full bg-gray-200 dark:bg-slate-700 rounded-xl" />
+                    <div className="h-12 w-full bg-gray-200 dark:bg-[#2C2C2E] rounded-xl" />
                 </div>
             </div>
 
@@ -106,17 +106,17 @@ const ApiKeySettingsSkeleton: React.FC<ApiKeySettingsSkeletonProps> = ({ holdOnE
                 {Array.from({ length: 4 }).map((_, idx) => (
                     <div
                         key={idx}
-                        className="bg-white dark:bg-slate-900/80 p-5 rounded-[20px] shadow-sm h-32 border border-transparent dark:border-white/5 animate-pulse"
+                        className="bg-white dark:bg-[#1C1C1E] p-5 rounded-[20px] shadow-sm h-32 border border-transparent dark:border-white/5 animate-pulse"
                     >
-                        <div className="h-3 w-20 bg-gray-200 dark:bg-slate-700 rounded mb-5" />
-                        <div className="h-8 w-16 bg-gray-200 dark:bg-slate-700 rounded mb-3" />
-                        <div className="h-3 w-12 bg-gray-200 dark:bg-slate-700 rounded" />
+                        <div className="h-3 w-20 bg-gray-200 dark:bg-[#2C2C2E] rounded mb-5" />
+                        <div className="h-8 w-16 bg-gray-200 dark:bg-[#2C2C2E] rounded mb-3" />
+                        <div className="h-3 w-12 bg-gray-200 dark:bg-[#2C2C2E] rounded" />
                     </div>
                 ))}
             </div>
 
             {holdOnError && (
-                <div className="bg-white dark:bg-slate-900/80 rounded-[20px] shadow-sm border border-transparent dark:border-white/5 p-6 text-center">
+                <div className="bg-white dark:bg-[#1C1C1E] rounded-[20px] shadow-sm border border-transparent dark:border-white/5 p-6 text-center">
                     <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">加载失败，请重试</p>
                     <button
                         onClick={onRetry}
@@ -321,7 +321,7 @@ const UserApiKeySettings: React.FC = () => {
     const showContentSkeleton = isInitialLoading || isHoldLoadingOnError;
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-slate-950 font-sans selection:bg-blue-500/30">
+        <div className="min-h-screen bg-gray-50 dark:bg-black font-sans selection:bg-blue-500/30">
             {/* 顶部导航 */}
             <div className="max-w-3xl mx-auto px-6 pt-24 pb-6">
                 <button
@@ -378,7 +378,7 @@ const UserApiKeySettings: React.FC = () => {
                         className="space-y-6"
                     >
                         {/* 状态概览卡片 */}
-                        <div className="bg-white dark:bg-slate-900/80 rounded-[20px] shadow-sm overflow-hidden border border-transparent dark:border-white/5">
+                        <div className="bg-white dark:bg-[#1C1C1E] rounded-[20px] shadow-sm overflow-hidden border border-transparent dark:border-white/5">
                             <div className="px-5 py-4 border-b border-gray-100 dark:border-white/10 flex items-center justify-between">
                                 <span className="text-[17px] font-semibold text-black dark:text-white">
                                     当前密钥状态
@@ -408,7 +408,7 @@ const UserApiKeySettings: React.FC = () => {
                                         type={showKey ? 'text' : 'password'}
                                         value={apiKeyInfo.api_key}
                                         readOnly
-                                        className="w-full pl-12 pr-24 py-3 bg-gray-50 dark:bg-slate-800/80 rounded-xl text-[15px] font-mono text-gray-900 dark:text-gray-100 border-none focus:ring-0 cursor-default"
+                                        className="w-full pl-12 pr-24 py-3 bg-gray-50 dark:bg-[#2C2C2E] rounded-xl text-[15px] font-mono text-gray-900 dark:text-gray-100 border-none focus:ring-0 cursor-default"
                                     />
                                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                                         <button
@@ -442,7 +442,7 @@ const UserApiKeySettings: React.FC = () => {
                                 <motion.div
                                     key={idx}
                                     whileHover={{ scale: 1.02 }}
-                                    className="bg-white dark:bg-slate-900/80 p-5 rounded-[20px] shadow-sm flex flex-col justify-between h-32 border border-transparent dark:border-white/5"
+                                    className="bg-white dark:bg-[#1C1C1E] p-5 rounded-[20px] shadow-sm flex flex-col justify-between h-32 border border-transparent dark:border-white/5"
                                 >
                                     <span className="text-[13px] font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide">
                                         {stat.label}
@@ -465,7 +465,7 @@ const UserApiKeySettings: React.FC = () => {
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => setShowUnbindDialog(true)}
                                 disabled={isSubmitting}
-                                className="w-full py-3.5 bg-white dark:bg-slate-900/80 text-red-500 text-[17px] font-medium rounded-[14px] shadow-sm hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors border border-transparent dark:border-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full py-3.5 bg-white dark:bg-[#1C1C1E] text-red-500 text-[17px] font-medium rounded-[14px] shadow-sm hover:bg-gray-50 dark:hover:bg-[#2C2C2E] transition-colors border border-transparent dark:border-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 解除绑定
                             </motion.button>
@@ -477,7 +477,7 @@ const UserApiKeySettings: React.FC = () => {
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-white dark:bg-slate-900/80 rounded-[20px] shadow-sm overflow-hidden border border-transparent dark:border-white/5"
+                            className="bg-white dark:bg-[#1C1C1E] rounded-[20px] shadow-sm overflow-hidden border border-transparent dark:border-white/5"
                         >
                             <div className="p-6">
                                 <label className="block text-[13px] font-medium text-gray-500 dark:text-slate-400 mb-2 uppercase tracking-wide ml-1">
@@ -488,11 +488,11 @@ const UserApiKeySettings: React.FC = () => {
                                     placeholder="sk-..."
                                     value={newApiKey}
                                     onChange={(e) => setNewApiKey(e.target.value)}
-                                    className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-800/80 rounded-xl text-[17px] text-black dark:text-white placeholder-gray-400 border-none focus:ring-2 focus:ring-blue-500/50 transition-all font-mono"
+                                    className="w-full px-4 py-3 bg-gray-100 dark:bg-[#2C2C2E] rounded-xl text-[17px] text-black dark:text-white placeholder-gray-400 border-none focus:ring-2 focus:ring-blue-500/50 transition-all font-mono"
                                     autoFocus
                                 />
                                 <p className="mt-3 ml-1 text-[13px] text-gray-400">
-                                    请输入以 <code className="bg-gray-100 dark:bg-slate-800/80 px-1 rounded text-gray-600 dark:text-slate-300">sk-</code> 开头的 43 位密钥
+                                    请输入以 <code className="bg-gray-100 dark:bg-[#2C2C2E] px-1 rounded text-gray-600 dark:text-slate-300">sk-</code> 开头的 43 位密钥
                                 </p>
 
                                 <div className="mt-8">
@@ -521,7 +521,7 @@ const UserApiKeySettings: React.FC = () => {
 
             {/* 解绑确认对话框 - iOS Style */}
             <AlertDialog open={showUnbindDialog} onOpenChange={setShowUnbindDialog}>
-                <AlertDialogContent className="w-[320px] p-0 gap-0 bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl border border-transparent dark:border-white/10 rounded-[14px] overflow-hidden shadow-2xl">
+                <AlertDialogContent className="w-[320px] p-0 gap-0 bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-xl border border-transparent dark:border-white/10 rounded-[14px] overflow-hidden shadow-2xl">
                     <div className="p-6 text-center">
                         <AlertDialogHeader>
                             <AlertDialogTitle className="text-[17px] font-semibold text-black dark:text-white text-center">

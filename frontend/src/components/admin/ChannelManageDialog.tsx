@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { ConfirmDialog } from './ConfirmDialog';
-import type { TGChannel } from '@/types/api';
+import type { TGChannel, ListTGChannelsResponse } from '@/types/api';
 
 interface ChannelManageDialogProps {
     isOpen: boolean;
@@ -46,8 +46,8 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
             });
 
             if (response.ok) {
-                const data = await response.json();
-                setChannels(data.channels || []);
+                const data = (await response.json()) as ListTGChannelsResponse;
+                setChannels(Array.isArray(data.channels) ? data.channels : []);
             } else {
                 toast.error('获取频道列表失败');
             }
@@ -179,7 +179,12 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
 
             const data = await response.json();
 
-            if (data.accessible) {
+            if (!response.ok) {
+                setTestingStatus(prev => ({ ...prev, [channelName]: 'error' }));
+                toast.error(`测试频道 ${channelName} 失败`, {
+                    description: data.error || '记录测试结果失败',
+                });
+            } else if (data.accessible) {
                 setTestingStatus(prev => ({ ...prev, [channelName]: 'success' }));
                 toast.success(`频道 ${channelName} 可访问`);
             } else {
@@ -188,6 +193,8 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                     description: data.error || '频道可能不存在或已被限制',
                 });
             }
+            await fetchChannels();
+            onSuccess();
         } catch {
             setTestingStatus(prev => ({ ...prev, [channelName]: 'error' }));
             toast.error(`测试频道 ${channelName} 出错`);
@@ -222,11 +229,12 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                         headers: { 'Authorization': `Bearer ${token}` },
                     });
                     const data = await response.json();
+                    const ok = response.ok && Boolean(data.accessible);
                     setTestingStatus(prev => ({
                         ...prev,
-                        [ch.name]: data.accessible ? 'success' : 'error',
+                        [ch.name]: ok ? 'success' : 'error',
                     }));
-                    return { name: ch.name, accessible: data.accessible };
+                    return { name: ch.name, accessible: ok };
                 } catch {
                     setTestingStatus(prev => ({ ...prev, [ch.name]: 'error' }));
                     return { name: ch.name, accessible: false };
@@ -246,6 +254,8 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
         }
 
         setIsBatchTesting(false);
+        await fetchChannels();
+        onSuccess();
 
         // 10秒后重置所有状态
         setTimeout(() => {
@@ -310,6 +320,7 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
     };
 
     const enabledCount = channels.filter(ch => ch.is_enabled).length;
+    const enabledErrorCount = channels.filter(ch => ch.is_enabled && ch.health_status === 'error').length;
 
     if (!isOpen) return null;
 
@@ -359,25 +370,32 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
 
                             {/* 添加频道区域 */}
                             <div className="px-5 pt-4 pb-2">
-                                <div className="flex gap-2">
+                                <div className="flex flex-col sm:flex-row gap-2">
                                     <Input
                                         placeholder="输入频道名称（如 tgsearchers3）"
                                         value={newChannelName}
                                         onChange={(e) => setNewChannelName(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !isAdding && newChannelName.trim()) {
+                                                e.preventDefault();
+                                                void handleAddChannel();
+                                            }
+                                        }}
                                         className="flex-1"
                                         disabled={isAdding}
                                     />
                                     <Button
                                         onClick={handleAddChannel}
                                         disabled={isAdding || !newChannelName.trim()}
-                                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white cursor-pointer shrink-0"
+                                        className="h-11 sm:h-auto px-4 sm:px-5 min-w-[108px] whitespace-nowrap bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white cursor-pointer shrink-0"
+                                        aria-label="添加频道"
                                     >
                                         {isAdding ? (
                                             <Loader2 className="w-4 h-4 animate-spin mr-1" />
                                         ) : (
                                             <Plus className="w-4 h-4 mr-1" />
                                         )}
-                                        添加
+                                        添加频道
                                     </Button>
                                 </div>
                             </div>
@@ -396,16 +414,19 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                                 ) : (
                                     <div className="space-y-2">
                                         {channels.map((channel, index) => (
-                                            <motion.div
+                                            <div
                                                 key={channel.id}
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: index * 0.03 }}
-                                                className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${channel.is_enabled
+                                                className={`rounded-lg border transition-colors ${channel.is_enabled
                                                     ? 'bg-slate-50 dark:bg-slate-700/30 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
                                                     : 'bg-slate-100/50 dark:bg-slate-800/30 border-slate-200/50 dark:border-slate-700/50 opacity-60'
                                                     }`}
                                             >
+                                                <motion.div
+                                                    initial={{ opacity: 0, x: -10 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ delay: index * 0.03 }}
+                                                    className="flex items-center justify-between p-3"
+                                                >
                                                 {/* 左侧：排序把手 + 状态点 + 频道名 */}
                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
                                                     {/* 排序控制 */}
@@ -440,6 +461,24 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                                                     {!channel.is_enabled && (
                                                         <Badge variant="outline" className="text-xs text-slate-400 border-slate-300 dark:border-slate-600 shrink-0">
                                                             已禁用
+                                                        </Badge>
+                                                    )}
+                                                    {channel.health_status === 'healthy' && (
+                                                        <Badge className="text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 shrink-0">
+                                                            正常
+                                                        </Badge>
+                                                    )}
+                                                    {channel.health_status === 'error' && (
+                                                        <Badge
+                                                            className="text-xs bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 shrink-0"
+                                                            title={channel.last_error || '最近一次测试失败'}
+                                                        >
+                                                            异常
+                                                        </Badge>
+                                                    )}
+                                                    {(!channel.health_status || channel.health_status === 'untested') && (
+                                                        <Badge variant="outline" className="text-xs shrink-0">
+                                                            未测试
                                                         </Badge>
                                                     )}
                                                 </div>
@@ -496,7 +535,16 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                                                         </Button>
                                                     </motion.div>
                                                 </div>
-                                            </motion.div>
+                                                </motion.div>
+                                                {channel.health_status === 'error' && channel.last_error && (
+                                                    <div
+                                                        className="px-3 pb-3 text-xs text-red-600 dark:text-red-400 truncate"
+                                                        title={channel.last_error}
+                                                    >
+                                                        最近错误: {channel.last_error}
+                                                    </div>
+                                                )}
+                                            </div>
                                         ))}
                                     </div>
                                 )}
@@ -506,7 +554,7 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                             <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                                 <div className="flex justify-between items-center">
                                     <span className="text-sm text-slate-500 dark:text-slate-400">
-                                        共 {channels.length} 个频道，{enabledCount} 个已启用
+                                        共 {channels.length} 个频道，{enabledCount} 个已启用，异常频道（已启用）{enabledErrorCount}
                                     </span>
                                     <div className="flex items-center gap-2">
                                         <Button

@@ -102,7 +102,7 @@ const AdminLogin: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-slate-950 px-4 pt-16 overflow-hidden relative">
+        <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 pt-16 overflow-hidden relative">
             <AuthBackground preset={authVisualPresets.adminLogin} particles={particles} />
 
             {/* 登录卡片 */}
@@ -132,7 +132,7 @@ const AdminLogin: React.FC = () => {
                         <CardContent className="space-y-6 relative">
                             {/* 后台登录加载遮罩与模糊层 */}
                             {isAdminLoading && (
-                                <div className="absolute inset-x-0 -top-20 bottom-0 bg-white/5 dark:bg-slate-950/20 backdrop-blur-[2px] z-10 rounded-xl transition-all duration-300" />
+                                <div className="absolute inset-x-0 -top-20 bottom-0 bg-white/5 dark:bg-gray-900/20 backdrop-blur-[2px] z-10 rounded-xl transition-all duration-300" />
                             )}
                             <form onSubmit={(e) => { e.preventDefault(); handleAdminLogin(); }} className={cn("space-y-6 transition-all duration-300", isAdminLoading && "opacity-60 scale-[0.98]")}>
                                 <div className="space-y-3 animate-fade-in auth-delay-300">
@@ -151,7 +151,7 @@ const AdminLogin: React.FC = () => {
                                             onChange={(e) => setUsername(e.target.value)}
                                             onKeyDown={handleKeyPress}
                                             disabled={isAdminLoading}
-                                            className="h-12 bg-white/50 dark:bg-white/5 border-gray-300 dark:border-slate-700 focus:border-rose-500 dark:focus:border-rose-400 focus:ring-2 focus:ring-rose-500/20 focus:outline-none transition-all duration-200"
+                                            className="h-12 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-slate-700 focus:border-rose-500 dark:focus:border-rose-400 focus:ring-2 focus:ring-rose-500/20 focus:outline-none transition-all duration-200"
                                         />
                                         <div className="absolute inset-0 rounded-md bg-gradient-to-r from-rose-500/0 via-rose-500/10 to-rose-600/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                                     </div>
@@ -173,7 +173,7 @@ const AdminLogin: React.FC = () => {
                                             onChange={(e) => setPassword(e.target.value)}
                                             onKeyDown={handleKeyPress}
                                             disabled={isAdminLoading}
-                                            className="h-12 pr-12 bg-white/50 dark:bg-white/5 border-gray-300 dark:border-slate-700 focus:border-rose-500 dark:focus:border-rose-400 focus:ring-2 focus:ring-rose-500/20 focus:outline-none transition-all duration-200"
+                                            className="h-12 pr-12 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-slate-700 focus:border-rose-500 dark:focus:border-rose-400 focus:ring-2 focus:ring-rose-500/20 focus:outline-none transition-all duration-200"
                                         />
                                         <button
                                             type="button"
@@ -198,7 +198,7 @@ const AdminLogin: React.FC = () => {
                                         id="rememberMe"
                                         checked={rememberMe}
                                         onChange={(e) => setRememberMe(e.target.checked)}
-                                        className="w-4 h-4 text-rose-600 bg-white/50 dark:bg-white/5 border-gray-300 dark:border-slate-700 rounded focus:ring-2 focus:ring-rose-500/20 transition-all duration-200"
+                                        className="w-4 h-4 text-rose-600 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-slate-700 rounded focus:ring-2 focus:ring-rose-500/20 transition-all duration-200"
                                     />
                                     <Label
                                         htmlFor="rememberMe"

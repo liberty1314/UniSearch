@@ -274,6 +274,13 @@ func (p *DuoduoAsyncPlugin) parseSearchItem(s *goquery.Selection, keyword string
 	})
 	plot := strings.TrimSpace(plotElement.Find(".video-info-item").Text())
 
+	// 提取封面图片 (参考 Pan_mogg.js 的选择器)
+	var images []string
+	if picURL, exists := s.Find(".module-item-pic > img").Attr("data-src"); exists && picURL != "" {
+		images = append(images, picURL)
+	}
+	result.Images = images
+
 	// 构建内容描述
 	var contentParts []string
 	if quality != "" {
@@ -341,9 +348,14 @@ func (p *DuoduoAsyncPlugin) enhanceWithDetails(client *http.Client, results []mo
 			}
 			atomic.AddInt64(&cacheMisses, 1)
 
-			// 获取详情页链接
-			detailLinks := p.fetchDetailLinks(client, itemID)
+			// 获取详情页链接和图片
+			detailLinks, detailImages := p.fetchDetailLinksAndImages(client, itemID)
 			r.Links = detailLinks
+
+			// 合并图片：优先使用详情页的海报，如果没有则使用搜索结果的图片
+			if len(detailImages) > 0 {
+				r.Images = detailImages
+			}
 
 			// 缓存结果
 			detailCache.Store(itemID, r)
@@ -387,8 +399,8 @@ func (p *DuoduoAsyncPlugin) doRequestWithRetry(req *http.Request, client *http.C
 	return nil, fmt.Errorf("重试 %d 次后仍然失败: %w", maxRetries, lastErr)
 }
 
-// fetchDetailLinks 获取详情页的下载链接
-func (p *DuoduoAsyncPlugin) fetchDetailLinks(client *http.Client, itemID string) []model.Link {
+// fetchDetailLinksAndImages 获取详情页的下载链接和图片
+func (p *DuoduoAsyncPlugin) fetchDetailLinksAndImages(client *http.Client, itemID string) ([]model.Link, []string) {
 	// 性能统计
 	start := time.Now()
 	atomic.AddInt64(&detailPageRequests, 1)
@@ -406,7 +418,7 @@ func (p *DuoduoAsyncPlugin) fetchDetailLinks(client *http.Client, itemID string)
 	// 创建请求
 	req, err := http.NewRequestWithContext(ctx, "GET", detailURL, nil)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 
 	// 设置请求头
@@ -419,20 +431,26 @@ func (p *DuoduoAsyncPlugin) fetchDetailLinks(client *http.Client, itemID string)
 	// 发送请求（带重试）
 	resp, err := p.doRequestWithRetry(req, client)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return nil
+		return nil, nil
 	}
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 
 	var links []model.Link
+	var images []string
+
+	// 提取详情页的海报图片 (参考 Pan_mogg.js 的选择器)
+	if posterURL, exists := doc.Find(".mobile-play .lazyload").Attr("data-src"); exists && posterURL != "" {
+		images = append(images, posterURL)
+	}
 
 	// 查找下载链接区域
 	doc.Find("#download-list .module-row-one").Each(func(i int, s *goquery.Selection) {
@@ -480,6 +498,12 @@ func (p *DuoduoAsyncPlugin) fetchDetailLinks(client *http.Client, itemID string)
 		})
 	})
 
+	return links, images
+}
+
+// fetchDetailLinks 获取详情页的下载链接（兼容性方法，仅返回链接）
+func (p *DuoduoAsyncPlugin) fetchDetailLinks(client *http.Client, itemID string) []model.Link {
+	links, _ := p.fetchDetailLinksAndImages(client, itemID)
 	return links
 }
 
