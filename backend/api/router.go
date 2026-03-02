@@ -12,7 +12,7 @@ import (
 
 // SetupRouter 设置路由
 // 验证需求：4.1, 5.1, 6.1, 7.1, 8.1, 10.1, 10.3
-func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService, systemSettingsService *service.SystemSettingsService, announcementService *service.AnnouncementService, tgChannelService *service.TGChannelService, pluginHealthService *service.PluginHealthService, tgChannelHealthService *service.TGChannelHealthService) *gin.Engine {
+func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService, systemSettingsService *service.SystemSettingsService, announcementService *service.AnnouncementService, tgChannelService *service.TGChannelService, pluginHealthService *service.PluginHealthService, pluginStateService *service.PluginStateService, tgChannelHealthService *service.TGChannelHealthService) *gin.Engine {
 	// 设置搜索服务
 	SetSearchService(searchService)
 	// 设置API Key服务
@@ -175,16 +175,17 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			admin.GET("/keys", ListAPIKeysHandler(apiKeyService))
 			admin.POST("/keys", CreateAPIKeyHandler(apiKeyService))
 			admin.DELETE("/keys/:key", DeleteAPIKeyHandler(apiKeyService))
-			admin.PATCH("/keys/:key", UpdateAPIKeyHandler(apiKeyService))                                    // 新增：更新API Key
-			admin.POST("/keys/batch-extend", BatchExtendAPIKeysHandler(apiKeyService))                       // 新增：批量延长
-			admin.POST("/keys/batch-create", BatchCreateAPIKeysHandler(apiKeyService))                       // 新增：批量创建
-			admin.POST("/keys/batch-delete", BatchDeleteAPIKeysHandler(apiKeyService))                       // 新增：批量删除
-			admin.GET("/system-info", GetSystemInfoHandler(searchService, userService, pluginHealthService)) // 更新：获取系统信息（包含插件状态 + 用户活跃度）
-			admin.POST("/plugins/:pluginName/test", TestPluginHandler(searchService, pluginHealthService))   // 新增：测试插件
-			admin.POST("/plugins", CreatePluginHandler(pluginHealthService))                                 // 新增：创建插件
-			admin.PUT("/plugins/:pluginName", UpdatePluginHandler(pluginHealthService))                      // 新增：更新插件
-			admin.DELETE("/plugins/:pluginName", DeletePluginHandler(pluginHealthService))                   // 新增：删除插件
-			admin.POST("/test-url", TestURLHandler())                                                        // 新增：测试URL连通性
+			admin.PATCH("/keys/:key", UpdateAPIKeyHandler(apiKeyService))                                                        // 新增：更新API Key
+			admin.POST("/keys/batch-extend", BatchExtendAPIKeysHandler(apiKeyService))                                           // 新增：批量延长
+			admin.POST("/keys/batch-create", BatchCreateAPIKeysHandler(apiKeyService))                                           // 新增：批量创建
+			admin.POST("/keys/batch-delete", BatchDeleteAPIKeysHandler(apiKeyService))                                           // 新增：批量删除
+			admin.GET("/system-info", GetSystemInfoHandler(searchService, userService, pluginHealthService, pluginStateService)) // 更新：获取系统信息（包含插件状态 + 用户活跃度）
+			admin.POST("/plugins/:pluginName/test", TestPluginHandler(searchService, pluginHealthService))                       // 新增：测试插件
+			admin.POST("/plugins", CreatePluginHandler(pluginHealthService, pluginStateService))                                 // 新增：创建插件
+			admin.PUT("/plugins/:pluginName", UpdatePluginHandler(pluginHealthService, pluginStateService))                      // 新增：更新插件
+			admin.DELETE("/plugins/:pluginName", DeletePluginHandler(pluginHealthService, pluginStateService))                   // 新增：删除插件
+			admin.POST("/plugins/:pluginName/status", SetPluginStatusHandler(searchService, pluginStateService))                 // 新增：插件启停
+			admin.POST("/test-url", TestURLHandler())                                                                            // 新增：测试URL连通性
 
 			// 系统设置管理
 			admin.GET("/system-settings", GetSystemSettingsHandler)    // 获取系统设置
@@ -242,10 +243,26 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 
 			if pluginsEnabled && searchService != nil && searchService.GetPluginManager() != nil {
 				plugins := searchService.GetPluginManager().GetPlugins()
-				pluginCount = len(plugins)
+				allNames := make([]string, 0, len(plugins))
 				for _, p := range plugins {
+					allNames = append(allNames, p.Name())
+				}
+
+				enabledMap := make(map[string]bool)
+				if pluginStateService != nil {
+					if statusMap, err := pluginStateService.GetStatusMap(allNames); err == nil {
+						enabledMap = statusMap
+					}
+				}
+
+				for _, p := range plugins {
+					enabled, exists := enabledMap[p.Name()]
+					if exists && !enabled {
+						continue
+					}
 					pluginNames = append(pluginNames, p.Name())
 				}
+				pluginCount = len(pluginNames)
 			}
 
 			// 获取频道信息（优先从 TGChannelService 获取）

@@ -128,8 +128,9 @@ func calculateCompletenessScore(result model.SearchResult) int {
 
 // SearchService 搜索服务
 type SearchService struct {
-	pluginManager *plugin.PluginManager
-	cache         *cache.RedisCache // Redis 缓存客户端
+	pluginManager      *plugin.PluginManager
+	cache              *cache.RedisCache // Redis 缓存客户端
+	pluginStateService *PluginStateService
 }
 
 // NewSearchService 创建搜索服务实例
@@ -139,11 +140,44 @@ type SearchService struct {
 //
 // 返回:
 //   - *SearchService: 搜索服务实例
-func NewSearchService(pluginManager *plugin.PluginManager, redisCache *cache.RedisCache) *SearchService {
+func NewSearchService(pluginManager *plugin.PluginManager, redisCache *cache.RedisCache, pluginStateService *PluginStateService) *SearchService {
 	return &SearchService{
-		pluginManager: pluginManager,
-		cache:         redisCache,
+		pluginManager:      pluginManager,
+		cache:              redisCache,
+		pluginStateService: pluginStateService,
 	}
+}
+
+func (s *SearchService) filterEnabledBuiltinPlugins(allPlugins []plugin.AsyncSearchPlugin) []plugin.AsyncSearchPlugin {
+	if len(allPlugins) == 0 {
+		return allPlugins
+	}
+
+	if s.pluginStateService == nil {
+		return allPlugins
+	}
+
+	pluginNames := make([]string, 0, len(allPlugins))
+	for _, p := range allPlugins {
+		pluginNames = append(pluginNames, p.Name())
+	}
+
+	statusMap, err := s.pluginStateService.GetStatusMap(pluginNames)
+	if err != nil {
+		log.Printf("⚠️ [插件搜索] 获取插件启用状态失败，默认全量启用: %v", err)
+		return allPlugins
+	}
+
+	enabledPlugins := make([]plugin.AsyncSearchPlugin, 0, len(allPlugins))
+	for _, p := range allPlugins {
+		enabled, exists := statusMap[p.Name()]
+		if exists && !enabled {
+			continue
+		}
+		enabledPlugins = append(enabledPlugins, p)
+	}
+
+	return enabledPlugins
 }
 
 // Search 执行搜索
@@ -180,9 +214,9 @@ func (s *SearchService) Search(keyword string, channels []string, concurrency in
 			// 如果全是空字符串，视为未指定
 			if !hasNonEmpty {
 				plugins = nil
-			} else {
-				// 检查是否包含所有插件
-				allPlugins := s.pluginManager.GetPlugins()
+			} else if s.pluginManager != nil {
+				// 检查是否包含所有“已启用”插件
+				allPlugins := s.filterEnabledBuiltinPlugins(s.pluginManager.GetPlugins())
 				allPluginNames := make([]string, 0, len(allPlugins))
 				for _, p := range allPlugins {
 					allPluginNames = append(allPluginNames, strings.ToLower(p.Name()))
@@ -196,8 +230,8 @@ func (s *SearchService) Search(keyword string, channels []string, concurrency in
 					}
 				}
 
-				// 如果请求的插件数量与所有插件数量相同，检查是否包含所有插件
-				if len(requestedPlugins) == len(allPluginNames) {
+				// 如果请求的插件数量与所有已启用插件数量相同，检查是否包含全部
+				if len(allPluginNames) > 0 && len(requestedPlugins) == len(allPluginNames) {
 					// 创建映射以便快速查找
 					pluginMap := make(map[string]bool)
 					for _, p := range requestedPlugins {
@@ -1011,8 +1045,50 @@ func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRef
 		ext = make(map[string]interface{})
 	}
 
-	// 生成缓存键（使用 Redis 缓存键生成函数）
-	cacheKey := cache.GeneratePluginCacheKey(keyword)
+	// 获取所有启用中的内置插件
+	var enabledBuiltinPlugins []plugin.AsyncSearchPlugin
+	if s.pluginManager != nil {
+		enabledBuiltinPlugins = s.filterEnabledBuiltinPlugins(s.pluginManager.GetPlugins())
+	}
+
+	// 获取所有可用插件（先应用启用过滤，再应用请求过滤）
+	availablePlugins := make([]plugin.AsyncSearchPlugin, 0, len(enabledBuiltinPlugins))
+	hasPlugins := plugins != nil && len(plugins) > 0
+	hasNonEmptyPlugin := false
+	if hasPlugins {
+		for _, p := range plugins {
+			if strings.TrimSpace(p) != "" {
+				hasNonEmptyPlugin = true
+				break
+			}
+		}
+	}
+
+	if hasPlugins && hasNonEmptyPlugin {
+		pluginMap := make(map[string]bool)
+		for _, p := range plugins {
+			trimmed := strings.TrimSpace(p)
+			if trimmed != "" {
+				pluginMap[strings.ToLower(trimmed)] = true
+			}
+		}
+
+		for _, p := range enabledBuiltinPlugins {
+			if pluginMap[strings.ToLower(p.Name())] {
+				availablePlugins = append(availablePlugins, p)
+			}
+		}
+	} else {
+		availablePlugins = enabledBuiltinPlugins
+	}
+
+	availablePluginNames := make([]string, 0, len(availablePlugins))
+	for _, p := range availablePlugins {
+		availablePluginNames = append(availablePluginNames, p.Name())
+	}
+
+	// 缓存键包含实际参与搜索的插件集合，避免启停切换后命中脏缓存
+	cacheKey := cache.GeneratePluginCacheKey(keyword, availablePluginNames)
 
 	// 如果未启用强制刷新且缓存可用，尝试从 Redis 缓存获取结果
 	if !forceRefresh && s.cache != nil && config.AppConfig.CacheEnabled {
@@ -1037,43 +1113,8 @@ func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRef
 	}
 
 	// 缓存未命中或强制刷新，执行实际搜索
-
-	// 获取所有可用插件
-	var availablePlugins []plugin.AsyncSearchPlugin
-	if s.pluginManager != nil {
-		allPlugins := s.pluginManager.GetPlugins()
-
-		// 确保plugins不为nil并且有非空元素
-		hasPlugins := plugins != nil && len(plugins) > 0
-		hasNonEmptyPlugin := false
-
-		if hasPlugins {
-			for _, p := range plugins {
-				if p != "" {
-					hasNonEmptyPlugin = true
-					break
-				}
-			}
-		}
-
-		// 只有当plugins数组包含非空元素时才进行过滤
-		if hasPlugins && hasNonEmptyPlugin {
-			pluginMap := make(map[string]bool)
-			for _, p := range plugins {
-				if p != "" { // 忽略空字符串
-					pluginMap[strings.ToLower(p)] = true
-				}
-			}
-
-			for _, p := range allPlugins {
-				if pluginMap[strings.ToLower(p.Name())] {
-					availablePlugins = append(availablePlugins, p)
-				}
-			}
-		} else {
-			// 如果plugins为nil、空数组或只包含空字符串，视为未指定，使用所有插件
-			availablePlugins = allPlugins
-		}
+	if len(availablePlugins) == 0 {
+		return []model.SearchResult{}, nil
 	}
 
 	// 控制并发数

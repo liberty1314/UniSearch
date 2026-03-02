@@ -6,6 +6,8 @@ interface PluginInfo {
   name: string;
   priority: number;
   status: string;
+  plugin_type: 'builtin' | 'custom';
+  is_enabled: boolean;
   description: string;
 }
 
@@ -21,6 +23,12 @@ export const ApplePluginTable: React.FC<ApplePluginTableProps> = ({
   plugins,
   isLoading,
 }) => {
+  const getEffectiveStatus = (plugin: PluginInfo): 'active' | 'custom' | 'inactive' | 'error' => {
+    if (!plugin.is_enabled) return 'inactive';
+    if (plugin.status === 'error') return 'error';
+    return plugin.plugin_type === 'custom' ? 'custom' : 'active';
+  };
+
   /**
    * 列配置
    */
@@ -52,20 +60,21 @@ export const ApplePluginTable: React.FC<ApplePluginTableProps> = ({
       title: '状态',
       align: 'center',
       render: (plugin) => {
+        const effectiveStatus = getEffectiveStatus(plugin);
         const statusConfig =
-          plugin.status === 'active'
+          effectiveStatus === 'active'
             ? {
               text: '活跃',
               color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
               dotColor: 'bg-green-500',
             }
-            : plugin.status === 'custom'
+            : effectiveStatus === 'custom'
               ? {
                 text: '自定义',
                 color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
                 dotColor: 'bg-blue-500',
               }
-              : plugin.status === 'inactive'
+              : effectiveStatus === 'inactive'
                 ? {
                   text: '不活跃',
                   color: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',

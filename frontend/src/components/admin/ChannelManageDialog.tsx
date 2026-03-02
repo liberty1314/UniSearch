@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Trash2, Loader2, CheckCircle2, XCircle, Radio, ToggleLeft, ToggleRight, Zap, GripVertical, ArrowUp, ArrowDown, PlayCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { ConfirmDialog } from './ConfirmDialog';
 import type { TGChannel, ListTGChannelsResponse } from '@/types/api';
+import { compareChannels, getChannelSortRank } from './adminListSort';
 
 interface ChannelManageDialogProps {
     isOpen: boolean;
@@ -63,6 +64,31 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
             fetchChannels();
         }
     }, [isOpen, fetchChannels]);
+
+    const displayChannels = useMemo(
+        () => [...channels].sort(compareChannels),
+        [channels]
+    );
+
+    const getGroupChannels = useCallback((channel: TGChannel) => {
+        const currentRank = getChannelSortRank(channel);
+        return displayChannels.filter((item) => getChannelSortRank(item) === currentRank);
+    }, [displayChannels]);
+
+    const findGroupSwapTarget = useCallback((channel: TGChannel, direction: 'up' | 'down') => {
+        const sameGroupChannels = getGroupChannels(channel);
+        const currentIndex = sameGroupChannels.findIndex((item) => item.id === channel.id);
+        if (currentIndex < 0) return null;
+
+        const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+        if (swapIndex < 0 || swapIndex >= sameGroupChannels.length) return null;
+
+        return sameGroupChannels[swapIndex];
+    }, [getGroupChannels]);
+
+    const canMoveChannel = useCallback((channel: TGChannel, direction: 'up' | 'down') => {
+        return findGroupSwapTarget(channel, direction) !== null;
+    }, [findGroupSwapTarget]);
 
     // 添加频道
     const handleAddChannel = async () => {
@@ -265,12 +291,8 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
 
     // 移动频道排序
     const handleMoveChannel = async (channel: TGChannel, direction: 'up' | 'down') => {
-        const currentIndex = channels.findIndex(ch => ch.id === channel.id);
-        const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-
-        if (swapIndex < 0 || swapIndex >= channels.length) return;
-
-        const swapChannel = channels[swapIndex];
+        const swapChannel = findGroupSwapTarget(channel, direction);
+        if (!swapChannel) return;
 
         // 交换 sort_order
         try {
@@ -413,7 +435,7 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                                     </div>
                                 ) : (
                                     <div className="space-y-2">
-                                        {channels.map((channel, index) => (
+                                        {displayChannels.map((channel, index) => (
                                             <div
                                                 key={channel.id}
                                                 className={`rounded-lg border transition-colors ${channel.is_enabled
@@ -433,14 +455,16 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                                                     <div className="flex flex-col gap-0.5">
                                                         <button
                                                             onClick={() => handleMoveChannel(channel, 'up')}
-                                                            disabled={index === 0}
+                                                            disabled={!canMoveChannel(channel, 'up')}
+                                                            aria-label={`频道 ${channel.name} 上移`}
                                                             className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-colors"
                                                         >
                                                             <ArrowUp className="w-3 h-3 text-slate-500" />
                                                         </button>
                                                         <button
                                                             onClick={() => handleMoveChannel(channel, 'down')}
-                                                            disabled={index === channels.length - 1}
+                                                            disabled={!canMoveChannel(channel, 'down')}
+                                                            aria-label={`频道 ${channel.name} 下移`}
                                                             className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-colors"
                                                         >
                                                             <ArrowDown className="w-3 h-3 text-slate-500" />

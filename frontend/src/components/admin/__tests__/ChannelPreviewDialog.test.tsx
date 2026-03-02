@@ -24,30 +24,36 @@ describe('ChannelPreviewDialog', () => {
     vi.stubGlobal('fetch', fetchMock);
   });
 
-  it('supports search, filter, pagination and switch to manage mode', async () => {
-    const onClose = vi.fn();
-    const onOpenManage = vi.fn();
-
+  it('supports sorted list, search, filter and pagination', async () => {
     render(
       <ChannelPreviewDialog
         isOpen
-        onClose={onClose}
-        onOpenManage={onOpenManage}
+        onClose={vi.fn()}
         token="test-token"
       />
     );
 
-    expect(await screen.findByText('channel-1')).toBeInTheDocument();
-    expect(screen.queryByText('channel-11')).not.toBeInTheDocument();
+    const errorNode = await screen.findByText('channel-1');
+    const enabledHealthyNode = screen.getByText('channel-3');
+    const disabledNode = screen.getByText('channel-2');
+    expect(errorNode.compareDocumentPosition(enabledHealthyNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(enabledHealthyNode.compareDocumentPosition(disabledNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    expect(screen.getByRole('button', { name: '全部' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '启用' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '禁用' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '异常' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '正常' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '未测试' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /下一页/i }));
-    expect(await screen.findByText('channel-11')).toBeInTheDocument();
+    expect(await screen.findByText('channel-10')).toBeInTheDocument();
 
     fireEvent.change(screen.getByPlaceholderText('按频道名称搜索'), {
       target: { value: 'channel-12' },
     });
     expect(await screen.findByText('channel-12')).toBeInTheDocument();
-    expect(screen.queryByText('channel-11')).not.toBeInTheDocument();
+    expect(screen.queryByText('channel-10')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '启用' }));
     await waitFor(() => {
@@ -57,19 +63,12 @@ describe('ChannelPreviewDialog', () => {
     fireEvent.change(screen.getByPlaceholderText('按频道名称搜索'), {
       target: { value: '' },
     });
-    fireEvent.click(screen.getByRole('button', { name: '健康全部' }));
     fireEvent.click(screen.getByRole('button', { name: '异常' }));
     expect(await screen.findByText('channel-1')).toBeInTheDocument();
-    expect(screen.queryByText('channel-2')).not.toBeInTheDocument();
+    expect(screen.queryByText('channel-3')).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByPlaceholderText('按频道名称搜索'), {
-      target: { value: '' },
-    });
-    expect(await screen.findByText('channel-1')).toBeInTheDocument();
-    expect(screen.queryByText('channel-2')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: '进入编辑模式' }));
-    expect(onClose).toHaveBeenCalledTimes(1);
-    expect(onOpenManage).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: '禁用' }));
+    expect(await screen.findByText('channel-2')).toBeInTheDocument();
+    expect(screen.queryByText('channel-1')).not.toBeInTheDocument();
   });
 });

@@ -240,9 +240,6 @@ func startServer() {
 	// 更新默认并发数（使用实际插件数）
 	config.UpdateDefaultConcurrency(len(pluginManager.GetPlugins()))
 
-	// 初始化搜索服务（注入 Redis 缓存）
-	searchService := service.NewSearchService(pluginManager, globalRedisCache)
-
 	// 初始化 API Key 服务（管理后台需要，必须始终初始化）
 	var apiKeyService *service.APIKeyService
 	apiKeyService = service.NewAPIKeyService()
@@ -320,9 +317,16 @@ func startServer() {
 	pluginHealthService := service.NewPluginHealthService(database.GetDB())
 	fmt.Println("PluginHealth 服务已启动（插件健康状态持久化已启用）")
 
+	// 初始化插件启用状态服务（插件启停持久化）
+	pluginStateService := service.NewPluginStateService(database.GetDB())
+	fmt.Println("PluginState 服务已启动（插件启停状态持久化已启用）")
+
 	// 初始化 TG 频道健康状态服务（频道测试结果持久化）
 	tgChannelHealthService := service.NewTGChannelHealthService(database.GetDB())
 	fmt.Println("TGChannelHealth 服务已启动（TG 频道健康状态持久化已启用）")
+
+	// 初始化搜索服务（注入 Redis 缓存 + 插件启停状态服务）
+	searchService := service.NewSearchService(pluginManager, globalRedisCache, pluginStateService)
 
 	// 设置路由
 	router := api.SetupRouter(
@@ -335,6 +339,7 @@ func startServer() {
 		announcementService,
 		tgChannelService,
 		pluginHealthService,
+		pluginStateService,
 		tgChannelHealthService,
 	)
 

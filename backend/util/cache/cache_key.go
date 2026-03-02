@@ -72,11 +72,12 @@ func GenerateTGCacheKeyLegacy(keyword string, channels []string) string {
 }
 
 // GeneratePluginCacheKey 为插件搜索生成缓存键（新版本 - Redis 迁移）
-// 使用 SHA256 哈希算法生成查询字符串的哈希值
-// 返回格式: plugin:search:{query_hash}
-// 注意：此函数签名已更改以符合 Redis 缓存迁移规范
-func GeneratePluginCacheKey(query string) string {
-	hash := sha256.Sum256([]byte(query))
+// 缓存键包含查询词与实际参与搜索的插件集合，避免启停后缓存污染
+// 返回格式: plugin:search:{query_and_plugins_hash}
+func GeneratePluginCacheKey(query string, pluginNames []string) string {
+	normalizedQuery := strings.ToLower(strings.TrimSpace(query))
+	pluginsHash := getPluginsHash(pluginNames)
+	hash := sha256.Sum256([]byte(normalizedQuery + ":" + pluginsHash))
 	return fmt.Sprintf("plugin:search:%x", hash)
 }
 

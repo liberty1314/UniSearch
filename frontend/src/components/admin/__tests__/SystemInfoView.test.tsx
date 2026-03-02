@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { SystemInfoView } from '../SystemInfoView';
 
 vi.mock('@/stores/authStore', () => ({
@@ -18,21 +18,19 @@ vi.mock('../ChannelManageDialog', () => ({
 }));
 
 vi.mock('../PluginPreviewDialog', () => ({
-  PluginPreviewDialog: ({ isOpen, onOpenManage }: { isOpen: boolean; onOpenManage: () => void }) =>
+  PluginPreviewDialog: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? (
       <div data-testid="plugin-preview-dialog">
         plugin-preview-dialog
-        <button onClick={onOpenManage}>open-plugin-manage</button>
       </div>
     ) : null,
 }));
 
 vi.mock('../ChannelPreviewDialog', () => ({
-  ChannelPreviewDialog: ({ isOpen, onOpenManage }: { isOpen: boolean; onOpenManage: () => void }) =>
+  ChannelPreviewDialog: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? (
       <div data-testid="channel-preview-dialog">
         channel-preview-dialog
-        <button onClick={onOpenManage}>open-channel-manage</button>
       </div>
     ) : null,
 }));
@@ -47,8 +45,8 @@ describe('SystemInfoView', () => {
           ok: true,
           json: async () => ({
             plugins: [
-              { name: 'plugin-alpha', priority: 1, status: 'active', description: 'alpha desc' },
-              { name: 'plugin-beta', priority: 2, status: 'error', description: 'beta desc' },
+              { name: 'plugin-alpha', priority: 1, status: 'active', plugin_type: 'builtin', is_enabled: true, description: 'alpha desc' },
+              { name: 'plugin-beta', priority: 2, status: 'error', plugin_type: 'builtin', is_enabled: true, description: 'beta desc' },
             ],
             stats: {
               plugin_count: 2,
@@ -135,17 +133,14 @@ describe('SystemInfoView', () => {
     fireEvent.click(viewAllButtons[0]);
     expect(await screen.findByTestId('channel-preview-dialog')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'open-channel-manage' }));
-    await waitFor(() => {
-      expect(screen.getByTestId('channel-manage-dialog')).toBeInTheDocument();
-    });
-
     fireEvent.click(viewAllButtons[1]);
     expect(await screen.findByTestId('plugin-preview-dialog')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'open-plugin-manage' }));
-    await waitFor(() => {
-      expect(screen.getByTestId('plugin-manage-dialog')).toBeInTheDocument();
-    });
+    const editButtons = screen.getAllByRole('button', { name: '编辑' });
+    fireEvent.click(editButtons[0]);
+    expect(await screen.findByTestId('channel-manage-dialog')).toBeInTheDocument();
+
+    fireEvent.click(editButtons[1]);
+    expect(await screen.findByTestId('plugin-manage-dialog')).toBeInTheDocument();
   });
 });

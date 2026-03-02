@@ -1,19 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Zap, Trash2, Loader2, CheckCircle2, XCircle, AlertCircle, Eye, Edit3, Save, ChevronUp, PlayCircle } from 'lucide-react';
+import { X, Plus, Zap, Trash2, Loader2, CheckCircle2, XCircle, AlertCircle, Eye, Edit3, Save, ChevronUp, PlayCircle, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-
-interface PluginInfo {
-    name: string;
-    priority: number;
-    status: string;
-    description: string;
-    url?: string;
-}
+import type { PluginInfo } from '@/types/api';
+import { comparePlugins } from './adminListSort';
 
 interface PluginManageDialogProps {
     isOpen: boolean;
@@ -34,6 +28,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
 }) => {
     const [testingStatus, setTestingStatus] = useState<Record<string, TestStatus>>({});
     const [localPlugins, setLocalPlugins] = useState<PluginInfo[]>(plugins);
+    const [hasPendingChanges, setHasPendingChanges] = useState(false);
 
     // 同步 props 到本地状态
     useEffect(() => {
@@ -48,12 +43,22 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
     const [editForm, setEditForm] = useState<{ priority: number; description: string; url: string }>({ priority: 0, description: '', url: '' });
     const [isBatchTesting, setIsBatchTesting] = useState(false);
 
-    // 测试插件连通性
-    const handleTestPlugin = async (pluginName: string) => {
-        setTestingStatus(prev => ({ ...prev, [pluginName]: 'testing' }));
+    const resolvePluginStatus = (plugin: PluginInfo): PluginInfo['status'] => {
+        if (!plugin.is_enabled) return 'inactive';
+        if (plugin.status === 'error') return 'error';
+        return plugin.plugin_type === 'custom' ? 'custom' : 'active';
+    };
+    const sortedPlugins = useMemo(
+        () => [...localPlugins].sort(comparePlugins),
+        [localPlugins]
+    );
+
+    // 测试插件连通性（停用插件也允许单测）
+    const handleTestPlugin = async (plugin: PluginInfo) => {
+        setTestingStatus(prev => ({ ...prev, [plugin.name]: 'testing' }));
 
         try {
-            const response = await fetch(`/api/admin/plugins/${pluginName}/test`, {
+            const response = await fetch(`/api/admin/plugins/${plugin.name}/test`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -62,21 +67,25 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
             });
 
             if (response.ok) {
-                setTestingStatus(prev => ({ ...prev, [pluginName]: 'success' }));
+                setTestingStatus(prev => ({ ...prev, [plugin.name]: 'success' }));
                 setLocalPlugins(prev => prev.map(p =>
-                    p.name === pluginName ? { ...p, status: p.url ? 'custom' : 'active' } : p
+                    p.name === plugin.name
+                        ? { ...p, status: p.is_enabled ? (p.plugin_type === 'custom' ? 'custom' : 'active') : 'inactive' }
+                        : p
                 ));
-                toast.success(`插件 ${pluginName} 连通性测试成功`);
+                toast.success(`插件 ${plugin.name} 连通性测试成功`);
             } else {
-                setTestingStatus(prev => ({ ...prev, [pluginName]: 'error' }));
+                setTestingStatus(prev => ({ ...prev, [plugin.name]: 'error' }));
                 setLocalPlugins(prev => prev.map(p =>
-                    p.name === pluginName ? { ...p, status: 'error' } : p
+                    p.name === plugin.name
+                        ? { ...p, status: p.is_enabled ? 'error' : 'inactive' }
+                        : p
                 ));
-                toast.error(`插件 ${pluginName} 连通性测试失败`);
+                toast.error(`插件 ${plugin.name} 连通性测试失败`);
             }
         } catch {
-            setTestingStatus(prev => ({ ...prev, [pluginName]: 'error' }));
-            toast.error(`插件 ${pluginName} 测试出错`);
+            setTestingStatus(prev => ({ ...prev, [plugin.name]: 'error' }));
+            toast.error(`插件 ${plugin.name} 测试出错`);
         }
 
         // 同步刷新系统监控面板中的插件状态摘要
@@ -84,15 +93,15 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
 
         // 5秒后重置状态
         setTimeout(() => {
-            setTestingStatus(prev => ({ ...prev, [pluginName]: 'idle' }));
+            setTestingStatus(prev => ({ ...prev, [plugin.name]: 'idle' }));
         }, 5000);
     };
 
-    // 批量测试所有活跃/自定义/测试失败的插件
+    // 批量测试所有已启用插件
     const handleBatchTest = async () => {
-        const activePlugins = localPlugins.filter(p => p.status === 'active' || p.status === 'custom' || p.status === 'error');
+        const activePlugins = localPlugins.filter(p => p.is_enabled);
         if (activePlugins.length === 0) {
-            toast.error('没有可供测试的插件');
+            toast.error('没有已启用的插件可供测试');
             return;
         }
 
@@ -120,7 +129,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                     // 更新插件状态
                     setLocalPlugins(prev => prev.map(p => {
                         if (p.name === plugin.name) {
-                            return { ...p, status: ok ? (p.url ? 'custom' : 'active') : 'error' };
+                            return { ...p, status: ok ? (p.plugin_type === 'custom' ? 'custom' : 'active') : 'error' };
                         }
                         return p;
                     }));
@@ -129,7 +138,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                 } catch {
                     setTestingStatus(prev => ({ ...prev, [plugin.name]: 'error' }));
                     setLocalPlugins(prev => prev.map(p =>
-                        p.name === plugin.name ? { ...p, status: 'error' } : p
+                        p.name === plugin.name ? { ...p, status: p.is_enabled ? 'error' : 'inactive' } : p
                     ));
                     return { name: plugin.name, ok: false };
                 }
@@ -153,6 +162,48 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
         setTimeout(() => {
             setTestingStatus({});
         }, 10000);
+    };
+
+    // 切换插件启用/停用状态
+    const handleTogglePluginEnabled = async (plugin: PluginInfo) => {
+        const nextEnabled = !plugin.is_enabled;
+        try {
+            const response = await fetch(`/api/admin/plugins/${plugin.name}/status`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ is_enabled: nextEnabled }),
+            });
+
+            if (!response.ok) {
+                let message = `插件 ${plugin.name} 状态更新失败`;
+                try {
+                    const data = await response.json();
+                    if (typeof data?.error === 'string' && data.error.trim()) {
+                        message = data.error;
+                    }
+                } catch {
+                    // ignore parse error
+                }
+                toast.error(message);
+                return;
+            }
+
+            setLocalPlugins(prev => prev.map(p => {
+                if (p.name !== plugin.name) return p;
+                return {
+                    ...p,
+                    is_enabled: nextEnabled,
+                    status: nextEnabled ? (p.plugin_type === 'custom' ? 'custom' : 'active') : 'inactive',
+                };
+            }));
+            setHasPendingChanges(true);
+            toast.success(`插件 ${plugin.name} 已${nextEnabled ? '启用' : '停用'}`);
+        } catch {
+            toast.error(`插件 ${plugin.name} 状态更新出错`);
+        }
     };
 
     // 删除插件
@@ -304,6 +355,10 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
     const handleClose = () => {
         setShowAddForm(false);
         setNewPlugin({ name: '', url: '', priority: 100, description: '' });
+        if (hasPendingChanges) {
+            onSuccess();
+            setHasPendingChanges(false);
+        }
         onClose();
     };
 
@@ -353,7 +408,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                         插件管理
                                     </h2>
                                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                                        管理系统插件：测试连通性、新增或删除
+                                        管理系统插件：启用停用、测试连通性、新增或删除
                                     </p>
                                 </div>
                                 <motion.button
@@ -484,7 +539,9 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
 
                                 {/* 插件列表 */}
                                 <div className="space-y-2">
-                                    {localPlugins.map((plugin) => (
+                                    {sortedPlugins.map((plugin) => {
+                                        const pluginStatus = resolvePluginStatus(plugin);
+                                        return (
                                         <motion.div
                                             key={plugin.name}
                                             initial={{ opacity: 0, x: -10 }}
@@ -494,23 +551,26 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                             {/* 插件主行 */}
                                             <div className="flex items-center justify-between p-3">
                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${plugin.status === 'active' ? 'bg-green-500' :
-                                                        plugin.status === 'custom' ? 'bg-blue-500' :
-                                                            plugin.status === 'error' ? 'bg-red-500' : 'bg-gray-400'
+                                                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${pluginStatus === 'active' ? 'bg-green-500' :
+                                                        pluginStatus === 'custom' ? 'bg-blue-500' :
+                                                            pluginStatus === 'error' ? 'bg-red-500' : 'bg-gray-400'
                                                         }`} />
                                                     <div className="min-w-0 flex-1">
                                                         <div className="font-medium text-slate-700 dark:text-slate-200 truncate">{plugin.name}</div>
                                                         <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{plugin.description}</div>
                                                     </div>
                                                     <Badge variant="outline" className="text-xs flex-shrink-0">优先级: {plugin.priority}</Badge>
-                                                    {plugin.status === 'custom' && (
+                                                    {pluginStatus === 'custom' && (
                                                         <Badge className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 flex-shrink-0">自定义</Badge>
                                                     )}
-                                                    {plugin.status === 'active' && (
+                                                    {pluginStatus === 'active' && (
                                                         <Badge className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 flex-shrink-0">内置</Badge>
                                                     )}
-                                                    {plugin.status === 'error' && (
+                                                    {pluginStatus === 'error' && (
                                                         <Badge className="text-xs bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 flex-shrink-0">异常</Badge>
+                                                    )}
+                                                    {pluginStatus === 'inactive' && (
+                                                        <Badge variant="outline" className="text-xs flex-shrink-0">已停用</Badge>
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2 ml-2">
@@ -535,7 +595,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            onClick={() => handleTestPlugin(plugin.name)}
+                                                            onClick={() => handleTestPlugin(plugin)}
                                                             disabled={testingStatus[plugin.name] === 'testing'}
                                                             className="h-8 px-2 text-xs cursor-pointer"
                                                         >
@@ -543,13 +603,33 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                                             <span className="ml-1">测试</span>
                                                         </Button>
                                                     </motion.div>
+                                                    {/* 启用/停用按钮 */}
+                                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleTogglePluginEnabled(plugin)}
+                                                            aria-label={`切换插件 ${plugin.name} 状态`}
+                                                            className={`h-8 px-2 text-xs cursor-pointer ${plugin.is_enabled
+                                                                ? 'text-green-600 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/20'
+                                                                : 'text-slate-500 border-slate-200 hover:bg-slate-50 dark:text-slate-400 dark:border-slate-600 dark:hover:bg-slate-700/50'
+                                                                }`}
+                                                        >
+                                                            {plugin.is_enabled ? (
+                                                                <ToggleRight className="w-4 h-4" />
+                                                            ) : (
+                                                                <ToggleLeft className="w-4 h-4" />
+                                                            )}
+                                                        </Button>
+                                                    </motion.div>
                                                     {/* 删除按钮 - 只有自定义插件可删除 */}
-                                                    {plugin.status === 'custom' && (
+                                                    {plugin.plugin_type === 'custom' && (
                                                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
                                                                 onClick={() => handleDeletePlugin(plugin.name)}
+                                                                aria-label={`删除插件 ${plugin.name}`}
                                                                 className="h-8 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 cursor-pointer"
                                                             >
                                                                 <Trash2 className="w-4 h-4" />
@@ -592,7 +672,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                                                             />
                                                                         </div>
                                                                     </div>
-                                                                    {plugin.status === 'custom' && (
+                                                                    {plugin.plugin_type === 'custom' && (
                                                                         <div>
                                                                             <Label className="text-xs text-slate-600 dark:text-slate-400">URL</Label>
                                                                             <Input
@@ -644,9 +724,10 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                                                         <div>
                                                                             <span className="text-xs text-slate-500 dark:text-slate-400">状态</span>
                                                                             <p className="font-medium text-slate-700 dark:text-slate-200">
-                                                                                {plugin.status === 'active' ? '内置插件' :
-                                                                                    plugin.status === 'custom' ? '自定义插件' :
-                                                                                        plugin.status === 'error' ? '测试失败' : plugin.status}
+                                                                                {pluginStatus === 'active' ? '内置插件' :
+                                                                                    pluginStatus === 'custom' ? '自定义插件' :
+                                                                                        pluginStatus === 'inactive' ? '已停用' :
+                                                                                            pluginStatus === 'error' ? '测试失败' : pluginStatus}
                                                                             </p>
                                                                         </div>
                                                                         <div>
@@ -654,14 +735,14 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                                                             <p className="font-medium text-slate-700 dark:text-slate-200">{plugin.description || '无描述'}</p>
                                                                         </div>
                                                                     </div>
-                                                                    {plugin.status === 'custom' && plugin.url && (
+                                                                    {plugin.plugin_type === 'custom' && plugin.url && (
                                                                         <div>
                                                                             <span className="text-xs text-slate-500 dark:text-slate-400">URL</span>
                                                                             <p className="font-medium text-slate-700 dark:text-slate-200 break-all">{plugin.url}</p>
                                                                         </div>
                                                                     )}
                                                                     {/* 只有自定义插件可编辑 */}
-                                                                    {plugin.status === 'custom' && (
+                                                                    {plugin.plugin_type === 'custom' && (
                                                                         <div className="flex justify-end pt-2">
                                                                             <Button
                                                                                 variant="outline"
@@ -681,10 +762,11 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                                 )}
                                             </AnimatePresence>
                                         </motion.div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
 
-                                {plugins.length === 0 && (
+                                {localPlugins.length === 0 && (
                                     <div className="text-center py-8 text-slate-500 dark:text-slate-400">
                                         <AlertCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
                                         <p>暂无插件</p>
@@ -696,14 +778,14 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                             <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                                 <div className="flex justify-between items-center">
                                     <span className="text-sm text-slate-500 dark:text-slate-400">
-                                        共 {plugins.length} 个插件
+                                        共 {localPlugins.length} 个插件
                                     </span>
                                     <div className="flex items-center gap-2">
                                         <Button
                                             variant="outline"
                                             size="sm"
                                             onClick={handleBatchTest}
-                                            disabled={isBatchTesting || plugins.length === 0}
+                                            disabled={isBatchTesting || localPlugins.length === 0}
                                             className="cursor-pointer text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/20"
                                         >
                                             {isBatchTesting ? (

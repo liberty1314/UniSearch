@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -77,12 +78,11 @@ func (c *CustomPluginsConfig) AddPlugin(plugin CustomPlugin) error {
 
 	// 检查是否已存在
 	for _, p := range c.Plugins {
-		if p.Name == plugin.Name {
+		if normalizeCustomPluginName(p.Name) == normalizeCustomPluginName(plugin.Name) {
 			return nil // 已存在，不重复添加
 		}
 	}
 
-	plugin.Enabled = true
 	c.Plugins = append(c.Plugins, plugin)
 	return c.saveWithoutLock()
 }
@@ -93,7 +93,7 @@ func (c *CustomPluginsConfig) RemovePlugin(name string) error {
 	defer c.mu.Unlock()
 
 	for i, p := range c.Plugins {
-		if p.Name == name {
+		if normalizeCustomPluginName(p.Name) == normalizeCustomPluginName(name) {
 			c.Plugins = append(c.Plugins[:i], c.Plugins[i+1:]...)
 			return c.saveWithoutLock()
 		}
@@ -131,10 +131,43 @@ func (c *CustomPluginsConfig) UpdatePlugin(name string, plugin CustomPlugin) err
 	defer c.mu.Unlock()
 
 	for i, p := range c.Plugins {
-		if p.Name == name {
+		if normalizeCustomPluginName(p.Name) == normalizeCustomPluginName(name) {
 			c.Plugins[i] = plugin
 			return c.saveWithoutLock()
 		}
 	}
 	return nil // 插件不存在，静默返回
+}
+
+// GetPluginByName 按名称获取插件配置
+func (c *CustomPluginsConfig) GetPluginByName(name string) (CustomPlugin, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	normalized := normalizeCustomPluginName(name)
+	for _, p := range c.Plugins {
+		if normalizeCustomPluginName(p.Name) == normalized {
+			return p, true
+		}
+	}
+	return CustomPlugin{}, false
+}
+
+// SetPluginEnabled 设置插件启用状态
+func (c *CustomPluginsConfig) SetPluginEnabled(name string, enabled bool) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	normalized := normalizeCustomPluginName(name)
+	for i, p := range c.Plugins {
+		if normalizeCustomPluginName(p.Name) == normalized {
+			c.Plugins[i].Enabled = enabled
+			return c.saveWithoutLock()
+		}
+	}
+	return nil
+}
+
+func normalizeCustomPluginName(name string) string {
+	return strings.ToLower(strings.TrimSpace(name))
 }

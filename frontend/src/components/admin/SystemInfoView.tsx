@@ -151,8 +151,8 @@ export const SystemInfoView: React.FC = () => {
   /**
    * 加载系统信息
    */
-  const loadSystemInfo = useCallback(async (force = false) => {
-    if (isMountedRef.current) {
+  const loadSystemInfo = useCallback(async (force = false, silent = false) => {
+    if (!silent && isMountedRef.current) {
       setIsLoading(true);
     }
 
@@ -178,7 +178,7 @@ export const SystemInfoView: React.FC = () => {
       console.error('加载系统信息失败:', error);
       toast.error('加载系统信息失败');
     } finally {
-      if (isMountedRef.current) {
+      if (!silent && isMountedRef.current) {
         setIsLoading(false);
       }
     }
@@ -203,14 +203,14 @@ export const SystemInfoView: React.FC = () => {
    * 插件/频道管理成功后的回调
    */
   const handleManageSuccess = () => {
-    loadSystemInfo(true);
+    loadSystemInfo(true, true);
   };
 
   const pluginSummary = useMemo(() => {
     const plugins = systemInfo?.plugins ?? [];
-    const active = plugins.filter((plugin) => plugin.status === 'active' || plugin.status === 'custom').length;
-    const error = plugins.filter((plugin) => plugin.status === 'error').length;
-    const inactive = plugins.filter((plugin) => plugin.status === 'inactive').length;
+    const active = plugins.filter((plugin) => plugin.is_enabled && (plugin.status === 'active' || plugin.status === 'custom')).length;
+    const error = plugins.filter((plugin) => plugin.is_enabled && plugin.status === 'error').length;
+    const inactive = plugins.filter((plugin) => !plugin.is_enabled || plugin.status === 'inactive').length;
 
     return {
       total: plugins.length,
@@ -547,14 +547,12 @@ export const SystemInfoView: React.FC = () => {
       <PluginPreviewDialog
         isOpen={isPluginPreviewDialogOpen}
         onClose={() => setIsPluginPreviewDialogOpen(false)}
-        onOpenManage={() => setIsPluginManageDialogOpen(true)}
         plugins={systemInfo.plugins}
       />
 
       <ChannelPreviewDialog
         isOpen={isChannelPreviewDialogOpen}
         onClose={() => setIsChannelPreviewDialogOpen(false)}
-        onOpenManage={() => setIsChannelManageDialogOpen(true)}
         token={token || ''}
       />
 

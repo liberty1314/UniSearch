@@ -3,6 +3,7 @@ package api
 import (
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -227,6 +228,8 @@ type PluginInfoResponse struct {
 	Name        string `json:"name"`
 	Priority    int    `json:"priority"`
 	Status      string `json:"status"`
+	PluginType  string `json:"plugin_type"` // builtin | custom
+	IsEnabled   bool   `json:"is_enabled"`
 	Description string `json:"description"`
 	URL         string `json:"url,omitempty"`
 }
@@ -269,7 +272,7 @@ type SystemConfigResponse struct {
 }
 
 // GetSystemInfoHandler 获取系统信息（插件状态 + 系统配置 + 用户活跃度统计）
-func GetSystemInfoHandler(searchService *service.SearchService, userService *service.UserService, pluginHealthService *service.PluginHealthService) gin.HandlerFunc {
+func GetSystemInfoHandler(searchService *service.SearchService, userService *service.UserService, pluginHealthService *service.PluginHealthService, pluginStateService *service.PluginStateService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取插件管理器
 		pluginManager := searchService.GetPluginManager()
@@ -284,13 +287,13 @@ func GetSystemInfoHandler(searchService *service.SearchService, userService *ser
 		// 获取所有内置插件
 		plugins := pluginManager.GetPlugins()
 		customPlugins := config.GetCustomPluginsConfig()
-		enabledCustomPlugins := customPlugins.GetEnabledPlugins()
+		allCustomPlugins := customPlugins.GetPlugins()
 
-		pluginNames := make([]string, 0, len(plugins)+len(enabledCustomPlugins))
+		pluginNames := make([]string, 0, len(plugins)+len(allCustomPlugins))
 		for _, p := range plugins {
 			pluginNames = append(pluginNames, p.Name())
 		}
-		for _, cp := range enabledCustomPlugins {
+		for _, cp := range allCustomPlugins {
 			pluginNames = append(pluginNames, cp.Name)
 		}
 
@@ -304,25 +307,57 @@ func GetSystemInfoHandler(searchService *service.SearchService, userService *ser
 			}
 		}
 
+		enabledMap := make(map[string]bool)
+		if pluginStateService != nil {
+			statusMap, err := pluginStateService.GetStatusMap(pluginNames)
+			if err != nil {
+				log.Printf("⚠️  获取插件启用状态失败，使用默认启用状态: %v", err)
+			} else {
+				enabledMap = statusMap
+			}
+		}
+
 		// 构建插件信息列表
-		pluginInfos := make([]PluginInfoResponse, 0, len(plugins))
+		pluginInfos := make([]PluginInfoResponse, 0, len(plugins)+len(allCustomPlugins))
 		for _, p := range plugins {
-			status := resolvePluginStatusByHealthMap(p.Name(), "active", healthMap)
+			isEnabled := true
+			if value, exists := enabledMap[p.Name()]; exists {
+				isEnabled = value
+			}
+
+			status := "inactive"
+			if isEnabled {
+				status = resolvePluginStatusByHealthMap(p.Name(), "active", healthMap)
+			}
+
 			pluginInfos = append(pluginInfos, PluginInfoResponse{
 				Name:        p.Name(),
 				Priority:    p.Priority(),
 				Status:      status,
+				PluginType:  "builtin",
+				IsEnabled:   isEnabled,
 				Description: getPluginDescription(p.Name()),
 			})
 		}
 
 		// 获取自定义插件并添加到列表
-		for _, cp := range enabledCustomPlugins {
-			status := resolvePluginStatusByHealthMap(cp.Name, "custom", healthMap)
+		for _, cp := range allCustomPlugins {
+			isEnabled := cp.Enabled
+			if value, exists := enabledMap[cp.Name]; exists {
+				isEnabled = value
+			}
+
+			status := "inactive"
+			if isEnabled {
+				status = resolvePluginStatusByHealthMap(cp.Name, "custom", healthMap)
+			}
+
 			pluginInfos = append(pluginInfos, PluginInfoResponse{
 				Name:        cp.Name,
 				Priority:    cp.Priority,
 				Status:      status,
+				PluginType:  "custom",
+				IsEnabled:   isEnabled,
 				Description: cp.Description,
 				URL:         cp.URL,
 			})
@@ -673,7 +708,7 @@ func TestPluginHandler(searchService *service.SearchService, pluginHealthService
 
 		// 如果不是内置插件，检查自定义插件
 		customPlugins := config.GetCustomPluginsConfig()
-		for _, cp := range customPlugins.GetEnabledPlugins() {
+		for _, cp := range customPlugins.GetPlugins() {
 			if cp.Name == pluginName {
 				// 对自定义插件进行URL连通性测试
 				client := &http.Client{
@@ -802,7 +837,7 @@ type CreatePluginRequest struct {
 }
 
 // CreatePluginHandler 创建插件
-func CreatePluginHandler(pluginHealthService *service.PluginHealthService) gin.HandlerFunc {
+func CreatePluginHandler(pluginHealthService *service.PluginHealthService, pluginStateService *service.PluginStateService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req CreatePluginRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -831,6 +866,19 @@ func CreatePluginHandler(pluginHealthService *service.PluginHealthService) gin.H
 			return
 		}
 
+		if pluginStateService != nil {
+			if err := pluginStateService.SetStatus(req.Name, "custom", true); err != nil {
+				if rollbackErr := customPlugins.RemovePlugin(req.Name); rollbackErr != nil {
+					log.Printf("⚠️  创建插件失败回滚 JSON 配置失败(%s): %v", req.Name, rollbackErr)
+				}
+				c.JSON(500, gin.H{
+					"error": "同步插件启用状态失败: " + err.Error(),
+					"code":  "STATUS_SYNC_FAILED",
+				})
+				return
+			}
+		}
+
 		if pluginHealthService != nil {
 			if err := pluginHealthService.ClearStatus(req.Name); err != nil {
 				log.Printf("⚠️  清理插件健康状态失败(%s): %v", req.Name, err)
@@ -845,13 +893,15 @@ func CreatePluginHandler(pluginHealthService *service.PluginHealthService) gin.H
 				"url":         req.URL,
 				"priority":    req.Priority,
 				"description": req.Description,
+				"plugin_type": "custom",
+				"is_enabled":  true,
 			},
 		})
 	}
 }
 
 // DeletePluginHandler 删除插件
-func DeletePluginHandler(pluginHealthService *service.PluginHealthService) gin.HandlerFunc {
+func DeletePluginHandler(pluginHealthService *service.PluginHealthService, pluginStateService *service.PluginStateService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		pluginName := c.Param("pluginName")
 		if pluginName == "" {
@@ -862,8 +912,17 @@ func DeletePluginHandler(pluginHealthService *service.PluginHealthService) gin.H
 			return
 		}
 
-		// 从自定义插件配置中删除
 		customPlugins := config.GetCustomPluginsConfig()
+		oldPlugin, exists := customPlugins.GetPluginByName(pluginName)
+		if !exists {
+			c.JSON(404, gin.H{
+				"error": "插件不存在",
+				"code":  "PLUGIN_NOT_FOUND",
+			})
+			return
+		}
+
+		// 从自定义插件配置中删除
 		err := customPlugins.RemovePlugin(pluginName)
 
 		if err != nil {
@@ -872,6 +931,19 @@ func DeletePluginHandler(pluginHealthService *service.PluginHealthService) gin.H
 				"code":  "DELETE_FAILED",
 			})
 			return
+		}
+
+		if pluginStateService != nil {
+			if err := pluginStateService.DeleteStatus(pluginName); err != nil {
+				if rollbackErr := customPlugins.AddPlugin(oldPlugin); rollbackErr != nil {
+					log.Printf("⚠️  删除插件失败回滚 JSON 配置失败(%s): %v", pluginName, rollbackErr)
+				}
+				c.JSON(500, gin.H{
+					"error": "同步插件状态失败: " + err.Error(),
+					"code":  "STATUS_SYNC_FAILED",
+				})
+				return
+			}
 		}
 
 		if pluginHealthService != nil {
@@ -896,7 +968,7 @@ type UpdatePluginRequest struct {
 }
 
 // UpdatePluginHandler 更新插件
-func UpdatePluginHandler(pluginHealthService *service.PluginHealthService) gin.HandlerFunc {
+func UpdatePluginHandler(pluginHealthService *service.PluginHealthService, pluginStateService *service.PluginStateService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		pluginName := c.Param("pluginName")
 		if pluginName == "" {
@@ -916,15 +988,26 @@ func UpdatePluginHandler(pluginHealthService *service.PluginHealthService) gin.H
 			return
 		}
 
-		// 更新自定义插件配置
 		customPlugins := config.GetCustomPluginsConfig()
-		err := customPlugins.UpdatePlugin(pluginName, config.CustomPlugin{
-			Name:        pluginName,
-			URL:         req.URL,
-			Priority:    req.Priority,
-			Description: req.Description,
-			Enabled:     true,
-		})
+		oldPlugin, exists := customPlugins.GetPluginByName(pluginName)
+		if !exists {
+			c.JSON(404, gin.H{
+				"error": "插件不存在",
+				"code":  "PLUGIN_NOT_FOUND",
+			})
+			return
+		}
+
+		updatedPlugin := oldPlugin
+		updatedPlugin.Name = pluginName
+		if strings.TrimSpace(req.URL) != "" {
+			updatedPlugin.URL = req.URL
+		}
+		updatedPlugin.Priority = req.Priority
+		updatedPlugin.Description = req.Description
+
+		// 更新自定义插件配置
+		err := customPlugins.UpdatePlugin(pluginName, updatedPlugin)
 
 		if err != nil {
 			c.JSON(500, gin.H{
@@ -932,6 +1015,19 @@ func UpdatePluginHandler(pluginHealthService *service.PluginHealthService) gin.H
 				"code":  "UPDATE_FAILED",
 			})
 			return
+		}
+
+		if pluginStateService != nil {
+			if err := pluginStateService.SetStatus(pluginName, "custom", updatedPlugin.Enabled); err != nil {
+				if rollbackErr := customPlugins.UpdatePlugin(pluginName, oldPlugin); rollbackErr != nil {
+					log.Printf("⚠️  更新插件失败回滚 JSON 配置失败(%s): %v", pluginName, rollbackErr)
+				}
+				c.JSON(500, gin.H{
+					"error": "同步插件状态失败: " + err.Error(),
+					"code":  "STATUS_SYNC_FAILED",
+				})
+				return
+			}
 		}
 
 		if pluginHealthService != nil {
@@ -945,10 +1041,109 @@ func UpdatePluginHandler(pluginHealthService *service.PluginHealthService) gin.H
 			"message": "插件更新成功",
 			"plugin": gin.H{
 				"name":        pluginName,
-				"url":         req.URL,
-				"priority":    req.Priority,
-				"description": req.Description,
+				"url":         updatedPlugin.URL,
+				"priority":    updatedPlugin.Priority,
+				"description": updatedPlugin.Description,
+				"plugin_type": "custom",
+				"is_enabled":  updatedPlugin.Enabled,
 			},
+		})
+	}
+}
+
+type SetPluginStatusRequest struct {
+	IsEnabled *bool `json:"is_enabled" binding:"required"`
+}
+
+// SetPluginStatusHandler 设置插件启用状态（内置 + 自定义）
+func SetPluginStatusHandler(searchService *service.SearchService, pluginStateService *service.PluginStateService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		pluginName := strings.TrimSpace(c.Param("pluginName"))
+		if pluginName == "" {
+			c.JSON(400, gin.H{
+				"error": "插件名称不能为空",
+				"code":  "INVALID_REQUEST",
+			})
+			return
+		}
+
+		var req SetPluginStatusRequest
+		if err := c.ShouldBindJSON(&req); err != nil || req.IsEnabled == nil {
+			c.JSON(400, gin.H{
+				"error": "请求参数错误",
+				"code":  "INVALID_REQUEST",
+			})
+			return
+		}
+
+		isEnabled := *req.IsEnabled
+		pluginManager := searchService.GetPluginManager()
+		if pluginManager == nil {
+			c.JSON(500, gin.H{
+				"error": "插件管理器未初始化",
+				"code":  "PLUGIN_MANAGER_NOT_INITIALIZED",
+			})
+			return
+		}
+
+		// 优先匹配内置插件
+		for _, p := range pluginManager.GetPlugins() {
+			if strings.EqualFold(p.Name(), pluginName) {
+				if pluginStateService != nil {
+					if err := pluginStateService.SetStatus(p.Name(), "builtin", isEnabled); err != nil {
+						c.JSON(500, gin.H{
+							"error": "更新插件状态失败: " + err.Error(),
+							"code":  "STATUS_UPDATE_FAILED",
+						})
+						return
+					}
+				}
+				c.JSON(200, gin.H{
+					"success":     true,
+					"plugin_name": p.Name(),
+					"is_enabled":  isEnabled,
+				})
+				return
+			}
+		}
+
+		// 再匹配自定义插件，双写同步（JSON + DB）
+		customPlugins := config.GetCustomPluginsConfig()
+		customPlugin, exists := customPlugins.GetPluginByName(pluginName)
+		if exists {
+			oldEnabled := customPlugin.Enabled
+			if err := customPlugins.SetPluginEnabled(customPlugin.Name, isEnabled); err != nil {
+				c.JSON(500, gin.H{
+					"error": "更新自定义插件配置失败: " + err.Error(),
+					"code":  "SAVE_FAILED",
+				})
+				return
+			}
+
+			if pluginStateService != nil {
+				if err := pluginStateService.SetStatus(customPlugin.Name, "custom", isEnabled); err != nil {
+					if rollbackErr := customPlugins.SetPluginEnabled(customPlugin.Name, oldEnabled); rollbackErr != nil {
+						log.Printf("⚠️  同步状态失败后回滚 JSON 失败(%s): %v", customPlugin.Name, rollbackErr)
+					}
+					c.JSON(500, gin.H{
+						"error": "同步插件状态失败: " + err.Error(),
+						"code":  "STATUS_SYNC_FAILED",
+					})
+					return
+				}
+			}
+
+			c.JSON(200, gin.H{
+				"success":     true,
+				"plugin_name": customPlugin.Name,
+				"is_enabled":  isEnabled,
+			})
+			return
+		}
+
+		c.JSON(404, gin.H{
+			"error": "插件不存在",
+			"code":  "PLUGIN_NOT_FOUND",
 		})
 	}
 }

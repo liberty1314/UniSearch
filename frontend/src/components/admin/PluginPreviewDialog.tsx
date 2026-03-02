@@ -1,20 +1,23 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, X, Search, Settings2 } from 'lucide-react';
+import { Activity, X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ApplePagination } from './ApplePagination';
 import type { PluginInfo } from '@/types/api';
+import { comparePlugins, getEffectivePluginStatus } from './adminListSort';
+import {
+  UNIFIED_STATUS_FILTER_OPTIONS,
+  type UnifiedStatusFilter,
+  isPluginMatchesStatusFilter,
+} from './previewFilters';
 
 interface PluginPreviewDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onOpenManage: () => void;
   plugins: PluginInfo[];
 }
-
-type PluginFilter = 'all' | 'active' | 'inactive' | 'error' | 'custom';
 
 const PAGE_SIZE = 10;
 
@@ -45,11 +48,10 @@ const getStatusClassName = (status: PluginInfo['status']): string => {
 export const PluginPreviewDialog: React.FC<PluginPreviewDialogProps> = ({
   isOpen,
   onClose,
-  onOpenManage,
   plugins,
 }) => {
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [statusFilter, setStatusFilter] = useState<PluginFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<UnifiedStatusFilter>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const listContainerRef = useRef<HTMLDivElement>(null);
 
@@ -69,13 +71,18 @@ export const PluginPreviewDialog: React.FC<PluginPreviewDialogProps> = ({
         !keyword ||
         plugin.name.toLowerCase().includes(keyword) ||
         plugin.description.toLowerCase().includes(keyword);
-      const matchesStatus = statusFilter === 'all' || plugin.status === statusFilter;
+      const matchesStatus = isPluginMatchesStatusFilter(plugin, statusFilter);
 
       return matchesKeyword && matchesStatus;
     });
   }, [plugins, searchKeyword, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredPlugins.length / PAGE_SIZE));
+  const sortedFilteredPlugins = useMemo(
+    () => [...filteredPlugins].sort(comparePlugins),
+    [filteredPlugins]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(sortedFilteredPlugins.length / PAGE_SIZE));
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -95,17 +102,8 @@ export const PluginPreviewDialog: React.FC<PluginPreviewDialogProps> = ({
 
   const pagedPlugins = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredPlugins.slice(start, start + PAGE_SIZE);
-  }, [currentPage, filteredPlugins]);
-
-  const activeCount = plugins.filter((plugin) => plugin.status === 'active' || plugin.status === 'custom').length;
-  const errorCount = plugins.filter((plugin) => plugin.status === 'error').length;
-  const inactiveCount = plugins.filter((plugin) => plugin.status === 'inactive').length;
-
-  const handleOpenManage = () => {
-    onClose();
-    onOpenManage();
-  };
+    return sortedFilteredPlugins.slice(start, start + PAGE_SIZE);
+  }, [currentPage, sortedFilteredPlugins]);
 
   if (!isOpen) return null;
 
@@ -166,26 +164,18 @@ export const PluginPreviewDialog: React.FC<PluginPreviewDialogProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  {(['all', 'active', 'custom', 'inactive', 'error'] as PluginFilter[]).map((status) => (
+                  {UNIFIED_STATUS_FILTER_OPTIONS.map(({ value, label }) => (
                     <Button
-                      key={status}
+                      key={value}
                       size="sm"
-                      variant={statusFilter === status ? 'default' : 'outline'}
+                      variant={statusFilter === value ? 'default' : 'outline'}
                       onClick={() => {
-                        setStatusFilter(status);
+                        setStatusFilter(value);
                         setCurrentPage(1);
                       }}
                       className="cursor-pointer"
                     >
-                      {status === 'all'
-                        ? '全部'
-                        : status === 'active'
-                          ? '活跃'
-                          : status === 'custom'
-                            ? '自定义'
-                            : status === 'inactive'
-                              ? '不活跃'
-                              : '异常'}
+                      {label}
                     </Button>
                   ))}
                 </div>
@@ -199,7 +189,9 @@ export const PluginPreviewDialog: React.FC<PluginPreviewDialogProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {pagedPlugins.map((plugin, index) => (
+                    {pagedPlugins.map((plugin, index) => {
+                      const effectiveStatus = getEffectivePluginStatus(plugin);
+                      return (
                       <motion.div
                         key={plugin.name}
                         initial={{ opacity: 0, x: -10 }}
@@ -214,8 +206,8 @@ export const PluginPreviewDialog: React.FC<PluginPreviewDialogProps> = ({
                           <Badge variant="outline">优先级 {plugin.priority}</Badge>
                         </div>
                         <div>
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusClassName(plugin.status)}`}>
-                            {getStatusText(plugin.status)}
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusClassName(effectiveStatus)}`}>
+                            {getStatusText(effectiveStatus)}
                           </span>
                         </div>
                         <div className="min-w-0">
@@ -224,27 +216,13 @@ export const PluginPreviewDialog: React.FC<PluginPreviewDialogProps> = ({
                           </p>
                         </div>
                       </motion.div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
 
-              <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-sm">
-                  <div className="rounded-lg bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 px-3 py-2">
-                    总插件 <span className="font-semibold text-slate-900 dark:text-white">{plugins.length}</span>
-                  </div>
-                  <div className="rounded-lg bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 px-3 py-2">
-                    活跃 <span className="font-semibold text-emerald-600 dark:text-emerald-400">{activeCount}</span>
-                  </div>
-                  <div className="rounded-lg bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 px-3 py-2">
-                    异常 <span className="font-semibold text-red-600 dark:text-red-400">{errorCount}</span>
-                  </div>
-                  <div className="rounded-lg bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 px-3 py-2">
-                    非活跃 <span className="font-semibold text-slate-700 dark:text-slate-300">{inactiveCount}</span>
-                  </div>
-                </div>
-
+              <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                 {filteredPlugins.length > 0 && (
                   <ApplePagination
                     currentPage={currentPage}
@@ -254,20 +232,6 @@ export const PluginPreviewDialog: React.FC<PluginPreviewDialogProps> = ({
                     onPageChange={setCurrentPage}
                   />
                 )}
-
-                <div className="flex justify-end items-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleOpenManage}
-                    className="cursor-pointer text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/20"
-                  >
-                    <Settings2 className="w-4 h-4 mr-1" />
-                    进入编辑模式
-                  </Button>
-                  <Button variant="outline" onClick={onClose} className="cursor-pointer">
-                    关闭
-                  </Button>
-                </div>
               </div>
             </motion.div>
           </div>

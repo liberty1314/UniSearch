@@ -537,7 +537,10 @@ export interface PluginInfo {
   name: string;
   priority: number;
   status: 'active' | 'inactive' | 'error' | 'custom';
+  plugin_type: 'builtin' | 'custom';
+  is_enabled: boolean;
   description: string;
+  url?: string;
 }
 
 /**

@@ -1,36 +1,36 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Radio, X, Loader2, Search, CheckCircle2, Circle, Settings2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Radio, X, Loader2, Search, CheckCircle2, Circle, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ApplePagination } from './ApplePagination';
 import type { TGChannel } from '@/types/api';
 import { toast } from 'sonner';
+import { compareChannels } from './adminListSort';
+import {
+  UNIFIED_STATUS_FILTER_OPTIONS,
+  type UnifiedStatusFilter,
+  isChannelMatchesStatusFilter,
+} from './previewFilters';
 
 interface ChannelPreviewDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onOpenManage: () => void;
   token: string;
 }
-
-type ChannelFilter = 'all' | 'enabled' | 'disabled';
-type ChannelHealthFilter = 'all' | 'healthy' | 'error' | 'untested';
 
 const PAGE_SIZE = 10;
 
 export const ChannelPreviewDialog: React.FC<ChannelPreviewDialogProps> = ({
   isOpen,
   onClose,
-  onOpenManage,
   token,
 }) => {
   const [channels, setChannels] = useState<TGChannel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ChannelFilter>('all');
-  const [healthFilter, setHealthFilter] = useState<ChannelHealthFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<UnifiedStatusFilter>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const listContainerRef = useRef<HTMLDivElement>(null);
 
@@ -68,7 +68,6 @@ export const ChannelPreviewDialog: React.FC<ChannelPreviewDialogProps> = ({
 
     setSearchKeyword('');
     setStatusFilter('all');
-    setHealthFilter('all');
     setCurrentPage(1);
     fetchChannels();
   }, [fetchChannels, isOpen]);
@@ -78,22 +77,18 @@ export const ChannelPreviewDialog: React.FC<ChannelPreviewDialogProps> = ({
 
     return channels.filter((channel) => {
       const matchesKeyword = !keyword || channel.name.toLowerCase().includes(keyword);
-      const matchesStatus =
-        statusFilter === 'all' ||
-        (statusFilter === 'enabled' && channel.is_enabled) ||
-        (statusFilter === 'disabled' && !channel.is_enabled);
-      const channelHealth = channel.health_status || 'untested';
-      const matchesHealth =
-        healthFilter === 'all' ||
-        (healthFilter === 'healthy' && channelHealth === 'healthy') ||
-        (healthFilter === 'error' && channelHealth === 'error') ||
-        (healthFilter === 'untested' && channelHealth === 'untested');
+      const matchesStatus = isChannelMatchesStatusFilter(channel, statusFilter);
 
-      return matchesKeyword && matchesStatus && matchesHealth;
+      return matchesKeyword && matchesStatus;
     });
-  }, [channels, searchKeyword, statusFilter, healthFilter]);
+  }, [channels, searchKeyword, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredChannels.length / PAGE_SIZE));
+  const sortedFilteredChannels = useMemo(
+    () => [...filteredChannels].sort(compareChannels),
+    [filteredChannels]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(sortedFilteredChannels.length / PAGE_SIZE));
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -113,19 +108,8 @@ export const ChannelPreviewDialog: React.FC<ChannelPreviewDialogProps> = ({
 
   const pagedChannels = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredChannels.slice(start, start + PAGE_SIZE);
-  }, [currentPage, filteredChannels]);
-
-  const totalCount = channels.length;
-  const enabledCount = channels.filter((channel) => channel.is_enabled).length;
-  const disabledCount = totalCount - enabledCount;
-  const errorCount = channels.filter((channel) => (channel.health_status || 'untested') === 'error').length;
-  const untestedCount = channels.filter((channel) => !channel.health_status || channel.health_status === 'untested').length;
-
-  const handleOpenManage = () => {
-    onClose();
-    onOpenManage();
-  };
+    return sortedFilteredChannels.slice(start, start + PAGE_SIZE);
+  }, [currentPage, sortedFilteredChannels]);
 
   if (!isOpen) return null;
 
@@ -186,84 +170,20 @@ export const ChannelPreviewDialog: React.FC<ChannelPreviewDialogProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Button
-                    size="sm"
-                    variant={statusFilter === 'all' ? 'default' : 'outline'}
-                    onClick={() => {
-                      setStatusFilter('all');
-                      setCurrentPage(1);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    全部
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={statusFilter === 'enabled' ? 'default' : 'outline'}
-                    onClick={() => {
-                      setStatusFilter('enabled');
-                      setCurrentPage(1);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    启用
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={statusFilter === 'disabled' ? 'default' : 'outline'}
-                    onClick={() => {
-                      setStatusFilter('disabled');
-                      setCurrentPage(1);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    禁用
-                  </Button>
-                  <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" />
-                  <Button
-                    size="sm"
-                    variant={healthFilter === 'all' ? 'default' : 'outline'}
-                    onClick={() => {
-                      setHealthFilter('all');
-                      setCurrentPage(1);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    健康全部
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={healthFilter === 'healthy' ? 'default' : 'outline'}
-                    onClick={() => {
-                      setHealthFilter('healthy');
-                      setCurrentPage(1);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    正常
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={healthFilter === 'error' ? 'default' : 'outline'}
-                    onClick={() => {
-                      setHealthFilter('error');
-                      setCurrentPage(1);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    异常
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={healthFilter === 'untested' ? 'default' : 'outline'}
-                    onClick={() => {
-                      setHealthFilter('untested');
-                      setCurrentPage(1);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    未测试
-                  </Button>
+                  {UNIFIED_STATUS_FILTER_OPTIONS.map(({ value, label }) => (
+                    <Button
+                      key={value}
+                      size="sm"
+                      variant={statusFilter === value ? 'default' : 'outline'}
+                      onClick={() => {
+                        setStatusFilter(value);
+                        setCurrentPage(1);
+                      }}
+                      className="cursor-pointer"
+                    >
+                      {label}
+                    </Button>
+                  ))}
                 </div>
               </div>
 
@@ -327,25 +247,7 @@ export const ChannelPreviewDialog: React.FC<ChannelPreviewDialogProps> = ({
                 )}
               </div>
 
-              <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 text-sm">
-                  <div className="rounded-lg bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 px-3 py-2">
-                    总频道 <span className="font-semibold text-slate-900 dark:text-white">{totalCount}</span>
-                  </div>
-                  <div className="rounded-lg bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 px-3 py-2">
-                    已启用 <span className="font-semibold text-emerald-600 dark:text-emerald-400">{enabledCount}</span>
-                  </div>
-                  <div className="rounded-lg bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 px-3 py-2">
-                    已禁用 <span className="font-semibold text-slate-700 dark:text-slate-300">{disabledCount}</span>
-                  </div>
-                  <div className="rounded-lg bg-white dark:bg-slate-900/60 border border-red-200 dark:border-red-800 px-3 py-2">
-                    异常 <span className="font-semibold text-red-600 dark:text-red-400">{errorCount}</span>
-                  </div>
-                  <div className="rounded-lg bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 px-3 py-2">
-                    未测试 <span className="font-semibold text-slate-700 dark:text-slate-300">{untestedCount}</span>
-                  </div>
-                </div>
-
+              <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                 {!isLoading && filteredChannels.length > 0 && (
                   <ApplePagination
                     currentPage={currentPage}
@@ -355,20 +257,6 @@ export const ChannelPreviewDialog: React.FC<ChannelPreviewDialogProps> = ({
                     onPageChange={setCurrentPage}
                   />
                 )}
-
-                <div className="flex justify-end items-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleOpenManage}
-                    className="cursor-pointer text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/20"
-                  >
-                    <Settings2 className="w-4 h-4 mr-1" />
-                    进入编辑模式
-                  </Button>
-                  <Button variant="outline" onClick={onClose} className="cursor-pointer">
-                    关闭
-                  </Button>
-                </div>
               </div>
             </motion.div>
           </div>
