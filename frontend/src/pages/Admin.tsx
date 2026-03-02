@@ -785,14 +785,14 @@ const Admin: React.FC = () => {
                             {/* 统计卡片 */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <StatsCard
-                                    title="总密鑰数"
+                                    title="总密钥数"
                                     value={totalApiKeys}
                                     icon={Key}
                                     color="nebula"
                                     index={0}
                                 />
                                 <StatsCard
-                                    title="活跃密鑰"
+                                    title="活跃密钥"
                                     value={pagedApiKeys.filter(k => !k.is_permanent && k.is_enabled && !isKeyExpired(k.expires_at)).length}
                                     icon={CheckCircle2}
                                     color="emerald"

@@ -167,3 +167,19 @@ feat(admin): 新增自定义插件添加功能并支持 URL 连通性测试
 - frontend/src/types/api.ts
 
 ---
+
+## 2026-03-02 23:30:18
+
+### Commit
+```
+fix(admin): 修正密钥文案错别字并调整频道默认顺序
+```
+
+### Body
+修正管理后台统计卡片中"密鑰"为正确的"密钥"，同时调整 .env.example 中频道列表的默认顺序以优化加载优先级。
+
+### Files
+- .env.example
+- frontend/src/pages/Admin.tsx
+
+---
