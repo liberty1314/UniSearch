@@ -1055,6 +1055,21 @@ type SetPluginStatusRequest struct {
 	IsEnabled *bool `json:"is_enabled" binding:"required"`
 }
 
+type BatchPluginStatusRequest struct {
+	PluginNames []string `json:"plugin_names" binding:"required"`
+	IsEnabled   *bool    `json:"is_enabled" binding:"required"`
+}
+
+type BatchDeletePluginsRequest struct {
+	PluginNames []string `json:"plugin_names" binding:"required"`
+}
+
+type BatchPluginOperationError struct {
+	PluginName string `json:"plugin_name"`
+	Error      string `json:"error"`
+	Code       string `json:"code"`
+}
+
 // SetPluginStatusHandler 设置插件启用状态（内置 + 自定义）
 func SetPluginStatusHandler(searchService *service.SearchService, pluginStateService *service.PluginStateService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -1144,6 +1159,236 @@ func SetPluginStatusHandler(searchService *service.SearchService, pluginStateSer
 		c.JSON(404, gin.H{
 			"error": "插件不存在",
 			"code":  "PLUGIN_NOT_FOUND",
+		})
+	}
+}
+
+// BatchSetPluginStatusHandler 批量设置插件启用状态（内置 + 自定义）
+func BatchSetPluginStatusHandler(searchService *service.SearchService, pluginStateService *service.PluginStateService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req BatchPluginStatusRequest
+		if err := c.ShouldBindJSON(&req); err != nil || req.IsEnabled == nil {
+			c.JSON(400, gin.H{
+				"error": "请求参数错误",
+				"code":  "INVALID_REQUEST",
+			})
+			return
+		}
+
+		if len(req.PluginNames) == 0 {
+			c.JSON(400, gin.H{
+				"error": "插件名称列表不能为空",
+				"code":  "INVALID_REQUEST",
+			})
+			return
+		}
+
+		pluginManager := searchService.GetPluginManager()
+		if pluginManager == nil {
+			c.JSON(500, gin.H{
+				"error": "插件管理器未初始化",
+				"code":  "PLUGIN_MANAGER_NOT_INITIALIZED",
+			})
+			return
+		}
+
+		isEnabled := *req.IsEnabled
+		success := make([]string, 0, len(req.PluginNames))
+		failed := make([]BatchPluginOperationError, 0)
+
+		builtinMap := make(map[string]string)
+		for _, p := range pluginManager.GetPlugins() {
+			builtinMap[strings.ToLower(strings.TrimSpace(p.Name()))] = p.Name()
+		}
+
+		customPlugins := config.GetCustomPluginsConfig()
+		customMap := make(map[string]config.CustomPlugin)
+		for _, cp := range customPlugins.GetPlugins() {
+			customMap[strings.ToLower(strings.TrimSpace(cp.Name))] = cp
+		}
+
+		seen := make(map[string]struct{}, len(req.PluginNames))
+		for _, rawName := range req.PluginNames {
+			normalizedName := strings.ToLower(strings.TrimSpace(rawName))
+			if normalizedName == "" {
+				continue
+			}
+			if _, exists := seen[normalizedName]; exists {
+				continue
+			}
+			seen[normalizedName] = struct{}{}
+
+			if builtinName, exists := builtinMap[normalizedName]; exists {
+				if pluginStateService != nil {
+					if err := pluginStateService.SetStatus(builtinName, "builtin", isEnabled); err != nil {
+						failed = append(failed, BatchPluginOperationError{
+							PluginName: builtinName,
+							Error:      "更新插件状态失败: " + err.Error(),
+							Code:       "STATUS_UPDATE_FAILED",
+						})
+						continue
+					}
+				}
+				success = append(success, builtinName)
+				continue
+			}
+
+			customPlugin, exists := customMap[normalizedName]
+			if !exists {
+				failed = append(failed, BatchPluginOperationError{
+					PluginName: strings.TrimSpace(rawName),
+					Error:      "插件不存在",
+					Code:       "PLUGIN_NOT_FOUND",
+				})
+				continue
+			}
+
+			oldEnabled := customPlugin.Enabled
+			if err := customPlugins.SetPluginEnabled(customPlugin.Name, isEnabled); err != nil {
+				failed = append(failed, BatchPluginOperationError{
+					PluginName: customPlugin.Name,
+					Error:      "更新自定义插件配置失败: " + err.Error(),
+					Code:       "SAVE_FAILED",
+				})
+				continue
+			}
+
+			if pluginStateService != nil {
+				if err := pluginStateService.SetStatus(customPlugin.Name, "custom", isEnabled); err != nil {
+					if rollbackErr := customPlugins.SetPluginEnabled(customPlugin.Name, oldEnabled); rollbackErr != nil {
+						log.Printf("⚠️  批量更新插件状态回滚 JSON 配置失败(%s): %v", customPlugin.Name, rollbackErr)
+					}
+					failed = append(failed, BatchPluginOperationError{
+						PluginName: customPlugin.Name,
+						Error:      "同步插件状态失败: " + err.Error(),
+						Code:       "STATUS_SYNC_FAILED",
+					})
+					continue
+				}
+			}
+
+			success = append(success, customPlugin.Name)
+		}
+
+		c.JSON(200, gin.H{
+			"success_count": len(success),
+			"failed_count":  len(failed),
+			"success":       success,
+			"failed":        failed,
+		})
+	}
+}
+
+// BatchDeletePluginsHandler 批量删除插件（仅删除自定义插件）
+func BatchDeletePluginsHandler(searchService *service.SearchService, pluginHealthService *service.PluginHealthService, pluginStateService *service.PluginStateService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req BatchDeletePluginsRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{
+				"error": "请求参数错误",
+				"code":  "INVALID_REQUEST",
+			})
+			return
+		}
+
+		if len(req.PluginNames) == 0 {
+			c.JSON(400, gin.H{
+				"error": "插件名称列表不能为空",
+				"code":  "INVALID_REQUEST",
+			})
+			return
+		}
+
+		pluginManager := searchService.GetPluginManager()
+		if pluginManager == nil {
+			c.JSON(500, gin.H{
+				"error": "插件管理器未初始化",
+				"code":  "PLUGIN_MANAGER_NOT_INITIALIZED",
+			})
+			return
+		}
+
+		builtinSet := make(map[string]string)
+		for _, p := range pluginManager.GetPlugins() {
+			builtinSet[strings.ToLower(strings.TrimSpace(p.Name()))] = p.Name()
+		}
+
+		customPlugins := config.GetCustomPluginsConfig()
+		customMap := make(map[string]config.CustomPlugin)
+		for _, cp := range customPlugins.GetPlugins() {
+			customMap[strings.ToLower(strings.TrimSpace(cp.Name))] = cp
+		}
+
+		success := make([]string, 0, len(req.PluginNames))
+		failed := make([]BatchPluginOperationError, 0)
+
+		seen := make(map[string]struct{}, len(req.PluginNames))
+		for _, rawName := range req.PluginNames {
+			normalizedName := strings.ToLower(strings.TrimSpace(rawName))
+			if normalizedName == "" {
+				continue
+			}
+			if _, exists := seen[normalizedName]; exists {
+				continue
+			}
+			seen[normalizedName] = struct{}{}
+
+			if builtinName, exists := builtinSet[normalizedName]; exists {
+				failed = append(failed, BatchPluginOperationError{
+					PluginName: builtinName,
+					Error:      "内置插件不支持删除",
+					Code:       "PLUGIN_NOT_DELETABLE",
+				})
+				continue
+			}
+
+			customPlugin, exists := customMap[normalizedName]
+			if !exists {
+				failed = append(failed, BatchPluginOperationError{
+					PluginName: strings.TrimSpace(rawName),
+					Error:      "插件不存在",
+					Code:       "PLUGIN_NOT_FOUND",
+				})
+				continue
+			}
+
+			if err := customPlugins.RemovePlugin(customPlugin.Name); err != nil {
+				failed = append(failed, BatchPluginOperationError{
+					PluginName: customPlugin.Name,
+					Error:      "删除插件配置失败: " + err.Error(),
+					Code:       "DELETE_FAILED",
+				})
+				continue
+			}
+
+			if pluginStateService != nil {
+				if err := pluginStateService.DeleteStatus(customPlugin.Name); err != nil {
+					if rollbackErr := customPlugins.AddPlugin(customPlugin); rollbackErr != nil {
+						log.Printf("⚠️  批量删除插件回滚 JSON 配置失败(%s): %v", customPlugin.Name, rollbackErr)
+					}
+					failed = append(failed, BatchPluginOperationError{
+						PluginName: customPlugin.Name,
+						Error:      "同步插件状态失败: " + err.Error(),
+						Code:       "STATUS_SYNC_FAILED",
+					})
+					continue
+				}
+			}
+
+			if pluginHealthService != nil {
+				if err := pluginHealthService.ClearStatus(customPlugin.Name); err != nil {
+					log.Printf("⚠️  清理插件健康状态失败(%s): %v", customPlugin.Name, err)
+				}
+			}
+
+			success = append(success, customPlugin.Name)
+		}
+
+		c.JSON(200, gin.H{
+			"success_count": len(success),
+			"failed_count":  len(failed),
+			"success":       success,
+			"failed":        failed,
 		})
 	}
 }

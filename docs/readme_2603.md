@@ -79,3 +79,27 @@ fix(search): 修复工作池超时死锁并优化搜索超时提示
 - frontend/src/lib/__tests__/api.test.ts
 - frontend/src/lib/api.ts
 
+
+## 2026-03-02 16:58:04
+
+### Commit
+```
+feat(admin): 新增插件和频道批量操作功能并优化会话内排序逻辑
+```
+
+### Body
+新增插件和频道的批量启用/停用/删除功能，支持多选操作。新增批量操作确认对话框，失败项自动保留在选中状态。优化会话内排序逻辑，切换状态后保持原有顺序不变。修复系统信息视图中插件统计文案（移除"含自定义"）。新增批量操作相关 API 类型定义和测试用例。
+
+### Files
+- backend/api/admin_handler.go
+- backend/api/router.go
+- backend/api/tg_channel_handler.go
+- backend/custom_plugins.json
+- frontend/src/components/admin/ChannelManageDialog.tsx
+- frontend/src/components/admin/PluginManageDialog.tsx
+- frontend/src/components/admin/SystemInfoView.tsx
+- frontend/src/components/admin/__tests__/ChannelManageDialog.test.tsx
+- frontend/src/components/admin/__tests__/PluginManageDialog.test.tsx
+- frontend/src/types/api.ts
+
+---

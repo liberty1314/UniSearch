@@ -4,7 +4,7 @@
     "url": "http://app.ishen520.com/api.php/v1.vod?wd=考研",
     "priority": 3,
     "description": "看剧吧-考研",
-    "enabled": true
+    "enabled": false
   },
   {
     "name": "52API",

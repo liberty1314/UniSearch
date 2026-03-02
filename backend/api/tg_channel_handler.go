@@ -374,6 +374,168 @@ type BatchUpdateTGChannelsRequest struct {
 	Channels []model.TGChannel `json:"channels" binding:"required"`
 }
 
+type BatchSetTGChannelsStatusRequest struct {
+	ChannelIDs []uint `json:"channel_ids" binding:"required"`
+	IsEnabled  *bool  `json:"is_enabled" binding:"required"`
+}
+
+type BatchDeleteTGChannelsRequest struct {
+	ChannelIDs []uint `json:"channel_ids" binding:"required"`
+}
+
+type BatchTGChannelOperationError struct {
+	ChannelID uint   `json:"channel_id"`
+	Error     string `json:"error"`
+	Code      string `json:"code"`
+}
+
+// BatchSetTGChannelsStatusHandler 批量更新频道启用状态
+func BatchSetTGChannelsStatusHandler(c *gin.Context) {
+	if tgChannelService == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "频道服务未初始化"})
+		return
+	}
+
+	var req BatchSetTGChannelsStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil || req.IsEnabled == nil {
+		errMsg := "请求参数错误"
+		if err != nil {
+			errMsg += "：" + err.Error()
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": errMsg})
+		return
+	}
+
+	if len(req.ChannelIDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "频道 ID 列表不能为空"})
+		return
+	}
+
+	isEnabled := *req.IsEnabled
+	success := make([]uint, 0, len(req.ChannelIDs))
+	failed := make([]BatchTGChannelOperationError, 0)
+
+	seen := make(map[uint]struct{}, len(req.ChannelIDs))
+	for _, channelID := range req.ChannelIDs {
+		if channelID == 0 {
+			failed = append(failed, BatchTGChannelOperationError{
+				ChannelID: channelID,
+				Error:     "无效的频道 ID",
+				Code:      "INVALID_CHANNEL_ID",
+			})
+			continue
+		}
+		if _, exists := seen[channelID]; exists {
+			continue
+		}
+		seen[channelID] = struct{}{}
+
+		if _, err := tgChannelService.UpdateChannel(channelID, nil, &isEnabled, nil); err != nil {
+			errMsg := err.Error()
+			errCode := "CHANNEL_UPDATE_FAILED"
+			if strings.Contains(errMsg, "不存在") {
+				errCode = "CHANNEL_NOT_FOUND"
+			}
+			failed = append(failed, BatchTGChannelOperationError{
+				ChannelID: channelID,
+				Error:     errMsg,
+				Code:      errCode,
+			})
+			continue
+		}
+		success = append(success, channelID)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success_count": len(success),
+		"failed_count":  len(failed),
+		"success":       success,
+		"failed":        failed,
+	})
+}
+
+// BatchDeleteTGChannelsHandler 批量删除频道
+func BatchDeleteTGChannelsHandler(c *gin.Context) {
+	if tgChannelService == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "频道服务未初始化"})
+		return
+	}
+
+	var req BatchDeleteTGChannelsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数错误：" + err.Error()})
+		return
+	}
+
+	if len(req.ChannelIDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "频道 ID 列表不能为空"})
+		return
+	}
+
+	success := make([]uint, 0, len(req.ChannelIDs))
+	failed := make([]BatchTGChannelOperationError, 0)
+
+	seen := make(map[uint]struct{}, len(req.ChannelIDs))
+	for _, channelID := range req.ChannelIDs {
+		if channelID == 0 {
+			failed = append(failed, BatchTGChannelOperationError{
+				ChannelID: channelID,
+				Error:     "无效的频道 ID",
+				Code:      "INVALID_CHANNEL_ID",
+			})
+			continue
+		}
+		if _, exists := seen[channelID]; exists {
+			continue
+		}
+		seen[channelID] = struct{}{}
+
+		channel, err := tgChannelService.GetChannelByID(channelID)
+		if err != nil {
+			errMsg := err.Error()
+			errCode := "CHANNEL_DELETE_FAILED"
+			if strings.Contains(errMsg, "不存在") {
+				errCode = "CHANNEL_NOT_FOUND"
+			}
+			failed = append(failed, BatchTGChannelOperationError{
+				ChannelID: channelID,
+				Error:     errMsg,
+				Code:      errCode,
+			})
+			continue
+		}
+
+		if err := tgChannelService.DeleteChannel(channelID); err != nil {
+			errMsg := err.Error()
+			errCode := "CHANNEL_DELETE_FAILED"
+			if strings.Contains(errMsg, "不存在") {
+				errCode = "CHANNEL_NOT_FOUND"
+			}
+			failed = append(failed, BatchTGChannelOperationError{
+				ChannelID: channelID,
+				Error:     errMsg,
+				Code:      errCode,
+			})
+			continue
+		}
+
+		if tgChannelHealthService != nil {
+			if err := tgChannelHealthService.ClearStatus(channel.Name); err != nil {
+				log.Printf("⚠️  清理删除频道健康状态失败(%s): %v", channel.Name, err)
+			}
+		}
+
+		success = append(success, channelID)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success_count": len(success),
+		"failed_count":  len(failed),
+		"success":       success,
+		"failed":        failed,
+	})
+}
+
 // BatchUpdateTGChannelsHandler 批量更新频道列表
 func BatchUpdateTGChannelsHandler(c *gin.Context) {
 	if tgChannelService == nil {

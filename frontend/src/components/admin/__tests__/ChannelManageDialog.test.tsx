@@ -28,7 +28,23 @@ vi.mock('sonner', () => ({
 }));
 
 vi.mock('../ConfirmDialog', () => ({
-  ConfirmDialog: () => null,
+  ConfirmDialog: ({
+    open,
+    title,
+    description,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }) => (open ? (
+    <div>
+      <div>{title}</div>
+      <div>{description}</div>
+      <button onClick={onConfirm}>确认操作</button>
+    </div>
+  ) : null),
 }));
 
 const channels = [
@@ -110,6 +126,18 @@ describe('ChannelManageDialog', () => {
           json: async () => ({ accessible: true }),
         };
       }
+      if (url === '/api/admin/channels/batch-status') {
+        return {
+          ok: true,
+          json: async () => ({ success_count: 2, failed_count: 0, success: [5, 6], failed: [] }),
+        };
+      }
+      if (url === '/api/admin/channels/batch-delete') {
+        return {
+          ok: true,
+          json: async () => ({ success_count: 1, failed_count: 1, success: [6], failed: [{ channel_id: 4, error: 'failed', code: 'CHANNEL_DELETE_FAILED' }] }),
+        };
+      }
       return {
         ok: true,
         json: async () => ({}),
@@ -117,6 +145,67 @@ describe('ChannelManageDialog', () => {
     });
 
     vi.stubGlobal('fetch', fetchMock);
+  });
+
+  it('sends batch channel status request for selected channels', async () => {
+    render(
+      <ChannelManageDialog
+        isOpen
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        token="test-token"
+      />
+    );
+
+    await screen.findByText('channel-disabled-healthy');
+    fireEvent.click(screen.getByLabelText('选择频道 channel-disabled-healthy'));
+    fireEvent.click(screen.getByLabelText('选择频道 channel-disabled-untested'));
+    fireEvent.click(screen.getByRole('button', { name: '批量启用' }));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/admin/channels/batch-status',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            channel_ids: [5, 6],
+            is_enabled: true,
+          }),
+        })
+      );
+    });
+  });
+
+  it('supports batch delete with confirmation and keeps failed rows', async () => {
+    render(
+      <ChannelManageDialog
+        isOpen
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        token="test-token"
+      />
+    );
+
+    await screen.findByText('channel-disabled-error');
+    fireEvent.click(screen.getByLabelText('选择频道 channel-disabled-error'));
+    fireEvent.click(screen.getByLabelText('选择频道 channel-disabled-untested'));
+    fireEvent.click(screen.getByRole('button', { name: '批量删除' }));
+    fireEvent.click(screen.getByRole('button', { name: '确认操作' }));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/admin/channels/batch-delete',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            channel_ids: [4, 6],
+          }),
+        })
+      );
+    });
+
+    expect(screen.queryByText('channel-disabled-untested')).not.toBeInTheDocument();
+    expect(screen.getByText('channel-disabled-error')).toBeInTheDocument();
   });
 
   it('sorts channels with disabled healthy then untested then error', async () => {
@@ -169,5 +258,62 @@ describe('ChannelManageDialog', () => {
       expect(hasChannelTestRequest).toBe(true);
     });
     expect(onSuccess).toHaveBeenCalled();
+  });
+
+  it('keeps list order within the same session when toggling channel status', async () => {
+    const localChannels = [
+      {
+        id: 11,
+        name: 'first-enabled',
+        is_enabled: true,
+        sort_order: 10,
+        health_status: 'healthy',
+        last_error: '',
+        created_at: '',
+        updated_at: '',
+      },
+      {
+        id: 12,
+        name: 'second-disabled',
+        is_enabled: false,
+        sort_order: 1,
+        health_status: 'healthy',
+        last_error: '',
+        created_at: '',
+        updated_at: '',
+      },
+    ];
+
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === '/api/admin/channels') {
+        return { ok: true, json: async () => ({ channels: localChannels, total: localChannels.length }) };
+      }
+      if (url === '/api/admin/channels/12') {
+        return { ok: true, json: async () => ({}) };
+      }
+      return { ok: true, json: async () => ({}) };
+    }));
+
+    render(
+      <ChannelManageDialog
+        isOpen
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        token="test-token"
+      />
+    );
+
+    const firstNode = await screen.findByText('first-enabled');
+    const secondNode = screen.getByText('second-disabled');
+    expect(firstNode.compareDocumentPosition(secondNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText('切换频道 second-disabled 状态'));
+
+    await waitFor(() => {
+      const nextFirstNode = screen.getByText('first-enabled');
+      const nextSecondNode = screen.getByText('second-disabled');
+      expect(nextFirstNode.compareDocumentPosition(nextSecondNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
   });
 });

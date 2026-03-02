@@ -543,6 +543,28 @@ export interface PluginInfo {
   url?: string;
 }
 
+export interface BatchPluginStatusRequest {
+  plugin_names: string[];
+  is_enabled: boolean;
+}
+
+export interface BatchDeletePluginsRequest {
+  plugin_names: string[];
+}
+
+export interface BatchPluginOperationError {
+  plugin_name: string;
+  error: string;
+  code: string;
+}
+
+export interface BatchPluginOperationResponse {
+  success_count: number;
+  failed_count: number;
+  success: string[];
+  failed: BatchPluginOperationError[];
+}
+
 /**
  * 系统统计信息
  */
@@ -609,6 +631,28 @@ export interface TGChannel {
   last_checked_at?: string | null;
   last_error?: string;
   check_source?: 'manual_test' | 'batch_test' | 'system' | string;
+}
+
+export interface BatchChannelStatusRequest {
+  channel_ids: number[];
+  is_enabled: boolean;
+}
+
+export interface BatchDeleteChannelsRequest {
+  channel_ids: number[];
+}
+
+export interface BatchChannelOperationError {
+  channel_id: number;
+  error: string;
+  code: string;
+}
+
+export interface BatchChannelOperationResponse {
+  success_count: number;
+  failed_count: number;
+  success: number[];
+  failed: BatchChannelOperationError[];
 }
 
 /**

@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Trash2, Loader2, CheckCircle2, XCircle, Radio, ToggleLeft, ToggleRight, Zap, PlayCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { ConfirmDialog } from './ConfirmDialog';
-import type { TGChannel, ListTGChannelsResponse } from '@/types/api';
+import type { TGChannel, ListTGChannelsResponse, BatchChannelOperationResponse } from '@/types/api';
 import { compareChannels } from './adminListSort';
 
 interface ChannelManageDialogProps {
@@ -31,6 +32,13 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
     const [testingStatus, setTestingStatus] = useState<Record<string, TestStatus>>({});
     const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
     const [isBatchTesting, setIsBatchTesting] = useState(false);
+    const [isBatchUpdating, setIsBatchUpdating] = useState(false);
+    const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+    const [selectedChannelIds, setSelectedChannelIds] = useState<Set<number>>(new Set());
+    const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
+    const [sessionOrderMap, setSessionOrderMap] = useState<Record<number, number>>({});
+    const [hasFetchedOnce, setHasFetchedOnce] = useState(false);
+    const sessionInitializedRef = useRef(false);
     const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; channel: TGChannel | null }>({
         open: false,
         channel: null,
@@ -56,19 +64,70 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
             toast.error('获取频道列表出错');
         } finally {
             setLoading(false);
+            setHasFetchedOnce(true);
         }
     }, [token]);
 
     useEffect(() => {
         if (isOpen) {
+            setHasFetchedOnce(false);
             fetchChannels();
         }
     }, [isOpen, fetchChannels]);
 
+    useEffect(() => {
+        if (!isOpen) {
+            sessionInitializedRef.current = false;
+            setSelectedChannelIds(new Set());
+            setSessionOrderMap({});
+            setBatchDeleteConfirmOpen(false);
+            setHasFetchedOnce(false);
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen || sessionInitializedRef.current || !hasFetchedOnce) return;
+        const initialSortedChannels = [...channels].sort(compareChannels);
+        const nextOrderMap: Record<number, number> = {};
+        initialSortedChannels.forEach((channel, index) => {
+            nextOrderMap[channel.id] = index;
+        });
+        setSessionOrderMap(nextOrderMap);
+        sessionInitializedRef.current = true;
+    }, [channels, hasFetchedOnce, isOpen]);
+
+    useEffect(() => {
+        const channelIdSet = new Set(channels.map((channel) => channel.id));
+        setSelectedChannelIds((prev) => {
+            const next = new Set<number>();
+            prev.forEach((id) => {
+                if (channelIdSet.has(id)) {
+                    next.add(id);
+                }
+            });
+            return next;
+        });
+    }, [channels]);
+
     const displayChannels = useMemo(
-        () => [...channels].sort(compareChannels),
-        [channels]
+        () => [...channels].sort((a, b) => {
+            const aOrder = sessionOrderMap[a.id];
+            const bOrder = sessionOrderMap[b.id];
+            if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
+            if (aOrder !== undefined) return -1;
+            if (bOrder !== undefined) return 1;
+            return compareChannels(a, b);
+        }),
+        [channels, sessionOrderMap]
     );
+    const selectedCount = selectedChannelIds.size;
+    const isOperationBusy = isBatchTesting || isBatchUpdating || isBatchDeleting || isAdding;
+    const selectedChannelPreviewText = useMemo(() => {
+        const selectedNames = displayChannels
+            .filter((channel) => selectedChannelIds.has(channel.id))
+            .map((channel) => channel.name);
+        return selectedNames.slice(0, 3).join('、');
+    }, [displayChannels, selectedChannelIds]);
 
     // 添加频道
     const handleAddChannel = async () => {
@@ -126,7 +185,12 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
 
             if (response.ok) {
                 toast.success(`频道 ${channel.name} 已删除`);
-                await fetchChannels();
+                setChannels((prev) => prev.filter((item) => item.id !== channel.id));
+                setSelectedChannelIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(channel.id);
+                    return next;
+                });
             } else {
                 const data = await response.json();
                 toast.error(data.error || '删除频道失败');
@@ -144,6 +208,7 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
 
     // 切换频道启用/禁用状态
     const handleToggleEnabled = async (channel: TGChannel) => {
+        if (isOperationBusy) return;
         const newEnabled = !channel.is_enabled;
         try {
             const response = await fetch(`/api/admin/channels/${channel.id}`, {
@@ -168,6 +233,149 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
             }
         } catch {
             toast.error('更新频道出错');
+        }
+    };
+
+    const handleSelectChannel = (channelId: number, checked: boolean) => {
+        setSelectedChannelIds((prev) => {
+            const next = new Set(prev);
+            if (checked) {
+                next.add(channelId);
+            } else {
+                next.delete(channelId);
+            }
+            return next;
+        });
+    };
+
+    const handleSelectAllChannels = () => {
+        setSelectedChannelIds(new Set(displayChannels.map((channel) => channel.id)));
+    };
+
+    const handleClearSelectedChannels = () => {
+        setSelectedChannelIds(new Set());
+    };
+
+    const handleBatchToggleChannels = async (isEnabled: boolean) => {
+        if (selectedChannelIds.size === 0) {
+            toast.error('请先选择要操作的频道');
+            return;
+        }
+
+        setIsBatchUpdating(true);
+        try {
+            const response = await fetch('/api/admin/channels/batch-status', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    channel_ids: Array.from(selectedChannelIds),
+                    is_enabled: isEnabled,
+                }),
+            });
+
+            if (!response.ok) {
+                let message = '批量更新频道状态失败';
+                try {
+                    const data = await response.json();
+                    if (typeof data?.error === 'string' && data.error.trim()) {
+                        message = data.error;
+                    }
+                } catch {
+                    // ignore parse error
+                }
+                toast.error(message);
+                return;
+            }
+
+            const result = (await response.json()) as BatchChannelOperationResponse;
+            const successSet = new Set(result.success ?? []);
+            const failedSet = new Set((result.failed ?? []).map((item) => item.channel_id));
+
+            if (successSet.size > 0) {
+                setChannels((prev) =>
+                    prev.map((channel) =>
+                        successSet.has(channel.id)
+                            ? { ...channel, is_enabled: isEnabled }
+                            : channel
+                    )
+                );
+            }
+
+            setSelectedChannelIds(failedSet);
+            const firstError = result.failed?.[0]?.error;
+            if ((result.failed_count ?? 0) > 0) {
+                toast.warning(`批量${isEnabled ? '启用' : '停用'}完成：成功 ${result.success_count} 项，失败 ${result.failed_count} 项`, {
+                    description: firstError || undefined,
+                });
+            } else {
+                toast.success(`批量${isEnabled ? '启用' : '停用'}成功：${result.success_count} 项`);
+            }
+        } catch {
+            toast.error('批量更新频道状态出错');
+        } finally {
+            setIsBatchUpdating(false);
+        }
+    };
+
+    const handleBatchDeleteChannels = async () => {
+        if (selectedChannelIds.size === 0) {
+            toast.error('请先选择要删除的频道');
+            return;
+        }
+
+        setIsBatchDeleting(true);
+        try {
+            const response = await fetch('/api/admin/channels/batch-delete', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    channel_ids: Array.from(selectedChannelIds),
+                }),
+            });
+
+            if (!response.ok) {
+                let message = '批量删除频道失败';
+                try {
+                    const data = await response.json();
+                    if (typeof data?.error === 'string' && data.error.trim()) {
+                        message = data.error;
+                    }
+                } catch {
+                    // ignore parse error
+                }
+                toast.error(message);
+                return;
+            }
+
+            const result = (await response.json()) as BatchChannelOperationResponse;
+            const successSet = new Set(result.success ?? []);
+            const failedSet = new Set((result.failed ?? []).map((item) => item.channel_id));
+
+            if (successSet.size > 0) {
+                setChannels((prev) => prev.filter((channel) => !successSet.has(channel.id)));
+            }
+
+            setSelectedChannelIds(failedSet);
+            setBatchDeleteConfirmOpen(false);
+
+            const firstError = result.failed?.[0]?.error;
+            if ((result.failed_count ?? 0) > 0) {
+                toast.warning(`批量删除完成：成功 ${result.success_count} 项，失败 ${result.failed_count} 项`, {
+                    description: firstError || undefined,
+                });
+            } else {
+                toast.success(`批量删除成功：${result.success_count} 项`);
+            }
+        } catch {
+            toast.error('批量删除频道出错');
+        } finally {
+            setIsBatchDeleting(false);
         }
     };
 
@@ -285,6 +493,8 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
 
     const handleClose = () => {
         setNewChannelName('');
+        setSelectedChannelIds(new Set());
+        setBatchDeleteConfirmOpen(false);
         onSuccess();
         onClose();
     };
@@ -372,6 +582,62 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
 
                             {/* 频道列表 */}
                             <div className="flex-1 overflow-y-auto px-5 py-2">
+                                <div className="mb-3 flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 px-3 py-2">
+                                    <span className="text-sm text-slate-600 dark:text-slate-300">
+                                        已选 {selectedCount} 项
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleSelectAllChannels}
+                                            disabled={isOperationBusy || displayChannels.length === 0}
+                                            className="h-7 px-2 text-xs cursor-pointer"
+                                        >
+                                            全选
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleClearSelectedChannels}
+                                            disabled={isOperationBusy || selectedCount === 0}
+                                            className="h-7 px-2 text-xs cursor-pointer"
+                                        >
+                                            清空
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="mb-4 flex flex-wrap items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => void handleBatchToggleChannels(true)}
+                                        disabled={isOperationBusy || selectedCount === 0}
+                                        className="h-8 px-3 text-xs text-green-600 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/20 cursor-pointer"
+                                    >
+                                        批量启用
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => void handleBatchToggleChannels(false)}
+                                        disabled={isOperationBusy || selectedCount === 0}
+                                        className="h-8 px-3 text-xs text-slate-600 border-slate-300 hover:bg-slate-100 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700 cursor-pointer"
+                                    >
+                                        批量停用
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setBatchDeleteConfirmOpen(true)}
+                                        disabled={isOperationBusy || selectedCount === 0}
+                                        className="h-8 px-3 text-xs text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 cursor-pointer"
+                                    >
+                                        批量删除
+                                    </Button>
+                                </div>
+
                                 {loading ? (
                                     <div className="flex items-center justify-center py-12">
                                         <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -399,6 +665,13 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                                                 >
                                                 {/* 左侧：状态点 + 频道名 */}
                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    <Checkbox
+                                                        checked={selectedChannelIds.has(channel.id)}
+                                                        onCheckedChange={(checked) => handleSelectChannel(channel.id, checked as boolean)}
+                                                        aria-label={`选择频道 ${channel.name}`}
+                                                        disabled={isOperationBusy}
+                                                        onClick={(event: React.MouseEvent) => event.stopPropagation()}
+                                                    />
                                                     {/* 状态指示器 */}
                                                     <div className={`w-2 h-2 rounded-full shrink-0 ${channel.is_enabled ? 'bg-green-500' : 'bg-gray-400'
                                                         }`} />
@@ -441,7 +714,7 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                                                             variant="outline"
                                                             size="sm"
                                                             onClick={() => handleTestChannel(channel.name)}
-                                                            disabled={testingStatus[channel.name] === 'testing'}
+                                                            disabled={isOperationBusy || testingStatus[channel.name] === 'testing'}
                                                             className="h-7 px-2 text-xs cursor-pointer"
                                                         >
                                                             {getTestIcon(testingStatus[channel.name] || 'idle')}
@@ -455,6 +728,8 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                                                             variant="outline"
                                                             size="sm"
                                                             onClick={() => handleToggleEnabled(channel)}
+                                                            aria-label={`切换频道 ${channel.name} 状态`}
+                                                            disabled={isOperationBusy}
                                                             className={`h-7 px-2 text-xs cursor-pointer ${channel.is_enabled
                                                                 ? 'text-green-600 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/20'
                                                                 : 'text-slate-500 border-slate-200 hover:bg-slate-50 dark:text-slate-400 dark:border-slate-600 dark:hover:bg-slate-700/50'
@@ -474,7 +749,7 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                                                             variant="outline"
                                                             size="sm"
                                                             onClick={() => handleDeleteChannel(channel)}
-                                                            disabled={deletingIds.has(channel.id)}
+                                                            disabled={isOperationBusy || deletingIds.has(channel.id)}
                                                             className="h-7 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 cursor-pointer"
                                                         >
                                                             {deletingIds.has(channel.id) ? (
@@ -504,14 +779,14 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                             <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                                 <div className="flex justify-between items-center">
                                     <span className="text-sm text-slate-500 dark:text-slate-400">
-                                        共 {channels.length} 个频道，{enabledCount} 个已启用，异常频道 {errorCount}
+                                        共 {channels.length} 个频道，{enabledCount} 个已启用，异常频道 {errorCount}，已选 {selectedCount} 项
                                     </span>
                                     <div className="flex items-center gap-2">
                                         <Button
                                             variant="outline"
                                             size="sm"
                                             onClick={handleBatchTest}
-                                            disabled={isBatchTesting || channels.length === 0}
+                                            disabled={isOperationBusy || channels.length === 0}
                                             className="cursor-pointer text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/20"
                                         >
                                             {isBatchTesting ? (
@@ -542,6 +817,17 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                 variant="destructive"
                 onConfirm={confirmDelete}
                 isLoading={deleteConfirm.channel ? deletingIds.has(deleteConfirm.channel.id) : false}
+            />
+
+            <ConfirmDialog
+                open={batchDeleteConfirmOpen}
+                onOpenChange={setBatchDeleteConfirmOpen}
+                title="确认批量删除频道"
+                description={`将删除 ${selectedCount} 个已选频道${selectedChannelPreviewText ? `（例如：${selectedChannelPreviewText}）` : ''}。`}
+                confirmText="删除"
+                variant="destructive"
+                onConfirm={handleBatchDeleteChannels}
+                isLoading={isBatchDeleting}
             />
         </AnimatePresence>
     );

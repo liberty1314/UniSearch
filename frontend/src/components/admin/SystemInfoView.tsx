@@ -406,7 +406,7 @@ export const SystemInfoView: React.FC = () => {
               <p className="text-xl font-semibold text-slate-800 dark:text-slate-100">{pluginSummary.total}</p>
             </div>
             <div className="rounded-xl border border-emerald-100 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-900/20 px-4 py-3">
-              <p className="text-xs text-emerald-700 dark:text-emerald-300">活跃（含自定义）</p>
+              <p className="text-xs text-emerald-700 dark:text-emerald-300">活跃</p>
               <p className="text-xl font-semibold text-emerald-700 dark:text-emerald-300">{pluginSummary.active}</p>
             </div>
             <div className="rounded-xl border border-red-100 dark:border-red-900 bg-red-50/70 dark:bg-red-900/20 px-4 py-3">

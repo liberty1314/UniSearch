@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Zap, Trash2, Loader2, CheckCircle2, XCircle, AlertCircle, Eye, Edit3, Save, ChevronUp, PlayCircle, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import type { PluginInfo } from '@/types/api';
+import type { PluginInfo, BatchPluginOperationResponse } from '@/types/api';
 import { comparePlugins } from './adminListSort';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface PluginManageDialogProps {
     isOpen: boolean;
@@ -29,11 +31,51 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
     const [testingStatus, setTestingStatus] = useState<Record<string, TestStatus>>({});
     const [localPlugins, setLocalPlugins] = useState<PluginInfo[]>(plugins);
     const [hasPendingChanges, setHasPendingChanges] = useState(false);
+    const [selectedPluginNames, setSelectedPluginNames] = useState<Set<string>>(new Set());
+    const [isBatchUpdating, setIsBatchUpdating] = useState(false);
+    const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+    const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
+    const [sessionOrderMap, setSessionOrderMap] = useState<Record<string, number>>({});
+    const sessionInitializedRef = useRef(false);
 
     // 同步 props 到本地状态
     useEffect(() => {
         setLocalPlugins(plugins);
     }, [plugins]);
+
+    useEffect(() => {
+        if (!isOpen) {
+            sessionInitializedRef.current = false;
+            setSelectedPluginNames(new Set());
+            setSessionOrderMap({});
+            return;
+        }
+        if (sessionInitializedRef.current) {
+            return;
+        }
+        sessionInitializedRef.current = true;
+        const initialSortedPlugins = [...plugins].sort(comparePlugins);
+        const nextOrderMap: Record<string, number> = {};
+        initialSortedPlugins.forEach((plugin, index) => {
+            nextOrderMap[plugin.name] = index;
+        });
+        setSessionOrderMap(nextOrderMap);
+        setLocalPlugins(plugins);
+        setSelectedPluginNames(new Set());
+    }, [isOpen, plugins]);
+
+    useEffect(() => {
+        const pluginNameSet = new Set(localPlugins.map((plugin) => plugin.name));
+        setSelectedPluginNames((prev) => {
+            const next = new Set<string>();
+            prev.forEach((name) => {
+                if (pluginNameSet.has(name)) {
+                    next.add(name);
+                }
+            });
+            return next;
+        });
+    }, [localPlugins]);
     const [showAddForm, setShowAddForm] = useState(false);
     const [newPlugin, setNewPlugin] = useState({ name: '', url: '', priority: 100, description: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,9 +90,22 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
         if (!plugin.is_enabled) return 'inactive';
         return plugin.plugin_type === 'custom' ? 'custom' : 'active';
     };
-    const sortedPlugins = useMemo(
-        () => [...localPlugins].sort(comparePlugins),
-        [localPlugins]
+    const displayPlugins = useMemo(
+        () => [...localPlugins].sort((a, b) => {
+            const aOrder = sessionOrderMap[a.name];
+            const bOrder = sessionOrderMap[b.name];
+            if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
+            if (aOrder !== undefined) return -1;
+            if (bOrder !== undefined) return 1;
+            return comparePlugins(a, b);
+        }),
+        [localPlugins, sessionOrderMap]
+    );
+    const selectedCount = selectedPluginNames.size;
+    const isOperationBusy = isBatchUpdating || isBatchDeleting || isBatchTesting;
+    const selectedPluginPreviewText = useMemo(
+        () => Array.from(selectedPluginNames).slice(0, 3).join('、'),
+        [selectedPluginNames]
     );
 
     // 测试插件连通性（停用插件也允许单测）
@@ -171,6 +226,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
 
     // 切换插件启用/停用状态
     const handleTogglePluginEnabled = async (plugin: PluginInfo) => {
+        if (isOperationBusy) return;
         const nextEnabled = !plugin.is_enabled;
         try {
             const response = await fetch(`/api/admin/plugins/${plugin.name}/status`, {
@@ -213,6 +269,98 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
         }
     };
 
+    const handleSelectPlugin = (pluginName: string, checked: boolean) => {
+        setSelectedPluginNames((prev) => {
+            const next = new Set(prev);
+            if (checked) {
+                next.add(pluginName);
+            } else {
+                next.delete(pluginName);
+            }
+            return next;
+        });
+    };
+
+    const handleSelectAllPlugins = () => {
+        const names = displayPlugins.map((plugin) => plugin.name);
+        setSelectedPluginNames(new Set(names));
+    };
+
+    const handleClearSelectedPlugins = () => {
+        setSelectedPluginNames(new Set());
+    };
+
+    const handleBatchTogglePlugins = async (isEnabled: boolean) => {
+        if (selectedPluginNames.size === 0) {
+            toast.error('请先选择要操作的插件');
+            return;
+        }
+
+        setIsBatchUpdating(true);
+        try {
+            const response = await fetch('/api/admin/plugins/batch-status', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    plugin_names: Array.from(selectedPluginNames),
+                    is_enabled: isEnabled,
+                }),
+            });
+
+            if (!response.ok) {
+                let message = '批量更新插件状态失败';
+                try {
+                    const data = await response.json();
+                    if (typeof data?.error === 'string' && data.error.trim()) {
+                        message = data.error;
+                    }
+                } catch {
+                    // ignore parse error
+                }
+                toast.error(message);
+                return;
+            }
+
+            const result = (await response.json()) as BatchPluginOperationResponse;
+            const successSet = new Set(result.success ?? []);
+            const failedSet = new Set((result.failed ?? []).map((item) => item.plugin_name));
+
+            if (successSet.size > 0) {
+                setLocalPlugins((prev) =>
+                    prev.map((plugin) => {
+                        if (!successSet.has(plugin.name)) return plugin;
+                        return {
+                            ...plugin,
+                            is_enabled: isEnabled,
+                            status: plugin.status === 'error'
+                                ? 'error'
+                                : (isEnabled ? (plugin.plugin_type === 'custom' ? 'custom' : 'active') : 'inactive'),
+                        };
+                    })
+                );
+                setHasPendingChanges(true);
+            }
+
+            setSelectedPluginNames(failedSet);
+
+            const firstError = result.failed?.[0]?.error;
+            if ((result.failed_count ?? 0) > 0) {
+                toast.warning(`批量${isEnabled ? '启用' : '停用'}完成：成功 ${result.success_count} 项，失败 ${result.failed_count} 项`, {
+                    description: firstError || undefined,
+                });
+            } else {
+                toast.success(`批量${isEnabled ? '启用' : '停用'}成功：${result.success_count} 项`);
+            }
+        } catch {
+            toast.error('批量更新插件状态出错');
+        } finally {
+            setIsBatchUpdating(false);
+        }
+    };
+
     // 删除插件
     const handleDeletePlugin = async (pluginName: string) => {
         if (!confirm(`确定要删除插件 "${pluginName}" 吗？`)) return;
@@ -227,12 +375,78 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
 
             if (response.ok) {
                 toast.success(`插件 ${pluginName} 已删除`);
-                onSuccess();
+                setLocalPlugins((prev) => prev.filter((plugin) => plugin.name !== pluginName));
+                setSelectedPluginNames((prev) => {
+                    const next = new Set(prev);
+                    next.delete(pluginName);
+                    return next;
+                });
+                setHasPendingChanges(true);
             } else {
                 toast.error(`删除插件失败`);
             }
         } catch {
             toast.error('删除插件出错');
+        }
+    };
+
+    const handleBatchDeletePlugins = async () => {
+        if (selectedPluginNames.size === 0) {
+            toast.error('请先选择要删除的插件');
+            return;
+        }
+
+        setIsBatchDeleting(true);
+        try {
+            const response = await fetch('/api/admin/plugins/batch-delete', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    plugin_names: Array.from(selectedPluginNames),
+                }),
+            });
+
+            if (!response.ok) {
+                let message = '批量删除插件失败';
+                try {
+                    const data = await response.json();
+                    if (typeof data?.error === 'string' && data.error.trim()) {
+                        message = data.error;
+                    }
+                } catch {
+                    // ignore parse error
+                }
+                toast.error(message);
+                return;
+            }
+
+            const result = (await response.json()) as BatchPluginOperationResponse;
+            const successSet = new Set(result.success ?? []);
+            const failedSet = new Set((result.failed ?? []).map((item) => item.plugin_name));
+
+            if (successSet.size > 0) {
+                setLocalPlugins((prev) => prev.filter((plugin) => !successSet.has(plugin.name)));
+                setHasPendingChanges(true);
+            }
+
+            setSelectedPluginNames(failedSet);
+            setBatchDeleteConfirmOpen(false);
+
+            const firstError = result.failed?.[0]?.error;
+            if ((result.failed_count ?? 0) > 0) {
+                toast.warning(`批量删除完成：成功 ${result.success_count} 项，失败 ${result.failed_count} 项`, {
+                    description: firstError || undefined,
+                });
+            } else {
+                toast.success(`批量删除成功：${result.success_count} 项`);
+            }
+        } catch {
+            toast.error('批量删除插件出错');
+        } finally {
+            setIsBatchDeleting(false);
         }
     };
 
@@ -362,6 +576,8 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
     const handleClose = () => {
         setShowAddForm(false);
         setNewPlugin({ name: '', url: '', priority: 100, description: '' });
+        setBatchDeleteConfirmOpen(false);
+        setSelectedPluginNames(new Set());
         if (hasPendingChanges) {
             onSuccess();
             setHasPendingChanges(false);
@@ -386,9 +602,10 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
     if (!isOpen) return null;
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <>
+        <>
+            <AnimatePresence>
+                {isOpen && (
+                    <>
                     {/* 背景遮罩 */}
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -544,9 +761,66 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                     )}
                                 </AnimatePresence>
 
+                                {/* 多选与批量操作 */}
+                                <div className="mb-3 flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 px-3 py-2">
+                                    <span className="text-sm text-slate-600 dark:text-slate-300">
+                                        已选 {selectedCount} 项
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleSelectAllPlugins}
+                                            disabled={isOperationBusy || displayPlugins.length === 0}
+                                            className="h-7 px-2 text-xs cursor-pointer"
+                                        >
+                                            全选
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleClearSelectedPlugins}
+                                            disabled={isOperationBusy || selectedCount === 0}
+                                            className="h-7 px-2 text-xs cursor-pointer"
+                                        >
+                                            清空
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="mb-4 flex flex-wrap items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => void handleBatchTogglePlugins(true)}
+                                        disabled={isOperationBusy || selectedCount === 0}
+                                        className="h-8 px-3 text-xs text-green-600 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/20 cursor-pointer"
+                                    >
+                                        批量启用
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => void handleBatchTogglePlugins(false)}
+                                        disabled={isOperationBusy || selectedCount === 0}
+                                        className="h-8 px-3 text-xs text-slate-600 border-slate-300 hover:bg-slate-100 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700 cursor-pointer"
+                                    >
+                                        批量停用
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setBatchDeleteConfirmOpen(true)}
+                                        disabled={isOperationBusy || selectedCount === 0}
+                                        className="h-8 px-3 text-xs text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 cursor-pointer"
+                                    >
+                                        批量删除
+                                    </Button>
+                                </div>
+
                                 {/* 插件列表 */}
                                 <div className="space-y-2">
-                                    {sortedPlugins.map((plugin) => {
+                                    {displayPlugins.map((plugin) => {
                                         const pluginStatus = resolvePluginStatus(plugin);
                                         return (
                                         <motion.div
@@ -558,6 +832,13 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                             {/* 插件主行 */}
                                             <div className="flex items-center justify-between p-3">
                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    <Checkbox
+                                                        checked={selectedPluginNames.has(plugin.name)}
+                                                        onCheckedChange={(checked) => handleSelectPlugin(plugin.name, checked as boolean)}
+                                                        aria-label={`选择插件 ${plugin.name}`}
+                                                        disabled={isOperationBusy}
+                                                        onClick={(event: React.MouseEvent) => event.stopPropagation()}
+                                                    />
                                                     <div className={`w-2 h-2 rounded-full flex-shrink-0 ${pluginStatus === 'active' ? 'bg-green-500' :
                                                         pluginStatus === 'custom' ? 'bg-blue-500' :
                                                             pluginStatus === 'error' ? 'bg-red-500' : 'bg-gray-400'
@@ -587,6 +868,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                                             variant="outline"
                                                             size="sm"
                                                             onClick={() => toggleExpand(plugin.name)}
+                                                            disabled={isOperationBusy}
                                                             className="h-8 px-2 text-xs cursor-pointer"
                                                         >
                                                             {expandedPlugin === plugin.name ? (
@@ -603,7 +885,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                                             variant="outline"
                                                             size="sm"
                                                             onClick={() => handleTestPlugin(plugin)}
-                                                            disabled={testingStatus[plugin.name] === 'testing'}
+                                                            disabled={isOperationBusy || testingStatus[plugin.name] === 'testing'}
                                                             className="h-8 px-2 text-xs cursor-pointer"
                                                         >
                                                             {getTestIcon(testingStatus[plugin.name] || 'idle')}
@@ -617,6 +899,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                                             size="sm"
                                                             onClick={() => handleTogglePluginEnabled(plugin)}
                                                             aria-label={`切换插件 ${plugin.name} 状态`}
+                                                            disabled={isOperationBusy}
                                                             className={`h-8 px-2 text-xs cursor-pointer ${plugin.is_enabled
                                                                 ? 'text-green-600 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/20'
                                                                 : 'text-slate-500 border-slate-200 hover:bg-slate-50 dark:text-slate-400 dark:border-slate-600 dark:hover:bg-slate-700/50'
@@ -637,6 +920,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                                                                 size="sm"
                                                                 onClick={() => handleDeletePlugin(plugin.name)}
                                                                 aria-label={`删除插件 ${plugin.name}`}
+                                                                disabled={isOperationBusy}
                                                                 className="h-8 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 cursor-pointer"
                                                             >
                                                                 <Trash2 className="w-4 h-4" />
@@ -785,14 +1069,14 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                             <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                                 <div className="flex justify-between items-center">
                                     <span className="text-sm text-slate-500 dark:text-slate-400">
-                                        共 {localPlugins.length} 个插件
+                                        共 {localPlugins.length} 个插件，已选 {selectedCount} 项
                                     </span>
                                     <div className="flex items-center gap-2">
                                         <Button
                                             variant="outline"
                                             size="sm"
                                             onClick={handleBatchTest}
-                                            disabled={isBatchTesting || localPlugins.length === 0}
+                                            disabled={isOperationBusy || localPlugins.length === 0}
                                             className="cursor-pointer text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/20"
                                         >
                                             {isBatchTesting ? (
@@ -810,8 +1094,20 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                             </div>
                         </motion.div>
                     </div>
-                </>
-            )}
-        </AnimatePresence>
+                    </>
+                )}
+            </AnimatePresence>
+
+            <ConfirmDialog
+                open={batchDeleteConfirmOpen}
+                onOpenChange={setBatchDeleteConfirmOpen}
+                title="确认批量删除插件"
+                description={`将删除 ${selectedCount} 个已选插件${selectedPluginPreviewText ? `（例如：${selectedPluginPreviewText}）` : ''}。内置插件会自动跳过。`}
+                confirmText="删除"
+                variant="destructive"
+                onConfirm={handleBatchDeletePlugins}
+                isLoading={isBatchDeleting}
+            />
+        </>
     );
 };

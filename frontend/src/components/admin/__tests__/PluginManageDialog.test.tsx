@@ -28,6 +28,26 @@ vi.mock('sonner', () => ({
   },
 }));
 
+vi.mock('../ConfirmDialog', () => ({
+  ConfirmDialog: ({
+    open,
+    title,
+    description,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }) => (open ? (
+    <div>
+      <div>{title}</div>
+      <div>{description}</div>
+      <button onClick={onConfirm}>确认操作</button>
+    </div>
+  ) : null),
+}));
+
 const plugins: PluginInfo[] = [
   {
     name: 'builtin-error',
@@ -76,6 +96,18 @@ describe('PluginManageDialog', () => {
   beforeEach(() => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
+      if (url.endsWith('/batch-status')) {
+        return {
+          ok: true,
+          json: async () => ({ success_count: 1, failed_count: 0, success: ['builtin-disabled'], failed: [] }),
+        };
+      }
+      if (url.endsWith('/batch-delete')) {
+        return {
+          ok: true,
+          json: async () => ({ success_count: 1, failed_count: 1, success: ['custom-enabled'], failed: [{ plugin_name: 'builtin-enabled', error: '内置插件不支持删除', code: 'PLUGIN_NOT_DELETABLE' }] }),
+        };
+      }
       if (url.includes('/status')) {
         return { ok: true, json: async () => ({ success: true }) };
       }
@@ -113,6 +145,67 @@ describe('PluginManageDialog', () => {
         })
       );
     });
+  });
+
+  it('sends batch plugin status request for selected plugins', async () => {
+    render(
+      <PluginManageDialog
+        isOpen
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        token="test-token"
+        plugins={plugins}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('选择插件 builtin-disabled'));
+    fireEvent.click(screen.getByLabelText('选择插件 builtin-disabled-error'));
+    fireEvent.click(screen.getByRole('button', { name: '批量启用' }));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/admin/plugins/batch-status',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            plugin_names: ['builtin-disabled', 'builtin-disabled-error'],
+            is_enabled: true,
+          }),
+        })
+      );
+    });
+  });
+
+  it('supports batch delete with confirmation and keeps failed selections', async () => {
+    render(
+      <PluginManageDialog
+        isOpen
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        token="test-token"
+        plugins={plugins}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('选择插件 custom-enabled'));
+    fireEvent.click(screen.getByLabelText('选择插件 builtin-enabled'));
+    fireEvent.click(screen.getByRole('button', { name: '批量删除' }));
+    fireEvent.click(screen.getByRole('button', { name: '确认操作' }));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/admin/plugins/batch-delete',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            plugin_names: ['custom-enabled', 'builtin-enabled'],
+          }),
+        })
+      );
+    });
+
+    expect(screen.queryByText('custom-enabled')).not.toBeInTheDocument();
+    expect(screen.getByText('builtin-enabled')).toBeInTheDocument();
   });
 
   it('sorts plugins with disabled normals before disabled errors', () => {
@@ -155,23 +248,23 @@ describe('PluginManageDialog', () => {
     expect(within(disabledErrorRow as HTMLElement).getByText('异常')).toBeInTheDocument();
   });
 
-  it('moves plugin into disabled group after toggling off', async () => {
+  it('keeps list order within the same session when toggling status', async () => {
     const localPlugins: PluginInfo[] = [
       {
-        name: 'only-active',
-        priority: 1,
+        name: 'first-enabled',
+        priority: 10,
         status: 'active',
         plugin_type: 'builtin',
         is_enabled: true,
-        description: 'only active',
+        description: 'first',
       },
       {
-        name: 'only-error',
+        name: 'second-disabled',
         priority: 0,
-        status: 'error',
+        status: 'inactive',
         plugin_type: 'builtin',
-        is_enabled: true,
-        description: 'only error',
+        is_enabled: false,
+        description: 'second',
       },
     ];
 
@@ -185,17 +278,16 @@ describe('PluginManageDialog', () => {
       />
     );
 
-    const errorNode = screen.getByText('only-error');
-    const activeNode = screen.getByText('only-active');
-    expect(errorNode.compareDocumentPosition(activeNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const firstNode = screen.getByText('first-enabled');
+    const secondNode = screen.getByText('second-disabled');
+    expect(firstNode.compareDocumentPosition(secondNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-    fireEvent.click(screen.getByLabelText('切换插件 only-active 状态'));
+    fireEvent.click(screen.getByLabelText('切换插件 second-disabled 状态'));
 
     await waitFor(() => {
-      const nextErrorNode = screen.getByText('only-error');
-      const nextActiveNode = screen.getByText('only-active');
-      expect(nextErrorNode.compareDocumentPosition(nextActiveNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      expect(screen.getAllByText('已停用').length).toBeGreaterThan(0);
+      const nextFirstNode = screen.getByText('first-enabled');
+      const nextSecondNode = screen.getByText('second-disabled');
+      expect(nextFirstNode.compareDocumentPosition(nextSecondNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
   });
 
