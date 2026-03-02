@@ -183,3 +183,19 @@ fix(admin): 修正密钥文案错别字并调整频道默认顺序
 - frontend/src/pages/Admin.tsx
 
 ---
+
+## 2026-03-02 23:45:32
+
+### Commit
+```
+refactor(scripts): 优化备份管理脚本并新增手动清理功能
+```
+
+### Body
+移除颜色输出以适配不支持 ANSI 的环境，调整备份保留天数默认值为 7 天，新增手动清理过期备份功能（含确认交互和空间统计），修复部署脚本中镜像名称加载时序问题。
+
+### Files
+- scripts/backup-manager.sh
+- scripts/deploy-update.sh
+
+---

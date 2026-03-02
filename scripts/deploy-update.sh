@@ -55,8 +55,7 @@ load_env() {
     fi
 }
 
-# 使用 FULL_IMAGE_NAME 或默认值
-IMAGE_NAME="${FULL_IMAGE_NAME:-liberty159/unisearch:latest}"
+# IMAGE_NAME 将在 load_env() 调用后设置
 
 # ==============================================================================
 # 日志函数
@@ -417,6 +416,10 @@ main() {
     check_root
     check_docker
     load_env
+    
+    # 设置镜像名称（必须在 load_env 之后）
+    IMAGE_NAME="${FULL_IMAGE_NAME:-liberty159/unisearch:latest}"
+    
     check_containers
     
     # 显示当前状态

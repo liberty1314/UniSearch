@@ -7,18 +7,10 @@
 # 用法: sudo ./scripts/backup-manager.sh
 # ==============================================================================
 
-# 颜色定义
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-MAGENTA='\033[0;35m'
-NC='\033[0m'
+# 颜色定义已移除（环境不支持）
 
 # 配置
 BACKUP_BASE_DIR="${BACKUP_PATH:-/opt/unisearch/backup}"
-BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
 LOG_FILE="/var/log/unisearch/backup.log"
 MYSQL_CONTAINER="unisearch-mysql"
 REDIS_CONTAINER="unisearch-redis"
@@ -28,12 +20,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="$PROJECT_DIR/.env.production"
 
+# 备份保留天数（默认 7 天，可通过环境变量覆盖）
+BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
+
 # 日志函数
-log_info() { echo -e "${BLUE}[INFO]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"; }
-log_success() { echo -e "${GREEN}[✓]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"; }
-log_warning() { echo -e "${YELLOW}[⚠]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"; }
-log_error() { echo -e "${RED}[✗]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"; }
-log_step() { echo -e "${CYAN}[→]${NC} $(date '+%Y-%m-%d %H:%M:%S') - $1"; }
+log_info() { echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') - $1"; }
+log_success() { echo "[✓] $(date '+%Y-%m-%d %H:%M:%S') - $1"; }
+log_warning() { echo "[⚠] $(date '+%Y-%m-%d %H:%M:%S') - $1"; }
+log_error() { echo "[✗] $(date '+%Y-%m-%d %H:%M:%S') - $1"; }
+log_step() { echo "[→] $(date '+%Y-%m-%d %H:%M:%S') - $1"; }
 
 # 检查权限
 check_root() {
@@ -49,6 +44,9 @@ load_env() {
         set -a
         source "$ENV_FILE"
         set +a
+        
+        # 重新设置备份保留天数（确保使用脚本默认值，除非环境变量明确设置）
+        BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
     else
         log_error "环境配置文件不存在: $ENV_FILE"
         exit 1
@@ -167,15 +165,26 @@ EOF
     # 清理过期备份
     log_step "清理过期备份（保留 $BACKUP_RETENTION_DAYS 天）..."
     local deleted_count=0
+    local deleted_size=0
+    
+    # 查找并清理超过保留天数的备份目录
     while IFS= read -r old_backup; do
-        if [ -d "$old_backup" ]; then
+        if [ -d "$old_backup" ] && [ "$old_backup" != "$BACKUP_BASE_DIR" ]; then
+            local backup_name=$(basename "$old_backup")
+            local backup_size=$(du -sm "$old_backup" 2>/dev/null | cut -f1)
+            
+            log_info "删除过期备份: $backup_name (大小: ${backup_size}MB)"
             rm -rf "$old_backup"
+            
             deleted_count=$((deleted_count + 1))
+            deleted_size=$((deleted_size + backup_size))
         fi
-    done < <(find "$BACKUP_BASE_DIR" -maxdepth 1 -type d -mtime +$BACKUP_RETENTION_DAYS)
+    done < <(find "$BACKUP_BASE_DIR" -maxdepth 1 -type d -mtime +$BACKUP_RETENTION_DAYS 2>/dev/null)
     
     if [ $deleted_count -gt 0 ]; then
-        log_success "已清理 $deleted_count 个过期备份"
+        log_success "已清理 $deleted_count 个过期备份，释放空间: ${deleted_size}MB"
+    else
+        log_info "无需清理，所有备份均在保留期内"
     fi
     
     # 显示摘要
@@ -297,21 +306,21 @@ check_status() {
     echo ""
     
     # 检查备份目录
-    echo -e "${CYAN}[1] 备份目录状态${NC}"
+    echo "[1] 备份目录状态"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     if [ -d "$BACKUP_BASE_DIR" ]; then
-        echo -e "${GREEN}✓${NC} 备份目录存在: $BACKUP_BASE_DIR"
+        echo "✓ 备份目录存在: $BACKUP_BASE_DIR"
         
         local backup_count=$(find "$BACKUP_BASE_DIR" -maxdepth 1 -type d | wc -l)
         backup_count=$((backup_count - 1))
-        echo -e "${GREEN}✓${NC} 备份总数: $backup_count"
+        echo "✓ 备份总数: $backup_count"
         
         local total_size=$(du -sh "$BACKUP_BASE_DIR" 2>/dev/null | cut -f1)
-        echo -e "${GREEN}✓${NC} 总占用空间: $total_size"
+        echo "✓ 总占用空间: $total_size"
         
         local latest_backup=$(ls -t "$BACKUP_BASE_DIR" | head -1)
         if [ -n "$latest_backup" ]; then
-            echo -e "${GREEN}✓${NC} 最新备份: $latest_backup"
+            echo "✓ 最新备份: $latest_backup"
             
             if [ -f "$BACKUP_BASE_DIR/$latest_backup/backup_info.txt" ]; then
                 echo ""
@@ -320,71 +329,71 @@ check_status() {
             fi
         fi
     else
-        echo -e "${RED}✗${NC} 备份目录不存在: $BACKUP_BASE_DIR"
+        echo "✗ 备份目录不存在: $BACKUP_BASE_DIR"
     fi
     
     echo ""
     
     # 检查定时任务
-    echo -e "${CYAN}[2] 定时任务状态${NC}"
+    echo "[2] 定时任务状态"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     if crontab -l 2>/dev/null | grep -q "backup-manager.sh"; then
-        echo -e "${GREEN}✓${NC} 定时任务已配置"
+        echo "✓ 定时任务已配置"
         echo ""
         echo "定时任务列表:"
         crontab -l 2>/dev/null | grep "backup-manager.sh" | sed 's/^/  /'
     else
-        echo -e "${RED}✗${NC} 定时任务未配置"
+        echo "✗ 定时任务未配置"
     fi
     
     echo ""
     
     # 检查日志文件
-    echo -e "${CYAN}[3] 备份日志状态${NC}"
+    echo "[3] 备份日志状态"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     if [ -f "$LOG_FILE" ]; then
-        echo -e "${GREEN}✓${NC} 日志文件存在: $LOG_FILE"
+        echo "✓ 日志文件存在: $LOG_FILE"
         local log_size=$(du -h "$LOG_FILE" | cut -f1)
-        echo -e "${GREEN}✓${NC} 日志大小: $log_size"
+        echo "✓ 日志大小: $log_size"
         
         echo ""
         echo "最近 5 条备份记录:"
         grep "备份完成" "$LOG_FILE" 2>/dev/null | tail -5 | sed 's/^/  /' || echo "  暂无备份记录"
     else
-        echo -e "${YELLOW}⚠${NC} 日志文件不存在"
+        echo "⚠ 日志文件不存在"
     fi
     
     echo ""
     
     # 检查容器状态
-    echo -e "${CYAN}[4] 容器状态${NC}"
+    echo "[4] 容器状态"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     if docker ps --format '{{.Names}}' | grep -q "^${MYSQL_CONTAINER}$"; then
-        echo -e "${GREEN}✓${NC} MySQL 容器运行中"
+        echo "✓ MySQL 容器运行中"
     else
-        echo -e "${RED}✗${NC} MySQL 容器未运行"
+        echo "✗ MySQL 容器未运行"
     fi
     
     if docker ps --format '{{.Names}}' | grep -q "^${REDIS_CONTAINER}$"; then
-        echo -e "${GREEN}✓${NC} Redis 容器运行中"
+        echo "✓ Redis 容器运行中"
     else
-        echo -e "${RED}✗${NC} Redis 容器未运行"
+        echo "✗ Redis 容器未运行"
     fi
     
     echo ""
     
     # 检查磁盘空间
-    echo -e "${CYAN}[5] 磁盘空间${NC}"
+    echo "[5] 磁盘空间"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     df -h "$BACKUP_BASE_DIR" 2>/dev/null | tail -1 | awk '{
         printf "可用空间: %s / %s (使用率: %s)\n", $4, $2, $5
         usage = substr($5, 1, length($5)-1)
         if (usage > 90) {
-            printf "\033[0;31m✗\033[0m 警告：磁盘使用率过高！\n"
+            printf "✗ 警告：磁盘使用率过高！\n"
         } else if (usage > 80) {
-            printf "\033[1;33m⚠\033[0m 提示：磁盘使用率较高\n"
+            printf "⚠ 提示：磁盘使用率较高\n"
         } else {
-            printf "\033[0;32m✓\033[0m 磁盘空间充足\n"
+            printf "✓ 磁盘空间充足\n"
         }
     }'
     
@@ -459,8 +468,98 @@ EOF
     echo "完整备份: 每周日凌晨 3:00"
     echo "日志文件: $LOG_FILE"
     echo "日志保留: 30 天"
+    echo "备份保留: 7 天"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
+}
+
+# ==============================================================================
+# 清理过期备份功能
+# ==============================================================================
+cleanup_old_backups() {
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════╗"
+    echo "║        清理过期备份                                      ║"
+    echo "╚══════════════════════════════════════════════════════════╝"
+    echo ""
+    
+    if [ ! -d "$BACKUP_BASE_DIR" ]; then
+        log_error "备份目录不存在: $BACKUP_BASE_DIR"
+        return
+    fi
+    
+    log_info "备份保留策略: $BACKUP_RETENTION_DAYS 天"
+    echo ""
+    
+    # 查找过期备份
+    log_step "扫描过期备份..."
+    local old_backups=()
+    while IFS= read -r old_backup; do
+        if [ -d "$old_backup" ] && [ "$old_backup" != "$BACKUP_BASE_DIR" ]; then
+            old_backups+=("$old_backup")
+        fi
+    done < <(find "$BACKUP_BASE_DIR" -maxdepth 1 -type d -mtime +$BACKUP_RETENTION_DAYS 2>/dev/null)
+    
+    if [ ${#old_backups[@]} -eq 0 ]; then
+        log_success "无过期备份需要清理"
+        echo ""
+        log_info "所有备份均在 $BACKUP_RETENTION_DAYS 天保留期内"
+        return
+    fi
+    
+    # 显示过期备份列表
+    echo ""
+    log_warning "发现 ${#old_backups[@]} 个过期备份:"
+    echo ""
+    printf "%-5s %-25s %-15s\n" "序号" "备份时间" "大小"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    local total_size=0
+    local index=1
+    for backup in "${old_backups[@]}"; do
+        local backup_name=$(basename "$backup")
+        local backup_size=$(du -sm "$backup" 2>/dev/null | cut -f1)
+        total_size=$((total_size + backup_size))
+        printf "%-5s %-25s %-15s\n" "$index" "$backup_name" "${backup_size}MB"
+        index=$((index + 1))
+    done
+    
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "总计: ${#old_backups[@]} 个备份，共 ${total_size}MB"
+    echo ""
+    
+    # 确认删除
+    log_warning "这些备份将被永久删除！"
+    read -p "确认清理这些过期备份吗？(yes/no): " confirm
+    
+    if [ "$confirm" != "yes" ]; then
+        log_info "操作已取消"
+        return
+    fi
+    
+    echo ""
+    log_step "开始清理过期备份..."
+    
+    local deleted_count=0
+    for backup in "${old_backups[@]}"; do
+        local backup_name=$(basename "$backup")
+        log_info "删除: $backup_name"
+        rm -rf "$backup"
+        deleted_count=$((deleted_count + 1))
+    done
+    
+    echo ""
+    log_success "清理完成！"
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  清理摘要"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "已删除备份: $deleted_count 个"
+    echo "释放空间: ${total_size}MB"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    
+    logger -t unisearch-backup "手动清理过期备份: 删除 $deleted_count 个，释放 ${total_size}MB"
 }
 
 # ==============================================================================
@@ -475,13 +574,14 @@ show_menu() {
     echo "║                                                          ║"
     echo "╚══════════════════════════════════════════════════════════╝"
     echo ""
-    echo "  ${CYAN}1.${NC} 执行增量备份"
-    echo "  ${CYAN}2.${NC} 执行完整备份"
-    echo "  ${CYAN}3.${NC} 恢复备份"
-    echo "  ${CYAN}4.${NC} 查看备份状态"
-    echo "  ${CYAN}5.${NC} 配置定时任务"
-    echo "  ${CYAN}6.${NC} 查看备份列表"
-    echo "  ${CYAN}0.${NC} 退出"
+    echo "  1. 执行增量备份"
+    echo "  2. 执行完整备份"
+    echo "  3. 恢复备份"
+    echo "  4. 查看备份状态"
+    echo "  5. 配置定时任务"
+    echo "  6. 查看备份列表"
+    echo "  7. 清理过期备份"
+    echo "  0. 退出"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
@@ -539,7 +639,7 @@ main() {
     # 交互式菜单
     while true; do
         show_menu
-        read -p "请选择操作 [0-6]: " choice
+        read -p "请选择操作 [0-7]: " choice
         
         case $choice in
             1)
@@ -564,6 +664,10 @@ main() {
                 ;;
             6)
                 list_backups
+                read -p "按回车键继续..."
+                ;;
+            7)
+                cleanup_old_backups
                 read -p "按回车键继续..."
                 ;;
             0)
