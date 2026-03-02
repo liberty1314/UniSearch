@@ -17,6 +17,7 @@ type WorkerPool struct {
 	wg         sync.WaitGroup
 	ctx        context.Context
 	cancel     context.CancelFunc
+	closeOnce  sync.Once
 }
 
 // NewWorkerPool 创建一个新的工作池
@@ -71,7 +72,11 @@ func (p *WorkerPool) startWorkers() {
 
 					// 执行任务并发送结果
 					result := task()
-					p.results <- result
+					select {
+					case p.results <- result:
+					case <-p.ctx.Done():
+						return
+					}
 
 				case <-p.ctx.Done():
 					return
@@ -91,12 +96,26 @@ func (p *WorkerPool) GetResults(count int) []interface{} {
 	results := make([]interface{}, 0, count)
 
 	// 收集指定数量的结果
-	for i := 0; i < count; i++ {
+	for len(results) < count {
 		select {
-		case result := <-p.results:
+		case result, ok := <-p.results:
+			if !ok {
+				return results
+			}
 			results = append(results, result)
 		case <-p.ctx.Done():
-			// 上下文取消，返回已收集的结果
+			// 上下文取消后尽力回收已完成任务的结果，避免丢失可用数据
+			for len(results) < count {
+				select {
+				case result, ok := <-p.results:
+					if !ok {
+						return results
+					}
+					results = append(results, result)
+				default:
+					return results
+				}
+			}
 			return results
 		}
 	}
@@ -106,23 +125,29 @@ func (p *WorkerPool) GetResults(count int) []interface{} {
 
 // Close 关闭工作池
 func (p *WorkerPool) Close() {
-	// 取消上下文
-	p.cancel()
+	p.closeOnce.Do(func() {
+		// 先关闭任务队列，阻止继续提交
+		close(p.taskQueue)
 
-	// 关闭任务队列
-	close(p.taskQueue)
+		// 再取消上下文，唤醒可能阻塞的发送/接收
+		p.cancel()
 
-	// 等待所有工作者完成
-	p.wg.Wait()
+		// 等待所有工作者完成
+		p.wg.Wait()
 
-	// 关闭结果队列
-	close(p.results)
+		// 最后关闭结果队列
+		close(p.results)
+	})
 }
 
 // ExecuteBatch 批量执行任务并返回结果
 func ExecuteBatch(tasks []Task, maxWorkers int) []interface{} {
 	if len(tasks) == 0 {
 		return []interface{}{}
+	}
+
+	if maxWorkers <= 0 {
+		maxWorkers = 1
 	}
 
 	// 如果任务数量少于工作者数量，调整工作者数量
@@ -145,8 +170,18 @@ func ExecuteBatch(tasks []Task, maxWorkers int) []interface{} {
 
 // ExecuteBatchWithTimeout 批量执行任务，带有超时控制，并返回结果
 func ExecuteBatchWithTimeout(tasks []Task, maxWorkers int, timeout time.Duration) []interface{} {
+	results, _, _ := ExecuteBatchWithTimeoutDetailed(tasks, maxWorkers, timeout)
+	return results
+}
+
+// ExecuteBatchWithTimeoutDetailed 批量执行任务并返回结果与超时元信息
+func ExecuteBatchWithTimeoutDetailed(tasks []Task, maxWorkers int, timeout time.Duration) ([]interface{}, int, bool) {
 	if len(tasks) == 0 {
-		return []interface{}{}
+		return []interface{}{}, 0, false
+	}
+
+	if maxWorkers <= 0 {
+		maxWorkers = 1
 	}
 
 	// 如果任务数量少于工作者数量，调整工作者数量
@@ -162,17 +197,21 @@ func ExecuteBatchWithTimeout(tasks []Task, maxWorkers int, timeout time.Duration
 	pool := NewWorkerPoolWithContext(ctx, maxWorkers)
 	defer pool.Close()
 
+	submittedTasks := 0
+
 	// 提交所有任务
 	for _, task := range tasks {
 		select {
 		case pool.taskQueue <- task:
 			// 任务提交成功
+			submittedTasks++
 		case <-ctx.Done():
 			// 超时或取消，停止提交更多任务
-			return pool.GetResults(len(tasks))
+			return pool.GetResults(submittedTasks), submittedTasks, true
 		}
 	}
 
 	// 获取所有结果，GetResults方法会处理超时情况
-	return pool.GetResults(len(tasks))
+	results := pool.GetResults(submittedTasks)
+	return results, submittedTasks, ctx.Err() != nil
 }

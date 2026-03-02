@@ -1120,7 +1120,29 @@ func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRef
 	// 控制并发数
 	if concurrency <= 0 {
 		// 使用配置中的默认值
-		concurrency = config.AppConfig.DefaultConcurrency
+		if config.AppConfig != nil && config.AppConfig.DefaultConcurrency > 0 {
+			concurrency = config.AppConfig.DefaultConcurrency
+		} else {
+			concurrency = 1
+		}
+	}
+
+	maxBackgroundWorkers := concurrency
+	if config.AppConfig != nil && config.AppConfig.AsyncMaxBackgroundWorkers > 0 {
+		maxBackgroundWorkers = config.AppConfig.AsyncMaxBackgroundWorkers
+	}
+
+	effectivePluginWorkers := concurrency
+	if maxBackgroundWorkers > effectivePluginWorkers {
+		effectivePluginWorkers = maxBackgroundWorkers
+	}
+	if len(availablePlugins) < effectivePluginWorkers {
+		effectivePluginWorkers = len(availablePlugins)
+	}
+
+	pluginTimeout := 30 * time.Second
+	if config.AppConfig != nil && config.AppConfig.PluginTimeout > 0 {
+		pluginTimeout = config.AppConfig.PluginTimeout
 	}
 
 	// 使用工作池执行并行搜索
@@ -1146,7 +1168,18 @@ func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRef
 	}
 
 	// 执行搜索任务并获取结果
-	results := pool.ExecuteBatchWithTimeout(tasks, concurrency, config.AppConfig.PluginTimeout)
+	results, submittedTasks, timedOut := pool.ExecuteBatchWithTimeoutDetailed(tasks, effectivePluginWorkers, pluginTimeout)
+	if timedOut {
+		log.Printf(
+			"⚠️ [插件搜索] 批处理超时 - 关键词: %s, 已提交任务: %d, 已收集结果: %d, 总任务: %d, worker数: %d, 超时阈值: %s",
+			keyword,
+			submittedTasks,
+			len(results),
+			len(tasks),
+			effectivePluginWorkers,
+			pluginTimeout,
+		)
+	}
 
 	// 合并所有插件的结果，过滤掉无链接的结果
 	var allResults []model.SearchResult

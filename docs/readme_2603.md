@@ -58,3 +58,24 @@
 - frontend/src/components/admin/previewFilters.ts
 
 ---
+
+---
+
+## 2026-03-02 15:58:59
+
+### Commit
+```
+fix(search): 修复工作池超时死锁并优化搜索超时提示
+```
+
+### Body
+修复工作池在超时场景下可能发生的死锁问题,优化插件搜索的并发控制逻辑,并改进前端超时错误提示。后端增加详细的超时日志记录,前端将 ECONNABORTED 错误映射为用户友好的搜索超时提示。
+
+### Files
+- backend/service/search_service.go
+- backend/service/search_service_test.go
+- backend/util/pool/worker_pool.go
+- backend/util/pool/worker_pool_test.go
+- frontend/src/lib/__tests__/api.test.ts
+- frontend/src/lib/api.ts
+

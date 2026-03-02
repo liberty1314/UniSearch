@@ -214,6 +214,9 @@ class ApiClient {
           return `请求失败 (${status})`;
       }
     } else if (error.request) {
+      if (error.code === 'ECONNABORTED') {
+        return '搜索超时，请缩小范围或稍后重试';
+      }
       // 网络错误
       return '网络连接失败，请检查网络设置';
     } else {
