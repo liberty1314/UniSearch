@@ -6,8 +6,6 @@ import { Button } from '@/components/ui/button';
 import { StatsCard } from './StatsCard';
 import { PluginManageDialog } from './PluginManageDialog';
 import { ChannelManageDialog } from './ChannelManageDialog';
-import { ChannelPreviewDialog } from './ChannelPreviewDialog';
-import { PluginPreviewDialog } from './PluginPreviewDialog';
 import {
   Activity,
   RefreshCw,
@@ -24,7 +22,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
-import type { SystemInfoResponse, TGChannel, ListTGChannelsResponse } from '@/types/api';
+import type { AdminDialogMode, SystemInfoResponse, TGChannel, ListTGChannelsResponse } from '@/types/api';
 import { toast } from 'sonner';
 
 const SYSTEM_INFO_CACHE_TTL_MS = 1500;
@@ -118,8 +116,8 @@ export const SystemInfoView: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isPluginManageDialogOpen, setIsPluginManageDialogOpen] = useState<boolean>(false);
   const [isChannelManageDialogOpen, setIsChannelManageDialogOpen] = useState<boolean>(false);
-  const [isPluginPreviewDialogOpen, setIsPluginPreviewDialogOpen] = useState<boolean>(false);
-  const [isChannelPreviewDialogOpen, setIsChannelPreviewDialogOpen] = useState<boolean>(false);
+  const [pluginDialogMode, setPluginDialogMode] = useState<AdminDialogMode>('edit');
+  const [channelDialogMode, setChannelDialogMode] = useState<AdminDialogMode>('edit');
   const [channelSummary, setChannelSummary] = useState({
     total: 0,
     enabled: 0,
@@ -315,7 +313,10 @@ export const SystemInfoView: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsChannelPreviewDialogOpen(true)}
+                  onClick={() => {
+                    setChannelDialogMode('view');
+                    setIsChannelManageDialogOpen(true);
+                  }}
                   className="cursor-pointer"
                 >
                   <Eye className="w-4 h-4 mr-1" />
@@ -326,7 +327,10 @@ export const SystemInfoView: React.FC = () => {
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={() => setIsChannelManageDialogOpen(true)}
+                  onClick={() => {
+                    setChannelDialogMode('edit');
+                    setIsChannelManageDialogOpen(true);
+                  }}
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
                 >
                   <Edit className="w-4 h-4 mr-1" />
@@ -378,7 +382,10 @@ export const SystemInfoView: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsPluginPreviewDialogOpen(true)}
+                  onClick={() => {
+                    setPluginDialogMode('view');
+                    setIsPluginManageDialogOpen(true);
+                  }}
                   className="cursor-pointer"
                 >
                   <Eye className="w-4 h-4 mr-1" />
@@ -389,7 +396,10 @@ export const SystemInfoView: React.FC = () => {
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={() => setIsPluginManageDialogOpen(true)}
+                  onClick={() => {
+                    setPluginDialogMode('edit');
+                    setIsPluginManageDialogOpen(true);
+                  }}
                   className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
                 >
                   <Edit className="w-4 h-4 mr-1" />
@@ -544,24 +554,13 @@ export const SystemInfoView: React.FC = () => {
         </CardContent>
       </Card>
 
-      <PluginPreviewDialog
-        isOpen={isPluginPreviewDialogOpen}
-        onClose={() => setIsPluginPreviewDialogOpen(false)}
-        plugins={systemInfo.plugins}
-      />
-
-      <ChannelPreviewDialog
-        isOpen={isChannelPreviewDialogOpen}
-        onClose={() => setIsChannelPreviewDialogOpen(false)}
-        token={token || ''}
-      />
-
       <PluginManageDialog
         isOpen={isPluginManageDialogOpen}
         onClose={() => setIsPluginManageDialogOpen(false)}
         onSuccess={handleManageSuccess}
         token={token || ''}
         plugins={systemInfo.plugins}
+        mode={pluginDialogMode}
       />
 
       <ChannelManageDialog
@@ -569,6 +568,7 @@ export const SystemInfoView: React.FC = () => {
         onClose={() => setIsChannelManageDialogOpen(false)}
         onSuccess={handleManageSuccess}
         token={token || ''}
+        mode={channelDialogMode}
       />
     </motion.div>
   );

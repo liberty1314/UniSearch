@@ -316,4 +316,30 @@ describe('ChannelManageDialog', () => {
       expect(nextFirstNode.compareDocumentPosition(nextSecondNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
   });
+
+  it('uses one toggle button to select all filtered channels and clear selection', async () => {
+    render(
+      <ChannelManageDialog
+        isOpen
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        token="test-token"
+      />
+    );
+
+    await screen.findByText('channel-disabled-healthy');
+
+    expect(screen.queryByRole('button', { name: '清空' })).not.toBeInTheDocument();
+    expect(screen.queryByText('已选 0 项')).not.toBeInTheDocument();
+    const toggleButton = screen.getByRole('button', { name: '全选' });
+    fireEvent.click(toggleButton);
+
+    expect(screen.getByText('已选 6 项')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '清空' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '清空' }));
+    expect(screen.queryByText('已选 6 项')).not.toBeInTheDocument();
+    expect(screen.queryByText('已选 0 项')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '全选' })).toBeInTheDocument();
+  });
 });

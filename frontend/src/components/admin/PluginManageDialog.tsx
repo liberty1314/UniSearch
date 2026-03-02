@@ -1,1113 +1,1021 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Zap, Trash2, Loader2, CheckCircle2, XCircle, AlertCircle, Eye, Edit3, Save, ChevronUp, PlayCircle, ToggleLeft, ToggleRight } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import {
+  Activity,
+  CheckCircle2,
+  Edit3,
+  Eye,
+  Layers,
+  Loader2,
+  PlayCircle,
+  Save,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
+  X,
+  XCircle,
+  Zap,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import type { PluginInfo, BatchPluginOperationResponse } from '@/types/api';
+import type {
+  AdminDialogMode,
+  BatchPluginOperationResponse,
+  PluginInfo,
+} from '@/types/api';
 import { comparePlugins } from './adminListSort';
 import { ConfirmDialog } from './ConfirmDialog';
+import { ApplePagination } from './ApplePagination';
+import {
+  UNIFIED_STATUS_FILTER_OPTIONS,
+  type UnifiedStatusFilter,
+  isPluginMatchesStatusFilter,
+} from './previewFilters';
+import { useAdminWorkspaceState } from './useAdminWorkspaceState';
+import {
+  buildAuthHeaders,
+  readErrorMessage,
+  toastBatchResult,
+} from './adminWorkspaceApi';
 
 interface PluginManageDialogProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSuccess: () => void;
-    token: string;
-    plugins: PluginInfo[];
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  token: string;
+  plugins: PluginInfo[];
+  mode?: AdminDialogMode;
 }
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
 
+const PAGE_SIZE = 10;
+
+const resolvePluginStatus = (plugin: PluginInfo): PluginInfo['status'] => {
+  if (plugin.status === 'error') return 'error';
+  if (!plugin.is_enabled) return 'inactive';
+  return plugin.plugin_type === 'custom' ? 'custom' : 'active';
+};
+
+const pluginStatusText = (status: PluginInfo['status']): string => {
+  if (status === 'custom') return '自定义';
+  if (status === 'active') return '内置';
+  if (status === 'error') return '异常';
+  return '已停用';
+};
+
+const pluginStatusBadgeClass = (status: PluginInfo['status']): string => {
+  if (status === 'custom') return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+  if (status === 'active') return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+  if (status === 'error') return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+  return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+};
+
 export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
-    isOpen,
-    onClose,
-    onSuccess,
-    token,
-    plugins,
+  isOpen,
+  onClose,
+  onSuccess,
+  token,
+  plugins,
+  mode = 'edit',
 }) => {
-    const [testingStatus, setTestingStatus] = useState<Record<string, TestStatus>>({});
-    const [localPlugins, setLocalPlugins] = useState<PluginInfo[]>(plugins);
-    const [hasPendingChanges, setHasPendingChanges] = useState(false);
-    const [selectedPluginNames, setSelectedPluginNames] = useState<Set<string>>(new Set());
-    const [isBatchUpdating, setIsBatchUpdating] = useState(false);
-    const [isBatchDeleting, setIsBatchDeleting] = useState(false);
-    const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
-    const [sessionOrderMap, setSessionOrderMap] = useState<Record<string, number>>({});
-    const sessionInitializedRef = useRef(false);
+  const isReadOnly = mode === 'view';
+  const [localPlugins, setLocalPlugins] = useState<PluginInfo[]>(plugins);
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
+  const [testingStatus, setTestingStatus] = useState<Record<string, TestStatus>>({});
+  const [isBatchTesting, setIsBatchTesting] = useState(false);
+  const [isBatchUpdating, setIsBatchUpdating] = useState(false);
+  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
 
-    // 同步 props 到本地状态
-    useEffect(() => {
-        setLocalPlugins(plugins);
-    }, [plugins]);
+  const [detailPluginName, setDetailPluginName] = useState<string | null>(null);
+  const [editingPluginName, setEditingPluginName] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{ priority: number; description: string; url: string }>({
+    priority: 0,
+    description: '',
+    url: '',
+  });
 
-    useEffect(() => {
-        if (!isOpen) {
-            sessionInitializedRef.current = false;
-            setSelectedPluginNames(new Set());
-            setSessionOrderMap({});
-            return;
-        }
-        if (sessionInitializedRef.current) {
-            return;
-        }
-        sessionInitializedRef.current = true;
-        const initialSortedPlugins = [...plugins].sort(comparePlugins);
-        const nextOrderMap: Record<string, number> = {};
-        initialSortedPlugins.forEach((plugin, index) => {
-            nextOrderMap[plugin.name] = index;
-        });
-        setSessionOrderMap(nextOrderMap);
-        setLocalPlugins(plugins);
-        setSelectedPluginNames(new Set());
-    }, [isOpen, plugins]);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; pluginName: string | null }>({
+    open: false,
+    pluginName: null,
+  });
+  const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
 
-    useEffect(() => {
-        const pluginNameSet = new Set(localPlugins.map((plugin) => plugin.name));
-        setSelectedPluginNames((prev) => {
-            const next = new Set<string>();
-            prev.forEach((name) => {
-                if (pluginNameSet.has(name)) {
-                    next.add(name);
+  const listContainerRef = useRef<HTMLDivElement>(null);
+  const timeoutIdsRef = useRef<number[]>([]);
+
+  useEffect(() => {
+    setLocalPlugins(plugins);
+  }, [plugins]);
+
+  useEffect(() => {
+    if (isOpen) return;
+    setHasPendingChanges(false);
+    setTestingStatus({});
+    setDeleteConfirm({ open: false, pluginName: null });
+    setBatchDeleteConfirmOpen(false);
+    setDetailPluginName(null);
+    setEditingPluginName(null);
+  }, [isOpen]);
+
+  const clearStatusTimeouts = () => {
+    timeoutIdsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    timeoutIdsRef.current = [];
+  };
+
+  const scheduleStatusReset = (callback: () => void, delay: number) => {
+    const timeoutId = window.setTimeout(() => {
+      callback();
+      timeoutIdsRef.current = timeoutIdsRef.current.filter((id) => id !== timeoutId);
+    }, delay);
+    timeoutIdsRef.current.push(timeoutId);
+  };
+
+  useEffect(() => () => clearStatusTimeouts(), []);
+
+  const getPluginKey = useCallback((plugin: PluginInfo) => plugin.name, []);
+  const matchesPluginStatus = useCallback(
+    (plugin: PluginInfo, filter: UnifiedStatusFilter) =>
+      isPluginMatchesStatusFilter(plugin, filter),
+    []
+  );
+
+  const {
+    statusFilter,
+    setStatusFilter,
+    currentPage,
+    setCurrentPage,
+    filteredItems,
+    pagedItems,
+    totalPages,
+    selectedKeys: selectedPluginNames,
+    selectedCount,
+    selectKey,
+    selectAllFiltered,
+    clearSelected,
+    orderedItems,
+  } = useAdminWorkspaceState<PluginInfo, string>({
+    isOpen,
+    items: localPlugins,
+    getKey: getPluginKey,
+    compareItems: comparePlugins,
+    matchesKeyword: () => true,
+    matchesStatus: matchesPluginStatus,
+    pageSize: PAGE_SIZE,
+  });
+
+  useEffect(() => {
+    const container = listContainerRef.current;
+    if (!container) return;
+
+    if (typeof container.scrollTo === 'function') {
+      container.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    container.scrollTop = 0;
+  }, [currentPage]);
+
+  const isOperationBusy = isBatchTesting || isBatchUpdating || isBatchDeleting;
+
+  const selectedPluginPreviewText = useMemo(
+    () =>
+      orderedItems
+        .filter((plugin) => selectedPluginNames.has(plugin.name))
+        .map((plugin) => plugin.name)
+        .slice(0, 3)
+        .join('、'),
+    [orderedItems, selectedPluginNames]
+  );
+  const filteredPluginNames = useMemo(
+    () => filteredItems.map((plugin) => plugin.name),
+    [filteredItems]
+  );
+  const isAllFilteredSelected = useMemo(
+    () =>
+      filteredPluginNames.length > 0 &&
+      filteredPluginNames.every((name) => selectedPluginNames.has(name)),
+    [filteredPluginNames, selectedPluginNames]
+  );
+
+  const activeDetailPlugin = useMemo(
+    () => localPlugins.find((plugin) => plugin.name === detailPluginName) || null,
+    [detailPluginName, localPlugins]
+  );
+
+  const activeEditingPlugin = useMemo(
+    () => localPlugins.find((plugin) => plugin.name === editingPluginName) || null,
+    [editingPluginName, localPlugins]
+  );
+
+  const handleClose = () => {
+    clearStatusTimeouts();
+    if (hasPendingChanges) {
+      onSuccess();
+      setHasPendingChanges(false);
+    }
+    onClose();
+  };
+
+  const handleOpenDetail = (plugin: PluginInfo) => {
+    setDetailPluginName(plugin.name);
+  };
+
+  const openEditDialog = (plugin: PluginInfo) => {
+    setEditingPluginName(plugin.name);
+    setEditForm({
+      priority: plugin.priority,
+      description: plugin.description,
+      url: plugin.url || '',
+    });
+  };
+
+  const handleTestPlugin = async (plugin: PluginInfo) => {
+    setTestingStatus((prev) => ({ ...prev, [plugin.name]: 'testing' }));
+
+    try {
+      const response = await fetch(`/api/admin/plugins/${plugin.name}/test`, {
+        method: 'POST',
+        headers: buildAuthHeaders(token, true),
+      });
+
+      if (response.ok) {
+        setTestingStatus((prev) => ({ ...prev, [plugin.name]: 'success' }));
+        setLocalPlugins((prev) =>
+          prev.map((item) =>
+            item.name === plugin.name
+              ? {
+                  ...item,
+                  status: item.is_enabled
+                    ? item.plugin_type === 'custom'
+                      ? 'custom'
+                      : 'active'
+                    : 'inactive',
                 }
-            });
-            return next;
-        });
-    }, [localPlugins]);
-    const [showAddForm, setShowAddForm] = useState(false);
-    const [newPlugin, setNewPlugin] = useState({ name: '', url: '', priority: 100, description: '' });
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [newUrlTestStatus, setNewUrlTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-    const [expandedPlugin, setExpandedPlugin] = useState<string | null>(null);
-    const [editingPlugin, setEditingPlugin] = useState<string | null>(null);
-    const [editForm, setEditForm] = useState<{ priority: number; description: string; url: string }>({ priority: 0, description: '', url: '' });
-    const [isBatchTesting, setIsBatchTesting] = useState(false);
-
-    const resolvePluginStatus = (plugin: PluginInfo): PluginInfo['status'] => {
-        if (plugin.status === 'error') return 'error';
-        if (!plugin.is_enabled) return 'inactive';
-        return plugin.plugin_type === 'custom' ? 'custom' : 'active';
-    };
-    const displayPlugins = useMemo(
-        () => [...localPlugins].sort((a, b) => {
-            const aOrder = sessionOrderMap[a.name];
-            const bOrder = sessionOrderMap[b.name];
-            if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
-            if (aOrder !== undefined) return -1;
-            if (bOrder !== undefined) return 1;
-            return comparePlugins(a, b);
-        }),
-        [localPlugins, sessionOrderMap]
-    );
-    const selectedCount = selectedPluginNames.size;
-    const isOperationBusy = isBatchUpdating || isBatchDeleting || isBatchTesting;
-    const selectedPluginPreviewText = useMemo(
-        () => Array.from(selectedPluginNames).slice(0, 3).join('、'),
-        [selectedPluginNames]
-    );
-
-    // 测试插件连通性（停用插件也允许单测）
-    const handleTestPlugin = async (plugin: PluginInfo) => {
-        setTestingStatus(prev => ({ ...prev, [plugin.name]: 'testing' }));
-
-        try {
-            const response = await fetch(`/api/admin/plugins/${plugin.name}/test`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (response.ok) {
-                setTestingStatus(prev => ({ ...prev, [plugin.name]: 'success' }));
-                setLocalPlugins(prev => prev.map(p =>
-                    p.name === plugin.name
-                        ? { ...p, status: p.is_enabled ? (p.plugin_type === 'custom' ? 'custom' : 'active') : 'inactive' }
-                        : p
-                ));
-                toast.success(`插件 ${plugin.name} 连通性测试成功`);
-            } else {
-                setTestingStatus(prev => ({ ...prev, [plugin.name]: 'error' }));
-                setLocalPlugins(prev => prev.map(p =>
-                    p.name === plugin.name
-                        ? { ...p, status: 'error' }
-                        : p
-                ));
-                toast.error(`插件 ${plugin.name} 连通性测试失败`);
-            }
-        } catch {
-            setTestingStatus(prev => ({ ...prev, [plugin.name]: 'error' }));
-            setLocalPlugins(prev => prev.map(p =>
-                p.name === plugin.name
-                    ? { ...p, status: 'error' }
-                    : p
-            ));
-            toast.error(`插件 ${plugin.name} 测试出错`);
-        }
-
-        // 同步刷新系统监控面板中的插件状态摘要
-        onSuccess();
-
-        // 5秒后重置状态
-        setTimeout(() => {
-            setTestingStatus(prev => ({ ...prev, [plugin.name]: 'idle' }));
-        }, 5000);
-    };
-
-    // 批量测试所有已启用插件
-    const handleBatchTest = async () => {
-        const activePlugins = localPlugins.filter(p => p.is_enabled);
-        if (activePlugins.length === 0) {
-            toast.error('没有已启用的插件可供测试');
-            return;
-        }
-
-        setIsBatchTesting(true);
-        const testingMap: Record<string, TestStatus> = {};
-        activePlugins.forEach(p => { testingMap[p.name] = 'testing'; });
-        setTestingStatus(prev => ({ ...prev, ...testingMap }));
-
-        const results = await Promise.allSettled(
-            activePlugins.map(async (plugin) => {
-                try {
-                    const response = await fetch(`/api/admin/plugins/${plugin.name}/test`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json',
-                        },
-                    });
-                    const ok = response.ok;
-                    setTestingStatus(prev => ({
-                        ...prev,
-                        [plugin.name]: ok ? 'success' : 'error',
-                    }));
-
-                    // 更新插件状态
-                    setLocalPlugins(prev => prev.map(p => {
-                        if (p.name === plugin.name) {
-                            return { ...p, status: ok ? (p.plugin_type === 'custom' ? 'custom' : 'active') : 'error' };
-                        }
-                        return p;
-                    }));
-
-                    return { name: plugin.name, ok };
-                } catch {
-                    setTestingStatus(prev => ({ ...prev, [plugin.name]: 'error' }));
-                    setLocalPlugins(prev => prev.map(p =>
-                        p.name === plugin.name ? { ...p, status: p.is_enabled ? 'error' : 'inactive' } : p
-                    ));
-                    return { name: plugin.name, ok: false };
-                }
-            })
+              : item
+          )
         );
+        toast.success(`插件 ${plugin.name} 连通性测试成功`);
+      } else {
+        setTestingStatus((prev) => ({ ...prev, [plugin.name]: 'error' }));
+        setLocalPlugins((prev) =>
+          prev.map((item) =>
+            item.name === plugin.name ? { ...item, status: 'error' } : item
+          )
+        );
+        toast.error(`插件 ${plugin.name} 连通性测试失败`);
+      }
+    } catch {
+      setTestingStatus((prev) => ({ ...prev, [plugin.name]: 'error' }));
+      setLocalPlugins((prev) =>
+        prev.map((item) =>
+          item.name === plugin.name ? { ...item, status: 'error' } : item
+        )
+      );
+      toast.error(`插件 ${plugin.name} 测试出错`);
+    }
 
-        const successCount = results.filter(
-            r => r.status === 'fulfilled' && r.value.ok
-        ).length;
-        const failCount = activePlugins.length - successCount;
+    onSuccess();
+    scheduleStatusReset(() => {
+      setTestingStatus((prev) => ({ ...prev, [plugin.name]: 'idle' }));
+    }, 5000);
+  };
 
-        if (failCount === 0) {
-            toast.success(`全部 ${successCount} 个插件测试通过`);
-        } else {
-            toast.warning(`${successCount} 个通过，${failCount} 个失败`);
-        }
+  const handleBatchTest = async () => {
+    const enabledPlugins = localPlugins.filter((plugin) => plugin.is_enabled);
+    if (enabledPlugins.length === 0) {
+      toast.error('没有已启用的插件可供测试');
+      return;
+    }
 
-        setIsBatchTesting(false);
-        onSuccess();
+    setIsBatchTesting(true);
+    setTestingStatus((prev) => {
+      const next = { ...prev };
+      enabledPlugins.forEach((plugin) => {
+        next[plugin.name] = 'testing';
+      });
+      return next;
+    });
 
-        setTimeout(() => {
-            setTestingStatus({});
-        }, 10000);
-    };
-
-    // 切换插件启用/停用状态
-    const handleTogglePluginEnabled = async (plugin: PluginInfo) => {
-        if (isOperationBusy) return;
-        const nextEnabled = !plugin.is_enabled;
+    const results = await Promise.allSettled(
+      enabledPlugins.map(async (plugin) => {
         try {
-            const response = await fetch(`/api/admin/plugins/${plugin.name}/status`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ is_enabled: nextEnabled }),
-            });
+          const response = await fetch(`/api/admin/plugins/${plugin.name}/test`, {
+            method: 'POST',
+            headers: buildAuthHeaders(token, true),
+          });
+          const ok = response.ok;
 
-            if (!response.ok) {
-                let message = `插件 ${plugin.name} 状态更新失败`;
-                try {
-                    const data = await response.json();
-                    if (typeof data?.error === 'string' && data.error.trim()) {
-                        message = data.error;
-                    }
-                } catch {
-                    // ignore parse error
-                }
-                toast.error(message);
-                return;
-            }
+          setTestingStatus((prev) => ({
+            ...prev,
+            [plugin.name]: ok ? 'success' : 'error',
+          }));
 
-            setLocalPlugins(prev => prev.map(p => {
-                if (p.name !== plugin.name) return p;
-                return {
-                    ...p,
-                    is_enabled: nextEnabled,
-                    status: p.status === 'error'
-                        ? 'error'
-                        : (nextEnabled ? (p.plugin_type === 'custom' ? 'custom' : 'active') : 'inactive'),
-                };
-            }));
-            setHasPendingChanges(true);
-            toast.success(`插件 ${plugin.name} 已${nextEnabled ? '启用' : '停用'}`);
+          setLocalPlugins((prev) =>
+            prev.map((item) => {
+              if (item.name !== plugin.name) return item;
+              return {
+                ...item,
+                status: ok
+                  ? item.plugin_type === 'custom'
+                    ? 'custom'
+                    : 'active'
+                  : 'error',
+              };
+            })
+          );
+
+          return { name: plugin.name, ok };
         } catch {
-            toast.error(`插件 ${plugin.name} 状态更新出错`);
+          setTestingStatus((prev) => ({ ...prev, [plugin.name]: 'error' }));
+          setLocalPlugins((prev) =>
+            prev.map((item) =>
+              item.name === plugin.name ? { ...item, status: 'error' } : item
+            )
+          );
+          return { name: plugin.name, ok: false };
         }
-    };
-
-    const handleSelectPlugin = (pluginName: string, checked: boolean) => {
-        setSelectedPluginNames((prev) => {
-            const next = new Set(prev);
-            if (checked) {
-                next.add(pluginName);
-            } else {
-                next.delete(pluginName);
-            }
-            return next;
-        });
-    };
-
-    const handleSelectAllPlugins = () => {
-        const names = displayPlugins.map((plugin) => plugin.name);
-        setSelectedPluginNames(new Set(names));
-    };
-
-    const handleClearSelectedPlugins = () => {
-        setSelectedPluginNames(new Set());
-    };
-
-    const handleBatchTogglePlugins = async (isEnabled: boolean) => {
-        if (selectedPluginNames.size === 0) {
-            toast.error('请先选择要操作的插件');
-            return;
-        }
-
-        setIsBatchUpdating(true);
-        try {
-            const response = await fetch('/api/admin/plugins/batch-status', {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    plugin_names: Array.from(selectedPluginNames),
-                    is_enabled: isEnabled,
-                }),
-            });
-
-            if (!response.ok) {
-                let message = '批量更新插件状态失败';
-                try {
-                    const data = await response.json();
-                    if (typeof data?.error === 'string' && data.error.trim()) {
-                        message = data.error;
-                    }
-                } catch {
-                    // ignore parse error
-                }
-                toast.error(message);
-                return;
-            }
-
-            const result = (await response.json()) as BatchPluginOperationResponse;
-            const successSet = new Set(result.success ?? []);
-            const failedSet = new Set((result.failed ?? []).map((item) => item.plugin_name));
-
-            if (successSet.size > 0) {
-                setLocalPlugins((prev) =>
-                    prev.map((plugin) => {
-                        if (!successSet.has(plugin.name)) return plugin;
-                        return {
-                            ...plugin,
-                            is_enabled: isEnabled,
-                            status: plugin.status === 'error'
-                                ? 'error'
-                                : (isEnabled ? (plugin.plugin_type === 'custom' ? 'custom' : 'active') : 'inactive'),
-                        };
-                    })
-                );
-                setHasPendingChanges(true);
-            }
-
-            setSelectedPluginNames(failedSet);
-
-            const firstError = result.failed?.[0]?.error;
-            if ((result.failed_count ?? 0) > 0) {
-                toast.warning(`批量${isEnabled ? '启用' : '停用'}完成：成功 ${result.success_count} 项，失败 ${result.failed_count} 项`, {
-                    description: firstError || undefined,
-                });
-            } else {
-                toast.success(`批量${isEnabled ? '启用' : '停用'}成功：${result.success_count} 项`);
-            }
-        } catch {
-            toast.error('批量更新插件状态出错');
-        } finally {
-            setIsBatchUpdating(false);
-        }
-    };
-
-    // 删除插件
-    const handleDeletePlugin = async (pluginName: string) => {
-        if (!confirm(`确定要删除插件 "${pluginName}" 吗？`)) return;
-
-        try {
-            const response = await fetch(`/api/admin/plugins/${pluginName}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-
-            if (response.ok) {
-                toast.success(`插件 ${pluginName} 已删除`);
-                setLocalPlugins((prev) => prev.filter((plugin) => plugin.name !== pluginName));
-                setSelectedPluginNames((prev) => {
-                    const next = new Set(prev);
-                    next.delete(pluginName);
-                    return next;
-                });
-                setHasPendingChanges(true);
-            } else {
-                toast.error(`删除插件失败`);
-            }
-        } catch {
-            toast.error('删除插件出错');
-        }
-    };
-
-    const handleBatchDeletePlugins = async () => {
-        if (selectedPluginNames.size === 0) {
-            toast.error('请先选择要删除的插件');
-            return;
-        }
-
-        setIsBatchDeleting(true);
-        try {
-            const response = await fetch('/api/admin/plugins/batch-delete', {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    plugin_names: Array.from(selectedPluginNames),
-                }),
-            });
-
-            if (!response.ok) {
-                let message = '批量删除插件失败';
-                try {
-                    const data = await response.json();
-                    if (typeof data?.error === 'string' && data.error.trim()) {
-                        message = data.error;
-                    }
-                } catch {
-                    // ignore parse error
-                }
-                toast.error(message);
-                return;
-            }
-
-            const result = (await response.json()) as BatchPluginOperationResponse;
-            const successSet = new Set(result.success ?? []);
-            const failedSet = new Set((result.failed ?? []).map((item) => item.plugin_name));
-
-            if (successSet.size > 0) {
-                setLocalPlugins((prev) => prev.filter((plugin) => !successSet.has(plugin.name)));
-                setHasPendingChanges(true);
-            }
-
-            setSelectedPluginNames(failedSet);
-            setBatchDeleteConfirmOpen(false);
-
-            const firstError = result.failed?.[0]?.error;
-            if ((result.failed_count ?? 0) > 0) {
-                toast.warning(`批量删除完成：成功 ${result.success_count} 项，失败 ${result.failed_count} 项`, {
-                    description: firstError || undefined,
-                });
-            } else {
-                toast.success(`批量删除成功：${result.success_count} 项`);
-            }
-        } catch {
-            toast.error('批量删除插件出错');
-        } finally {
-            setIsBatchDeleting(false);
-        }
-    };
-
-    // 展开/收起插件详情
-    const toggleExpand = (pluginName: string) => {
-        if (expandedPlugin === pluginName) {
-            setExpandedPlugin(null);
-            setEditingPlugin(null);
-        } else {
-            setExpandedPlugin(pluginName);
-            setEditingPlugin(null);
-        }
-    };
-
-    // 开始编辑插件
-    const startEditing = (plugin: PluginInfo) => {
-        setEditingPlugin(plugin.name);
-        setEditForm({
-            priority: plugin.priority,
-            description: plugin.description,
-            url: plugin.url || '',
-        });
-    };
-
-    // 保存编辑
-    const handleSaveEdit = async (pluginName: string) => {
-        try {
-            const response = await fetch(`/api/admin/plugins/${pluginName}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(editForm),
-            });
-
-            if (response.ok) {
-                toast.success('插件更新成功');
-                setEditingPlugin(null);
-                onSuccess();
-            } else {
-                toast.error('更新插件失败');
-            }
-        } catch {
-            toast.error('更新插件出错');
-        }
-    };
-
-    // 新增插件
-    const handleAddPlugin = async () => {
-        if (!newPlugin.name || !newPlugin.url) {
-            toast.error('请填写插件名称和URL');
-            return;
-        }
-
-        setIsSubmitting(true);
-        try {
-            const response = await fetch('/api/admin/plugins', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(newPlugin),
-            });
-
-            if (response.ok) {
-                toast.success('插件添加成功');
-                setNewPlugin({ name: '', url: '', priority: 100, description: '' });
-                setShowAddForm(false);
-                onSuccess();
-            } else {
-                toast.error('添加插件失败');
-            }
-        } catch {
-            toast.error('添加插件出错');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    // 测试新插件URL连通性
-    const handleTestNewUrl = async () => {
-        if (!newPlugin.url) {
-            toast.error('请先输入URL');
-            return;
-        }
-
-        setNewUrlTestStatus('testing');
-
-        try {
-            const response = await fetch('/api/admin/test-url', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ url: newPlugin.url }),
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                setNewUrlTestStatus('success');
-                toast.success('URL连通性测试成功', {
-                    description: `状态码: ${result.status_code}`,
-                });
-            } else {
-                setNewUrlTestStatus('error');
-                toast.error('URL连通性测试失败', {
-                    description: result.message || '无法连接',
-                });
-            }
-        } catch {
-            setNewUrlTestStatus('error');
-            toast.error('测试请求失败', {
-                description: '网络错误或服务器无响应',
-            });
-        }
-
-        // 5秒后重置状态
-        setTimeout(() => {
-            setNewUrlTestStatus('idle');
-        }, 5000);
-    };
-
-    const handleClose = () => {
-        setShowAddForm(false);
-        setNewPlugin({ name: '', url: '', priority: 100, description: '' });
-        setBatchDeleteConfirmOpen(false);
-        setSelectedPluginNames(new Set());
-        if (hasPendingChanges) {
-            onSuccess();
-            setHasPendingChanges(false);
-        }
-        onClose();
-    };
-
-    // 获取测试状态图标
-    const getTestIcon = (status: TestStatus) => {
-        switch (status) {
-            case 'testing':
-                return <Loader2 className="w-4 h-4 animate-spin" />;
-            case 'success':
-                return <CheckCircle2 className="w-4 h-4 text-green-500" />;
-            case 'error':
-                return <XCircle className="w-4 h-4 text-red-500" />;
-            default:
-                return <Zap className="w-4 h-4" />;
-        }
-    };
-
-    if (!isOpen) return null;
-
-    return (
-        <>
-            <AnimatePresence>
-                {isOpen && (
-                    <>
-                    {/* 背景遮罩 */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-                        onClick={handleClose}
-                    />
-
-                    {/* 对话框 */}
-                    <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            transition={{ duration: 0.2 }}
-                            className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            {/* 头部 */}
-                            <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-slate-800 dark:to-slate-700">
-                                <div>
-                                    <h2 className="text-lg font-bold text-slate-800 dark:text-white">
-                                        插件管理
-                                    </h2>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                                        管理系统插件：启用停用、测试连通性、新增或删除
-                                    </p>
-                                </div>
-                                <motion.button
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={handleClose}
-                                    className="w-8 h-8 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 flex items-center justify-center cursor-pointer"
-                                >
-                                    <X className="w-5 h-5 text-slate-600 dark:text-slate-300" />
-                                </motion.button>
-                            </div>
-
-                            {/* 内容区域 */}
-                            <div className="flex-1 overflow-y-auto p-5">
-                                {/* 新增插件按钮 */}
-                                {!showAddForm && (
-                                    <motion.div whileHover={{ scale: 1.02 }} className="mb-4">
-                                        <Button
-                                            onClick={() => setShowAddForm(true)}
-                                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white cursor-pointer"
-                                        >
-                                            <Plus className="w-4 h-4 mr-2" />
-                                            新增插件
-                                        </Button>
-                                    </motion.div>
-                                )}
-
-                                {/* 新增插件表单 */}
-                                <AnimatePresence>
-                                    {showAddForm && (
-                                        <motion.div
-                                            initial={{ opacity: 0, height: 0 }}
-                                            animate={{ opacity: 1, height: 'auto' }}
-                                            exit={{ opacity: 0, height: 0 }}
-                                            className="mb-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600"
-                                        >
-                                            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">新增插件</h3>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <Label className="text-xs">插件名称 *</Label>
-                                                    <Input
-                                                        placeholder="例如: myplugin"
-                                                        value={newPlugin.name}
-                                                        onChange={(e) => setNewPlugin({ ...newPlugin, name: e.target.value })}
-                                                        className="mt-1"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <Label className="text-xs">优先级</Label>
-                                                    <Input
-                                                        type="number"
-                                                        value={newPlugin.priority}
-                                                        onChange={(e) => setNewPlugin({ ...newPlugin, priority: parseInt(e.target.value) || 100 })}
-                                                        className="mt-1"
-                                                    />
-                                                </div>
-                                                <div className="col-span-2">
-                                                    <Label className="text-xs">插件URL *</Label>
-                                                    <div className="flex gap-2 mt-1">
-                                                        <Input
-                                                            placeholder="https://example.com/api"
-                                                            value={newPlugin.url}
-                                                            onChange={(e) => setNewPlugin({ ...newPlugin, url: e.target.value })}
-                                                            className="flex-1"
-                                                        />
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={handleTestNewUrl}
-                                                            disabled={newUrlTestStatus === 'testing'}
-                                                            className={`cursor-pointer ${newUrlTestStatus === 'success' ? 'border-green-500 text-green-600' :
-                                                                newUrlTestStatus === 'error' ? 'border-red-500 text-red-600' : ''
-                                                                }`}
-                                                        >
-                                                            {newUrlTestStatus === 'testing' ? (
-                                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                            ) : newUrlTestStatus === 'success' ? (
-                                                                <CheckCircle2 className="w-4 h-4" />
-                                                            ) : newUrlTestStatus === 'error' ? (
-                                                                <XCircle className="w-4 h-4" />
-                                                            ) : (
-                                                                <Zap className="w-4 h-4" />
-                                                            )}
-                                                            <span className="ml-1">
-                                                                {newUrlTestStatus === 'testing' ? '测试中' :
-                                                                    newUrlTestStatus === 'success' ? '成功' :
-                                                                        newUrlTestStatus === 'error' ? '失败' : '测试'}
-                                                            </span>
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                                <div className="col-span-2">
-                                                    <Label className="text-xs">描述</Label>
-                                                    <Input
-                                                        placeholder="插件功能描述"
-                                                        value={newPlugin.description}
-                                                        onChange={(e) => setNewPlugin({ ...newPlugin, description: e.target.value })}
-                                                        className="mt-1"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="flex justify-end gap-2 mt-4">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        setShowAddForm(false);
-                                                        setNewPlugin({ name: '', url: '', priority: 100, description: '' });
-                                                    }}
-                                                    className="cursor-pointer"
-                                                >
-                                                    取消
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    onClick={handleAddPlugin}
-                                                    disabled={isSubmitting}
-                                                    className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
-                                                >
-                                                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
-                                                    添加
-                                                </Button>
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-
-                                {/* 多选与批量操作 */}
-                                <div className="mb-3 flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 px-3 py-2">
-                                    <span className="text-sm text-slate-600 dark:text-slate-300">
-                                        已选 {selectedCount} 项
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleSelectAllPlugins}
-                                            disabled={isOperationBusy || displayPlugins.length === 0}
-                                            className="h-7 px-2 text-xs cursor-pointer"
-                                        >
-                                            全选
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleClearSelectedPlugins}
-                                            disabled={isOperationBusy || selectedCount === 0}
-                                            className="h-7 px-2 text-xs cursor-pointer"
-                                        >
-                                            清空
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                <div className="mb-4 flex flex-wrap items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => void handleBatchTogglePlugins(true)}
-                                        disabled={isOperationBusy || selectedCount === 0}
-                                        className="h-8 px-3 text-xs text-green-600 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/20 cursor-pointer"
-                                    >
-                                        批量启用
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => void handleBatchTogglePlugins(false)}
-                                        disabled={isOperationBusy || selectedCount === 0}
-                                        className="h-8 px-3 text-xs text-slate-600 border-slate-300 hover:bg-slate-100 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700 cursor-pointer"
-                                    >
-                                        批量停用
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setBatchDeleteConfirmOpen(true)}
-                                        disabled={isOperationBusy || selectedCount === 0}
-                                        className="h-8 px-3 text-xs text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 cursor-pointer"
-                                    >
-                                        批量删除
-                                    </Button>
-                                </div>
-
-                                {/* 插件列表 */}
-                                <div className="space-y-2">
-                                    {displayPlugins.map((plugin) => {
-                                        const pluginStatus = resolvePluginStatus(plugin);
-                                        return (
-                                        <motion.div
-                                            key={plugin.name}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            className="bg-slate-50 dark:bg-slate-700/30 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 transition-colors overflow-hidden"
-                                        >
-                                            {/* 插件主行 */}
-                                            <div className="flex items-center justify-between p-3">
-                                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                    <Checkbox
-                                                        checked={selectedPluginNames.has(plugin.name)}
-                                                        onCheckedChange={(checked) => handleSelectPlugin(plugin.name, checked as boolean)}
-                                                        aria-label={`选择插件 ${plugin.name}`}
-                                                        disabled={isOperationBusy}
-                                                        onClick={(event: React.MouseEvent) => event.stopPropagation()}
-                                                    />
-                                                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${pluginStatus === 'active' ? 'bg-green-500' :
-                                                        pluginStatus === 'custom' ? 'bg-blue-500' :
-                                                            pluginStatus === 'error' ? 'bg-red-500' : 'bg-gray-400'
-                                                        }`} />
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="font-medium text-slate-700 dark:text-slate-200 truncate">{plugin.name}</div>
-                                                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{plugin.description}</div>
-                                                    </div>
-                                                    <Badge variant="outline" className="text-xs flex-shrink-0">优先级: {plugin.priority}</Badge>
-                                                    {pluginStatus === 'custom' && (
-                                                        <Badge className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 flex-shrink-0">自定义</Badge>
-                                                    )}
-                                                    {pluginStatus === 'active' && (
-                                                        <Badge className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 flex-shrink-0">内置</Badge>
-                                                    )}
-                                                    {pluginStatus === 'error' && (
-                                                        <Badge className="text-xs bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 flex-shrink-0">异常</Badge>
-                                                    )}
-                                                    {pluginStatus === 'inactive' && (
-                                                        <Badge variant="outline" className="text-xs flex-shrink-0">已停用</Badge>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-2 ml-2">
-                                                    {/* 查看/收起按钮 */}
-                                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => toggleExpand(plugin.name)}
-                                                            disabled={isOperationBusy}
-                                                            className="h-8 px-2 text-xs cursor-pointer"
-                                                        >
-                                                            {expandedPlugin === plugin.name ? (
-                                                                <ChevronUp className="w-4 h-4" />
-                                                            ) : (
-                                                                <Eye className="w-4 h-4" />
-                                                            )}
-                                                            <span className="ml-1">{expandedPlugin === plugin.name ? '收起' : '查看'}</span>
-                                                        </Button>
-                                                    </motion.div>
-                                                    {/* 测试按钮 */}
-                                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handleTestPlugin(plugin)}
-                                                            disabled={isOperationBusy || testingStatus[plugin.name] === 'testing'}
-                                                            className="h-8 px-2 text-xs cursor-pointer"
-                                                        >
-                                                            {getTestIcon(testingStatus[plugin.name] || 'idle')}
-                                                            <span className="ml-1">测试</span>
-                                                        </Button>
-                                                    </motion.div>
-                                                    {/* 启用/停用按钮 */}
-                                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handleTogglePluginEnabled(plugin)}
-                                                            aria-label={`切换插件 ${plugin.name} 状态`}
-                                                            disabled={isOperationBusy}
-                                                            className={`h-8 px-2 text-xs cursor-pointer ${plugin.is_enabled
-                                                                ? 'text-green-600 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/20'
-                                                                : 'text-slate-500 border-slate-200 hover:bg-slate-50 dark:text-slate-400 dark:border-slate-600 dark:hover:bg-slate-700/50'
-                                                                }`}
-                                                        >
-                                                            {plugin.is_enabled ? (
-                                                                <ToggleRight className="w-4 h-4" />
-                                                            ) : (
-                                                                <ToggleLeft className="w-4 h-4" />
-                                                            )}
-                                                        </Button>
-                                                    </motion.div>
-                                                    {/* 删除按钮 - 只有自定义插件可删除 */}
-                                                    {plugin.plugin_type === 'custom' && (
-                                                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleDeletePlugin(plugin.name)}
-                                                                aria-label={`删除插件 ${plugin.name}`}
-                                                                disabled={isOperationBusy}
-                                                                className="h-8 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 cursor-pointer"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
-                                                        </motion.div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* 展开的详情区域 */}
-                                            <AnimatePresence>
-                                                {expandedPlugin === plugin.name && (
-                                                    <motion.div
-                                                        initial={{ height: 0, opacity: 0 }}
-                                                        animate={{ height: 'auto', opacity: 1 }}
-                                                        exit={{ height: 0, opacity: 0 }}
-                                                        transition={{ duration: 0.2 }}
-                                                        className="border-t border-slate-200 dark:border-slate-600"
-                                                    >
-                                                        <div className="p-4 bg-slate-100/50 dark:bg-slate-800/50">
-                                                            {editingPlugin === plugin.name ? (
-                                                                /* 编辑模式 */
-                                                                <div className="space-y-3">
-                                                                    <div className="grid grid-cols-2 gap-3">
-                                                                        <div>
-                                                                            <Label className="text-xs text-slate-600 dark:text-slate-400">插件名称</Label>
-                                                                            <Input
-                                                                                value={plugin.name}
-                                                                                disabled
-                                                                                className="mt-1 bg-slate-200 dark:bg-slate-700"
-                                                                            />
-                                                                        </div>
-                                                                        <div>
-                                                                            <Label className="text-xs text-slate-600 dark:text-slate-400">优先级</Label>
-                                                                            <Input
-                                                                                type="number"
-                                                                                value={editForm.priority}
-                                                                                onChange={(e) => setEditForm({ ...editForm, priority: parseInt(e.target.value) || 0 })}
-                                                                                className="mt-1"
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-                                                                    {plugin.plugin_type === 'custom' && (
-                                                                        <div>
-                                                                            <Label className="text-xs text-slate-600 dark:text-slate-400">URL</Label>
-                                                                            <Input
-                                                                                value={editForm.url}
-                                                                                onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
-                                                                                className="mt-1"
-                                                                            />
-                                                                        </div>
-                                                                    )}
-                                                                    <div>
-                                                                        <Label className="text-xs text-slate-600 dark:text-slate-400">描述</Label>
-                                                                        <Input
-                                                                            value={editForm.description}
-                                                                            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                                                                            className="mt-1"
-                                                                        />
-                                                                    </div>
-                                                                    <div className="flex justify-end gap-2 pt-2">
-                                                                        <Button
-                                                                            variant="outline"
-                                                                            size="sm"
-                                                                            onClick={() => setEditingPlugin(null)}
-                                                                            className="cursor-pointer"
-                                                                        >
-                                                                            取消
-                                                                        </Button>
-                                                                        <Button
-                                                                            size="sm"
-                                                                            onClick={() => handleSaveEdit(plugin.name)}
-                                                                            className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
-                                                                        >
-                                                                            <Save className="w-4 h-4 mr-1" />
-                                                                            保存
-                                                                        </Button>
-                                                                    </div>
-                                                                </div>
-                                                            ) : (
-                                                                /* 查看模式 */
-                                                                <div className="space-y-3">
-                                                                    <div className="grid grid-cols-2 gap-4">
-                                                                        <div>
-                                                                            <span className="text-xs text-slate-500 dark:text-slate-400">插件名称</span>
-                                                                            <p className="font-medium text-slate-700 dark:text-slate-200">{plugin.name}</p>
-                                                                        </div>
-                                                                        <div>
-                                                                            <span className="text-xs text-slate-500 dark:text-slate-400">优先级</span>
-                                                                            <p className="font-medium text-slate-700 dark:text-slate-200">{plugin.priority}</p>
-                                                                        </div>
-                                                                        <div>
-                                                                            <span className="text-xs text-slate-500 dark:text-slate-400">状态</span>
-                                                                            <p className="font-medium text-slate-700 dark:text-slate-200">
-                                                                                {pluginStatus === 'active' ? '内置插件' :
-                                                                                    pluginStatus === 'custom' ? '自定义插件' :
-                                                                                        pluginStatus === 'inactive' ? '已停用' :
-                                                                                            pluginStatus === 'error' ? '测试失败' : pluginStatus}
-                                                                            </p>
-                                                                        </div>
-                                                                        <div>
-                                                                            <span className="text-xs text-slate-500 dark:text-slate-400">描述</span>
-                                                                            <p className="font-medium text-slate-700 dark:text-slate-200">{plugin.description || '无描述'}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                    {plugin.plugin_type === 'custom' && plugin.url && (
-                                                                        <div>
-                                                                            <span className="text-xs text-slate-500 dark:text-slate-400">URL</span>
-                                                                            <p className="font-medium text-slate-700 dark:text-slate-200 break-all">{plugin.url}</p>
-                                                                        </div>
-                                                                    )}
-                                                                    {/* 只有自定义插件可编辑 */}
-                                                                    {plugin.plugin_type === 'custom' && (
-                                                                        <div className="flex justify-end pt-2">
-                                                                            <Button
-                                                                                variant="outline"
-                                                                                size="sm"
-                                                                                onClick={() => startEditing(plugin)}
-                                                                                className="cursor-pointer"
-                                                                            >
-                                                                                <Edit3 className="w-4 h-4 mr-1" />
-                                                                                编辑
-                                                                            </Button>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </motion.div>
-                                        );
-                                    })}
-                                </div>
-
-                                {localPlugins.length === 0 && (
-                                    <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-                                        <AlertCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                                        <p>暂无插件</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* 底部 */}
-                            <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-sm text-slate-500 dark:text-slate-400">
-                                        共 {localPlugins.length} 个插件，已选 {selectedCount} 项
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleBatchTest}
-                                            disabled={isOperationBusy || localPlugins.length === 0}
-                                            className="cursor-pointer text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/20"
-                                        >
-                                            {isBatchTesting ? (
-                                                <Loader2 className="w-4 h-4 animate-spin mr-1" />
-                                            ) : (
-                                                <PlayCircle className="w-4 h-4 mr-1" />
-                                            )}
-                                            批量测试
-                                        </Button>
-                                        <Button variant="outline" onClick={handleClose} className="cursor-pointer">
-                                            关闭
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                    </>
-                )}
-            </AnimatePresence>
-
-            <ConfirmDialog
-                open={batchDeleteConfirmOpen}
-                onOpenChange={setBatchDeleteConfirmOpen}
-                title="确认批量删除插件"
-                description={`将删除 ${selectedCount} 个已选插件${selectedPluginPreviewText ? `（例如：${selectedPluginPreviewText}）` : ''}。内置插件会自动跳过。`}
-                confirmText="删除"
-                variant="destructive"
-                onConfirm={handleBatchDeletePlugins}
-                isLoading={isBatchDeleting}
-            />
-        </>
+      })
     );
+
+    const successCount = results.filter((result) => result.status === 'fulfilled' && result.value.ok).length;
+    const failCount = enabledPlugins.length - successCount;
+
+    if (failCount === 0) {
+      toast.success(`全部 ${successCount} 个插件测试通过`);
+    } else {
+      toast.warning(`${successCount} 个通过，${failCount} 个失败`);
+    }
+
+    setIsBatchTesting(false);
+    onSuccess();
+    scheduleStatusReset(() => {
+      setTestingStatus({});
+    }, 10000);
+  };
+
+  const handleTogglePluginEnabled = async (plugin: PluginInfo) => {
+    if (isOperationBusy) return;
+    const nextEnabled = !plugin.is_enabled;
+
+    try {
+      const response = await fetch(`/api/admin/plugins/${plugin.name}/status`, {
+        method: 'POST',
+        headers: buildAuthHeaders(token, true),
+        body: JSON.stringify({ is_enabled: nextEnabled }),
+      });
+
+      if (!response.ok) {
+        toast.error(await readErrorMessage(response, `插件 ${plugin.name} 状态更新失败`));
+        return;
+      }
+
+      setLocalPlugins((prev) =>
+        prev.map((item) => {
+          if (item.name !== plugin.name) return item;
+          return {
+            ...item,
+            is_enabled: nextEnabled,
+            status:
+              item.status === 'error'
+                ? 'error'
+                : nextEnabled
+                  ? item.plugin_type === 'custom'
+                    ? 'custom'
+                    : 'active'
+                  : 'inactive',
+          };
+        })
+      );
+      setHasPendingChanges(true);
+      toast.success(`插件 ${plugin.name} 已${nextEnabled ? '启用' : '停用'}`);
+    } catch {
+      toast.error(`插件 ${plugin.name} 状态更新出错`);
+    }
+  };
+
+  const handleBatchTogglePlugins = async (isEnabled: boolean) => {
+    if (selectedPluginNames.size === 0) {
+      toast.error('请先选择要操作的插件');
+      return;
+    }
+
+    setIsBatchUpdating(true);
+    try {
+      const response = await fetch('/api/admin/plugins/batch-status', {
+        method: 'POST',
+        headers: buildAuthHeaders(token, true),
+        body: JSON.stringify({
+          plugin_names: Array.from(selectedPluginNames),
+          is_enabled: isEnabled,
+        }),
+      });
+
+      if (!response.ok) {
+        toast.error(await readErrorMessage(response, '批量更新插件状态失败'));
+        return;
+      }
+
+      const result = (await response.json()) as BatchPluginOperationResponse;
+      const successSet = new Set(result.success ?? []);
+      const failedSet = new Set((result.failed ?? []).map((item) => item.plugin_name));
+
+      if (successSet.size > 0) {
+        setLocalPlugins((prev) =>
+          prev.map((plugin) => {
+            if (!successSet.has(plugin.name)) return plugin;
+            return {
+              ...plugin,
+              is_enabled: isEnabled,
+              status:
+                plugin.status === 'error'
+                  ? 'error'
+                  : isEnabled
+                    ? plugin.plugin_type === 'custom'
+                      ? 'custom'
+                      : 'active'
+                    : 'inactive',
+            };
+          })
+        );
+        setHasPendingChanges(true);
+      }
+
+      setSelectedPlugins(failedSet);
+      toastBatchResult(`批量${isEnabled ? '启用' : '停用'}`, result);
+    } catch {
+      toast.error('批量更新插件状态出错');
+    } finally {
+      setIsBatchUpdating(false);
+    }
+  };
+
+  const setSelectedPlugins = (nextSelected: Set<string>) => {
+    clearSelected();
+    nextSelected.forEach((name) => selectKey(name, true));
+  };
+  const handleToggleSelectFiltered = () => {
+    if (isAllFilteredSelected) {
+      clearSelected();
+      return;
+    }
+    selectAllFiltered();
+  };
+
+  const handleConfirmDeletePlugin = async () => {
+    const pluginName = deleteConfirm.pluginName;
+    if (!pluginName) return;
+
+    setIsBatchDeleting(true);
+    try {
+      const response = await fetch(`/api/admin/plugins/${pluginName}`, {
+        method: 'DELETE',
+        headers: buildAuthHeaders(token),
+      });
+
+      if (!response.ok) {
+        toast.error(await readErrorMessage(response, '删除插件失败'));
+        return;
+      }
+
+      setLocalPlugins((prev) => prev.filter((plugin) => plugin.name !== pluginName));
+      selectKey(pluginName, false);
+      setHasPendingChanges(true);
+      toast.success(`插件 ${pluginName} 已删除`);
+      setDeleteConfirm({ open: false, pluginName: null });
+    } catch {
+      toast.error('删除插件出错');
+    } finally {
+      setIsBatchDeleting(false);
+    }
+  };
+
+  const handleBatchDeletePlugins = async () => {
+    if (selectedPluginNames.size === 0) {
+      toast.error('请先选择要删除的插件');
+      return;
+    }
+
+    setIsBatchDeleting(true);
+    try {
+      const response = await fetch('/api/admin/plugins/batch-delete', {
+        method: 'POST',
+        headers: buildAuthHeaders(token, true),
+        body: JSON.stringify({
+          plugin_names: Array.from(selectedPluginNames),
+        }),
+      });
+
+      if (!response.ok) {
+        toast.error(await readErrorMessage(response, '批量删除插件失败'));
+        return;
+      }
+
+      const result = (await response.json()) as BatchPluginOperationResponse;
+      const successSet = new Set(result.success ?? []);
+      const failedSet = new Set((result.failed ?? []).map((item) => item.plugin_name));
+
+      if (successSet.size > 0) {
+        setLocalPlugins((prev) => prev.filter((plugin) => !successSet.has(plugin.name)));
+        setHasPendingChanges(true);
+      }
+
+      setSelectedPlugins(failedSet);
+      setBatchDeleteConfirmOpen(false);
+      toastBatchResult('批量删除', result);
+    } catch {
+      toast.error('批量删除插件出错');
+    } finally {
+      setIsBatchDeleting(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingPluginName) return;
+
+    try {
+      const response = await fetch(`/api/admin/plugins/${editingPluginName}`, {
+        method: 'PUT',
+        headers: buildAuthHeaders(token, true),
+        body: JSON.stringify(editForm),
+      });
+
+      if (!response.ok) {
+        toast.error(await readErrorMessage(response, '更新插件失败'));
+        return;
+      }
+
+      setLocalPlugins((prev) =>
+        prev.map((plugin) =>
+          plugin.name === editingPluginName
+            ? {
+                ...plugin,
+                priority: editForm.priority,
+                description: editForm.description,
+                url: editForm.url,
+              }
+            : plugin
+        )
+      );
+      setHasPendingChanges(true);
+      setEditingPluginName(null);
+      toast.success('插件更新成功');
+    } catch {
+      toast.error('更新插件出错');
+    }
+  };
+
+  const getTestIcon = (status: TestStatus) => {
+    if (status === 'testing') return <Loader2 className="w-4 h-4 animate-spin" />;
+    if (status === 'success') return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+    if (status === 'error') return <XCircle className="w-4 h-4 text-red-500" />;
+    return <Zap className="w-4 h-4" />;
+  };
+
+  if (!isOpen) return null;
+
+  const workspaceModal = (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/55 backdrop-blur-sm z-50"
+            onClick={handleClose}
+          />
+
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              transition={{ duration: 0.2 }}
+              onClick={(event) => event.stopPropagation()}
+              className="w-full max-w-5xl max-h-[88vh] rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden flex flex-col"
+            >
+              <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-emerald-50 via-blue-50 to-cyan-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      <Layers className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                      插件工作台
+                      <Badge variant={isReadOnly ? 'outline' : 'success'}>
+                        {isReadOnly ? '只读模式' : '编辑模式'}
+                      </Badge>
+                    </h2>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
+                      统一检索、查看与操作插件状态
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleClose}
+                    className="w-8 h-8 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center"
+                    aria-label="关闭插件管理"
+                  >
+                    <X className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+                  </button>
+                </div>
+
+              </div>
+
+              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {UNIFIED_STATUS_FILTER_OPTIONS.map(({ value, label }) => (
+                    <Button
+                      key={value}
+                      size="sm"
+                      variant={statusFilter === value ? 'default' : 'outline'}
+                      onClick={() => setStatusFilter(value)}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+
+                {!isReadOnly && (
+                  <>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void handleBatchTogglePlugins(true)}
+                        disabled={isOperationBusy || selectedCount === 0}
+                        className="text-green-600 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/20"
+                      >
+                        批量启用
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void handleBatchTogglePlugins(false)}
+                        disabled={isOperationBusy || selectedCount === 0}
+                      >
+                        批量停用
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBatchDeleteConfirmOpen(true)}
+                        disabled={isOperationBusy || selectedCount === 0}
+                        className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
+                      >
+                        批量删除
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBatchTest}
+                        disabled={isOperationBusy || localPlugins.length === 0}
+                        className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/20"
+                      >
+                        {isBatchTesting ? (
+                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                        ) : (
+                          <PlayCircle className="w-4 h-4 mr-1" />
+                        )}
+                        批量测试
+                      </Button>
+                      <div className="ml-auto flex items-center gap-2">
+                        {selectedCount > 0 && (
+                          <span className="text-sm text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                            已选 {selectedCount} 项
+                          </span>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleToggleSelectFiltered}
+                          disabled={isOperationBusy || filteredItems.length === 0}
+                          className="h-8 px-3 text-xs"
+                        >
+                          {isAllFilteredSelected ? '清空' : '全选'}
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div ref={listContainerRef} className="flex-1 overflow-y-auto p-5">
+                {pagedItems.length === 0 ? (
+                  <div className="text-center py-16 text-slate-500 dark:text-slate-400">
+                    <Activity className="w-10 h-10 mx-auto mb-2 opacity-35" />
+                    <p>无匹配数据</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {pagedItems.map((plugin, index) => {
+                      const pluginStatus = resolvePluginStatus(plugin);
+                      return (
+                        <motion.div
+                          key={plugin.name}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.02 }}
+                          className="bg-slate-50 dark:bg-slate-700/30 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
+                        >
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              {!isReadOnly && (
+                                <Checkbox
+                                  checked={selectedPluginNames.has(plugin.name)}
+                                  onCheckedChange={(checked) => selectKey(plugin.name, Boolean(checked))}
+                                  aria-label={`选择插件 ${plugin.name}`}
+                                  disabled={isOperationBusy}
+                                />
+                              )}
+                              <div
+                                className={`w-2.5 h-2.5 rounded-full ${
+                                  pluginStatus === 'error'
+                                    ? 'bg-red-500'
+                                    : pluginStatus === 'custom'
+                                      ? 'bg-blue-500'
+                                      : pluginStatus === 'active'
+                                        ? 'bg-green-500'
+                                        : 'bg-slate-400'
+                                }`}
+                              />
+                              <div className="min-w-0">
+                                <p className="font-medium text-slate-800 dark:text-slate-100 truncate">{plugin.name}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{plugin.description || '无描述'}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center flex-wrap gap-2">
+                              <Badge variant="outline">优先级 {plugin.priority}</Badge>
+                              <Badge className={pluginStatusBadgeClass(pluginStatus)}>{pluginStatusText(pluginStatus)}</Badge>
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenDetail(plugin)}
+                                className="h-8 px-2"
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                详情
+                              </Button>
+
+                              {!isReadOnly && (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleTestPlugin(plugin)}
+                                    disabled={isOperationBusy || testingStatus[plugin.name] === 'testing'}
+                                    className="h-8 px-2"
+                                  >
+                                    {getTestIcon(testingStatus[plugin.name] || 'idle')}
+                                    <span className="ml-1">测试</span>
+                                  </Button>
+
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleTogglePluginEnabled(plugin)}
+                                    aria-label={`切换插件 ${plugin.name} 状态`}
+                                    disabled={isOperationBusy}
+                                    className={`h-8 px-2 ${
+                                      plugin.is_enabled
+                                        ? 'text-green-600 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/20'
+                                        : 'text-slate-500 border-slate-200 hover:bg-slate-100 dark:text-slate-400 dark:border-slate-600 dark:hover:bg-slate-700/50'
+                                    }`}
+                                  >
+                                    {plugin.is_enabled ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                                  </Button>
+
+                                  {plugin.plugin_type === 'custom' && (
+                                    <>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => openEditDialog(plugin)}
+                                        className="h-8 px-2"
+                                      >
+                                        <Edit3 className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setDeleteConfirm({ open: true, pluginName: plugin.name })}
+                                        aria-label={`删除插件 ${plugin.name}`}
+                                        disabled={isOperationBusy}
+                                        className="h-8 px-2 text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="px-5 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/60">
+                <div className="flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
+                  <span className="text-sm text-slate-500 dark:text-slate-400">
+                    共 {localPlugins.length} 个插件{!isReadOnly ? `，已选 ${selectedCount} 项` : ''}
+                  </span>
+                  {filteredItems.length > 0 && (
+                    <ApplePagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={filteredItems.length}
+                      pageSize={PAGE_SIZE}
+                      onPageChange={setCurrentPage}
+                    />
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+
+  return (
+    <>
+      {createPortal(workspaceModal, document.body)}
+
+      <Dialog
+        open={Boolean(activeDetailPlugin)}
+        onOpenChange={(open) => {
+          if (!open) setDetailPluginName(null);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          {activeDetailPlugin ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Activity className="w-4 h-4" />
+                  {activeDetailPlugin.name}
+                </DialogTitle>
+                <DialogDescription>插件详情信息</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-slate-500 dark:text-slate-400">类型</p>
+                    <p className="font-medium">{activeDetailPlugin.plugin_type === 'custom' ? '自定义插件' : '内置插件'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 dark:text-slate-400">优先级</p>
+                    <p className="font-medium">{activeDetailPlugin.priority}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-slate-500 dark:text-slate-400">状态</p>
+                  <Badge className={pluginStatusBadgeClass(resolvePluginStatus(activeDetailPlugin))}>
+                    {pluginStatusText(resolvePluginStatus(activeDetailPlugin))}
+                  </Badge>
+                </div>
+
+                <div>
+                  <p className="text-slate-500 dark:text-slate-400">描述</p>
+                  <p className="font-medium">{activeDetailPlugin.description || '无描述'}</p>
+                </div>
+
+                {activeDetailPlugin.url && (
+                  <div>
+                    <p className="text-slate-500 dark:text-slate-400">URL</p>
+                    <p className="font-medium break-all">{activeDetailPlugin.url}</p>
+                  </div>
+                )}
+              </div>
+
+              {!isReadOnly && activeDetailPlugin.plugin_type === 'custom' && (
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setDetailPluginName(null);
+                      openEditDialog(activeDetailPlugin);
+                    }}
+                  >
+                    <Edit3 className="w-4 h-4 mr-1" />
+                    编辑该插件
+                  </Button>
+                </DialogFooter>
+              )}
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(activeEditingPlugin)}
+        onOpenChange={(open) => {
+          if (!open) setEditingPluginName(null);
+        }}
+      >
+        <DialogContent className="max-w-xl">
+          {activeEditingPlugin ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>编辑插件</DialogTitle>
+                <DialogDescription>{activeEditingPlugin.name}</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label>插件名称</Label>
+                    <Input value={activeEditingPlugin.name} disabled className="bg-slate-100 dark:bg-slate-800" />
+                  </div>
+                  <div>
+                    <Label>优先级</Label>
+                    <Input
+                      type="number"
+                      value={editForm.priority}
+                      onChange={(event) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          priority: Number.parseInt(event.target.value, 10) || 0,
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>URL</Label>
+                  <Input
+                    value={editForm.url}
+                    onChange={(event) => setEditForm((prev) => ({ ...prev, url: event.target.value }))}
+                    disabled={activeEditingPlugin.plugin_type !== 'custom'}
+                  />
+                </div>
+
+                <div>
+                  <Label>描述</Label>
+                  <Input
+                    value={editForm.description}
+                    onChange={(event) =>
+                      setEditForm((prev) => ({ ...prev, description: event.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingPluginName(null)}>
+                  取消
+                </Button>
+                <Button onClick={handleSaveEdit}>
+                  <Save className="w-4 h-4 mr-1" />
+                  保存
+                </Button>
+              </DialogFooter>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(open) => !open && setDeleteConfirm({ open: false, pluginName: null })}
+        title="删除插件"
+        description={`确定要删除插件 "${deleteConfirm.pluginName || ''}" 吗？`}
+        confirmText="删除"
+        variant="destructive"
+        onConfirm={handleConfirmDeletePlugin}
+        isLoading={isBatchDeleting}
+      />
+
+      <ConfirmDialog
+        open={batchDeleteConfirmOpen}
+        onOpenChange={setBatchDeleteConfirmOpen}
+        title="确认批量删除插件"
+        description={`将删除 ${selectedCount} 个已选插件${selectedPluginPreviewText ? `（例如：${selectedPluginPreviewText}）` : ''}。内置插件会自动跳过。`}
+        confirmText="删除"
+        variant="destructive"
+        onConfirm={handleBatchDeletePlugins}
+        isLoading={isBatchDeleting}
+      />
+    </>
+  );
 };

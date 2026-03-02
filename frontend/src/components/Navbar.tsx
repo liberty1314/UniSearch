@@ -87,7 +87,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
         className={cn(
-          'fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out',
+          'fixed top-0 left-0 right-0 z-40 transition-all duration-300 ease-in-out',
           isScrolled
             ? 'h-16 glass shadow-nebula backdrop-blur-nebula'
             : 'h-20 bg-transparent',

@@ -103,3 +103,27 @@ feat(admin): 新增插件和频道批量操作功能并优化会话内排序逻�
 - frontend/src/types/api.ts
 
 ---
+
+## 2026-03-02 19:48:50
+
+### Commit
+```
+refactor(admin): 统一插件和频道管理对话框为双模式并优化工作区状态管理
+```
+
+### Body
+将插件和频道管理对话框重构为支持查看/编辑双模式，移除独立的预览对话框组件。新增 `useAdminWorkspaceState` 自定义 Hook 统一管理工作区状态（搜索、筛选、分页、选择），并抽取 `adminWorkspaceApi` 工具模块封装通用 API 逻辑。优化了测试用例以适配新的双模式交互。
+
+### Files
+- frontend/src/components/Navbar.tsx
+- frontend/src/components/admin/ChannelManageDialog.tsx
+- frontend/src/components/admin/PluginManageDialog.tsx
+- frontend/src/components/admin/SystemInfoView.tsx
+- frontend/src/components/admin/__tests__/ChannelManageDialog.test.tsx
+- frontend/src/components/admin/__tests__/PluginManageDialog.test.tsx
+- frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
+- frontend/src/components/admin/adminWorkspaceApi.ts
+- frontend/src/components/admin/useAdminWorkspaceState.ts
+- frontend/src/types/api.ts
+
+---

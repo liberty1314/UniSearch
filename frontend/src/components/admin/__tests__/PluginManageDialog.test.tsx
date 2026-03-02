@@ -349,8 +349,35 @@ describe('PluginManageDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: '测试' }));
 
     await waitFor(() => {
-      expect(screen.getByText('异常')).toBeInTheDocument();
-      expect(screen.queryByText('已停用')).not.toBeInTheDocument();
+      const row = screen.getByText('disabled-normal').closest('.bg-slate-50');
+      expect(row).not.toBeNull();
+      expect(within(row as HTMLElement).getByText('异常')).toBeInTheDocument();
+      expect(within(row as HTMLElement).queryByText('已停用')).not.toBeInTheDocument();
     });
+  });
+
+  it('uses one toggle button to select all filtered plugins and clear selection', () => {
+    render(
+      <PluginManageDialog
+        isOpen
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        token="test-token"
+        plugins={plugins}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: '清空' })).not.toBeInTheDocument();
+    expect(screen.queryByText('已选 0 项')).not.toBeInTheDocument();
+    const toggleButton = screen.getByRole('button', { name: '全选' });
+    fireEvent.click(toggleButton);
+
+    expect(screen.getByText('已选 5 项')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '清空' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '清空' }));
+    expect(screen.queryByText('已选 5 项')).not.toBeInTheDocument();
+    expect(screen.queryByText('已选 0 项')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '全选' })).toBeInTheDocument();
   });
 });

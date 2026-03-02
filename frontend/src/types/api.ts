@@ -565,6 +565,8 @@ export interface BatchPluginOperationResponse {
   failed: BatchPluginOperationError[];
 }
 
+export type AdminDialogMode = 'view' | 'edit';
+
 /**
  * 系统统计信息
  */

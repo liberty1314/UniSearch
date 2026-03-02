@@ -8,31 +8,13 @@ vi.mock('@/stores/authStore', () => ({
 }));
 
 vi.mock('../PluginManageDialog', () => ({
-  PluginManageDialog: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="plugin-manage-dialog">plugin-manage-dialog</div> : null,
+  PluginManageDialog: ({ isOpen, mode }: { isOpen: boolean; mode?: 'view' | 'edit' }) =>
+    isOpen ? <div data-testid="plugin-manage-dialog">{`plugin-manage-dialog-${mode}`}</div> : null,
 }));
 
 vi.mock('../ChannelManageDialog', () => ({
-  ChannelManageDialog: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="channel-manage-dialog">channel-manage-dialog</div> : null,
-}));
-
-vi.mock('../PluginPreviewDialog', () => ({
-  PluginPreviewDialog: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? (
-      <div data-testid="plugin-preview-dialog">
-        plugin-preview-dialog
-      </div>
-    ) : null,
-}));
-
-vi.mock('../ChannelPreviewDialog', () => ({
-  ChannelPreviewDialog: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? (
-      <div data-testid="channel-preview-dialog">
-        channel-preview-dialog
-      </div>
-    ) : null,
+  ChannelManageDialog: ({ isOpen, mode }: { isOpen: boolean; mode?: 'view' | 'edit' }) =>
+    isOpen ? <div data-testid="channel-manage-dialog">{`channel-manage-dialog-${mode}`}</div> : null,
 }));
 
 describe('SystemInfoView', () => {
@@ -149,16 +131,16 @@ describe('SystemInfoView', () => {
 
     const viewAllButtons = screen.getAllByRole('button', { name: '查看全部' });
     fireEvent.click(viewAllButtons[0]);
-    expect(await screen.findByTestId('channel-preview-dialog')).toBeInTheDocument();
+    expect(await screen.findByText('channel-manage-dialog-view')).toBeInTheDocument();
 
     fireEvent.click(viewAllButtons[1]);
-    expect(await screen.findByTestId('plugin-preview-dialog')).toBeInTheDocument();
+    expect(await screen.findByText('plugin-manage-dialog-view')).toBeInTheDocument();
 
     const editButtons = screen.getAllByRole('button', { name: '编辑' });
     fireEvent.click(editButtons[0]);
-    expect(await screen.findByTestId('channel-manage-dialog')).toBeInTheDocument();
+    expect(await screen.findByText('channel-manage-dialog-edit')).toBeInTheDocument();
 
     fireEvent.click(editButtons[1]);
-    expect(await screen.findByTestId('plugin-manage-dialog')).toBeInTheDocument();
+    expect(await screen.findByText('plugin-manage-dialog-edit')).toBeInTheDocument();
   });
 });
