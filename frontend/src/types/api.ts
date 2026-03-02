@@ -543,6 +543,37 @@ export interface PluginInfo {
   url?: string;
 }
 
+export interface CreatePluginRequest {
+  name: string;
+  url: string;
+  priority: number;
+  description: string;
+}
+
+export interface CreatePluginResponse {
+  success: boolean;
+  message: string;
+  plugin?: {
+    name: string;
+    url: string;
+    priority: number;
+    description: string;
+    plugin_type: 'custom';
+    is_enabled: boolean;
+  };
+}
+
+export interface TestURLRequest {
+  url: string;
+}
+
+export interface TestURLResponse {
+  success: boolean;
+  message: string;
+  error?: string;
+  status_code?: number;
+}
+
 export interface BatchPluginStatusRequest {
   plugin_names: string[];
   is_enabled: boolean;

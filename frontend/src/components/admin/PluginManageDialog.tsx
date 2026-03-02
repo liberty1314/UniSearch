@@ -9,6 +9,7 @@ import {
   Layers,
   Loader2,
   PlayCircle,
+  Plus,
   Save,
   ToggleLeft,
   ToggleRight,
@@ -34,7 +35,10 @@ import { toast } from 'sonner';
 import type {
   AdminDialogMode,
   BatchPluginOperationResponse,
+  CreatePluginRequest,
   PluginInfo,
+  TestURLRequest,
+  TestURLResponse,
 } from '@/types/api';
 import { comparePlugins } from './adminListSort';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -61,6 +65,13 @@ interface PluginManageDialogProps {
 }
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
+type URLTestStatus = 'idle' | 'success' | 'error';
+type AddPluginForm = {
+  name: string;
+  url: string;
+  priority: number;
+  description: string;
+};
 
 const PAGE_SIZE = 10;
 
@@ -99,6 +110,17 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
   const [isBatchTesting, setIsBatchTesting] = useState(false);
   const [isBatchUpdating, setIsBatchUpdating] = useState(false);
   const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [isTestingUrl, setIsTestingUrl] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [addForm, setAddForm] = useState<AddPluginForm>({
+    name: '',
+    url: '',
+    priority: 3,
+    description: '',
+  });
+  const [urlTestResult, setUrlTestResult] = useState<URLTestStatus>('idle');
+  const [urlTestMessage, setUrlTestMessage] = useState('');
 
   const [detailPluginName, setDetailPluginName] = useState<string | null>(null);
   const [editingPluginName, setEditingPluginName] = useState<string | null>(null);
@@ -117,6 +139,20 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
   const listContainerRef = useRef<HTMLDivElement>(null);
   const timeoutIdsRef = useRef<number[]>([]);
 
+  const resetAddDialogState = () => {
+    setAddDialogOpen(false);
+    setIsAdding(false);
+    setIsTestingUrl(false);
+    setAddForm({
+      name: '',
+      url: '',
+      priority: 3,
+      description: '',
+    });
+    setUrlTestResult('idle');
+    setUrlTestMessage('');
+  };
+
   useEffect(() => {
     setLocalPlugins(plugins);
   }, [plugins]);
@@ -129,6 +165,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
     setBatchDeleteConfirmOpen(false);
     setDetailPluginName(null);
     setEditingPluginName(null);
+    resetAddDialogState();
   }, [isOpen]);
 
   const clearStatusTimeouts = () => {
@@ -189,7 +226,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
     container.scrollTop = 0;
   }, [currentPage]);
 
-  const isOperationBusy = isBatchTesting || isBatchUpdating || isBatchDeleting;
+  const isOperationBusy = isBatchTesting || isBatchUpdating || isBatchDeleting || isAdding;
 
   const selectedPluginPreviewText = useMemo(
     () =>
@@ -241,6 +278,133 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
       description: plugin.description,
       url: plugin.url || '',
     });
+  };
+
+  const openAddDialog = () => {
+    if (isReadOnly) return;
+    resetAddDialogState();
+    setAddDialogOpen(true);
+  };
+
+  const handleAddFormKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter') return;
+    if (isAdding || !addForm.name.trim() || !addForm.url.trim()) return;
+    event.preventDefault();
+    void handleAddPlugin();
+  };
+
+  const handleTestAddPluginURL = async () => {
+    const normalizedURL = addForm.url.trim();
+    if (!normalizedURL) {
+      toast.error('请输入插件 URL');
+      return;
+    }
+
+    setIsTestingUrl(true);
+    setUrlTestResult('idle');
+    setUrlTestMessage('');
+    try {
+      const payload: TestURLRequest = { url: normalizedURL };
+      const response = await fetch('/api/admin/test-url', {
+        method: 'POST',
+        headers: buildAuthHeaders(token, true),
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const message = await readErrorMessage(response, 'URL 连通性测试失败');
+        setUrlTestResult('error');
+        setUrlTestMessage(message);
+        toast.error(message);
+        return;
+      }
+
+      const result = (await response.json()) as TestURLResponse;
+      if (result.success) {
+        const message = result.message || 'URL 连通性测试成功';
+        setUrlTestResult('success');
+        setUrlTestMessage(message);
+        toast.success(message);
+        return;
+      }
+
+      const message = result.error || result.message || 'URL 连通性测试失败';
+      setUrlTestResult('error');
+      setUrlTestMessage(message);
+      toast.error(message);
+    } catch {
+      setUrlTestResult('error');
+      setUrlTestMessage('URL 连通性测试出错');
+      toast.error('URL 连通性测试出错');
+    } finally {
+      setIsTestingUrl(false);
+    }
+  };
+
+  const handleAddPlugin = async () => {
+    const normalizedName = addForm.name.trim();
+    const normalizedURL = addForm.url.trim();
+
+    if (!normalizedName) {
+      toast.error('请输入插件名称');
+      return;
+    }
+    if (!normalizedURL) {
+      toast.error('请输入插件 URL');
+      return;
+    }
+
+    const duplicated = localPlugins.some(
+      (plugin) => plugin.name.trim().toLowerCase() === normalizedName.toLowerCase()
+    );
+    if (duplicated) {
+      toast.error('插件名称已存在，请更换名称');
+      return;
+    }
+
+    setIsAdding(true);
+    try {
+      const payload: CreatePluginRequest = {
+        name: normalizedName,
+        url: normalizedURL,
+        priority: addForm.priority,
+        description: addForm.description.trim(),
+      };
+
+      const response = await fetch('/api/admin/plugins', {
+        method: 'POST',
+        headers: buildAuthHeaders(token, true),
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        toast.error(await readErrorMessage(response, '添加插件失败'));
+        return;
+      }
+
+      setLocalPlugins((prev) => [
+        {
+          name: normalizedName,
+          url: normalizedURL,
+          priority: addForm.priority,
+          description: addForm.description.trim(),
+          plugin_type: 'custom',
+          is_enabled: true,
+          status: 'custom',
+        },
+        ...prev,
+      ]);
+      setStatusFilter('all');
+      setCurrentPage(1);
+      setHasPendingChanges(true);
+      toast.success(`插件 ${normalizedName} 添加成功`);
+      resetAddDialogState();
+      onSuccess();
+    } catch {
+      toast.error('添加插件出错');
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   const handleTestPlugin = async (plugin: PluginInfo) => {
@@ -634,17 +798,30 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
               </div>
 
               <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 space-y-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  {UNIFIED_STATUS_FILTER_OPTIONS.map(({ value, label }) => (
+                <div className="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {UNIFIED_STATUS_FILTER_OPTIONS.map(({ value, label }) => (
+                      <Button
+                        key={value}
+                        size="sm"
+                        variant={statusFilter === value ? 'default' : 'outline'}
+                        onClick={() => setStatusFilter(value)}
+                      >
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+                  {!isReadOnly && (
                     <Button
-                      key={value}
-                      size="sm"
-                      variant={statusFilter === value ? 'default' : 'outline'}
-                      onClick={() => setStatusFilter(value)}
+                      onClick={openAddDialog}
+                      className="bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white lg:ml-auto"
+                      aria-label="添加插件"
+                      disabled={isOperationBusy}
                     >
-                      {label}
+                      <Plus className="w-4 h-4 mr-1" />
+                      添加插件
                     </Button>
-                  ))}
+                  )}
                 </div>
 
                 {!isReadOnly && (
@@ -857,6 +1034,120 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
   return (
     <>
       {createPortal(workspaceModal, document.body)}
+
+      <Dialog
+        open={addDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            resetAddDialogState();
+            return;
+          }
+          setAddDialogOpen(true);
+        }}
+      >
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>添加插件</DialogTitle>
+            <DialogDescription>新增自定义插件并可选执行 URL 连通性测试</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label>插件名称 *</Label>
+                <Input
+                  value={addForm.name}
+                  onChange={(event) =>
+                    setAddForm((prev) => ({ ...prev, name: event.target.value }))
+                  }
+                  onKeyDown={handleAddFormKeyDown}
+                  placeholder="例如：my-custom-plugin"
+                />
+              </div>
+              <div>
+                <Label>优先级</Label>
+                <Input
+                  type="number"
+                  value={addForm.priority}
+                  onChange={(event) =>
+                    setAddForm((prev) => ({
+                      ...prev,
+                      priority: Number.parseInt(event.target.value, 10) || 0,
+                    }))
+                  }
+                  onKeyDown={handleAddFormKeyDown}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>URL *</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={addForm.url}
+                  onChange={(event) => {
+                    setAddForm((prev) => ({ ...prev, url: event.target.value }));
+                    setUrlTestResult('idle');
+                    setUrlTestMessage('');
+                  }}
+                  onKeyDown={handleAddFormKeyDown}
+                  placeholder="https://example.com/api/search?q=关键词"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void handleTestAddPluginURL()}
+                  disabled={isTestingUrl || !addForm.url.trim()}
+                  className="shrink-0 whitespace-nowrap"
+                >
+                  {isTestingUrl ? '测试中...' : '测试URL'}
+                </Button>
+              </div>
+              {urlTestResult !== 'idle' && (
+                <p
+                  className={`mt-2 text-sm flex items-center gap-1 ${
+                    urlTestResult === 'success'
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}
+                >
+                  {urlTestResult === 'success' ? (
+                    <CheckCircle2 className="w-4 h-4" />
+                  ) : (
+                    <XCircle className="w-4 h-4" />
+                  )}
+                  {urlTestMessage}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label>描述</Label>
+              <Input
+                value={addForm.description}
+                onChange={(event) =>
+                  setAddForm((prev) => ({ ...prev, description: event.target.value }))
+                }
+                onKeyDown={handleAddFormKeyDown}
+                placeholder="填写插件用途、资源类型等说明"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => resetAddDialogState()}>
+              取消
+            </Button>
+            <Button
+              onClick={() => void handleAddPlugin()}
+              disabled={isAdding || !addForm.name.trim() || !addForm.url.trim()}
+            >
+              {isAdding ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
+              添加插件
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={Boolean(activeDetailPlugin)}

@@ -147,3 +147,23 @@ refactor(plugin): 移除失效插件
 - frontend/src/components/BubbleLoader.tsx
 
 ---
+
+## 2026-03-02 21:24:59
+
+### Commit
+```
+feat(admin): 新增自定义插件添加功能并支持 URL 连通性测试
+```
+
+### Body
+在插件管理对话框中新增"添加插件"功能，支持自定义插件名称、URL、优先级和描述；新增 URL 连通性测试接口，允许用户在添加前验证插件 URL 可用性；后端支持通过环境变量 CUSTOM_PLUGINS_PATH 配置自定义插件文件路径，并在 Docker 环境中自动回退到默认路径；新增完整的单元测试覆盖添加、验证和测试流程。
+
+### Files
+- .env.example
+- backend/Dockerfile
+- backend/config/custom_plugins.go
+- frontend/src/components/admin/PluginManageDialog.tsx
+- frontend/src/components/admin/__tests__/PluginManageDialog.test.tsx
+- frontend/src/types/api.ts
+
+---

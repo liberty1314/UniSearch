@@ -26,16 +26,25 @@ type CustomPluginsConfig struct {
 var customPluginsInstance *CustomPluginsConfig
 var customPluginsOnce sync.Once
 
+const defaultCustomPluginsPath = "./custom_plugins.json"
+
 // GetCustomPluginsConfig 获取自定义插件配置单例
 func GetCustomPluginsConfig() *CustomPluginsConfig {
 	customPluginsOnce.Do(func() {
 		customPluginsInstance = &CustomPluginsConfig{
 			Plugins: []CustomPlugin{},
-			path:    "./custom_plugins.json",
+			path:    resolveCustomPluginsPath(),
 		}
 		customPluginsInstance.Load()
 	})
 	return customPluginsInstance
+}
+
+func resolveCustomPluginsPath() string {
+	if path := strings.TrimSpace(os.Getenv("CUSTOM_PLUGINS_PATH")); path != "" {
+		return path
+	}
+	return defaultCustomPluginsPath
 }
 
 // Load 从文件加载配置
@@ -46,6 +55,15 @@ func (c *CustomPluginsConfig) Load() error {
 	data, err := os.ReadFile(c.path)
 	if err != nil {
 		if os.IsNotExist(err) {
+			if c.path != defaultCustomPluginsPath {
+				if fallbackData, fallbackErr := os.ReadFile(defaultCustomPluginsPath); fallbackErr == nil {
+					var fallbackPlugins []CustomPlugin
+					if unmarshalErr := json.Unmarshal(fallbackData, &fallbackPlugins); unmarshalErr == nil {
+						c.Plugins = fallbackPlugins
+						return c.saveWithoutLock()
+					}
+				}
+			}
 			// 文件不存在，创建空配置
 			c.Plugins = []CustomPlugin{}
 			return c.saveWithoutLock()
