@@ -25,6 +25,8 @@ const BubbleLoader: React.FC<BubbleLoaderProps> = ({ size = 130, className }) =>
     });
 
     const bubbleBaseClass = "absolute top-0 w-5 h-5 rounded-full z-10";
+    const trackBaseClass =
+        "absolute inset-0 rounded-[25px] bg-[#111827] dark:bg-[#E5E7EB] shadow-[0_4px_10px_rgba(0,0,0,0.4)] dark:shadow-[0_4px_10px_rgba(255,255,255,0.3)]";
 
     return (
         <div
@@ -36,12 +38,12 @@ const BubbleLoader: React.FC<BubbleLoaderProps> = ({ size = 130, className }) =>
             {/* Strich1 Container - Rotated 45deg */}
             <div className="relative flex items-center justify-center w-[130px] h-[50px] rotate-45">
                 {/* Strich1 Visual */}
-                <div className="absolute inset-0 bg-black rounded-[25px] shadow-[0_4px_10px_rgba(0,0,0,0.4)] z-0" />
+                <div className={cn(trackBaseClass, "z-0")} />
 
                 {/* Strich2 Container - Rotated -90deg relative to Strich1 */}
                 <div className="absolute inset-0 flex items-center justify-center -rotate-90 z-0">
                     {/* Strich2 Visual */}
-                    <div className="absolute inset-0 bg-black rounded-[25px] shadow-[0_4px_10px_rgba(0,0,0,0.4)]" />
+                    <div className={trackBaseClass} />
 
                     {/* Bubbles are inside Strich2, so they follow its coordinate system */}
                     {/* bubble */}

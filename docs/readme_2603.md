@@ -127,3 +127,23 @@ refactor(admin): 统一插件和频道管理对话框为双模式并优化工作
 - frontend/src/types/api.ts
 
 ---
+
+## 2026-03-02 20:42:43
+
+### Commit
+```
+refactor(plugin): 移除失效插件
+```
+
+### Body
+删除 zhizhen 插件及其文档,清理 yunsou 插件中的冗余辅助函数(网盘类型判断、密码提取、HTTP 重试等),同时优化前端 BubbleLoader 组件的暗色模式样式。
+
+### Files
+- .env.example
+- backend/main.go
+- backend/plugin/yunsou/yunsou.go
+- backend/plugin/zhizhen/json结构分析.md (deleted)
+- backend/plugin/zhizhen/zhizhen.go (deleted)
+- frontend/src/components/BubbleLoader.tsx
+
+---
