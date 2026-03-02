@@ -7,8 +7,11 @@ export const getEffectivePluginStatus = (plugin: PluginInfo): PluginInfo['status
 };
 
 export const getPluginSortRank = (plugin: PluginInfo): number => {
-  if (!plugin.is_enabled) return 2;
-  return getEffectivePluginStatus(plugin) === 'error' ? 0 : 1;
+  if (plugin.is_enabled) {
+    return getEffectivePluginStatus(plugin) === 'error' ? 0 : 1;
+  }
+
+  return plugin.status === 'error' ? 3 : 2;
 };
 
 export const comparePlugins = (a: PluginInfo, b: PluginInfo): number => {
@@ -25,8 +28,15 @@ export const comparePlugins = (a: PluginInfo, b: PluginInfo): number => {
 };
 
 export const getChannelSortRank = (channel: TGChannel): number => {
-  if (!channel.is_enabled) return 2;
-  return channel.health_status === 'error' ? 0 : 1;
+  const healthStatus = channel.health_status || 'untested';
+
+  if (channel.is_enabled) {
+    return healthStatus === 'error' ? 0 : 1;
+  }
+
+  if (healthStatus === 'healthy') return 2;
+  if (healthStatus === 'untested') return 3;
+  return 4;
 };
 
 export const compareChannels = (a: TGChannel, b: TGChannel): number => {

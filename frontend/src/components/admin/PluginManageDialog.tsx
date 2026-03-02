@@ -44,8 +44,8 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
     const [isBatchTesting, setIsBatchTesting] = useState(false);
 
     const resolvePluginStatus = (plugin: PluginInfo): PluginInfo['status'] => {
-        if (!plugin.is_enabled) return 'inactive';
         if (plugin.status === 'error') return 'error';
+        if (!plugin.is_enabled) return 'inactive';
         return plugin.plugin_type === 'custom' ? 'custom' : 'active';
     };
     const sortedPlugins = useMemo(
@@ -78,13 +78,18 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                 setTestingStatus(prev => ({ ...prev, [plugin.name]: 'error' }));
                 setLocalPlugins(prev => prev.map(p =>
                     p.name === plugin.name
-                        ? { ...p, status: p.is_enabled ? 'error' : 'inactive' }
+                        ? { ...p, status: 'error' }
                         : p
                 ));
                 toast.error(`插件 ${plugin.name} 连通性测试失败`);
             }
         } catch {
             setTestingStatus(prev => ({ ...prev, [plugin.name]: 'error' }));
+            setLocalPlugins(prev => prev.map(p =>
+                p.name === plugin.name
+                    ? { ...p, status: 'error' }
+                    : p
+            ));
             toast.error(`插件 ${plugin.name} 测试出错`);
         }
 
@@ -196,7 +201,9 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                 return {
                     ...p,
                     is_enabled: nextEnabled,
-                    status: nextEnabled ? (p.plugin_type === 'custom' ? 'custom' : 'active') : 'inactive',
+                    status: p.status === 'error'
+                        ? 'error'
+                        : (nextEnabled ? (p.plugin_type === 'custom' ? 'custom' : 'active') : 'inactive'),
                 };
             }));
             setHasPendingChanges(true);

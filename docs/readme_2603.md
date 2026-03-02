@@ -32,3 +32,29 @@
 - frontend/src/types/api.ts
 
 ---
+
+### refactor(admin): 优化异常状态统计口径并移除频道手动排序功能
+
+**时间**: 2026-03-02
+
+**Body**: 
+1. 统一异常状态统计口径：插件和频道的异常状态现在包含启用和禁用的所有异常项，不再仅统计已启用的异常
+2. 移除频道管理对话框中的手动上下移动排序功能，简化交互逻辑
+3. 优化排序算法：禁用状态下按 healthy → untested → error 排序
+4. 修复插件状态显示逻辑：禁用插件测试失败后正确显示为异常状态
+5. 更新所有相关测试用例以覆盖新的排序和状态逻辑
+
+**Files**:
+- frontend/src/components/admin/ChannelManageDialog.tsx
+- frontend/src/components/admin/PluginManageDialog.tsx
+- frontend/src/components/admin/PluginPreviewDialog.tsx
+- frontend/src/components/admin/SystemInfoView.tsx
+- frontend/src/components/admin/__tests__/ChannelManageDialog.test.tsx
+- frontend/src/components/admin/__tests__/ChannelPreviewDialog.test.tsx
+- frontend/src/components/admin/__tests__/PluginManageDialog.test.tsx
+- frontend/src/components/admin/__tests__/PluginPreviewDialog.test.tsx
+- frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
+- frontend/src/components/admin/adminListSort.ts
+- frontend/src/components/admin/previewFilters.ts
+
+---

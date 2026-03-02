@@ -64,7 +64,7 @@ const channels = [
   },
   {
     id: 4,
-    name: 'channel-disabled-a',
+    name: 'channel-disabled-error',
     is_enabled: false,
     sort_order: 4,
     health_status: 'error',
@@ -74,10 +74,20 @@ const channels = [
   },
   {
     id: 5,
-    name: 'channel-disabled-b',
+    name: 'channel-disabled-healthy',
     is_enabled: false,
     sort_order: 5,
     health_status: 'healthy',
+    last_error: '',
+    created_at: '',
+    updated_at: '',
+  },
+  {
+    id: 6,
+    name: 'channel-disabled-untested',
+    is_enabled: false,
+    sort_order: 6,
+    health_status: 'untested',
     last_error: '',
     created_at: '',
     updated_at: '',
@@ -94,6 +104,12 @@ describe('ChannelManageDialog', () => {
           json: async () => ({ channels, total: channels.length }),
         };
       }
+      if (url.includes('/api/admin/channels/') && url.endsWith('/test')) {
+        return {
+          ok: true,
+          json: async () => ({ accessible: true }),
+        };
+      }
       return {
         ok: true,
         json: async () => ({}),
@@ -103,7 +119,7 @@ describe('ChannelManageDialog', () => {
     vi.stubGlobal('fetch', fetchMock);
   });
 
-  it('sorts channels with enabled errors first and disabled last', async () => {
+  it('sorts channels with disabled healthy then untested then error', async () => {
     render(
       <ChannelManageDialog
         isOpen
@@ -115,51 +131,43 @@ describe('ChannelManageDialog', () => {
 
     const errorNode = await screen.findByText('channel-enabled-error');
     const healthyNode = screen.getByText('channel-enabled-healthy-a');
-    const disabledNode = screen.getByText('channel-disabled-a');
+    const disabledHealthyNode = screen.getByText('channel-disabled-healthy');
+    const disabledUntestedNode = screen.getByText('channel-disabled-untested');
+    const disabledErrorNode = screen.getByText('channel-disabled-error');
 
     expect(errorNode.compareDocumentPosition(healthyNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(healthyNode.compareDocumentPosition(disabledNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(healthyNode.compareDocumentPosition(disabledHealthyNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(disabledHealthyNode.compareDocumentPosition(disabledUntestedNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(disabledUntestedNode.compareDocumentPosition(disabledErrorNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('only allows move within same rank group and sends swap requests', async () => {
+  it('removes manual move controls and keeps test action working', async () => {
+    const onSuccess = vi.fn();
     render(
       <ChannelManageDialog
         isOpen
         onClose={vi.fn()}
-        onSuccess={vi.fn()}
+        onSuccess={onSuccess}
         token="test-token"
       />
     );
 
     await screen.findByText('channel-enabled-error');
 
-    const errorUp = screen.getByLabelText('频道 channel-enabled-error 上移');
-    const errorDown = screen.getByLabelText('频道 channel-enabled-error 下移');
-    expect(errorUp).toBeDisabled();
-    expect(errorDown).toBeDisabled();
+    expect(screen.queryByLabelText('频道 channel-enabled-error 上移')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('频道 channel-enabled-error 下移')).not.toBeInTheDocument();
 
-    const firstHealthyUp = screen.getByLabelText('频道 channel-enabled-healthy-a 上移');
-    const firstHealthyDown = screen.getByLabelText('频道 channel-enabled-healthy-a 下移');
-    expect(firstHealthyUp).toBeDisabled();
-    expect(firstHealthyDown).toBeEnabled();
-
-    fireEvent.click(firstHealthyDown);
-
+    const testButtons = screen.getAllByRole('button', { name: '测试' });
+    fireEvent.click(testButtons[0]);
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/admin/channels/1',
-        expect.objectContaining({
-          method: 'PUT',
-          body: JSON.stringify({ sort_order: 3 }),
-        })
-      );
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/admin/channels/3',
-        expect.objectContaining({
-          method: 'PUT',
-          body: JSON.stringify({ sort_order: 1 }),
-        })
-      );
+      const fetchCalls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls;
+      const hasChannelTestRequest = fetchCalls.some(([url, init]) => {
+        return typeof url === 'string'
+          && /\/api\/admin\/channels\/.+\/test$/.test(url)
+          && (init as RequestInit | undefined)?.method === 'POST';
+      });
+      expect(hasChannelTestRequest).toBe(true);
     });
+    expect(onSuccess).toHaveBeenCalled();
   });
 });

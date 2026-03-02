@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { PluginManageDialog } from '../PluginManageDialog';
 import type { PluginInfo } from '@/types/api';
 
@@ -54,8 +54,16 @@ const plugins: PluginInfo[] = [
     description: 'builtin disabled',
   },
   {
-    name: 'custom-enabled',
+    name: 'builtin-disabled-error',
     priority: 3,
+    status: 'error',
+    plugin_type: 'builtin',
+    is_enabled: false,
+    description: 'builtin disabled error',
+  },
+  {
+    name: 'custom-enabled',
+    priority: 4,
     status: 'custom',
     plugin_type: 'custom',
     is_enabled: true,
@@ -107,7 +115,7 @@ describe('PluginManageDialog', () => {
     });
   });
 
-  it('sorts plugins by error first and disabled last', () => {
+  it('sorts plugins with disabled normals before disabled errors', () => {
     render(
       <PluginManageDialog
         isOpen
@@ -122,10 +130,29 @@ describe('PluginManageDialog', () => {
     const customNode = screen.getByText('custom-enabled');
     const enabledNode = screen.getByText('builtin-enabled');
     const disabledNode = screen.getByText('builtin-disabled');
+    const disabledErrorNode = screen.getByText('builtin-disabled-error');
 
     expect(errorNode.compareDocumentPosition(customNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(customNode.compareDocumentPosition(enabledNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(enabledNode.compareDocumentPosition(disabledNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(disabledNode.compareDocumentPosition(disabledErrorNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows disabled error plugin as error status', () => {
+    render(
+      <PluginManageDialog
+        isOpen
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        token="test-token"
+        plugins={plugins}
+      />
+    );
+
+    const disabledErrorNode = screen.getByText('builtin-disabled-error');
+    const disabledErrorRow = disabledErrorNode.closest('.bg-slate-50');
+    expect(disabledErrorRow).not.toBeNull();
+    expect(within(disabledErrorRow as HTMLElement).getByText('异常')).toBeInTheDocument();
   });
 
   it('moves plugin into disabled group after toggling off', async () => {
@@ -192,6 +219,46 @@ describe('PluginManageDialog', () => {
       expect(calls).toContain('/api/admin/plugins/builtin-enabled/test');
       expect(calls).toContain('/api/admin/plugins/custom-enabled/test');
       expect(calls).not.toContain('/api/admin/plugins/builtin-disabled/test');
+      expect(calls).not.toContain('/api/admin/plugins/builtin-disabled-error/test');
+    });
+  });
+
+  it('keeps disabled plugin as error when test fails', async () => {
+    const localPlugins: PluginInfo[] = [
+      {
+        name: 'disabled-normal',
+        priority: 10,
+        status: 'inactive',
+        plugin_type: 'builtin',
+        is_enabled: false,
+        description: 'disabled normal',
+      },
+    ];
+
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === '/api/admin/plugins/disabled-normal/test') {
+        return { ok: false, json: async () => ({ error: 'failed' }) };
+      }
+      return { ok: true, json: async () => ({}) };
+    }));
+
+    render(
+      <PluginManageDialog
+        isOpen
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        token="test-token"
+        plugins={localPlugins}
+      />
+    );
+
+    expect(screen.getByText('已停用')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '测试' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('异常')).toBeInTheDocument();
+      expect(screen.queryByText('已停用')).not.toBeInTheDocument();
     });
   });
 });

@@ -1,5 +1,4 @@
 import type { PluginInfo, TGChannel } from '@/types/api';
-import { getEffectivePluginStatus } from './adminListSort';
 
 export type UnifiedStatusFilter = 'all' | 'enabled' | 'disabled' | 'error';
 
@@ -14,12 +13,12 @@ export const isPluginMatchesStatusFilter = (plugin: PluginInfo, filter: UnifiedS
   if (filter === 'all') return true;
   if (filter === 'enabled') return plugin.is_enabled;
   if (filter === 'disabled') return !plugin.is_enabled;
-  return plugin.is_enabled && getEffectivePluginStatus(plugin) === 'error';
+  return plugin.status === 'error';
 };
 
 export const isChannelMatchesStatusFilter = (channel: TGChannel, filter: UnifiedStatusFilter): boolean => {
   if (filter === 'all') return true;
   if (filter === 'enabled') return channel.is_enabled;
   if (filter === 'disabled') return !channel.is_enabled;
-  return channel.is_enabled && (channel.health_status || 'untested') === 'error';
+  return (channel.health_status || 'untested') === 'error';
 };

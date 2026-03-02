@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Trash2, Loader2, CheckCircle2, XCircle, Radio, ToggleLeft, ToggleRight, Zap, GripVertical, ArrowUp, ArrowDown, PlayCircle } from 'lucide-react';
+import { X, Plus, Trash2, Loader2, CheckCircle2, XCircle, Radio, ToggleLeft, ToggleRight, Zap, PlayCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { ConfirmDialog } from './ConfirmDialog';
 import type { TGChannel, ListTGChannelsResponse } from '@/types/api';
-import { compareChannels, getChannelSortRank } from './adminListSort';
+import { compareChannels } from './adminListSort';
 
 interface ChannelManageDialogProps {
     isOpen: boolean;
@@ -69,26 +69,6 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
         () => [...channels].sort(compareChannels),
         [channels]
     );
-
-    const getGroupChannels = useCallback((channel: TGChannel) => {
-        const currentRank = getChannelSortRank(channel);
-        return displayChannels.filter((item) => getChannelSortRank(item) === currentRank);
-    }, [displayChannels]);
-
-    const findGroupSwapTarget = useCallback((channel: TGChannel, direction: 'up' | 'down') => {
-        const sameGroupChannels = getGroupChannels(channel);
-        const currentIndex = sameGroupChannels.findIndex((item) => item.id === channel.id);
-        if (currentIndex < 0) return null;
-
-        const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-        if (swapIndex < 0 || swapIndex >= sameGroupChannels.length) return null;
-
-        return sameGroupChannels[swapIndex];
-    }, [getGroupChannels]);
-
-    const canMoveChannel = useCallback((channel: TGChannel, direction: 'up' | 'down') => {
-        return findGroupSwapTarget(channel, direction) !== null;
-    }, [findGroupSwapTarget]);
 
     // 添加频道
     const handleAddChannel = async () => {
@@ -289,38 +269,6 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
         }, 10000);
     };
 
-    // 移动频道排序
-    const handleMoveChannel = async (channel: TGChannel, direction: 'up' | 'down') => {
-        const swapChannel = findGroupSwapTarget(channel, direction);
-        if (!swapChannel) return;
-
-        // 交换 sort_order
-        try {
-            await Promise.all([
-                fetch(`/api/admin/channels/${channel.id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ sort_order: swapChannel.sort_order }),
-                }),
-                fetch(`/api/admin/channels/${swapChannel.id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ sort_order: channel.sort_order }),
-                }),
-            ]);
-
-            await fetchChannels();
-        } catch {
-            toast.error('调整排序失败');
-        }
-    };
-
     // 获取测试状态图标
     const getTestIcon = (status: TestStatus) => {
         switch (status) {
@@ -342,7 +290,7 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
     };
 
     const enabledCount = channels.filter(ch => ch.is_enabled).length;
-    const enabledErrorCount = channels.filter(ch => ch.is_enabled && ch.health_status === 'error').length;
+    const errorCount = channels.filter(ch => ch.health_status === 'error').length;
 
     if (!isOpen) return null;
 
@@ -449,30 +397,8 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                                                     transition={{ delay: index * 0.03 }}
                                                     className="flex items-center justify-between p-3"
                                                 >
-                                                {/* 左侧：排序把手 + 状态点 + 频道名 */}
+                                                {/* 左侧：状态点 + 频道名 */}
                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                    {/* 排序控制 */}
-                                                    <div className="flex flex-col gap-0.5">
-                                                        <button
-                                                            onClick={() => handleMoveChannel(channel, 'up')}
-                                                            disabled={!canMoveChannel(channel, 'up')}
-                                                            aria-label={`频道 ${channel.name} 上移`}
-                                                            className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-colors"
-                                                        >
-                                                            <ArrowUp className="w-3 h-3 text-slate-500" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleMoveChannel(channel, 'down')}
-                                                            disabled={!canMoveChannel(channel, 'down')}
-                                                            aria-label={`频道 ${channel.name} 下移`}
-                                                            className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-colors"
-                                                        >
-                                                            <ArrowDown className="w-3 h-3 text-slate-500" />
-                                                        </button>
-                                                    </div>
-
-                                                    <GripVertical className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />
-
                                                     {/* 状态指示器 */}
                                                     <div className={`w-2 h-2 rounded-full shrink-0 ${channel.is_enabled ? 'bg-green-500' : 'bg-gray-400'
                                                         }`} />
@@ -578,7 +504,7 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                             <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                                 <div className="flex justify-between items-center">
                                     <span className="text-sm text-slate-500 dark:text-slate-400">
-                                        共 {channels.length} 个频道，{enabledCount} 个已启用，异常频道（已启用）{enabledErrorCount}
+                                        共 {channels.length} 个频道，{enabledCount} 个已启用，异常频道 {errorCount}
                                     </span>
                                     <div className="flex items-center gap-2">
                                         <Button

@@ -190,7 +190,8 @@ export const PluginPreviewDialog: React.FC<PluginPreviewDialogProps> = ({
                 ) : (
                   <div className="space-y-2">
                     {pagedPlugins.map((plugin, index) => {
-                      const effectiveStatus = getEffectivePluginStatus(plugin);
+                      const displayStatus =
+                        plugin.status === 'error' ? 'error' : getEffectivePluginStatus(plugin);
                       return (
                       <motion.div
                         key={plugin.name}
@@ -206,8 +207,8 @@ export const PluginPreviewDialog: React.FC<PluginPreviewDialogProps> = ({
                           <Badge variant="outline">优先级 {plugin.priority}</Badge>
                         </div>
                         <div>
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusClassName(effectiveStatus)}`}>
-                            {getStatusText(effectiveStatus)}
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusClassName(displayStatus)}`}>
+                            {getStatusText(displayStatus)}
                           </span>
                         </div>
                         <div className="min-w-0">

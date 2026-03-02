@@ -65,10 +65,15 @@ describe('ChannelPreviewDialog', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: '异常' }));
     expect(await screen.findByText('channel-1')).toBeInTheDocument();
+    expect(screen.getByText('channel-4')).toBeInTheDocument();
     expect(screen.queryByText('channel-3')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '禁用' }));
-    expect(await screen.findByText('channel-2')).toBeInTheDocument();
+    const disabledHealthyNode = await screen.findByText('channel-2');
+    const disabledUntestedNode = screen.getByText('channel-6');
+    const disabledErrorNode = screen.getByText('channel-4');
+    expect(disabledHealthyNode.compareDocumentPosition(disabledUntestedNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(disabledUntestedNode.compareDocumentPosition(disabledErrorNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByText('channel-1')).not.toBeInTheDocument();
   });
 });

@@ -47,11 +47,13 @@ describe('SystemInfoView', () => {
             plugins: [
               { name: 'plugin-alpha', priority: 1, status: 'active', plugin_type: 'builtin', is_enabled: true, description: 'alpha desc' },
               { name: 'plugin-beta', priority: 2, status: 'error', plugin_type: 'builtin', is_enabled: true, description: 'beta desc' },
+              { name: 'plugin-gamma', priority: 3, status: 'error', plugin_type: 'builtin', is_enabled: false, description: 'gamma desc' },
+              { name: 'plugin-delta', priority: 4, status: 'inactive', plugin_type: 'builtin', is_enabled: false, description: 'delta desc' },
             ],
             stats: {
-              plugin_count: 2,
+              plugin_count: 4,
               active_plugin_count: 1,
-              channel_count: 2,
+              channel_count: 3,
               cache_enabled: true,
               proxy_enabled: false,
               dau: 3,
@@ -91,18 +93,27 @@ describe('SystemInfoView', () => {
               },
               {
                 id: 2,
-                name: 'chan-disabled',
+                name: 'chan-disabled-error',
                 is_enabled: false,
                 sort_order: 2,
+                health_status: 'error',
+                created_at: '',
+                updated_at: '',
+              },
+              {
+                id: 3,
+                name: 'chan-disabled',
+                is_enabled: false,
+                sort_order: 3,
                 health_status: 'untested',
                 created_at: '',
                 updated_at: '',
               },
             ],
             health_summary: {
-              total: 2,
+              total: 3,
               healthy: 0,
-              error: 1,
+              error: 2,
               untested: 1,
               enabled_error: 1,
             },
@@ -124,7 +135,14 @@ describe('SystemInfoView', () => {
 
     await screen.findByText('Telegram 频道摘要');
     expect(screen.getByText('插件状态摘要')).toBeInTheDocument();
-    expect(screen.getByText(/异常仅统计已启用频道/)).toBeInTheDocument();
+    expect(screen.getByText(/异常包含启用与禁用频道/)).toBeInTheDocument();
+
+    const errorBlocks = screen.getAllByText('异常');
+    const errorValues = errorBlocks
+      .map((label) => label.parentElement?.querySelector('p:last-child')?.textContent?.trim())
+      .filter((value): value is string => Boolean(value));
+    expect(errorValues.filter((value) => value === '2').length).toBeGreaterThanOrEqual(2);
+
     expect(screen.queryByText('未测试')).not.toBeInTheDocument();
     expect(screen.queryByText('plugin-alpha')).not.toBeInTheDocument();
     expect(screen.queryByText('chan-alpha')).not.toBeInTheDocument();

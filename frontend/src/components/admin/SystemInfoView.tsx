@@ -94,13 +94,13 @@ const fetchChannelSummary = async (token: string): Promise<{ total: number; enab
   const total = channels.length;
   const enabled = channels.filter((channel) => channel.is_enabled).length;
   const healthSummary = data?.health_summary;
-  const fallbackError = channels.filter((channel) => channel.is_enabled && (channel.health_status || 'untested') === 'error').length;
+  const fallbackError = channels.filter((channel) => (channel.health_status || 'untested') === 'error').length;
 
   return {
     total,
     enabled,
     disabled: total - enabled,
-    error: typeof healthSummary?.enabled_error === 'number' ? healthSummary.enabled_error : fallbackError,
+    error: typeof healthSummary?.error === 'number' ? healthSummary.error : fallbackError,
   };
 };
 
@@ -209,8 +209,8 @@ export const SystemInfoView: React.FC = () => {
   const pluginSummary = useMemo(() => {
     const plugins = systemInfo?.plugins ?? [];
     const active = plugins.filter((plugin) => plugin.is_enabled && (plugin.status === 'active' || plugin.status === 'custom')).length;
-    const error = plugins.filter((plugin) => plugin.is_enabled && plugin.status === 'error').length;
-    const inactive = plugins.filter((plugin) => !plugin.is_enabled || plugin.status === 'inactive').length;
+    const error = plugins.filter((plugin) => plugin.status === 'error').length;
+    const inactive = plugins.filter((plugin) => plugin.status !== 'error' && (!plugin.is_enabled || plugin.status === 'inactive')).length;
 
     return {
       total: plugins.length,
@@ -356,7 +356,7 @@ export const SystemInfoView: React.FC = () => {
             </div>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            口径说明：总频道来自数据库，启用/禁用根据频道开关状态统计，异常仅统计已启用频道。
+            口径说明：总频道来自数据库，启用/禁用根据频道开关状态统计，异常包含启用与禁用频道。
           </p>
         </CardContent>
       </Card>
