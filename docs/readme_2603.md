@@ -199,3 +199,24 @@ refactor(scripts): 优化备份管理脚本并新增手动清理功能
 - scripts/deploy-update.sh
 
 ---
+
+## 2026-03-04 14:25:21
+
+### Commit
+```
+feat(frontend): 新增免责声明页面及底部链接组件
+```
+
+### Body
+新增 DisclaimerPage 页面展示平台免责声明，包含服务性质、版权归属、用户义务、风险提示、侵权处理及条款更新等 6 个核心条款。新增 DisclaimerFooter 组件在非管理员路由底部显示免责声明链接。重构 App.tsx 将路由逻辑提取为 AppLayout 组件，支持条件渲染底部组件。新增 disclaimer.ts 工具函数判断路由是否显示免责声明。包含完整的单元测试覆盖。
+
+### Files
+- frontend/src/App.tsx
+- frontend/src/components/DisclaimerFooter.tsx
+- frontend/src/components/__tests__/DisclaimerFooter.test.tsx
+- frontend/src/components/__tests__/DisclaimerFooterVisibility.test.tsx
+- frontend/src/lib/disclaimer.ts
+- frontend/src/pages/DisclaimerPage.tsx
+- frontend/src/pages/__tests__/DisclaimerPage.test.tsx
+
+---
