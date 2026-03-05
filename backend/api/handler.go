@@ -2,6 +2,7 @@ package api
 
 import (
 	// "fmt"
+	"log"
 	"net/http"
 	// "os"
 
@@ -308,7 +309,20 @@ func SearchHandler(c *gin.Context) {
 	// 更新 first_used_at（如果是首次使用）、today_search_count、last_search_date
 	if err := apiKeyService.UpdateAPIKeyUsage(apiKeyStr); err != nil {
 		// 记录错误但不影响搜索结果返回
-		// 可以考虑记录日志：log.Printf("更新 API Key 使用统计失败: %v", err)
+		log.Printf("⚠ 更新 API Key 使用统计失败: %v", err)
+	}
+
+	// 更新 API Key 最后登录时间
+	if err := apiKeyService.UpdateLastLoginAt(apiKeyStr); err != nil {
+		log.Printf("⚠ 更新 API Key 最后登录时间失败: %v", err)
+	}
+
+	// 如果 API Key 绑定了用户，同步更新用户最后登录时间
+	if apiKey.UserID != nil {
+		authService := service.NewAuthService()
+		if err := authService.UpdateLastLoginAtByUserID(*apiKey.UserID); err != nil {
+			log.Printf("⚠ 更新用户最后登录时间失败: user_id=%d err=%v", *apiKey.UserID, err)
+		}
 	}
 
 	// 包装SearchResponse到标准响应格式中

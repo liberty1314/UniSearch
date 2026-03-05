@@ -177,6 +177,26 @@ func (s *AuthService) Login(username, password string) (token string, user *mode
 	return token, &dbUser, permanentAPIKey, nil
 }
 
+// UpdateLastLoginAtByUserID 根据用户ID更新最后登录时间
+func (s *AuthService) UpdateLastLoginAtByUserID(userID uint) error {
+	if userID == 0 {
+		return errors.New("用户ID不能为空")
+	}
+
+	now := time.Now()
+	result := s.db.Model(&model.User{}).
+		Where("id = ?", userID).
+		Update("last_login_at", now)
+	if result.Error != nil {
+		return fmt.Errorf("更新最后登录时间失败: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
+	return nil
+}
+
 // ValidateToken 验证 JWT Token
 // 参数：
 //   - tokenString: JWT Token 字符串

@@ -220,3 +220,19 @@ feat(frontend): 新增免责声明页面及底部链接组件
 - frontend/src/pages/__tests__/DisclaimerPage.test.tsx
 
 ---
+
+## 2026-03-05 14:32:51
+
+### Commit
+```
+feat(search): 新增搜索时同步更新用户最后登录时间功能
+```
+
+### Body
+在搜索接口中新增逻辑，当 API Key 绑定用户时，同步更新用户的 last_login_at 字段，确保用户活跃度统计的准确性。同时优化了错误日志输出格式。
+
+### Files
+- backend/api/handler.go
+- backend/service/auth_service.go
+
+---
