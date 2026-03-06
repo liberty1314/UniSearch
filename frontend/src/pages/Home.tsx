@@ -135,7 +135,7 @@ const Home: React.FC = () => {
         <div className="max-w-6xl mx-auto">
           {!hasSearched ? (
             /* 首页内容 */
-            <div className="space-y-16 pb-40">
+            <div className="space-y-16 pb-24">
               {/* 功能特色 - 增强视觉设计 */}
               <div>
                 <motion.div

@@ -375,3 +375,23 @@ feat(user): 新增搜索权限状态管理并优化 API Key 绑定流程
 - frontend/src/types/api.ts
 
 ---
+
+## 2026-03-06 20:35:12
+
+### Commit
+```
+feat(frontend): 新增统一站点底部组件并重构 Button 为标准 shadcn/ui 实现
+```
+
+### Body
+新增 SiteFooter 和 Footer 通用组件，替换原有的 DisclaimerFooter；重构 Button 组件从 AppleButton 兼容层改为标准 shadcn/ui 实现，支持 loading 状态和多种变体；调整首页底部间距以适配新底部组件。
+
+### Files
+- frontend/src/components/SiteFooter.tsx
+- frontend/src/components/ui/button.tsx
+- frontend/src/components/ui/demo.tsx
+- frontend/src/components/ui/footer.tsx
+- frontend/src/pages/Home.tsx
+- frontend/src/routes/AppRoutes.tsx
+
+---

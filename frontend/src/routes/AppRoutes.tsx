@@ -3,9 +3,8 @@ import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import Navbar from '@/components/Navbar';
 import { AnnouncementProvider } from '@/components/AnnouncementProvider';
-import DisclaimerFooter from '@/components/DisclaimerFooter';
+import SiteFooter from '@/components/SiteFooter';
 import PageTransition from '@/components/PageTransition';
-import { shouldShowDisclaimer } from '@/lib/disclaimer';
 import ScrollToTop from './ScrollToTop';
 import {
   AdminGuestRoute,
@@ -64,7 +63,11 @@ const NotFoundPage: React.FC = () => (
 
 const AppRoutes: React.FC = () => {
   const { pathname } = useLocation();
-  const showDisclaimer = shouldShowDisclaimer(pathname);
+  const showSiteFooter =
+    !pathname.startsWith('/admin') &&
+    !pathname.startsWith('/login') &&
+    !pathname.startsWith('/register') &&
+    !pathname.startsWith('/auth');
 
   return (
     <div className="bg-gray-50 dark:bg-slate-950 transition-colors duration-200">
@@ -138,7 +141,7 @@ const AppRoutes: React.FC = () => {
         </PageTransition>
       </main>
 
-      {showDisclaimer && <DisclaimerFooter />}
+      {showSiteFooter && <SiteFooter />}
       <Toaster {...TOAST_CONFIG} />
     </div>
   );
