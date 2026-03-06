@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![React Version](https://img.shields.io/badge/React-18.3-61DAFB?style=flat&logo=react)](https://react.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -111,7 +111,7 @@
 
 ### 后端技术栈
 
-- **框架**: Go 1.24 + Gin Web Framework
+- **框架**: Go 1.24.1+ + Gin Web Framework
 - **数据库**: MySQL 8.0 + GORM ORM
 - **认证**: JWT Token + Bcrypt 密码加密
 - **特性**: 
@@ -174,7 +174,7 @@
 
 ### 环境要求
 
-- **Go**: 1.23 或更高版本
+- **Go**: 1.24.1 或更高版本
 - **Node.js**: 18 或更高版本
 - **pnpm**: 最新版本
 - **MySQL**: 8.0 或更高版本
@@ -192,6 +192,7 @@ cd UniSearch
 # 配置环境变量
 cp .env.example .env
 # 编辑 .env 文件，配置数据库连接信息
+# 如需本地覆盖，不要直接改容器默认值，新增 .env.local 即可
 
 # 启动 MySQL 数据库
 # macOS: brew install mysql && brew services start mysql
@@ -213,6 +214,7 @@ mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS unisearch CHARACTER SET utf8m
 - ✅ 自动执行数据库迁移
 - ✅ 并行启动前后端服务
 - ✅ 实时显示服务状态
+- ✅ 支持 `.env.local` 覆盖本地开发配置
 
 **首次启动说明：**
 - 系统会自动创建数据库表结构
@@ -254,6 +256,20 @@ docker-compose logs -f
 # 停止服务
 docker-compose down
 ```
+
+### CI 检查
+
+仓库级 CI 会在干净环境中统一执行以下命令：
+
+```bash
+cd backend && go test ./...
+cd frontend && pnpm run lint
+cd frontend && pnpm run check
+cd frontend && pnpm test --run
+cd frontend && pnpm run build
+```
+
+建议在提交前本地先跑一遍，确保与 CI 结果一致。
 
 ---
 

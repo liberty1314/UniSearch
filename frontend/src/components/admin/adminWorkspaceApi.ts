@@ -6,6 +6,20 @@ interface BatchLikeResult {
   failed?: Array<{ error?: string }>;
 }
 
+type AuthorizedRequestOptions = Omit<RequestInit, 'headers' | 'body'> & {
+  body?: unknown;
+  includeJson?: boolean;
+};
+
+const isBodyInit = (value: unknown): value is BodyInit =>
+  typeof value === 'string' ||
+  value instanceof Blob ||
+  value instanceof FormData ||
+  value instanceof URLSearchParams ||
+  value instanceof ArrayBuffer ||
+  ArrayBuffer.isView(value) ||
+  value instanceof ReadableStream;
+
 export const buildAuthHeaders = (token: string, includeJson = false): HeadersInit => {
   if (includeJson) {
     return {
@@ -33,6 +47,51 @@ export const readErrorMessage = async (
     // ignore parse error
   }
   return fallbackMessage;
+};
+
+export const getRequestErrorMessage = (
+  error: unknown,
+  fallbackMessage: string
+): string => {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  return fallbackMessage;
+};
+
+export const requestAuthed = async (
+  url: string,
+  token: string,
+  fallbackMessage: string,
+  options: AuthorizedRequestOptions = {}
+): Promise<Response> => {
+  const { body, includeJson, ...rest } = options;
+  const shouldUseJson =
+    includeJson ?? (body !== undefined && !isBodyInit(body));
+  const requestBody: BodyInit | undefined =
+    body === undefined ? undefined : isBodyInit(body) ? body : JSON.stringify(body);
+
+  const response = await fetch(url, {
+    ...rest,
+    headers: buildAuthHeaders(token, shouldUseJson),
+    body: requestBody,
+  });
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, fallbackMessage));
+  }
+
+  return response;
+};
+
+export const requestAuthedJson = async <T>(
+  url: string,
+  token: string,
+  fallbackMessage: string,
+  options: AuthorizedRequestOptions = {}
+): Promise<T> => {
+  const response = await requestAuthed(url, token, fallbackMessage, options);
+  return (await response.json()) as T;
 };
 
 export const toastBatchResult = (

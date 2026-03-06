@@ -12,6 +12,7 @@ import {
   type UnifiedStatusFilter,
   isPluginMatchesStatusFilter,
 } from './previewFilters';
+import { usePagedListScrollReset } from '@/hooks/usePagedListScrollReset';
 
 interface PluginPreviewDialogProps {
   isOpen: boolean;
@@ -90,15 +91,7 @@ export const PluginPreviewDialog: React.FC<PluginPreviewDialogProps> = ({
     }
   }, [currentPage, totalPages]);
 
-  useEffect(() => {
-    const container = listContainerRef.current;
-    if (!container) return;
-    if (typeof container.scrollTo === 'function') {
-      container.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-    container.scrollTop = 0;
-  }, [currentPage]);
+  usePagedListScrollReset(listContainerRef, currentPage);
 
   const pagedPlugins = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;

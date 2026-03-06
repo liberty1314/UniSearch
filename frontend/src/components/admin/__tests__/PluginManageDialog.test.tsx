@@ -8,13 +8,13 @@ import { toast } from 'sonner';
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement> & Record<string, unknown>) => {
-      const { initial, animate, exit, transition, whileHover, whileTap, ...rest } = props;
-      void initial; void animate; void exit; void transition; void whileHover; void whileTap;
+      const { initial, animate, exit, transition, whileHover, whileTap, layout, layoutId, ...rest } = props;
+      void initial; void animate; void exit; void transition; void whileHover; void whileTap; void layout; void layoutId;
       return <div {...rest}>{children}</div>;
     },
     button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>) => {
-      const { initial, animate, exit, transition, whileHover, whileTap, ...rest } = props;
-      void initial; void animate; void exit; void transition; void whileHover; void whileTap;
+      const { initial, animate, exit, transition, whileHover, whileTap, layout, layoutId, ...rest } = props;
+      void initial; void animate; void exit; void transition; void whileHover; void whileTap; void layout; void layoutId;
       return <button {...rest}>{children}</button>;
     },
   },

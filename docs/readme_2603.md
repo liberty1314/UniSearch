@@ -236,3 +236,73 @@ feat(search): 新增搜索时同步更新用户最后登录时间功能
 - backend/service/auth_service.go
 
 ---
+
+## 2026-03-06 16:09:39
+
+### Commit
+```
+refactor(frontend): 重构 Admin 页面并优化路由和构建配置
+```
+
+### Body
+将 Admin 页面拆分为独立的视图组件和视图模型，提升代码可维护性；新增路由守卫和滚动管理；优化 Vite 构建配置实现代码分割；修复 UserApiKeySettings 的 finally 块逻辑；优化本地开发脚本支持 .env.local 覆盖配置。
+
+### Files
+- .github/workflows/ci.yml
+- .gitignore
+- README.md
+- backend/plugin/http_helpers.go
+- backend/plugin/kkmao/kkmao.go
+- backend/plugin/kkmao/kkmao_test.go
+- backend/plugin/xuexizhinan/xuexizhinan.go
+- backend/plugin/xuexizhinan/xuexizhinan_test.go
+- backend/service/search_cache.go
+- backend/service/search_executor.go
+- backend/service/search_executor_test.go
+- backend/service/search_metrics.go
+- backend/service/search_plugin_selector.go
+- backend/service/search_plugin_selector_test.go
+- backend/service/search_request.go
+- backend/service/search_request_test.go
+- backend/service/search_response_builder.go
+- backend/service/search_response_builder_test.go
+- backend/service/search_result_merger.go
+- backend/service/search_result_merger_test.go
+- backend/service/search_service.go
+- frontend/src/App.tsx
+- frontend/src/components/admin/AdminApiKeysView.tsx
+- frontend/src/components/admin/AdminUsersView.tsx
+- frontend/src/components/admin/AdminWorkspaceFooter.tsx
+- frontend/src/components/admin/AdminWorkspaceToolbar.tsx
+- frontend/src/components/admin/ChannelAddDialog.tsx
+- frontend/src/components/admin/ChannelManageDialog.tsx
+- frontend/src/components/admin/ChannelManageWorkspace.tsx
+- frontend/src/components/admin/ChannelPreviewDialog.tsx
+- frontend/src/components/admin/PluginAddDialog.tsx
+- frontend/src/components/admin/PluginManageDialog.tsx
+- frontend/src/components/admin/PluginManageWorkspace.tsx
+- frontend/src/components/admin/PluginPreviewDialog.tsx
+- frontend/src/components/admin/__tests__/ChannelManageDialog.test.tsx
+- frontend/src/components/admin/__tests__/PluginManageDialog.test.tsx
+- frontend/src/components/admin/adminWorkspaceApi.ts
+- frontend/src/components/admin/channelManageDialogShared.ts
+- frontend/src/components/admin/channelManageStateUtils.ts
+- frontend/src/components/admin/pluginManageDialogShared.ts
+- frontend/src/components/admin/pluginManageStateUtils.ts
+- frontend/src/components/admin/workspaceSelection.ts
+- frontend/src/hooks/useAdminPageController.ts
+- frontend/src/hooks/useChannelManageController.ts
+- frontend/src/hooks/usePagedListScrollReset.ts
+- frontend/src/hooks/usePluginManageController.ts
+- frontend/src/hooks/usePluginManageDialogState.ts
+- frontend/src/hooks/useWorkspaceTestStatus.ts
+- frontend/src/hooks/useWorkspaceTimeoutManager.ts
+- frontend/src/pages/Admin.tsx
+- frontend/src/pages/UserApiKeySettings.tsx
+- frontend/src/routes/AppRoutes.tsx
+- frontend/src/routes/RouteGuards.tsx
+- frontend/src/routes/ScrollToTop.tsx
+- frontend/vite.config.ts
+- scripts/local.sh
+
+---

@@ -14,6 +14,27 @@ export default defineConfig(() => {
     },
     build: {
       sourcemap: 'hidden' as const,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'react-vendor': ['react', 'react-dom'],
+            'router-vendor': ['react-router-dom'],
+            'motion-vendor': ['framer-motion', 'motion'],
+            'radix-vendor': [
+              '@radix-ui/react-alert-dialog',
+              '@radix-ui/react-checkbox',
+              '@radix-ui/react-dialog',
+              '@radix-ui/react-label',
+              '@radix-ui/react-scroll-area',
+              '@radix-ui/react-select',
+              '@radix-ui/react-slot',
+              '@radix-ui/react-tabs',
+            ],
+            'forms-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
+            'ui-vendor': ['lucide-react', 'sonner', 'zustand', 'axios', 'date-fns'],
+          },
+        },
+      },
     },
     server: {
       proxy: {

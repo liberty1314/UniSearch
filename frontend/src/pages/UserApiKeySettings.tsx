@@ -191,14 +191,12 @@ const UserApiKeySettings: React.FC = () => {
 
             return null;
         } finally {
-            if (cancelled()) {
-                return null;
-            }
-
-            if (background) {
-                setIsRefreshing(false);
-            } else {
-                setIsInitialLoading(false);
+            if (!cancelled()) {
+                if (background) {
+                    setIsRefreshing(false);
+                } else {
+                    setIsInitialLoading(false);
+                }
             }
         }
     }, []);

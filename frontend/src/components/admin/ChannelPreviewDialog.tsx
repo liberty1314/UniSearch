@@ -13,6 +13,7 @@ import {
   type UnifiedStatusFilter,
   isChannelMatchesStatusFilter,
 } from './previewFilters';
+import { usePagedListScrollReset } from '@/hooks/usePagedListScrollReset';
 
 interface ChannelPreviewDialogProps {
   isOpen: boolean;
@@ -96,15 +97,7 @@ export const ChannelPreviewDialog: React.FC<ChannelPreviewDialogProps> = ({
     }
   }, [currentPage, totalPages]);
 
-  useEffect(() => {
-    const container = listContainerRef.current;
-    if (!container) return;
-    if (typeof container.scrollTo === 'function') {
-      container.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-    container.scrollTop = 0;
-  }, [currentPage]);
+  usePagedListScrollReset(listContainerRef, currentPage);
 
   const pagedChannels = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;

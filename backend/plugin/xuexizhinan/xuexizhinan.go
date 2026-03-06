@@ -28,6 +28,10 @@ const (
 
 	// 并发数限制
 	MaxConcurrency = 8 // 提高并发数以提高性能
+
+	searchMaxRetries = 3
+	detailMaxRetries = 2
+	retryBaseDelay   = 200 * time.Millisecond
 )
 
 // 预编译正则表达式
@@ -116,8 +120,7 @@ func (p *XuexizhinanPlugin) doSearch(client *http.Client, keyword string, ext ma
 	if err != nil {
 		return nil, fmt.Errorf("创建请求失败: %w", err)
 	}
-
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
+	plugin.ApplyBrowserHeaders(req, "https://xuexizhinan.com/")
 
 	// 添加请求超时控制
 	ctx, cancel := context.WithTimeout(req.Context(), DefaultTimeout)
@@ -125,7 +128,7 @@ func (p *XuexizhinanPlugin) doSearch(client *http.Client, keyword string, ext ma
 	req = req.WithContext(ctx)
 
 	// 发送请求
-	resp, err := client.Do(req)
+	resp, err := plugin.DoRequestWithRetry(req, client, searchMaxRetries, retryBaseDelay)
 	if err != nil {
 		return nil, fmt.Errorf("请求失败: %w", err)
 	}
@@ -137,53 +140,13 @@ func (p *XuexizhinanPlugin) doSearch(client *http.Client, keyword string, ext ma
 	}
 
 	// 解析HTML
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	doc, err := plugin.ParseHTMLDocument(resp)
 	if err != nil {
 		return nil, fmt.Errorf("解析HTML失败: %w", err)
 	}
 
 	// 提取搜索结果
-	type searchItem struct {
-		url   string
-		title string
-	}
-
-	// 将关键词转为小写，用于不区分大小写的比较
-	lowerKeywords := strings.ToLower(keyword)
-	// 将关键词按空格分割，用于支持多关键词搜索
-	keywords := strings.Fields(lowerKeywords)
-
-	// 存储符合条件的搜索项
-	var validItems []searchItem
-
-	// 使用更高效的选择器直接获取所有链接和标题
-	doc.Find(".url-card").Each(func(i int, s *goquery.Selection) {
-		// 提取标题和链接
-		titleElem := s.Find(".list-title")
-		title := strings.TrimSpace(titleElem.Text())
-		link, exists := titleElem.Attr("href")
-
-		if !exists || link == "" || title == "" {
-			return
-		}
-
-		// 标题转小写，用于不区分大小写的比较
-		lowerTitle := strings.ToLower(title)
-
-		// 检查标题是否包含所有关键词
-		matched := true
-		for _, kw := range keywords {
-			if !strings.Contains(lowerTitle, kw) {
-				matched = false
-				break
-			}
-		}
-
-		// 如果标题包含所有关键词，则添加到有效项中
-		if matched {
-			validItems = append(validItems, searchItem{url: link, title: title})
-		}
-	})
+	validItems := extractSearchItems(doc, keyword)
 
 	// 如果没有搜索结果，返回空结果
 	if len(validItems) == 0 {
@@ -252,6 +215,37 @@ func (p *XuexizhinanPlugin) doSearch(client *http.Client, keyword string, ext ma
 	return nil, nil
 }
 
+type searchItem struct {
+	url   string
+	title string
+}
+
+func extractSearchItems(doc *goquery.Document, keyword string) []searchItem {
+	lowerKeywords := strings.ToLower(keyword)
+	keywords := strings.Fields(lowerKeywords)
+
+	var validItems []searchItem
+	doc.Find(".url-card").Each(func(i int, s *goquery.Selection) {
+		titleElem := s.Find(".list-title")
+		title := strings.TrimSpace(titleElem.Text())
+		link, exists := titleElem.Attr("href")
+		if !exists || link == "" || title == "" {
+			return
+		}
+
+		lowerTitle := strings.ToLower(title)
+		for _, kw := range keywords {
+			if !strings.Contains(lowerTitle, kw) {
+				return
+			}
+		}
+
+		validItems = append(validItems, searchItem{url: link, title: title})
+	})
+
+	return validItems
+}
+
 // processDetailPage 处理详情页，提取网盘链接和资源信息
 func (p *XuexizhinanPlugin) processDetailPage(client *http.Client, detailURL string) (*model.SearchResult, error) {
 	// 检查缓存
@@ -275,8 +269,7 @@ func (p *XuexizhinanPlugin) processDetailPage(client *http.Client, detailURL str
 	if err != nil {
 		return nil, fmt.Errorf("创建请求失败: %w", err)
 	}
-
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
+	plugin.ApplyBrowserHeaders(req, "https://xuexizhinan.com/")
 
 	// 添加请求超时控制
 	ctx, cancel := context.WithTimeout(req.Context(), DefaultTimeout)
@@ -284,7 +277,7 @@ func (p *XuexizhinanPlugin) processDetailPage(client *http.Client, detailURL str
 	req = req.WithContext(ctx)
 
 	// 发送请求
-	resp, err := client.Do(req)
+	resp, err := plugin.DoRequestWithRetry(req, client, detailMaxRetries, retryBaseDelay)
 	if err != nil {
 		return nil, fmt.Errorf("请求失败: %w", err)
 	}
@@ -296,7 +289,7 @@ func (p *XuexizhinanPlugin) processDetailPage(client *http.Client, detailURL str
 	}
 
 	// 解析HTML
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	doc, err := plugin.ParseHTMLDocument(resp)
 	if err != nil {
 		return nil, fmt.Errorf("解析HTML失败: %w", err)
 	}

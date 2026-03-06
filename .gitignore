@@ -165,6 +165,10 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
+frontend/dist/
+backend/backend
+backend/*.test
+backend/refresh_tokens.dat
 
 # Gatsby files
 .cache/
@@ -233,6 +237,8 @@ pids
 
 # Optional cache
 .cache
+frontend/.vite/
+frontend/coverage/
 
 # Backup files
 *.bak

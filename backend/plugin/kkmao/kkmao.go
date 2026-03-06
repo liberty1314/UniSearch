@@ -88,19 +88,15 @@ func (p *KkMaoPlugin) SearchWithResult(keyword string, ext map[string]interface{
 }
 
 func newHTTPClient() *http.Client {
-	transport := &http.Transport{
+	return plugin.NewPooledHTTPClient(plugin.HTTPClientOptions{
+		Timeout:               searchTimeout,
 		MaxIdleConns:          maxIdleConns,
 		MaxIdleConnsPerHost:   maxIdlePerHost,
 		MaxConnsPerHost:       maxConnsPerHost,
 		IdleConnTimeout:       idleConnLifetime,
 		TLSHandshakeTimeout:   tlsHandshakeTimeout,
 		ExpectContinueTimeout: expectContinueTimeout,
-		ForceAttemptHTTP2:     true,
-	}
-	return &http.Client{
-		Transport: transport,
-		Timeout:   searchTimeout,
-	}
+	})
 }
 
 func (p *KkMaoPlugin) searchImpl(client *http.Client, keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
@@ -117,7 +113,7 @@ func (p *KkMaoPlugin) searchImpl(client *http.Client, keyword string, ext map[st
 		return nil, fmt.Errorf("[%s] 创建请求失败: %w", p.Name(), err)
 	}
 
-	setCommonHeaders(req, "https://www.kuakemao.com/")
+	plugin.ApplyBrowserHeaders(req, "https://www.kuakemao.com/")
 
 	resp, err := p.doRequestWithRetry(req, client, searchMaxRetries, retryBaseDelay)
 	if err != nil {
@@ -129,7 +125,7 @@ func (p *KkMaoPlugin) searchImpl(client *http.Client, keyword string, ext map[st
 		return nil, fmt.Errorf("[%s] 搜索返回状态码: %d", p.Name(), resp.StatusCode)
 	}
 
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	doc, err := plugin.ParseHTMLDocument(resp)
 	if err != nil {
 		return nil, fmt.Errorf("[%s] 解析搜索页面失败: %w", p.Name(), err)
 	}
@@ -243,7 +239,7 @@ func (p *KkMaoPlugin) fetchDetailLinks(client *http.Client, detailURL, articleID
 	if err != nil {
 		return nil
 	}
-	setCommonHeaders(req, detailURL)
+	plugin.ApplyBrowserHeaders(req, detailURL)
 
 	resp, err := p.doRequestWithRetry(req, client, detailMaxRetries, retryBaseDelay)
 	if err != nil {
@@ -255,7 +251,7 @@ func (p *KkMaoPlugin) fetchDetailLinks(client *http.Client, detailURL, articleID
 		return nil
 	}
 
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	doc, err := plugin.ParseHTMLDocument(resp)
 	if err != nil {
 		return nil
 	}
@@ -351,33 +347,8 @@ func matchPassword(text string) string {
 	return ""
 }
 
-func setCommonHeaders(req *http.Request, referer string) {
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
-	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
-	req.Header.Set("Connection", "keep-alive")
-	req.Header.Set("Referer", referer)
-}
-
 func (p *KkMaoPlugin) doRequestWithRetry(req *http.Request, client *http.Client, maxRetries int, baseDelay time.Duration) (*http.Response, error) {
-	var lastErr error
-
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		resp, err := client.Do(req.Clone(req.Context()))
-		if err == nil && resp.StatusCode == http.StatusOK {
-			return resp, nil
-		}
-		if resp != nil {
-			resp.Body.Close()
-		}
-		lastErr = err
-		if attempt < maxRetries-1 {
-			backoff := baseDelay * time.Duration(1<<attempt)
-			time.Sleep(backoff)
-		}
-	}
-
-	return nil, fmt.Errorf("重试 %d 次后失败: %w", maxRetries, lastErr)
+	return plugin.DoRequestWithRetry(req, client, maxRetries, baseDelay)
 }
 
 func startDetailCacheCleaner() {
