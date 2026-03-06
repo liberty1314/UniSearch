@@ -81,7 +81,7 @@ const RegisterPage: React.FC = () => {
         setIsLoading(true);
         try {
             await AuthService.register(username.trim(), password);
-            toast.success('注册成功！请登录');
+            toast.success('注册成功，请先登录；登录后绑定 API Key 即可搜索');
             navigate('/login');
         } catch (error) {
             console.error('Register failed:', error);

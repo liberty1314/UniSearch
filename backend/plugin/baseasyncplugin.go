@@ -211,6 +211,25 @@ type BaseAsyncPlugin struct {
 	skipServiceFilter  bool                                                                  // 是否跳过Service层的关键词过滤
 }
 
+func newBasePluginHTTPClient(timeout time.Duration, maxIdleConnsPerHost int, maxConnsPerHost int) *http.Client {
+	if maxIdleConnsPerHost <= 0 {
+		maxIdleConnsPerHost = 32
+	}
+	if maxConnsPerHost <= 0 {
+		maxConnsPerHost = maxIdleConnsPerHost * 2
+	}
+
+	return NewPooledHTTPClient(HTTPClientOptions{
+		Timeout:               timeout,
+		MaxIdleConns:          maxConnsPerHost * 2,
+		MaxIdleConnsPerHost:   maxIdleConnsPerHost,
+		MaxConnsPerHost:       maxConnsPerHost,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	})
+}
+
 // NewBaseAsyncPlugin 创建基础异步插件
 func NewBaseAsyncPlugin(name string, priority int) *BaseAsyncPlugin {
 	// 确保异步插件已初始化
@@ -231,14 +250,10 @@ func NewBaseAsyncPlugin(name string, priority int) *BaseAsyncPlugin {
 	}
 
 	return &BaseAsyncPlugin{
-		name:     name,
-		priority: priority,
-		client: &http.Client{
-			Timeout: responseTimeout,
-		},
-		backgroundClient: &http.Client{
-			Timeout: processingTimeout,
-		},
+		name:               name,
+		priority:           priority,
+		client:             newBasePluginHTTPClient(responseTimeout, 16, 32),
+		backgroundClient:   newBasePluginHTTPClient(processingTimeout, 32, 64),
 		cacheTTL:           cacheTTL,
 		finalUpdateTracker: make(map[string]bool), // 初始化缓存更新追踪器
 		skipServiceFilter:  false,                 // 默认不跳过Service层过滤
@@ -265,14 +280,10 @@ func NewBaseAsyncPluginWithFilter(name string, priority int, skipServiceFilter b
 	}
 
 	return &BaseAsyncPlugin{
-		name:     name,
-		priority: priority,
-		client: &http.Client{
-			Timeout: responseTimeout,
-		},
-		backgroundClient: &http.Client{
-			Timeout: processingTimeout,
-		},
+		name:               name,
+		priority:           priority,
+		client:             newBasePluginHTTPClient(responseTimeout, 16, 32),
+		backgroundClient:   newBasePluginHTTPClient(processingTimeout, 32, 64),
 		cacheTTL:           cacheTTL,
 		finalUpdateTracker: make(map[string]bool), // 初始化缓存更新追踪器
 		skipServiceFilter:  skipServiceFilter,     // 使用传入的过滤设置

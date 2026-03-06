@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"unisearch/config"
 )
 
 type SearchMetricsRecorder struct {
@@ -59,13 +61,18 @@ func (r *SearchMetricsRecorder) RecordSearch(scope string, keyword string, durat
 	}
 	r.mu.Unlock()
 
-	logSearchEvent("search", map[string]interface{}{
+	fields := map[string]interface{}{
 		"scope":        scope,
 		"keyword":      keyword,
 		"duration_ms":  duration.Milliseconds(),
 		"result_count": resultCount,
 		"error_class":  classifySearchError(err),
-	})
+	}
+	if err != nil {
+		logSearchEvent("search", fields)
+		return
+	}
+	logSearchEventIfEnabled("search", fields)
 }
 
 func logSearchEvent(event string, fields map[string]interface{}) {
@@ -82,6 +89,13 @@ func logSearchEvent(event string, fields map[string]interface{}) {
 	}
 
 	log.Printf("[search] %s", strings.Join(parts, " "))
+}
+
+func logSearchEventIfEnabled(event string, fields map[string]interface{}) {
+	if config.AppConfig == nil || !config.AppConfig.SearchEventLogEnabled {
+		return
+	}
+	logSearchEvent(event, fields)
 }
 
 func classifySearchError(err error) string {

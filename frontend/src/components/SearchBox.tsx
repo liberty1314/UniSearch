@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useSearchStore, useSearchHistory } from '@/stores/searchStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useSearchAccessStatus } from '@/stores/searchAccessStore';
+import { SystemSettingsService } from '@/services/systemSettingsService';
 import { cn } from '@/lib/utils';
 import { toStyleVars } from '@/lib/styleVars';
 import { getErrorCode, getErrorMessage } from '@/lib/error';
@@ -29,7 +31,8 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   const [isHoveringHistory, setIsHoveringHistory] = useState(false);
 
   const { searchParams, setSearchParams, performSearch, clearHistory, removeFromHistory, isLoading } = useSearchStore();
-  const { isAuthenticated, token } = useAuthStore();
+  const { token, apiKey, isAdmin, logout } = useAuthStore();
+  const { status: searchAccessStatus } = useSearchAccessStatus();
   const navigate = useNavigate();
   const searchHistory = useSearchHistory();
 
@@ -47,58 +50,63 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     }
   }, [autoFocus]);
 
+  const handleSearchError = async (error: unknown) => {
+    const errorCode = getErrorCode(error);
+    const errorMessage = getErrorMessage(error, '搜索失败');
+
+    if (!isAdmin && errorCode === 403 && searchAccessStatus === 'session_only') {
+      toast.warning('请先绑定 API Key 后再进行搜索', { duration: 3000 });
+      navigate('/settings/apikey');
+      return;
+    }
+
+    if (errorCode === 401) {
+      if (!isAdmin && token && !apiKey) {
+        logout();
+        toast.error('登录状态已失效，请重新登录');
+        navigate('/login');
+        return;
+      }
+
+      const entryPath = await SystemSettingsService.resolveDefaultAuthEntryPath();
+      const needsApiKeyLogin =
+        searchAccessStatus === 'anonymous' ||
+        searchAccessStatus === 'api_key_only' ||
+        errorMessage.includes('API Key');
+
+      toast.warning(
+        needsApiKeyLogin
+          ? (entryPath === '/auth/apikey' ? '请先使用 API Key 登录后再进行搜索' : '请先登录后再进行搜索')
+          : errorMessage,
+        { duration: 3000 }
+      );
+      navigate(needsApiKeyLogin ? entryPath : '/login');
+      return;
+    }
+
+    toast.error(errorMessage);
+  };
+
+  const executeSearch = async (keyword: string, keepHistoryOpen: boolean = false) => {
+    setSearchParams({ keyword });
+
+    try {
+      await buttonRef.current?.run(() => performSearch({ keyword }));
+      onSearch?.(keyword);
+      if (!keepHistoryOpen) {
+        setShowHistory(false);
+      }
+    } catch (error) {
+      await handleSearchError(error);
+    }
+  };
+
   // 处理搜索
   const handleSearch = async () => {
     const keyword = inputValue.trim();
     if (!keyword) return;
 
-    // 检查：如果用户已登录但未绑定 API Key，阻止搜索并跳转
-    if (isAuthenticated && token) {
-      try {
-        // 尝试获取用户绑定的 API Key
-        const response = await fetch('/api/user/apikey', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (response.status === 404) {
-          // 用户未绑定 API Key，阻止搜索，提示并跳转
-          toast.warning('请先绑定 API Key 后再进行搜索', {
-            duration: 3000,
-          });
-          navigate('/settings/apikey');
-          return; // 阻止搜索请求
-        }
-      } catch (error) {
-        console.error('检查 API Key 绑定状态失败:', error);
-        // 如果检查失败，也阻止搜索
-        toast.error('无法验证 API Key 绑定状态，请稍后重试');
-        return;
-      }
-    }
-
-    setSearchParams({ keyword });
-
-    try {
-      // 触发按钮动画并执行搜索
-      await buttonRef.current?.run(() => performSearch({ keyword }));
-      onSearch?.(keyword);
-      setShowHistory(false);
-    } catch (error) {
-      // 处理搜索错误
-      const errorCode = getErrorCode(error);
-      if (errorCode === 401 || errorCode === 404) {
-        // 401/404 错误：需要绑定 API Key
-        toast.warning('请先绑定 API Key 后再进行搜索', {
-          duration: 3000,
-        });
-        navigate('/settings/apikey');
-      } else {
-        // 其他错误
-        toast.error(getErrorMessage(error, '搜索失败'));
-      }
-    }
+    await executeSearch(keyword);
   };
 
   // 处理键盘事件
@@ -147,48 +155,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   // 选择历史记录
   const handleSelectHistory = async (keyword: string) => {
     setInputValue(keyword);
-    setSearchParams({ keyword });
-
-    // 检查：如果用户已登录但未绑定 API Key，阻止搜索并跳转
-    if (isAuthenticated && token) {
-      try {
-        // 尝试获取用户绑定的 API Key
-        const response = await fetch('/api/user/apikey', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (response.status === 404) {
-          // 用户未绑定 API Key，阻止搜索，提示并跳转
-          toast.warning('请先绑定 API Key 后再进行搜索', {
-            duration: 3000,
-          });
-          navigate('/settings/apikey');
-          return; // 阻止搜索请求
-        }
-      } catch (error) {
-        console.error('检查 API Key 绑定状态失败:', error);
-        toast.error('无法验证 API Key 绑定状态，请稍后重试');
-        return;
-      }
-    }
-
-    try {
-      await buttonRef.current?.run(() => performSearch({ keyword }));
-      onSearch?.(keyword);
-    } catch (error) {
-      // 处理搜索错误
-      const errorCode = getErrorCode(error);
-      if (errorCode === 401 || errorCode === 404) {
-        toast.warning('请先绑定 API Key 后再进行搜索', {
-          duration: 3000,
-        });
-        navigate('/settings/apikey');
-      } else {
-        toast.error(getErrorMessage(error, '搜索失败'));
-      }
-    }
+    await executeSearch(keyword, true);
     // 选择历史后保持下拉框打开，便于继续点击其他记录
   };
 

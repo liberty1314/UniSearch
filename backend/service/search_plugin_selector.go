@@ -3,7 +3,10 @@ package service
 import (
 	"log"
 	"strings"
+	"sync"
+	"time"
 
+	"unisearch/config"
 	"unisearch/plugin"
 )
 
@@ -11,17 +14,29 @@ type PluginSelector interface {
 	EnabledBuiltinPlugins() []plugin.AsyncSearchPlugin
 	NormalizeRequestedPlugins(sourceType string, plugins []string) []string
 	ResolvePlugins(plugins []string) []plugin.AsyncSearchPlugin
+	InvalidateCache()
 }
 
 type searchPluginSelector struct {
 	pluginManager      *plugin.PluginManager
 	pluginStateService *PluginStateService
+	statusLoader       func([]string) (map[string]bool, error)
+	cacheMu            sync.RWMutex
+	cachedPlugins      []plugin.AsyncSearchPlugin
+	cacheExpiresAt     time.Time
+	cacheReady         bool
 }
 
 func newPluginSelector(pluginManager *plugin.PluginManager, pluginStateService *PluginStateService) PluginSelector {
 	return &searchPluginSelector{
 		pluginManager:      pluginManager,
 		pluginStateService: pluginStateService,
+		statusLoader: func(pluginNames []string) (map[string]bool, error) {
+			if pluginStateService == nil {
+				return map[string]bool{}, nil
+			}
+			return pluginStateService.GetStatusMap(pluginNames)
+		},
 	}
 }
 
@@ -32,7 +47,11 @@ func (s *searchPluginSelector) EnabledBuiltinPlugins() []plugin.AsyncSearchPlugi
 
 	allPlugins := s.pluginManager.GetPlugins()
 	if len(allPlugins) == 0 || s.pluginStateService == nil {
-		return allPlugins
+		return append([]plugin.AsyncSearchPlugin(nil), allPlugins...)
+	}
+
+	if cachedPlugins := s.getCachedPlugins(); cachedPlugins != nil {
+		return cachedPlugins
 	}
 
 	pluginNames := make([]string, 0, len(allPlugins))
@@ -40,10 +59,10 @@ func (s *searchPluginSelector) EnabledBuiltinPlugins() []plugin.AsyncSearchPlugi
 		pluginNames = append(pluginNames, p.Name())
 	}
 
-	statusMap, err := s.pluginStateService.GetStatusMap(pluginNames)
+	statusMap, err := s.statusLoader(pluginNames)
 	if err != nil {
 		log.Printf("⚠️ [插件搜索] 获取插件启用状态失败，默认全量启用: %v", err)
-		return allPlugins
+		return append([]plugin.AsyncSearchPlugin(nil), allPlugins...)
 	}
 
 	enabledPlugins := make([]plugin.AsyncSearchPlugin, 0, len(allPlugins))
@@ -56,6 +75,7 @@ func (s *searchPluginSelector) EnabledBuiltinPlugins() []plugin.AsyncSearchPlugi
 		enabledPlugins = append(enabledPlugins, p)
 	}
 
+	s.setCachedPlugins(enabledPlugins)
 	return enabledPlugins
 }
 
@@ -111,4 +131,43 @@ func toPluginNameSet(plugins []plugin.AsyncSearchPlugin) map[string]struct{} {
 	}
 
 	return names
+}
+
+func (s *searchPluginSelector) InvalidateCache() {
+	s.cacheMu.Lock()
+	defer s.cacheMu.Unlock()
+
+	s.cachedPlugins = nil
+	s.cacheExpiresAt = time.Time{}
+	s.cacheReady = false
+}
+
+func (s *searchPluginSelector) getCachedPlugins() []plugin.AsyncSearchPlugin {
+	cacheTTL := 30 * time.Second
+	if config.AppConfig != nil && config.AppConfig.PluginStateCacheTTL > 0 {
+		cacheTTL = config.AppConfig.PluginStateCacheTTL
+	}
+
+	s.cacheMu.RLock()
+	defer s.cacheMu.RUnlock()
+
+	if !s.cacheReady || cacheTTL <= 0 || time.Now().After(s.cacheExpiresAt) {
+		return nil
+	}
+
+	return append([]plugin.AsyncSearchPlugin(nil), s.cachedPlugins...)
+}
+
+func (s *searchPluginSelector) setCachedPlugins(plugins []plugin.AsyncSearchPlugin) {
+	cacheTTL := 30 * time.Second
+	if config.AppConfig != nil && config.AppConfig.PluginStateCacheTTL > 0 {
+		cacheTTL = config.AppConfig.PluginStateCacheTTL
+	}
+
+	s.cacheMu.Lock()
+	defer s.cacheMu.Unlock()
+
+	s.cachedPlugins = append([]plugin.AsyncSearchPlugin(nil), plugins...)
+	s.cacheExpiresAt = time.Now().Add(cacheTTL)
+	s.cacheReady = true
 }

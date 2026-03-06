@@ -26,5 +26,17 @@ describe('apiClient handleError', () => {
 
     expect(message).toBe('网络连接失败，请检查网络设置');
   });
-});
 
+  it('prefers backend error field when message is missing', () => {
+    const message = callHandleError({
+      response: {
+        status: 500,
+        data: {
+          error: '数据库写入失败',
+        },
+      } as unknown as AxiosError<ApiResponse>['response'],
+    });
+
+    expect(message).toBe('数据库写入失败');
+  });
+});

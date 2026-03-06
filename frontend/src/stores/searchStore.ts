@@ -132,9 +132,9 @@ export const useSearchStore = create<SearchState>()(devtools(
           get().addToHistory(finalParams.keyword);
         }
       } catch (error) {
-        // 特殊处理：如果是 401 错误且提示需要绑定 API Key
+        // 特殊处理：将 API Key 绑定/登录引导错误继续抛给调用方处理跳转
         const errorCode = getErrorCode(error);
-        if (errorCode === 401 || errorCode === 404) {
+        if (errorCode === 401 || errorCode === 403 || errorCode === 404) {
           set({
             error: getErrorMessage(error, '搜索失败'),
             isLoading: false,

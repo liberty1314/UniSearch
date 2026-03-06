@@ -751,6 +751,11 @@ export interface CreateUserRequest {
   username: string;
   password: string;
   role: 'admin' | 'user';
+  restore_if_deleted?: boolean;
+}
+
+export interface CreateUserResponse extends UserInfo {
+  restored?: boolean;
 }
 
 /**

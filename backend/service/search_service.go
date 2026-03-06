@@ -175,3 +175,10 @@ func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRef
 func (s *SearchService) GetPluginManager() *plugin.PluginManager {
 	return s.pluginManager
 }
+
+func (s *SearchService) InvalidatePluginSelectorCache() {
+	if s == nil || s.pluginSelector == nil {
+		return
+	}
+	s.pluginSelector.InvalidateCache()
+}

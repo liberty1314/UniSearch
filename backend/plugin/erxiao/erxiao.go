@@ -130,7 +130,7 @@ func (p *ErxiaoAsyncPlugin) searchImpl(client *http.Client, keyword string, ext 
 	}()
 
 	// 使用优化的客户端
-	if p.optimizedClient != nil {
+	if client == nil && p.optimizedClient != nil {
 		client = p.optimizedClient
 	}
 

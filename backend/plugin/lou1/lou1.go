@@ -93,7 +93,7 @@ func (p *Lou1Plugin) SearchWithResult(keyword string, ext map[string]interface{}
 }
 
 func (p *Lou1Plugin) searchImpl(client *http.Client, keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
-	if p.client != nil {
+	if client == nil && p.client != nil {
 		client = p.client
 	}
 

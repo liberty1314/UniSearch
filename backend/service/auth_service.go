@@ -20,6 +20,14 @@ type AuthService struct {
 	db *gorm.DB
 }
 
+func isAuthDuplicateEntryError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errMsg := strings.ToLower(err.Error())
+	return strings.Contains(errMsg, "duplicate entry") || strings.Contains(errMsg, "error 1062")
+}
+
 // NewAuthService 创建认证服务实例
 func NewAuthService() *AuthService {
 	return &AuthService{
@@ -59,9 +67,10 @@ func (s *AuthService) Register(username, password string) (*model.User, error) {
 		return nil, errors.New("密码长度必须在6-64字符之间")
 	}
 
-	// 检查用户名是否已存在
+	// 检查用户名是否已存在。
+	// 注册流程不自动恢复软删除用户，避免历史账号被新的注册请求接管。
 	var existingUser model.User
-	result := s.db.Where("username = ?", username).First(&existingUser)
+	result := s.db.Unscoped().Where("username = ?", username).First(&existingUser)
 	if result.Error == nil {
 		// 用户已存在
 		return nil, errors.New("用户名已存在")
@@ -85,6 +94,9 @@ func (s *AuthService) Register(username, password string) (*model.User, error) {
 
 	// 保存到数据库
 	if err := s.db.Create(user).Error; err != nil {
+		if isAuthDuplicateEntryError(err) {
+			return nil, errors.New("用户名已存在")
+		}
 		return nil, fmt.Errorf("创建用户失败: %w", err)
 	}
 

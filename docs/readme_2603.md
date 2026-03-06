@@ -306,3 +306,72 @@ refactor(frontend): 重构 Admin 页面并优化路由和构建配置
 - scripts/local.sh
 
 ---
+
+## 2026-03-06 20:08:47
+
+### Commit
+```
+feat(user): 新增搜索权限状态管理并优化 API Key 绑定流程
+```
+
+### Body
+新增 searchAccessStore 统一管理用户搜索权限状态（anonymous/session_only/search_ready/api_key_only），优化 API Key 绑定页面 UI 和交互流程，增强错误处理机制，并新增相关单元测试。
+
+### Files
+- backend/api/admin_handler.go
+- backend/api/handler.go
+- backend/api/user_handler.go
+- backend/config/config.go
+- backend/plugin/aikanzy/aikanzy.go
+- backend/plugin/baseasyncplugin.go
+- backend/plugin/daishudj/daishudj.go
+- backend/plugin/erxiao/erxiao.go
+- backend/plugin/feikuai/feikuai.go
+- backend/plugin/lou1/lou1.go
+- backend/plugin/muou/muou.go
+- backend/plugin/ouge/ouge.go
+- backend/plugin/thepiratebay/thepiratebay.go
+- backend/plugin/wanou/wanou.go
+- backend/service/auth_service.go
+- backend/service/search_cache.go
+- backend/service/search_cache_test.go
+- backend/service/search_executor.go
+- backend/service/search_executor_test.go
+- backend/service/search_metrics.go
+- backend/service/search_plugin_selector.go
+- backend/service/search_plugin_selector_test.go
+- backend/service/search_response_builder.go
+- backend/service/search_response_builder_test.go
+- backend/service/search_result_merger.go
+- backend/service/search_service.go
+- backend/service/search_service_test.go
+- backend/service/user_service.go
+- backend/util/cache/redis_cache.go
+- backend/util/cache/redis_cache_test.go
+- frontend/src/components/MobileMenu.tsx
+- frontend/src/components/Navbar.tsx
+- frontend/src/components/SearchBox.tsx
+- frontend/src/components/__tests__/SearchBox.test.tsx
+- frontend/src/components/admin/ConfirmDialog.tsx
+- frontend/src/components/admin/CreateUserDialog.tsx
+- frontend/src/components/admin/__tests__/CreateUserDialog.test.tsx
+- frontend/src/components/ui/AppleInput.tsx
+- frontend/src/components/ui/confirm-dialog.tsx
+- frontend/src/lib/__tests__/api.test.ts
+- frontend/src/lib/__tests__/error.test.ts
+- frontend/src/lib/api.ts
+- frontend/src/lib/error.ts
+- frontend/src/pages/Home.tsx
+- frontend/src/pages/RegisterPage.tsx
+- frontend/src/pages/UserApiKeySettings.tsx
+- frontend/src/pages/__tests__/Home.test.tsx
+- frontend/src/services/__tests__/searchService.test.ts
+- frontend/src/services/searchService.ts
+- frontend/src/services/systemSettingsService.ts
+- frontend/src/services/userService.ts
+- frontend/src/stores/__tests__/searchAccessStore.test.ts
+- frontend/src/stores/searchAccessStore.ts
+- frontend/src/stores/searchStore.ts
+- frontend/src/types/api.ts
+
+---

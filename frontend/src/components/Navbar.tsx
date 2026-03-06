@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { MobileMenu } from '@/components/MobileMenu';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { useAuthStore } from '@/stores/authStore';
+import { useSearchAccessStatus } from '@/stores/searchAccessStore';
 import { useAnnouncementStore } from '@/stores/announcementStore';
 import { useAdminStore } from '@/stores/adminStore';
 import { AnnouncementPanel } from './AnnouncementPanel';
@@ -31,6 +32,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
 
   // Auth State
   const { isAuthenticated, isAdmin, logout, username } = useAuthStore();
+  const { status: searchAccessStatus } = useSearchAccessStatus();
 
   // Announcement State
   const { getUnreadAnnouncements } = useAnnouncementStore();
@@ -79,6 +81,15 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
   const navItems: Array<{ path: string; label: string; icon: React.ComponentType<{ className?: string }> }> = [
     // Add nav items if needed
   ];
+  const apiKeyEntryLabel = searchAccessStatus === 'session_only' ? '绑定 API Key' : 'API Key 设置';
+  const searchAccessHint = searchAccessStatus === 'session_only'
+    ? '未绑定 API Key'
+    : searchAccessStatus === 'search_ready'
+      ? 'API Key 已绑定'
+      : searchAccessStatus === 'api_key_only'
+        ? 'API Key 登录中'
+        : '普通用户';
+  const showNormalUserHint = isAuthenticated && !isAdmin;
 
   return (
     <>
@@ -140,7 +151,9 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                       "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-200 outline-none focus:outline-none",
                       isUserMenuOpen
                         ? "bg-white/20 border-transparent text-nebula-600 dark:text-nebula-300"
-                        : "border-transparent hover:bg-white/10 hover:border-white/20 text-gray-700 dark:text-gray-200"
+                        : searchAccessStatus === 'session_only'
+                          ? "border-amber-200/80 bg-amber-50/80 text-amber-800 hover:bg-amber-100/80 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100"
+                          : "border-transparent hover:bg-white/10 hover:border-white/20 text-gray-700 dark:text-gray-200"
                     )}
                   >
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-nebula-400 to-cosmic-400 flex items-center justify-center text-white font-bold text-sm shadow-sm">
@@ -162,9 +175,23 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                             {username || 'User'}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-slate-400">
-                            {isAdmin ? '管理员' : '普通用户'}
-                          </p>
+                          <div className="mt-1 flex items-center gap-2">
+                            <p className="text-xs text-gray-500 dark:text-slate-400">
+                              {isAdmin ? '管理员' : '普通用户'}
+                            </p>
+                            {showNormalUserHint && (
+                              <span
+                                className={cn(
+                                  'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                                  searchAccessStatus === 'session_only'
+                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200'
+                                    : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200'
+                                )}
+                              >
+                                {searchAccessHint}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <div className="p-1">
@@ -184,7 +211,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                               className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-nebula-50 dark:hover:bg-nebula-900/30 hover:text-nebula-600 dark:hover:text-nebula-300 rounded-lg transition-colors"
                             >
                               <Key className="w-4 h-4" />
-                              <span>API Key 设置</span>
+                              <span>{apiKeyEntryLabel}</span>
                             </Link>
                           )}
                         </div>

@@ -1,6 +1,12 @@
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const PUBLIC_SETTINGS_CACHE_TTL_MS = 30000;
+
+let publicSettingsCache: {
+    value: SystemSettingsResponse;
+    expiresAt: number;
+} | null = null;
 
 /**
  * 系统设置响应接口
@@ -21,6 +27,28 @@ export class SystemSettingsService {
     static async getSettings(): Promise<SystemSettingsResponse> {
         const response = await axios.get<SystemSettingsResponse>(`${API_BASE_URL}/system-settings`);
         return response.data;
+    }
+
+    static async getSettingsCached(force = false): Promise<SystemSettingsResponse> {
+        const now = Date.now();
+        if (!force && publicSettingsCache && publicSettingsCache.expiresAt > now) {
+            return publicSettingsCache.value;
+        }
+
+        const settings = await this.getSettings();
+        publicSettingsCache = {
+            value: settings,
+            expiresAt: now + PUBLIC_SETTINGS_CACHE_TTL_MS,
+        };
+        return settings;
+    }
+
+    static async resolveDefaultAuthEntryPath(force = false): Promise<string> {
+        const settings = await this.getSettingsCached(force);
+        if (!settings.enable_user_auth || !settings.enable_user_login) {
+            return '/auth/apikey';
+        }
+        return '/login';
     }
 
     /**
@@ -58,6 +86,10 @@ export class SystemSettingsService {
                 },
             }
         );
+        publicSettingsCache = {
+            value: response.data,
+            expiresAt: Date.now() + PUBLIC_SETTINGS_CACHE_TTL_MS,
+        };
         return response.data;
     }
 }

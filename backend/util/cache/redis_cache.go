@@ -19,8 +19,18 @@ var (
 
 // RedisCache Redis 缓存客户端
 type RedisCache struct {
-	client *redis.Client
+	client redisClient
 	ttl    time.Duration
+}
+
+type redisClient interface {
+	Ping(ctx context.Context) *redis.StatusCmd
+	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
+	Get(ctx context.Context, key string) *redis.StringCmd
+	Del(ctx context.Context, keys ...string) *redis.IntCmd
+	Exists(ctx context.Context, keys ...string) *redis.IntCmd
+	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
+	Close() error
 }
 
 // Config Redis 配置
@@ -187,18 +197,6 @@ func (rc *RedisCache) Get(ctx context.Context, key string, dest interface{}) err
 		log.Printf("错误: JSON 反序列化失败 - 键: %s, 错误: %v", key, err)
 		return fmt.Errorf("反序列化失败: %w", err)
 	}
-
-	// 异步刷新缓存 TTL（热数据保活机制）
-	go func(k string, ttl time.Duration) {
-		refreshCtx, refreshCancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer refreshCancel()
-
-		if err := rc.client.Expire(refreshCtx, k, ttl).Err(); err != nil {
-			log.Printf("警告: 缓存 TTL 刷新失败 - 键: %s, 错误: %v", k, err)
-		} else {
-			log.Printf("🔄 缓存 TTL 已刷新 - 键: %s, 新TTL: %v", k, ttl)
-		}
-	}(key, rc.ttl)
 
 	log.Printf("调试: 缓存读取成功 - 键: %s", key)
 	return nil

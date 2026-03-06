@@ -42,11 +42,17 @@ type UserInfo struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
+type CreateUserResponse struct {
+	UserInfo
+	Restored bool `json:"restored"`
+}
+
 // CreateUserRequest 创建用户请求
 type CreateUserRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=32"`
-	Password string `json:"password" binding:"required,min=6,max=64"`
-	Role     string `json:"role" binding:"required,oneof=admin user"`
+	Username         string `json:"username" binding:"required,min=3,max=32"`
+	Password         string `json:"password" binding:"required,min=6,max=64"`
+	Role             string `json:"role" binding:"required,oneof=admin user"`
+	RestoreIfDeleted bool   `json:"restore_if_deleted"`
 }
 
 // UpdateUserRequest 更新用户请求
@@ -231,12 +237,14 @@ func CreateUserHandler(userService *service.UserService) gin.HandlerFunc {
 		}
 
 		// 调用服务层
-		user, err := userService.CreateUser(req.Username, req.Password, req.Role)
+		user, restored, err := userService.CreateUser(req.Username, req.Password, req.Role, req.RestoreIfDeleted)
 		if err != nil {
 			// 根据错误类型返回不同的状态码
 			switch err.Error() {
 			case "用户名已存在":
 				respondError(c, http.StatusConflict, err.Error(), "USERNAME_EXISTS")
+			case "用户名对应的账号已被删除，请确认是否恢复该账号":
+				respondError(c, http.StatusConflict, err.Error(), "USER_SOFT_DELETED")
 			case "用户名长度必须在3-32字符之间", "用户名只能包含字母、数字、下划线和连字符":
 				respondError(c, http.StatusBadRequest, err.Error(), "INVALID_USERNAME")
 			case "密码长度必须在6-64字符之间":
@@ -244,13 +252,21 @@ func CreateUserHandler(userService *service.UserService) gin.HandlerFunc {
 			case "角色必须是admin或user":
 				respondError(c, http.StatusBadRequest, err.Error(), "INVALID_ROLE")
 			default:
+				log.Printf("✗ 创建用户内部错误: username=%s role=%s err=%v", req.Username, req.Role, err)
 				respondError(c, http.StatusInternalServerError, "创建用户失败", "INTERNAL_SERVER_ERROR")
 			}
 			return
 		}
 
-		log.Printf("✓ 用户创建成功: %s (ID: %d, Role: %s)", user.Username, user.ID, user.Role)
-		respondSuccess(c, convertToUserInfo(user))
+		if restored {
+			log.Printf("✓ 用户恢复成功: %s (ID: %d, Role: %s)", user.Username, user.ID, user.Role)
+		} else {
+			log.Printf("✓ 用户创建成功: %s (ID: %d, Role: %s)", user.Username, user.ID, user.Role)
+		}
+		respondSuccess(c, CreateUserResponse{
+			UserInfo: convertToUserInfo(user),
+			Restored: restored,
+		})
 	}
 }
 

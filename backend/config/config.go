@@ -80,6 +80,11 @@ type Config struct {
 	HTTPWriteTimeout time.Duration // 写入超时
 	HTTPIdleTimeout  time.Duration // 空闲超时
 	HTTPMaxConns     int           // 最大连接数
+	// 搜索链路优化配置
+	SearchEventLogEnabled bool          // 是否启用常态搜索事件日志
+	PluginStateCacheTTL   time.Duration // 插件状态缓存 TTL
+	CacheWriteQueueSize   int           // 搜索缓存异步写队列长度
+	CacheWriteWorkers     int           // 搜索缓存异步写 worker 数
 	// 认证相关配置
 	AuthEnabled     bool              // 是否启用认证
 	AuthUsers       map[string]string // 用户名:密码映射
@@ -178,6 +183,11 @@ func Init() {
 		HTTPWriteTimeout: getHTTPWriteTimeout(),
 		HTTPIdleTimeout:  getHTTPIdleTimeout(),
 		HTTPMaxConns:     getHTTPMaxConns(),
+		// 搜索链路优化配置
+		SearchEventLogEnabled: getSearchEventLogEnabled(),
+		PluginStateCacheTTL:   getPluginStateCacheTTL(),
+		CacheWriteQueueSize:   getCacheWriteQueueSize(),
+		CacheWriteWorkers:     getCacheWriteWorkers(),
 		// 认证相关配置
 		AuthEnabled:     getAuthEnabled(),
 		AuthUsers:       getAuthUsers(),
@@ -634,6 +644,57 @@ func getHTTPMaxConns() int {
 	}
 
 	return maxConns
+}
+
+func getSearchEventLogEnabled() bool {
+	enabled := os.Getenv("SEARCH_EVENT_LOG_ENABLED")
+	if enabled == "" {
+		return false
+	}
+	value, err := strconv.ParseBool(enabled)
+	if err != nil {
+		return false
+	}
+	return value
+}
+
+func getPluginStateCacheTTL() time.Duration {
+	ttlEnv := os.Getenv("PLUGIN_STATE_CACHE_TTL_SECONDS")
+	if ttlEnv == "" {
+		return 30 * time.Second
+	}
+
+	ttl, err := strconv.Atoi(ttlEnv)
+	if err != nil || ttl <= 0 {
+		return 30 * time.Second
+	}
+	return time.Duration(ttl) * time.Second
+}
+
+func getCacheWriteQueueSize() int {
+	sizeEnv := os.Getenv("CACHE_WRITE_QUEUE_SIZE")
+	if sizeEnv == "" {
+		return 256
+	}
+
+	size, err := strconv.Atoi(sizeEnv)
+	if err != nil || size <= 0 {
+		return 256
+	}
+	return size
+}
+
+func getCacheWriteWorkers() int {
+	workersEnv := os.Getenv("CACHE_WRITE_WORKERS")
+	if workersEnv == "" {
+		return 4
+	}
+
+	workers, err := strconv.Atoi(workersEnv)
+	if err != nil || workers <= 0 {
+		return 4
+	}
+	return workers
 }
 
 // 从环境变量获取异步插件日志开关，如果未设置则使用默认值

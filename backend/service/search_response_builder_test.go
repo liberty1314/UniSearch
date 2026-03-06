@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
 	"testing"
@@ -45,6 +46,11 @@ func TestSearchResponseBuilderBuildFiltersAndSortsResults(t *testing.T) {
 		priority: 1,
 	})
 	pluginLevelCache = sync.Map{}
+	pluginMetadataCache.mu.Lock()
+	pluginMetadataCache.priorities = nil
+	pluginMetadataCache.skipFilters = nil
+	pluginMetadataCache.registrySize = 0
+	pluginMetadataCache.mu.Unlock()
 
 	builder := newSearchResponseBuilder()
 	now := time.Now()
@@ -99,6 +105,11 @@ func TestSearchResponseBuilderBuildMergedByTypeHonorsCloudTypesAndSkipFilter(t *
 		skipFilter: true,
 	})
 	pluginLevelCache = sync.Map{}
+	pluginMetadataCache.mu.Lock()
+	pluginMetadataCache.priorities = nil
+	pluginMetadataCache.skipFilters = nil
+	pluginMetadataCache.registrySize = 0
+	pluginMetadataCache.mu.Unlock()
 
 	builder := newSearchResponseBuilder()
 	response := builder.Build([]model.SearchResult{
@@ -132,5 +143,48 @@ func TestSearchResponseBuilderBuildMergedByTypeHonorsCloudTypesAndSkipFilter(t *
 	}
 	if _, exists := response.MergedByType["baidu"]; exists {
 		t.Fatal("expected baidu links to be filtered out by cloudTypes")
+	}
+}
+
+func BenchmarkSearchResponseBuilderBuild(b *testing.B) {
+	plugin.RegisterGlobalPlugin(&responseBuilderTestPlugin{
+		name:     "benchplugin",
+		priority: 1,
+	})
+	pluginLevelCache = sync.Map{}
+	pluginMetadataCache.mu.Lock()
+	pluginMetadataCache.priorities = nil
+	pluginMetadataCache.skipFilters = nil
+	pluginMetadataCache.registrySize = 0
+	pluginMetadataCache.mu.Unlock()
+
+	now := time.Now()
+	results := make([]model.SearchResult, 0, 500)
+	for i := 0; i < 500; i++ {
+		results = append(results, model.SearchResult{
+			UniqueID: fmt.Sprintf("benchplugin-%d", i),
+			Title:    fmt.Sprintf("仙逆合集 第%d集", i),
+			Content: fmt.Sprintf(
+				"仙逆合集 第%d集\n链接：https://pan.quark.cn/s/%03d\n链接：https://pan.baidu.com/s/%03d",
+				i, i, i,
+			),
+			Links: []model.Link{
+				{URL: fmt.Sprintf("https://pan.quark.cn/s/%03d", i)},
+				{URL: fmt.Sprintf("https://pan.baidu.com/s/%03d", i)},
+			},
+			Datetime: now.Add(-time.Duration(i) * time.Hour),
+		})
+	}
+
+	builder := newSearchResponseBuilder()
+	request := NormalizedSearchRequest{
+		Keyword:    "仙逆",
+		ResultType: "all",
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = builder.Build(results, request)
 	}
 }

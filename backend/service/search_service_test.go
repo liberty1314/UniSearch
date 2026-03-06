@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"net/http"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -12,8 +13,10 @@ import (
 )
 
 type mockAsyncSearchPlugin struct {
-	name  string
-	delay time.Duration
+	name             string
+	delay            time.Duration
+	asyncSearchCalls atomic.Int32
+	searchCalls      atomic.Int32
 }
 
 func (m *mockAsyncSearchPlugin) Name() string {
@@ -30,6 +33,7 @@ func (m *mockAsyncSearchPlugin) AsyncSearch(
 	_ string,
 	_ map[string]interface{},
 ) ([]model.SearchResult, error) {
+	m.asyncSearchCalls.Add(1)
 	if m.delay > 0 {
 		time.Sleep(m.delay)
 	}
@@ -53,6 +57,7 @@ func (m *mockAsyncSearchPlugin) SetMainCacheKey(_ string) {}
 func (m *mockAsyncSearchPlugin) SetCurrentKeyword(_ string) {}
 
 func (m *mockAsyncSearchPlugin) Search(keyword string, _ map[string]interface{}) ([]model.SearchResult, error) {
+	m.searchCalls.Add(1)
 	return []model.SearchResult{
 		{
 			UniqueID: fmt.Sprintf("%s-search-%s", m.name, keyword),
@@ -69,6 +74,14 @@ func (m *mockAsyncSearchPlugin) Search(keyword string, _ map[string]interface{})
 
 func (m *mockAsyncSearchPlugin) SkipServiceFilter() bool {
 	return false
+}
+
+func (m *mockAsyncSearchPlugin) AsyncSearchCalls() int32 {
+	return m.asyncSearchCalls.Load()
+}
+
+func (m *mockAsyncSearchPlugin) SearchCalls() int32 {
+	return m.searchCalls.Load()
 }
 
 func TestSearchPlugins_LowConcurrencyDoesNotBlock(t *testing.T) {

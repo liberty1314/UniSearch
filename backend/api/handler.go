@@ -41,6 +41,8 @@ func SearchHandler(c *gin.Context) {
 	var req model.SearchRequest
 	var err error
 	var apiKeyStr string
+	var jwtTokenValid bool
+	var jwtTokenInvalid bool
 
 	// ========== 混合访问模式：获取 API Key ==========
 
@@ -59,20 +61,34 @@ func SearchHandler(c *gin.Context) {
 			// 验证 JWT Token（使用新版本的 ValidateJWTToken）
 			claims, err := util.ValidateJWTToken(token, config.AppConfig.AuthJWTSecret)
 			if err == nil && claims.UserID > 0 {
+				jwtTokenValid = true
 				// 从数据库获取用户绑定的 API Key
 				if apiKeyService != nil {
 					userAPIKey, err := apiKeyService.GetUserAPIKey(claims.UserID)
 					if err == nil && userAPIKey != nil {
 						apiKeyStr = userAPIKey.Key
+					} else if err != nil && !strings.Contains(err.Error(), "未绑定 API Key") {
+						c.JSON(http.StatusInternalServerError, model.NewErrorResponse(500, "查询用户 API Key 失败"))
+						return
 					}
 				}
+			} else {
+				jwtTokenInvalid = true
 			}
 		}
 	}
 
 	// 3. 如果既无 API Key 也无有效的 JWT Token，返回错误
 	if apiKeyStr == "" {
-		c.JSON(http.StatusUnauthorized, model.NewErrorResponse(401, "请提供 API Key 或登录后使用"))
+		if jwtTokenInvalid {
+			c.JSON(http.StatusUnauthorized, model.NewErrorResponse(401, "登录状态已失效，请重新登录"))
+			return
+		}
+		if jwtTokenValid {
+			c.JSON(http.StatusForbidden, model.NewErrorResponse(403, "请先绑定 API Key 后再进行搜索"))
+			return
+		}
+		c.JSON(http.StatusUnauthorized, model.NewErrorResponse(401, "请先使用 API Key 登录后再进行搜索"))
 		return
 	}
 

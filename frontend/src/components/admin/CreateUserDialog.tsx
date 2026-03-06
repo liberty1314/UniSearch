@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { Eye, EyeOff } from 'lucide-react';
 import { UserService } from '@/services/userService';
-import { getErrorDataError, getErrorMessage, getErrorStatus } from '@/lib/error';
+import { getErrorDataCode, getErrorDataError, getErrorMessage, getErrorStatus } from '@/lib/error';
 import {
     Dialog,
     DialogContent,
@@ -10,6 +11,16 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { AppleInput } from '@/components/ui/AppleInput';
 import { AppleButton } from '@/components/ui/AppleButton';
 import {
@@ -48,6 +59,9 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
     const [password, setPassword] = useState<string>('');
     const [confirmPassword, setConfirmPassword] = useState<string>('');
     const [role, setRole] = useState<'admin' | 'user'>('user');
+    const [showPassword, setShowPassword] = useState<boolean>(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+    const [showRestoreDialog, setShowRestoreDialog] = useState<boolean>(false);
 
     // 加载状态
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -61,6 +75,9 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
             setPassword('');
             setConfirmPassword('');
             setRole('user');
+            setShowPassword(false);
+            setShowConfirmPassword(false);
+            setShowRestoreDialog(false);
         }
     }, [open]);
 
@@ -74,13 +91,15 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
      * - 角色：必须为 admin 或 user
      */
     const validateForm = (): boolean => {
+        const trimmedUsername = username.trim();
+
         // 验证用户名
-        if (!username.trim()) {
+        if (!trimmedUsername) {
             toast.error('请输入用户名');
             return false;
         }
 
-        if (username.length < 3 || username.length > 32) {
+        if (trimmedUsername.length < 3 || trimmedUsername.length > 32) {
             toast.error('用户名长度必须在 3-32 字符之间');
             return false;
         }
@@ -119,46 +138,63 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
     /**
      * 处理创建用户
      */
-    const handleCreate = async () => {
+    const submitCreate = async (restoreIfDeleted: boolean = false) => {
         // 前端验证
         if (!validateForm()) {
             return;
         }
 
+        const trimmedUsername = username.trim();
         setIsLoading(true);
 
         try {
             // 调用用户服务创建用户
-            await UserService.createUser(username.trim(), password, role);
+            const result = await UserService.createUser(trimmedUsername, password, role, restoreIfDeleted);
 
             // 显示成功提示
-            toast.success(`用户 "${username}" 创建成功`);
+            if (result.restored) {
+                toast.success(`用户 "${trimmedUsername}" 已恢复并更新密码/角色`);
+            } else {
+                toast.success(`用户 "${trimmedUsername}" 创建成功`);
+            }
 
             // 通知父组件刷新列表
             onSuccess();
 
             // 关闭对话框
+            setShowRestoreDialog(false);
             onOpenChange(false);
         } catch (error) {
             console.error('创建用户失败:', error);
 
             // 显示错误提示
             const status = getErrorStatus(error);
+            const dataCode = getErrorDataCode(error);
             if (status === 401) {
                 toast.error('未授权：请重新登录');
             } else if (status === 403) {
                 toast.error('权限不足：需要管理员权限');
+            } else if (status === 409 && dataCode === 'USER_SOFT_DELETED') {
+                setShowRestoreDialog(true);
             } else if (status === 409) {
-                toast.error('用户名已存在，请使用其他用户名');
+                toast.error(getErrorDataError(error) || '用户名已存在，请使用其他用户名');
             } else if (status === 400) {
                 const errorMsg = getErrorDataError(error) || '请检查输入';
                 toast.error('参数错误：' + errorMsg);
             } else {
-                toast.error('创建失败：' + getErrorMessage(error));
+                toast.error('创建失败：' + (getErrorDataError(error) || getErrorMessage(error)));
             }
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleCreate = async () => {
+        await submitCreate(false);
+    };
+
+    const handleRestore = async () => {
+        await submitCreate(true);
     };
 
     /**
@@ -179,104 +215,141 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
         }
     };
 
+    const renderPasswordToggle = (
+        visible: boolean,
+        onToggle: () => void,
+        label: string
+    ) => (
+        <button
+            type="button"
+            onClick={onToggle}
+            disabled={isLoading}
+            aria-label={visible ? `隐藏${label}` : `显示${label}`}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+        >
+            {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+    );
+
     return (
-        <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                    <DialogTitle>创建用户</DialogTitle>
-                    <DialogDescription>
-                        创建新的用户账户，设置用户名、密码和角色
-                    </DialogDescription>
-                </DialogHeader>
+        <>
+            <Dialog open={open} onOpenChange={handleClose}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle>创建用户</DialogTitle>
+                        <DialogDescription>
+                            创建新的用户账户，设置用户名、密码和角色
+                        </DialogDescription>
+                    </DialogHeader>
 
-                <div className="space-y-4 py-4">
-                    {/* 用户名输入 */}
-                    <AppleInput
-                        label="用户名"
-                        id="username"
-                        type="text"
-                        placeholder="请输入用户名（3-32 字符）"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        disabled={isLoading}
-                        autoComplete="off"
-                        helperText="用户名长度为 3-32 字符"
-                        required
-                    />
+                    <div className="space-y-4 py-4">
+                        {/* 用户名输入 */}
+                        <AppleInput
+                            label="用户名"
+                            id="username"
+                            type="text"
+                            placeholder="请输入用户名（3-32 字符）"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            disabled={isLoading}
+                            autoComplete="off"
+                            helperText="用户名长度为 3-32 字符"
+                            required
+                        />
 
-                    {/* 密码输入 */}
-                    <AppleInput
-                        label="密码"
-                        id="password"
-                        type="password"
-                        placeholder="请输入密码（6-64 字符）"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        disabled={isLoading}
-                        autoComplete="new-password"
-                        helperText="密码长度为 6-64 字符"
-                        required
-                    />
+                        {/* 密码输入 */}
+                        <AppleInput
+                            label="密码"
+                            id="password"
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="请输入密码（6-64 字符）"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            disabled={isLoading}
+                            autoComplete="new-password"
+                            helperText="密码长度为 6-64 字符"
+                            endAdornment={renderPasswordToggle(showPassword, () => setShowPassword((prev) => !prev), '密码')}
+                            required
+                        />
 
-                    {/* 确认密码输入 */}
-                    <AppleInput
-                        label="确认密码"
-                        id="confirm-password"
-                        type="password"
-                        placeholder="请再次输入密码"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        disabled={isLoading}
-                        autoComplete="new-password"
-                        error={confirmPassword && password !== confirmPassword ? '两次输入的密码不一致' : undefined}
-                        required
-                    />
+                        {/* 确认密码输入 */}
+                        <AppleInput
+                            label="确认密码"
+                            id="confirm-password"
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            placeholder="请再次输入密码"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            disabled={isLoading}
+                            autoComplete="new-password"
+                            error={confirmPassword && password !== confirmPassword ? '两次输入的密码不一致' : undefined}
+                            endAdornment={renderPasswordToggle(showConfirmPassword, () => setShowConfirmPassword((prev) => !prev), '确认密码')}
+                            required
+                        />
 
-                    {/* 角色选择 */}
-                    <div className="space-y-2">
-                        <Label htmlFor="role">
-                            角色 <span className="text-red-500">*</span>
-                        </Label>
-                        <Select
-                            value={role}
-                            onValueChange={(value) => setRole(value as 'admin' | 'user')}
+                        {/* 角色选择 */}
+                        <div className="space-y-2">
+                            <Label htmlFor="role">
+                                角色 <span className="text-red-500">*</span>
+                            </Label>
+                            <Select
+                                value={role}
+                                onValueChange={(value) => setRole(value as 'admin' | 'user')}
+                                disabled={isLoading}
+                            >
+                                <SelectTrigger id="role">
+                                    <SelectValue placeholder="请选择角色" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="user">普通用户</SelectItem>
+                                    <SelectItem value="admin">管理员</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-gray-500 dark:text-slate-400">
+                                管理员拥有系统管理权限，普通用户只能使用搜索功能
+                            </p>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <AppleButton
+                            variant="secondary"
+                            onClick={handleClose}
                             disabled={isLoading}
                         >
-                            <SelectTrigger id="role">
-                                <SelectValue placeholder="请选择角色" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="user">普通用户</SelectItem>
-                                <SelectItem value="admin">管理员</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <p className="text-xs text-gray-500 dark:text-slate-400">
-                            管理员拥有系统管理权限，普通用户只能使用搜索功能
-                        </p>
-                    </div>
-                </div>
+                            取消
+                        </AppleButton>
+                        <AppleButton
+                            variant="primary"
+                            onClick={handleCreate}
+                            loading={isLoading}
+                            disabled={isLoading}
+                        >
+                            创建用户
+                        </AppleButton>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
-                <DialogFooter>
-                    <AppleButton
-                        variant="secondary"
-                        onClick={handleClose}
-                        disabled={isLoading}
-                    >
-                        取消
-                    </AppleButton>
-                    <AppleButton
-                        variant="primary"
-                        onClick={handleCreate}
-                        loading={isLoading}
-                        disabled={isLoading}
-                    >
-                        创建用户
-                    </AppleButton>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            <AlertDialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>恢复已删除账号</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            用户名 "{username.trim()}" 对应的账号已被软删除。继续操作将恢复原账号，并使用当前填写的密码和角色覆盖原设置。
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isLoading}>取消</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleRestore} disabled={isLoading}>
+                            恢复账号
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 }

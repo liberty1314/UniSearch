@@ -2,7 +2,6 @@ package service
 
 import (
 	"log"
-	"net/http"
 	"time"
 
 	"unisearch/config"
@@ -135,9 +134,7 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 			currentPlugin.SetMainCacheKey(cacheKey)
 			currentPlugin.SetCurrentKeyword(keyword)
 
-			results, searchErr := currentPlugin.AsyncSearch(keyword, func(client *http.Client, kw string, extParams map[string]interface{}) ([]model.SearchResult, error) {
-				return currentPlugin.Search(kw, extParams)
-			}, cacheKey, ext)
+			results, searchErr := currentPlugin.Search(keyword, ext)
 			if searchErr != nil {
 				return nil
 			}

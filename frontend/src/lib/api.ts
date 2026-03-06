@@ -11,6 +11,10 @@ import type { ApiResponse } from '@/types/api';
 import { useAuthStore } from '@/stores/authStore';
 import { refreshAuthTokenSingleFlight } from '@/lib/authRefreshManager';
 
+type ApiErrorResponse = ApiResponse & {
+  error?: string;
+};
+
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
   skipAuthRefresh?: boolean;
@@ -106,16 +110,25 @@ class ApiClient {
         // 非标准格式，直接返回原始响应
         return response;
       },
-      async (error: AxiosError<ApiResponse>) => {
+      async (error: AxiosError<ApiErrorResponse>) => {
         const originalRequest = error.config as RetryableRequestConfig | undefined;
+        const requestURL = this.normalizeRequestURL(originalRequest?.url);
+        const isSearchRequest = requestURL.startsWith('/search');
+        const responseMessage = this.extractApiErrorMessage(error.response?.data);
+        const isSearchCredentialGuidance =
+          isSearchRequest &&
+          (
+            responseMessage === '请先绑定 API Key 后再进行搜索' ||
+            responseMessage === '请先使用 API Key 登录后再进行搜索' ||
+            responseMessage === 'API Key 无效或已过期'
+          );
 
         // 处理 401 未授权错误：先尝试刷新并重试一次，失败再登出
         if (error.response?.status === 401 && originalRequest) {
-          const requestURL = this.normalizeRequestURL(originalRequest.url);
           const isExcludedAuthEndpoint = this.isExcludedAuthEndpoint(requestURL);
           const skipAuthRefresh = originalRequest.skipAuthRefresh === true;
 
-          if (!isExcludedAuthEndpoint && !skipAuthRefresh && !originalRequest._retry) {
+          if (!isExcludedAuthEndpoint && !skipAuthRefresh && !originalRequest._retry && !isSearchCredentialGuidance) {
             const authStore = useAuthStore.getState();
             if (authStore.refreshToken) {
               originalRequest._retry = true;
@@ -137,7 +150,7 @@ class ApiClient {
           }
 
           // 登录相关接口 401 不触发全局登出
-          if (!isExcludedAuthEndpoint) {
+          if (!isExcludedAuthEndpoint && !isSearchRequest && !isSearchCredentialGuidance) {
             const authStore = useAuthStore.getState();
             authStore.logout();
 
@@ -152,9 +165,11 @@ class ApiClient {
         // 从错误响应中提取 message 字段
         let errorMessage = this.handleError(error);
         if (error.response?.data && typeof error.response.data === 'object') {
-          const apiError = error.response.data as ApiResponse;
-          if (apiError.message) {
+          const apiError = error.response.data as ApiErrorResponse;
+          if (typeof apiError.message === 'string' && apiError.message.trim()) {
             errorMessage = apiError.message;
+          } else if (typeof apiError.error === 'string' && apiError.error.trim()) {
+            errorMessage = apiError.error;
           }
         }
 
@@ -163,6 +178,12 @@ class ApiClient {
           code: error.response?.status || -1,
           message: errorMessage,
           data: error.response?.data,
+          response: error.response
+            ? {
+                status: error.response.status,
+                data: error.response.data,
+              }
+            : undefined,
         });
       }
     );
@@ -181,17 +202,33 @@ class ApiClient {
     );
   }
 
+  private extractApiErrorMessage(data?: ApiErrorResponse): string {
+    if (!data) {
+      return '';
+    }
+    if (typeof data.message === 'string' && data.message.trim()) {
+      return data.message;
+    }
+    if (typeof data.error === 'string' && data.error.trim()) {
+      return data.error;
+    }
+    return '';
+  }
+
   /**
    * 统一错误处理
    */
-  private handleError(error: AxiosError<ApiResponse>): string {
+  private handleError(error: AxiosError<ApiErrorResponse>): string {
     if (error.response) {
       // 服务器响应错误
       const { status, data } = error.response;
 
       // 优先使用后端返回的错误消息
-      if (data?.message) {
+      if (typeof data?.message === 'string' && data.message.trim()) {
         return data.message;
+      }
+      if (typeof data?.error === 'string' && data.error.trim()) {
+        return data.error;
       }
 
       // 如果后端没有返回消息，使用通用错误消息

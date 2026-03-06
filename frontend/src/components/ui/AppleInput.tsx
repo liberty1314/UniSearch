@@ -1,4 +1,4 @@
-import { forwardRef, InputHTMLAttributes } from 'react';
+import { forwardRef, InputHTMLAttributes, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -9,6 +9,7 @@ export interface AppleInputProps extends InputHTMLAttributes<HTMLInputElement> {
   helperText?: string;
   containerClassName?: string;
   labelClassName?: string;
+  endAdornment?: ReactNode;
 }
 
 export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
@@ -20,6 +21,7 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
       className,
       containerClassName,
       labelClassName,
+      endAdornment,
       id,
       ...props
     },
@@ -55,6 +57,7 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
             className={cn(
               // 基础样式
               'w-full px-4 py-3 text-base rounded-xl',
+              endAdornment && 'pr-12',
               'bg-white/80 dark:bg-slate-800/80',
               'border border-gray-200 dark:border-slate-700',
               'backdrop-blur-sm',
@@ -93,6 +96,11 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
             )}
             {...props}
           />
+          {endAdornment && (
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+              {endAdornment}
+            </div>
+          )}
         </div>
 
         {/* 错误提示动画 */}

@@ -4,6 +4,7 @@ import type {
   ListUsersResponse,
   UserInfo,
   CreateUserRequest,
+  CreateUserResponse,
   UpdateUserRequest,
   ResetPasswordRequest,
   SetUserStatusRequest,
@@ -57,15 +58,17 @@ export class UserService {
   static async createUser(
     username: string,
     password: string,
-    role: 'admin' | 'user'
-  ): Promise<UserInfo> {
+    role: 'admin' | 'user',
+    restoreIfDeleted: boolean = false
+  ): Promise<CreateUserResponse> {
     const data: CreateUserRequest = {
       username,
       password,
       role,
+      restore_if_deleted: restoreIfDeleted,
     };
 
-    const response = await apiClient.post<UserInfo>('/admin/users', data);
+    const response = await apiClient.post<CreateUserResponse>('/admin/users', data);
     return response;
   }
 

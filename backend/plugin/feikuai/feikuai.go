@@ -92,7 +92,7 @@ func (p *FeikuaiPlugin) SearchWithResult(keyword string, ext map[string]interfac
 // searchImpl 搜索实现
 func (p *FeikuaiPlugin) searchImpl(client *http.Client, keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
 	// 使用优化的客户端
-	if p.optimizedClient != nil {
+	if client == nil && p.optimizedClient != nil {
 		client = p.optimizedClient
 	}
 

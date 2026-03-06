@@ -3,17 +3,10 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { useSearchAccessStatus } from '@/stores/searchAccessStore';
 import { apiClient } from '@/lib/api';
 import { Eye, EyeOff, Copy, ArrowLeft, Lightbulb, CheckCircle2, XCircle, RefreshCw } from 'lucide-react';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { getErrorCode, getErrorMessage } from '@/lib/error';
 
 interface APIKeyInfo {
@@ -135,6 +128,7 @@ const ApiKeySettingsSkeleton: React.FC<ApiKeySettingsSkeletonProps> = ({ holdOnE
 const UserApiKeySettings: React.FC = () => {
     const navigate = useNavigate();
     const { token, apiKey, isAuthenticated } = useAuthStore();
+    const { refresh: refreshSearchAccess, overrideStatus } = useSearchAccessStatus();
 
     const [apiKeyInfo, setApiKeyInfo] = useState<APIKeyInfo | null>(null);
     const [newApiKey, setNewApiKey] = useState('');
@@ -145,6 +139,13 @@ const UserApiKeySettings: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showKey, setShowKey] = useState(false);
     const [showUnbindDialog, setShowUnbindDialog] = useState(false);
+    const [hasJustBound, setHasJustBound] = useState(false);
+
+    const syncSearchAccessFromAPIKeyInfo = useCallback((data: APIKeyInfo | null) => {
+        if (token && !apiKey) {
+            overrideStatus(data ? 'search_ready' : 'session_only');
+        }
+    }, [apiKey, overrideStatus, token]);
 
     const loadAPIKeyInfo = useCallback(async ({
         force = false,
@@ -175,6 +176,7 @@ const UserApiKeySettings: React.FC = () => {
             setApiKeyInfo(data);
             setHasResolvedData(true);
             setIsHoldLoadingOnError(false);
+            syncSearchAccessFromAPIKeyInfo(data);
             return data;
         } catch (error) {
             if (cancelled()) {
@@ -199,7 +201,7 @@ const UserApiKeySettings: React.FC = () => {
                 }
             }
         }
-    }, []);
+    }, [syncSearchAccessFromAPIKeyInfo]);
 
     useEffect(() => {
         if (!isAuthenticated || (!token && !apiKey)) {
@@ -227,6 +229,7 @@ const UserApiKeySettings: React.FC = () => {
                 setHasResolvedData(true);
                 setIsInitialLoading(false);
                 setIsHoldLoadingOnError(false);
+                syncSearchAccessFromAPIKeyInfo(cacheSnapshot.value);
 
                 await loadAPIKeyInfo({
                     force: false,
@@ -250,7 +253,7 @@ const UserApiKeySettings: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [isAuthenticated, token, apiKey, loadAPIKeyInfo]);
+    }, [isAuthenticated, token, apiKey, loadAPIKeyInfo, syncSearchAccessFromAPIKeyInfo]);
 
     const handleBindAPIKey = async () => {
         if (!newApiKey.trim()) {
@@ -269,14 +272,17 @@ const UserApiKeySettings: React.FC = () => {
                 key: newApiKey.trim(),
             });
 
-            toast.success('绑定成功');
+            toast.success('绑定成功，已开通搜索权限');
             setNewApiKey('');
+            setHasJustBound(true);
             invalidateApiKeyInfoCache();
+            overrideStatus('search_ready');
             await loadAPIKeyInfo({
                 force: true,
                 background: false,
                 holdOnError: true,
             });
+            await refreshSearchAccess({ force: true, silent: true });
         } catch (error) {
             console.error('绑定 API Key 失败:', error);
             toast.error(getErrorMessage(error, '绑定失败'));
@@ -295,6 +301,8 @@ const UserApiKeySettings: React.FC = () => {
             setApiKeyInfo(null);
             setHasResolvedData(true);
             setShowUnbindDialog(false);
+            setHasJustBound(false);
+            overrideStatus('session_only');
 
             await loadAPIKeyInfo({
                 force: true,
@@ -302,6 +310,7 @@ const UserApiKeySettings: React.FC = () => {
                 holdOnError: false,
                 showErrorToast: false,
             });
+            await refreshSearchAccess({ force: true, silent: true });
         } catch (error) {
             console.error('解绑 API Key 失败:', error);
             toast.error(getErrorMessage(error, '解绑失败'));
@@ -319,7 +328,7 @@ const UserApiKeySettings: React.FC = () => {
     const showContentSkeleton = isInitialLoading || isHoldLoadingOnError;
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-black font-sans selection:bg-blue-500/30">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans selection:bg-blue-500/30">
             {/* 顶部导航 */}
             <div className="max-w-3xl mx-auto px-6 pt-24 pb-6">
                 <button
@@ -343,7 +352,7 @@ const UserApiKeySettings: React.FC = () => {
                             API Key
                         </h1>
                         <p className="mt-1 text-[17px] text-gray-500 dark:text-slate-400 font-normal">
-                            管理您的个人的搜索访问密钥
+                            绑定后即可使用搜索，解绑后将恢复为仅登录状态
                         </p>
                     </div>
 
@@ -475,34 +484,73 @@ const UserApiKeySettings: React.FC = () => {
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-white dark:bg-[#1C1C1E] rounded-[20px] shadow-sm overflow-hidden border border-transparent dark:border-white/5"
+                            className="space-y-4"
                         >
-                            <div className="p-6">
-                                <label className="block text-[13px] font-medium text-gray-500 dark:text-slate-400 mb-2 uppercase tracking-wide ml-1">
-                                    输入密钥
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="sk-..."
-                                    value={newApiKey}
-                                    onChange={(e) => setNewApiKey(e.target.value)}
-                                    className="w-full px-4 py-3 bg-gray-100 dark:bg-[#2C2C2E] rounded-xl text-[17px] text-black dark:text-white placeholder-gray-400 border-none focus:ring-2 focus:ring-blue-500/50 transition-all font-mono"
-                                    autoFocus
-                                />
-                                <p className="mt-3 ml-1 text-[13px] text-gray-400">
-                                    请输入以 <code className="bg-gray-100 dark:bg-[#2C2C2E] px-1 rounded text-gray-600 dark:text-slate-300">sk-</code> 开头的 43 位密钥
-                                </p>
+                            <div className="overflow-hidden rounded-[24px] border border-blue-200/60 bg-[linear-gradient(135deg,rgba(239,246,255,0.95),rgba(255,255,255,0.92))] shadow-[0_24px_60px_rgba(59,130,246,0.14)] dark:border-blue-500/15 dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(28,28,30,0.96))]">
+                                <div className="border-b border-blue-100/80 px-6 py-5 dark:border-white/5">
+                                    <h2 className="text-[22px] font-semibold text-black dark:text-white">绑定后即可使用搜索</h2>
+                                    <p className="mt-2 text-[14px] leading-6 text-gray-500 dark:text-slate-400">
+                                        当前账号已经登录，但搜索资格尚未开通。完成绑定后，首页和搜索入口会立即恢复可用。
+                                    </p>
+                                </div>
+                                <div className="p-6">
+                                    <label className="mb-2 ml-1 block text-[13px] font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400">
+                                        输入密钥
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="sk-..."
+                                        value={newApiKey}
+                                        onChange={(e) => setNewApiKey(e.target.value)}
+                                        className="w-full rounded-xl border-none bg-gray-100 px-4 py-3 text-[17px] font-mono text-black placeholder-gray-400 transition-all focus:ring-2 focus:ring-blue-500/50 dark:bg-[#2C2C2E] dark:text-white"
+                                        autoFocus
+                                    />
+                                    <p className="mt-3 ml-1 text-[13px] text-gray-400">
+                                        请输入以 <code className="rounded bg-gray-100 px-1 text-gray-600 dark:bg-[#2C2C2E] dark:text-slate-300">sk-</code> 开头的 43 位密钥
+                                    </p>
 
-                                <div className="mt-8">
-                                    <button
-                                        onClick={handleBindAPIKey}
-                                        disabled={isSubmitting || !newApiKey.trim()}
-                                        className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 text-white text-[17px] font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20 active:scale-[0.98]"
-                                    >
-                                        {isSubmitting ? '验证并绑定...' : '绑定 API Key'}
-                                    </button>
+                                    <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                                        <button
+                                            onClick={handleBindAPIKey}
+                                            disabled={isSubmitting || !newApiKey.trim()}
+                                            className="flex-1 rounded-xl bg-blue-500 py-3.5 text-[17px] font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {isSubmitting ? '验证并绑定...' : '绑定 API Key'}
+                                        </button>
+                                        <button
+                                            onClick={() => navigate('/')}
+                                            className="rounded-xl border border-gray-200 bg-white px-5 py-3.5 text-[15px] font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-white/10 dark:bg-[#1C1C1E] dark:text-slate-200 dark:hover:bg-[#2C2C2E]"
+                                        >
+                                            返回首页
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
+
+                            {hasJustBound && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="rounded-[20px] border border-emerald-200 bg-emerald-50/80 p-5 dark:border-emerald-500/20 dark:bg-emerald-500/10"
+                                >
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <h3 className="text-[17px] font-semibold text-emerald-800 dark:text-emerald-200">
+                                                搜索权限已开通
+                                            </h3>
+                                            <p className="mt-1 text-sm text-emerald-700/90 dark:text-emerald-100/80">
+                                                现在返回首页即可直接开始搜索，无需再次登录。
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => navigate('/')}
+                                            className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                                        >
+                                            返回首页开始搜索
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
                         </motion.div>
                     )
                 )}
@@ -511,42 +559,23 @@ const UserApiKeySettings: React.FC = () => {
                 <div className="mt-8 px-4 flex gap-4">
                     <Lightbulb className="w-5 h-5 text-gray-400 flex-shrink-0" />
                     <div className="space-y-1 text-[13px] text-gray-400 leading-relaxed">
-                        <p>API Key 用于验证您的身份并统计您的搜索用量。</p>
+                        <p>API Key 用于验证您的身份并开通搜索能力，同时统计您的搜索用量。</p>
                         <p>如果您的 Key 泄露，请立即联系管理员重置。</p>
                     </div>
                 </div>
             </div>
 
-            {/* 解绑确认对话框 - iOS Style */}
-            <AlertDialog open={showUnbindDialog} onOpenChange={setShowUnbindDialog}>
-                <AlertDialogContent className="w-[320px] p-0 gap-0 bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-xl border border-transparent dark:border-white/10 rounded-[14px] overflow-hidden shadow-2xl">
-                    <div className="p-6 text-center">
-                        <AlertDialogHeader>
-                            <AlertDialogTitle className="text-[17px] font-semibold text-black dark:text-white text-center">
-                                解除绑定?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription className="text-[13px] text-gray-500 dark:text-slate-400 text-center mt-1">
-                                解绑后您将无法使用高级搜索功能，确定要继续吗？
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                    </div>
-                    <div className="flex border-t border-gray-200/50 dark:border-white/10 divide-x divide-gray-200/50 dark:divide-white/10">
-                        <AlertDialogCancel
-                            className="flex-1 h-12 bg-transparent hover:bg-gray-100 dark:hover:bg-white/5 border-none rounded-none text-[17px] text-blue-500 font-normal m-0"
-                            disabled={isSubmitting}
-                        >
-                            取消
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleUnbindAPIKey}
-                            className="flex-1 h-12 bg-transparent hover:bg-gray-100 dark:hover:bg-white/5 border-none rounded-none text-[17px] text-red-500 font-semibold m-0 shadow-none hover:shadow-none"
-                            disabled={isSubmitting}
-                        >
-                            解除绑定
-                        </AlertDialogAction>
-                    </div>
-                </AlertDialogContent>
-            </AlertDialog>
+            <ConfirmDialog
+                open={showUnbindDialog}
+                onOpenChange={setShowUnbindDialog}
+                title="解除绑定？"
+                description="解绑后您将暂时无法继续搜索，确定要继续吗？"
+                confirmText="解除绑定"
+                cancelText="取消"
+                variant="destructive"
+                onConfirm={handleUnbindAPIKey}
+                isLoading={isSubmitting}
+            />
         </div>
     );
 };

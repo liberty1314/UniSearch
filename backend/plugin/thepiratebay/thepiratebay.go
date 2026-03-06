@@ -145,7 +145,7 @@ func (p *ThePirateBayPlugin) SearchWithResult(keyword string, ext map[string]int
 // searchImpl 实现具体的搜索逻辑（支持分页）
 func (p *ThePirateBayPlugin) searchImpl(client *http.Client, keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
 	// 使用优化的客户端
-	if p.optimizedClient != nil {
+	if client == nil && p.optimizedClient != nil {
 		client = p.optimizedClient
 	}
 

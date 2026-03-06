@@ -6,7 +6,6 @@ import type {
   HealthResponse,
   CloudTypeValue,
 } from '@/types/api';
-import { getErrorMessage } from '@/lib/error';
 
 /**
  * 搜索服务类
@@ -51,7 +50,7 @@ export class SearchService {
       }
     } catch (error) {
       console.error('Search error:', error);
-      throw new Error(getErrorMessage(error, '搜索请求失败'));
+      throw error;
     }
   }
 
@@ -70,7 +69,7 @@ export class SearchService {
       }
     } catch (error) {
       console.error('Health check error:', error);
-      throw new Error(getErrorMessage(error, '健康检查请求失败'));
+      throw error;
     }
   }
 

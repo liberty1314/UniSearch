@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"sort"
 
 	"unisearch/model"
 )
@@ -38,10 +37,6 @@ func (searchResultMerger) Merge(existing []model.SearchResult, newResults []mode
 	for _, result := range resultMap {
 		merged = append(merged, result)
 	}
-
-	sort.Slice(merged, func(i, j int) bool {
-		return merged[i].Datetime.After(merged[j].Datetime)
-	})
 
 	return merged
 }

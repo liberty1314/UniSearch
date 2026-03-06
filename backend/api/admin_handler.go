@@ -1113,6 +1113,7 @@ func SetPluginStatusHandler(searchService *service.SearchService, pluginStateSer
 						return
 					}
 				}
+				searchService.InvalidatePluginSelectorCache()
 				c.JSON(200, gin.H{
 					"success":     true,
 					"plugin_name": p.Name(),
@@ -1148,6 +1149,7 @@ func SetPluginStatusHandler(searchService *service.SearchService, pluginStateSer
 				}
 			}
 
+			searchService.InvalidatePluginSelectorCache()
 			c.JSON(200, gin.H{
 				"success":     true,
 				"plugin_name": customPlugin.Name,
@@ -1229,6 +1231,7 @@ func BatchSetPluginStatusHandler(searchService *service.SearchService, pluginSta
 						continue
 					}
 				}
+				searchService.InvalidatePluginSelectorCache()
 				success = append(success, builtinName)
 				continue
 			}
@@ -1267,6 +1270,7 @@ func BatchSetPluginStatusHandler(searchService *service.SearchService, pluginSta
 				}
 			}
 
+			searchService.InvalidatePluginSelectorCache()
 			success = append(success, customPlugin.Name)
 		}
 
