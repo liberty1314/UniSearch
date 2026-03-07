@@ -30,8 +30,8 @@ const Home: React.FC = () => {
   const hasSearched = searchParams.keyword || (searchResults?.results && searchResults.results.length > 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="container mx-auto px-4 py-8 pt-24">
+    <div className="min-h-screen bg-gray-50 dark:bg-gradient-to-b dark:from-gray-900 dark:via-gray-900 dark:to-slate-950 transition-colors duration-500">
+      <div className="container mx-auto px-4 py-8 pt-24 pb-12 relative z-10">
         {/* 页面头部 - 增强品牌形象 */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

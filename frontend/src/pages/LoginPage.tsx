@@ -49,7 +49,7 @@ const LoginPage: React.FC = () => {
                 setEnableUserSignup(settings.enable_user_signup);
 
                 if (!settings.enable_user_auth) {
-                    navigate('/auth/apikey');
+                    navigate('/apikey');
                     return;
                 }
 
@@ -57,7 +57,7 @@ const LoginPage: React.FC = () => {
                     if (settings.enable_user_signup) {
                         navigate('/register');
                     } else {
-                        navigate('/auth/apikey');
+                        navigate('/apikey');
                     }
                 }
             } catch (error) {
@@ -223,7 +223,7 @@ const LoginPage: React.FC = () => {
                                     />
                                 )}
                                 <AuthEntryLink
-                                    to="/auth/apikey"
+                                    to="/apikey"
                                     state={{ authTransition: 'forward', from: '/login' }}
                                     label="API Key"
                                     icon={Key}

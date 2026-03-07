@@ -169,7 +169,7 @@ describe('SearchBox', () => {
       isAdmin: false,
     };
     searchAccessStatus = 'anonymous';
-    resolveDefaultAuthEntryPathMock.mockResolvedValue('/auth/apikey');
+    resolveDefaultAuthEntryPathMock.mockResolvedValue('/apikey');
     performSearchMock.mockRejectedValue({
       code: 401,
       message: '请先使用 API Key 登录后再进行搜索',
@@ -184,6 +184,6 @@ describe('SearchBox', () => {
       expect(resolveDefaultAuthEntryPathMock).toHaveBeenCalled();
     });
     expect(warningToastMock).toHaveBeenCalledWith('请先使用 API Key 登录后再进行搜索', { duration: 3000 });
-    expect(navigateMock).toHaveBeenCalledWith('/auth/apikey');
+    expect(navigateMock).toHaveBeenCalledWith('/apikey');
   });
 });

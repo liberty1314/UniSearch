@@ -1,4 +1,4 @@
-export const AUTH_ROUTES = ['/login', '/register', '/auth/apikey', '/admin/login'] as const;
+export const AUTH_ROUTES = ['/login', '/register', '/apikey', '/admin/login'] as const;
 
 export type AuthRoute = (typeof AUTH_ROUTES)[number];
 export type AuthDirection = -1 | 0 | 1;
@@ -17,8 +17,8 @@ export function isAuthRoute(pathname: string): pathname is AuthRoute {
 const AUTH_DIRECTION_MAP: Record<string, AuthDirection> = {
   '/login->/register': 1,
   '/register->/login': -1,
-  '/login->/auth/apikey': 1,
-  '/auth/apikey->/login': -1,
+  '/login->/apikey': 1,
+  '/apikey->/login': -1,
   '/login->/admin/login': 1,
   '/admin/login->/login': -1,
 };

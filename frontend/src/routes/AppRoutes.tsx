@@ -6,6 +6,7 @@ import { AnnouncementProvider } from '@/components/AnnouncementProvider';
 import SiteFooter from '@/components/SiteFooter';
 import PageTransition from '@/components/PageTransition';
 import ScrollToTop from './ScrollToTop';
+import { isAuthRoute } from '@/components/auth/authRouteMotion';
 import {
   AdminGuestRoute,
   AdminRoute,
@@ -65,9 +66,8 @@ const AppRoutes: React.FC = () => {
   const { pathname } = useLocation();
   const showSiteFooter =
     !pathname.startsWith('/admin') &&
-    !pathname.startsWith('/login') &&
-    !pathname.startsWith('/register') &&
-    !pathname.startsWith('/auth');
+    pathname !== '/auth' &&
+    !isAuthRoute(pathname);
 
   return (
     <div className="bg-gray-50 dark:bg-slate-950 transition-colors duration-200">
@@ -103,7 +103,7 @@ const AppRoutes: React.FC = () => {
               )}
             />
             <Route
-              path="/auth/apikey"
+              path="/apikey"
               element={renderLazyRoute(
                 <GuestRoute>
                   <ApiKeyLoginPage />

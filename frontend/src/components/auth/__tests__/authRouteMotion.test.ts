@@ -8,8 +8,8 @@ describe('authRouteMotion', () => {
   });
 
   it('resolves login/apikey directions from fixed mapping', () => {
-    expect(resolveAuthDirection('/login', '/auth/apikey')).toBe(1);
-    expect(resolveAuthDirection('/auth/apikey', '/login')).toBe(-1);
+    expect(resolveAuthDirection('/login', '/apikey')).toBe(1);
+    expect(resolveAuthDirection('/apikey', '/login')).toBe(-1);
   });
 
   it('resolves login/admin directions from fixed mapping', () => {
@@ -18,8 +18,8 @@ describe('authRouteMotion', () => {
   });
 
   it('falls back to neutral when route combination is unsupported', () => {
-    expect(resolveAuthDirection('/register', '/auth/apikey')).toBe(0);
-    expect(resolveAuthDirection('/auth/apikey', '/register')).toBe(0);
+    expect(resolveAuthDirection('/register', '/apikey')).toBe(0);
+    expect(resolveAuthDirection('/apikey', '/register')).toBe(0);
     expect(resolveAuthDirection(undefined, '/register')).toBe(0);
   });
 

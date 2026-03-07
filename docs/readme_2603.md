@@ -395,3 +395,26 @@ feat(frontend): 新增统一站点底部组件并重构 Button 为标准 shadcn/
 - frontend/src/routes/AppRoutes.tsx
 
 ---
+
+## 2026-03-08 00:33:00
+
+### refactor(frontend): 统一 API Key 登录路由为 /apikey 并优化底部组件视觉效果
+
+**Body**:
+将原 `/auth/apikey` 路由统一简化为 `/apikey`，同时优化 SiteFooter 和 Footer 组件的视觉层次,增加渐变背景和光晕效果以提升用户体验。
+
+**Files**:
+- frontend/src/components/SearchBox.tsx
+- frontend/src/components/SiteFooter.tsx
+- frontend/src/components/__tests__/DisclaimerFooterVisibility.test.tsx
+- frontend/src/components/__tests__/SearchBox.test.tsx
+- frontend/src/components/auth/__tests__/authRouteMotion.test.ts
+- frontend/src/components/auth/authRouteMotion.ts
+- frontend/src/components/ui/footer.tsx
+- frontend/src/lib/api.ts
+- frontend/src/pages/ApiKeyLoginPage.tsx
+- frontend/src/pages/Home.tsx
+- frontend/src/pages/LoginPage.tsx
+- frontend/src/routes/AppRoutes.tsx
+- frontend/src/routes/__tests__/AppRoutes.test.tsx (新增)
+- frontend/src/services/systemSettingsService.ts

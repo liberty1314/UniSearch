@@ -184,7 +184,7 @@ const ApiKeyLoginPage: React.FC = () => {
                                 <AuthEntryLinksRow>
                                     <AuthEntryLink
                                         to="/login"
-                                        state={{ authTransition: 'backward', from: '/auth/apikey' }}
+                                        state={{ authTransition: 'backward', from: '/apikey' }}
                                         label="返回账号登录"
                                         icon={LogIn}
                                     />

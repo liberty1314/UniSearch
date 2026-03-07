@@ -76,7 +76,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
 
       toast.warning(
         needsApiKeyLogin
-          ? (entryPath === '/auth/apikey' ? '请先使用 API Key 登录后再进行搜索' : '请先登录后再进行搜索')
+          ? (entryPath === '/apikey' ? '请先使用 API Key 登录后再进行搜索' : '请先登录后再进行搜索')
           : errorMessage,
         { duration: 3000 }
       );

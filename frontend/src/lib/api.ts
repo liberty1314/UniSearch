@@ -156,7 +156,11 @@ class ApiClient {
 
             // 跳转到登录页（避免在登录页和认证相关页面重复跳转）
             const currentPath = window.location.pathname;
-            if (!currentPath.includes('/login') && !currentPath.includes('/auth')) {
+            const isAuthPage =
+              currentPath.includes('/login') ||
+              currentPath.startsWith('/auth') ||
+              currentPath === '/apikey';
+            if (!isAuthPage) {
               window.location.href = '/login';
             }
           }

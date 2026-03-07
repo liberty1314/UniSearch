@@ -1,9 +1,9 @@
 import { Button } from '@/components/ui/button';
 
 interface FooterProps {
-  logo: React.ReactNode;
-  brandName: string;
-  socialLinks: Array<{
+  logo?: React.ReactNode;
+  brandName?: string;
+  socialLinks?: Array<{
     icon: React.ReactNode;
     href: string;
     label: string;
@@ -20,48 +20,54 @@ interface FooterProps {
     text: string;
     license?: string;
   };
+  showHeader?: boolean;
 }
 
 export function Footer({
   logo,
   brandName,
-  socialLinks,
+  socialLinks = [],
   mainLinks,
   legalLinks,
   copyright,
+  showHeader = true,
 }: FooterProps) {
+  const hasHeader = showHeader && (logo || brandName || socialLinks.length > 0);
+
   return (
-    <footer className="pb-6 pt-10 lg:pb-8 lg:pt-14">
+    <footer className="pb-6 pt-8 lg:pb-8 lg:pt-10">
       <div className="px-4 lg:px-8">
-        <div className="md:flex md:items-start md:justify-between">
-          <a
-            href="/"
-            className="flex items-center gap-x-2"
-            aria-label={brandName}
-          >
-            {logo}
-            <span className="font-bold text-xl">{brandName}</span>
-          </a>
-          {socialLinks.length > 0 && (
-            <ul className="mt-6 flex list-none space-x-3 md:mt-0">
-              {socialLinks.map((link, i) => (
-                <li key={i}>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-10 w-10 rounded-full"
-                    asChild
-                  >
-                    <a href={link.href} target="_blank" rel="noreferrer" aria-label={link.label}>
-                      {link.icon}
-                    </a>
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="mt-6 border-t pt-6 md:mt-4 md:pt-8 lg:grid lg:grid-cols-10">
+        {hasHeader && (
+          <div className="md:flex md:items-start md:justify-between">
+            <a
+              href="/"
+              className="flex items-center gap-x-2"
+              aria-label={brandName ?? 'Footer brand'}
+            >
+              {logo}
+              {brandName && <span className="text-xl font-bold">{brandName}</span>}
+            </a>
+            {socialLinks.length > 0 && (
+              <ul className="mt-6 flex list-none space-x-3 md:mt-0">
+                {socialLinks.map((link, i) => (
+                  <li key={i}>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-10 w-10 rounded-full"
+                      asChild
+                    >
+                      <a href={link.href} target="_blank" rel="noreferrer" aria-label={link.label}>
+                        {link.icon}
+                      </a>
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+        <div className={`${hasHeader ? 'mt-6 border-t pt-6 md:mt-4 md:pt-8' : ''} lg:grid lg:grid-cols-10 lg:items-start`}>
           <nav className="lg:col-[4/11] lg:mt-0">
             <ul className="-mx-2 -my-1 flex list-none flex-wrap lg:justify-end">
               {mainLinks.map((link, i) => (
