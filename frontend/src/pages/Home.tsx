@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRight, KeyRound } from 'lucide-react';
+import { ArrowRight, BriefcaseBusiness, KeyRound, Lightbulb, RefreshCw } from 'lucide-react';
 import SearchBox from '@/components/SearchBox';
 import CloudTypeFilter from '@/components/CloudTypeFilter';
 import SearchResults from '@/components/SearchResults';
@@ -10,6 +10,45 @@ import GradientText from '@/components/GradientText';
 import { useSearchStore } from '@/stores/searchStore';
 import { useSearchAccessStatus } from '@/stores/searchAccessStore';
 import { FeatureCardsSkeleton } from '@/components/SkeletonLoader';
+
+const featureCards = [
+  {
+    title: '多平台搜索',
+    description: '支持百度网盘、阿里云盘、夸克网盘等多个主流网盘平台，一站式搜索体验',
+    Icon: BriefcaseBusiness,
+    iconGradient: 'from-blue-500 via-sky-500 to-cyan-400',
+    iconGlow: 'shadow-[0_18px_32px_rgba(14,165,233,0.24)] group-hover:shadow-[0_22px_40px_rgba(14,165,233,0.28)]',
+    accentText: 'group-hover:text-blue-500',
+    accentBorder: 'group-hover:border-blue-400/28 dark:group-hover:border-blue-400/42',
+    depthGlow: 'from-blue-200/45 via-sky-100/20 to-cyan-200/38 dark:from-slate-800/72 dark:via-blue-950/28 dark:to-cyan-950/42',
+    surfaceTint: 'from-blue-500/[0.10] via-sky-100/20 to-cyan-500/[0.08] dark:from-blue-400/[0.12] dark:via-slate-950/10 dark:to-cyan-400/[0.10]',
+    edgeTint: 'from-blue-400/40 via-white/55 to-cyan-300/38 dark:from-blue-400/34 dark:via-slate-400/12 dark:to-cyan-400/28',
+  },
+  {
+    title: '智能匹配',
+    description: '采用先进的搜索算法和AI技术，精准匹配您的搜索需求，提高搜索效率',
+    Icon: Lightbulb,
+    iconGradient: 'from-emerald-500 via-teal-500 to-green-400',
+    iconGlow: 'shadow-[0_18px_32px_rgba(16,185,129,0.24)] group-hover:shadow-[0_22px_40px_rgba(16,185,129,0.28)]',
+    accentText: 'group-hover:text-teal-500',
+    accentBorder: 'group-hover:border-teal-400/28 dark:group-hover:border-teal-400/42',
+    depthGlow: 'from-emerald-200/45 via-teal-100/20 to-green-200/38 dark:from-slate-800/72 dark:via-emerald-950/28 dark:to-teal-950/42',
+    surfaceTint: 'from-emerald-500/[0.10] via-teal-100/18 to-green-500/[0.08] dark:from-emerald-400/[0.12] dark:via-slate-950/10 dark:to-teal-400/[0.10]',
+    edgeTint: 'from-emerald-400/40 via-white/55 to-teal-300/38 dark:from-emerald-400/34 dark:via-slate-400/12 dark:to-teal-400/28',
+  },
+  {
+    title: '实时更新',
+    description: '资源库实时更新维护，确保您获得最新最全的搜索结果和资源信息',
+    Icon: RefreshCw,
+    iconGradient: 'from-amber-500 via-orange-500 to-yellow-400',
+    iconGlow: 'shadow-[0_18px_32px_rgba(245,158,11,0.24)] group-hover:shadow-[0_22px_40px_rgba(245,158,11,0.28)]',
+    accentText: 'group-hover:text-amber-500',
+    accentBorder: 'group-hover:border-amber-400/28 dark:group-hover:border-amber-400/42',
+    depthGlow: 'from-amber-200/45 via-orange-100/20 to-yellow-200/38 dark:from-slate-800/72 dark:via-amber-950/28 dark:to-orange-950/42',
+    surfaceTint: 'from-amber-500/[0.10] via-orange-100/18 to-yellow-500/[0.08] dark:from-amber-400/[0.12] dark:via-slate-950/10 dark:to-orange-400/[0.10]',
+    edgeTint: 'from-amber-400/40 via-white/55 to-orange-300/38 dark:from-amber-400/34 dark:via-slate-400/12 dark:to-orange-400/28',
+  },
+] as const;
 
 const Home: React.FC = () => {
   const {
@@ -30,7 +69,7 @@ const Home: React.FC = () => {
   const hasSearched = searchParams.keyword || (searchResults?.results && searchResults.results.length > 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gradient-to-b dark:from-gray-900 dark:via-gray-900 dark:to-slate-950 transition-colors duration-500">
+    <div className="min-h-screen bg-white dark:bg-gradient-to-b dark:from-gray-900 dark:via-gray-900 dark:to-slate-950 transition-colors duration-500">
       <div className="container mx-auto px-4 py-8 pt-24 pb-12 relative z-10">
         {/* 页面头部 - 增强品牌形象 */}
         <motion.div
@@ -87,9 +126,6 @@ const Home: React.FC = () => {
             transition={{ delay: 0.6, duration: 0.8, ease: "easeOut" }}
             className="relative max-w-4xl w-full z-20"
           >
-            {/* 搜索框背景光晕 - 更强的动态光效 */}
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-fuchsia-500/20 rounded-[2rem] blur-3xl transform scale-105 opacity-50 dark:opacity-30 animate-pulse-slow" />
-
             <SearchBox className="w-full" />
           </motion.div>
 
@@ -155,78 +191,66 @@ const Home: React.FC = () => {
                 {isPageLoading ? (
                   <FeatureCardsSkeleton />
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {/* 多平台搜索 */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 1.0, duration: 0.5 }}
-                      className="group relative cursor-pointer"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-2xl blur-xl group-hover:blur-2xl group-hover:scale-110 transition-all duration-500"></div>
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                      <div className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-apple rounded-2xl p-8 shadow-card hover:shadow-hover transition-all duration-500 border border-gray-200/50 dark:border-white/10 group-hover:-translate-y-3 group-hover:border-blue-500/30">
-                        <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:scale-125 group-hover:rotate-3 transition-all duration-500 group-hover:shadow-lg">
-                          <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                          </svg>
-                        </div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center group-hover:text-blue-500 group-hover:-translate-y-1 transition-all duration-300">
-                          多平台搜索
-                        </h3>
-                        <p className="text-gray-600 dark:text-slate-300 text-center leading-relaxed group-hover:text-gray-700 dark:group-hover:text-gray-200 group-hover:-translate-y-1 transition-all duration-300">
-                          支持百度网盘、阿里云盘、夸克网盘等多个主流网盘平台，一站式搜索体验
-                        </p>
-                      </div>
-                    </motion.div>
+                  <div className="grid grid-cols-1 gap-8 md:grid-cols-3 [perspective:1600px]">
+                    {featureCards.map((feature, index) => {
+                      const { Icon } = feature;
 
-                    {/* 智能匹配 */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 1.1, duration: 0.5 }}
-                      className="group relative cursor-pointer"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-teal-500/10 to-emerald-500/10 rounded-2xl blur-xl group-hover:blur-2xl group-hover:scale-110 transition-all duration-500"></div>
-                      <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 to-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                      <div className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-apple rounded-2xl p-8 shadow-card hover:shadow-hover transition-all duration-500 border border-gray-200/50 dark:border-white/10 group-hover:-translate-y-3 group-hover:border-teal-500/30">
-                        <div className="w-16 h-16 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:scale-125 group-hover:rotate-3 transition-all duration-500 group-hover:shadow-lg">
-                          <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                          </svg>
-                        </div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center group-hover:text-teal-500 group-hover:-translate-y-1 transition-all duration-300">
-                          智能匹配
-                        </h3>
-                        <p className="text-gray-600 dark:text-slate-300 text-center leading-relaxed group-hover:text-gray-700 dark:group-hover:text-gray-200 group-hover:-translate-y-1 transition-all duration-300">
-                          采用先进的搜索算法和AI技术，精准匹配您的搜索需求，提高搜索效率
-                        </p>
-                      </div>
-                    </motion.div>
+                      return (
+                        <motion.div
+                          key={feature.title}
+                          initial={{ opacity: 0, y: 30 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 1 + index * 0.1, duration: 0.5 }}
+                          className="group relative cursor-pointer"
+                        >
+                          <div
+                            aria-hidden="true"
+                            data-testid="feature-card-depth"
+                            className={`pointer-events-none absolute inset-x-7 bottom-2 top-14 rounded-[2rem] bg-gradient-to-b ${feature.depthGlow} opacity-80 blur-2xl transition-all duration-500 group-hover:translate-y-5 group-hover:scale-[0.94] group-hover:opacity-100`}
+                          />
+                          <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-x-10 bottom-0 h-10 rounded-full bg-slate-950/12 blur-2xl transition-all duration-500 group-hover:translate-y-3 group-hover:scale-x-90 dark:bg-black/35"
+                          />
 
-                    {/* 实时更新 */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 1.2, duration: 0.5 }}
-                      className="group relative cursor-pointer"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-2xl blur-xl group-hover:blur-2xl group-hover:scale-110 transition-all duration-500"></div>
-                      <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-orange-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                      <div className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-apple rounded-2xl p-8 shadow-card hover:shadow-hover transition-all duration-500 border border-gray-200/50 dark:border-white/10 group-hover:-translate-y-3 group-hover:border-amber-500/30">
-                        <div className="w-16 h-16 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:scale-125 group-hover:rotate-3 transition-all duration-500 group-hover:shadow-lg">
-                          <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg>
-                        </div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center group-hover:text-amber-500 group-hover:-translate-y-1 transition-all duration-300">
-                          实时更新
-                        </h3>
-                        <p className="text-gray-600 dark:text-slate-300 text-center leading-relaxed group-hover:text-gray-700 dark:group-hover:text-gray-200 group-hover:-translate-y-1 transition-all duration-300">
-                          资源库实时更新维护，确保您获得最新最全的搜索结果和资源信息
-                        </p>
-                      </div>
-                    </motion.div>
+                          <div
+                            data-testid="feature-card-surface"
+                            className={`relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-[0_22px_50px_rgba(15,23,42,0.08),0_6px_18px_rgba(255,255,255,0.7)_inset,0_-18px_30px_rgba(148,163,184,0.08)_inset] backdrop-blur-apple transition-all duration-500 will-change-transform [transform-style:preserve-3d] dark:bg-slate-950/80 dark:border-slate-700/55 dark:shadow-[0_30px_60px_rgba(2,6,23,0.56),0_1px_0_rgba(148,163,184,0.12)_inset,0_-24px_34px_rgba(15,23,42,0.28)_inset] group-hover:[transform:translateY(-12px)_scale(1.01)] ${feature.accentBorder}`}
+                          >
+                            <div
+                              aria-hidden="true"
+                              className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${feature.surfaceTint} opacity-90`}
+                            />
+                            <div
+                              aria-hidden="true"
+                              className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.24),transparent_22%,transparent_100%)] opacity-80 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_18%,transparent_100%)] dark:opacity-100"
+                            />
+                            <div
+                              aria-hidden="true"
+                              className={`pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent ${feature.edgeTint} to-transparent opacity-85`}
+                            />
+                            <div
+                              aria-hidden="true"
+                              className="pointer-events-none absolute -right-10 top-10 h-24 w-24 rounded-full bg-white/22 blur-3xl transition-all duration-500 group-hover:scale-110 group-hover:opacity-80 dark:bg-slate-200/5"
+                            />
+
+                            <div className="relative z-10">
+                              <div className={`mx-auto mb-6 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-[1.6rem] bg-gradient-to-br ${feature.iconGradient} text-white ring-1 ring-white/40 transition-all duration-500 group-hover:-translate-y-1 group-hover:scale-[1.18] group-hover:rotate-3 ${feature.iconGlow}`}>
+                                <Icon className="h-8 w-8 transition-transform duration-300 group-hover:scale-110" strokeWidth={2.2} />
+                              </div>
+
+                              <h3 className={`mb-4 text-center text-xl font-bold text-gray-900 transition-all duration-300 group-hover:-translate-y-1 dark:text-white ${feature.accentText}`}>
+                                {feature.title}
+                              </h3>
+
+                              <p className="text-center leading-relaxed text-gray-600 transition-all duration-300 group-hover:-translate-y-1 group-hover:text-gray-700 dark:text-slate-300 dark:group-hover:text-gray-200">
+                                {feature.description}
+                              </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

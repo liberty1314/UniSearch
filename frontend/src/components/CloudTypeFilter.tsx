@@ -116,10 +116,7 @@ const CloudTypeFilter: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
       className="w-full max-w-5xl mx-auto mt-6"
     >
-      <div className="relative group">
-        {/* 背景光晕 */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 rounded-3xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity duration-500" />
-
+      <div className="relative">
         {/* 内容容器 */}
         <div className="relative bg-white/60 dark:bg-slate-800/60 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 dark:border-white/10 shadow-glass">
 

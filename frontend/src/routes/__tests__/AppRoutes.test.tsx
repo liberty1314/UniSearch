@@ -83,4 +83,19 @@ describe('AppRoutes', () => {
     expect(await screen.findByText('页面未找到')).toBeInTheDocument();
     expect(screen.queryByText('API Key Login Page')).not.toBeInTheDocument();
   });
+
+  it('uses a pure white light shell for standard pages but keeps auth page shell unchanged', async () => {
+    const { container, unmount } = renderRoutesAt('/');
+
+    expect(await screen.findByText('Home Page')).toBeInTheDocument();
+    expect(container.firstChild).toHaveClass('bg-white');
+    expect(container.firstChild).not.toHaveClass('bg-gray-50');
+
+    unmount();
+
+    const loginRender = renderRoutesAt('/login');
+    expect(await screen.findByText('Login Page')).toBeInTheDocument();
+    expect(loginRender.container.firstChild).toHaveClass('bg-gray-50');
+    expect(loginRender.container.firstChild).not.toHaveClass('bg-white');
+  });
 });

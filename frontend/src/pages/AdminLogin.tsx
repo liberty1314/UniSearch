@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, Lock, Shield, User, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, Loader2 } from 'lucide-react';
 import AuthBackground from '@/components/auth/AuthBackground';
 import AuthCardShell from '@/components/auth/AuthCardShell';
 import AuthSwitchMotion from '@/components/auth/AuthSwitchMotion';
@@ -117,7 +117,6 @@ const AdminLogin: React.FC = () => {
                                         <Lock className="w-8 h-8 text-white auth-icon-intro" />
                                     </div>
                                     <div className="absolute inset-0 bg-gradient-to-br from-rose-500 to-rose-700 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
-                                    <Shield className="absolute -top-2 -right-2 w-5 h-5 text-yellow-400 auth-sparkle-intro" />
                                 </div>
                             </div>
 
@@ -212,7 +211,7 @@ const AdminLogin: React.FC = () => {
                                     <Button
                                         type="submit"
                                         disabled={isAdminLoading || !username.trim() || !password.trim()}
-                                        className="w-full h-12 bg-gradient-to-r from-rose-600 via-rose-500 to-rose-700 hover:from-rose-700 hover:via-rose-600 hover:to-rose-800 text-white font-medium shadow-lg hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden group"
+                                        className="w-full h-12 bg-gradient-to-r from-rose-600 via-rose-500 to-rose-700 hover:from-rose-700 hover:via-rose-600 hover:to-rose-800 text-white font-medium shadow-lg hover:shadow-2xl transform active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden group"
                                     >
                                         {/* 按钮光泽效果 */}
                                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>

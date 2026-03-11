@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { User, Lock, Sparkles, UserPlus, Eye, EyeOff, LogIn } from 'lucide-react';
+import { User, Lock, UserPlus, Eye, EyeOff, LogIn } from 'lucide-react';
 import PageLoader from '@/components/PageLoader';
 import AuthBackground from '@/components/auth/AuthBackground';
 import AuthCardShell from '@/components/auth/AuthCardShell';
@@ -112,7 +112,6 @@ const RegisterPage: React.FC = () => {
                                     <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
                                         <UserPlus className="w-8 h-8 text-white auth-icon-intro" />
                                     </div>
-                                    <Sparkles className="absolute -top-2 -right-2 w-5 h-5 text-yellow-400 auth-sparkle-intro" />
                                 </div>
                             </div>
                             <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 bg-clip-text text-transparent animate-auth-gradient">
@@ -190,7 +189,7 @@ const RegisterPage: React.FC = () => {
                                 <Button
                                     onClick={handleRegister}
                                     disabled={isLoading || !username.trim() || !password.trim() || !confirmPassword.trim()}
-                                    className="w-full h-12 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 hover:from-emerald-700 hover:via-emerald-600 hover:to-teal-600 text-white font-medium shadow-lg hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                                    className="w-full h-12 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 hover:from-emerald-700 hover:via-emerald-600 hover:to-teal-600 text-white font-medium shadow-lg hover:shadow-2xl transform active:scale-[0.98] transition-all duration-200"
                                 >
                                     {isLoading ? '注册中...' : '立即注册'}
                                 </Button>

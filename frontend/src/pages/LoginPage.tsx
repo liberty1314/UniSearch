@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { User, Lock, Sparkles, LogIn, Eye, EyeOff, ArrowRight, Key, Loader2 } from 'lucide-react';
+import { User, Lock, LogIn, Eye, EyeOff, ArrowRight, Key, Loader2 } from 'lucide-react';
 import PageLoader from '@/components/PageLoader';
 import AuthBackground from '@/components/auth/AuthBackground';
 import AuthCardShell from '@/components/auth/AuthCardShell';
@@ -121,7 +121,6 @@ const LoginPage: React.FC = () => {
                                     <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
                                         <LogIn className="w-8 h-8 text-white auth-icon-intro" />
                                     </div>
-                                    <Sparkles className="absolute -top-2 -right-2 w-5 h-5 text-yellow-400 auth-sparkle-intro" />
                                 </div>
                             </div>
                             <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-500 bg-clip-text text-transparent animate-auth-gradient">
@@ -194,7 +193,7 @@ const LoginPage: React.FC = () => {
                                 <Button
                                     onClick={handleLogin}
                                     disabled={isLoading || !username.trim() || !password.trim()}
-                                    className="relative w-full h-12 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600 text-white font-medium shadow-lg hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 overflow-hidden"
+                                    className="relative w-full h-12 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600 text-white font-medium shadow-lg hover:shadow-2xl transform active:scale-[0.98] transition-all duration-300 overflow-hidden"
                                 >
                                     {/* 文字淡入淡出 */}
                                     <span className={cn(

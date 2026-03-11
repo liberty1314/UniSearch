@@ -74,4 +74,45 @@ describe('Home', () => {
 
     expect(screen.queryByText('当前账号已登录，绑定 API Key 后即可开始搜索')).not.toBeInTheDocument();
   });
+
+  it('renders elevated feature cards with dedicated depth layers', () => {
+    searchAccessStatus = 'search_ready';
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>
+    );
+
+    expect(screen.getAllByTestId('feature-card-depth')).toHaveLength(3);
+    expect(screen.getAllByTestId('feature-card-surface')).toHaveLength(3);
+  });
+
+  it('tones feature card surfaces for dark backgrounds with matte slate panels', () => {
+    searchAccessStatus = 'search_ready';
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>
+    );
+
+    screen.getAllByTestId('feature-card-surface').forEach((card) => {
+      expect(card).toHaveClass('dark:bg-slate-950/80');
+      expect(card).toHaveClass('dark:border-slate-700/55');
+    });
+  });
+
+  it('uses a pure white light page background', () => {
+    searchAccessStatus = 'search_ready';
+
+    const { container } = render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>
+    );
+
+    expect(container.firstChild).toHaveClass('bg-white');
+    expect(container.firstChild).not.toHaveClass('bg-gray-50');
+  });
 });

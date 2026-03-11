@@ -24,4 +24,11 @@ describe('DisclaimerPage', () => {
     expect(emailLink).toBeInTheDocument();
     expect(emailLink).toHaveAttribute('href', 'mailto:UniSearch@163.com');
   });
+
+  it('uses a pure white light page background', () => {
+    const { container } = render(<DisclaimerPage />);
+
+    expect(container.firstChild).toHaveClass('bg-white');
+    expect(container.firstChild).not.toHaveClass('bg-gray-50');
+  });
 });

@@ -64,13 +64,14 @@ const NotFoundPage: React.FC = () => (
 
 const AppRoutes: React.FC = () => {
   const { pathname } = useLocation();
+  const isStandaloneAuthPage = isAuthRoute(pathname);
   const showSiteFooter =
     !pathname.startsWith('/admin') &&
     pathname !== '/auth' &&
-    !isAuthRoute(pathname);
+    !isStandaloneAuthPage;
 
   return (
-    <div className="bg-gray-50 dark:bg-slate-950 transition-colors duration-200">
+    <div className={`${isStandaloneAuthPage ? 'bg-gray-50' : 'bg-white'} dark:bg-slate-950 transition-colors duration-200`}>
       <ScrollToTop />
       <Navbar />
       <AnnouncementProvider />

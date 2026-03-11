@@ -418,3 +418,34 @@ feat(frontend): 新增统一站点底部组件并重构 Button 为标准 shadcn/
 - frontend/src/routes/AppRoutes.tsx
 - frontend/src/routes/__tests__/AppRoutes.test.tsx (新增)
 - frontend/src/services/systemSettingsService.ts
+
+---
+
+## 2026-03-11 20:13:49
+
+### refactor(frontend): 统一页面背景色方案并优化卡片视觉层次
+
+**Body**:
+将主要页面的浅色模式背景从 bg-gray-50 统一改为 bg-white，优化 UserApiKeySettings 页面的卡片设计（新增深度层次、图标、状态徽章），调整认证页面的背景策略，并新增相应的测试覆盖。
+
+**Files**:
+- .gitignore
+- frontend/src/components/CloudTypeFilter.tsx
+- frontend/src/components/SearchBox.tsx
+- frontend/src/components/SiteFooter.tsx
+- frontend/src/components/__tests__/CloudTypeFilter.test.tsx
+- frontend/src/pages/Admin.tsx
+- frontend/src/pages/AdminLogin.tsx
+- frontend/src/pages/ApiKeyLoginPage.tsx
+- frontend/src/pages/DisclaimerPage.tsx
+- frontend/src/pages/Home.tsx
+- frontend/src/pages/LoginPage.tsx
+- frontend/src/pages/RegisterPage.tsx
+- frontend/src/pages/UserApiKeySettings.tsx
+- frontend/src/pages/__tests__/Admin.test.tsx (新增)
+- frontend/src/pages/__tests__/AuthEntryPages.test.tsx (新增)
+- frontend/src/pages/__tests__/DisclaimerPage.test.tsx
+- frontend/src/pages/__tests__/Home.test.tsx
+- frontend/src/pages/__tests__/UserApiKeySettings.test.tsx (新增)
+- frontend/src/routes/AppRoutes.tsx
+- frontend/src/routes/__tests__/AppRoutes.test.tsx
