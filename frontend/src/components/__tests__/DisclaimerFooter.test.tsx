@@ -5,14 +5,20 @@ import DisclaimerFooter from '@/components/DisclaimerFooter';
 
 describe('DisclaimerFooter', () => {
   it('renders disclaimer link to disclaimer page', () => {
-    render(
+    const { container } = render(
       <MemoryRouter>
         <DisclaimerFooter />
       </MemoryRouter>
     );
 
     const disclaimerLink = screen.getByRole('link', { name: '免责声明' });
+    const divider = container.querySelector('.pointer-events-none') as HTMLElement;
     expect(disclaimerLink).toBeInTheDocument();
     expect(disclaimerLink).toHaveAttribute('href', '/disclaimer');
+    expect(divider.className).toContain('via-blue-500/60');
+    expect(divider.className).toContain('dark:via-cyan-400/50');
+    expect(disclaimerLink.className).toContain('hover:text-blue-600');
+    expect(disclaimerLink.className).toContain('dark:hover:text-cyan-300');
+    expect(disclaimerLink.className).not.toContain('nebula');
   });
 });

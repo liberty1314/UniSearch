@@ -126,11 +126,11 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
               onClick={(event) => event.stopPropagation()}
               className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
             >
-              <div className="border-b border-slate-200 bg-gradient-to-r from-emerald-50 via-blue-50 to-cyan-50 px-6 py-4 dark:border-slate-700 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+              <div className="border-b border-slate-200 bg-gradient-to-r from-blue-50 via-blue-50 to-cyan-50 px-6 py-4 dark:border-slate-700 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                      <Layers className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                      <Layers className="h-5 w-5 text-blue-600 dark:text-cyan-300" />
                       插件工作台
                       <Badge variant={isReadOnly ? 'outline' : 'success'}>
                         {isReadOnly ? '只读模式' : '编辑模式'}
@@ -160,8 +160,8 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
                 statusFilter={statusFilter}
                 addButtonLabel="添加插件"
                 addButtonAriaLabel="添加插件"
-                addButtonClassName="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white hover:from-emerald-700 hover:to-cyan-700 lg:ml-auto"
-                batchTestClassName="border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+                addButtonClassName="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600 lg:ml-auto"
+                batchTestClassName="border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-cyan-800/70 dark:text-cyan-300 dark:hover:bg-cyan-950/30"
                 batchTestDisabled={isOperationBusy || localPluginsCount === 0}
                 onSetStatusFilter={onSetStatusFilter}
                 onOpenAddDialog={onOpenAddDialog}
@@ -204,7 +204,7 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
                                   pluginStatus === 'error'
                                     ? 'bg-red-500'
                                     : pluginStatus === 'custom'
-                                      ? 'bg-blue-500'
+                                      ? 'bg-cyan-500'
                                       : pluginStatus === 'active'
                                         ? 'bg-green-500'
                                         : 'bg-slate-400'

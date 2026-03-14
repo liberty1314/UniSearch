@@ -1,5 +1,9 @@
 import React from 'react';
 import { Footer } from '@/components/ui/footer';
+import {
+  BLUE_CYAN_DIVIDER_PRIMARY,
+  BLUE_CYAN_DIVIDER_SECONDARY,
+} from '@/lib/brandTheme';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const CONTACT_EMAIL = 'UniSearch@163.com';
@@ -7,7 +11,12 @@ const CONTACT_EMAIL = 'UniSearch@163.com';
 const SiteFooter: React.FC = () => {
   return (
     <footer className="relative w-full z-10">
-      <div className="relative border-t border-gray-200/50 bg-white/60 backdrop-blur-2xl dark:border-white/[0.05] dark:bg-slate-950/80 transition-colors duration-500">
+      {/* 21st.dev 风格 - 动态渐变分隔线 */}
+      <div className="relative h-px w-full overflow-hidden">
+        <div className={`absolute inset-0 ${BLUE_CYAN_DIVIDER_PRIMARY} animate-shimmer`} />
+        <div className={`absolute inset-0 ${BLUE_CYAN_DIVIDER_SECONDARY} animate-shimmer`} style={{ animationDelay: '0.75s' }} />
+      </div>
+      <div className="relative bg-white/60 backdrop-blur-2xl dark:bg-slate-950/80 transition-colors duration-500">
         <div className="container mx-auto">
           <Footer
             showHeader={false}

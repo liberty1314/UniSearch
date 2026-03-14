@@ -1,6 +1,12 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Clock, X, Trash2, Download } from 'lucide-react';
+import {
+    BLUE_CYAN_BORDER,
+    BLUE_CYAN_SOFT_SURFACE,
+    BLUE_CYAN_TEXT,
+    BLUE_CYAN_TEXT_STRONG,
+} from '@/lib/brandTheme';
 
 /**
  * BatchActionsBar 组件属性
@@ -46,8 +52,8 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
     return (
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* 左侧：选中数量 */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <span className="text-sm font-medium text-blue-900 dark:text-blue-100 hidden sm:inline">
+            <div className={`flex items-center gap-2 px-3 py-1.5 ${BLUE_CYAN_SOFT_SURFACE} border ${BLUE_CYAN_BORDER} rounded-lg`}>
+                <span className={`text-sm font-medium ${BLUE_CYAN_TEXT_STRONG} hidden sm:inline`}>
                     已选中 {selectedCount} 个
                 </span>
             </div>
@@ -68,7 +74,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={onBatchExport}
-                    className="flex items-center gap-2 h-9 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20"
+                    className={`flex items-center gap-2 h-9 ${BLUE_CYAN_TEXT} hover:text-blue-800 dark:hover:text-cyan-200 hover:bg-blue-50 dark:hover:bg-cyan-950/30`}
                     disabled={disabled}
                 >
                     <Download className="w-4 h-4" />

@@ -82,6 +82,8 @@ describe('AppRoutes', () => {
 
     expect(await screen.findByText('页面未找到')).toBeInTheDocument();
     expect(screen.queryByText('API Key Login Page')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('navbar')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('site-footer')).not.toBeInTheDocument();
   });
 
   it('uses a pure white light shell for standard pages but keeps auth page shell unchanged', async () => {

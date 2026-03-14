@@ -13,6 +13,11 @@ import { AnnouncementPanel } from './AnnouncementPanel';
 import { AuthService } from '@/services/authService';
 import { toast } from 'sonner';
 import { IoNotificationsOutline } from 'react-icons/io5';
+import {
+  BLUE_CYAN_HOVER_SURFACE,
+  BLUE_CYAN_HOVER_TEXT,
+  BLUE_CYAN_TEXT_GRADIENT_WITH_DARK,
+} from '@/lib/brandTheme';
 
 interface NavbarProps {
   className?: string;
@@ -100,7 +105,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
         className={cn(
           'fixed top-0 left-0 right-0 z-40 transition-all duration-300 ease-in-out',
           isScrolled
-            ? 'h-16 glass shadow-nebula backdrop-blur-nebula'
+            ? 'h-16 glass shadow-[0_16px_36px_rgba(14,165,233,0.12)] backdrop-blur-xl'
             : 'h-20 bg-transparent',
           className
         )}
@@ -118,7 +123,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                 className="w-8 h-8 object-contain relative z-10 transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110"
               />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-nebula-600 via-purple-600 to-cosmic-600 dark:from-nebula-400 dark:via-purple-400 dark:to-cosmic-400 bg-clip-text text-transparent group-hover:tracking-wide transition-all duration-300">
+            <span className={`${BLUE_CYAN_TEXT_GRADIENT_WITH_DARK} text-xl font-bold group-hover:tracking-wide transition-all duration-300`}>
               UniSearch
             </span>
           </Link>
@@ -150,13 +155,13 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                     className={cn(
                       "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-200 outline-none focus:outline-none",
                       isUserMenuOpen
-                        ? "bg-white/20 border-transparent text-nebula-600 dark:text-nebula-300"
+                        ? "bg-white/20 border-transparent text-blue-600 dark:text-cyan-300"
                         : searchAccessStatus === 'session_only'
                           ? "border-amber-200/80 bg-amber-50/80 text-amber-800 hover:bg-amber-100/80 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100"
                           : "border-transparent hover:bg-white/10 hover:border-white/20 text-gray-700 dark:text-gray-200"
                     )}
                   >
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-nebula-400 to-cosmic-400 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-white font-bold text-sm shadow-sm">
                       {username ? username[0].toUpperCase() : <User className="w-4 h-4" />}
                     </div>
                     <span className="text-sm font-medium pr-1 max-w-[100px] truncate">{username}</span>
@@ -199,7 +204,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                             <Link
                               to="/admin"
                               onClick={() => setIsUserMenuOpen(false)}
-                              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-nebula-50 dark:hover:bg-nebula-900/30 hover:text-nebula-600 dark:hover:text-nebula-300 rounded-lg transition-colors"
+                              className={`flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 ${BLUE_CYAN_HOVER_SURFACE} ${BLUE_CYAN_HOVER_TEXT} rounded-lg transition-colors`}
                             >
                               <LayoutDashboard className="w-4 h-4" />
                               <span>后台管理</span>
@@ -208,7 +213,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                             <Link
                               to="/settings/apikey"
                               onClick={() => setIsUserMenuOpen(false)}
-                              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-nebula-50 dark:hover:bg-nebula-900/30 hover:text-nebula-600 dark:hover:text-nebula-300 rounded-lg transition-colors"
+                              className={`flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 ${BLUE_CYAN_HOVER_SURFACE} ${BLUE_CYAN_HOVER_TEXT} rounded-lg transition-colors`}
                             >
                               <Key className="w-4 h-4" />
                               <span>{apiKeyEntryLabel}</span>
@@ -236,7 +241,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                 >
                   <Link
                     to="/login"
-                    className="group flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-nebula-600 dark:hover:text-nebula-400 bg-gray-100/50 dark:bg-white/5 hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all duration-300 backdrop-blur-sm"
+                    className={`group flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-700 dark:text-gray-200 ${BLUE_CYAN_HOVER_TEXT} bg-gray-100/50 dark:bg-white/5 hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all duration-300 backdrop-blur-sm`}
                   >
                     <span>登录</span>
                     <ArrowRight className="w-4 h-4 ml-0.5 group-hover:translate-x-0.5 transition-transform duration-300" />

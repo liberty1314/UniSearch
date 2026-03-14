@@ -24,6 +24,7 @@ import {
 import { useAuthStore } from '@/stores/authStore';
 import type { AdminDialogMode, SystemInfoResponse, TGChannel, ListTGChannelsResponse } from '@/types/api';
 import { toast } from 'sonner';
+import { BLUE_CYAN_BUTTON, BLUE_CYAN_ICON } from '@/lib/brandTheme';
 
 const SYSTEM_INFO_CACHE_TTL_MS = 1500;
 
@@ -226,7 +227,7 @@ export const SystemInfoView: React.FC = () => {
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
           className="inline-block"
         >
-          <RefreshCw className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+          <RefreshCw className={`w-8 h-8 ${BLUE_CYAN_ICON}`} />
         </motion.div>
         <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
       </div>
@@ -298,7 +299,7 @@ export const SystemInfoView: React.FC = () => {
           <div className="flex items-center justify-between gap-2">
             <div>
               <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-                <Radio className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <Radio className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
                 Telegram 频道摘要
                 <Badge variant="outline" className="ml-1 text-xs">
                   {channelSummary.total}
@@ -331,7 +332,7 @@ export const SystemInfoView: React.FC = () => {
                     setChannelDialogMode('edit');
                     setIsChannelManageDialogOpen(true);
                   }}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+                  className={`${BLUE_CYAN_BUTTON} shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer`}
                 >
                   <Edit className="w-4 h-4 mr-1" />
                   编辑
@@ -370,7 +371,7 @@ export const SystemInfoView: React.FC = () => {
           <div className="flex items-center justify-between gap-2">
             <div>
               <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-                <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <Activity className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
                 插件状态摘要
               </CardTitle>
               <CardDescription className="text-slate-500 dark:text-slate-400">
@@ -434,7 +435,7 @@ export const SystemInfoView: React.FC = () => {
       <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
         <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/50">
           <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-            <Server className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <Server className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
             系统配置
           </CardTitle>
           <CardDescription className="text-slate-500 dark:text-slate-400">
@@ -445,7 +446,7 @@ export const SystemInfoView: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                <Database className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <Database className={`w-4 h-4 ${BLUE_CYAN_ICON}`} />
                 缓存配置
               </div>
               <div className="space-y-2 pl-6 text-sm">
@@ -493,7 +494,7 @@ export const SystemInfoView: React.FC = () => {
 
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                <Globe className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <Globe className="w-4 h-4 text-cyan-700 dark:text-cyan-300" />
                 代理配置
               </div>
               <div className="space-y-2 pl-6 text-sm">

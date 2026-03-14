@@ -7,6 +7,11 @@ import { Edit, Trash2, KeyRound, Power, PowerOff } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { UserInfo } from '@/types/api';
+import {
+  BLUE_CYAN_ACTION_HOVER,
+  BLUE_CYAN_AVATAR_GRADIENT,
+  BLUE_CYAN_TEXT,
+} from '@/lib/brandTheme';
 
 interface AppleUserTableProps {
   users: UserInfo[];
@@ -76,13 +81,13 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
       sortable: true,
       render: (user) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-apple-blue to-apple-purple flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+          <div className={`w-10 h-10 rounded-full ${BLUE_CYAN_AVATAR_GRADIENT} flex items-center justify-center text-white font-semibold text-sm flex-shrink-0`}>
             {user.username.charAt(0).toUpperCase()}
           </div>
           <div className="flex flex-col min-w-0">
             <span className="font-medium truncate">{user.username}</span>
             {user.id === currentUserId && (
-              <span className="text-xs text-apple-blue dark:text-apple-blue">
+              <span className={`text-xs ${BLUE_CYAN_TEXT}`}>
                 当前用户
               </span>
             )}
@@ -184,7 +189,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
                 onEditClick(user);
               }}
               disabled={isDeleting || isBatchOperating}
-              className="hover:bg-blue-50 dark:hover:bg-blue-900/20"
+              className={BLUE_CYAN_ACTION_HOVER}
               title="编辑"
             >
               <Edit className="w-4 h-4" />
@@ -210,7 +215,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
                 onToggleStatus(user.id, !user.is_enabled);
               }}
               disabled={isCurrentUser || isDeleting || isBatchOperating}
-              className="hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-600"
+              className={`${BLUE_CYAN_ACTION_HOVER} text-cyan-700 dark:text-cyan-300`}
               title={user.is_enabled ? '禁用' : '启用'}
             >
               {user.is_enabled ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
@@ -264,7 +269,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
               className="h-5 w-5"
             />
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-apple-blue to-apple-purple flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
+              <div className={`w-8 h-8 rounded-full ${BLUE_CYAN_AVATAR_GRADIENT} flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}>
                 {user.username.charAt(0).toUpperCase()}
               </div>
               <div className="flex flex-col">
@@ -301,7 +306,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
             size="sm"
             onClick={(e) => { e.stopPropagation(); onEditClick(user); }}
             disabled={isDeleting || isBatchOperating}
-            className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            className={`h-8 w-8 p-0 ${BLUE_CYAN_ACTION_HOVER}`}
           >
             <Edit className="w-4 h-4 text-gray-600 dark:text-slate-300" />
           </Button>
@@ -321,9 +326,9 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
                 size="sm"
                 onClick={(e) => { e.stopPropagation(); onToggleStatus(user.id, !user.is_enabled); }}
                 disabled={isDeleting || isBatchOperating}
-                className="h-8 w-8 p-0 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                className={`h-8 w-8 p-0 ${BLUE_CYAN_ACTION_HOVER}`}
               >
-                {user.is_enabled ? <PowerOff className="w-4 h-4 text-purple-600" /> : <Power className="w-4 h-4 text-purple-600" />}
+                {user.is_enabled ? <PowerOff className="w-4 h-4 text-cyan-700 dark:text-cyan-300" /> : <Power className="w-4 h-4 text-cyan-700 dark:text-cyan-300" />}
               </Button>
               <Button
                 variant="ghost"

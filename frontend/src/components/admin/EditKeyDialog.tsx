@@ -240,7 +240,7 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
                                 helperText="在当前过期时间基础上延长指定小时数"
                             />
                             {extendHours && !isNaN(Number(extendHours)) && Number(extendHours) > 0 && (
-                                <p className="text-xs text-blue-600 dark:text-blue-400">
+                                <p className="text-xs text-blue-600 dark:text-cyan-300">
                                     延长后过期时间: {formatDateTime(
                                         new Date(new Date(apiKey.expires_at).getTime() + Number(extendHours) * 60 * 60 * 1000).toISOString()
                                     )}

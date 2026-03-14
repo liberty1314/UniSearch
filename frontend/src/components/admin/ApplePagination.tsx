@@ -98,7 +98,7 @@ export const ApplePagination: React.FC<ApplePaginationProps> = ({
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
               disabled={isLoading}
-              className="h-8 px-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-8 px-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {pageSizeOptions.map((size) => (
                 <option key={size} value={size}>
@@ -170,7 +170,7 @@ export const ApplePagination: React.FC<ApplePaginationProps> = ({
                 {currentPage === pageNum && (
                   <motion.div
                     layoutId="activePageIndicator"
-                    className="absolute inset-0 bg-blue-500 shadow-md rounded-full pointer-events-none"
+                    className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-500 shadow-md rounded-full pointer-events-none"
                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                   />
                 )}

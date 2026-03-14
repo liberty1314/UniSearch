@@ -33,6 +33,7 @@ let authState = {
 };
 
 let searchAccessStatus: 'anonymous' | 'session_only' | 'search_ready' | 'api_key_only' = 'session_only';
+let searchHistoryState: string[] = [];
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -51,7 +52,7 @@ vi.mock('@/stores/searchStore', () => ({
     removeFromHistory: removeFromHistoryMock,
     isLoading: false,
   }),
-  useSearchHistory: () => [],
+  useSearchHistory: () => searchHistoryState,
 }));
 
 vi.mock('@/stores/authStore', () => ({
@@ -124,6 +125,104 @@ describe('SearchBox', () => {
       isAdmin: false,
     };
     searchAccessStatus = 'session_only';
+    searchHistoryState = [];
+  });
+
+  it('shows up to six recent searches when the input is focused', async () => {
+    searchHistoryState = ['海贼王', '斗破苍穹', '庆余年', '流浪地球', '仙逆', '凡人修仙传', '三体'];
+
+    render(<SearchBox />);
+
+    await userEvent.click(screen.getByPlaceholderText('搜索网盘资源...'));
+
+    expect(screen.getByText('最近搜索')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '删除历史记录 海贼王' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '删除历史记录 凡人修仙传' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '删除历史记录 三体' })).not.toBeInTheDocument();
+  });
+
+  it('renders plain history labels and keeps delete buttons pinned to the top-right corner', async () => {
+    searchHistoryState = ['海贼王'];
+
+    render(<SearchBox />);
+
+    await userEvent.click(screen.getByPlaceholderText('搜索网盘资源...'));
+
+    const historyButton = screen.getByRole('button', { name: '使用历史记录搜索 海贼王' });
+    const deleteButton = screen.getByRole('button', { name: '删除历史记录 海贼王' });
+    const deleteButtonClassName = deleteButton.getAttribute('class') ?? '';
+
+    expect(historyButton.querySelector('svg')).toBeNull();
+    expect(deleteButtonClassName).toContain('-top-1.5');
+    expect(deleteButtonClassName).toContain('-right-1.5');
+  });
+
+  it('does not render the history panel when there is no search history', async () => {
+    render(<SearchBox />);
+
+    await userEvent.click(screen.getByPlaceholderText('搜索网盘资源...'));
+
+    expect(screen.queryByText('最近搜索')).not.toBeInTheDocument();
+  });
+
+  it('searches and collapses the history panel after selecting a history item', async () => {
+    searchHistoryState = ['仙逆', '凡人修仙传'];
+    performSearchMock.mockResolvedValue(undefined);
+
+    render(<SearchBox />);
+
+    await userEvent.click(screen.getByPlaceholderText('搜索网盘资源...'));
+    await userEvent.click(screen.getByRole('button', { name: '使用历史记录搜索 仙逆' }));
+
+    await waitFor(() => {
+      expect(setSearchParamsMock).toHaveBeenCalledWith({ keyword: '仙逆' });
+    });
+    expect(performSearchMock).toHaveBeenCalledWith({ keyword: '仙逆' });
+    await waitFor(() => {
+      expect(screen.queryByText('最近搜索')).not.toBeInTheDocument();
+    });
+  });
+
+  it('removes a single history item without triggering a search', async () => {
+    searchHistoryState = ['海贼王'];
+
+    render(<SearchBox />);
+
+    await userEvent.click(screen.getByPlaceholderText('搜索网盘资源...'));
+    await userEvent.click(screen.getByRole('button', { name: '删除历史记录 海贼王' }));
+
+    expect(removeFromHistoryMock).toHaveBeenCalledWith('海贼王');
+    expect(performSearchMock).not.toHaveBeenCalled();
+  });
+
+  it('clears history and closes the panel', async () => {
+    searchHistoryState = ['海贼王', '三体'];
+
+    render(<SearchBox />);
+
+    await userEvent.click(screen.getByPlaceholderText('搜索网盘资源...'));
+    await userEvent.click(screen.getByRole('button', { name: '清空记录' }));
+
+    expect(clearHistoryMock).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.queryByText('最近搜索')).not.toBeInTheDocument();
+    });
+  });
+
+  it('closes the history panel when escape is pressed', async () => {
+    searchHistoryState = ['海贼王'];
+
+    render(<SearchBox />);
+
+    const input = screen.getByPlaceholderText('搜索网盘资源...');
+    await userEvent.click(input);
+    expect(screen.getByText('最近搜索')).toBeInTheDocument();
+
+    await userEvent.type(input, '{Escape}');
+
+    await waitFor(() => {
+      expect(screen.queryByText('最近搜索')).not.toBeInTheDocument();
+    });
   });
 
   it('routes token-only users to API key binding on 403 search errors', async () => {

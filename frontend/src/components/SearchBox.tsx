@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { IoCloseOutline } from 'react-icons/io5';
+import { IoCloseOutline, IoTimeOutline } from 'react-icons/io5';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useSearchStore, useSearchHistory } from '@/stores/searchStore';
@@ -18,6 +18,8 @@ interface SearchBoxProps {
   onSearch?: (keyword: string) => void;
 }
 
+const MAX_VISIBLE_HISTORY_ITEMS = 6;
+
 export const SearchBox: React.FC<SearchBoxProps> = ({
   className,
   placeholder = '搜索网盘资源...',
@@ -35,6 +37,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   const { status: searchAccessStatus } = useSearchAccessStatus();
   const navigate = useNavigate();
   const searchHistory = useSearchHistory();
+  const visibleSearchHistory = searchHistory.slice(0, MAX_VISIBLE_HISTORY_ITEMS);
 
   const [inputValue, setInputValue] = useState(searchParams.keyword || '');
 
@@ -87,15 +90,13 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     toast.error(errorMessage);
   };
 
-  const executeSearch = async (keyword: string, keepHistoryOpen: boolean = false) => {
+  const executeSearch = async (keyword: string) => {
     setSearchParams({ keyword });
 
     try {
       await buttonRef.current?.run(() => performSearch({ keyword }));
       onSearch?.(keyword);
-      if (!keepHistoryOpen) {
-        setShowHistory(false);
-      }
+      setShowHistory(false);
     } catch (error) {
       await handleSearchError(error);
     }
@@ -128,7 +129,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   // 处理焦点
   const handleFocus = () => {
     setIsFocused(true);
-    if (searchHistory.length > 0) {
+    if (visibleSearchHistory.length > 0) {
       setShowHistory(true);
     }
   };
@@ -155,8 +156,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   // 选择历史记录
   const handleSelectHistory = async (keyword: string) => {
     setInputValue(keyword);
-    await executeSearch(keyword, true);
-    // 选择历史后保持下拉框打开，便于继续点击其他记录
+    await executeSearch(keyword);
   };
 
   // 清空历史记录
@@ -174,8 +174,25 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
 
   return (
     <div className={cn('relative w-full max-w-2xl mx-auto group', className)}>
+      {/* 21st.dev 风格 - 多层发光晕染层 */}
+      <div
+        aria-hidden="true"
+        className={cn(
+          'absolute -inset-[3px] rounded-[18px] opacity-0 blur-md transition-all duration-500 pointer-events-none',
+          'bg-gradient-to-r from-nebula-400/40 via-cosmic-400/50 to-nebula-400/40',
+          isFocused && 'opacity-100'
+        )}
+      />
+      <div
+        aria-hidden="true"
+        className={cn(
+          'absolute -inset-[1px] rounded-[17px] opacity-0 transition-all duration-300 pointer-events-none',
+          'bg-gradient-to-r from-nebula-500/30 via-cosmic-500/40 to-nebula-500/30',
+          isFocused && 'opacity-100'
+        )}
+      />
       {/* 搜索框容器 */}
-      <div className="relative glass-card-3d rounded-2xl group-focus-within:ring-2 group-focus-within:ring-nebula-500/30 transition-all duration-300 hover-lift">
+      <div className="relative glass-card-3d rounded-2xl group-focus-within:ring-1 group-focus-within:ring-nebula-400/30 transition-all duration-300 hover-lift">
         <svg className="absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-nebula-500 w-6 h-6 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
@@ -216,51 +233,54 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
       </div>
 
       {/* 搜索历史下拉菜单 */}
-      {showHistory && searchHistory.length > 0 && (
+      {showHistory && visibleSearchHistory.length > 0 && (
         <div
-          className="absolute top-full left-0 right-0 mt-3 bg-white/70 dark:bg-slate-900/60 backdrop-blur-2xl ring-1 ring-black/5 dark:ring-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 max-h-72 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300"
+          className="absolute top-full left-0 right-0 mt-2.5 overflow-hidden rounded-[22px] border border-white/70 bg-white/78 shadow-[0_18px_48px_rgba(15,23,42,0.12)] ring-1 ring-slate-200/70 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/72 dark:ring-white/10 dark:shadow-[0_18px_48px_rgba(2,8,23,0.45)] z-50 animate-in fade-in slide-in-from-top-2 duration-200"
           onMouseEnter={() => setIsHoveringHistory(true)}
           onMouseLeave={() => {
             setIsHoveringHistory(false);
             if (!isFocused) setShowHistory(false);
           }}
         >
-          <div className="px-5 py-3 border-b border-black/5 dark:border-white/5 flex items-center justify-between bg-black/[0.02] dark:bg-white/[0.02]">
-            <span className="text-xs font-semibold text-gray-500 dark:text-slate-400 tracking-wider uppercase">
-              最近搜索
-            </span>
+          <div className="flex items-center justify-between border-b border-slate-200/70 bg-white/45 px-4 py-2.5 dark:border-white/8 dark:bg-white/[0.03]">
+            <div className="flex items-center gap-2 text-[12px] font-medium text-slate-500 dark:text-slate-400">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900/[0.04] text-slate-500 dark:bg-white/[0.06] dark:text-slate-300">
+                <IoTimeOutline className="h-3.5 w-3.5" />
+              </span>
+              <span>最近搜索</span>
+              <span className="text-slate-400/80 dark:text-slate-500">最近 {visibleSearchHistory.length} 条</span>
+            </div>
             <button
               onClick={handleClearHistory}
-              className="text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 opacity-60 hover:opacity-100 transition-all duration-300 font-medium"
+              className="rounded-full px-2.5 py-1 text-[12px] font-medium text-slate-400 transition-colors duration-200 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 dark:hover:text-red-300"
             >
               清空记录
             </button>
           </div>
-          {/* 历史记录 chips */}
-          <div className="px-5 py-4 overflow-y-auto overflow-x-hidden max-h-56">
-            <div className="flex items-center gap-3 flex-wrap">
-              {searchHistory.map((keyword, index) => (
+          <div className="max-h-48 overflow-y-auto px-4 py-3">
+            <div className="flex flex-wrap gap-2.5">
+              {visibleSearchHistory.map((keyword, index) => (
                 <div
-                  key={index}
-                  onClick={() => handleSelectHistory(keyword)}
-                  className="group/chip relative inline-flex items-center px-4 py-2 rounded-full cursor-pointer transition-all duration-300 ease-out 
-                             bg-white/50 hover:bg-nebula-50/80 dark:bg-slate-800/50 dark:hover:bg-nebula-500/20 
-                             border border-black/5 dark:border-white/5 hover:border-nebula-200/80 dark:hover:border-nebula-500/40
-                             shadow-sm hover:shadow-md hover:shadow-nebula-500/10 dark:shadow-black/20 history-chip-delay
-                             backdrop-blur-md hover:scale-105 active:scale-95"
-                  style={toStyleVars({ '--history-chip-delay': `${index * 30}ms` })}
+                  key={keyword}
+                  className="group/history relative max-w-full"
+                  style={toStyleVars({ '--history-chip-delay': `${index * 24}ms` })}
                 >
-                  <span className="text-sm font-medium text-gray-700 dark:text-slate-300 group-hover/chip:text-nebula-600 dark:group-hover/chip:text-nebula-300 transition-colors truncate max-w-[12rem]">
-                    {keyword}
-                  </span>
-
-                  {/* 右上角删除按钮 */}
                   <button
-                    onClick={(e) => handleDeleteHistoryItem(e, keyword)}
-                    className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-white/90 dark:bg-slate-800/80 border border-black/5 dark:border-white/10 shadow-sm text-gray-400 opacity-0 scale-75 group-hover/chip:opacity-100 group-hover/chip:scale-100 hover:text-red-500 hover:border-red-200 dark:hover:border-red-800 transition-all duration-200 backdrop-blur-md"
-                    aria-label="删除该条记录"
+                    type="button"
+                    onClick={() => handleSelectHistory(keyword)}
+                    className="history-chip-delay inline-flex max-w-full items-center rounded-full border border-slate-200/80 bg-white/82 px-3.5 py-2 text-left text-sm text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:border-cyan-200 hover:bg-cyan-50/70 hover:text-cyan-700 hover:shadow-[0_8px_20px_rgba(14,165,233,0.10)] focus:outline-none focus-visible:border-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-200 dark:border-white/10 dark:bg-slate-800/72 dark:text-slate-200 dark:hover:border-cyan-400/30 dark:hover:bg-cyan-500/10 dark:hover:text-cyan-100 dark:hover:shadow-none dark:focus-visible:border-cyan-400/40 dark:focus-visible:ring-cyan-500/20"
+                    aria-label={`使用历史记录搜索 ${keyword}`}
                   >
-                    <IoCloseOutline className="w-3.5 h-3.5" />
+                    <span className="truncate max-w-[11rem] font-medium leading-none">{keyword}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteHistoryItem(e, keyword)}
+                    className="absolute -right-1.5 -top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200/80 bg-white/96 text-slate-400 opacity-0 shadow-sm transition-all duration-200 group-hover/history:opacity-100 group-focus-within/history:opacity-100 hover:border-red-100 hover:bg-red-50 hover:text-red-500 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-red-100 dark:border-white/10 dark:bg-slate-900/96 dark:text-slate-500 dark:hover:border-red-500/20 dark:hover:bg-red-500/10 dark:hover:text-red-300 dark:focus-visible:ring-red-500/20"
+                    aria-label={`删除历史记录 ${keyword}`}
+                  >
+                    <IoCloseOutline className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ))}

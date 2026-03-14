@@ -6,6 +6,11 @@ import { Copy, Edit, Trash2, CheckCircle2, X, Clock, Shield, Power, PowerOff } f
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { APIKeyInfo } from '@/types/api';
+import {
+  BLUE_CYAN_ACTION_HOVER,
+  BLUE_CYAN_STATUS_BADGE,
+  BLUE_CYAN_TEXT,
+} from '@/lib/brandTheme';
 
 interface AppleApiKeyTableProps {
   apiKeys: APIKeyInfo[];
@@ -187,7 +192,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
         if (key.is_permanent) {
           return (
             <div className="flex flex-col min-w-[120px]">
-              <span className="text-sm whitespace-nowrap text-purple-600 dark:text-purple-400 font-medium">
+              <span className="text-sm whitespace-nowrap text-cyan-700 dark:text-cyan-300 font-medium">
                 永不过期
               </span>
               <span className="text-xs text-gray-500 dark:text-slate-400 whitespace-nowrap">
@@ -201,7 +206,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
         if (!key.first_used_at) {
           return (
             <div className="flex flex-col min-w-[140px]">
-              <span className="text-sm whitespace-nowrap text-blue-600 dark:text-blue-400 font-medium">
+              <span className={`text-sm whitespace-nowrap font-medium ${BLUE_CYAN_TEXT}`}>
                 待激活
               </span>
               <span className="text-xs text-gray-500 dark:text-slate-400 whitespace-nowrap">
@@ -238,7 +243,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
         if (key.is_permanent) {
           statusConfig = {
             text: '永久',
-            color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+            color: BLUE_CYAN_STATUS_BADGE,
             icon: <Shield className="w-4 h-4 flex-shrink-0" />,
           };
         } else if (!key.is_enabled) {
@@ -251,7 +256,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
           // 未激活的密钥
           statusConfig = {
             text: '待激活',
-            color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+            color: 'bg-blue-100 text-blue-700 dark:bg-cyan-950/40 dark:text-cyan-300',
             icon: <Clock className="w-4 h-4 flex-shrink-0" />,
           };
         } else if (isKeyExpired(key.expires_at)) {
@@ -290,7 +295,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
               onEditClick(key);
             }}
             disabled={isDeleting || isBatchOperating || key.is_permanent}
-            className="hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            className={BLUE_CYAN_ACTION_HOVER}
             title={key.is_permanent ? '管理员永久密钥不可编辑' : '编辑'}
           >
             <Edit className="w-4 h-4" />
@@ -303,7 +308,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
               onToggleStatus(key, !key.is_enabled);
             }}
             disabled={isDeleting || isBatchOperating || key.is_permanent}
-            className="hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-600"
+            className={`${BLUE_CYAN_ACTION_HOVER} text-cyan-700 dark:text-cyan-300`}
             title={key.is_permanent ? '管理员永久密钥不可修改状态' : (key.is_enabled ? '禁用' : '启用')}
           >
             {key.is_enabled ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
@@ -336,7 +341,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
     if (key.is_permanent) {
       statusConfig = {
         text: '永久',
-        color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+        color: BLUE_CYAN_STATUS_BADGE,
         icon: <Shield className="w-3 h-3 flex-shrink-0" />,
       };
     } else if (!key.is_enabled) {
@@ -349,7 +354,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
       // 未激活的密钥
       statusConfig = {
         text: '待激活',
-        color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+        color: 'bg-blue-100 text-blue-700 dark:bg-cyan-950/40 dark:text-cyan-300',
         icon: <Clock className="w-3 h-3 flex-shrink-0" />,
       };
     } else if (isKeyExpired(key.expires_at)) {
@@ -393,7 +398,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
                 onEditClick(key);
               }}
               disabled={isDeleting || isBatchOperating || key.is_permanent}
-              className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+              className={`h-8 w-8 p-0 ${BLUE_CYAN_ACTION_HOVER}`}
             >
               <Edit className="w-4 h-4 text-gray-600 dark:text-slate-300" />
             </Button>
@@ -405,9 +410,9 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
                 onToggleStatus(key, !key.is_enabled);
               }}
               disabled={isDeleting || isBatchOperating || key.is_permanent}
-              className="h-8 w-8 p-0 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+              className={`h-8 w-8 p-0 ${BLUE_CYAN_ACTION_HOVER}`}
             >
-              {key.is_enabled ? <PowerOff className="w-4 h-4 text-purple-600" /> : <Power className="w-4 h-4 text-purple-600" />}
+              {key.is_enabled ? <PowerOff className="w-4 h-4 text-cyan-700 dark:text-cyan-300" /> : <Power className="w-4 h-4 text-cyan-700 dark:text-cyan-300" />}
             </Button>
             <Button
               variant="ghost"

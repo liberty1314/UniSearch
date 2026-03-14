@@ -3,6 +3,11 @@ import { Key, Activity, X, Users, Settings, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { useAdminStore } from '@/stores/adminStore';
+import {
+    BLUE_CYAN_ACTIVE_SHADOW,
+    BLUE_CYAN_GRADIENT,
+    BLUE_CYAN_HOVER_TEXT,
+} from '@/lib/brandTheme';
 
 /**
  * 管理视图类型
@@ -145,7 +150,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     className="w-11 h-11 transition-transform duration-300"
                                 />
                                 {/* Logo 悬停时的光晕效果 */}
-                                <div className="absolute inset-0 bg-nebula-500/20 rounded-full opacity-0 hover:opacity-100 transition-opacity duration-300 blur-sm scale-110" />
+                                <div className="absolute inset-0 bg-cyan-500/20 rounded-full opacity-0 hover:opacity-100 transition-opacity duration-300 blur-sm scale-110" />
                             </motion.div>
                             <div>
                                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">
@@ -174,7 +179,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             transition-colors duration-300
                                             ${isActive
                                                 ? 'text-white font-medium'
-                                                : 'text-gray-600 dark:text-slate-400 hover:text-nebula-600 dark:hover:text-nebula-300'
+                                                : `text-gray-600 dark:text-slate-400 ${BLUE_CYAN_HOVER_TEXT}`
                                             }
                                         `}
                                         initial={false}
@@ -190,7 +195,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         {isActive && (
                                             <motion.div
                                                 layoutId="activeTab"
-                                                className="absolute inset-0 bg-gradient-to-r from-nebula-600 to-cosmic-500 rounded-xl shadow-nebula"
+                                                className={`absolute inset-0 ${BLUE_CYAN_GRADIENT} rounded-xl ${BLUE_CYAN_ACTIVE_SHADOW}`}
                                                 transition={{
                                                     type: "spring",
                                                     stiffness: 350,
@@ -314,7 +319,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         transition-colors duration-300
                                         ${isActive
                                             ? 'text-white font-medium'
-                                            : 'text-gray-600 dark:text-slate-400 hover:text-nebula-600 dark:hover:text-nebula-300'
+                                            : `text-gray-600 dark:text-slate-400 ${BLUE_CYAN_HOVER_TEXT}`
                                         }
                                     `}
                                     initial={false}
@@ -329,7 +334,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     {isActive && (
                                         <motion.div
                                             layoutId="mobileActiveTab"
-                                            className="absolute inset-0 bg-gradient-to-r from-nebula-600 to-cosmic-500 rounded-xl shadow-nebula"
+                                            className={`absolute inset-0 ${BLUE_CYAN_GRADIENT} rounded-xl ${BLUE_CYAN_ACTIVE_SHADOW}`}
                                             transition={{
                                                 type: "spring",
                                                 stiffness: 350,

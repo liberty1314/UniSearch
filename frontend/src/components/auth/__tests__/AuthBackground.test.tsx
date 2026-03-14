@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import AuthBackground from '@/components/auth/AuthBackground';
-import type { AuthVisualPreset } from '@/components/auth/authVisualPresets';
+import { authVisualPresets, type AuthVisualPreset } from '@/components/auth/authVisualPresets';
 
 const preset: AuthVisualPreset = {
   topOrbGradientClass: 'from-a to-b',
@@ -45,5 +45,19 @@ describe('AuthBackground', () => {
     );
 
     expect(container.querySelectorAll('.auth-bg-orb').length).toBe(2);
+  });
+
+  it('keeps user-facing auth presets on the blue/cyan theme axis', () => {
+    expect(authVisualPresets.loginPage.cardGlowGradientClass).toContain('from-blue-600');
+    expect(authVisualPresets.apiKeyPage.cardGlowGradientClass).toContain('to-cyan-500');
+    expect(authVisualPresets.userAuth.centerOrbGradientClass).toContain('to-cyan-500/20');
+
+    expect(authVisualPresets.legacyLogin.topOrbGradientClass).toContain('from-blue-400/30');
+    expect(authVisualPresets.legacyLogin.bottomOrbGradientClass).toContain('to-cyan-400/30');
+    expect(authVisualPresets.legacyLogin.centerOrbGradientClass).toContain('from-blue-500/20');
+    expect(authVisualPresets.legacyLogin.particleColorClass).toBe('bg-cyan-400/30');
+    expect(authVisualPresets.legacyLogin.cardGlowGradientClass).toBe(
+      'bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500'
+    );
   });
 });

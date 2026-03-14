@@ -127,10 +127,10 @@ export const ChannelPreviewDialog: React.FC<ChannelPreviewDialogProps> = ({
               className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
               onClick={(event) => event.stopPropagation()}
             >
-              <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700">
+              <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-slate-800 dark:to-slate-700">
                 <div>
                   <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                    <Radio className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <Radio className="w-5 h-5 text-blue-600 dark:text-cyan-300" />
                     TG 频道全量查看
                   </h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
@@ -183,7 +183,7 @@ export const ChannelPreviewDialog: React.FC<ChannelPreviewDialogProps> = ({
               <div ref={listContainerRef} className="flex-1 overflow-y-auto p-5">
                 {isLoading ? (
                   <div className="flex items-center justify-center py-16">
-                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                    <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
                   </div>
                 ) : pagedChannels.length === 0 ? (
                   <div className="text-center py-16 text-slate-500 dark:text-slate-400">

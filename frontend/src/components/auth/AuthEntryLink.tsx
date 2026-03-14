@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { BLUE_CYAN_HOVER_TEXT } from '@/lib/brandTheme';
 import type { AuthTransitionState } from './authRouteMotion';
 
 export interface AuthEntryLinkProps {
@@ -30,7 +31,7 @@ export const AuthEntryLink: React.FC<AuthEntryLinkProps> = ({
       to={to}
       state={state}
       className={cn(
-        'inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-slate-300 hover:text-nebula-600 dark:hover:text-nebula-400 hover:underline underline-offset-4 transition-colors duration-200',
+        `inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-slate-300 ${BLUE_CYAN_HOVER_TEXT} hover:underline underline-offset-4 transition-colors duration-200`,
         className,
       )}
     >

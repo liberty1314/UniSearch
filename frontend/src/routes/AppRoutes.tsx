@@ -1,10 +1,11 @@
 import React, { Suspense, lazy } from 'react';
-import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, matchPath, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import Navbar from '@/components/Navbar';
 import { AnnouncementProvider } from '@/components/AnnouncementProvider';
 import SiteFooter from '@/components/SiteFooter';
 import PageTransition from '@/components/PageTransition';
+import NotFoundPage from '@/components/ui/page-not-found';
 import ScrollToTop from './ScrollToTop';
 import { isAuthRoute } from '@/components/auth/authRouteMotion';
 import {
@@ -34,7 +35,7 @@ const TOAST_CONFIG = {
 
 const RouteFallback: React.FC = () => (
   <div className="flex min-h-[40vh] items-center justify-center">
-    <div className="h-10 w-10 animate-spin rounded-full border-2 border-slate-200 border-t-blue-500 dark:border-slate-700 dark:border-t-blue-400" />
+    <div className="h-10 w-10 animate-spin rounded-full border-2 border-slate-200 border-t-cyan-500 dark:border-slate-700 dark:border-t-cyan-400" />
   </div>
 );
 
@@ -42,38 +43,39 @@ const renderLazyRoute = (element: React.ReactNode) => (
   <Suspense fallback={<RouteFallback />}>{element}</Suspense>
 );
 
-const NotFoundPage: React.FC = () => (
-  <div className="min-h-screen flex items-center justify-center pt-16">
-    <div className="text-center">
-      <h1 className="text-6xl font-bold text-gray-300 dark:text-gray-600 mb-4">404</h1>
-      <h2 className="text-2xl font-semibold text-gray-700 dark:text-slate-300 mb-4">
-        页面未找到
-      </h2>
-      <p className="text-gray-500 dark:text-slate-400 mb-8">
-        抱歉，您访问的页面不存在。
-      </p>
-      <Link
-        to="/"
-        className="inline-flex items-center px-6 py-3 bg-apple-blue text-white rounded-lg hover:bg-apple-blue/90 transition-colors"
-      >
-        返回首页
-      </Link>
-    </div>
-  </div>
-);
+const KNOWN_ROUTE_PATTERNS = [
+  '/',
+  '/login',
+  '/register',
+  '/apikey',
+  '/disclaimer',
+  '/auth',
+  '/admin/login',
+  '/admin',
+  '/settings/apikey',
+];
 
 const AppRoutes: React.FC = () => {
   const { pathname } = useLocation();
   const isStandaloneAuthPage = isAuthRoute(pathname);
+  const isKnownRoute = KNOWN_ROUTE_PATTERNS.some((path) =>
+    matchPath({ path, end: true }, pathname)
+  );
+  const isNotFoundRoute = !isKnownRoute;
   const showSiteFooter =
+    !isNotFoundRoute &&
     !pathname.startsWith('/admin') &&
     pathname !== '/auth' &&
     !isStandaloneAuthPage;
+  const showNavbar = !isNotFoundRoute;
+  const appShellClassName = isNotFoundRoute
+    ? 'bg-black'
+    : `${isStandaloneAuthPage ? 'bg-gray-50' : 'bg-white'} dark:bg-slate-950`;
 
   return (
-    <div className={`${isStandaloneAuthPage ? 'bg-gray-50' : 'bg-white'} dark:bg-slate-950 transition-colors duration-200`}>
+    <div className={`${appShellClassName} transition-colors duration-200`}>
       <ScrollToTop />
-      <Navbar />
+      {showNavbar && <Navbar />}
       <AnnouncementProvider />
 
       <main className="relative min-h-screen">

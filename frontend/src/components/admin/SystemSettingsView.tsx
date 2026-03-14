@@ -7,6 +7,7 @@ import { Settings, RefreshCw, Shield, Key, LogIn, UserPlus } from 'lucide-react'
 import { SystemSettingsService } from '@/services/systemSettingsService';
 import { useAuthStore } from '@/stores/authStore';
 import { getErrorDataError, getErrorMessage } from '@/lib/error';
+import { BLUE_CYAN_ICON } from '@/lib/brandTheme';
 
 /**
  * 系统设置视图组件
@@ -140,8 +141,8 @@ export const SystemSettingsView: React.FC = () => {
         <button
             onClick={() => onChange(!checked)}
             disabled={disabled}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                checked ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${
+                checked ? 'bg-gradient-to-r from-blue-600 to-cyan-500' : 'bg-gray-300 dark:bg-gray-600'
             } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -153,7 +154,7 @@ export const SystemSettingsView: React.FC = () => {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                        <Settings className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                        <Settings className={`w-6 h-6 ${BLUE_CYAN_ICON}`} />
                         系统设置
                     </h1>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">配置系统全局设置和功能开关</p>
@@ -163,7 +164,7 @@ export const SystemSettingsView: React.FC = () => {
             <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
                 <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/50">
                     <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-                        <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <Shield className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
                         登录认证设置
                     </CardTitle>
                     <CardDescription className="text-slate-500 dark:text-slate-400">控制用户登录和注册功能的可用性</CardDescription>
@@ -172,7 +173,7 @@ export const SystemSettingsView: React.FC = () => {
                     {isLoading ? (
                         <div className="text-center py-12">
                             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="inline-block">
-                                <RefreshCw className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                                <RefreshCw className={`w-8 h-8 ${BLUE_CYAN_ICON}`} />
                             </motion.div>
                             <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
                         </div>
@@ -181,7 +182,7 @@ export const SystemSettingsView: React.FC = () => {
                             <div className="flex items-start justify-between p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50">
                                 <div className="flex-1">
                                     <Label className="text-base font-medium text-slate-800 dark:text-white flex items-center gap-2">
-                                        <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                        <Shield className={`w-4 h-4 ${BLUE_CYAN_ICON}`} />
                                         启用用户登录注册功能
                                     </Label>
                                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">主开关：控制是否启用用户认证功能</p>
@@ -202,7 +203,7 @@ export const SystemSettingsView: React.FC = () => {
                             </div>
 
                             {enableUserAuth && (
-                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="ml-6 space-y-4 border-l-2 border-blue-200 dark:border-blue-800 pl-4">
+                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="ml-6 space-y-4 border-l-2 border-blue-200 dark:border-cyan-800/70 pl-4">
                                     <div className="flex items-start justify-between p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30">
                                         <div className="flex-1">
                                             <Label className="text-base font-medium text-slate-800 dark:text-white flex items-center gap-2">
@@ -221,7 +222,7 @@ export const SystemSettingsView: React.FC = () => {
                                     <div className="flex items-start justify-between p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30">
                                         <div className="flex-1">
                                             <Label className="text-base font-medium text-slate-800 dark:text-white flex items-center gap-2">
-                                                <UserPlus className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                                                <UserPlus className="w-4 h-4 text-cyan-700 dark:text-cyan-300" />
                                                 启用用户注册功能
                                             </Label>
                                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">允许新用户注册账号</p>

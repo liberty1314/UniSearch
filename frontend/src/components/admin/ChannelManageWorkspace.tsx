@@ -126,11 +126,11 @@ export function ChannelManageWorkspace({ workspace }: ChannelManageWorkspaceProp
               onClick={(event) => event.stopPropagation()}
               className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
             >
-              <div className="border-b border-slate-200 bg-gradient-to-r from-blue-50 via-indigo-50 to-cyan-50 px-6 py-4 dark:border-slate-700 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+              <div className="border-b border-slate-200 bg-gradient-to-r from-blue-50 via-blue-50 to-cyan-50 px-6 py-4 dark:border-slate-700 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                      <Radio className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <Radio className="h-5 w-5 text-blue-600 dark:text-cyan-300" />
                       Telegram 频道工作台
                       <Badge variant={isReadOnly ? 'outline' : 'success'}>
                         {isReadOnly ? '只读模式' : '编辑模式'}
@@ -160,8 +160,8 @@ export function ChannelManageWorkspace({ workspace }: ChannelManageWorkspaceProp
                 statusFilter={statusFilter}
                 addButtonLabel="添加频道"
                 addButtonAriaLabel="添加频道"
-                addButtonClassName="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 lg:ml-auto"
-                batchTestClassName="border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                addButtonClassName="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600 lg:ml-auto"
+                batchTestClassName="border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-cyan-800/70 dark:text-cyan-300 dark:hover:bg-cyan-950/30"
                 batchTestDisabled={isOperationBusy || totalChannels === 0}
                 onSetStatusFilter={onSetStatusFilter}
                 onOpenAddDialog={onOpenAddDialog}
@@ -174,7 +174,7 @@ export function ChannelManageWorkspace({ workspace }: ChannelManageWorkspaceProp
               <div ref={listContainerRef} className="flex-1 overflow-y-auto p-5">
                 {loading ? (
                   <div className="flex items-center justify-center py-16">
-                    <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                    <Loader2 className="h-8 w-8 animate-spin text-cyan-500" />
                   </div>
                 ) : pagedItems.length === 0 ? (
                   <div className="py-16 text-center text-slate-500 dark:text-slate-400">

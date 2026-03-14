@@ -27,11 +27,37 @@ vi.mock('@/components/magicui/sparkles-text', () => ({
 
 vi.mock('@/components/GradientText', () => ({
   __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  default: ({
+    children,
+    className,
+    colors,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+    colors?: string[];
+  }) => (
+    <div data-testid="gradient-text" data-colors={colors?.join(',')} className={className}>
+      {children}
+    </div>
+  ),
 }));
 
 vi.mock('@/components/SkeletonLoader', () => ({
   FeatureCardsSkeleton: () => <div>feature-skeleton</div>,
+}));
+
+vi.mock('@/components/ui/animated-grid-pattern', () => ({
+  AnimatedGridPattern: ({ className }: { className?: string }) => (
+    <div data-testid="animated-grid" className={className} />
+  ),
+}));
+
+vi.mock('@/components/ui/glowing-effect', () => ({
+  GlowCard: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@/components/ui/number-ticker', () => ({
+  NumberTicker: ({ value }: { value: number }) => <>{value}</>,
 }));
 
 vi.mock('@/stores/searchStore', () => ({
@@ -114,5 +140,30 @@ describe('Home', () => {
 
     expect(container.firstChild).toHaveClass('bg-white');
     expect(container.firstChild).not.toHaveClass('bg-gray-50');
+  });
+
+  it('keeps homepage hero and section typography on the blue/cyan theme axis', () => {
+    searchAccessStatus = 'search_ready';
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>
+    );
+
+    const heroTitle = screen.getByTestId('gradient-text');
+    const heroSubtitle = screen.getByRole('heading', { level: 2, name: '智能网盘资源搜索引擎' });
+    const statsValue = screen.getByText('支持平台').previousElementSibling as HTMLElement;
+    const sectionTitle = screen.getByRole('heading', { level: 2, name: '为什么选择 UniSearch？' });
+    const animatedGrid = screen.getByTestId('animated-grid');
+
+    expect(heroTitle).toHaveAttribute('data-colors', '#3b82f6,#0ea5e9,#06b6d4');
+    expect(heroSubtitle.className).toContain('via-cyan-600');
+    expect(heroSubtitle.className).not.toContain('indigo');
+    expect(statsValue).toHaveClass('from-blue-600');
+    expect(statsValue).toHaveClass('to-cyan-500');
+    expect(sectionTitle.className).toContain('text-blue-950');
+    expect(animatedGrid.className).toContain('text-blue-600');
+    expect(animatedGrid.className).not.toContain('nebula');
   });
 });

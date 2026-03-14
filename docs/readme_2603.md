@@ -449,3 +449,137 @@ feat(frontend): 新增统一站点底部组件并重构 Button 为标准 shadcn/
 - frontend/src/pages/__tests__/UserApiKeySettings.test.tsx (新增)
 - frontend/src/routes/AppRoutes.tsx
 - frontend/src/routes/__tests__/AppRoutes.test.tsx
+
+---
+
+## 2026-03-14 16:19:55
+
+### feat(frontend): 新增多组视觉组件并优化加载与后台管理体验
+
+**Body**:
+新增页面级视觉组件（404、展示卡片、发光效果、数字滚动、动态网格）并统一蓝青主题；重构加载页进度展示与首页/路由视觉表现，同时优化后台管理表格与批量操作交互并补充测试覆盖。
+
+**Files**:
+- frontend/src/components/DisclaimerFooter.tsx
+- frontend/src/components/MobileMenu.tsx
+- frontend/src/components/Navbar.tsx
+- frontend/src/components/PageLoader.tsx
+- frontend/src/components/SearchBox.tsx
+- frontend/src/components/SiteFooter.tsx
+- frontend/src/components/__tests__/DisclaimerFooter.test.tsx
+- frontend/src/components/__tests__/PageLoader.test.tsx
+- frontend/src/components/__tests__/SearchBox.test.tsx
+- frontend/src/components/__tests__/SiteFooter.test.tsx
+- frontend/src/components/admin/AdminApiKeysView.tsx
+- frontend/src/components/admin/AdminUsersView.tsx
+- frontend/src/components/admin/AnnouncementManagement.tsx
+- frontend/src/components/admin/AppleApiKeyTable.tsx
+- frontend/src/components/admin/ApplePagination.tsx
+- frontend/src/components/admin/ApplePluginTable.tsx
+- frontend/src/components/admin/AppleUserTable.tsx
+- frontend/src/components/admin/BatchActionsBar.tsx
+- frontend/src/components/admin/BatchCreateDialog.tsx
+- frontend/src/components/admin/BatchDeleteDialog.tsx
+- frontend/src/components/admin/BatchExportDialog.tsx
+- frontend/src/components/admin/BatchExtendDialog.tsx
+- frontend/src/components/admin/BatchUpdateRoleDialog.tsx
+- frontend/src/components/admin/ChannelManageWorkspace.tsx
+- frontend/src/components/admin/ChannelPreviewDialog.tsx
+- frontend/src/components/admin/EditKeyDialog.tsx
+- frontend/src/components/admin/PluginManageWorkspace.tsx
+- frontend/src/components/admin/PluginPreviewDialog.tsx
+- frontend/src/components/admin/Sidebar.tsx
+- frontend/src/components/admin/StatsCard.tsx
+- frontend/src/components/admin/SystemInfoView.tsx
+- frontend/src/components/admin/SystemSettingsView.tsx
+- frontend/src/components/admin/TableFilterDropdown.tsx
+- frontend/src/components/admin/__tests__/AppleApiKeyTable.test.tsx
+- frontend/src/components/admin/__tests__/AppleUserTable.test.tsx
+- frontend/src/components/admin/__tests__/StatsCard.test.tsx
+- frontend/src/components/admin/pluginManageDialogShared.ts
+- frontend/src/components/auth/AuthEntryLink.tsx
+- frontend/src/components/auth/__tests__/AuthBackground.test.tsx
+- frontend/src/components/auth/authVisualPresets.ts
+- frontend/src/components/ui/__tests__/page-not-found.test.tsx
+- frontend/src/components/ui/animated-grid-pattern.tsx
+- frontend/src/components/ui/demo.tsx
+- frontend/src/components/ui/display-cards.tsx
+- frontend/src/components/ui/glowing-effect.tsx
+- frontend/src/components/ui/number-ticker.tsx
+- frontend/src/components/ui/page-not-found.tsx
+- frontend/src/index.css
+- frontend/src/lib/brandTheme.ts
+- frontend/src/pages/Admin.tsx
+- frontend/src/pages/Home.tsx
+- frontend/src/pages/__tests__/Admin.test.tsx
+- frontend/src/pages/__tests__/Home.test.tsx
+- frontend/src/routes/AppRoutes.tsx
+- frontend/src/routes/__tests__/AppRoutes.test.tsx
+- frontend/src/test/setup.ts
+
+---
+
+## 2026-03-14 16:20:10
+
+### feat(frontend): 新增多组视觉组件并优化加载与后台管理体验
+
+**Body**:
+新增页面级视觉组件（404、展示卡片、发光效果、数字滚动、动态网格）并统一蓝青主题；重构加载页进度展示与首页/路由视觉表现，同时优化后台管理表格与批量操作交互并补充测试覆盖。
+
+**Files**:
+- frontend/src/components/DisclaimerFooter.tsx
+- frontend/src/components/MobileMenu.tsx
+- frontend/src/components/Navbar.tsx
+- frontend/src/components/PageLoader.tsx
+- frontend/src/components/SearchBox.tsx
+- frontend/src/components/SiteFooter.tsx
+- frontend/src/components/__tests__/DisclaimerFooter.test.tsx
+- frontend/src/components/__tests__/PageLoader.test.tsx
+- frontend/src/components/__tests__/SearchBox.test.tsx
+- frontend/src/components/__tests__/SiteFooter.test.tsx
+- frontend/src/components/admin/AdminApiKeysView.tsx
+- frontend/src/components/admin/AdminUsersView.tsx
+- frontend/src/components/admin/AnnouncementManagement.tsx
+- frontend/src/components/admin/AppleApiKeyTable.tsx
+- frontend/src/components/admin/ApplePagination.tsx
+- frontend/src/components/admin/ApplePluginTable.tsx
+- frontend/src/components/admin/AppleUserTable.tsx
+- frontend/src/components/admin/BatchActionsBar.tsx
+- frontend/src/components/admin/BatchCreateDialog.tsx
+- frontend/src/components/admin/BatchDeleteDialog.tsx
+- frontend/src/components/admin/BatchExportDialog.tsx
+- frontend/src/components/admin/BatchExtendDialog.tsx
+- frontend/src/components/admin/BatchUpdateRoleDialog.tsx
+- frontend/src/components/admin/ChannelManageWorkspace.tsx
+- frontend/src/components/admin/ChannelPreviewDialog.tsx
+- frontend/src/components/admin/EditKeyDialog.tsx
+- frontend/src/components/admin/PluginManageWorkspace.tsx
+- frontend/src/components/admin/PluginPreviewDialog.tsx
+- frontend/src/components/admin/Sidebar.tsx
+- frontend/src/components/admin/StatsCard.tsx
+- frontend/src/components/admin/SystemInfoView.tsx
+- frontend/src/components/admin/SystemSettingsView.tsx
+- frontend/src/components/admin/TableFilterDropdown.tsx
+- frontend/src/components/admin/__tests__/AppleApiKeyTable.test.tsx
+- frontend/src/components/admin/__tests__/AppleUserTable.test.tsx
+- frontend/src/components/admin/__tests__/StatsCard.test.tsx
+- frontend/src/components/admin/pluginManageDialogShared.ts
+- frontend/src/components/auth/AuthEntryLink.tsx
+- frontend/src/components/auth/__tests__/AuthBackground.test.tsx
+- frontend/src/components/auth/authVisualPresets.ts
+- frontend/src/components/ui/__tests__/page-not-found.test.tsx
+- frontend/src/components/ui/animated-grid-pattern.tsx
+- frontend/src/components/ui/demo.tsx
+- frontend/src/components/ui/display-cards.tsx
+- frontend/src/components/ui/glowing-effect.tsx
+- frontend/src/components/ui/number-ticker.tsx
+- frontend/src/components/ui/page-not-found.tsx
+- frontend/src/index.css
+- frontend/src/lib/brandTheme.ts
+- frontend/src/pages/Admin.tsx
+- frontend/src/pages/Home.tsx
+- frontend/src/pages/__tests__/Admin.test.tsx
+- frontend/src/pages/__tests__/Home.test.tsx
+- frontend/src/routes/AppRoutes.tsx
+- frontend/src/routes/__tests__/AppRoutes.test.tsx
+- frontend/src/test/setup.ts

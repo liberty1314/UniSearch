@@ -71,8 +71,8 @@ export const ApplePluginTable: React.FC<ApplePluginTableProps> = ({
             : effectiveStatus === 'custom'
               ? {
                 text: '自定义',
-                color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-                dotColor: 'bg-blue-500',
+                color: 'bg-blue-100 text-blue-700 dark:bg-cyan-950/40 dark:text-cyan-300',
+                dotColor: 'bg-cyan-500',
               }
               : effectiveStatus === 'inactive'
                 ? {

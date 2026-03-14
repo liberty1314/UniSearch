@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { LucideIcon } from 'lucide-react';
 import { AppleCard } from '@/components/ui/AppleCard';
+import { BLUE_CYAN_ICON, BLUE_CYAN_SOFT_SURFACE, BLUE_CYAN_SOFT_SURFACE_STRONG } from '@/lib/brandTheme';
 
 interface StatsCardProps {
     title: string;
@@ -17,14 +18,14 @@ interface StatsCardProps {
 
 const colorClasses = {
     nebula: {
-        bg: 'bg-nebula-50 dark:bg-nebula-950/20',
-        icon: 'text-nebula-600 dark:text-nebula-400',
-        iconBg: 'bg-nebula-100 dark:bg-nebula-900/30',
+        bg: BLUE_CYAN_SOFT_SURFACE,
+        icon: BLUE_CYAN_ICON,
+        iconBg: BLUE_CYAN_SOFT_SURFACE_STRONG,
     },
-    blue: { // Backwards compatibility / Alias to nebula
-        bg: 'bg-nebula-50 dark:bg-nebula-950/20',
-        icon: 'text-nebula-600 dark:text-nebula-400',
-        iconBg: 'bg-nebula-100 dark:bg-nebula-900/30',
+    blue: {
+        bg: BLUE_CYAN_SOFT_SURFACE,
+        icon: BLUE_CYAN_ICON,
+        iconBg: BLUE_CYAN_SOFT_SURFACE_STRONG,
     },
     emerald: {
         bg: 'bg-emerald-50 dark:bg-emerald-950/20',
@@ -37,9 +38,9 @@ const colorClasses = {
         iconBg: 'bg-amber-100 dark:bg-amber-900/30',
     },
     purple: {
-        bg: 'bg-purple-50 dark:bg-purple-950/20',
-        icon: 'text-purple-600 dark:text-purple-400',
-        iconBg: 'bg-purple-100 dark:bg-purple-900/30',
+        bg: 'bg-cyan-50 dark:bg-cyan-950/25',
+        icon: 'text-cyan-700 dark:text-cyan-300',
+        iconBg: 'bg-cyan-100 dark:bg-cyan-950/45',
     },
 };
 

@@ -251,7 +251,7 @@ export const BatchUpdateRoleDialog: React.FC<BatchUpdateRoleDialogProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-blue-500" />
+            <Shield className="h-5 w-5 text-blue-500 dark:text-cyan-300" />
             批量修改用户角色
           </DialogTitle>
           <DialogDescription>
@@ -273,13 +273,13 @@ export const BatchUpdateRoleDialog: React.FC<BatchUpdateRoleDialogProps> = ({
               <SelectContent>
                 <SelectItem value="admin">
                   <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-purple-500" />
+                    <Shield className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />
                     <span>管理员</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="user">
                   <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-blue-500" />
+                    <User className="h-4 w-4 text-blue-500 dark:text-cyan-300" />
                     <span>普通用户</span>
                   </div>
                 </SelectItem>
@@ -302,8 +302,8 @@ export const BatchUpdateRoleDialog: React.FC<BatchUpdateRoleDialogProps> = ({
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs ${
                           user.role === 'admin'
-                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
-                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                            ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300'
+                            : 'bg-blue-100 text-blue-700 dark:bg-cyan-950/30 dark:text-cyan-300'
                         }`}
                       >
                         {user.role === 'admin' ? '管理员' : '普通用户'}
@@ -312,8 +312,8 @@ export const BatchUpdateRoleDialog: React.FC<BatchUpdateRoleDialogProps> = ({
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs ${
                           selectedRole === 'admin'
-                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
-                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                            ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300'
+                            : 'bg-blue-100 text-blue-700 dark:bg-cyan-950/30 dark:text-cyan-300'
                         }`}
                       >
                         {selectedRole === 'admin' ? '管理员' : '普通用户'}
@@ -327,10 +327,10 @@ export const BatchUpdateRoleDialog: React.FC<BatchUpdateRoleDialogProps> = ({
           </div>
 
           {/* 提示信息 */}
-          <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950">
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-cyan-800/70 dark:bg-cyan-950/30">
             <div className="flex gap-2">
-              <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-              <div className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
+              <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-cyan-300 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1 text-sm text-blue-800 dark:text-cyan-100">
                 <p className="font-medium">注意事项：</p>
                 <ul className="list-disc list-inside space-y-0.5 text-xs">
                   <li>无法修改当前登录用户的角色</li>

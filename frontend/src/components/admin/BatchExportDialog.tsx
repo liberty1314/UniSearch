@@ -234,7 +234,7 @@ export function BatchExportDialog({
                                 id="enable-copy-format"
                                 checked={enableCopyFormat}
                                 onChange={(e) => setEnableCopyFormat(e.target.checked)}
-                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-cyan-500"
                             />
                             <label htmlFor="enable-copy-format" className="text-sm font-medium cursor-pointer">
                                 复制时追加格式文本
@@ -251,7 +251,7 @@ export function BatchExportDialog({
                                     value={copyFormatTemplate}
                                     onChange={(e) => setCopyFormatTemplate(e.target.value)}
                                     placeholder="卡密：{key}，网址：https://unisearchso.xyz/"
-                                    className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-700"
+                                    className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 dark:bg-slate-700 dark:border-slate-700"
                                 />
                                 <p className="text-xs text-gray-500">
                                     示例：卡密：{formatKeyDisplay(selectedKeys[0]?.key || 'sk-xxx')}，网址：https://unisearchso.xyz/

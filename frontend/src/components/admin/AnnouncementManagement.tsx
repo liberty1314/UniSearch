@@ -23,6 +23,7 @@ import {
 import { AnnouncementService } from '@/services/announcementService';
 import type { Announcement, AnnouncementPriority, CreateAnnouncementRequest, UpdateAnnouncementRequest } from '@/types/api';
 import { getErrorMessage } from '@/lib/error';
+import { BLUE_CYAN_BUTTON, BLUE_CYAN_ICON } from '@/lib/brandTheme';
 
 /**
  * 公告表单数据
@@ -289,7 +290,7 @@ export const AnnouncementManagement: React.FC = () => {
       case 'medium':
         return 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30';
       case 'low':
-        return 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30';
+        return 'text-blue-600 dark:text-cyan-300 bg-blue-100 dark:bg-cyan-950/40';
       default:
         return 'text-gray-600 dark:text-slate-400 bg-gray-100 dark:bg-slate-800/40';
     }
@@ -316,7 +317,7 @@ export const AnnouncementManagement: React.FC = () => {
     <button
       onClick={() => onChange(!checked)}
       disabled={disabled}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${checked ? 'bg-blue-600' : 'bg-gray-300 dark:bg-slate-600'
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${checked ? 'bg-gradient-to-r from-blue-600 to-cyan-500' : 'bg-gray-300 dark:bg-slate-600'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
     >
       <span
@@ -337,7 +338,7 @@ export const AnnouncementManagement: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <Megaphone className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <Megaphone className={`w-6 h-6 ${BLUE_CYAN_ICON}`} />
             系统公告管理
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -350,7 +351,7 @@ export const AnnouncementManagement: React.FC = () => {
       <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
         <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/80">
           <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-            <Megaphone className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <Megaphone className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
             公告功能设置
           </CardTitle>
           <CardDescription className="text-slate-500 dark:text-slate-400">
@@ -365,7 +366,7 @@ export const AnnouncementManagement: React.FC = () => {
                 transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                 className="inline-block"
               >
-                <RefreshCw className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                <RefreshCw className={`w-8 h-8 ${BLUE_CYAN_ICON}`} />
               </motion.div>
               <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
             </div>
@@ -373,7 +374,7 @@ export const AnnouncementManagement: React.FC = () => {
             <div className="flex items-start justify-between p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80">
               <div className="flex-1">
                 <Label className="text-base font-medium text-slate-800 dark:text-white flex items-center gap-2">
-                  <Megaphone className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <Megaphone className={`w-4 h-4 ${BLUE_CYAN_ICON}`} />
                   启用系统公告功能
                 </Label>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -418,7 +419,7 @@ export const AnnouncementManagement: React.FC = () => {
             </div>
             <Button
               onClick={handleCreate}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className={BLUE_CYAN_BUTTON}
             >
               <Plus className="w-4 h-4 mr-2" />
               创建公告
@@ -647,7 +648,7 @@ export const AnnouncementManagement: React.FC = () => {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setFormData({ ...formData, is_enabled: !formData.is_enabled })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${formData.is_enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-slate-600'
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${formData.is_enabled ? 'bg-gradient-to-r from-blue-600 to-cyan-500' : 'bg-gray-300 dark:bg-slate-600'
                   }`}
               >
                 <span

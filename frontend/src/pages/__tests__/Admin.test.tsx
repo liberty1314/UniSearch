@@ -199,5 +199,6 @@ describe('Admin', () => {
 
     expect(container.firstChild).toHaveClass('bg-white');
     expect(container.firstChild).not.toHaveClass('from-gray-50');
+    expect(container.firstChild).not.toHaveClass('dark:to-nebula-950/20');
   });
 });

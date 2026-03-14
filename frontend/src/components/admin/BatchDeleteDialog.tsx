@@ -257,8 +257,8 @@ export const BatchDeleteDialog: React.FC<BatchDeleteDialogProps> = ({
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs ${
                         user.role === 'admin'
-                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
-                          : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                          ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300'
+                          : 'bg-blue-100 text-blue-700 dark:bg-cyan-950/30 dark:text-cyan-300'
                       }`}
                     >
                       {user.role === 'admin' ? '管理员' : '普通用户'}

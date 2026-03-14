@@ -9,6 +9,14 @@ import { StatsCard } from './StatsCard';
 import { TableFilterDropdown } from './TableFilterDropdown';
 import { AppleUserTable } from './AppleUserTable';
 import { ApplePagination } from './ApplePagination';
+import {
+  BLUE_CYAN_BORDER,
+  BLUE_CYAN_BUTTON,
+  BLUE_CYAN_ICON,
+  BLUE_CYAN_SOFT_SURFACE,
+  BLUE_CYAN_TEXT,
+  BLUE_CYAN_TEXT_STRONG,
+} from '@/lib/brandTheme';
 
 interface UserStats {
   total: number;
@@ -105,14 +113,14 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ viewModel }) => {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div className="flex-shrink-0">
               <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-                <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <Users className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
                 用户管理
               </CardTitle>
               <CardDescription className="text-slate-500 dark:text-slate-400 mt-1">
                 {selectedUsers.size > 0 ? (
                   <span className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                    <span className="text-blue-700 dark:text-blue-300 font-medium">已选中 {selectedUsers.size} 个用户</span>
+                    <CheckCircle2 className={`w-3.5 h-3.5 ${BLUE_CYAN_ICON}`} />
+                    <span className={`${BLUE_CYAN_TEXT} font-medium`}>已选中 {selectedUsers.size} 个用户</span>
                   </span>
                 ) : (
                   '管理系统用户，控制访问权限和账户状态'
@@ -130,9 +138,9 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ viewModel }) => {
                   transition={{ duration: 0.2 }}
                   className="flex flex-wrap items-center gap-2 sm:gap-3"
                 >
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-medium text-blue-900 dark:text-blue-100 hidden sm:inline">
+                  <div className={`flex items-center gap-2 px-3 py-1.5 ${BLUE_CYAN_SOFT_SURFACE} border ${BLUE_CYAN_BORDER} rounded-lg`}>
+                    <CheckCircle2 className={`w-4 h-4 ${BLUE_CYAN_ICON}`} />
+                    <span className={`text-sm font-medium ${BLUE_CYAN_TEXT_STRONG} hidden sm:inline`}>
                       已选中 {selectedUsers.size} 个用户
                     </span>
                   </div>
@@ -213,7 +221,7 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ viewModel }) => {
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                     <Button
                       onClick={onCreateUser}
-                      className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/30"
+                      className={`flex items-center gap-2 ${BLUE_CYAN_BUTTON} shadow-lg shadow-cyan-500/25`}
                       disabled={isLoadingUsers || isBatchOperatingUsers}
                     >
                       <Plus className="w-4 h-4" />
@@ -229,7 +237,7 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ viewModel }) => {
           {isLoadingUsers ? (
             <div className="text-center py-12">
               <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="inline-block">
-                <RefreshCw className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                <RefreshCw className={`w-8 h-8 ${BLUE_CYAN_ICON}`} />
               </motion.div>
               <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
             </div>
@@ -242,7 +250,7 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ viewModel }) => {
                 {hasUserFilters ? '没有找到匹配的用户' : '暂无用户'}
               </p>
               {!hasUserFilters && (
-                <Button onClick={onCreateUser} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
+                <Button onClick={onCreateUser} className={BLUE_CYAN_BUTTON}>
                   <Plus className="w-4 h-4 mr-2" />
                   创建第一个用户
                 </Button>

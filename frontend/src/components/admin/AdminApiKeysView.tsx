@@ -10,6 +10,14 @@ import { StatsCard } from './StatsCard';
 import { TableFilterDropdown } from './TableFilterDropdown';
 import { AppleApiKeyTable } from './AppleApiKeyTable';
 import { ApplePagination } from './ApplePagination';
+import {
+  BLUE_CYAN_BORDER,
+  BLUE_CYAN_BUTTON,
+  BLUE_CYAN_ICON,
+  BLUE_CYAN_SOFT_SURFACE,
+  BLUE_CYAN_TEXT,
+  BLUE_CYAN_TEXT_STRONG,
+} from '@/lib/brandTheme';
 
 export interface AdminApiKeysViewModel {
   totalApiKeys: number;
@@ -129,14 +137,14 @@ const AdminApiKeysView: React.FC<AdminApiKeysViewProps> = ({ viewModel }) => {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div className="flex-shrink-0">
               <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-                <Key className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <Key className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
                 API Key 管理
               </CardTitle>
               <CardDescription className="text-slate-500 dark:text-slate-400 mt-1">
                 {hasAnyFilter() ? (
                   <span className="flex items-center gap-2">
-                    <Filter className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                    <span className="text-blue-700 dark:text-blue-300 font-medium">已应用筛选条件</span>
+                    <Filter className={`w-3.5 h-3.5 ${BLUE_CYAN_ICON}`} />
+                    <span className={`${BLUE_CYAN_TEXT} font-medium`}>已应用筛选条件</span>
                     <span className="text-slate-500 dark:text-slate-400">· 共 {totalApiKeys} 条记录</span>
                   </span>
                 ) : (
@@ -173,9 +181,9 @@ const AdminApiKeysView: React.FC<AdminApiKeysViewProps> = ({ viewModel }) => {
                   transition={{ duration: 0.2 }}
                   className="flex flex-wrap items-center gap-2 sm:gap-3"
                 >
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <Filter className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-medium text-blue-900 dark:text-blue-100">已应用筛选条件</span>
+                  <div className={`flex items-center gap-2 px-3 py-1.5 ${BLUE_CYAN_SOFT_SURFACE} border ${BLUE_CYAN_BORDER} rounded-lg`}>
+                    <Filter className={`w-4 h-4 ${BLUE_CYAN_ICON}`} />
+                    <span className={`text-sm font-medium ${BLUE_CYAN_TEXT_STRONG}`}>已应用筛选条件</span>
                     <span className="text-sm text-slate-500 dark:text-slate-400">· 共 {totalApiKeys} 条</span>
                   </div>
                   <Button variant="ghost" size="sm" onClick={onClearAllFilters} className="flex items-center gap-2 h-9">
@@ -228,7 +236,7 @@ const AdminApiKeysView: React.FC<AdminApiKeysViewProps> = ({ viewModel }) => {
                         variant="outline"
                         size="sm"
                         onClick={onClearAllFilters}
-                        className="border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                        className={`border ${BLUE_CYAN_BORDER} ${BLUE_CYAN_TEXT} hover:bg-blue-50 dark:hover:bg-cyan-950/30`}
                       >
                         <X className="w-3.5 h-3.5 mr-1" />
                         清除筛选
@@ -260,7 +268,7 @@ const AdminApiKeysView: React.FC<AdminApiKeysViewProps> = ({ viewModel }) => {
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                     <Button
                       onClick={onOpenCreateKey}
-                      className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/30"
+                      className={`flex items-center gap-2 ${BLUE_CYAN_BUTTON} shadow-lg shadow-cyan-500/25`}
                       disabled={isLoadingKeys || isBatchOperating}
                     >
                       <Plus className="w-4 h-4" />
@@ -280,7 +288,7 @@ const AdminApiKeysView: React.FC<AdminApiKeysViewProps> = ({ viewModel }) => {
                 transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                 className="inline-block"
               >
-                <RefreshCw className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                <RefreshCw className={`w-8 h-8 ${BLUE_CYAN_ICON}`} />
               </motion.div>
               <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
             </div>
@@ -290,7 +298,7 @@ const AdminApiKeysView: React.FC<AdminApiKeysViewProps> = ({ viewModel }) => {
                 <Key className="w-8 h-8 text-slate-400" />
               </div>
               <p className="text-slate-500 dark:text-slate-400 mb-4">暂无 API Keys</p>
-              <Button onClick={onOpenCreateKey} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
+              <Button onClick={onOpenCreateKey} className={BLUE_CYAN_BUTTON}>
                 <Plus className="w-4 h-4 mr-2" />
                 创建第一个 Key
               </Button>

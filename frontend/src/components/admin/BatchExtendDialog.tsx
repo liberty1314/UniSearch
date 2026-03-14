@@ -169,8 +169,8 @@ export function BatchExtendDialog({
 
                 <div className="space-y-4 py-4">
                     {/* 显示选中数量 */}
-                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
-                        <div className="text-sm text-blue-900 dark:text-blue-100">
+                    <div className="p-3 bg-blue-50 dark:bg-cyan-950/30 border border-blue-200 dark:border-cyan-800/70 rounded-md">
+                        <div className="text-sm text-blue-900 dark:text-cyan-100">
                             <span className="font-medium">已选中 {selectedKeys.length} 个 API Key</span>
                         </div>
                     </div>
@@ -195,7 +195,7 @@ export function BatchExtendDialog({
                     {/* 操作进度提示 */}
                     {isLoading && (
                         <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-800 rounded-md">
-                            <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                            <Loader2 className="w-4 h-4 animate-spin text-cyan-500" />
                             <span className="text-sm text-gray-600 dark:text-slate-400">
                                 正在处理，请稍候...
                             </span>

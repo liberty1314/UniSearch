@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Filter, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toStyleVars } from '@/lib/styleVars';
+import { BLUE_CYAN_ICON } from '@/lib/brandTheme';
 
 export interface FilterOption {
     label: string;
@@ -85,7 +86,7 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
                     group flex items-center justify-center w-7 h-7 rounded-md
                     transition-all duration-200
                     ${hasSelection
-                        ? 'bg-blue-100 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400'
+                        ? 'bg-blue-100 dark:bg-cyan-950/50 text-blue-600 dark:text-cyan-300'
                         : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }
                 `}
@@ -137,7 +138,7 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
                                                 w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm
                                                 transition-all duration-150
                                                 ${isSelected
-                                                    ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300'
+                                                    ? 'bg-blue-50 dark:bg-cyan-950/30 text-blue-700 dark:text-cyan-300'
                                                     : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                                                 }
                                             `}
@@ -157,7 +158,7 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
                                                     animate={{ scale: 1 }}
                                                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                                                 >
-                                                    <Check className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                    <Check className={`w-4 h-4 ${BLUE_CYAN_ICON}`} />
                                                 </motion.div>
                                             )}
                                         </motion.button>
