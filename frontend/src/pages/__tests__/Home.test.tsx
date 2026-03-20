@@ -1,10 +1,12 @@
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Home from '@/pages/Home';
 
 let searchAccessStatus: 'anonymous' | 'session_only' | 'search_ready' | 'api_key_only' = 'session_only';
+let searchKeyword = '';
+let searchResults: Array<{ id: number }> = [];
 
 vi.mock('@/components/SearchBox', () => ({
   __esModule: true,
@@ -62,8 +64,8 @@ vi.mock('@/components/ui/number-ticker', () => ({
 
 vi.mock('@/stores/searchStore', () => ({
   useSearchStore: () => ({
-    searchParams: { keyword: '' },
-    searchResults: null,
+    searchParams: { keyword: searchKeyword },
+    searchResults: searchResults.length > 0 ? { results: searchResults } : null,
   }),
 }));
 
@@ -75,6 +77,12 @@ vi.mock('@/stores/searchAccessStore', () => ({
 }));
 
 describe('Home', () => {
+  beforeEach(() => {
+    searchAccessStatus = 'session_only';
+    searchKeyword = '';
+    searchResults = [];
+  });
+
   it('shows a lightweight API key hint for session-only users', () => {
     searchAccessStatus = 'session_only';
 
@@ -129,7 +137,7 @@ describe('Home', () => {
     });
   });
 
-  it('uses a pure white light page background', () => {
+  it('uses the shared grid-backed page shell in the default state', () => {
     searchAccessStatus = 'search_ready';
 
     const { container } = render(
@@ -140,6 +148,9 @@ describe('Home', () => {
 
     expect(container.firstChild).toHaveClass('bg-white');
     expect(container.firstChild).not.toHaveClass('bg-gray-50');
+    expect(container.firstChild).toHaveClass('dark:from-gray-900');
+    expect(screen.getByTestId('animated-grid')).toBeInTheDocument();
+    expect(screen.getByTestId('public-page-glow')).toBeInTheDocument();
   });
 
   it('keeps homepage hero and section typography on the blue/cyan theme axis', () => {
@@ -165,5 +176,22 @@ describe('Home', () => {
     expect(sectionTitle.className).toContain('text-blue-950');
     expect(animatedGrid.className).toContain('text-blue-600');
     expect(animatedGrid.className).not.toContain('nebula');
+  });
+
+  it('keeps the shared grid-backed shell in the searched state', () => {
+    searchAccessStatus = 'search_ready';
+    searchKeyword = '电影';
+    searchResults = [{ id: 1 }];
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('search-results')).toBeInTheDocument();
+    expect(screen.getByTestId('animated-grid')).toBeInTheDocument();
+    expect(screen.getByTestId('public-page-glow')).toBeInTheDocument();
+    expect(screen.queryByText('为什么选择 UniSearch？')).not.toBeInTheDocument();
   });
 });

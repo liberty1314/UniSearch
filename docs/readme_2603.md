@@ -639,3 +639,24 @@ feat(admin): 增强站点配置管理与生产环境同步机制
 - scripts/backup-manager.sh
 - scripts/deploy-update.sh
 - scripts/sync-production-config.sh
+
+---
+
+## 2026-03-20 23:36:11
+
+### Commit
+```
+refactor(frontend): 统一公开页面背景并增强搜索结果卡片层次
+```
+
+### Body
+抽出公开页面共享背景壳层，让首页、搜索结果态和 API Key 设置页统一使用首页格子背景。同步增强搜索结果卡片与结果工具栏的边框、表面和投影层次，提升与背景的区分度。
+
+### Files
+- frontend/src/components/PublicPageShell.tsx
+- frontend/src/components/SearchResults.tsx
+- frontend/src/components/__tests__/SearchResults.test.tsx
+- frontend/src/pages/Home.tsx
+- frontend/src/pages/UserApiKeySettings.tsx
+- frontend/src/pages/__tests__/Home.test.tsx
+- frontend/src/pages/__tests__/UserApiKeySettings.test.tsx

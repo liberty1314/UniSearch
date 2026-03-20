@@ -296,9 +296,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           className="group relative h-full"
           onClick={handleLinkClick}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-gray-800/40 dark:to-gray-900/10 rounded-[1.5rem] blur opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10" />
+          <div className="absolute inset-x-6 -bottom-4 h-12 rounded-full bg-slate-950/10 blur-2xl opacity-80 transition-all duration-300 group-hover:translate-y-1 group-hover:opacity-100 dark:bg-black/35" />
+          <div className="absolute inset-0 rounded-[1.5rem] bg-gradient-to-br from-white/52 via-white/18 to-cyan-100/16 opacity-70 transition-opacity duration-300 group-hover:opacity-100 dark:from-slate-900/20 dark:via-cyan-950/8 dark:to-slate-950/18" />
 
-          <div className="h-full flex flex-col p-5 bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-[1.5rem] border border-white/50 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-blue-200/20 dark:hover:shadow-blue-900/20 transition-all duration-300 cursor-pointer overflow-hidden">
+          <div
+            data-testid="search-result-grid-card"
+            className="relative h-full flex flex-col p-5 bg-white/88 dark:bg-slate-900/78 backdrop-blur-xl rounded-[1.5rem] border border-slate-200/85 dark:border-slate-700/55 ring-1 ring-white/75 dark:ring-white/5 shadow-[0_24px_54px_rgba(15,23,42,0.08)] hover:shadow-[0_30px_64px_rgba(14,165,233,0.16)] dark:hover:shadow-[0_28px_62px_rgba(8,145,178,0.22)] transition-all duration-300 cursor-pointer overflow-hidden"
+          >
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:via-cyan-200/20" />
             {/* 顶部装饰条 */}
             <div className={cn("absolute top-0 left-0 right-0 h-1 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300",
               cloudInfo.text.includes("blue") ? "from-blue-400 to-cyan-300" :
@@ -363,8 +368,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         variants={itemVariants}
         whileHover={{ x: 5 }}
         onClick={handleLinkClick}
-        className="group relative p-4 bg-white/70 dark:bg-slate-800/60 backdrop-blur-xl rounded-2xl border border-white/50 dark:border-white/10 shadow-sm hover:shadow-lg hover:shadow-blue-200/10 dark:hover:shadow-blue-900/10 cursor-pointer overflow-hidden transition-all duration-300"
+        className="group relative p-4 bg-white/84 dark:bg-slate-900/74 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-700/55 ring-1 ring-white/70 dark:ring-white/5 shadow-[0_18px_42px_rgba(15,23,42,0.07)] hover:shadow-[0_22px_50px_rgba(14,165,233,0.14)] dark:hover:shadow-[0_24px_54px_rgba(8,145,178,0.18)] cursor-pointer overflow-hidden transition-all duration-300"
       >
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:via-cyan-200/20" />
         <div className="flex items-center gap-5">
           {/* 左侧图标/类型 */}
           <div className={cn(
@@ -490,7 +496,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between bg-white/50 dark:bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/50 dark:border-white/5 shadow-sm"
+          data-testid="search-results-toolbar"
+          className="flex items-center justify-between bg-white/78 dark:bg-slate-900/64 backdrop-blur-xl p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/45 ring-1 ring-white/70 dark:ring-white/5 shadow-[0_18px_40px_rgba(15,23,42,0.06)]"
         >
           <div className="flex items-center gap-4">
             <div className="text-sm text-gray-600 dark:text-slate-400 flex items-center gap-2">

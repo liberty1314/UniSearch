@@ -50,6 +50,12 @@ vi.mock('@/components/ui/confirm-dialog', () => ({
   ConfirmDialog: () => null,
 }));
 
+vi.mock('@/components/ui/animated-grid-pattern', () => ({
+  AnimatedGridPattern: ({ className }: { className?: string }) => (
+    <div data-testid="animated-grid" className={className} />
+  ),
+}));
+
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({
@@ -98,18 +104,15 @@ describe('UserApiKeySettings', () => {
     });
   });
 
-  it('uses a pure white light page background', async () => {
+  it('uses the shared homepage grid-backed page shell', async () => {
     const { container } = render(<UserApiKeySettings />);
     await screen.findByText('当前密钥状态');
 
     expect(container.firstChild).toHaveClass('bg-white');
     expect(container.firstChild).not.toHaveClass('bg-gray-50');
-
-    const hasBackgroundGlow = Array.from(container.querySelectorAll('div')).some((node) =>
-      typeof node.className === 'string' && node.className.includes('bg-[radial-gradient(circle,rgba(59,130,246,0.10),transparent_68%)]')
-    );
-
-    expect(hasBackgroundGlow).toBe(false);
+    expect(container.firstChild).toHaveClass('dark:from-gray-900');
+    expect(screen.getByTestId('animated-grid')).toBeInTheDocument();
+    expect(screen.getByTestId('public-page-glow')).toBeInTheDocument();
   });
 
   it('renders plain white panels after loading api key data', async () => {

@@ -10,9 +10,9 @@ import GradientText from '@/components/GradientText';
 import { useSearchStore } from '@/stores/searchStore';
 import { useSearchAccessStatus } from '@/stores/searchAccessStore';
 import { FeatureCardsSkeleton } from '@/components/SkeletonLoader';
-import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern';
 import { GlowCard } from '@/components/ui/glowing-effect';
 import { NumberTicker } from '@/components/ui/number-ticker';
+import PublicPageShell from '@/components/PublicPageShell';
 import { BLUE_CYAN_TEXT_GRADIENT_WITH_DARK } from '@/lib/brandTheme';
 
 const featureCards = [
@@ -73,21 +73,7 @@ const Home: React.FC = () => {
   const hasSearched = searchParams.keyword || (searchResults?.results && searchResults.results.length > 0);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gradient-to-b dark:from-gray-900 dark:via-gray-900 dark:to-slate-950 transition-colors duration-500 relative overflow-hidden">
-      {/* 21st.dev 动态网格背景 - 仅在未搜索时显示 */}
-      {!hasSearched && (
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <AnimatedGridPattern
-            numSquares={30}
-            maxOpacity={0.07}
-            duration={3}
-            className="text-blue-600 dark:text-cyan-400 stroke-blue-300/30 dark:stroke-cyan-700/20 fill-blue-500/[0.04] dark:fill-cyan-400/[0.03]"
-          />
-          {/* 中心辉光晕染 */}
-          <div className="absolute inset-x-0 top-0 h-[60vh] bg-gradient-radial from-blue-200/25 via-cyan-100/10 to-transparent dark:from-blue-950/25 dark:via-cyan-950/10 dark:to-transparent pointer-events-none" />
-        </div>
-      )}
-      <div className="container mx-auto px-4 py-8 pt-24 pb-12 relative z-10">
+    <PublicPageShell contentClassName="container mx-auto px-4 py-8 pt-24 pb-12">
         {/* 页面头部 - 增强品牌形象 */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -316,8 +302,7 @@ const Home: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </PublicPageShell>
   );
 };
 

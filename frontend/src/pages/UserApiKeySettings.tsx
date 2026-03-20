@@ -7,6 +7,7 @@ import { useSearchAccessStatus } from '@/stores/searchAccessStore';
 import { apiClient } from '@/lib/api';
 import { Eye, EyeOff, Copy, ArrowLeft, Lightbulb, CheckCircle2, XCircle, RefreshCw, CalendarDays, Gauge, Activity, ShieldCheck } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import PublicPageShell from '@/components/PublicPageShell';
 import { getErrorCode, getErrorMessage } from '@/lib/error';
 
 interface APIKeyInfo {
@@ -369,7 +370,7 @@ const UserApiKeySettings: React.FC = () => {
     ] : [];
 
     return (
-        <div className="min-h-screen bg-white dark:bg-gray-900 font-sans selection:bg-blue-500/30">
+        <PublicPageShell className="font-sans selection:bg-blue-500/30">
             {/* 顶部导航 */}
             <div className="max-w-3xl mx-auto px-6 pt-24 pb-6">
                 <button
@@ -648,7 +649,7 @@ const UserApiKeySettings: React.FC = () => {
                 onConfirm={handleUnbindAPIKey}
                 isLoading={isSubmitting}
             />
-        </div>
+        </PublicPageShell>
     );
 };
 
