@@ -583,3 +583,18 @@ feat(frontend): 新增统一站点底部组件并重构 Button 为标准 shadcn/
 - frontend/src/routes/AppRoutes.tsx
 - frontend/src/routes/__tests__/AppRoutes.test.tsx
 - frontend/src/test/setup.ts
+
+---
+
+## 2026-03-20 19:49:52
+
+### Commit
+```
+fix(deploy): 优化 Nginx 配置中应用容器名称的硬编码逻辑
+```
+
+### Body
+将 Nginx 配置文件中代理到应用容器的名称从泛化的 'app' 修改为部署脚本中固定的 'unisearch-app'，以确保在生产环境下负载均衡和容器间通信的准确性。同时在注释中明确了该名称由部署脚本硬编码。
+
+### Files
+- deploy/nginx/nginx.conf
