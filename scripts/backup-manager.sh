@@ -44,6 +44,8 @@ load_env() {
         set -a
         source "$ENV_FILE"
         set +a
+        MYSQL_CONTAINER="${MYSQL_CONTAINER_NAME:-$MYSQL_CONTAINER}"
+        REDIS_CONTAINER="${REDIS_CONTAINER_NAME:-$REDIS_CONTAINER}"
         
         # 重新设置备份保留天数（确保使用脚本默认值，除非环境变量明确设置）
         BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"

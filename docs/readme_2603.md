@@ -598,3 +598,44 @@ fix(deploy): 优化 Nginx 配置中应用容器名称的硬编码逻辑
 
 ### Files
 - deploy/nginx/nginx.conf
+
+---
+
+## 2026-03-20 21:08:49
+
+### Commit
+```
+feat(admin): 增强站点配置管理与生产环境同步机制
+```
+
+### Body
+1. 完善系统设置(SystemSettings)模型和持久化逻辑，支持应用名称、公告、查询限额等核心配置。
+2. 重构前端 SystemSettingsView 及其 Mock, 新增站点信息配置项, 优化同步逻辑。
+3. 增强 Nginx 代理配置, 支持模板化 (.template) 以及灵活的生产环境(unisearch-app)适配。
+4. 新增同步生产配置脚本 (sync-production-config.sh), 提升运维效率。
+5. 补齐后端 API 与 Service 层的单元测试, 确保配置读写的鲁棒性。
+
+### Files
+- .env.example
+- backend/api/system_settings_handler.go
+- backend/api/system_settings_handler_test.go
+- backend/go.mod
+- backend/go.sum
+- backend/model/system_settings.go
+- backend/model/system_settings_test.go
+- backend/service/system_settings_service.go
+- backend/service/system_settings_service_test.go
+- deploy/nginx/nginx.conf
+- deploy/nginx/nginx.conf.template
+- frontend/src/components/admin/BatchCreateDialog.tsx
+- frontend/src/components/admin/BatchExportDialog.tsx
+- frontend/src/components/admin/EditKeyDialog.tsx
+- frontend/src/components/admin/SystemSettingsView.tsx
+- frontend/src/components/admin/__tests__/AppleApiKeyTable.test.tsx
+- frontend/src/components/admin/__tests__/AppleUserTable.test.tsx
+- frontend/src/lib/publicSiteConfig.ts
+- frontend/src/lib/__tests__/publicSiteConfig.test.ts
+- frontend/src/services/systemSettingsService.ts
+- scripts/backup-manager.sh
+- scripts/deploy-update.sh
+- scripts/sync-production-config.sh

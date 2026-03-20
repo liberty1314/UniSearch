@@ -2,12 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Settings, RefreshCw, Shield, Key, LogIn, UserPlus } from 'lucide-react';
+import { Settings, RefreshCw, Shield, Key, LogIn, UserPlus, Globe, Copy as CopyIcon, Save } from 'lucide-react';
 import { SystemSettingsService } from '@/services/systemSettingsService';
 import { useAuthStore } from '@/stores/authStore';
 import { getErrorDataError, getErrorMessage } from '@/lib/error';
 import { BLUE_CYAN_ICON } from '@/lib/brandTheme';
+import { buildCopyFormatPreview, getCopyFormatTemplate, resolvePublicSiteUrl } from '@/lib/publicSiteConfig';
+import { Button } from '@/components/ui/button';
 
 /**
  * 系统设置视图组件
@@ -19,6 +22,8 @@ export const SystemSettingsView: React.FC = () => {
     const [enableUserAuth, setEnableUserAuth] = useState<boolean>(true);
     const [enableUserLogin, setEnableUserLogin] = useState<boolean>(true);
     const [enableUserSignup, setEnableUserSignup] = useState<boolean>(true);
+    const [publicSiteUrl, setPublicSiteUrl] = useState<string>(resolvePublicSiteUrl());
+    const [defaultCopyFormatTemplate, setDefaultCopyFormatTemplate] = useState<string>(getCopyFormatTemplate());
     
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [isSaving, setIsSaving] = useState<string | null>(null);
@@ -28,6 +33,8 @@ export const SystemSettingsView: React.FC = () => {
         enableUserAuth: true,
         enableUserLogin: true,
         enableUserSignup: true,
+        publicSiteUrl: resolvePublicSiteUrl(),
+        defaultCopyFormatTemplate: getCopyFormatTemplate(),
     });
 
     /**
@@ -42,10 +49,14 @@ export const SystemSettingsView: React.FC = () => {
             setEnableUserAuth(settings.enable_user_auth);
             setEnableUserLogin(settings.enable_user_login);
             setEnableUserSignup(settings.enable_user_signup);
+            setPublicSiteUrl(resolvePublicSiteUrl(settings));
+            setDefaultCopyFormatTemplate(getCopyFormatTemplate(settings));
             setOriginalValues({
                 enableUserAuth: settings.enable_user_auth,
                 enableUserLogin: settings.enable_user_login,
                 enableUserSignup: settings.enable_user_signup,
+                publicSiteUrl: resolvePublicSiteUrl(settings),
+                defaultCopyFormatTemplate: getCopyFormatTemplate(settings),
             });
         } catch (error) {
             console.error('加载系统设置失败:', error);
@@ -127,6 +138,35 @@ export const SystemSettingsView: React.FC = () => {
         } catch (error) {
             console.error('保存系统设置失败:', error);
             setEnableUserSignup(originalValues.enableUserSignup);
+            toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
+        } finally {
+            setIsSaving(null);
+        }
+    };
+
+    const handleSaveDisplayConfig = async () => {
+        if (!token) return;
+
+        setIsSaving('display');
+        try {
+            const result = await SystemSettingsService.updateSettings(token, {
+                public_site_url: publicSiteUrl.trim(),
+                default_copy_format_template: defaultCopyFormatTemplate.trim(),
+            });
+            const resolvedSiteUrl = resolvePublicSiteUrl(result);
+            const resolvedTemplate = getCopyFormatTemplate(result);
+            setPublicSiteUrl(resolvedSiteUrl);
+            setDefaultCopyFormatTemplate(resolvedTemplate);
+            setOriginalValues(prev => ({
+                ...prev,
+                publicSiteUrl: resolvedSiteUrl,
+                defaultCopyFormatTemplate: resolvedTemplate,
+            }));
+            toast.success('公开展示配置已更新');
+        } catch (error) {
+            console.error('保存系统设置失败:', error);
+            setPublicSiteUrl(originalValues.publicSiteUrl);
+            setDefaultCopyFormatTemplate(originalValues.defaultCopyFormatTemplate);
             toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
         } finally {
             setIsSaving(null);
@@ -237,6 +277,52 @@ export const SystemSettingsView: React.FC = () => {
                             )}
                         </div>
                     )}
+                </CardContent>
+            </Card>
+
+            <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+                <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/50">
+                    <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
+                        <Globe className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
+                        公开展示配置
+                    </CardTitle>
+                    <CardDescription className="text-slate-500 dark:text-slate-400">配置站点 URL 和 API Key 复制默认模板</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 p-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="public-site-url">公开站点 URL</Label>
+                        <Input
+                            id="public-site-url"
+                            value={publicSiteUrl}
+                            onChange={(e) => setPublicSiteUrl(e.target.value)}
+                            placeholder={resolvePublicSiteUrl()}
+                            disabled={isLoading || isSaving === 'display'}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="default-copy-format-template">默认复制模板</Label>
+                        <textarea
+                            id="default-copy-format-template"
+                            value={defaultCopyFormatTemplate}
+                            onChange={(e) => setDefaultCopyFormatTemplate(e.target.value)}
+                            placeholder={getCopyFormatTemplate()}
+                            disabled={isLoading || isSaving === 'display'}
+                            rows={3}
+                            className="flex min-h-[96px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus-visible:border-cyan-500 focus-visible:ring-2 focus-visible:ring-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+                        />
+                        <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                            <CopyIcon className="h-3.5 w-3.5" />
+                            示例：{buildCopyFormatPreview({ public_site_url: publicSiteUrl, default_copy_format_template: defaultCopyFormatTemplate }, 'sk-xxx')}
+                        </p>
+                    </div>
+
+                    <div className="flex justify-end">
+                        <Button onClick={handleSaveDisplayConfig} disabled={isLoading || isSaving === 'display'} className="gap-2">
+                            <Save className="h-4 w-4" />
+                            {isSaving === 'display' ? '保存中...' : '保存展示配置'}
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
         </motion.div>

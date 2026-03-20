@@ -2,10 +2,19 @@ package service
 
 import (
 	"errors"
+	"strings"
 	"unisearch/model"
 
 	"gorm.io/gorm"
 )
+
+type SystemSettingsUpdateInput struct {
+	EnableUserAuth            *bool
+	EnableUserLogin           *bool
+	EnableUserSignup          *bool
+	PublicSiteURL             *string
+	DefaultCopyFormatTemplate *string
+}
 
 // SystemSettingsService 系统设置服务
 type SystemSettingsService struct {
@@ -27,10 +36,12 @@ func (s *SystemSettingsService) GetSettings() (*model.SystemSettings, error) {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// 如果不存在，创建默认设置
 			settings = model.SystemSettings{
-				EnableUserAuth:      true,  // 默认启用用户登录注册
-				EnableUserLogin:     true,  // 默认启用用户登录
-				EnableUserSignup:    true,  // 默认启用用户注册
-				AnnouncementEnabled: false, // 默认禁用公告功能（需求 13.5）
+				EnableUserAuth:            true,  // 默认启用用户登录注册
+				EnableUserLogin:           true,  // 默认启用用户登录
+				EnableUserSignup:          true,  // 默认启用用户注册
+				AnnouncementEnabled:       false, // 默认禁用公告功能（需求 13.5）
+				PublicSiteURL:             "",
+				DefaultCopyFormatTemplate: "",
 			}
 			if err := s.db.Create(&settings).Error; err != nil {
 				return nil, err
@@ -44,21 +55,29 @@ func (s *SystemSettingsService) GetSettings() (*model.SystemSettings, error) {
 }
 
 // UpdateSettings 更新系统设置
-func (s *SystemSettingsService) UpdateSettings(enableUserAuth bool, enableUserLogin *bool, enableUserSignup *bool) (*model.SystemSettings, error) {
+func (s *SystemSettingsService) UpdateSettings(input SystemSettingsUpdateInput) (*model.SystemSettings, error) {
 	settings, err := s.GetSettings()
 	if err != nil {
 		return nil, err
 	}
 
 	// 更新主开关
-	settings.EnableUserAuth = enableUserAuth
+	if input.EnableUserAuth != nil {
+		settings.EnableUserAuth = *input.EnableUserAuth
+	}
 
 	// 更新子选项（如果提供）
-	if enableUserLogin != nil {
-		settings.EnableUserLogin = *enableUserLogin
+	if input.EnableUserLogin != nil {
+		settings.EnableUserLogin = *input.EnableUserLogin
 	}
-	if enableUserSignup != nil {
-		settings.EnableUserSignup = *enableUserSignup
+	if input.EnableUserSignup != nil {
+		settings.EnableUserSignup = *input.EnableUserSignup
+	}
+	if input.PublicSiteURL != nil {
+		settings.PublicSiteURL = strings.TrimSpace(*input.PublicSiteURL)
+	}
+	if input.DefaultCopyFormatTemplate != nil {
+		settings.DefaultCopyFormatTemplate = strings.TrimSpace(*input.DefaultCopyFormatTemplate)
 	}
 
 	if err := s.db.Save(settings).Error; err != nil {
@@ -82,6 +101,7 @@ func (s *SystemSettingsService) GetAnnouncementEnabled() (bool, error) {
 // SetAnnouncementEnabled 设置公告功能启用状态
 // 参数:
 //   - enabled: 是否启用
+//
 // 返回: 错误信息
 // 需求: 13.1, 13.4
 func (s *SystemSettingsService) SetAnnouncementEnabled(enabled bool) error {

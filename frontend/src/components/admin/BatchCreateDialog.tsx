@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { AuthService } from '@/services/authService';
+import { SystemSettingsService } from '@/services/systemSettingsService';
 import type { APIKeyInfo } from '@/types/api';
+import { buildCopyFormatPreview, getCopyFormatTemplate } from '@/lib/publicSiteConfig';
 import {
     Dialog,
     DialogContent,
@@ -49,6 +51,7 @@ export function BatchCreateDialog({
     onOpenChange,
     onSuccess,
 }: BatchCreateDialogProps) {
+    const defaultCopyTemplate = getCopyFormatTemplate();
     // 表单状态
     const [count, setCount] = useState<string>('10'); // 默认创建 10 个
     const [ttlHours, setTtlHours] = useState<string>('720'); // 默认 30 天
@@ -64,7 +67,7 @@ export function BatchCreateDialog({
 
     // 复制格式设置
     const [enableCopyFormat, setEnableCopyFormat] = useState<boolean>(true);
-    const [copyFormatTemplate, setCopyFormatTemplate] = useState<string>('卡密：{key}，网址：https://unisearchso.xyz/');
+    const [copyFormatTemplate, setCopyFormatTemplate] = useState<string>(defaultCopyTemplate);
 
     // 确认对话框状态
     const [showConfirm, setShowConfirm] = useState<boolean>(false);
@@ -81,8 +84,33 @@ export function BatchCreateDialog({
             setCreatedKeys([]);
             setShowResults(false);
             setShowConfirm(false);
+            setEnableCopyFormat(true);
+            setCopyFormatTemplate(defaultCopyTemplate);
         }
-    }, [open]);
+    }, [defaultCopyTemplate, open]);
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        let cancelled = false;
+        SystemSettingsService.getSettingsCached()
+            .then((settings) => {
+                if (!cancelled) {
+                    setCopyFormatTemplate(getCopyFormatTemplate(settings));
+                }
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setCopyFormatTemplate(defaultCopyTemplate);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [defaultCopyTemplate, open]);
 
     /**
      * 验证表单
@@ -468,11 +496,11 @@ export function BatchCreateDialog({
                                             type="text"
                                             value={copyFormatTemplate}
                                             onChange={(e) => setCopyFormatTemplate(e.target.value)}
-                                            placeholder="卡密：{key}，网址：https://unisearchso.xyz/"
+                                            placeholder={defaultCopyTemplate}
                                             className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 dark:bg-slate-700 dark:border-slate-700"
                                         />
                                         <p className="text-xs text-gray-500">
-                                            示例：卡密：{formatKeyDisplay(createdKeys[0]?.key || 'sk-xxx')}，网址：https://unisearchso.xyz/
+                                            示例：{buildCopyFormatPreview(undefined, formatKeyDisplay(createdKeys[0]?.key || 'sk-xxx'), copyFormatTemplate)}
                                         </p>
                                     </div>
                                 )}

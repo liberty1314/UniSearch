@@ -33,9 +33,11 @@ func GetSystemSettingsHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"enable_user_auth":   settings.EnableUserAuth,
-		"enable_user_login":  settings.EnableUserLogin,
-		"enable_user_signup": settings.EnableUserSignup,
+		"enable_user_auth":             settings.EnableUserAuth,
+		"enable_user_login":            settings.EnableUserLogin,
+		"enable_user_signup":           settings.EnableUserSignup,
+		"public_site_url":              settings.PublicSiteURL,
+		"default_copy_format_template": settings.DefaultCopyFormatTemplate,
 	})
 }
 
@@ -51,9 +53,11 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 
 	// 解析请求体
 	var req struct {
-		EnableUserAuth   *bool `json:"enable_user_auth"`
-		EnableUserLogin  *bool `json:"enable_user_login"`
-		EnableUserSignup *bool `json:"enable_user_signup"`
+		EnableUserAuth            *bool   `json:"enable_user_auth"`
+		EnableUserLogin           *bool   `json:"enable_user_login"`
+		EnableUserSignup          *bool   `json:"enable_user_signup"`
+		PublicSiteURL             *string `json:"public_site_url"`
+		DefaultCopyFormatTemplate *string `json:"default_copy_format_template"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -64,7 +68,11 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 	}
 
 	// 至少需要提供一个字段
-	if req.EnableUserAuth == nil && req.EnableUserLogin == nil && req.EnableUserSignup == nil {
+	if req.EnableUserAuth == nil &&
+		req.EnableUserLogin == nil &&
+		req.EnableUserSignup == nil &&
+		req.PublicSiteURL == nil &&
+		req.DefaultCopyFormatTemplate == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "请求参数错误：至少需要提供一个设置字段",
 		})
@@ -81,13 +89,20 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 	}
 
 	// 确定主开关的值
-	enableUserAuth := currentSettings.EnableUserAuth
+	// 更新设置
+	input := service.SystemSettingsUpdateInput{
+		EnableUserLogin:           req.EnableUserLogin,
+		EnableUserSignup:          req.EnableUserSignup,
+		PublicSiteURL:             req.PublicSiteURL,
+		DefaultCopyFormatTemplate: req.DefaultCopyFormatTemplate,
+	}
 	if req.EnableUserAuth != nil {
-		enableUserAuth = *req.EnableUserAuth
+		input.EnableUserAuth = req.EnableUserAuth
+	} else {
+		input.EnableUserAuth = &currentSettings.EnableUserAuth
 	}
 
-	// 更新设置
-	settings, err := systemSettingsService.UpdateSettings(enableUserAuth, req.EnableUserLogin, req.EnableUserSignup)
+	settings, err := systemSettingsService.UpdateSettings(input)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "更新系统设置失败：" + err.Error(),
@@ -96,9 +111,11 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":            "系统设置已更新",
-		"enable_user_auth":   settings.EnableUserAuth,
-		"enable_user_login":  settings.EnableUserLogin,
-		"enable_user_signup": settings.EnableUserSignup,
+		"message":                      "系统设置已更新",
+		"enable_user_auth":             settings.EnableUserAuth,
+		"enable_user_login":            settings.EnableUserLogin,
+		"enable_user_signup":           settings.EnableUserSignup,
+		"public_site_url":              settings.PublicSiteURL,
+		"default_copy_format_template": settings.DefaultCopyFormatTemplate,
 	})
 }

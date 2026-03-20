@@ -32,6 +32,7 @@ NC='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="$PROJECT_DIR/.env.production"
+SYNC_CONFIG_SCRIPT="$PROJECT_DIR/scripts/sync-production-config.sh"
 
 # 备份目录
 BACKUP_DIR="$HOME/unisearch_backup_$(date +%Y%m%d_%H%M%S)"
@@ -49,10 +50,25 @@ load_env() {
         set -a
         source "$ENV_FILE"
         set +a
+        APP_CONTAINER="${APP_CONTAINER_NAME:-$APP_CONTAINER}"
+        MYSQL_CONTAINER="${MYSQL_CONTAINER_NAME:-$MYSQL_CONTAINER}"
+        REDIS_CONTAINER="${REDIS_CONTAINER_NAME:-$REDIS_CONTAINER}"
+        NGINX_CONTAINER="${NGINX_CONTAINER_NAME:-$NGINX_CONTAINER}"
+        NETWORK_NAME="${DOCKER_NETWORK_NAME:-$NETWORK_NAME}"
+        SITE_DOMAIN="${SITE_DOMAIN:-${DOMAIN:-example.com}}"
     else
         log_error "环境配置文件不存在: $ENV_FILE"
         exit 1
     fi
+}
+
+sync_production_config() {
+    if [ ! -x "$SYNC_CONFIG_SCRIPT" ]; then
+        log_error "配置同步脚本不存在或不可执行: $SYNC_CONFIG_SCRIPT"
+        exit 1
+    fi
+    log_header "阶段 0: 同步生产配置"
+    "$SYNC_CONFIG_SCRIPT"
 }
 
 # IMAGE_NAME 将在 load_env() 调用后设置
@@ -265,6 +281,9 @@ start_new_container() {
         docker logs "$APP_CONTAINER" --tail 50
         exit 1
     fi
+
+    log_step "同步 Nginx 配置..."
+    "$SYNC_CONFIG_SCRIPT"
 }
 
 verify_services() {
@@ -416,6 +435,7 @@ main() {
     check_root
     check_docker
     load_env
+    sync_production_config
     
     # 设置镜像名称（必须在 load_env 之后）
     IMAGE_NAME="${FULL_IMAGE_NAME:-liberty159/unisearch:latest}"
@@ -461,7 +481,7 @@ main() {
     echo -e "${GREEN}  部署信息${NC}"
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
-    echo -e "  ${CYAN}域名:${NC}        https://unisearchso.xyz"
+    echo -e "  ${CYAN}域名:${NC}        https://${SITE_DOMAIN}"
     echo -e "  ${CYAN}镜像版本:${NC}    $IMAGE_NAME"
     echo -e "  ${CYAN}备份目录:${NC}    $BACKUP_DIR"
     echo -e "  ${CYAN}容器名称:${NC}    $APP_CONTAINER"

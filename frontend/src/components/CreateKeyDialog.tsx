@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { AuthService } from '@/services/authService';
+import { SystemSettingsService } from '@/services/systemSettingsService';
 import type { APIKeyInfo } from '@/types/api';
 import { getErrorMessage, getErrorStatus } from '@/lib/error';
+import { buildCopyFormatPreview, getCopyFormatTemplate } from '@/lib/publicSiteConfig';
 import {
     Dialog,
     DialogContent,
@@ -45,6 +47,7 @@ const TTL_PRESETS = [
  * 生成 Key 对话框组件
  */
 export function CreateKeyDialog({ open, onOpenChange, onSuccess }: CreateKeyDialogProps) {
+    const defaultCopyTemplate = getCopyFormatTemplate();
     const [ttlPreset, setTtlPreset] = useState<string>('720');
     const [customDays, setCustomDays] = useState<number>(30);
     const [dailySearchLimit, setDailySearchLimit] = useState<number>(5);
@@ -52,7 +55,7 @@ export function CreateKeyDialog({ open, onOpenChange, onSuccess }: CreateKeyDial
     const [createdKey, setCreatedKey] = useState<APIKeyInfo | null>(null);
     const [showResult, setShowResult] = useState<boolean>(false);
     const [enableCopyFormat, setEnableCopyFormat] = useState<boolean>(true);
-    const [copyFormatTemplate, setCopyFormatTemplate] = useState<string>('卡密：{key}，网址：https://unisearchso.xyz/');
+    const [copyFormatTemplate, setCopyFormatTemplate] = useState<string>(defaultCopyTemplate);
     const [isLoading, setIsLoading] = useState<boolean>(false);
 
     // 当选择预设时，自动更新每日搜索限制
@@ -62,6 +65,31 @@ export function CreateKeyDialog({ open, onOpenChange, onSuccess }: CreateKeyDial
             setDailySearchLimit(preset.defaultDailyLimit);
         }
     }, [ttlPreset]);
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        let cancelled = false;
+        setCopyFormatTemplate(defaultCopyTemplate);
+
+        SystemSettingsService.getSettingsCached()
+            .then((settings) => {
+                if (!cancelled) {
+                    setCopyFormatTemplate(getCopyFormatTemplate(settings));
+                }
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setCopyFormatTemplate(defaultCopyTemplate);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [defaultCopyTemplate, open]);
 
     // 计算实际的TTL小时数
     const getActualTtlHours = (): number => {
@@ -113,7 +141,7 @@ export function CreateKeyDialog({ open, onOpenChange, onSuccess }: CreateKeyDial
         setCreatedKey(null);
         setShowResult(false);
         setEnableCopyFormat(true);
-        setCopyFormatTemplate('卡密：{key}，网址：https://unisearchso.xyz/');
+        setCopyFormatTemplate(defaultCopyTemplate);
     };
 
     const handleClose = () => {
@@ -282,10 +310,10 @@ export function CreateKeyDialog({ open, onOpenChange, onSuccess }: CreateKeyDial
                                         <Input
                                             value={copyFormatTemplate}
                                             onChange={(e) => setCopyFormatTemplate(e.target.value)}
-                                            placeholder="卡密：{key}，网址：https://unisearchso.xyz/"
+                                            placeholder={defaultCopyTemplate}
                                         />
                                         <p className="text-xs text-gray-500">
-                                            示例：卡密：{formatKeyDisplay(createdKey?.key || 'sk-xxx')}，网址：https://unisearchso.xyz/
+                                            示例：{buildCopyFormatPreview(undefined, formatKeyDisplay(createdKey?.key || 'sk-xxx'), copyFormatTemplate)}
                                         </p>
                                     </div>
                                 )}
