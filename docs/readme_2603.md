@@ -660,3 +660,18 @@ refactor(frontend): 统一公开页面背景并增强搜索结果卡片层次
 - frontend/src/pages/UserApiKeySettings.tsx
 - frontend/src/pages/__tests__/Home.test.tsx
 - frontend/src/pages/__tests__/UserApiKeySettings.test.tsx
+---
+Timestamp: 2026-03-21T14:54:30
+Header: style(ui): 优化 PageLoader 组件的动画和样式
+
+Body:
+- 调整了 PageLoader 的核心和轨道动画，使其更加平滑自然。
+- 优化了 CSS 动画的关键帧，增加了呼吸效果和偏移，提升视觉表现力。
+- 更新了测试用例以匹配最新的 DOM 结构调整。
+
+Files:
+- frontend/src/components/PageLoader.tsx
+- frontend/src/components/__tests__/PageLoader.test.tsx
+- frontend/src/index.css
+---
+

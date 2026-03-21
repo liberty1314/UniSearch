@@ -14,12 +14,17 @@ describe('PageLoader', () => {
     expect(screen.getByText('正在唤醒搜索引擎')).toBeInTheDocument();
     expect(screen.getByText('同步导航、主题与搜索能力')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'UniSearch' })).not.toBeInTheDocument();
-    expect(screen.getByText('Search Core')).toBeInTheDocument();
+    expect(screen.getByText('搜索核心')).toBeInTheDocument();
+    expect(screen.getByText('主题')).toBeInTheDocument();
+    expect(screen.getByText('导航')).toBeInTheDocument();
+    expect(screen.getByText('搜索')).toBeInTheDocument();
     expect(screen.getByText('0%')).toBeInTheDocument();
     expect(markup).toContain('data-testid="page-loader-bottom-progress"');
     expect(markup).toContain('data-testid="page-loader-progress-track"');
     expect(markup).toContain('data-testid="page-loader-stage"');
     expect(markup).toContain('data-testid="page-loader-orbit"');
+    expect(markup).toContain('data-testid="page-loader-core-shell"');
+    expect(markup).toContain('data-testid="page-loader-status-row"');
     expect(markup).toContain('motion-reduce:animate-none');
     expect(markup).toContain('to-cyan-500');
     expect(markup).toContain('via-blue-500');
@@ -38,7 +43,7 @@ describe('PageLoader', () => {
 
     expect(screen.getByText('启动完成')).toBeInTheDocument();
     expect(screen.getByText('即将进入 UniSearch 工作区')).toBeInTheDocument();
-    expect(screen.getByText('Ready')).toBeInTheDocument();
+    expect(screen.getByText('已就绪')).toBeInTheDocument();
     expect(screen.getByText('100%')).toBeInTheDocument();
 
     await act(async () => {

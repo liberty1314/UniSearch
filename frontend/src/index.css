@@ -422,27 +422,27 @@ body {
 }
 
 .page-loader-grid {
-  background-image: linear-gradient(to right, rgba(59, 130, 246, 0.07) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(34, 211, 238, 0.07) 1px, transparent 1px);
-  background-size: 34px 34px;
-  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.68) 48%, transparent 84%);
-  -webkit-mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.68) 48%, transparent 84%);
+  background-image: linear-gradient(to right, rgba(96, 165, 250, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(125, 211, 252, 0.08) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.62) 50%, transparent 88%);
+  -webkit-mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.62) 50%, transparent 88%);
 }
 
 .page-loader-orbit {
-  animation: page-loader-orbit-pulse 4.8s ease-in-out infinite;
+  animation: page-loader-orbit-drift 9s ease-in-out infinite;
 }
 
 .page-loader-orbit-glow {
   background:
-    radial-gradient(circle, rgba(125, 211, 252, 0.18) 0%, rgba(125, 211, 252, 0.05) 42%, transparent 72%);
-  filter: blur(10px);
-  animation: page-loader-orbit-pulse 6.5s ease-in-out infinite;
+    radial-gradient(circle, rgba(125, 211, 252, 0.1) 0%, rgba(125, 211, 252, 0.03) 42%, transparent 72%);
+  filter: blur(8px);
+  animation: page-loader-orbit-drift 10s ease-in-out infinite;
 }
 
 .page-loader-scan-ring {
-  border: 1px solid rgba(125, 211, 252, 0.16);
-  animation: page-loader-orbit-spin 8s linear infinite;
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  animation: page-loader-orbit-spin 18s linear infinite;
 }
 
 .page-loader-scan-ring::before {
@@ -450,16 +450,39 @@ body {
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: conic-gradient(from 90deg,
+  background: conic-gradient(from 120deg,
       transparent 0deg,
-      transparent 228deg,
-      rgba(14, 165, 233, 0.05) 266deg,
-      rgba(34, 211, 238, 0.9) 310deg,
-      rgba(255, 255, 255, 0.92) 326deg,
-      rgba(34, 211, 238, 0.24) 344deg,
+      transparent 250deg,
+      rgba(14, 165, 233, 0.02) 284deg,
+      rgba(34, 211, 238, 0.55) 320deg,
+      rgba(255, 255, 255, 0.88) 334deg,
+      rgba(34, 211, 238, 0.16) 346deg,
       transparent 360deg);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1px));
+}
+
+.page-loader-core-shell {
+  position: relative;
+}
+
+.page-loader-core-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.08));
+  pointer-events: none;
+}
+
+.page-loader-core-shell::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: inherit;
+  border: 1px solid rgba(125, 211, 252, 0.24);
+  animation: page-loader-core-breathe 5.2s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .page-loader-delay-strong {
@@ -480,26 +503,26 @@ body {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0));
   pointer-events: none;
 }
 
 .page-loader-progress-rail {
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.6),
-    inset 0 -1px 2px rgba(148, 163, 184, 0.22);
+    inset 0 1px 1px rgba(255, 255, 255, 0.7),
+    inset 0 -1px 2px rgba(148, 163, 184, 0.16);
 }
 
 .page-loader-progress-rail-noise {
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.34), transparent 26%, transparent 74%, rgba(255, 255, 255, 0.18)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent);
+    linear-gradient(90deg, rgba(255, 255, 255, 0.24), transparent 26%, transparent 74%, rgba(255, 255, 255, 0.12)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent);
 }
 
 .page-loader-progress-fill {
   box-shadow:
-    0 0 24px rgba(34, 211, 238, 0.32),
-    0 0 40px rgba(59, 130, 246, 0.18);
+    0 0 16px rgba(34, 211, 238, 0.24),
+    0 0 28px rgba(59, 130, 246, 0.12);
 }
 
 .page-loader-progress-fill::before {
@@ -507,20 +530,20 @@ body {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.34) 48%, rgba(255, 255, 255, 0.08));
-  background-size: 160% 100%;
-  animation: page-loader-progress-sheen 1.8s linear infinite;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.26) 48%, rgba(255, 255, 255, 0.04));
+  background-size: 180% 100%;
+  animation: page-loader-progress-sheen 2.4s linear infinite;
 }
 
 .page-loader-progress-fill::after {
   content: "";
   position: absolute;
   top: 50%;
-  right: -6px;
-  width: 16px;
-  height: 16px;
+  right: -5px;
+  width: 12px;
+  height: 12px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.92) 0%, rgba(103, 232, 249, 0.74) 46%, rgba(34, 211, 238, 0.08) 78%, transparent 100%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(103, 232, 249, 0.64) 46%, rgba(34, 211, 238, 0.06) 78%, transparent 100%);
   transform: translateY(-50%);
   filter: blur(0.5px);
 }
@@ -696,6 +719,34 @@ body {
   50% {
     opacity: 1;
     transform: scale(1.018);
+  }
+}
+
+@keyframes page-loader-orbit-drift {
+
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(0.995);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.01);
+  }
+}
+
+@keyframes page-loader-core-breathe {
+
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.985);
+  }
+
+  50% {
+    opacity: 0.78;
+    transform: scale(1.01);
   }
 }
 
