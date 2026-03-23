@@ -31,20 +31,32 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.05
+      staggerChildren: 0.04
     }
   }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 15, scale: 0.95, filter: 'blur(5px)' },
   visible: {
     opacity: 1,
     y: 0,
+    scale: 1,
+    filter: 'blur(0px)',
     transition: {
       type: 'spring',
-      stiffness: 100,
-      damping: 15
+      stiffness: 120,
+      damping: 15,
+      mass: 0.8
+    }
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    filter: 'blur(5px)',
+    transition: {
+      duration: 0.2,
+      ease: "easeOut"
     }
   }
 } as const;
@@ -264,7 +276,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
 
   const renderResultItem = (item: { link: SearchResultLink; cloudType: string; datetime: number }) => {
     const { link, cloudType } = item;
-    const linkId = `${cloudType}-${link.url}`;
+    const linkId = `${viewMode}-${cloudType}-${link.url}`;
     const cloudInfo = getCloudTypeInfo(cloudType as CloudTypeValue);
     const hasPassword = link.password && link.password.trim() !== '';
 
@@ -290,6 +302,10 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     if (viewMode === 'grid') {
       return (
         <motion.div
+          layout
+          initial="hidden"
+          animate="visible"
+          exit="exit"
           key={linkId}
           variants={itemVariants}
           whileHover={{ y: -5, scale: 1.02 }}
@@ -297,11 +313,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           onClick={handleLinkClick}
         >
           <div className="absolute inset-x-6 -bottom-4 h-12 rounded-full bg-slate-950/10 blur-2xl opacity-80 transition-all duration-300 group-hover:translate-y-1 group-hover:opacity-100 dark:bg-black/35" />
-          <div className="absolute inset-0 rounded-[1.5rem] bg-gradient-to-br from-white/52 via-white/18 to-cyan-100/16 opacity-70 transition-opacity duration-300 group-hover:opacity-100 dark:from-slate-900/20 dark:via-cyan-950/8 dark:to-slate-950/18" />
+          <div className="absolute inset-0 rounded-[1.5rem] bg-gradient-to-br from-white/68 via-white/32 to-cyan-100/24 opacity-85 transition-opacity duration-300 group-hover:opacity-100 dark:from-slate-900/26 dark:via-cyan-950/12 dark:to-slate-950/22" />
 
           <div
             data-testid="search-result-grid-card"
-            className="relative h-full flex flex-col p-5 bg-white/88 dark:bg-slate-900/78 backdrop-blur-xl rounded-[1.5rem] border border-slate-200/85 dark:border-slate-700/55 ring-1 ring-white/75 dark:ring-white/5 shadow-[0_24px_54px_rgba(15,23,42,0.08)] hover:shadow-[0_30px_64px_rgba(14,165,233,0.16)] dark:hover:shadow-[0_28px_62px_rgba(8,145,178,0.22)] transition-all duration-300 cursor-pointer overflow-hidden"
+            className="relative h-full flex flex-col p-5 bg-white/88 dark:bg-slate-900/78 backdrop-blur-2xl backdrop-saturate-150 rounded-[1.5rem] border border-slate-200/85 dark:border-slate-700/55 ring-1 ring-white/75 dark:ring-white/5 shadow-[0_24px_54px_rgba(15,23,42,0.08)] hover:shadow-[0_30px_64px_rgba(14,165,233,0.16)] dark:hover:shadow-[0_28px_62px_rgba(8,145,178,0.22)] transition-all duration-300 cursor-pointer overflow-hidden"
           >
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:via-cyan-200/20" />
             {/* 顶部装饰条 */}
@@ -364,11 +380,15 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     // 列表视图
     return (
       <motion.div
+        layout
+        initial="hidden"
+        animate="visible"
+        exit="exit"
         key={linkId}
         variants={itemVariants}
         whileHover={{ x: 5 }}
         onClick={handleLinkClick}
-        className="group relative p-4 bg-white/84 dark:bg-slate-900/74 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-700/55 ring-1 ring-white/70 dark:ring-white/5 shadow-[0_18px_42px_rgba(15,23,42,0.07)] hover:shadow-[0_22px_50px_rgba(14,165,233,0.14)] dark:hover:shadow-[0_24px_54px_rgba(8,145,178,0.18)] cursor-pointer overflow-hidden transition-all duration-300"
+        className="group relative p-4 bg-white/84 dark:bg-slate-900/74 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl border border-slate-200/80 dark:border-slate-700/55 ring-1 ring-white/70 dark:ring-white/5 shadow-[0_18px_42px_rgba(15,23,42,0.07)] hover:shadow-[0_22px_50px_rgba(14,165,233,0.14)] dark:hover:shadow-[0_24px_54px_rgba(8,145,178,0.18)] cursor-pointer overflow-hidden transition-all duration-300"
       >
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:via-cyan-200/20" />
         <div className="flex items-center gap-5">
@@ -497,7 +517,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           data-testid="search-results-toolbar"
-          className="flex items-center justify-between bg-white/78 dark:bg-slate-900/64 backdrop-blur-xl p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/45 ring-1 ring-white/70 dark:ring-white/5 shadow-[0_18px_40px_rgba(15,23,42,0.06)]"
+          className="flex items-center justify-between bg-white/78 dark:bg-slate-900/64 backdrop-blur-2xl backdrop-saturate-150 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/45 ring-1 ring-white/70 dark:ring-white/5 shadow-[0_18px_40px_rgba(15,23,42,0.06)]"
         >
           <div className="flex items-center gap-4">
             <div className="text-sm text-gray-600 dark:text-slate-400 flex items-center gap-2">
@@ -514,30 +534,48 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="bg-gray-100/50 dark:bg-slate-800/50 p-1 rounded-xl flex items-center border border-gray-200/50 dark:border-white/10">
+            <div className="bg-gray-100/50 dark:bg-slate-800/50 p-1 rounded-xl flex items-center border border-gray-200/50 dark:border-white/10 relative">
               <button
                 onClick={() => setViewMode('list')}
                 className={cn(
-                  'p-2 rounded-lg transition-all duration-300',
+                  'relative p-2 rounded-lg transition-colors duration-300 z-10',
                   viewMode === 'list'
-                    ? 'bg-white dark:bg-slate-700 text-apple-blue shadow-sm scale-105'
+                    ? 'text-apple-blue'
                     : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-gray-200'
                 )}
                 title="列表视图"
               >
-                <IoListOutline className="w-4 h-4" />
+                {viewMode === 'list' && (
+                  <motion.div
+                    layoutId="viewModeIndicator"
+                    className="absolute inset-0 bg-white dark:bg-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.08)] rounded-lg pointer-events-none"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                    style={{ zIndex: -1 }}
+                  />
+                )}
+                <IoListOutline className="w-4 h-4 relative z-10" />
               </button>
               <button
                 onClick={() => setViewMode('grid')}
                 className={cn(
-                  'p-2 rounded-lg transition-all duration-300',
+                  'relative p-2 rounded-lg transition-colors duration-300 z-10',
                   viewMode === 'grid'
-                    ? 'bg-white dark:bg-slate-700 text-apple-blue shadow-sm scale-105'
+                    ? 'text-apple-blue'
                     : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-gray-200'
                 )}
                 title="网格视图"
               >
-                <IoGridOutline className="w-4 h-4" />
+                {viewMode === 'grid' && (
+                  <motion.div
+                    layoutId="viewModeIndicator"
+                    className="absolute inset-0 bg-white dark:bg-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.08)] rounded-lg pointer-events-none"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                    style={{ zIndex: -1 }}
+                  />
+                )}
+                <IoGridOutline className="w-4 h-4 relative z-10" />
               </button>
             </div>
           </div>
@@ -546,13 +584,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
 
       {/* 搜索结果 */}
       <motion.div
+        layout
         variants={containerVariants}
         initial="hidden"
         animate="visible"
         className={cn(
           viewMode === 'grid'
             ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5'
-            : 'space-y-4'
+            : 'flex flex-col gap-4'
         )}
       >
         <AnimatePresence mode='popLayout'>

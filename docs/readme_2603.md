@@ -675,3 +675,18 @@ Files:
 - frontend/src/index.css
 ---
 
+## 2026-03-23 13:04:12
+
+### Commit
+```
+style(ui): 优化搜索结果视图切换动画
+```
+
+### Body
+重构搜索卡片和列表视图间的切换动画，引入 framer-motion 的 layout 过渡及 blur 模糊特效，提升交互体验高级感。
+
+### Files
+- frontend/src/components/SearchResults.tsx
+
+---
+

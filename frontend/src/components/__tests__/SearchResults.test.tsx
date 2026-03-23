@@ -79,11 +79,14 @@ describe('SearchResults', () => {
 
     expect(gridCard).toHaveClass('bg-white/88');
     expect(gridCard).toHaveClass('border-slate-200/85');
+    expect(gridCard).toHaveClass('backdrop-blur-2xl');
+    expect(gridCard).toHaveClass('backdrop-saturate-150');
     expect(gridCard).toHaveClass('shadow-[0_24px_54px_rgba(15,23,42,0.08)]');
     expect(gridCard).not.toHaveClass('bg-white/70');
     expect(gridCard).not.toHaveClass('border-white/50');
 
     expect(toolbar).toHaveClass('bg-white/78');
     expect(toolbar).toHaveClass('border-slate-200/80');
+    expect(toolbar).toHaveClass('backdrop-blur-2xl');
   });
 });
