@@ -33,6 +33,27 @@
 
 ---
 
+## 2026-03-23 20:52:12
+
+### Commit
+```
+fix(admin): 修复 API Key 编辑误续期并统一按天延长
+```
+
+### Body
+修复后台编辑 API Key 时仅修改每日搜索次数也会默认续期 30 天的问题，将单个编辑和批量延长统一改为按天选择。
+新增 1 天、7 天、30 天、半年、一年和自定义天数选项，默认不延长，并补齐相关组件测试与前端换算逻辑。
+
+### Files
+- frontend/src/components/admin/BatchExtendDialog.tsx
+- frontend/src/components/admin/EditKeyDialog.tsx
+- frontend/src/components/admin/__tests__/BatchExtendDialog.test.tsx
+- frontend/src/components/admin/__tests__/EditKeyDialog.test.tsx
+- frontend/src/components/admin/apiKeyExtensionOptions.ts
+- frontend/src/types/api.ts
+
+---
+
 ### refactor(admin): 优化异常状态统计口径并移除频道手动排序功能
 
 **时间**: 2026-03-02

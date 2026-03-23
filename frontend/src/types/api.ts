@@ -471,7 +471,7 @@ export interface CreateAPIKeyRequest {
  */
 export interface UpdateAPIKeyRequest {
   expires_at?: string; // 可选：直接设置过期时间（ISO 8601 格式）
-  extend_hours?: number; // 可选：延长小时数
+  extend_hours?: number; // 可选：延长小时数（前端按天选择后换算）
   daily_search_limit?: number; // 可选：每日搜索次数限制
 }
 
@@ -480,7 +480,7 @@ export interface UpdateAPIKeyRequest {
  */
 export interface BatchExtendRequest {
   keys: string[];
-  extend_hours: number;
+  extend_hours: number; // 前端按天选择后换算
 }
 
 /**

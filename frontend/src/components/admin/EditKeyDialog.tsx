@@ -13,7 +13,22 @@ import {
 import { AppleInput } from '@/components/ui/AppleInput';
 import { AppleButton } from '@/components/ui/AppleButton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { getErrorDataError, getErrorMessage, getErrorStatus } from '@/lib/error';
+import {
+    API_KEY_EXTENSION_OPTIONS,
+    convertDaysToHours,
+    CUSTOM_EXTENSION_OPTION,
+    getExtendedExpiryDate,
+    isValidPositiveIntegerDays,
+    resolveExtensionDays,
+} from './apiKeyExtensionOptions';
 
 /**
  * 编辑 API Key 对话框组件属性
@@ -30,7 +45,7 @@ interface EditKeyDialogProps {
  * 
  * 允许管理员编辑 API Key 的有效期，提供两种方式：
  * 1. 设置新的过期日期时间
- * 2. 延长指定小时数
+ * 2. 按天延长有效期
  */
 export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKeyDialogProps) {
     // 当前选择的编辑方式
@@ -39,8 +54,11 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
     // 新的过期时间（日期时间选择器模式）
     const [newExpiresAt, setNewExpiresAt] = useState<string>('');
 
-    // 延长小时数（延长模式）
-    const [extendHours, setExtendHours] = useState<string>('');
+    // 延长天数选项（延长模式）
+    const [extendOption, setExtendOption] = useState<string>('');
+
+    // 自定义延长天数
+    const [customExtendDays, setCustomExtendDays] = useState<string>('');
 
     // 每日搜索次数限制
     const [dailySearchLimit, setDailySearchLimit] = useState<string>('');
@@ -59,7 +77,8 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
                 .toISOString()
                 .slice(0, 16);
             setNewExpiresAt(localDateTime);
-            setExtendHours('720'); // 默认延长 30 天
+            setExtendOption('');
+            setCustomExtendDays('');
             setDailySearchLimit(apiKey.daily_search_limit.toString()); // 初始化为当前值
             setEditMode('extend'); // 默认使用延长模式
         }
@@ -79,42 +98,46 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
         });
     };
 
-    /**
-     * 验证表单
-     */
-    const validateForm = (): boolean => {
-        if (editMode === 'datetime') {
-            if (!newExpiresAt) {
-                toast.error('请选择新的过期时间');
-                return false;
-            }
-            // 验证新的过期时间必须晚于当前时间
-            const newDate = new Date(newExpiresAt);
-            if (newDate <= new Date()) {
-                toast.error('新的过期时间必须晚于当前时间');
-                return false;
-            }
-        } else {
-            if (!extendHours || isNaN(Number(extendHours)) || Number(extendHours) <= 0) {
-                toast.error('请输入有效的延长小时数（大于 0）');
-                return false;
-            }
-        }
-
-        // 验证每日搜索次数限制
-        if (dailySearchLimit !== '' && (isNaN(Number(dailySearchLimit)) || Number(dailySearchLimit) < 0)) {
-            toast.error('每日搜索次数限制必须是大于等于 0 的整数');
-            return false;
-        }
-
-        return true;
-    };
+    const resolvedExtendDays = resolveExtensionDays(extendOption, customExtendDays);
+    const isCustomExtend = extendOption === CUSTOM_EXTENSION_OPTION;
+    const originalExpiresDate = new Date(apiKey.expires_at);
+    const initialLocalDateTime = new Date(originalExpiresDate.getTime() - originalExpiresDate.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+    const parsedDailySearchLimit = dailySearchLimit === '' ? undefined : Number(dailySearchLimit);
+    const dailyLimitChanged = parsedDailySearchLimit !== undefined && parsedDailySearchLimit !== apiKey.daily_search_limit;
+    const expiresAtChanged = editMode === 'datetime' && newExpiresAt !== initialLocalDateTime;
+    const extendDaysChanged = editMode === 'extend' && resolvedExtendDays !== null && resolvedExtendDays > 0;
 
     /**
      * 处理更新 API Key
      */
     const handleUpdate = async () => {
-        if (!validateForm()) {
+        if (dailySearchLimit !== '' && (isNaN(Number(dailySearchLimit)) || Number(dailySearchLimit) < 0 || !Number.isInteger(Number(dailySearchLimit)))) {
+            toast.error('每日搜索次数限制必须是大于等于 0 的整数');
+            return;
+        }
+
+        if (editMode === 'datetime' && expiresAtChanged) {
+            if (!newExpiresAt) {
+                toast.error('请选择新的过期时间');
+                return;
+            }
+
+            const newDate = new Date(newExpiresAt);
+            if (newDate <= new Date()) {
+                toast.error('新的过期时间必须晚于当前时间');
+                return;
+            }
+        }
+
+        if (editMode === 'extend' && isCustomExtend && !isValidPositiveIntegerDays(customExtendDays)) {
+            toast.error('请输入有效的自定义天数（大于 0 的整数）');
+            return;
+        }
+
+        if (!dailyLimitChanged && !expiresAtChanged && !extendDaysChanged) {
+            toast.info('未检测到变更');
             return;
         }
 
@@ -122,17 +145,19 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
 
         try {
             // 准备更新参数
-            const limit = dailySearchLimit !== '' ? Number(dailySearchLimit) : undefined;
+            const limit = dailyLimitChanged ? parsedDailySearchLimit : undefined;
 
             // 根据编辑模式调用不同的 API
-            if (editMode === 'datetime') {
+            if (expiresAtChanged) {
                 // 设置新时间模式：将本地时间转换为 ISO 8601 格式
                 const newDate = new Date(newExpiresAt);
                 const isoString = newDate.toISOString();
                 await AuthService.updateApiKey(apiKey.key, isoString, undefined, limit);
-            } else {
+            } else if (extendDaysChanged) {
                 // 延长模式
-                await AuthService.updateApiKey(apiKey.key, undefined, Number(extendHours), limit);
+                await AuthService.updateApiKey(apiKey.key, undefined, convertDaysToHours(resolvedExtendDays), limit);
+            } else {
+                await AuthService.updateApiKey(apiKey.key, undefined, undefined, limit);
             }
 
             toast.success('API Key 已更新');
@@ -228,24 +253,69 @@ export function EditKeyDialog({ open, onOpenChange, apiKey, onSuccess }: EditKey
 
                         {/* 延长有效期模式 */}
                         <TabsContent value="extend" className="space-y-4">
-                            <AppleInput
-                                label="延长小时数"
-                                id="extend-hours"
-                                type="number"
-                                min="1"
-                                placeholder="例如：720（30天）"
-                                value={extendHours}
-                                onChange={(e) => setExtendHours(e.target.value)}
-                                disabled={isLoading}
-                                helperText="在当前过期时间基础上延长指定小时数"
-                            />
-                            {extendHours && !isNaN(Number(extendHours)) && Number(extendHours) > 0 && (
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">
+                                    延长天数
+                                </label>
+                                <Select
+                                    value={extendOption}
+                                    onValueChange={setExtendOption}
+                                    disabled={isLoading}
+                                >
+                                    <SelectTrigger aria-label="延长天数">
+                                        <SelectValue placeholder="不延长（默认）" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {API_KEY_EXTENSION_OPTIONS.map((option) => (
+                                            <SelectItem key={option.value} value={option.value}>
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-sm text-gray-500 dark:text-slate-400">
+                                    默认不延长有效期；只有选择具体天数后才会续期
+                                </p>
+                                {extendOption ? (
+                                    <button
+                                        type="button"
+                                        className="text-sm text-blue-600 transition-colors hover:text-blue-500 dark:text-cyan-300 dark:hover:text-cyan-200"
+                                        onClick={() => {
+                                            setExtendOption('');
+                                            setCustomExtendDays('');
+                                        }}
+                                        disabled={isLoading}
+                                    >
+                                        清除延长设置
+                                    </button>
+                                ) : null}
+                            </div>
+
+                            {isCustomExtend ? (
+                                <AppleInput
+                                    label="自定义延长天数"
+                                    id="custom-extend-days"
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    placeholder="请输入天数"
+                                    value={customExtendDays}
+                                    onChange={(e) => setCustomExtendDays(e.target.value)}
+                                    disabled={isLoading}
+                                    helperText="仅支持大于 0 的整数天数"
+                                />
+                            ) : null}
+
+                            {resolvedExtendDays !== null && resolvedExtendDays > 0 && (
                                 <p className="text-xs text-blue-600 dark:text-cyan-300">
                                     延长后过期时间: {formatDateTime(
-                                        new Date(new Date(apiKey.expires_at).getTime() + Number(extendHours) * 60 * 60 * 1000).toISOString()
+                                        getExtendedExpiryDate(apiKey.expires_at, resolvedExtendDays)?.toISOString() ?? apiKey.expires_at
                                     )}
                                 </p>
                             )}
+                            <p className="text-xs text-gray-500 dark:text-slate-400">
+                                未过期 Key 会在当前过期时间基础上续期；已过期 Key 从当前时间开始计算
+                            </p>
                         </TabsContent>
 
                         {/* 设置新时间模式 */}

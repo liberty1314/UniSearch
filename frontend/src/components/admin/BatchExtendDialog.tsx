@@ -11,8 +11,23 @@ import {
 } from '@/components/ui/dialog';
 import { AppleInput } from '@/components/ui/AppleInput';
 import { AppleButton } from '@/components/ui/AppleButton';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Clock, Loader2 } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
+import {
+    API_KEY_EXTENSION_OPTIONS,
+    convertDaysToHours,
+    CUSTOM_EXTENSION_OPTION,
+    getExtensionDaysLabel,
+    isValidPositiveIntegerDays,
+    resolveExtensionDays,
+} from './apiKeyExtensionOptions';
 
 /**
  * 批量延长对话框组件属性
@@ -29,7 +44,7 @@ interface BatchExtendDialogProps {
  * 
  * 功能：
  * - 显示选中的密钥数量
- * - 提供延长小时数输入框
+ * - 提供按天延长的选择器
  * - 实现表单验证
  * - 显示操作进度
  */
@@ -39,8 +54,11 @@ export function BatchExtendDialog({
     selectedKeys,
     onSuccess,
 }: BatchExtendDialogProps) {
-    // 延长小时数
-    const [extendHours, setExtendHours] = useState<string>('720'); // 默认 30 天
+    // 延长天数选项
+    const [extendOption, setExtendOption] = useState<string>('');
+
+    // 自定义延长天数
+    const [customExtendDays, setCustomExtendDays] = useState<string>('');
 
     // 加载状态
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -53,22 +71,36 @@ export function BatchExtendDialog({
      */
     useEffect(() => {
         if (open) {
-            setExtendHours('720'); // 重置为默认值
+            setExtendOption('');
+            setCustomExtendDays('');
             setShowConfirm(false); // 重置确认对话框状态
         }
     }, [open]);
+
+    const resolvedExtendDays = resolveExtensionDays(extendOption, customExtendDays);
+    const isCustomExtend = extendOption === CUSTOM_EXTENSION_OPTION;
 
     /**
      * 验证表单
      */
     const validateForm = (): boolean => {
-        if (!extendHours || isNaN(Number(extendHours)) || Number(extendHours) <= 0) {
-            toast.error('请输入有效的延长小时数（大于 0）');
+        if (!extendOption) {
+            toast.error('请选择要延长的天数');
             return false;
         }
 
         if (selectedKeys.length === 0) {
             toast.error('请至少选择一个 API Key');
+            return false;
+        }
+
+        if (isCustomExtend && !isValidPositiveIntegerDays(customExtendDays)) {
+            toast.error('请输入有效的自定义天数（大于 0 的整数）');
+            return false;
+        }
+
+        if (resolvedExtendDays === null || resolvedExtendDays <= 0) {
+            toast.error('请选择有效的延长天数');
             return false;
         }
 
@@ -96,7 +128,7 @@ export function BatchExtendDialog({
             // 调用批量延长 API
             const result = await AuthService.batchExtendApiKeys(
                 selectedKeys,
-                Number(extendHours)
+                convertDaysToHours(resolvedExtendDays)
             );
 
             // 显示操作结果
@@ -145,15 +177,6 @@ export function BatchExtendDialog({
         }
     };
 
-    /**
-     * 计算延长后的天数
-     */
-    const calculateDays = (): number => {
-        const hours = Number(extendHours);
-        if (isNaN(hours) || hours <= 0) return 0;
-        return Math.floor(hours / 24);
-    };
-
     return (
         <Dialog open={open} onOpenChange={handleClose}>
             <DialogContent className="sm:max-w-[500px]">
@@ -175,22 +198,64 @@ export function BatchExtendDialog({
                         </div>
                     </div>
 
-                    {/* 延长小时数输入 */}
-                    <AppleInput
-                        label="延长小时数"
-                        id="extend-hours"
-                        type="number"
-                        min="1"
-                        placeholder="例如：720（30天）"
-                        value={extendHours}
-                        onChange={(e) => setExtendHours(e.target.value)}
-                        disabled={isLoading}
-                        helperText={
-                            extendHours && !isNaN(Number(extendHours)) && Number(extendHours) > 0
-                                ? `将延长约 ${calculateDays()} 天`
-                                : "在当前过期时间基础上延长指定小时数"
-                        }
-                    />
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">
+                            延长天数
+                        </label>
+                        <Select
+                            value={extendOption}
+                            onValueChange={setExtendOption}
+                            disabled={isLoading}
+                        >
+                            <SelectTrigger aria-label="批量延长天数">
+                                <SelectValue placeholder="请选择延长天数" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {API_KEY_EXTENSION_OPTIONS.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <p className="text-sm text-gray-500 dark:text-slate-400">
+                            会按各 Key 当前有效期续期；已过期 Key 会从当前时间开始计算
+                        </p>
+                        {extendOption ? (
+                            <button
+                                type="button"
+                                className="text-sm text-blue-600 transition-colors hover:text-blue-500 dark:text-cyan-300 dark:hover:text-cyan-200"
+                                onClick={() => {
+                                    setExtendOption('');
+                                    setCustomExtendDays('');
+                                }}
+                                disabled={isLoading}
+                            >
+                                清除延长设置
+                            </button>
+                        ) : null}
+                    </div>
+
+                    {isCustomExtend ? (
+                        <AppleInput
+                            label="自定义延长天数"
+                            id="batch-custom-extend-days"
+                            type="number"
+                            min="1"
+                            step="1"
+                            placeholder="请输入天数"
+                            value={customExtendDays}
+                            onChange={(e) => setCustomExtendDays(e.target.value)}
+                            disabled={isLoading}
+                            helperText="仅支持大于 0 的整数天数"
+                        />
+                    ) : null}
+
+                    {resolvedExtendDays !== null && resolvedExtendDays > 0 ? (
+                        <p className="text-xs text-blue-600 dark:text-cyan-300">
+                            当前将统一延长 {getExtensionDaysLabel(resolvedExtendDays)}
+                        </p>
+                    ) : null}
 
                     {/* 操作进度提示 */}
                     {isLoading && (
@@ -227,7 +292,7 @@ export function BatchExtendDialog({
                 open={showConfirm}
                 onOpenChange={setShowConfirm}
                 title="确认批量延长"
-                description={`您确定要为选中的 ${selectedKeys.length} 个 API Key 延长 ${extendHours} 小时（约 ${calculateDays()} 天）的有效期吗？`}
+                description={`您确定要为选中的 ${selectedKeys.length} 个 API Key 延长 ${resolvedExtendDays !== null && resolvedExtendDays > 0 ? getExtensionDaysLabel(resolvedExtendDays) : '指定天数'} 的有效期吗？已过期 Key 将从当前时间开始计算。`}
                 confirmText="确认延长"
                 cancelText="取消"
                 onConfirm={handleBatchExtend}
