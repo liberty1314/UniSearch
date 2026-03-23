@@ -187,8 +187,12 @@ const Home: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="max-w-4xl w-full"
+              className="max-w-4xl w-full relative"
             >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-10 -inset-y-2 hidden rounded-[2rem] blur-3xl dark:block dark:bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.10),transparent_68%)]"
+              />
               <CloudTypeFilter />
             </motion.div>
           )}

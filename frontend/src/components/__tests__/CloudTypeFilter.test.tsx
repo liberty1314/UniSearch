@@ -56,6 +56,11 @@ describe('CloudTypeFilter', () => {
 
     expect(screen.getByRole('heading', { name: '来源筛选' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /全选状态|选择全部/ })).toBeInTheDocument();
+    const filterSurface = screen.getByTestId('cloud-type-filter-surface');
+    expect(filterSurface).toHaveAttribute('data-glass-variant', 'panel');
+    expect(filterSurface).toHaveAttribute('data-glass-frosted', 'true');
+    expect(filterSurface).toHaveClass('dark:bg-[#050b16]/88');
+    expect(filterSurface).toHaveClass('dark:border-cyan-400/12');
 
     const hasOuterHaloLayer = Array.from(container.querySelectorAll('div')).some((node) =>
       typeof node.className === 'string' && node.className.includes('via-purple-500/10')

@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import PasswordModal from './PasswordModal';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import LoadingState from '@/components/LoadingState';
+import { GlassSurface } from '@/components/ui/glass-surface';
 
 interface SearchResultsProps {
   className?: string;
@@ -312,14 +313,15 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           className="group relative h-full"
           onClick={handleLinkClick}
         >
-          <div className="absolute inset-x-6 -bottom-4 h-12 rounded-full bg-slate-950/10 blur-2xl opacity-80 transition-all duration-300 group-hover:translate-y-1 group-hover:opacity-100 dark:bg-black/35" />
-          <div className="absolute inset-0 rounded-[1.5rem] bg-gradient-to-br from-white/68 via-white/32 to-cyan-100/24 opacity-85 transition-opacity duration-300 group-hover:opacity-100 dark:from-slate-900/26 dark:via-cyan-950/12 dark:to-slate-950/22" />
+          <div className="absolute inset-x-6 -bottom-4 h-12 rounded-full bg-slate-950/10 blur-2xl opacity-80 transition-all duration-300 group-hover:translate-y-1 group-hover:opacity-100 dark:bg-black/42" />
+          <div className="absolute inset-0 rounded-[1.5rem] bg-gradient-to-br from-white/68 via-white/32 to-cyan-100/24 opacity-85 transition-opacity duration-300 group-hover:opacity-100 dark:bg-[linear-gradient(180deg,rgba(34,211,238,0.10),rgba(15,23,42,0.02)_18%,rgba(2,6,23,0.18)_100%)]" />
 
           <div
             data-testid="search-result-grid-card"
-            className="relative h-full flex flex-col p-5 bg-white/88 dark:bg-slate-900/78 backdrop-blur-2xl backdrop-saturate-150 rounded-[1.5rem] border border-slate-200/85 dark:border-slate-700/55 ring-1 ring-white/75 dark:ring-white/5 shadow-[0_24px_54px_rgba(15,23,42,0.08)] hover:shadow-[0_30px_64px_rgba(14,165,233,0.16)] dark:hover:shadow-[0_28px_62px_rgba(8,145,178,0.22)] transition-all duration-300 cursor-pointer overflow-hidden"
+            className="relative h-full flex flex-col p-5 bg-white/88 dark:bg-[#08111f]/92 backdrop-blur-2xl backdrop-saturate-150 rounded-[1.5rem] border border-slate-200/85 dark:border-cyan-400/12 ring-1 ring-white/75 dark:ring-[rgba(165,243,252,0.06)] shadow-[0_24px_54px_rgba(15,23,42,0.08)] dark:shadow-[0_28px_70px_rgba(2,6,23,0.48),inset_0_1px_0_rgba(148,163,184,0.14),inset_0_-24px_44px_rgba(8,47,73,0.16)] hover:shadow-[0_30px_64px_rgba(14,165,233,0.16)] dark:hover:border-cyan-300/18 dark:hover:shadow-[0_34px_78px_rgba(8,145,178,0.24),inset_0_1px_0_rgba(186,230,253,0.16)] transition-all duration-300 cursor-pointer overflow-hidden"
           >
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:via-cyan-200/20" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:via-cyan-200/30" />
+            <div className="pointer-events-none absolute inset-x-5 top-0 h-16 rounded-full bg-cyan-300/[0.08] blur-3xl opacity-0 transition-opacity duration-300 dark:group-hover:opacity-100" />
             {/* 顶部装饰条 */}
             <div className={cn("absolute top-0 left-0 right-0 h-1 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300",
               cloudInfo.text.includes("blue") ? "from-blue-400 to-cyan-300" :
@@ -342,14 +344,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
                 <span>{formatResultTime(item.datetime)}</span>
               </div>
               {link.size && (
-                <div className="bg-gray-100 dark:bg-slate-800/50 px-2 py-0.5 rounded-full">
+                <div className="bg-gray-100 dark:border dark:border-cyan-300/10 dark:bg-slate-900/72 px-2 py-0.5 rounded-full">
                   {link.size}
                 </div>
               )}
             </div>
 
             {/* 底部功能区 */}
-            <div className="mt-auto pt-3 border-t border-gray-100 dark:border-white/10 flex items-center justify-between">
+            <div className="mt-auto pt-3 border-t border-gray-100 dark:border-cyan-400/10 flex items-center justify-between">
               {/* 网盘类型 */}
               <div className={cn(
                 "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
@@ -363,7 +365,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
               {/* 操作按钮 */}
               <div className="flex items-center gap-2">
                 {hasPassword && (
-                  <div className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs font-medium rounded-full border border-green-200/50 dark:border-green-800/30" title="需要访问码">
+                  <div className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-emerald-400/[0.08] text-green-600 dark:text-emerald-200 text-xs font-medium rounded-full border border-green-200/50 dark:border-emerald-300/16" title="需要访问码">
                     <IoKeyOutline className="w-3 h-3" />
                     <span>有码</span>
                   </div>
@@ -388,9 +390,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         variants={itemVariants}
         whileHover={{ x: 5 }}
         onClick={handleLinkClick}
-        className="group relative p-4 bg-white/84 dark:bg-slate-900/74 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl border border-slate-200/80 dark:border-slate-700/55 ring-1 ring-white/70 dark:ring-white/5 shadow-[0_18px_42px_rgba(15,23,42,0.07)] hover:shadow-[0_22px_50px_rgba(14,165,233,0.14)] dark:hover:shadow-[0_24px_54px_rgba(8,145,178,0.18)] cursor-pointer overflow-hidden transition-all duration-300"
+        className="group relative p-4 bg-white/84 dark:bg-[#08111f]/90 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl border border-slate-200/80 dark:border-cyan-400/12 ring-1 ring-white/70 dark:ring-[rgba(165,243,252,0.06)] shadow-[0_18px_42px_rgba(15,23,42,0.07)] dark:shadow-[0_24px_54px_rgba(2,6,23,0.42),inset_0_1px_0_rgba(148,163,184,0.12)] hover:shadow-[0_22px_50px_rgba(14,165,233,0.14)] dark:hover:border-cyan-300/16 dark:hover:shadow-[0_28px_62px_rgba(8,145,178,0.2),inset_0_1px_0_rgba(186,230,253,0.14)] cursor-pointer overflow-hidden transition-all duration-300"
       >
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:via-cyan-200/20" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:via-cyan-200/28" />
         <div className="flex items-center gap-5">
           {/* 左侧图标/类型 */}
           <div className={cn(
@@ -421,7 +423,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           {/* 右侧操作 */}
           <div className="flex items-center gap-3">
             {hasPassword && (
-              <div className="px-2.5 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs font-medium rounded-full border border-green-200/50 dark:border-green-800/30 flex items-center gap-1">
+              <div className="px-2.5 py-1 bg-green-50 dark:bg-emerald-400/[0.08] text-green-600 dark:text-emerald-200 text-xs font-medium rounded-full border border-green-200/50 dark:border-emerald-300/16 flex items-center gap-1">
                 <IoKeyOutline className="w-3.5 h-3.5" />
                 <span>访问码</span>
               </div>
@@ -440,20 +442,28 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         animate={{ opacity: 1, y: 0 }}
         className="text-center py-16"
       >
-        <div className="relative mb-6">
-          <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-pink-500/20 rounded-full blur-xl"></div>
-          <div className="relative text-red-500 bg-red-50 dark:bg-red-900/20 rounded-full p-6 w-24 h-24 mx-auto flex items-center justify-center shadow-lg border border-red-100 dark:border-red-900/30">
-            <IoAlertCircleOutline className="w-12 h-12" />
-          </div>
+        <div className="relative mx-auto max-w-xl">
+          <GlassSurface
+            variant="panel"
+            className="px-8 py-10 dark:border-red-400/12 dark:bg-[#08111f]/90 dark:shadow-[0_30px_72px_rgba(2,6,23,0.5),inset_0_1px_0_rgba(148,163,184,0.12)]"
+            frostOverlayClassName="dark:from-red-950/20 dark:via-[#08111f]/72 dark:to-[#020617]/88"
+          >
+            <div className="relative mb-6">
+              <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-pink-500/20 rounded-full blur-xl dark:from-red-500/16 dark:to-fuchsia-500/10"></div>
+              <div className="relative text-red-500 bg-red-50 dark:border dark:border-red-400/14 dark:bg-red-500/[0.08] rounded-full p-6 w-24 h-24 mx-auto flex items-center justify-center shadow-lg">
+                <IoAlertCircleOutline className="w-12 h-12" />
+              </div>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">搜索出错</h3>
+            <p className="text-gray-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed mb-6">{error}</p>
+            <button
+              onClick={() => performSearch(searchParams)}
+              className="px-6 py-2.5 bg-gradient-to-r from-apple-blue to-purple-600 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 transform hover:scale-105 active:scale-95"
+            >
+              重新尝试
+            </button>
+          </GlassSurface>
         </div>
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">搜索出错</h3>
-        <p className="text-gray-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed mb-6">{error}</p>
-        <button
-          onClick={() => performSearch(searchParams)}
-          className="px-6 py-2.5 bg-gradient-to-r from-apple-blue to-purple-600 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 transform hover:scale-105 active:scale-95"
-        >
-          重新尝试
-        </button>
       </motion.div>
     );
   }
@@ -465,31 +475,39 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         animate={{ opacity: 1, scale: 1 }}
         className={cn('text-center py-20', className)}
       >
-        <div className="relative mb-8">
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-400/20 to-gray-500/20 rounded-full blur-xl"></div>
-          <div className="relative text-gray-400 bg-white dark:bg-slate-800/50 rounded-full p-8 w-32 h-32 mx-auto flex items-center justify-center shadow-lg border border-white/50 dark:border-white/10 backdrop-blur-sm">
-            <IoSearchOutline className="w-16 h-16" />
-          </div>
-        </div>
-        <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">未找到相关资源</h3>
-        <p className="text-gray-500 dark:text-slate-400 max-w-lg mx-auto leading-relaxed mb-8">
-          很抱歉，没有找到与您搜索关键词"<span className="text-apple-blue">{searchParams.keyword}</span>"相关的资源。
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <div className="text-sm text-gray-500 dark:text-slate-400">
-            热门搜索：
-          </div>
-          <div className="flex flex-wrap gap-2 justify-center">
-            {['电影', '音乐', '软件', '电子书', '游戏'].map((keyword) => (
-              <button
-                key={keyword}
-                onClick={() => performSearch({ ...searchParams, keyword })}
-                className="px-4 py-1.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 rounded-lg text-sm hover:bg-apple-blue hover:text-white hover:border-apple-blue transition-all duration-300"
-              >
-                {keyword}
-              </button>
-            ))}
-          </div>
+        <div className="relative mx-auto max-w-2xl">
+          <GlassSurface
+            variant="panel"
+            className="px-8 py-10 dark:bg-[#08111f]/90 dark:border-cyan-400/12"
+            frostOverlayClassName="dark:from-cyan-950/16 dark:via-[#08111f]/72 dark:to-[#020617]/88"
+          >
+            <div className="relative mb-8">
+              <div className="absolute inset-0 bg-gradient-to-r from-gray-400/20 to-gray-500/20 rounded-full blur-xl dark:from-cyan-500/10 dark:to-slate-500/10"></div>
+              <div className="relative text-gray-400 bg-white dark:border dark:border-cyan-300/10 dark:bg-slate-900/72 rounded-full p-8 w-32 h-32 mx-auto flex items-center justify-center shadow-lg backdrop-blur-sm">
+                <IoSearchOutline className="w-16 h-16" />
+              </div>
+            </div>
+            <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">未找到相关资源</h3>
+            <p className="text-gray-500 dark:text-slate-400 max-w-lg mx-auto leading-relaxed mb-8">
+              很抱歉，没有找到与您搜索关键词"<span className="text-apple-blue">{searchParams.keyword}</span>"相关的资源。
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <div className="text-sm text-gray-500 dark:text-slate-400">
+                热门搜索：
+              </div>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {['电影', '音乐', '软件', '电子书', '游戏'].map((keyword) => (
+                  <button
+                    key={keyword}
+                    onClick={() => performSearch({ ...searchParams, keyword })}
+                    className="px-4 py-1.5 bg-white/50 dark:bg-slate-900/72 backdrop-blur-sm border border-gray-200 dark:border-cyan-300/10 text-gray-600 dark:text-slate-300 rounded-lg text-sm hover:bg-apple-blue hover:text-white hover:border-apple-blue transition-all duration-300"
+                  >
+                    {keyword}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </GlassSurface>
         </div>
       </motion.div>
     );
@@ -513,15 +531,19 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     <div className={cn('space-y-6', className)}>
       {/* 结果头部 */}
       {allSortedResults.length > 0 && (
-        <motion.div
+        <GlassSurface
+          as={motion.div}
+          variant="toolbar"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           data-testid="search-results-toolbar"
-          className="flex items-center justify-between bg-white/78 dark:bg-slate-900/64 backdrop-blur-2xl backdrop-saturate-150 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/45 ring-1 ring-white/70 dark:ring-white/5 shadow-[0_18px_40px_rgba(15,23,42,0.06)]"
+          className="p-4"
+          contentClassName="flex items-center justify-between gap-4"
+          contentProps={{ 'data-testid': 'search-results-toolbar-content' }}
         >
           <div className="flex items-center gap-4">
             <div className="text-sm text-gray-600 dark:text-slate-400 flex items-center gap-2">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-apple-blue/10 text-apple-blue text-xs font-bold">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-apple-blue/10 text-apple-blue text-xs font-bold dark:border dark:border-cyan-300/12 dark:bg-cyan-400/[0.08] dark:text-cyan-100">
                 {allSortedResults.length}
               </span>
               <span>个结果</span>
@@ -534,7 +556,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="bg-gray-100/50 dark:bg-slate-800/50 p-1 rounded-xl flex items-center border border-gray-200/50 dark:border-white/10 relative">
+            <div className="bg-gray-100/50 dark:bg-[#020817]/72 p-1 rounded-xl flex items-center border border-gray-200/50 dark:border-cyan-300/10 relative shadow-sm dark:shadow-[inset_0_1px_0_rgba(148,163,184,0.08)]">
               <button
                 onClick={() => setViewMode('list')}
                 className={cn(
@@ -548,7 +570,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
                 {viewMode === 'list' && (
                   <motion.div
                     layoutId="viewModeIndicator"
-                    className="absolute inset-0 bg-white dark:bg-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.08)] rounded-lg pointer-events-none"
+                    className="absolute inset-0 bg-white dark:bg-[linear-gradient(180deg,rgba(34,211,238,0.12),rgba(14,165,233,0.2))] shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_18px_rgba(8,145,178,0.24)] rounded-lg pointer-events-none"
                     initial={false}
                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
                     style={{ zIndex: -1 }}
@@ -569,7 +591,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
                 {viewMode === 'grid' && (
                   <motion.div
                     layoutId="viewModeIndicator"
-                    className="absolute inset-0 bg-white dark:bg-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.08)] rounded-lg pointer-events-none"
+                    className="absolute inset-0 bg-white dark:bg-[linear-gradient(180deg,rgba(34,211,238,0.12),rgba(14,165,233,0.2))] shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_18px_rgba(8,145,178,0.24)] rounded-lg pointer-events-none"
                     initial={false}
                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
                     style={{ zIndex: -1 }}
@@ -579,7 +601,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
               </button>
             </div>
           </div>
-        </motion.div>
+        </GlassSurface>
       )}
 
       {/* 搜索结果 */}
@@ -618,7 +640,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           whileInView={{ opacity: 1 }}
           className="text-center py-8"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100/50 dark:bg-slate-800/50 rounded-full text-xs text-gray-500 dark:text-slate-400">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100/50 dark:border dark:border-cyan-300/10 dark:bg-slate-900/72 rounded-full text-xs text-gray-500 dark:text-slate-400">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
             已加载全部 {allSortedResults.length} 条结果
           </div>

@@ -165,6 +165,26 @@ describe('SearchBox', () => {
     expect(screen.queryByText('最近搜索')).not.toBeInTheDocument();
   });
 
+  it('uses the shared glass surface for the search shell and history popover', async () => {
+    searchHistoryState = ['海贼王'];
+
+    render(<SearchBox />);
+
+    const searchShell = screen.getByTestId('search-box-surface');
+    expect(searchShell).toHaveAttribute('data-glass-surface', 'true');
+    expect(searchShell).toHaveAttribute('data-glass-variant', 'search');
+    expect(searchShell).toHaveClass('dark:group-focus-within:border-cyan-300/32');
+    expect(searchShell).toHaveClass('dark:group-focus-within:shadow-[0_36px_72px_rgba(8,145,178,0.28)]');
+
+    await userEvent.click(screen.getByPlaceholderText('搜索网盘资源...'));
+
+    const historyPopover = screen.getByTestId('search-history-surface');
+    expect(historyPopover).toHaveAttribute('data-glass-surface', 'true');
+    expect(historyPopover).toHaveAttribute('data-glass-variant', 'popover');
+    expect(historyPopover).toHaveClass('dark:bg-[#07101d]/92');
+    expect(historyPopover).toHaveClass('dark:border-cyan-400/14');
+  });
+
   it('searches and collapses the history panel after selecting a history item', async () => {
     searchHistoryState = ['仙逆', '凡人修仙传'];
     performSearchMock.mockResolvedValue(undefined);

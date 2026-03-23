@@ -690,3 +690,25 @@ style(ui): 优化搜索结果视图切换动画
 
 ---
 
+## 2026-03-23 14:20:11
+
+### Commit
+```
+style(ui): 重设计深色搜索页冷冽玻璃视觉
+```
+
+### Body
+统一深色搜索态的冷冽玻璃表面语言，重做搜索框、历史弹层、筛选栏、结果工具栏与结果卡片的层次和景深表现。
+同步补齐空态、错误态和相关组件测试，确保深色视觉重构不影响现有搜索交互与校验链路。
+
+### Files
+- frontend/src/components/CloudTypeFilter.tsx
+- frontend/src/components/SearchBox.tsx
+- frontend/src/components/SearchResults.tsx
+- frontend/src/components/__tests__/CloudTypeFilter.test.tsx
+- frontend/src/components/__tests__/SearchBox.test.tsx
+- frontend/src/components/__tests__/SearchResults.test.tsx
+- frontend/src/components/ui/glass-surface.tsx
+- frontend/src/pages/Home.tsx
+
+---

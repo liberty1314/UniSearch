@@ -5,6 +5,7 @@ import { CloudType, CloudTypeValue } from '@/types/api';
 import { useSearchStore } from '@/stores/searchStore';
 import { cn } from '@/lib/utils';
 import { CoolMode } from '@/components/magicui/cool-mode';
+import { GlassSurface } from '@/components/ui/glass-surface';
 
 // --- Sub-components ---
 
@@ -30,8 +31,8 @@ const CloudTypeTag = memo(({ config, isSelected, onToggle }: CloudTypeTagProps) 
         className={cn(
           "relative flex items-center px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 border box-border",
           isSelected
-            ? `bg-gradient-to-r ${config.color} text-white border-transparent ${config.shadow} shadow-lg ring-2 ring-white/20 dark:ring-black/20`
-            : "bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 shadow-sm"
+            ? `bg-gradient-to-r ${config.color} text-white border-transparent ${config.shadow} shadow-lg ring-2 ring-white/20 dark:ring-cyan-200/10 dark:shadow-[0_16px_28px_rgba(8,145,178,0.16)]`
+            : "bg-white dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.78),rgba(15,23,42,0.64))] text-gray-600 dark:text-slate-300 border-gray-100 dark:border-cyan-300/10 hover:bg-gray-50 dark:hover:border-cyan-300/20 dark:hover:bg-cyan-400/[0.06] shadow-sm dark:shadow-[0_14px_28px_rgba(2,6,23,0.28),inset_0_1px_0_rgba(148,163,184,0.08)]"
         )}
       >
 
@@ -118,12 +119,17 @@ const CloudTypeFilter: React.FC = () => {
     >
       <div className="relative">
         {/* 内容容器 */}
-        <div className="relative bg-white/60 dark:bg-slate-800/60 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 dark:border-white/10 shadow-glass">
+        <GlassSurface
+          variant="panel"
+          data-testid="cloud-type-filter-surface"
+          className="p-6 sm:p-8 dark:bg-[#050b16]/88 dark:border-cyan-400/12 dark:ring-[rgba(165,243,252,0.05)] dark:shadow-[0_30px_72px_rgba(2,6,23,0.58),inset_0_1px_0_rgba(148,163,184,0.14),inset_0_-24px_46px_rgba(8,47,73,0.18)]"
+          frostOverlayClassName="dark:from-[#0d1728]/88 dark:via-[#08111f]/72 dark:to-cyan-950/18"
+        >
 
           {/* 顶部栏：标题与全选 */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-500 dark:text-blue-400 flex-shrink-0">
+              <div className="p-2 bg-blue-50 dark:border dark:border-cyan-300/12 dark:bg-cyan-400/[0.08] rounded-xl text-blue-500 dark:text-cyan-100 flex-shrink-0">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                 </svg>
@@ -143,8 +149,8 @@ const CloudTypeFilter: React.FC = () => {
               className={cn(
                 "px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center gap-2 shadow-sm flex-shrink-0",
                 isAllSelected
-                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 shadow-lg"
-                  : "bg-white dark:bg-slate-700 text-gray-600 dark:text-slate-300 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                  ? "bg-gray-900 dark:border dark:border-cyan-200/12 dark:bg-[linear-gradient(135deg,rgba(34,211,238,0.16),rgba(14,165,233,0.3))] text-white dark:text-cyan-50 hover:bg-gray-800 dark:hover:bg-[linear-gradient(135deg,rgba(34,211,238,0.2),rgba(14,165,233,0.34))] shadow-lg dark:shadow-[0_18px_32px_rgba(8,145,178,0.18)]"
+                  : "bg-white dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.82),rgba(15,23,42,0.7))] text-gray-600 dark:text-slate-300 border border-gray-200 dark:border-cyan-300/10 hover:bg-gray-50 dark:hover:border-cyan-300/18 dark:hover:bg-cyan-400/[0.06]"
               )}
             >
               <div className="w-5 h-5 flex items-center justify-center">
@@ -167,7 +173,7 @@ const CloudTypeFilter: React.FC = () => {
               ))}
             </motion.div>
           </LayoutGroup>
-        </div>
+        </GlassSurface>
       </div>
     </motion.div>
   );
