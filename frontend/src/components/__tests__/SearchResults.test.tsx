@@ -67,7 +67,7 @@ vi.mock('framer-motion', () => ({
 }));
 
 describe('SearchResults', () => {
-  it('uses stronger card separation against the shared grid background', () => {
+  it('adds a light results panel around semi-solid glass cards', () => {
     class MockIntersectionObserver {
       observe = vi.fn();
       unobserve = vi.fn();
@@ -78,16 +78,27 @@ describe('SearchResults', () => {
 
     render(<SearchResults />);
 
+    const stage = screen.getByTestId('search-results-stage');
     const gridCard = screen.getByTestId('search-result-grid-card');
     const toolbar = screen.getByTestId('search-results-toolbar');
 
-    expect(gridCard).toHaveClass('bg-white/88');
-    expect(gridCard).toHaveClass('border-slate-200/85');
+    expect(stage).toHaveClass('bg-white/62');
+    expect(stage).toHaveClass('border-slate-200/75');
+    expect(stage).toHaveClass('ring-white/80');
+    expect(stage).toHaveClass('backdrop-blur-xl');
+    expect(stage).toHaveClass('dark:bg-[#050d18]/78');
+    expect(stage).toHaveClass('dark:border-slate-800/75');
+    expect(stage).toHaveClass('dark:ring-transparent');
+    expect(stage.querySelector('.bg-cyan-200\\/20')).toBeNull();
+
+    expect(gridCard).toHaveClass('bg-white/96');
+    expect(gridCard).toHaveClass('border-slate-200/90');
     expect(gridCard).toHaveClass('backdrop-blur-2xl');
     expect(gridCard).toHaveClass('backdrop-saturate-150');
-    expect(gridCard).toHaveClass('shadow-[0_24px_54px_rgba(15,23,42,0.08)]');
-    expect(gridCard).toHaveClass('dark:bg-[#08111f]/92');
-    expect(gridCard).toHaveClass('dark:border-cyan-400/12');
+    expect(gridCard).toHaveClass('shadow-[0_22px_52px_rgba(15,23,42,0.10)]');
+    expect(gridCard).toHaveClass('dark:bg-[#091321]/96');
+    expect(gridCard).toHaveClass('dark:border-slate-800/80');
+    expect(gridCard).toHaveClass('dark:ring-transparent');
     expect(gridCard).not.toHaveClass('bg-white/70');
     expect(gridCard).not.toHaveClass('border-white/50');
 
@@ -95,7 +106,8 @@ describe('SearchResults', () => {
     expect(toolbar).toHaveClass('border-slate-200/80');
     expect(toolbar).toHaveClass('backdrop-blur-2xl');
     expect(toolbar).toHaveClass('dark:bg-[#060d18]/84');
-    expect(toolbar).toHaveClass('dark:border-cyan-400/12');
+    expect(toolbar).toHaveClass('dark:border-slate-800/80');
+    expect(toolbar).toHaveClass('dark:ring-transparent');
     expect(toolbar).toHaveAttribute('data-glass-surface', 'true');
     expect(toolbar).toHaveAttribute('data-glass-variant', 'toolbar');
     expect(toolbar).toHaveAttribute('data-glass-frosted', 'true');

@@ -1,5 +1,26 @@
 # 开发日志 - 2026年03月
 
+## 2026-03-28 11:44:19
+
+### Commit
+```
+style(ui): 统一深色搜索页面板与历史框样式
+```
+
+### Body
+统一搜索页深色模式下的卡片、面板与历史下拉框视觉，移除偏亮白的描边和顶部高光，改为更克制的深色描边体系。
+新增搜索结果面板与搜索历史框样式回归测试，确保暗色搜索界面层级更稳定一致。
+
+### Files
+- frontend/src/components/CloudTypeFilter.tsx
+- frontend/src/components/SearchBox.tsx
+- frontend/src/components/SearchResults.tsx
+- frontend/src/components/__tests__/SearchBox.test.tsx
+- frontend/src/components/__tests__/SearchResults.test.tsx
+- frontend/src/components/ui/glass-surface.tsx
+
+---
+
 ## 2026-03-02
 
 ### feat(admin): 新增插件和频道统一排序及状态筛选功能

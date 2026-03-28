@@ -318,9 +318,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
 
           <div
             data-testid="search-result-grid-card"
-            className="relative h-full flex flex-col p-5 bg-white/88 dark:bg-[#08111f]/92 backdrop-blur-2xl backdrop-saturate-150 rounded-[1.5rem] border border-slate-200/85 dark:border-cyan-400/12 ring-1 ring-white/75 dark:ring-[rgba(165,243,252,0.06)] shadow-[0_24px_54px_rgba(15,23,42,0.08)] dark:shadow-[0_28px_70px_rgba(2,6,23,0.48),inset_0_1px_0_rgba(148,163,184,0.14),inset_0_-24px_44px_rgba(8,47,73,0.16)] hover:shadow-[0_30px_64px_rgba(14,165,233,0.16)] dark:hover:border-cyan-300/18 dark:hover:shadow-[0_34px_78px_rgba(8,145,178,0.24),inset_0_1px_0_rgba(186,230,253,0.16)] transition-all duration-300 cursor-pointer overflow-hidden"
+            className="relative h-full flex flex-col p-5 bg-white/96 dark:bg-[#091321]/96 backdrop-blur-2xl backdrop-saturate-150 rounded-[1.5rem] border border-slate-200/90 dark:border-slate-800/80 ring-1 ring-white/85 dark:ring-transparent shadow-[0_22px_52px_rgba(15,23,42,0.10)] dark:shadow-[0_30px_72px_rgba(2,6,23,0.5),inset_0_1px_0_rgba(186,230,253,0.08),inset_0_-24px_44px_rgba(8,47,73,0.18)] hover:shadow-[0_30px_68px_rgba(14,165,233,0.14)] dark:hover:border-slate-700/85 dark:hover:shadow-[0_34px_78px_rgba(8,145,178,0.24),inset_0_1px_0_rgba(186,230,253,0.10)] transition-all duration-300 cursor-pointer overflow-hidden"
           >
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:via-cyan-200/30" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:via-transparent dark:opacity-0" />
             <div className="pointer-events-none absolute inset-x-5 top-0 h-16 rounded-full bg-cyan-300/[0.08] blur-3xl opacity-0 transition-opacity duration-300 dark:group-hover:opacity-100" />
             {/* 顶部装饰条 */}
             <div className={cn("absolute top-0 left-0 right-0 h-1 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300",
@@ -390,9 +390,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         variants={itemVariants}
         whileHover={{ x: 5 }}
         onClick={handleLinkClick}
-        className="group relative p-4 bg-white/84 dark:bg-[#08111f]/90 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl border border-slate-200/80 dark:border-cyan-400/12 ring-1 ring-white/70 dark:ring-[rgba(165,243,252,0.06)] shadow-[0_18px_42px_rgba(15,23,42,0.07)] dark:shadow-[0_24px_54px_rgba(2,6,23,0.42),inset_0_1px_0_rgba(148,163,184,0.12)] hover:shadow-[0_22px_50px_rgba(14,165,233,0.14)] dark:hover:border-cyan-300/16 dark:hover:shadow-[0_28px_62px_rgba(8,145,178,0.2),inset_0_1px_0_rgba(186,230,253,0.14)] cursor-pointer overflow-hidden transition-all duration-300"
+        className="group relative p-4 bg-white/94 dark:bg-[#091321]/94 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl border border-slate-200/90 dark:border-slate-800/80 ring-1 ring-white/80 dark:ring-transparent shadow-[0_18px_42px_rgba(15,23,42,0.09)] dark:shadow-[0_24px_56px_rgba(2,6,23,0.46),inset_0_1px_0_rgba(186,230,253,0.08)] hover:shadow-[0_24px_54px_rgba(14,165,233,0.13)] dark:hover:border-slate-700/85 dark:hover:shadow-[0_28px_64px_rgba(8,145,178,0.2),inset_0_1px_0_rgba(186,230,253,0.10)] cursor-pointer overflow-hidden transition-all duration-300"
       >
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:via-cyan-200/28" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:via-transparent dark:opacity-0" />
         <div className="flex items-center gap-5">
           {/* 左侧图标/类型 */}
           <div className={cn(
@@ -605,23 +605,33 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       )}
 
       {/* 搜索结果 */}
-      <motion.div
-        layout
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className={cn(
-          viewMode === 'grid'
-            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5'
-            : 'flex flex-col gap-4'
-        )}
+      <div
+        data-testid="search-results-stage"
+        className="relative overflow-hidden rounded-[2rem] border border-slate-200/75 bg-white/62 p-3 ring-1 ring-white/80 shadow-[0_24px_60px_rgba(15,23,42,0.06)] backdrop-blur-xl sm:p-4 dark:border-slate-800/75 dark:bg-[#050d18]/78 dark:ring-transparent dark:shadow-[0_30px_72px_rgba(2,6,23,0.42),inset_0_1px_0_rgba(148,163,184,0.06)]"
       >
-        <AnimatePresence mode='popLayout'>
-          {displayedResults.map((item) =>
-            renderResultItem(item)
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.46),rgba(255,255,255,0.18)_28%,rgba(255,255,255,0.28)_100%)] dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.48),rgba(8,17,31,0.18)_28%,rgba(2,6,23,0.42)_100%)]"
+        />
+        <motion.div
+          layout
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className={cn(
+            'relative z-10',
+            viewMode === 'grid'
+              ? 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+              : 'flex flex-col gap-4'
           )}
-        </AnimatePresence>
-      </motion.div>
+        >
+          <AnimatePresence mode='popLayout'>
+            {displayedResults.map((item) =>
+              renderResultItem(item)
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
 
       {/* 无限滚动触发器 */}
       {hasMore && (

@@ -181,8 +181,19 @@ describe('SearchBox', () => {
     const historyPopover = screen.getByTestId('search-history-surface');
     expect(historyPopover).toHaveAttribute('data-glass-surface', 'true');
     expect(historyPopover).toHaveAttribute('data-glass-variant', 'popover');
-    expect(historyPopover).toHaveClass('dark:bg-[#07101d]/92');
-    expect(historyPopover).toHaveClass('dark:border-cyan-400/14');
+    expect(historyPopover).toHaveClass('dark:bg-[#08111f]/96');
+    expect(historyPopover).toHaveClass('dark:border-slate-800/80');
+
+    const historyHeader = screen.getByTestId('search-history-header');
+    expect(historyHeader).toHaveClass('dark:bg-[linear-gradient(180deg,rgba(8,15,28,0.74),rgba(8,15,28,0.54))]');
+    expect(historyHeader).toHaveClass('dark:border-slate-800/80');
+
+    const historyList = screen.getByTestId('search-history-list');
+    expect(historyList).toHaveClass('dark:bg-[linear-gradient(180deg,rgba(10,18,32,0.92),rgba(8,15,28,0.82))]');
+
+    const historyItem = screen.getByRole('button', { name: '使用历史记录搜索 海贼王' });
+    expect(historyItem).toHaveClass('dark:border-slate-700/80');
+    expect(historyItem).toHaveClass('dark:bg-[linear-gradient(180deg,rgba(10,18,32,0.94),rgba(8,15,28,0.84))]');
   });
 
   it('searches and collapses the history panel after selecting a history item', async () => {

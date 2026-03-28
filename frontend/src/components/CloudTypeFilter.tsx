@@ -122,7 +122,7 @@ const CloudTypeFilter: React.FC = () => {
         <GlassSurface
           variant="panel"
           data-testid="cloud-type-filter-surface"
-          className="p-6 sm:p-8 dark:bg-[#050b16]/88 dark:border-cyan-400/12 dark:ring-[rgba(165,243,252,0.05)] dark:shadow-[0_30px_72px_rgba(2,6,23,0.58),inset_0_1px_0_rgba(148,163,184,0.14),inset_0_-24px_46px_rgba(8,47,73,0.18)]"
+          className="p-6 sm:p-8 dark:bg-[#050b16]/88 dark:border-slate-800/80 dark:ring-transparent dark:shadow-[0_30px_72px_rgba(2,6,23,0.58),inset_0_1px_0_rgba(148,163,184,0.08),inset_0_-24px_46px_rgba(8,47,73,0.18)]"
           frostOverlayClassName="dark:from-[#0d1728]/88 dark:via-[#08111f]/72 dark:to-cyan-950/18"
         >
 
