@@ -25,8 +25,9 @@ const PublicPageShell: React.FC<PublicPageShellProps> = ({
           numSquares={30}
           maxOpacity={0.07}
           duration={3}
-          className="text-blue-600 dark:text-cyan-400 stroke-blue-300/30 dark:stroke-cyan-700/20 fill-blue-500/[0.04] dark:fill-cyan-400/[0.03]"
+          className="text-blue-600 dark:text-cyan-400 stroke-blue-300/30 dark:stroke-cyan-800/25 fill-blue-500/[0.04] dark:fill-cyan-400/[0.03]"
         />
+        
         <div
           data-testid="public-page-glow"
           className="absolute inset-x-0 top-0 h-[60vh] bg-gradient-radial from-blue-200/25 via-cyan-100/10 to-transparent dark:from-blue-950/25 dark:via-cyan-950/10 dark:to-transparent"

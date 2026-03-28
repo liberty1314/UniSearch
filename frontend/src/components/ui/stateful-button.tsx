@@ -121,7 +121,7 @@ export const Button = React.forwardRef<StatefulButtonHandle, ButtonProps>(({ cla
       layoutId="button"
       ref={scope}
       className={cn(
-        "flex min-w-[120px] cursor-pointer items-center justify-center gap-2 rounded-full bg-apple-blue px-4 py-2 font-medium text-white ring-offset-2 transition duration-200 hover:bg-apple-blue/90 hover:ring-2 hover:ring-apple-blue dark:ring-offset-black",
+        "flex min-w-[120px] cursor-pointer items-center justify-center gap-2 rounded-full bg-apple-blue px-4 py-2 font-medium text-white transition duration-200 hover:bg-apple-blue/90",
         className,
       )}
       {...buttonProps}

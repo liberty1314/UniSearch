@@ -84,10 +84,10 @@ interface ApiKeySettingsSkeletonProps {
     onRetry: () => void;
 }
 
-const apiKeyHeroCardClass = 'overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-[0_18px_38px_rgba(15,23,42,0.05)] dark:border-white/8 dark:bg-slate-900 dark:shadow-[0_22px_44px_rgba(2,6,23,0.38)]';
-const apiKeyStatCardClass = 'rounded-[22px] border border-slate-200/80 bg-white shadow-[0_14px_30px_rgba(15,23,42,0.045)] dark:border-white/8 dark:bg-slate-900 dark:shadow-[0_18px_34px_rgba(2,6,23,0.34)]';
-const apiKeyDangerPanelClass = 'rounded-[20px] border border-red-200/80 bg-white shadow-[0_14px_28px_rgba(239,68,68,0.06)] dark:border-red-500/20 dark:bg-slate-900';
-const apiKeyNotePanelClass = 'rounded-[18px] border border-slate-200/80 bg-white px-5 py-4 shadow-[0_12px_24px_rgba(15,23,42,0.04)] dark:border-white/8 dark:bg-slate-900';
+const apiKeyHeroCardClass = 'overflow-hidden rounded-[24px] border border-slate-200/70 bg-white/70 backdrop-blur-xl shadow-[0_18px_38px_rgba(15,23,42,0.04)] dark:border-white/[0.04] dark:bg-slate-950/40 dark:shadow-[0_22px_44px_rgba(0,0,0,0.4)] transition-all duration-300';
+const apiKeyStatCardClass = 'rounded-[22px] border border-slate-200/70 bg-white/60 backdrop-blur-lg shadow-[0_14px_30px_rgba(15,23,42,0.03)] dark:border-white/[0.04] dark:bg-slate-950/30 dark:hover:bg-slate-950/50 dark:shadow-[0_18px_34px_rgba(0,0,0,0.4)] transition-all duration-300';
+const apiKeyDangerPanelClass = 'rounded-[20px] border border-red-200/80 bg-white/60 backdrop-blur-lg shadow-[0_14px_28px_rgba(239,68,68,0.06)] dark:border-red-500/10 dark:bg-red-950/10 transition-all duration-300';
+const apiKeyNotePanelClass = 'rounded-[18px] border border-slate-200/70 bg-white/60 backdrop-blur-lg px-5 py-4 shadow-[0_12px_24px_rgba(15,23,42,0.03)] dark:border-white/[0.04] dark:bg-slate-950/30 transition-all duration-300';
 
 const ApiKeySettingsSkeleton: React.FC<ApiKeySettingsSkeletonProps> = ({ holdOnError, isRetrying, onRetry }) => {
     return (
@@ -341,7 +341,7 @@ const UserApiKeySettings: React.FC = () => {
             sub: '有效期至',
             highlight: false,
             Icon: CalendarDays,
-            iconClassName: 'bg-blue-50 text-blue-600 dark:bg-blue-500/12 dark:text-blue-300',
+            iconClassName: 'bg-gradient-to-br from-blue-50 to-blue-100/50 text-blue-600 border border-blue-200/50 dark:from-blue-500/20 dark:to-blue-500/5 dark:text-blue-400 dark:border-blue-500/20 shadow-inner',
         },
         {
             label: '每日限额',
@@ -349,7 +349,7 @@ const UserApiKeySettings: React.FC = () => {
             sub: '次/天',
             highlight: false,
             Icon: Gauge,
-            iconClassName: 'bg-violet-50 text-violet-600 dark:bg-violet-500/12 dark:text-violet-300',
+            iconClassName: 'bg-gradient-to-br from-violet-50 to-violet-100/50 text-violet-600 border border-violet-200/50 dark:from-violet-500/20 dark:to-violet-500/5 dark:text-violet-400 dark:border-violet-500/20 shadow-inner',
         },
         {
             label: '今日已用',
@@ -357,7 +357,7 @@ const UserApiKeySettings: React.FC = () => {
             sub: '次调用',
             highlight: true,
             Icon: Activity,
-            iconClassName: 'bg-amber-50 text-amber-600 dark:bg-amber-500/12 dark:text-amber-300',
+            iconClassName: 'bg-gradient-to-br from-amber-50 to-amber-100/50 text-amber-600 border border-amber-200/50 dark:from-amber-500/20 dark:to-amber-500/5 dark:text-amber-400 dark:border-amber-500/20 shadow-inner',
         },
         {
             label: '今日剩余',
@@ -365,7 +365,7 @@ const UserApiKeySettings: React.FC = () => {
             sub: '次可用',
             highlight: true,
             Icon: ShieldCheck,
-            iconClassName: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/12 dark:text-emerald-300',
+            iconClassName: 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 text-emerald-600 border border-emerald-200/50 dark:from-emerald-500/20 dark:to-emerald-500/5 dark:text-emerald-400 dark:border-emerald-500/20 shadow-inner',
         },
     ] : [];
 
@@ -404,15 +404,15 @@ const UserApiKeySettings: React.FC = () => {
                             data-testid="apikey-page-summary"
                             className="mt-5 flex flex-wrap gap-3"
                         >
-                            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/85 px-3 py-1.5 text-[13px] font-medium text-slate-600 shadow-[0_8px_18px_rgba(15,23,42,0.04)] dark:border-white/8 dark:bg-white/[0.04] dark:text-slate-300">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/60 backdrop-blur-md px-3 py-1.5 text-[13px] font-medium text-slate-600 shadow-sm dark:border-white/[0.06] dark:bg-white/[0.02] dark:text-slate-300 transition-all hover:bg-white/80 dark:hover:bg-white/[0.04]">
                                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                                 {apiKeyInfo?.is_valid ? '已开通搜索权限' : '状态待确认'}
                             </span>
-                            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/85 px-3 py-1.5 text-[13px] font-medium text-slate-600 shadow-[0_8px_18px_rgba(15,23,42,0.04)] dark:border-white/8 dark:bg-white/[0.04] dark:text-slate-300">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/60 backdrop-blur-md px-3 py-1.5 text-[13px] font-medium text-slate-600 shadow-sm dark:border-white/[0.06] dark:bg-white/[0.02] dark:text-slate-300 transition-all hover:bg-white/80 dark:hover:bg-white/[0.04]">
                                 <Gauge className="h-3.5 w-3.5 text-blue-500" />
                                 每日额度 {summaryDailyLimit}
                             </span>
-                            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/85 px-3 py-1.5 text-[13px] font-medium text-slate-600 shadow-[0_8px_18px_rgba(15,23,42,0.04)] dark:border-white/8 dark:bg-white/[0.04] dark:text-slate-300">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/60 backdrop-blur-md px-3 py-1.5 text-[13px] font-medium text-slate-600 shadow-sm dark:border-white/[0.06] dark:bg-white/[0.02] dark:text-slate-300 transition-all hover:bg-white/80 dark:hover:bg-white/[0.04]">
                                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
                                 今日剩余 {summaryRemaining}
                             </span>
@@ -449,7 +449,7 @@ const UserApiKeySettings: React.FC = () => {
                     >
                         {/* 状态概览卡片 */}
                         <div data-testid="apikey-hero-card" className={apiKeyHeroCardClass}>
-                            <div className="px-5 py-4 border-b border-slate-200/70 dark:border-white/10 flex items-center justify-between bg-white/35 dark:bg-white/[0.02]">
+                            <div className="px-5 py-4 border-b border-slate-200/70 dark:border-white/[0.06] flex items-center justify-between bg-white/35 dark:bg-white/[0.01]">
                                 <span className="text-[17px] font-semibold text-black dark:text-white">
                                     当前密钥状态
                                 </span>
@@ -478,7 +478,7 @@ const UserApiKeySettings: React.FC = () => {
                                         type={showKey ? 'text' : 'password'}
                                         value={apiKeyInfo.api_key}
                                         readOnly
-                                        className="w-full pl-12 pr-24 py-3 bg-white/80 dark:bg-[#0f172a]/70 rounded-xl text-[15px] font-mono text-gray-900 dark:text-gray-100 border border-slate-200/70 dark:border-white/5 focus:ring-0 cursor-default shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]"
+                                        className="w-full pl-12 pr-24 py-3 bg-white/40 dark:bg-slate-900/50 rounded-xl text-[15px] font-mono text-gray-900 dark:text-gray-100 border border-slate-200/70 dark:border-white/[0.06] focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 dark:focus:border-blue-400/50 dark:focus:ring-blue-400/20 cursor-default shadow-inner transition-colors"
                                     />
                                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                                         <button
@@ -537,17 +537,27 @@ const UserApiKeySettings: React.FC = () => {
                             })}
                         </div>
 
-                        {/* 操作区 */}
+                        {/* 操作区 (Danger Zone) */}
                         {apiKeyInfo.api_key !== apiKey && (
-                            <div className={`${apiKeyDangerPanelClass} p-3`}>
-                                <motion.button
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => setShowUnbindDialog(true)}
-                                    disabled={isSubmitting}
-                                    className="w-full py-3.5 rounded-[14px] border border-red-200/80 bg-white/85 text-red-500 text-[17px] font-medium shadow-[0_10px_24px_rgba(239,68,68,0.08)] hover:bg-red-50 transition-colors dark:border-red-500/10 dark:bg-slate-950/35 dark:hover:bg-red-950/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    解除绑定
-                                </motion.button>
+                            <div className="overflow-hidden rounded-[24px] border border-red-200/50 bg-white/50 backdrop-blur-xl dark:border-red-500/10 dark:bg-red-950/10 transition-all duration-300">
+                                <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div>
+                                        <h3 className="text-[17px] font-semibold text-red-600 dark:text-red-400">
+                                            危险操作
+                                        </h3>
+                                        <p className="mt-1 text-[13px] text-red-500/80 dark:text-red-400/80">
+                                            解除绑定后，当前设备的搜索权限将被立即停用。
+                                        </p>
+                                    </div>
+                                    <motion.button
+                                        whileTap={{ scale: 0.96 }}
+                                        onClick={() => setShowUnbindDialog(true)}
+                                        disabled={isSubmitting}
+                                        className="shrink-0 rounded-[12px] bg-red-50 hover:bg-red-100 border border-red-200/60 px-6 py-2.5 text-[15px] font-semibold text-red-600 shadow-sm transition-all dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400 dark:hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        解除绑定
+                                    </motion.button>
+                                </div>
                             </div>
                         )}
                     </motion.div>
@@ -559,8 +569,8 @@ const UserApiKeySettings: React.FC = () => {
                             animate={{ opacity: 1, y: 0 }}
                             className="relative z-10 space-y-4"
                         >
-                            <div className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-[0_18px_38px_rgba(15,23,42,0.05)] dark:border-white/8 dark:bg-slate-900">
-                            <div className="border-b border-slate-200/80 px-6 py-5 dark:border-white/5">
+                            <div className="overflow-hidden rounded-[24px] border border-slate-200/70 bg-white/70 backdrop-blur-xl shadow-[0_18px_38px_rgba(15,23,42,0.04)] dark:border-white/[0.04] dark:bg-slate-950/40">
+                            <div className="border-b border-slate-200/70 px-6 py-5 dark:border-white/[0.06] bg-white/35 dark:bg-white/[0.01]">
                                 <h2 className="text-[22px] font-semibold text-black dark:text-white">绑定后即可使用搜索</h2>
                                 <p className="mt-2 text-[14px] leading-6 text-gray-500 dark:text-slate-400">
                                     当前账号已经登录，但搜索资格尚未开通。完成绑定后，首页和搜索入口会立即恢复可用。
@@ -575,7 +585,7 @@ const UserApiKeySettings: React.FC = () => {
                                         placeholder="sk-..."
                                         value={newApiKey}
                                         onChange={(e) => setNewApiKey(e.target.value)}
-                                        className="w-full rounded-xl border-none bg-gray-100 px-4 py-3 text-[17px] font-mono text-black placeholder-gray-400 transition-all focus:ring-2 focus:ring-blue-500/50 dark:bg-[#2C2C2E] dark:text-white"
+                                        className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3 text-[17px] font-mono text-black placeholder-gray-400 transition-all focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 dark:border-white/10 dark:bg-slate-900/50 dark:text-white dark:focus:border-blue-400/50 dark:focus:ring-blue-400/20 shadow-inner"
                                         autoFocus
                                     />
                                     <p className="mt-3 ml-1 text-[13px] text-gray-400">

@@ -91,21 +91,21 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          {/* 背景遮罩 - Apple Style: 更加柔和的深色模糊背景 */}
+          {/* 背景遮罩 - Apple Style: 深度透明与较强模糊 */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-900/20 dark:bg-[#020617]/50 backdrop-blur-md"
             onClick={handleBackdropClick}
           />
 
-          {/* 公告卡片 - Nebula Premium Style */}
+          {/* 公告卡片 - Minimalist Glassmorphism */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{
               type: "spring",
               damping: 25,
@@ -114,21 +114,18 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
             }}
             className="relative w-full max-w-md group"
           >
-            {/* 动态光晕背景 */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600 rounded-3xl opacity-25 blur-xl group-hover:opacity-40 transition-opacity duration-1000 animate-gradient" />
+            {/* 极简底部光晕 */}
+            <div className="absolute -inset-1 bg-gradient-to-b from-blue-500/10 to-transparent rounded-[26px] opacity-0 dark:opacity-100 blur-xl pointer-events-none" />
 
             <div className={cn(
               "relative overflow-hidden",
-              "rounded-3xl",
-              "glass-card-3d", // 使用项目定义的 3D 玻璃效果
-              "p-1" // 给内部内容留一点边距，显示边框效果
+              "rounded-[24px]",
+              "border border-white/60 dark:border-white/[0.08]",
+              "bg-white/70 dark:bg-slate-950/40 backdrop-blur-2xl",
+              "shadow-[0_24px_48px_rgba(15,23,42,0.06)] dark:shadow-[0_24px_48px_rgba(0,0,0,0.5)]",
+              "p-1 transition-all duration-300"
             )}>
-
-              {/* 装饰性背景光斑 */}
-              <div className="absolute top-0 right-0 -mt-16 -mr-16 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute bottom-0 left-0 -mb-16 -ml-16 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
-
-              <div className="relative bg-white/40 dark:bg-[#121214]/60 backdrop-blur-xl rounded-[22px] p-6 pt-8 flex flex-col items-center">
+              <div className="relative rounded-[22px] px-6 pb-6 pt-8 flex flex-col items-center bg-white/40 dark:bg-white/[0.01]">
 
                 {/* 关闭按钮 */}
                 <button
@@ -137,34 +134,32 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
                     'absolute top-4 right-4 z-10',
                     'w-8 h-8 rounded-full',
                     'flex items-center justify-center',
-                    'bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10',
+                    'bg-slate-100/50 dark:bg-white/[0.04] hover:bg-slate-200/50 dark:hover:bg-white/[0.08]',
+                    'border border-transparent dark:border-white/[0.05]',
                     'transition-all duration-200',
-                    'backdrop-blur-sm'
+                    'backdrop-blur-md'
                   )}
                 >
-                  <X className="w-4 h-4 text-gray-500 dark:text-slate-400" />
+                  <X className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                 </button>
 
-                {/* 图标 - Nebula Style */}
+                {/* 图标 - High-end Tech Style */}
                 <motion.div
                   initial={{ scale: 0.8, opacity: 0, y: 10 }}
                   animate={{ scale: 1, opacity: 1, y: 0 }}
                   transition={{ delay: 0.1, duration: 0.4 }}
-                  className="mb-6 relative"
+                  className="mb-5 relative"
                 >
                   <div className={cn(
-                    'w-16 h-16 rounded-2xl',
-                    'bg-gradient-to-br from-white/80 to-white/20 dark:from-white/10 dark:to-transparent', // 玻璃质感
-                    'border border-white/50 dark:border-white/10',
+                    'w-16 h-16 rounded-[20px]',
+                    'bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-white/[0.08] dark:to-white/[0.02]',
+                    'border border-blue-200/50 dark:border-white/[0.08]',
                     'flex items-center justify-center',
-                    'shadow-lg shadow-purple-500/10',
+                    'shadow-inner',
                     'relative z-10'
                   )}>
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 opacity-50" />
-                    <Bell className="w-8 h-8 text-purple-600 dark:text-blue-400 drop-shadow-sm" strokeWidth={2} />
+                    <Bell className="w-8 h-8 text-blue-500 dark:text-slate-200 drop-shadow-sm" strokeWidth={2} />
                   </div>
-                  {/* 图标背后的发光 */}
-                  <div className="absolute inset-0 bg-blue-500/30 blur-xl rounded-full transform scale-150 z-0" />
                 </motion.div>
 
                 {/* 标题 */}
@@ -172,7 +167,7 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15, duration: 0.4 }}
-                  className="text-2xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-purple-800 to-gray-900 dark:from-white dark:via-blue-200 dark:to-white mb-3 tracking-tight"
+                  className="text-[22px] leading-snug font-bold text-slate-800 dark:text-slate-100 mb-3 tracking-tight text-center"
                 >
                   {announcement.title}
                 </motion.h2>
@@ -184,37 +179,35 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
                   transition={{ delay: 0.2, duration: 0.5 }}
                   className="w-full mb-8 relative"
                 >
-                  <div className="max-h-[60vh] overflow-y-auto px-2 custom-scrollbar">
+                  <div className="max-h-[50vh] overflow-y-auto px-2 custom-scrollbar">
                     <div
                       className={cn(
                         'prose prose-sm dark:prose-invert max-w-none text-center',
-                        'text-gray-600 dark:text-slate-300',
-                        'leading-relaxed'
+                        'text-slate-600 dark:text-slate-300/90',
+                        'leading-relaxed prose-p:my-2'
                       )}
                       dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                     />
                   </div>
                 </motion.div>
 
-                {/* 底部操作区 - Premium Style 按钮 */}
+                {/* 底部操作区 - Minimalist Button */}
                 <motion.button
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
+                  whileTap={{ scale: 0.98 }}
                   transition={{ delay: 0.25, duration: 0.4 }}
                   onClick={handleClose}
                   className={cn(
                     'w-full py-3.5 px-6',
-                    'rounded-xl',
-                    'btn-primary', // 使用项目定义的渐变按钮
-                    'text-white font-semibold text-[16px]',
-                    'hover-lift', // 悬停上浮效果
-                    'shadow-nebula group-hover:shadow-nebula-hover',
-                    'relative overflow-hidden'
+                    'rounded-[14px]',
+                    'bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100',
+                    'text-white dark:text-slate-900 font-semibold text-[15px]',
+                    'shadow-[0_8px_16px_rgba(15,23,42,0.15)] dark:shadow-[0_8px_20px_rgba(255,255,255,0.15)]',
+                    'transition-all duration-300'
                   )}
                 >
-                  <span className="relative z-10">我知道了</span>
-                  {/* 按钮内部的光泽扫过效果 */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+                  我知道了
                 </motion.button>
               </div>
             </div>

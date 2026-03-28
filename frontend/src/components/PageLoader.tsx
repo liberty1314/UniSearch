@@ -82,7 +82,7 @@ const PageLoader: React.FC<PageLoaderProps> = ({ isLoading, onComplete }) => {
     return (
         <div
             className={cn(
-                'fixed inset-0 z-[9999] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(148,214,255,0.26),transparent_20%),radial-gradient(circle_at_50%_100%,rgba(191,229,255,0.24),transparent_32%),linear-gradient(180deg,#fbfdff_0%,#f3f8ff_46%,#eef6ff_100%)] dark:bg-[radial-gradient(circle_at_top,rgba(103,232,249,0.08),transparent_18%),linear-gradient(180deg,#020617_0%,#081323_46%,#082235_100%)] transition-opacity duration-500 ease-out',
+                'fixed inset-0 z-[9999] overflow-hidden bg-white dark:bg-[#020617] bg-[radial-gradient(circle_at_top,rgba(148,214,255,0.26),transparent_20%),radial-gradient(circle_at_50%_100%,rgba(191,229,255,0.24),transparent_32%),linear-gradient(180deg,#fbfdff_0%,#f3f8ff_46%,#eef6ff_100%)] dark:bg-[radial-gradient(circle_at_top,rgba(103,232,249,0.08),transparent_18%),linear-gradient(180deg,#020617_0%,#081323_46%,#082235_100%)] transition-opacity duration-500 ease-out',
                 visible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
             )}
             onTransitionEnd={handleTransitionEnd}
@@ -92,30 +92,30 @@ const PageLoader: React.FC<PageLoaderProps> = ({ isLoading, onComplete }) => {
                 <div className="absolute inset-x-[24%] bottom-[-7rem] h-64 bg-[radial-gradient(circle,rgba(191,229,255,0.45)_0%,rgba(191,229,255,0)_72%)] opacity-70 blur-3xl dark:bg-[radial-gradient(circle,rgba(8,145,178,0.14)_0%,rgba(8,145,178,0)_72%)]" />
             </div>
 
-            <div className="page-loader-grid absolute inset-0 opacity-70 dark:opacity-40" />
+            <div className="page-loader-grid absolute inset-0 opacity-70 dark:opacity-15" />
 
             <div className="relative z-10 flex min-h-screen items-center justify-center px-6 pb-28 pt-10 sm:px-10 sm:pb-32">
                 <div
                     data-testid="page-loader-stage"
                     className="relative flex w-full max-w-[30rem] flex-col items-center"
                 >
-                    <div className="pointer-events-none absolute inset-x-8 top-[18%] h-px bg-gradient-to-r from-transparent via-sky-300/70 to-transparent dark:via-cyan-400/28" />
+                    <div className="pointer-events-none absolute inset-x-8 top-[18%] h-px bg-gradient-to-r from-transparent via-sky-300/70 to-transparent dark:via-cyan-400/10" />
 
                     <div className="relative flex h-[18rem] w-full items-center justify-center sm:h-[20rem]">
-                        <div className="absolute h-[13rem] w-[13rem] rounded-full bg-sky-200/30 blur-3xl dark:bg-cyan-400/8" />
+                        <div className="absolute h-[13rem] w-[13rem] rounded-full bg-sky-200/30 blur-3xl dark:bg-cyan-400/5" />
                         <div
                             data-testid="page-loader-orbit"
-                            className="page-loader-orbit absolute h-[12.5rem] w-[12.5rem] rounded-full border border-sky-200/80 motion-reduce:animate-none dark:border-cyan-400/18"
+                            className="page-loader-orbit absolute h-[12.5rem] w-[12.5rem] rounded-full border border-sky-200/80 motion-reduce:animate-none dark:border-cyan-400/10"
                         />
-                        <div className="absolute h-[10.4rem] w-[10.4rem] rounded-full border border-sky-100/90 bg-white/60 shadow-[0_16px_40px_rgba(120,169,214,0.08)] backdrop-blur-2xl dark:border-white/8 dark:bg-slate-950/40" />
+                        <div className="absolute h-[10.4rem] w-[10.4rem] rounded-full border border-sky-100/90 bg-white/60 shadow-[0_16px_40px_rgba(120,169,214,0.08)] backdrop-blur-2xl dark:border-white/[0.04] dark:bg-slate-950/40" />
                         <div className="page-loader-scan-ring absolute h-[11.25rem] w-[11.25rem] rounded-full motion-reduce:animate-none" />
-                        <div className="absolute h-[8.9rem] w-[8.9rem] rounded-full border border-sky-100/70 bg-[radial-gradient(circle,rgba(255,255,255,0.95)_0%,rgba(255,255,255,0.78)_56%,rgba(255,255,255,0.4)_100%)] dark:border-white/10 dark:bg-[radial-gradient(circle,rgba(255,255,255,0.04)_0%,rgba(15,23,42,0.68)_68%,rgba(2,6,23,0.82)_100%)]" />
+                        <div className="absolute h-[8.9rem] w-[8.9rem] rounded-full border border-sky-100/70 bg-[radial-gradient(circle,rgba(255,255,255,0.95)_0%,rgba(255,255,255,0.78)_56%,rgba(255,255,255,0.4)_100%)] dark:border-white/[0.03] dark:bg-[radial-gradient(circle,rgba(255,255,255,0.02)_0%,rgba(15,23,42,0.4)_68%,rgba(2,6,23,0.82)_100%)]" />
 
                         <div
                             data-testid="page-loader-core-shell"
-                            className="page-loader-core-shell relative flex h-[7.5rem] w-[7.5rem] items-center justify-center rounded-full border border-sky-100/95 bg-white/88 shadow-[0_18px_40px_rgba(148,195,237,0.18)] backdrop-blur-xl dark:border-cyan-300/12 dark:bg-slate-950/76 dark:shadow-[0_18px_40px_rgba(8,145,178,0.16)]"
+                            className="page-loader-core-shell relative flex h-[7.5rem] w-[7.5rem] items-center justify-center rounded-full border border-sky-100/95 bg-white/88 shadow-[0_18px_40px_rgba(148,195,237,0.18)] backdrop-blur-xl dark:border-cyan-300/[0.08] dark:bg-[linear-gradient(180deg,#0a1324_0%,#020617_100%)] dark:shadow-[0_18px_40px_rgba(0,0,0,0.4)]"
                         >
-                            <div className="absolute inset-[0.55rem] rounded-full border border-sky-100/85 dark:border-cyan-300/10" />
+                            <div className="absolute inset-[0.55rem] rounded-full border border-sky-100/85 dark:border-cyan-300/[0.04]" />
                             <img
                                 src="/Uni.png"
                                 alt="UniSearch Logo"
@@ -125,24 +125,24 @@ const PageLoader: React.FC<PageLoaderProps> = ({ isLoading, onComplete }) => {
                     </div>
 
                     <div className="mt-2 flex flex-col items-center text-center">
-                        <p className="mb-3 text-[0.68rem] font-medium uppercase tracking-[0.46em] text-slate-400 dark:text-slate-500">
+                        <p className="mb-3 text-[0.68rem] font-medium uppercase tracking-[0.46em] text-slate-400 dark:text-slate-500/80">
                             启动序列
                         </p>
                         <div
                             aria-live="polite"
                             className="mt-2 flex w-full max-w-[22rem] flex-col items-center gap-3"
                         >
-                            <p className="text-[1.05rem] font-medium tracking-[0.12em] text-slate-700 dark:text-slate-100">
+                            <p className="text-[1.05rem] font-medium tracking-[0.12em] text-slate-700 dark:text-slate-200">
                                 {progress >= 100 ? '启动完成' : '正在唤醒搜索引擎'}
                             </p>
-                            <p className="text-[0.82rem] tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                            <p className="text-[0.82rem] tracking-[0.18em] text-slate-500 dark:text-slate-500">
                                 {progress >= 100 ? '即将进入 UniSearch 工作区' : '同步导航、主题与搜索能力'}
                             </p>
                         </div>
 
                         <div
                             data-testid="page-loader-status-row"
-                            className="page-loader-status-row mt-6 flex items-center justify-center gap-4 rounded-full border border-white/75 bg-white/62 px-4 py-2 shadow-[0_12px_30px_rgba(148,195,237,0.1)] backdrop-blur-xl dark:border-white/8 dark:bg-slate-950/34 sm:gap-5"
+                            className="page-loader-status-row mt-6 flex items-center justify-center gap-4 rounded-full border border-white/75 bg-white/62 px-4 py-2 shadow-[0_12px_30px_rgba(148,195,237,0.1)] backdrop-blur-xl dark:border-white/[0.04] dark:bg-[#020617]/50 dark:shadow-[0_8px_20px_rgba(0,0,0,0.5)] sm:gap-5"
                         >
                             {STATUS_ITEMS.map((item, index) => {
                                 const isComplete = progress >= item.threshold;
@@ -178,7 +178,7 @@ const PageLoader: React.FC<PageLoaderProps> = ({ isLoading, onComplete }) => {
                     className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-4xl px-6 sm:px-10"
                     style={{ paddingBottom: 'calc(1.25rem + var(--safe-area-inset-bottom))' }}
                 >
-                    <div className="page-loader-progress-shell rounded-[1.4rem] border border-white/80 bg-white/72 px-4 py-3 shadow-[0_18px_40px_rgba(148,195,237,0.1)] backdrop-blur-2xl dark:border-white/8 dark:bg-slate-950/42 dark:shadow-[0_18px_40px_rgba(8,145,178,0.14)] sm:px-5">
+                    <div className="page-loader-progress-shell rounded-[1.4rem] border border-white/80 bg-white/72 px-4 py-3 shadow-[0_18px_40px_rgba(148,195,237,0.1)] backdrop-blur-2xl dark:border-white/[0.04] dark:bg-[#020617]/50 dark:shadow-[0_18px_40px_rgba(0,0,0,0.5)] sm:px-5">
                         <div className="flex items-center gap-3 sm:gap-4">
                             <div className="min-w-0 shrink-0">
                                 <p className="text-[0.56rem] uppercase tracking-[0.36em] text-slate-400 dark:text-slate-500">

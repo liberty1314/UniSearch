@@ -29,10 +29,10 @@ const CloudTypeTag = memo(({ config, isSelected, onToggle }: CloudTypeTagProps) 
         whileHover={{ scale: 1.05, y: -2 }}
         whileTap={{ scale: 0.95 }}
         className={cn(
-          "relative flex items-center px-4 py-2.5 rounded-xl text-sm font-bold transition-colors duration-300 border box-border",
+          "relative flex items-center px-4 py-2.5 rounded-xl text-[13.5px] font-bold transition-all duration-300 border box-border",
           isSelected
-            ? `bg-gradient-to-r ${config.color} text-white border-transparent ${config.shadow} shadow-lg ring-2 ring-white/20 dark:ring-cyan-200/10 dark:shadow-[0_16px_28px_rgba(8,145,178,0.16)]`
-            : "bg-white dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.78),rgba(15,23,42,0.64))] text-gray-600 dark:text-slate-300 border-gray-100 dark:border-cyan-300/10 hover:bg-gray-50 dark:hover:border-cyan-300/20 dark:hover:bg-cyan-400/[0.06] shadow-sm dark:shadow-[0_14px_28px_rgba(2,6,23,0.28),inset_0_1px_0_rgba(148,163,184,0.08)]"
+            ? `bg-gradient-to-r ${config.color} text-white border-transparent ${config.shadow} shadow-lg ring-2 ring-white/30 dark:ring-white/10 dark:border-white/10 dark:shadow-none`
+            : "bg-white/50 dark:bg-white/[0.03] text-slate-600 dark:text-slate-300 border-slate-200/60 dark:border-white/[0.06] hover:bg-white/80 dark:hover:bg-white/[0.08] shadow-sm hover:shadow-md dark:shadow-none hover:-translate-y-0.5"
         )}
       >
 
@@ -119,42 +119,40 @@ const CloudTypeFilter: React.FC = () => {
     >
       <div className="relative">
         {/* 内容容器 */}
-        <GlassSurface
-          variant="panel"
+        <div
           data-testid="cloud-type-filter-surface"
-          className="p-6 sm:p-8 dark:bg-[#050b16]/88 dark:border-slate-800/80 dark:ring-transparent dark:shadow-[0_30px_72px_rgba(2,6,23,0.58),inset_0_1px_0_rgba(148,163,184,0.08),inset_0_-24px_46px_rgba(8,47,73,0.18)]"
-          frostOverlayClassName="dark:from-[#0d1728]/88 dark:via-[#08111f]/72 dark:to-cyan-950/18"
+          className="p-6 sm:p-8 rounded-[2rem] bg-white/60 dark:bg-slate-950/40 backdrop-blur-3xl border border-white/60 dark:border-white/[0.06] shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] transition-all duration-300"
         >
 
           {/* 顶部栏：标题与全选 */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="p-2 bg-blue-50 dark:border dark:border-cyan-300/12 dark:bg-cyan-400/[0.08] rounded-xl text-blue-500 dark:text-cyan-100 flex-shrink-0">
+              <div className="p-2.5 bg-blue-50/80 dark:border dark:border-white/[0.08] dark:bg-white/[0.04] rounded-[14px] text-blue-600 dark:text-slate-200 flex-shrink-0 shadow-sm shadow-blue-500/10 dark:shadow-none">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                 </svg>
               </div>
               <div className="min-w-[150px]">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">来源筛选</h3>
-                <p className="text-sm text-gray-500 dark:text-slate-400 truncate">
-                  {isAllSelected ? '已展示全网资源' : `已选中 ${selectedTypes.length} 个来源`}
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">来源筛选</h3>
+                <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5 truncate font-medium">
+                  {isAllSelected ? '已展示全网资源平台' : `已精准定位 ${selectedTypes.length} 个来源`}
                 </p>
               </div>
             </div>
 
             <motion.button
               whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileTap={{ scale: 0.96 }}
               onClick={handleSelectAll}
               className={cn(
-                "px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center gap-2 shadow-sm flex-shrink-0",
+                "px-5 py-2.5 rounded-[14px] font-bold text-[13.5px] transition-all duration-300 flex items-center gap-2 shadow-sm flex-shrink-0 active:scale-95",
                 isAllSelected
-                  ? "bg-gray-900 dark:border dark:border-cyan-200/12 dark:bg-[linear-gradient(135deg,rgba(34,211,238,0.16),rgba(14,165,233,0.3))] text-white dark:text-cyan-50 hover:bg-gray-800 dark:hover:bg-[linear-gradient(135deg,rgba(34,211,238,0.2),rgba(14,165,233,0.34))] shadow-lg dark:shadow-[0_18px_32px_rgba(8,145,178,0.18)]"
-                  : "bg-white dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.82),rgba(15,23,42,0.7))] text-gray-600 dark:text-slate-300 border border-gray-200 dark:border-cyan-300/10 hover:bg-gray-50 dark:hover:border-cyan-300/18 dark:hover:bg-cyan-400/[0.06]"
+                  ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md hover:bg-slate-800 dark:hover:bg-slate-100 hover:shadow-lg dark:shadow-none"
+                  : "bg-white/60 dark:bg-white/[0.04] text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.06] hover:bg-white/90 dark:hover:bg-white/[0.08] hover:text-slate-900 dark:hover:text-white"
               )}
             >
-              <div className="w-5 h-5 flex items-center justify-center">
-                {isAllSelected ? <IoCheckmarkCircle className="w-5 h-5" /> : <IoEllipseOutline className="w-5 h-5" />}
+              <div className="w-[18px] h-[18px] flex items-center justify-center">
+                {isAllSelected ? <IoCheckmarkCircle className="w-[18px] h-[18px]" /> : <IoEllipseOutline className="w-[18px] h-[18px]" />}
               </div>
               <span className="min-w-[4em] text-center">{isAllSelected ? '全选状态' : '选择全部'}</span>
             </motion.button>
@@ -173,7 +171,7 @@ const CloudTypeFilter: React.FC = () => {
               ))}
             </motion.div>
           </LayoutGroup>
-        </GlassSurface>
+        </div>
       </div>
     </motion.div>
   );

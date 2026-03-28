@@ -189,15 +189,13 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           isFocused && 'dark:opacity-100'
         )}
       />
-      <GlassSurface
-        variant="search"
-        interactive
+      <div
         data-testid="search-box-surface"
         className={cn(
-          'group-focus-within:-translate-y-0.5 group-focus-within:border-sky-200/95 group-focus-within:ring-white/85 group-focus-within:shadow-[0_28px_66px_rgba(14,165,233,0.14)] dark:before:absolute dark:before:inset-[1px] dark:before:rounded-[1.6rem] dark:before:bg-[linear-gradient(180deg,rgba(8,15,28,0.62),rgba(8,15,28,0.18)_38%,transparent)] dark:before:opacity-100 dark:before:content-[""] dark:group-focus-within:border-cyan-300/32 dark:group-focus-within:ring-cyan-200/[0.14] dark:group-focus-within:shadow-[0_36px_72px_rgba(8,145,178,0.28)]'
+          'relative z-10 overflow-hidden rounded-[2rem] bg-white/60 dark:bg-slate-950/40 backdrop-blur-3xl border border-white/60 dark:border-white/[0.08] shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] transition-all duration-500 group-focus-within:-translate-y-1 group-focus-within:border-blue-300/60 dark:group-focus-within:border-white/[0.15] group-focus-within:shadow-[0_32px_80px_rgba(37,99,235,0.12)] dark:group-focus-within:shadow-[0_32px_80px_rgba(0,0,0,0.6)]'
         )}
       >
-        <svg className="absolute left-5 top-1/2 z-20 h-6 w-6 -translate-y-1/2 text-slate-400 transition-colors duration-300 group-focus-within:text-cyan-600 dark:text-slate-400 dark:group-focus-within:text-cyan-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="absolute left-6 top-1/2 z-20 h-6 w-6 -translate-y-1/2 text-slate-400 transition-colors duration-300 group-focus-within:text-blue-500 dark:text-slate-500 dark:group-focus-within:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
         <input
@@ -209,14 +207,14 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholder={placeholder}
-          className="relative z-10 w-full bg-transparent py-4 pl-14 pr-28 text-base text-gray-900 placeholder-gray-500 focus:outline-none sm:py-5 sm:pr-32 sm:text-lg dark:text-slate-100 dark:placeholder:text-slate-500"
+          className="relative z-10 w-full bg-transparent py-4 pl-14 pr-28 text-base text-gray-900 placeholder-slate-400 focus:outline-none sm:py-5 sm:pr-32 sm:text-lg dark:text-slate-100 dark:placeholder:text-slate-500/80"
         />
 
         {/* 清空按钮 */}
         {inputValue && (
           <button
             onClick={handleClear}
-            className="absolute right-[100px] top-1/2 z-20 -translate-y-1/2 rounded-full p-2 text-slate-400 transition-all duration-300 hover:scale-110 hover:bg-slate-100/85 hover:text-slate-600 active:scale-95 sm:right-[120px] dark:border dark:border-transparent dark:bg-white/[0.02] dark:text-slate-500 dark:hover:border-cyan-300/18 dark:hover:bg-cyan-400/[0.08] dark:hover:text-slate-200"
+            className="absolute right-[100px] top-1/2 z-20 -translate-y-1/2 rounded-full p-2 text-slate-400 transition-all duration-300 hover:scale-110 hover:bg-slate-100 hover:text-slate-600 active:scale-95 sm:right-[120px] dark:text-slate-500 dark:hover:bg-white/[0.08] dark:hover:text-slate-200"
             aria-label="清空输入"
           >
             <IoCloseOutline className="w-5 h-5" />
@@ -224,24 +222,23 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
         )}
 
         {/* 搜索按钮 */}
-        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-20">
+        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-20 block">
           <StatefulButton
             ref={buttonRef}
             onClick={handleSearch}
             disabled={!inputValue.trim() || isLoading}
-            className="h-[42px] min-w-[90px] rounded-xl shadow-[0_12px_24px_rgba(37,99,235,0.28)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_30px_rgba(37,99,235,0.32)]"
+            className="h-[44px] min-w-[96px] rounded-[1.5rem] bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 dark:from-blue-600 dark:to-cyan-600 dark:hover:from-blue-500 dark:hover:to-cyan-500 text-white font-semibold shadow-[0_8px_16px_rgba(14,165,233,0.24)] dark:shadow-[0_8px_16px_rgba(8,145,178,0.2)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(14,165,233,0.36)] dark:hover:shadow-[0_12px_24px_rgba(8,145,178,0.36)] border border-transparent outline-none focus:outline-none ring-0 active:scale-95"
           >
             搜索
           </StatefulButton>
         </div>
-      </GlassSurface>
+      </div>
 
       {/* 搜索历史下拉菜单 */}
       {showHistory && visibleSearchHistory.length > 0 && (
-        <GlassSurface
-          variant="popover"
+        <div
           data-testid="search-history-surface"
-          className="absolute left-0 right-0 top-full z-50 mt-2.5 animate-in overflow-hidden fade-in slide-in-from-top-2 duration-200 dark:bg-[#08111f]/96 dark:border-slate-800/80 dark:ring-transparent dark:shadow-[0_28px_64px_rgba(2,6,23,0.56),inset_0_1px_0_rgba(148,163,184,0.06)]"
+          className="absolute left-0 right-0 top-full z-50 mt-3 animate-in overflow-hidden fade-in slide-in-from-top-3 duration-300 rounded-[2rem] bg-white/70 dark:bg-slate-950/50 backdrop-blur-3xl border border-white/60 dark:border-white/[0.08] shadow-[0_24px_64px_rgba(15,23,42,0.08)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.5)]"
           onMouseEnter={() => setIsHoveringHistory(true)}
           onMouseLeave={() => {
             setIsHoveringHistory(false);
@@ -250,25 +247,25 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
         >
           <div
             data-testid="search-history-header"
-            className="flex items-center justify-between border-b border-slate-200/70 bg-white/45 px-4 py-2.5 dark:border-slate-800/80 dark:bg-[linear-gradient(180deg,rgba(8,15,28,0.74),rgba(8,15,28,0.54))]"
+            className="flex items-center justify-between border-b border-slate-200/50 bg-white/40 px-6 py-4 dark:border-white/[0.04] dark:bg-white/[0.02]"
           >
-            <div className="flex items-center gap-2 text-[12px] font-medium text-slate-500 dark:text-slate-300">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900/[0.04] text-slate-500 dark:border dark:border-slate-700/80 dark:bg-slate-800/80 dark:text-slate-300">
-                <IoTimeOutline className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-2 text-[13.5px] font-medium text-slate-500 dark:text-slate-400">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900/[0.04] dark:bg-white/[0.06] text-slate-500 dark:text-slate-300">
+                <IoTimeOutline className="h-4 w-4" />
               </span>
               <span>最近搜索</span>
-              <span className="text-slate-400/80 dark:text-slate-500">最近 {visibleSearchHistory.length} 条</span>
+              <span className="text-slate-400/80 dark:text-slate-500 text-[12px] ml-1">最近 {visibleSearchHistory.length} 条</span>
             </div>
             <button
               onClick={handleClearHistory}
-              className="rounded-full px-2.5 py-1 text-[12px] font-medium text-slate-400 transition-colors duration-200 hover:bg-red-50 hover:text-red-500 dark:border dark:border-transparent dark:text-slate-500 dark:hover:border-slate-700/80 dark:hover:bg-red-500/10 dark:hover:text-red-200"
+              className="rounded-full px-3 py-1.5 text-[12.5px] font-medium text-slate-400 transition-colors duration-200 hover:bg-red-50 hover:text-red-500 dark:text-slate-500 dark:hover:bg-red-500/10 dark:hover:text-red-400"
             >
               清空记录
             </button>
           </div>
           <div
             data-testid="search-history-list"
-            className="max-h-48 overflow-y-auto px-4 py-3 dark:bg-[linear-gradient(180deg,rgba(10,18,32,0.92),rgba(8,15,28,0.82))]"
+            className="max-h-[300px] overflow-y-auto px-6 py-5 dark:bg-transparent"
           >
             <div className="flex flex-wrap gap-2.5">
               {visibleSearchHistory.map((keyword, index) => (
@@ -280,16 +277,16 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
                   <button
                     type="button"
                     onClick={() => handleSelectHistory(keyword)}
-                    className="history-chip-delay inline-flex max-w-full items-center rounded-full border border-slate-200/80 bg-white/82 px-3.5 py-2 text-left text-sm text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-50/70 hover:text-cyan-700 hover:shadow-[0_8px_20px_rgba(14,165,233,0.10)] focus:outline-none focus-visible:border-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-200 dark:border-slate-700/80 dark:bg-[linear-gradient(180deg,rgba(10,18,32,0.94),rgba(8,15,28,0.84))] dark:text-slate-200 dark:shadow-[0_12px_24px_rgba(2,6,23,0.28),inset_0_1px_0_rgba(148,163,184,0.04)] dark:hover:border-slate-600/85 dark:hover:bg-[linear-gradient(180deg,rgba(16,27,46,0.96),rgba(10,18,32,0.90))] dark:hover:text-slate-50 dark:hover:shadow-[0_18px_32px_rgba(8,145,178,0.14)] dark:focus-visible:border-slate-600/85 dark:focus-visible:ring-slate-600/20"
+                    className="history-chip-delay inline-flex max-w-full items-center rounded-full border border-slate-200/60 bg-white/60 px-4 py-2 text-left text-[14px] font-medium text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/50 hover:text-blue-600 hover:shadow-md dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-slate-300 dark:shadow-[0_12px_24px_rgba(0,0,0,0.2)] dark:hover:border-white/[0.12] dark:hover:bg-white/[0.08] dark:hover:text-white"
                     aria-label={`使用历史记录搜索 ${keyword}`}
                   >
-                    <span className="truncate max-w-[11rem] font-medium leading-none">{keyword}</span>
+                    <span className="truncate max-w-[12rem] leading-none">{keyword}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={(e) => handleDeleteHistoryItem(e, keyword)}
-                    className="absolute -right-1.5 -top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200/80 bg-white/96 text-slate-400 opacity-0 shadow-sm transition-all duration-200 group-hover/history:opacity-100 group-focus-within/history:opacity-100 hover:border-red-100 hover:bg-red-50 hover:text-red-500 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-red-100 dark:border-slate-700/80 dark:bg-[#08111f]/96 dark:text-slate-500 dark:shadow-[0_10px_24px_rgba(2,6,23,0.32)] dark:hover:border-slate-600/85 dark:hover:bg-red-500/10 dark:hover:text-red-200 dark:focus-visible:ring-red-500/20"
+                    className="absolute -right-1.5 -top-1.5 inline-flex h-[22px] w-[22px] items-center justify-center rounded-full border border-slate-200/80 bg-white shadow-sm text-slate-400 opacity-0 transition-all duration-200 group-hover/history:opacity-100 hover:scale-110 hover:border-red-100 hover:bg-red-50 hover:text-red-500 dark:border-white/[0.12] dark:bg-slate-800 dark:text-slate-400 dark:shadow-[0_4px_12px_rgba(0,0,0,0.5)] dark:hover:border-red-500/30 dark:hover:bg-red-500/20 dark:hover:text-red-300"
                     aria-label={`删除历史记录 ${keyword}`}
                   >
                     <IoCloseOutline className="h-3.5 w-3.5" />
@@ -298,7 +295,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
               ))}
             </div>
           </div>
-        </GlassSurface>
+        </div>
       )}
     </div>
   );

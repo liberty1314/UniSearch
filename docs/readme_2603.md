@@ -21,6 +21,31 @@ style(ui): 统一深色搜索页面板与历史框样式
 
 ---
 
+## 2026-03-29 02:19:19
+
+### Commit
+```
+style(ui): 统一搜索首页与结果页玻璃拟态视觉
+```
+
+### Body
+统一首页、搜索结果、筛选栏、公告弹窗与 API Key 页面为更轻的玻璃拟态视觉语言，并补齐深色模式下的根背景与加载态细节。
+同步收敛按钮、卡片、空态和错误态的层次表现，减少旧有霓虹发光风格带来的视觉噪声。
+
+### Files
+- frontend/src/components/AnnouncementDialog.tsx
+- frontend/src/components/CloudTypeFilter.tsx
+- frontend/src/components/PageLoader.tsx
+- frontend/src/components/PublicPageShell.tsx
+- frontend/src/components/SearchBox.tsx
+- frontend/src/components/SearchResults.tsx
+- frontend/src/components/ui/stateful-button.tsx
+- frontend/src/index.css
+- frontend/src/pages/Home.tsx
+- frontend/src/pages/UserApiKeySettings.tsx
+
+---
+
 ## 2026-03-02
 
 ### feat(admin): 新增插件和频道统一排序及状态筛选功能

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BriefcaseBusiness, KeyRound, Lightbulb, RefreshCw } from 'lucide-react';
+import { ArrowRight, Layers, KeyRound, Sparkles, Activity } from 'lucide-react';
 import SearchBox from '@/components/SearchBox';
 import CloudTypeFilter from '@/components/CloudTypeFilter';
 import SearchResults from '@/components/SearchResults';
@@ -19,7 +19,7 @@ const featureCards = [
   {
     title: '多平台搜索',
     description: '支持百度网盘、阿里云盘、夸克网盘等多个主流网盘平台，一站式搜索体验',
-    Icon: BriefcaseBusiness,
+    Icon: Layers,
     iconGradient: 'from-blue-500 via-sky-500 to-cyan-400',
     iconGlow: 'shadow-[0_18px_32px_rgba(14,165,233,0.24)] group-hover:shadow-[0_22px_40px_rgba(14,165,233,0.28)]',
     accentText: 'group-hover:text-blue-500',
@@ -31,7 +31,7 @@ const featureCards = [
   {
     title: '智能匹配',
     description: '采用先进的搜索算法和AI技术，精准匹配您的搜索需求，提高搜索效率',
-    Icon: Lightbulb,
+    Icon: Sparkles,
     iconGradient: 'from-emerald-500 via-teal-500 to-green-400',
     iconGlow: 'shadow-[0_18px_32px_rgba(16,185,129,0.24)] group-hover:shadow-[0_22px_40px_rgba(16,185,129,0.28)]',
     accentText: 'group-hover:text-teal-500',
@@ -43,7 +43,7 @@ const featureCards = [
   {
     title: '实时更新',
     description: '资源库实时更新维护，确保您获得最新最全的搜索结果和资源信息',
-    Icon: RefreshCw,
+    Icon: Activity,
     iconGradient: 'from-amber-500 via-orange-500 to-yellow-400',
     iconGlow: 'shadow-[0_18px_32px_rgba(245,158,11,0.24)] group-hover:shadow-[0_22px_40px_rgba(245,158,11,0.28)]',
     accentText: 'group-hover:text-amber-500',
@@ -90,7 +90,7 @@ const Home: React.FC = () => {
           >
 
 
-            <SparklesText>
+            <SparklesText colors={{ first: "#0ea5e9", second: "#06b6d4" }}>
               <GradientText
                 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight"
                 colors={["#3b82f6", "#0ea5e9", "#06b6d4"]}
@@ -105,7 +105,7 @@ const Home: React.FC = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.6 }}
-              className="text-2xl sm:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-cyan-600 to-blue-700 dark:from-blue-200 dark:via-cyan-300 dark:to-blue-200 font-bold tracking-tight mb-4 animate-gradient-breath-slow"
+              className="text-2xl sm:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-cyan-600 to-blue-700 dark:from-cyan-300 dark:via-blue-300 dark:to-cyan-400 font-bold tracking-tight mb-4 animate-[pulse_4s_ease-in-out_infinite] animate-gradient-breath-slow drop-shadow-sm dark:drop-shadow-[0_2px_12px_rgba(8,145,178,0.2)]"
             >
               智能网盘资源搜索引擎
             </motion.h2>
@@ -120,33 +120,33 @@ const Home: React.FC = () => {
             </motion.p>
           </motion.div>
 
-          {/* 统计数字标签 - 21st.dev NumberTicker 风格 */}
+          {/* 统计数字标签 - Glassmorphism 增强风格 */}
           {!hasSearched && (
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8, duration: 0.6 }}
-              className="flex items-center justify-center gap-6 mt-8 flex-wrap"
+              className="flex items-center justify-center gap-4 sm:gap-6 mt-10 mb-[-1rem] flex-wrap relative z-20"
             >
               {[
                 { value: 5, suffix: '+', label: '支持平台' },
                 { value: 100, suffix: 'w+', label: '资源索引' },
                 { value: 99, suffix: '%', label: '搜索准确率' },
               ].map(({ value, suffix, label }) => (
-                <div key={label} className="flex flex-col items-center gap-1 px-5 py-2.5 rounded-2xl bg-white/60 dark:bg-white/5 border border-white/70 dark:border-white/10 shadow-sm backdrop-blur-md">
-                  <p className={`text-2xl font-extrabold ${BLUE_CYAN_TEXT_GRADIENT_WITH_DARK} tabular-nums`}>
+                <div key={label} className="group relative flex flex-col items-center gap-1.5 px-6 py-3 min-w-[124px] rounded-[1.5rem] bg-white/60 dark:bg-slate-950/40 border border-white/60 dark:border-white/[0.08] shadow-[0_8px_32px_rgba(15,23,42,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-3xl hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-[0_16px_48px_rgba(0,0,0,0.5)] transition-all duration-300">
+                  <p className="text-3xl font-extrabold text-slate-800 dark:text-white tabular-nums tracking-tight">
                     <NumberTicker value={value} delay={0.9} />
                     <span>{suffix}</span>
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{label}</p>
+                  <p className="text-[13px] text-slate-500 dark:text-slate-400 font-medium tracking-wide">{label}</p>
                 </div>
               ))}
             </motion.div>
           )}
         </motion.div>
 
-        {/* 搜索区域 - 增强设计 */}
-        <div className="w-full flex flex-col items-center mb-24 space-y-10">
+        {/* 搜索区域 - 增强设计与间距紧凑化 */}
+        <div className="w-full flex flex-col items-center mb-20 space-y-8 relative z-30">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -163,16 +163,16 @@ const Home: React.FC = () => {
               transition={{ delay: 0.72, duration: 0.45 }}
               className="max-w-4xl w-full"
             >
-              <div className="mx-auto flex w-fit max-w-full flex-col items-center gap-3 rounded-full border border-amber-200/70 bg-white/75 px-4 py-3 text-center shadow-[0_16px_40px_rgba(148,163,184,0.14)] backdrop-blur-xl dark:border-amber-400/15 dark:bg-slate-900/60 sm:flex-row sm:text-left">
-                <div className="flex items-center gap-2 text-[13px] font-medium text-slate-600 dark:text-slate-300">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
+              <div className="mx-auto flex w-fit max-w-full flex-col items-center gap-3 rounded-[1.5rem] border border-amber-200/60 bg-white/60 px-5 py-3.5 text-center shadow-lg backdrop-blur-3xl dark:border-amber-500/20 dark:bg-slate-950/50 sm:flex-row sm:text-left">
+                <div className="flex items-center gap-2.5 text-[13.5px] font-medium text-amber-900/80 dark:text-amber-200/80">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100/80 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
                     <KeyRound className="h-4 w-4" />
                   </span>
-                  <span>当前账号已登录，绑定 API Key 后即可开始搜索</span>
+                  <span>当前账号已登录，绑定 API Key 后即可无限制搜索</span>
                 </div>
                 <Link
                   to="/settings/apikey"
-                  className="group inline-flex items-center gap-1 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition-all duration-300 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
+                  className="group inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-xs font-bold text-white transition-all duration-300 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
                 >
                   去绑定
                   <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
@@ -234,61 +234,32 @@ const Home: React.FC = () => {
                           transition={{ delay: 1 + index * 0.1, duration: 0.5 }}
                           className="group relative cursor-pointer"
                         >
-                          {/* 21st.dev GlowCard - 鼠标跟踪发光边框 */}
-                          <GlowCard
-                            className="rounded-[2rem] h-full"
-                            glowColorClass={`${
-                              index === 0 ? 'from-blue-500/60 via-sky-400/40 to-cyan-500/60' :
-                              index === 1 ? 'from-emerald-500/60 via-teal-400/40 to-green-500/60' :
-                                           'from-amber-500/60 via-orange-400/40 to-yellow-500/60'
-                            }`}
-                          >
+                          {/* 顶级净玻璃层级拟态 (Pristine Glassmorphism) */}
+                          <div className="relative h-full overflow-hidden rounded-[2rem] bg-white/60 dark:bg-slate-950/40 border border-white/60 dark:border-white/[0.08] shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] backdrop-blur-3xl transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_24px_64px_rgba(15,23,42,0.08)] dark:hover:shadow-[0_24px_64px_rgba(0,0,0,0.6)] p-8">
+                            {/* 边框发光伪影 - 极致细微 */}
+                            <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-white/[0.15] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-white/[0.15] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            
+                            {/* 背景光晕点缀 */}
                             <div
-                              aria-hidden="true"
-                              data-testid="feature-card-depth"
-                              className={`pointer-events-none absolute inset-x-7 bottom-2 top-14 rounded-[2rem] bg-gradient-to-b ${feature.depthGlow} opacity-80 blur-2xl transition-all duration-500 group-hover:translate-y-5 group-hover:scale-[0.94] group-hover:opacity-100`}
-                            />
-                            <div
-                              aria-hidden="true"
-                              className="pointer-events-none absolute inset-x-10 bottom-0 h-10 rounded-full bg-slate-950/12 blur-2xl transition-all duration-500 group-hover:translate-y-3 group-hover:scale-x-90 dark:bg-black/35"
+                                aria-hidden="true"
+                                className="pointer-events-none absolute -right-10 top-10 h-32 w-32 rounded-full bg-white/30 blur-3xl transition-all duration-500 group-hover:scale-110 group-hover:opacity-100 dark:bg-white/[0.03]"
                             />
 
-                            <div
-                              data-testid="feature-card-surface"
-                              className={`relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-[0_22px_50px_rgba(15,23,42,0.08),0_6px_18px_rgba(255,255,255,0.7)_inset,0_-18px_30px_rgba(148,163,184,0.08)_inset] backdrop-blur-apple transition-all duration-500 will-change-transform [transform-style:preserve-3d] dark:bg-slate-950/80 dark:border-slate-700/55 dark:shadow-[0_30px_60px_rgba(2,6,23,0.56),0_1px_0_rgba(148,163,184,0.12)_inset,0_-24px_34px_rgba(15,23,42,0.28)_inset] group-hover:[transform:translateY(-12px)_scale(1.01)] ${feature.accentBorder}`}
-                            >
-                              <div
-                                aria-hidden="true"
-                                className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${feature.surfaceTint} opacity-90`}
-                              />
-                              <div
-                                aria-hidden="true"
-                                className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.24),transparent_22%,transparent_100%)] opacity-80 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_18%,transparent_100%)] dark:opacity-100"
-                              />
-                              <div
-                                aria-hidden="true"
-                                className={`pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent ${feature.edgeTint} to-transparent opacity-85`}
-                              />
-                              <div
-                                aria-hidden="true"
-                                className="pointer-events-none absolute -right-10 top-10 h-24 w-24 rounded-full bg-white/22 blur-3xl transition-all duration-500 group-hover:scale-110 group-hover:opacity-80 dark:bg-slate-200/5"
-                              />
-
-                              <div className="relative z-10">
-                                <div className={`mx-auto mb-6 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-[1.6rem] bg-gradient-to-br ${feature.iconGradient} text-white ring-1 ring-white/40 transition-all duration-500 group-hover:-translate-y-1 group-hover:scale-[1.18] group-hover:rotate-3 ${feature.iconGlow}`}>
-                                  <Icon className="h-8 w-8 transition-transform duration-300 group-hover:scale-110" strokeWidth={2.2} />
-                                </div>
-
-                                <h3 className={`mb-4 text-center text-xl font-bold text-gray-900 transition-all duration-300 group-hover:-translate-y-1 dark:text-white ${feature.accentText}`}>
-                                  {feature.title}
-                                </h3>
-
-                                <p className="text-center leading-relaxed text-gray-600 transition-all duration-300 group-hover:-translate-y-1 group-hover:text-gray-700 dark:text-slate-300 dark:group-hover:text-gray-200">
-                                  {feature.description}
-                                </p>
+                            <div className="relative z-10 flex flex-col h-full">
+                              <div className={`mx-auto mb-8 flex h-16 w-16 items-center justify-center rounded-[1.25rem] bg-gradient-to-br ${feature.iconGradient} text-white ring-2 ring-white/60 transition-all duration-500 group-hover:-translate-y-1 group-hover:scale-110 group-hover:rotate-6 ${feature.iconGlow}`}>
+                                <Icon className="h-8 w-8 transition-transform duration-300 group-hover:scale-105" strokeWidth={2} />
                               </div>
+
+                              <h3 className={`mb-4 text-center text-xl font-bold text-gray-900 transition-all duration-300 dark:text-white ${feature.accentText}`}>
+                                {feature.title}
+                              </h3>
+
+                              <p className="text-center leading-relaxed text-gray-600 dark:text-slate-300/90 text-[15px]">
+                                {feature.description}
+                              </p>
                             </div>
-                          </GlowCard>
+                          </div>
                         </motion.div>
                       );
                     })}
