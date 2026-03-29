@@ -779,3 +779,30 @@ style(ui): 重设计深色搜索页冷冽玻璃视觉
 - frontend/src/pages/Home.tsx
 
 ---
+
+## 2026-03-29 21:23:30
+
+### Commit
+```
+feat(frontend): 新增首页平台跑马灯与热门分类模块
+```
+
+### Body
+为首页新增平台跑马灯与热门分类展示区，补充网盘平台图标资源，并扩展 marquee 动画配置与分类组件测试。
+
+### Files
+- frontend/public/115网盘.svg
+- frontend/public/中国移动云盘.svg
+- frontend/public/天翼云盘.svg
+- frontend/public/夸克云盘.svg
+- frontend/public/百度网盘.svg
+- frontend/public/迅雷网盘.svg
+- frontend/public/阿里云盘.svg
+- frontend/src/components/home/PlatformMarquee.tsx
+- frontend/src/components/home/TrendingCategories.tsx
+- frontend/src/components/home/__tests__/TrendingCategories.test.tsx
+- frontend/src/components/ui/marquee.tsx
+- frontend/src/pages/Home.tsx
+- frontend/tailwind.config.js
+
+---

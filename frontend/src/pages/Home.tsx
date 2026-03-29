@@ -14,6 +14,8 @@ import { GlowCard } from '@/components/ui/glowing-effect';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import PublicPageShell from '@/components/PublicPageShell';
 import { BLUE_CYAN_TEXT_GRADIENT_WITH_DARK } from '@/lib/brandTheme';
+import PlatformMarquee from '@/components/home/PlatformMarquee';
+import TrendingCategories from '@/components/home/TrendingCategories';
 
 const featureCards = [
   {
@@ -201,8 +203,10 @@ const Home: React.FC = () => {
         {/* 主要内容区域 */}
         <div className="max-w-6xl mx-auto">
           {!hasSearched ? (
-            /* 首页内容 */
-            <div className="space-y-16 pb-24">
+            <div className="space-y-20 pb-24">
+              {/* 支持平台跑马灯 */}
+              <PlatformMarquee />
+
               {/* 功能特色 - 增强视觉设计 */}
               <div>
                 <motion.div
@@ -265,6 +269,9 @@ const Home: React.FC = () => {
                     })}
                   </div>
                 )}
+                
+                {/* 热门分类 Bento Grid */}
+                <TrendingCategories />
               </div>
             </div>
           ) : (

@@ -166,7 +166,9 @@ export default {
 				'float': 'float 3s ease-in-out infinite',
 				'glow': 'glow 2s ease-in-out infinite',
 				'gradient-breath': 'gradient-breath 4s ease-in-out infinite',
-				'gradient-breath-slow': 'gradient-breath-slow 6s ease-in-out infinite'
+				'gradient-breath-slow': 'gradient-breath-slow 6s ease-in-out infinite',
+				marquee: "marquee var(--duration) linear infinite",
+				"marquee-vertical": "marquee-vertical var(--duration) linear infinite",
 			},
 			keyframes: {
 				fadeIn: {
@@ -297,6 +299,14 @@ export default {
 						backgroundPosition: '100% 50%',
 						opacity: '0.85'
 					}
+				},
+				marquee: {
+					from: { transform: "translateX(0)" },
+					to: { transform: "translateX(calc(-100% - var(--gap)))" },
+				},
+				"marquee-vertical": {
+					from: { transform: "translateY(0)" },
+					to: { transform: "translateY(calc(-100% - var(--gap)))" },
 				}
 			},
 			transitionTimingFunction: {
