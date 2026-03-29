@@ -1,89 +1,5 @@
 # 开发日志 - 2026年03月
 
-## 2026-03-28 11:44:19
-
-### Commit
-```
-style(ui): 统一深色搜索页面板与历史框样式
-```
-
-### Body
-统一搜索页深色模式下的卡片、面板与历史下拉框视觉，移除偏亮白的描边和顶部高光，改为更克制的深色描边体系。
-新增搜索结果面板与搜索历史框样式回归测试，确保暗色搜索界面层级更稳定一致。
-
-### Files
-- frontend/src/components/CloudTypeFilter.tsx
-- frontend/src/components/SearchBox.tsx
-- frontend/src/components/SearchResults.tsx
-- frontend/src/components/__tests__/SearchBox.test.tsx
-- frontend/src/components/__tests__/SearchResults.test.tsx
-- frontend/src/components/ui/glass-surface.tsx
-
----
-
-## 2026-03-29 23:22:00
-
-### Commit
-```
-chore(ci): 修复前端流水线告警并升级工作流运行时
-```
-
-### Body
-升级 GitHub Actions 所依赖的 checkout、setup-node 与 setup-go 运行时版本，改用 Corepack 管理 pnpm，消除 CI 中的 Node 20 弃用告警。
-同步刷新前端 caniuse-lite 锁文件、移除首页第三方平台图标资源，并更新相关组件与测试以确保 lint、check、test、build 全链路通过。
-
-### Files
-- .github/workflows/ci.yml
-- frontend/package.json
-- frontend/pnpm-lock.yaml
-- frontend/public/115网盘.svg
-- frontend/public/中国移动云盘.svg
-- frontend/public/天翼云盘.svg
-- frontend/public/夸克云盘.svg
-- frontend/public/百度网盘.svg
-- frontend/public/迅雷网盘.svg
-- frontend/public/阿里云盘.svg
-- frontend/src/components/CloudTypeFilter.tsx
-- frontend/src/components/SearchBox.tsx
-- frontend/src/components/SearchResults.tsx
-- frontend/src/components/__tests__/CloudTypeFilter.test.tsx
-- frontend/src/components/__tests__/SearchBox.test.tsx
-- frontend/src/components/__tests__/SearchResults.test.tsx
-- frontend/src/components/home/__tests__/TrendingCategories.test.tsx
-- frontend/src/components/ui/glass-surface-variants.ts
-- frontend/src/components/ui/glass-surface.tsx
-- frontend/src/components/ui/marquee.tsx
-- frontend/src/pages/Home.tsx
-- frontend/src/pages/UserApiKeySettings.tsx
-- frontend/src/pages/__tests__/UserApiKeySettings.test.tsx
-
----
-
-## 2026-03-29 02:19:19
-
-### Commit
-```
-style(ui): 统一搜索首页与结果页玻璃拟态视觉
-```
-
-### Body
-统一首页、搜索结果、筛选栏、公告弹窗与 API Key 页面为更轻的玻璃拟态视觉语言，并补齐深色模式下的根背景与加载态细节。
-同步收敛按钮、卡片、空态和错误态的层次表现，减少旧有霓虹发光风格带来的视觉噪声。
-
-### Files
-- frontend/src/components/AnnouncementDialog.tsx
-- frontend/src/components/CloudTypeFilter.tsx
-- frontend/src/components/PageLoader.tsx
-- frontend/src/components/PublicPageShell.tsx
-- frontend/src/components/SearchBox.tsx
-- frontend/src/components/SearchResults.tsx
-- frontend/src/components/ui/stateful-button.tsx
-- frontend/src/index.css
-- frontend/src/pages/Home.tsx
-- frontend/src/pages/UserApiKeySettings.tsx
-
----
-
 ## 2026-03-02
 
 ### feat(admin): 新增插件和频道统一排序及状态筛选功能
@@ -117,27 +33,6 @@ style(ui): 统一搜索首页与结果页玻璃拟态视觉
 
 ---
 
-## 2026-03-23 20:52:12
-
-### Commit
-```
-fix(admin): 修复 API Key 编辑误续期并统一按天延长
-```
-
-### Body
-修复后台编辑 API Key 时仅修改每日搜索次数也会默认续期 30 天的问题，将单个编辑和批量延长统一改为按天选择。
-新增 1 天、7 天、30 天、半年、一年和自定义天数选项，默认不延长，并补齐相关组件测试与前端换算逻辑。
-
-### Files
-- frontend/src/components/admin/BatchExtendDialog.tsx
-- frontend/src/components/admin/EditKeyDialog.tsx
-- frontend/src/components/admin/__tests__/BatchExtendDialog.test.tsx
-- frontend/src/components/admin/__tests__/EditKeyDialog.test.tsx
-- frontend/src/components/admin/apiKeyExtensionOptions.ts
-- frontend/src/types/api.ts
-
----
-
 ### refactor(admin): 优化异常状态统计口径并移除频道手动排序功能
 
 **时间**: 2026-03-02
@@ -161,8 +56,6 @@ fix(admin): 修复 API Key 编辑误续期并统一按天延长
 - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
 - frontend/src/components/admin/adminListSort.ts
 - frontend/src/components/admin/previewFilters.ts
-
----
 
 ---
 
@@ -818,6 +711,73 @@ style(ui): 重设计深色搜索页冷冽玻璃视觉
 
 ---
 
+## 2026-03-23 20:52:12
+
+### Commit
+```
+fix(admin): 修复 API Key 编辑误续期并统一按天延长
+```
+
+### Body
+修复后台编辑 API Key 时仅修改每日搜索次数也会默认续期 30 天的问题，将单个编辑和批量延长统一改为按天选择。
+新增 1 天、7 天、30 天、半年、一年和自定义天数选项，默认不延长，并补齐相关组件测试与前端换算逻辑。
+
+### Files
+- frontend/src/components/admin/BatchExtendDialog.tsx
+- frontend/src/components/admin/EditKeyDialog.tsx
+- frontend/src/components/admin/__tests__/BatchExtendDialog.test.tsx
+- frontend/src/components/admin/__tests__/EditKeyDialog.test.tsx
+- frontend/src/components/admin/apiKeyExtensionOptions.ts
+- frontend/src/types/api.ts
+
+---
+
+## 2026-03-28 11:44:19
+
+### Commit
+```
+style(ui): 统一深色搜索页面板与历史框样式
+```
+
+### Body
+统一搜索页深色模式下的卡片、面板与历史下拉框视觉，移除偏亮白的描边和顶部高光，改为更克制的深色描边体系。
+新增搜索结果面板与搜索历史框样式回归测试，确保暗色搜索界面层级更稳定一致。
+
+### Files
+- frontend/src/components/CloudTypeFilter.tsx
+- frontend/src/components/SearchBox.tsx
+- frontend/src/components/SearchResults.tsx
+- frontend/src/components/__tests__/SearchBox.test.tsx
+- frontend/src/components/__tests__/SearchResults.test.tsx
+- frontend/src/components/ui/glass-surface.tsx
+
+---
+
+## 2026-03-29 02:19:19
+
+### Commit
+```
+style(ui): 统一搜索首页与结果页玻璃拟态视觉
+```
+
+### Body
+统一首页、搜索结果、筛选栏、公告弹窗与 API Key 页面为更轻的玻璃拟态视觉语言，并补齐深色模式下的根背景与加载态细节。
+同步收敛按钮、卡片、空态和错误态的层次表现，减少旧有霓虹发光风格带来的视觉噪声。
+
+### Files
+- frontend/src/components/AnnouncementDialog.tsx
+- frontend/src/components/CloudTypeFilter.tsx
+- frontend/src/components/PageLoader.tsx
+- frontend/src/components/PublicPageShell.tsx
+- frontend/src/components/SearchBox.tsx
+- frontend/src/components/SearchResults.tsx
+- frontend/src/components/ui/stateful-button.tsx
+- frontend/src/index.css
+- frontend/src/pages/Home.tsx
+- frontend/src/pages/UserApiKeySettings.tsx
+
+---
+
 ## 2026-03-29 21:23:30
 
 ### Commit
@@ -863,5 +823,59 @@ refactor(frontend): 首页平台展示降敏并补充商标声明
 - frontend/src/pages/__tests__/DisclaimerPage.test.tsx
 - frontend/src/pages/__tests__/Home.test.tsx
 - frontend/src/test/setup.ts
+
+---
+
+## 2026-03-29 23:22:00
+
+### Commit
+```
+chore(ci): 修复前端流水线告警并升级工作流运行时
+```
+
+### Body
+升级 GitHub Actions 所依赖的 checkout、setup-node 与 setup-go 运行时版本，改用 Corepack 管理 pnpm，消除 CI 中的 Node 20 弃用告警。
+同步刷新前端 caniuse-lite 锁文件、移除首页第三方平台图标资源，并更新相关组件与测试以确保 lint、check、test、build 全链路通过。
+
+### Files
+- .github/workflows/ci.yml
+- frontend/package.json
+- frontend/pnpm-lock.yaml
+- frontend/public/115网盘.svg
+- frontend/public/中国移动云盘.svg
+- frontend/public/天翼云盘.svg
+- frontend/public/夸克云盘.svg
+- frontend/public/百度网盘.svg
+- frontend/public/迅雷网盘.svg
+- frontend/public/阿里云盘.svg
+- frontend/src/components/CloudTypeFilter.tsx
+- frontend/src/components/SearchBox.tsx
+- frontend/src/components/SearchResults.tsx
+- frontend/src/components/__tests__/CloudTypeFilter.test.tsx
+- frontend/src/components/__tests__/SearchBox.test.tsx
+- frontend/src/components/__tests__/SearchResults.test.tsx
+- frontend/src/components/home/__tests__/TrendingCategories.test.tsx
+- frontend/src/components/ui/glass-surface-variants.ts
+- frontend/src/components/ui/glass-surface.tsx
+- frontend/src/components/ui/marquee.tsx
+- frontend/src/pages/Home.tsx
+- frontend/src/pages/UserApiKeySettings.tsx
+- frontend/src/pages/__tests__/UserApiKeySettings.test.tsx
+
+---
+
+## 2026-03-29 23:35:00
+
+### Commit
+```
+fix(ci): 修复前端工作流中 pnpm 初始化顺序
+```
+
+### Body
+移除 setup-node 阶段对 pnpm 缓存的提前调用，改为在前端 job 中显式通过 Corepack 激活指定版本的 pnpm。
+修复 GitHub Actions 在依赖安装前无法找到 pnpm 可执行文件而导致前端 CI 直接失败的问题。
+
+### Files
+- .github/workflows/ci.yml
 
 ---
