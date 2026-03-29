@@ -10,6 +10,18 @@ beforeAll(() => {
 
   vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
   vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  class MockIntersectionObserver {
+    root = null;
+    rootMargin = '';
+    thresholds: number[] = [];
+
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+    takeRecords = vi.fn(() => []);
+  }
+
+  vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
 
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     configurable: true,

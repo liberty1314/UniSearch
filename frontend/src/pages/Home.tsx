@@ -20,7 +20,7 @@ import TrendingCategories from '@/components/home/TrendingCategories';
 const featureCards = [
   {
     title: '多平台搜索',
-    description: '支持百度网盘、阿里云盘、夸克网盘等多个主流网盘平台，一站式搜索体验',
+    description: '支持多种主流网盘链接类型识别与聚合搜索，一站式完成检索',
     Icon: Layers,
     iconGradient: 'from-blue-500 via-sky-500 to-cyan-400',
     iconGlow: 'shadow-[0_18px_32px_rgba(14,165,233,0.24)] group-hover:shadow-[0_22px_40px_rgba(14,165,233,0.28)]',
@@ -118,7 +118,7 @@ const Home: React.FC = () => {
               transition={{ delay: 0.6, duration: 0.6 }}
               className="text-base sm:text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed"
             >
-              快速找到您需要的文件，支持多平台一站式聚合搜索
+              快速找到您需要的文件，聚合多种主流网盘链接类型
             </motion.p>
           </motion.div>
 

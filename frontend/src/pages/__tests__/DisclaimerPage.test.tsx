@@ -15,6 +15,8 @@ describe('DisclaimerPage', () => {
     expect(screen.getByRole('heading', { name: '6. 条款更新与生效', level: 2 })).toBeInTheDocument();
     expect(screen.getByText(/公开网络信息检索与索引服务/)).toBeInTheDocument();
     expect(screen.getByText(/权益均归原权利人所有/)).toBeInTheDocument();
+    expect(screen.getByText(/第三方平台名称、商标及标识归各自权利人所有/)).toBeInTheDocument();
+    expect(screen.getByText(/存在合作、授权、赞助或背书关系/)).toBeInTheDocument();
   });
 
   it('renders mailto contact link', () => {

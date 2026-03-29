@@ -48,6 +48,11 @@ vi.mock('@/components/SkeletonLoader', () => ({
   FeatureCardsSkeleton: () => <div>feature-skeleton</div>,
 }));
 
+vi.mock('@/components/home/TrendingCategories', () => ({
+  __esModule: true,
+  default: () => <div>trending-categories</div>,
+}));
+
 vi.mock('@/components/ui/animated-grid-pattern', () => ({
   AnimatedGridPattern: ({ className }: { className?: string }) => (
     <div data-testid="animated-grid" className={className} />
@@ -92,7 +97,7 @@ describe('Home', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('当前账号已登录，绑定 API Key 后即可开始搜索')).toBeInTheDocument();
+    expect(screen.getByText('当前账号已登录，绑定 API Key 后即可无限制搜索')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '去绑定' })).toHaveAttribute('href', '/settings/apikey');
     expect(screen.queryByText('SEARCH ACCESS')).not.toBeInTheDocument();
   });
@@ -106,7 +111,24 @@ describe('Home', () => {
       </MemoryRouter>
     );
 
-    expect(screen.queryByText('当前账号已登录，绑定 API Key 后即可开始搜索')).not.toBeInTheDocument();
+    expect(screen.queryByText('当前账号已登录，绑定 API Key 后即可无限制搜索')).not.toBeInTheDocument();
+  });
+
+  it('presents the homepage platform marquee as a capability notice without platform logos', () => {
+    searchAccessStatus = 'search_ready';
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('heading', { level: 3, name: '支持识别/聚合以下链接类型' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 3, name: '全网海量资源・一站聚合搜索' })).not.toBeInTheDocument();
+    expect(screen.queryByAltText('阿里云盘')).not.toBeInTheDocument();
+    expect(screen.queryByAltText('百度网盘')).not.toBeInTheDocument();
+    expect(screen.getAllByText('阿里云盘').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('百度网盘').length).toBeGreaterThan(0);
   });
 
   it('renders elevated feature cards with dedicated depth layers', () => {
@@ -118,8 +140,9 @@ describe('Home', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getAllByTestId('feature-card-depth')).toHaveLength(3);
-    expect(screen.getAllByTestId('feature-card-surface')).toHaveLength(3);
+    expect(screen.getByText('多平台搜索')).toBeInTheDocument();
+    expect(screen.getByText('智能匹配')).toBeInTheDocument();
+    expect(screen.getByText('实时更新')).toBeInTheDocument();
   });
 
   it('tones feature card surfaces for dark backgrounds with matte slate panels', () => {
@@ -131,10 +154,12 @@ describe('Home', () => {
       </MemoryRouter>
     );
 
-    screen.getAllByTestId('feature-card-surface').forEach((card) => {
-      expect(card).toHaveClass('dark:bg-slate-950/80');
-      expect(card).toHaveClass('dark:border-slate-700/55');
-    });
+    const featureCard = screen.getByText('多平台搜索').closest('div.group');
+    const featureSurface = featureCard?.querySelector('div.relative.h-full');
+
+    expect(featureSurface).not.toBeNull();
+    expect(featureSurface).toHaveClass('dark:bg-slate-950/40');
+    expect(featureSurface).toHaveClass('dark:border-white/[0.08]');
   });
 
   it('uses the shared grid-backed page shell in the default state', () => {
@@ -164,18 +189,32 @@ describe('Home', () => {
 
     const heroTitle = screen.getByTestId('gradient-text');
     const heroSubtitle = screen.getByRole('heading', { level: 2, name: '智能网盘资源搜索引擎' });
-    const statsValue = screen.getByText('支持平台').previousElementSibling as HTMLElement;
     const sectionTitle = screen.getByRole('heading', { level: 2, name: '为什么选择 UniSearch？' });
     const animatedGrid = screen.getByTestId('animated-grid');
 
     expect(heroTitle).toHaveAttribute('data-colors', '#3b82f6,#0ea5e9,#06b6d4');
     expect(heroSubtitle.className).toContain('via-cyan-600');
     expect(heroSubtitle.className).not.toContain('indigo');
-    expect(statsValue).toHaveClass('from-blue-600');
-    expect(statsValue).toHaveClass('to-cyan-500');
     expect(sectionTitle.className).toContain('text-blue-950');
     expect(animatedGrid.className).toContain('text-blue-600');
     expect(animatedGrid.className).not.toContain('nebula');
+  });
+
+  it('uses neutral copy for homepage feature descriptions instead of enumerating platform brands', () => {
+    searchAccessStatus = 'search_ready';
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>
+    );
+
+    expect(
+      screen.getByText('支持多种主流网盘链接类型识别与聚合搜索，一站式完成检索')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('支持百度网盘、阿里云盘、夸克网盘等多个主流网盘平台，一站式搜索体验')
+    ).not.toBeInTheDocument();
   });
 
   it('keeps the shared grid-backed shell in the searched state', () => {

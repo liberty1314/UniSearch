@@ -806,3 +806,24 @@ feat(frontend): 新增首页平台跑马灯与热门分类模块
 - frontend/tailwind.config.js
 
 ---
+
+## 2026-03-29 22:52:22
+
+### Commit
+```
+refactor(frontend): 首页平台展示降敏并补充商标声明
+```
+
+### Body
+将首页平台跑马灯从品牌展示调整为纯文字链接类型说明，移除第三方图标并同步收敛首页品牌露出文案。
+补充免责声明中的第三方平台名称、商标及标识归属说明，并更新相关页面测试与前端测试环境兼容配置。
+
+### Files
+- frontend/src/components/home/PlatformMarquee.tsx
+- frontend/src/pages/DisclaimerPage.tsx
+- frontend/src/pages/Home.tsx
+- frontend/src/pages/__tests__/DisclaimerPage.test.tsx
+- frontend/src/pages/__tests__/Home.test.tsx
+- frontend/src/test/setup.ts
+
+---
