@@ -5,36 +5,36 @@ import TrendingCategories from '@/components/home/TrendingCategories';
 
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({
-      children,
-      initial: _initial,
-      animate: _animate,
-      whileInView: _whileInView,
-      viewport: _viewport,
-      transition: _transition,
-      ...props
-    }: React.HTMLAttributes<HTMLDivElement> & {
+    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement> & {
       initial?: unknown;
       animate?: unknown;
       whileInView?: unknown;
       viewport?: unknown;
       transition?: unknown;
-    }) => <div {...props}>{children}</div>,
-    button: ({
-      children,
-      initial: _initial,
-      animate: _animate,
-      whileInView: _whileInView,
-      viewport: _viewport,
-      transition: _transition,
-      ...props
-    }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    }) => {
+      const domProps = { ...props };
+      delete domProps.initial;
+      delete domProps.animate;
+      delete domProps.whileInView;
+      delete domProps.viewport;
+      delete domProps.transition;
+      return <div {...domProps}>{children}</div>;
+    },
+    button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
       initial?: unknown;
       animate?: unknown;
       whileInView?: unknown;
       viewport?: unknown;
       transition?: unknown;
-    }) => <button {...props}>{children}</button>,
+    }) => {
+      const domProps = { ...props };
+      delete domProps.initial;
+      delete domProps.animate;
+      delete domProps.whileInView;
+      delete domProps.viewport;
+      delete domProps.transition;
+      return <button {...domProps}>{children}</button>;
+    },
   },
 }));
 

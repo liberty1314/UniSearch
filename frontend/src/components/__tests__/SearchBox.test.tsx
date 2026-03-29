@@ -171,29 +171,30 @@ describe('SearchBox', () => {
     render(<SearchBox />);
 
     const searchShell = screen.getByTestId('search-box-surface');
-    expect(searchShell).toHaveAttribute('data-glass-surface', 'true');
-    expect(searchShell).toHaveAttribute('data-glass-variant', 'search');
-    expect(searchShell).toHaveClass('dark:group-focus-within:border-cyan-300/32');
-    expect(searchShell).toHaveClass('dark:group-focus-within:shadow-[0_36px_72px_rgba(8,145,178,0.28)]');
+    expect(searchShell).toHaveClass('bg-white/60');
+    expect(searchShell).toHaveClass('dark:bg-slate-950/40');
+    expect(searchShell).toHaveClass('border-white/60');
+    expect(searchShell).toHaveClass('dark:border-white/[0.08]');
+    expect(searchShell).toHaveClass('group-focus-within:border-blue-300/60');
 
     await userEvent.click(screen.getByPlaceholderText('搜索网盘资源...'));
 
     const historyPopover = screen.getByTestId('search-history-surface');
-    expect(historyPopover).toHaveAttribute('data-glass-surface', 'true');
-    expect(historyPopover).toHaveAttribute('data-glass-variant', 'popover');
-    expect(historyPopover).toHaveClass('dark:bg-[#08111f]/96');
-    expect(historyPopover).toHaveClass('dark:border-slate-800/80');
+    expect(historyPopover).toHaveClass('bg-white/70');
+    expect(historyPopover).toHaveClass('dark:bg-slate-950/50');
+    expect(historyPopover).toHaveClass('border-white/60');
+    expect(historyPopover).toHaveClass('dark:border-white/[0.08]');
 
     const historyHeader = screen.getByTestId('search-history-header');
-    expect(historyHeader).toHaveClass('dark:bg-[linear-gradient(180deg,rgba(8,15,28,0.74),rgba(8,15,28,0.54))]');
-    expect(historyHeader).toHaveClass('dark:border-slate-800/80');
+    expect(historyHeader).toHaveClass('dark:bg-white/[0.02]');
+    expect(historyHeader).toHaveClass('dark:border-white/[0.04]');
 
     const historyList = screen.getByTestId('search-history-list');
-    expect(historyList).toHaveClass('dark:bg-[linear-gradient(180deg,rgba(10,18,32,0.92),rgba(8,15,28,0.82))]');
+    expect(historyList).toHaveClass('dark:bg-transparent');
 
     const historyItem = screen.getByRole('button', { name: '使用历史记录搜索 海贼王' });
-    expect(historyItem).toHaveClass('dark:border-slate-700/80');
-    expect(historyItem).toHaveClass('dark:bg-[linear-gradient(180deg,rgba(10,18,32,0.94),rgba(8,15,28,0.84))]');
+    expect(historyItem).toHaveClass('dark:border-white/[0.06]');
+    expect(historyItem).toHaveClass('dark:bg-white/[0.03]');
   });
 
   it('searches and collapses the history panel after selecting a history item', async () => {

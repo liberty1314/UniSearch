@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils';
 import PasswordModal from './PasswordModal';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import LoadingState from '@/components/LoadingState';
-import { GlassSurface } from '@/components/ui/glass-surface';
 
 interface SearchResultsProps {
   className?: string;

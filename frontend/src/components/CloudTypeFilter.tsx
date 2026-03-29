@@ -5,7 +5,6 @@ import { CloudType, CloudTypeValue } from '@/types/api';
 import { useSearchStore } from '@/stores/searchStore';
 import { cn } from '@/lib/utils';
 import { CoolMode } from '@/components/magicui/cool-mode';
-import { GlassSurface } from '@/components/ui/glass-surface';
 
 // --- Sub-components ---
 

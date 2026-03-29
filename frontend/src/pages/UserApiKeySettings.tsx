@@ -86,7 +86,6 @@ interface ApiKeySettingsSkeletonProps {
 
 const apiKeyHeroCardClass = 'overflow-hidden rounded-[24px] border border-slate-200/70 bg-white/70 backdrop-blur-xl shadow-[0_18px_38px_rgba(15,23,42,0.04)] dark:border-white/[0.04] dark:bg-slate-950/40 dark:shadow-[0_22px_44px_rgba(0,0,0,0.4)] transition-all duration-300';
 const apiKeyStatCardClass = 'rounded-[22px] border border-slate-200/70 bg-white/60 backdrop-blur-lg shadow-[0_14px_30px_rgba(15,23,42,0.03)] dark:border-white/[0.04] dark:bg-slate-950/30 dark:hover:bg-slate-950/50 dark:shadow-[0_18px_34px_rgba(0,0,0,0.4)] transition-all duration-300';
-const apiKeyDangerPanelClass = 'rounded-[20px] border border-red-200/80 bg-white/60 backdrop-blur-lg shadow-[0_14px_28px_rgba(239,68,68,0.06)] dark:border-red-500/10 dark:bg-red-950/10 transition-all duration-300';
 const apiKeyNotePanelClass = 'rounded-[18px] border border-slate-200/70 bg-white/60 backdrop-blur-lg px-5 py-4 shadow-[0_12px_24px_rgba(15,23,42,0.03)] dark:border-white/[0.04] dark:bg-slate-950/30 transition-all duration-300';
 
 const ApiKeySettingsSkeleton: React.FC<ApiKeySettingsSkeletonProps> = ({ holdOnError, isRetrying, onRetry }) => {

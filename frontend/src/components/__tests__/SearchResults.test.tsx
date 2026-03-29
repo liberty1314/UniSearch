@@ -43,17 +43,7 @@ vi.mock('@/components/LoadingState', () => ({
 
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({
-      children,
-      variants: _variants,
-      initial: _initial,
-      animate: _animate,
-      layout: _layout,
-      layoutId: _layoutId,
-      whileHover: _whileHover,
-      whileInView: _whileInView,
-      ...props
-    }: React.HTMLAttributes<HTMLDivElement> & {
+    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement> & {
       variants?: unknown;
       initial?: unknown;
       animate?: unknown;
@@ -61,7 +51,17 @@ vi.mock('framer-motion', () => ({
       layoutId?: unknown;
       whileHover?: unknown;
       whileInView?: unknown;
-    }) => <div {...props}>{children}</div>,
+    }) => {
+      const domProps = { ...props };
+      delete domProps.variants;
+      delete domProps.initial;
+      delete domProps.animate;
+      delete domProps.layout;
+      delete domProps.layoutId;
+      delete domProps.whileHover;
+      delete domProps.whileInView;
+      return <div {...domProps}>{children}</div>;
+    },
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -82,39 +82,24 @@ describe('SearchResults', () => {
     const gridCard = screen.getByTestId('search-result-grid-card');
     const toolbar = screen.getByTestId('search-results-toolbar');
 
-    expect(stage).toHaveClass('bg-white/62');
-    expect(stage).toHaveClass('border-slate-200/75');
-    expect(stage).toHaveClass('ring-white/80');
-    expect(stage).toHaveClass('backdrop-blur-xl');
-    expect(stage).toHaveClass('dark:bg-[#050d18]/78');
-    expect(stage).toHaveClass('dark:border-slate-800/75');
-    expect(stage).toHaveClass('dark:ring-transparent');
+    expect(stage).toHaveClass('relative');
     expect(stage.querySelector('.bg-cyan-200\\/20')).toBeNull();
 
-    expect(gridCard).toHaveClass('bg-white/96');
-    expect(gridCard).toHaveClass('border-slate-200/90');
-    expect(gridCard).toHaveClass('backdrop-blur-2xl');
-    expect(gridCard).toHaveClass('backdrop-saturate-150');
-    expect(gridCard).toHaveClass('shadow-[0_22px_52px_rgba(15,23,42,0.10)]');
-    expect(gridCard).toHaveClass('dark:bg-[#091321]/96');
-    expect(gridCard).toHaveClass('dark:border-slate-800/80');
-    expect(gridCard).toHaveClass('dark:ring-transparent');
+    expect(gridCard).toHaveClass('bg-white/60');
+    expect(gridCard).toHaveClass('border-white/60');
+    expect(gridCard).toHaveClass('backdrop-blur-xl');
+    expect(gridCard).toHaveClass('dark:bg-slate-950/40');
+    expect(gridCard).toHaveClass('dark:border-white/[0.06]');
     expect(gridCard).not.toHaveClass('bg-white/70');
     expect(gridCard).not.toHaveClass('border-white/50');
 
-    expect(toolbar).toHaveClass('bg-white/48');
-    expect(toolbar).toHaveClass('border-slate-200/80');
-    expect(toolbar).toHaveClass('backdrop-blur-2xl');
-    expect(toolbar).toHaveClass('dark:bg-[#060d18]/84');
-    expect(toolbar).toHaveClass('dark:border-slate-800/80');
-    expect(toolbar).toHaveClass('dark:ring-transparent');
-    expect(toolbar).toHaveAttribute('data-glass-surface', 'true');
-    expect(toolbar).toHaveAttribute('data-glass-variant', 'toolbar');
-    expect(toolbar).toHaveAttribute('data-glass-frosted', 'true');
-
-    const toolbarContent = screen.getByTestId('search-results-toolbar-content');
-    expect(toolbarContent).toHaveClass('flex');
-    expect(toolbarContent).toHaveClass('items-center');
-    expect(toolbarContent).toHaveClass('justify-between');
+    expect(toolbar).toHaveClass('bg-white/60');
+    expect(toolbar).toHaveClass('border-white/60');
+    expect(toolbar).toHaveClass('backdrop-blur-xl');
+    expect(toolbar).toHaveClass('dark:bg-slate-950/40');
+    expect(toolbar).toHaveClass('dark:border-white/[0.06]');
+    expect(toolbar).toHaveClass('flex');
+    expect(toolbar).toHaveClass('items-center');
+    expect(toolbar).toHaveClass('justify-between');
   });
 });

@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils';
 import { toStyleVars } from '@/lib/styleVars';
 import { getErrorCode, getErrorMessage } from '@/lib/error';
 import { Button as StatefulButton, StatefulButtonHandle } from '@/components/ui/stateful-button';
-import { GlassSurface } from '@/components/ui/glass-surface';
 
 interface SearchBoxProps {
   className?: string;

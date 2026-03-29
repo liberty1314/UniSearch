@@ -58,36 +58,36 @@ vi.mock('@/components/ui/animated-grid-pattern', () => ({
 
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({
-      children,
-      initial: _initial,
-      animate: _animate,
-      transition: _transition,
-      whileHover: _whileHover,
-      whileTap: _whileTap,
-      ...props
-    }: React.HTMLAttributes<HTMLDivElement> & {
+    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement> & {
       initial?: unknown;
       animate?: unknown;
       transition?: unknown;
       whileHover?: unknown;
       whileTap?: unknown;
-    }) => <div {...props}>{children}</div>,
-    button: ({
-      children,
-      initial: _initial,
-      animate: _animate,
-      transition: _transition,
-      whileHover: _whileHover,
-      whileTap: _whileTap,
-      ...props
-    }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    }) => {
+      const domProps = { ...props };
+      delete domProps.initial;
+      delete domProps.animate;
+      delete domProps.transition;
+      delete domProps.whileHover;
+      delete domProps.whileTap;
+      return <div {...domProps}>{children}</div>;
+    },
+    button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
       initial?: unknown;
       animate?: unknown;
       transition?: unknown;
       whileHover?: unknown;
       whileTap?: unknown;
-    }) => <button {...props}>{children}</button>,
+    }) => {
+      const domProps = { ...props };
+      delete domProps.initial;
+      delete domProps.animate;
+      delete domProps.transition;
+      delete domProps.whileHover;
+      delete domProps.whileTap;
+      return <button {...domProps}>{children}</button>;
+    },
   },
 }));
 
@@ -120,11 +120,11 @@ describe('UserApiKeySettings', () => {
 
     await screen.findByText('当前密钥状态');
 
-    expect(screen.getByTestId('apikey-hero-card')).toHaveClass('bg-white');
+    expect(screen.getByTestId('apikey-hero-card')).toHaveClass('bg-white/70');
     expect(screen.getByTestId('apikey-hero-card')).not.toHaveClass('bg-[linear-gradient(145deg,rgba(248,250,252,0.96),rgba(239,246,255,0.92))]');
     expect(screen.getAllByTestId('apikey-stat-card')).toHaveLength(4);
     expect(screen.getAllByTestId('apikey-stat-icon')).toHaveLength(4);
     expect(screen.getByTestId('apikey-page-summary')).toBeInTheDocument();
-    expect(screen.getAllByTestId('apikey-stat-card')[0]).toHaveClass('bg-white');
+    expect(screen.getAllByTestId('apikey-stat-card')[0]).toHaveClass('bg-white/60');
   });
 });

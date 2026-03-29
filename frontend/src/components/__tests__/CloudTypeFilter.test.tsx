@@ -11,20 +11,21 @@ vi.mock('@/components/magicui/cool-mode', () => ({
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement> & { layout?: boolean }) => {
-      const { layout: _layout, ...domProps } = props;
+      const domProps = { ...props };
+      delete domProps.layout;
       return <div {...domProps}>{children}</div>;
     },
-    button: ({
-      children,
-      whileHover: _whileHover,
-      whileTap: _whileTap,
-      layout: _layout,
-      ...props
-    }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
       whileHover?: unknown;
       whileTap?: unknown;
       layout?: boolean;
-    }) => <button {...props}>{children}</button>,
+    }) => {
+      const domProps = { ...props };
+      delete domProps.whileHover;
+      delete domProps.whileTap;
+      delete domProps.layout;
+      return <button {...domProps}>{children}</button>;
+    },
   },
   LayoutGroup: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -57,10 +58,10 @@ describe('CloudTypeFilter', () => {
     expect(screen.getByRole('heading', { name: '来源筛选' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /全选状态|选择全部/ })).toBeInTheDocument();
     const filterSurface = screen.getByTestId('cloud-type-filter-surface');
-    expect(filterSurface).toHaveAttribute('data-glass-variant', 'panel');
-    expect(filterSurface).toHaveAttribute('data-glass-frosted', 'true');
-    expect(filterSurface).toHaveClass('dark:bg-[#050b16]/88');
-    expect(filterSurface).toHaveClass('dark:border-cyan-400/12');
+    expect(filterSurface).toHaveClass('bg-white/60');
+    expect(filterSurface).toHaveClass('dark:bg-slate-950/40');
+    expect(filterSurface).toHaveClass('border-white/60');
+    expect(filterSurface).toHaveClass('dark:border-white/[0.06]');
 
     const hasOuterHaloLayer = Array.from(container.querySelectorAll('div')).some((node) =>
       typeof node.className === 'string' && node.className.includes('via-purple-500/10')

@@ -21,6 +21,44 @@ style(ui): 统一深色搜索页面板与历史框样式
 
 ---
 
+## 2026-03-29 23:22:00
+
+### Commit
+```
+chore(ci): 修复前端流水线告警并升级工作流运行时
+```
+
+### Body
+升级 GitHub Actions 所依赖的 checkout、setup-node 与 setup-go 运行时版本，改用 Corepack 管理 pnpm，消除 CI 中的 Node 20 弃用告警。
+同步刷新前端 caniuse-lite 锁文件、移除首页第三方平台图标资源，并更新相关组件与测试以确保 lint、check、test、build 全链路通过。
+
+### Files
+- .github/workflows/ci.yml
+- frontend/package.json
+- frontend/pnpm-lock.yaml
+- frontend/public/115网盘.svg
+- frontend/public/中国移动云盘.svg
+- frontend/public/天翼云盘.svg
+- frontend/public/夸克云盘.svg
+- frontend/public/百度网盘.svg
+- frontend/public/迅雷网盘.svg
+- frontend/public/阿里云盘.svg
+- frontend/src/components/CloudTypeFilter.tsx
+- frontend/src/components/SearchBox.tsx
+- frontend/src/components/SearchResults.tsx
+- frontend/src/components/__tests__/CloudTypeFilter.test.tsx
+- frontend/src/components/__tests__/SearchBox.test.tsx
+- frontend/src/components/__tests__/SearchResults.test.tsx
+- frontend/src/components/home/__tests__/TrendingCategories.test.tsx
+- frontend/src/components/ui/glass-surface-variants.ts
+- frontend/src/components/ui/glass-surface.tsx
+- frontend/src/components/ui/marquee.tsx
+- frontend/src/pages/Home.tsx
+- frontend/src/pages/UserApiKeySettings.tsx
+- frontend/src/pages/__tests__/UserApiKeySettings.test.tsx
+
+---
+
 ## 2026-03-29 02:19:19
 
 ### Commit

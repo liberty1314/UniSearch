@@ -10,10 +10,8 @@ import GradientText from '@/components/GradientText';
 import { useSearchStore } from '@/stores/searchStore';
 import { useSearchAccessStatus } from '@/stores/searchAccessStore';
 import { FeatureCardsSkeleton } from '@/components/SkeletonLoader';
-import { GlowCard } from '@/components/ui/glowing-effect';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import PublicPageShell from '@/components/PublicPageShell';
-import { BLUE_CYAN_TEXT_GRADIENT_WITH_DARK } from '@/lib/brandTheme';
 import PlatformMarquee from '@/components/home/PlatformMarquee';
 import TrendingCategories from '@/components/home/TrendingCategories';
 
