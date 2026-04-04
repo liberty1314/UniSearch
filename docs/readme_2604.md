@@ -24,3 +24,16 @@
   - frontend/src/components/home/PlatformMarquee.tsx
   - frontend/src/pages/Home.tsx
   - frontend/src/pages/__tests__/Home.test.tsx
+
+## [2026-04-04 17:18:40] style(ui): 优化首页视觉布局并引入统一章节标题组件
+- **内容**: 引入 `HomeSectionHeader` 统一首页章节视觉，扩充支持平台（115、迅雷等）主题配置，并优化跑马灯组件与首页布局间距。
+- **文件**:
+  - `frontend/src/components/CloudTypeFilter.tsx`
+  - `frontend/src/components/home/HomeSectionHeader.tsx`
+  - `frontend/src/components/home/PlatformMarquee.tsx`
+  - `frontend/src/components/home/TrendingCategories.tsx`
+  - `frontend/src/components/home/__tests__/PlatformMarquee.test.tsx`
+  - `frontend/src/components/home/platformThemes.ts`
+  - `frontend/src/components/ui/marquee.tsx`
+  - `frontend/src/pages/Home.tsx`
+  - `frontend/src/pages/__tests__/Home.test.tsx`

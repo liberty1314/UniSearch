@@ -14,6 +14,7 @@ import { NumberTicker } from '@/components/ui/number-ticker';
 import PublicPageShell from '@/components/PublicPageShell';
 import PlatformMarquee from '@/components/home/PlatformMarquee';
 import TrendingCategories from '@/components/home/TrendingCategories';
+import HomeSectionHeader from '@/components/home/HomeSectionHeader';
 
 const featureCards = [
   {
@@ -73,7 +74,7 @@ const Home: React.FC = () => {
   const hasSearched = searchParams.keyword || (searchResults?.results && searchResults.results.length > 0);
 
   return (
-    <PublicPageShell contentClassName="container mx-auto px-4 py-8 pt-24 pb-12">
+    <PublicPageShell contentClassName="container mx-auto px-4 py-8 pt-24 pb-16">
         {/* 页面头部 - 增强品牌形象 */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -126,7 +127,7 @@ const Home: React.FC = () => {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8, duration: 0.6 }}
-              className="flex items-center justify-center gap-4 sm:gap-6 mt-10 mb-[-1rem] flex-wrap relative z-20"
+              className="flex items-center justify-center gap-4 sm:gap-6 mt-10 mb-[-0.5rem] flex-wrap relative z-20"
             >
               {[
                 { value: 5, suffix: '+', label: '支持平台' },
@@ -201,27 +202,26 @@ const Home: React.FC = () => {
         {/* 主要内容区域 */}
         <div className="max-w-6xl mx-auto">
           {!hasSearched ? (
-            <div className="space-y-16 pb-24">
+            <div className="space-y-24 pb-28">
               {/* 功能特色 - 增强视觉设计 */}
               <div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6, duration: 0.6 }}
-                  className="text-center mb-16 px-4"
+                  className="mb-16"
                 >
-                  <h2 className="text-3xl sm:text-4xl font-bold mb-6 tracking-tight text-blue-950 dark:text-cyan-100">
-                    为什么选择 UniSearch？
-                  </h2>
-                  <p className="text-lg text-gray-600 dark:text-slate-400 max-w-2xl mx-auto">
-                    专业的网盘资源搜索平台，为您提供高效便捷的搜索体验
-                  </p>
+                  <HomeSectionHeader
+                    eyebrow="核心能力"
+                    title="为什么选择 UniSearch？"
+                    description="专业的网盘资源搜索平台，为您提供高效便捷的搜索体验"
+                  />
                 </motion.div>
 
                 {isPageLoading ? (
                   <FeatureCardsSkeleton />
                 ) : (
-                  <div className="grid grid-cols-1 gap-8 md:grid-cols-3 [perspective:1600px]">
+                  <div className="grid grid-cols-1 gap-10 md:grid-cols-3 [perspective:1600px]">
                     {featureCards.map((feature, index) => {
                       const { Icon } = feature;
 

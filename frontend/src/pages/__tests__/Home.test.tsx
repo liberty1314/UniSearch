@@ -129,12 +129,12 @@ describe('Home', () => {
     );
 
     const trendingHeading = screen.getByRole('heading', { level: 2, name: '探索热门分类' });
-    const capabilityHeading = screen.getByRole('heading', { level: 3, name: '支持识别/聚合以下链接类型' });
+    const capabilityHeading = screen.getByRole('heading', { level: 2, name: '支持识别 / 聚合以下链接类型' });
 
     expect(trendingHeading.compareDocumentPosition(capabilityHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(trendingHeading).toBeInTheDocument();
     expect(capabilityHeading).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { level: 3, name: '全网海量资源・一站聚合搜索' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 2, name: '全网海量资源・一站聚合搜索' })).not.toBeInTheDocument();
     expect(screen.getAllByText('阿里云盘').length).toBeGreaterThan(0);
     expect(screen.getAllByText('百度网盘').length).toBeGreaterThan(0);
   });

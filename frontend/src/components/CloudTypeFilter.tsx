@@ -1,30 +1,26 @@
 import React, { useEffect, memo, useRef } from 'react';
 import { motion, LayoutGroup } from 'framer-motion';
 import { IoCheckmarkCircle, IoEllipseOutline } from 'react-icons/io5';
-import { CloudType, CloudTypeValue } from '@/types/api';
+import { type CloudTypeValue } from '@/types/api';
 import { useSearchStore } from '@/stores/searchStore';
 import { cn } from '@/lib/utils';
 import { CoolMode } from '@/components/magicui/cool-mode';
+import { platformThemes, platformThemeTypes, type PlatformTheme } from '@/components/home/platformThemes';
 
 // --- Sub-components ---
 
 interface CloudTypeTagProps {
-  config: {
-    type: string;
-    name: string;
-    color: string;
-    shadow: string;
-  };
+  config: PlatformTheme;
   isSelected: boolean;
   onToggle: (type: CloudTypeValue) => void;
 }
 
 const CloudTypeTag = memo(({ config, isSelected, onToggle }: CloudTypeTagProps) => {
   return (
-    <CoolMode options={{ particleCount: 12, speedHorz: 5, speedUp: 15 }}>
+        <CoolMode options={{ particleCount: 12, speedHorz: 5, speedUp: 15 }}>
       <motion.button
         layout
-        onClick={() => onToggle(config.type as CloudTypeValue)}
+        onClick={() => onToggle(config.type)}
         whileHover={{ scale: 1.05, y: -2 }}
         whileTap={{ scale: 0.95 }}
         className={cn(
@@ -34,8 +30,6 @@ const CloudTypeTag = memo(({ config, isSelected, onToggle }: CloudTypeTagProps) 
             : "bg-white/50 dark:bg-white/[0.03] text-slate-600 dark:text-slate-300 border-slate-200/60 dark:border-white/[0.06] hover:bg-white/80 dark:hover:bg-white/[0.08] shadow-sm hover:shadow-md dark:shadow-none hover:-translate-y-0.5"
         )}
       >
-
-
         {/* 文本内容 */}
         <span>{config.name}</span>
       </motion.button>
@@ -53,21 +47,9 @@ CloudTypeTag.displayName = 'CloudTypeTag';
 const CloudTypeFilter: React.FC = () => {
   const { searchParams, setSearchParams } = useSearchStore();
 
-  const cloudTypeConfigs = [
-    { type: CloudType.BAIDU, name: '百度网盘', color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/30' },
-    { type: CloudType.ALIYUN, name: '阿里云盘', color: 'from-orange-500 to-orange-600', shadow: 'shadow-orange-500/30' },
-    { type: CloudType.QUARK, name: '夸克网盘', color: 'from-purple-500 to-purple-600', shadow: 'shadow-purple-500/30' },
-    { type: CloudType.TIANYI, name: '天翼云盘', color: 'from-cyan-500 to-cyan-600', shadow: 'shadow-cyan-500/30' },
-    { type: CloudType.UC, name: 'UC网盘', color: 'from-green-500 to-green-600', shadow: 'shadow-green-500/30' },
-    { type: CloudType.MOBILE, name: '移动云盘', color: 'from-indigo-500 to-indigo-600', shadow: 'shadow-indigo-500/30' },
-    { type: CloudType.ONE_ONE_FIVE, name: '115网盘', color: 'from-red-500 to-red-600', shadow: 'shadow-red-500/30' },
-    { type: CloudType.XUNLEI, name: '迅雷网盘', color: 'from-yellow-500 to-yellow-600', shadow: 'shadow-yellow-500/30' },
-    { type: CloudType.ONE_TWO_THREE, name: '123网盘', color: 'from-teal-500 to-teal-600', shadow: 'shadow-teal-500/30' },
-    { type: CloudType.MAGNET, name: '磁力链接', color: 'from-gray-600 to-gray-700', shadow: 'shadow-gray-500/30' },
-    { type: CloudType.LANZOU, name: '蓝奏云', color: 'from-blue-600 to-blue-700', shadow: 'shadow-blue-600/30' },
-  ];
+  const cloudTypeConfigs = platformThemes;
 
-  const allTypes = cloudTypeConfigs.map(config => config.type as CloudTypeValue);
+  const allTypes = platformThemeTypes;
   const hasInitializedCloudTypesRef = useRef(false);
 
   useEffect(() => {
@@ -164,7 +146,7 @@ const CloudTypeFilter: React.FC = () => {
                 <CloudTypeTag
                   key={config.type}
                   config={config}
-                  isSelected={isTypeSelected(config.type as CloudTypeValue)}
+                  isSelected={isTypeSelected(config.type)}
                   onToggle={handleTypeToggle}
                 />
               ))}

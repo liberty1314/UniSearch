@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Film, BookOpen, MonitorPlay, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import HomeSectionHeader from '@/components/home/HomeSectionHeader';
 
 type Category = {
   id: number;
@@ -69,22 +70,19 @@ const categories: Category[] = [
 
 export const TrendingCategories = () => {
   return (
-    <div className="w-full mt-24">
+    <div className="w-full mt-28">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-100px' }}
         transition={{ duration: 0.6 }}
-        className="mb-10 px-4 text-center sm:text-left"
+        className="mb-10"
       >
-        <div className="mx-auto max-w-2xl sm:mx-0">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-blue-950 dark:text-cyan-100">
-            探索热门分类
-          </h2>
-          <p className="mt-3 text-base leading-relaxed text-gray-600 dark:text-slate-400">
-            不知道搜什么？看看大家都在找些什么优质资源
-          </p>
-        </div>
+        <HomeSectionHeader
+          eyebrow="推荐探索"
+          title="探索热门分类"
+          description="不知道搜什么？看看大家都在找些什么优质资源"
+        />
       </motion.div>
 
       <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 md:auto-rows-fr xl:gap-5">
