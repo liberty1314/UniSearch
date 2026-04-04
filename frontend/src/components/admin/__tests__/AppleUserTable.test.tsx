@@ -1,34 +1,54 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AppleUserTable } from '@/components/admin/AppleUserTable';
 
-vi.mock('@/components/AppleTable', () => ({
-  AppleTable: ({
+let receivedShowCount: boolean | undefined;
+let overlayClose: ReturnType<typeof vi.fn>;
+
+vi.mock('@/components/admin/AdminDataTable', () => ({
+  AdminDataTable: ({
+    title,
     data,
     columns,
+    showCount,
     renderMobileItem,
+    renderDesktopOverlay,
   }: {
+    title?: string;
     data: Array<Record<string, unknown>>;
     columns: Array<{
       key: string;
       title: React.ReactNode;
       render?: (item: Record<string, unknown>) => React.ReactNode;
     }>;
+    showCount?: boolean;
     renderMobileItem?: (item: Record<string, unknown>) => React.ReactNode;
-  }) => (
-    <div>
-      {data.map((item, index) => (
-        <div key={index}>
-          {columns.map((column) => (
-            <div key={column.key} data-testid={`col-${column.key}`}>
-              {column.render ? column.render(item) : column.title}
+    renderDesktopOverlay?: (item: Record<string, unknown>, close: () => void) => React.ReactNode;
+  }) => {
+    receivedShowCount = showCount;
+
+    return (
+      <div>
+        <div data-testid="table-title">{title}</div>
+        {data.map((item, index) => {
+          overlayClose = vi.fn();
+          return (
+            <div key={index}>
+              {columns.map((column) => (
+                <div key={column.key} data-testid={`col-${column.key}`}>
+                  {column.render ? column.render(item) : column.title}
+                </div>
+              ))}
+              {renderDesktopOverlay && index === 0 ? (
+                <div data-testid="desktop-overlay">{renderDesktopOverlay(item, overlayClose as unknown as () => void)}</div>
+              ) : null}
+              {renderMobileItem ? <div data-testid="mobile-item">{renderMobileItem(item)}</div> : null}
             </div>
-          ))}
-          {renderMobileItem ? <div data-testid="mobile-item">{renderMobileItem(item)}</div> : null}
-        </div>
-      ))}
-    </div>
-  ),
+          );
+        })}
+      </div>
+    );
+  },
 }));
 
 describe('AppleUserTable', () => {
@@ -67,5 +87,16 @@ describe('AppleUserTable', () => {
     expect(markup).toContain('text-cyan-700');
     expect(markup).not.toContain('apple-purple');
     expect(markup).not.toContain('purple-');
+    expect(receivedShowCount).toBe(false);
+    expect(screen.getByTestId('table-title')).toBeEmptyDOMElement();
+    expect(screen.queryAllByTestId('col-actions')).toHaveLength(0);
+    fireEvent.click(screen.getByLabelText('关闭详情'));
+    expect(overlayClose).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: '编辑' }));
+    expect(overlayClose).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('desktop-overlay')).toHaveTextContent('编辑');
+    expect(screen.getByTestId('desktop-overlay')).toHaveTextContent('重置密码');
+    expect(screen.getByTestId('desktop-overlay')).toHaveTextContent('禁用');
+    expect(screen.getByTestId('desktop-overlay')).toHaveTextContent('删除');
   });
 });

@@ -1,5 +1,5 @@
-import React from 'react';
-import { AppleTable, AppleTableColumn } from '@/components/AppleTable';
+import React, { useState } from 'react';
+import { AdminDataTable, AdminDataTableColumn } from '@/components/admin/AdminDataTable';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Copy, Edit, Trash2, CheckCircle2, X, Clock, Shield, Power, PowerOff } from 'lucide-react';
@@ -42,6 +42,8 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
   isBatchOperating,
   isLoading,
 }) => {
+  const [activeKey, setActiveKey] = useState<APIKeyInfo | null>(null);
+
   /**
    * 判断 Key 是否已过期
    */
@@ -80,7 +82,7 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
   /**
    * 列配置
    */
-  const columns: AppleTableColumn<APIKeyInfo>[] = [
+  const columns: AdminDataTableColumn<APIKeyInfo>[] = [
     {
       key: 'select',
       title: (
@@ -113,14 +115,16 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
             {maskApiKey(key.key)}
           </code>
           <button
-            onClick={(e: React.MouseEvent) => {
+            type="button"
+            onClick={(e) => {
               e.stopPropagation();
               onCopyKey(key.key);
             }}
-            className="flex-shrink-0 p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-            title="复制完整密钥"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            title="复制 API Key"
+            aria-label={`复制 ${maskApiKey(key.key)}`}
           >
-            <Copy className="w-4 h-4 text-gray-500" />
+            <Copy className="h-4 w-4" />
           </button>
         </div>
       ),
@@ -281,55 +285,138 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
         );
       },
     },
-    {
-      key: 'actions',
-      title: '操作',
-      align: 'right',
-      render: (key) => (
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e: React.MouseEvent) => {
-              e.stopPropagation();
-              onEditClick(key);
-            }}
-            disabled={isDeleting || isBatchOperating || key.is_permanent}
-            className={BLUE_CYAN_ACTION_HOVER}
-            title={key.is_permanent ? '管理员永久密钥不可编辑' : '编辑'}
-          >
-            <Edit className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e: React.MouseEvent) => {
-              e.stopPropagation();
-              onToggleStatus(key, !key.is_enabled);
-            }}
-            disabled={isDeleting || isBatchOperating || key.is_permanent}
-            className={`${BLUE_CYAN_ACTION_HOVER} text-cyan-700 dark:text-cyan-300`}
-            title={key.is_permanent ? '管理员永久密钥不可修改状态' : (key.is_enabled ? '禁用' : '启用')}
-          >
-            {key.is_enabled ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e: React.MouseEvent) => {
-              e.stopPropagation();
-              onDeleteClick(key.key);
-            }}
-            disabled={isDeleting || isBatchOperating || key.is_permanent}
-            className="hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600"
-            title={key.is_permanent ? '管理员永久密钥不可删除' : '删除'}
-          >
-            <Trash2 className="w-4 h-4" />
+  ];
+
+  const desktopColumns = activeKey ? columns.filter((column) => column.key !== 'select') : columns;
+
+  const renderDesktopOverlay = (key: APIKeyInfo, _close: () => void) => {
+    let statusConfig: { text: string; color: string; icon: React.ReactNode };
+
+    if (key.is_permanent) {
+      statusConfig = {
+        text: '永久',
+        color: BLUE_CYAN_STATUS_BADGE,
+        icon: <Shield className="h-4 w-4" />,
+      };
+    } else if (!key.is_enabled) {
+      statusConfig = {
+        text: '已禁用',
+        color: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',
+        icon: <X className="h-4 w-4" />,
+      };
+    } else if (!key.first_used_at) {
+      statusConfig = {
+        text: '待激活',
+        color: 'bg-blue-100 text-blue-700 dark:bg-cyan-950/40 dark:text-cyan-300',
+        icon: <Clock className="h-4 w-4" />,
+      };
+    } else if (isKeyExpired(key.expires_at)) {
+      statusConfig = {
+        text: '已过期',
+        color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+        icon: <Clock className="h-4 w-4" />,
+      };
+    } else {
+      statusConfig = {
+        text: '正常',
+        color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+        icon: <CheckCircle2 className="h-4 w-4" />,
+      };
+    }
+
+    const disableProtectedActions = isDeleting || isBatchOperating || key.is_permanent;
+
+    return (
+      <div className="space-y-5">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="text-xl font-semibold text-slate-900 dark:text-slate-50">{maskApiKey(key.key)}</h4>
+              <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium ${statusConfig.color}`}>
+                {statusConfig.icon}
+                {statusConfig.text}
+              </div>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{key.description || '无描述'}</p>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
+                {key.is_permanent ? '管理员永久密钥' : '标准访问密钥'}
+              </span>
+              <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
+                {key.is_permanent ? '永不过期' : `过期时间 ${new Date(key.expires_at).toLocaleDateString('zh-CN')}`}
+              </span>
+            </div>
+          </div>
+
+          <Button variant="ghost" size="icon" onClick={_close} className="rounded-full" aria-label="关闭详情" title="关闭详情">
+            <X className="h-4 w-4" />
           </Button>
         </div>
-      ),
-    },
-  ];
+
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">创建时间</p>
+            <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">{new Date(key.created_at).toLocaleDateString('zh-CN')}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">最后登录</p>
+            <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">
+              {key.last_login_at ? formatDistanceToNow(new Date(key.last_login_at), { addSuffix: true, locale: zhCN }) : '从未登录'}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">描述</p>
+            <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">{key.description || '无描述'}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            className="border-slate-200 dark:border-slate-700"
+            onClick={() => onCopyKey(key.key)}
+            disabled={isDeleting || isBatchOperating}
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            复制完整密钥
+          </Button>
+          <Button
+            variant="outline"
+            className="border-slate-200 dark:border-slate-700"
+            onClick={() => {
+              onEditClick(key);
+            }}
+            disabled={disableProtectedActions}
+          >
+            <Edit className="mr-2 h-4 w-4" />
+            编辑
+          </Button>
+          <Button
+            variant="outline"
+            className={`border-cyan-200 text-cyan-700 hover:bg-cyan-50 dark:border-cyan-800/70 dark:text-cyan-300 dark:hover:bg-cyan-950/30 ${BLUE_CYAN_ACTION_HOVER}`}
+            onClick={() => {
+              onToggleStatus(key, !key.is_enabled);
+            }}
+            disabled={disableProtectedActions}
+          >
+            {key.is_enabled ? <PowerOff className="mr-2 h-4 w-4" /> : <Power className="mr-2 h-4 w-4" />}
+            {key.is_enabled ? '禁用' : '启用'}
+          </Button>
+          <Button
+            variant="outline"
+            className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800/70 dark:text-red-300 dark:hover:bg-red-950/30"
+            onClick={() => {
+              onDeleteClick(key.key);
+            }}
+            disabled={disableProtectedActions}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            删除
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   /**
    * 渲染移动端卡片项
@@ -472,14 +559,18 @@ export const AppleApiKeyTable: React.FC<AppleApiKeyTableProps> = ({
   };
 
   return (
-    <AppleTable
+    <AdminDataTable
       data={apiKeys}
-      columns={columns}
+      columns={desktopColumns}
       rowKey={(key) => key.key}
       loading={isLoading}
       emptyText="暂无 API Keys"
       hoverable
+      showCount={false}
       renderMobileItem={renderMobileItem}
+      renderDesktopOverlay={renderDesktopOverlay}
+      onOverlayOpenChange={(item) => setActiveKey(item)}
+      disableInteractionsWhenOverlayOpen
     />
   );
 };

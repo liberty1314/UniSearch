@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Filter, Plus, RefreshCw, Search, Shield, UserCheck, UserX, Users, X } from 'lucide-react';
 import type { UserInfo } from '@/types/api';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StatsCard } from './StatsCard';
@@ -17,6 +17,8 @@ import {
   BLUE_CYAN_TEXT,
   BLUE_CYAN_TEXT_STRONG,
 } from '@/lib/brandTheme';
+
+const countPillClassName = `inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium ${BLUE_CYAN_SOFT_SURFACE} ${BLUE_CYAN_BORDER} ${BLUE_CYAN_TEXT}`;
 
 interface UserStats {
   total: number;
@@ -111,21 +113,15 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ viewModel }) => {
       <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
         <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/50 min-h-[88px]">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-            <div className="flex-shrink-0">
+            <div className="flex flex-col gap-2 flex-shrink-0">
               <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
                 <Users className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
                 用户管理
               </CardTitle>
-              <CardDescription className="text-slate-500 dark:text-slate-400 mt-1">
-                {selectedUsers.size > 0 ? (
-                  <span className="flex items-center gap-2">
-                    <CheckCircle2 className={`w-3.5 h-3.5 ${BLUE_CYAN_ICON}`} />
-                    <span className={`${BLUE_CYAN_TEXT} font-medium`}>已选中 {selectedUsers.size} 个用户</span>
-                  </span>
-                ) : (
-                  '管理系统用户，控制访问权限和账户状态'
-                )}
-              </CardDescription>
+              <div className={countPillClassName}>
+                <span className={`inline-block h-2 w-2 rounded-full bg-cyan-500 ${isLoadingUsers ? 'animate-pulse' : ''}`} />
+                {isLoadingUsers ? '同步中' : `共 ${totalUsers} 条记录`}
+              </div>
             </div>
 
             <AnimatePresence mode="wait">

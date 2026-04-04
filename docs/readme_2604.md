@@ -5,3 +5,15 @@
 - **文件**:
   - `frontend/src/pages/LoginPage.tsx`
   - `frontend/src/pages/__tests__/Admin.test.tsx`
+
+## [2026-04-04 13:03:38] refactor(admin): 提取并重构后台数据表格组件及完善单元测试
+- **内容**: 抽象出通用的 AdminDataTable 基础组件，优化了 API Key 和用户管理页面的表格展示与操作逻辑，并完善了相关的交互测试用例。
+- **文件**:
+  - `frontend/src/components/admin/AdminApiKeysView.tsx`
+  - `frontend/src/components/admin/AdminDataTable.tsx`
+  - `frontend/src/components/admin/AdminUsersView.tsx`
+  - `frontend/src/components/admin/AppleApiKeyTable.tsx`
+  - `frontend/src/components/admin/AppleUserTable.tsx`
+  - `frontend/src/components/admin/__tests__/AdminDataTable.test.tsx`
+  - `frontend/src/components/admin/__tests__/AppleApiKeyTable.test.tsx`
+  - `frontend/src/components/admin/__tests__/AppleUserTable.test.tsx`

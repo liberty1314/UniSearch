@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, AlertCircle, CheckCircle2, Filter, Key, Plus, RefreshCw, Search, X } from 'lucide-react';
 import type { APIKeyInfo } from '@/types/api';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { BatchActionsBar } from './BatchActionsBar';
@@ -18,6 +18,8 @@ import {
   BLUE_CYAN_TEXT,
   BLUE_CYAN_TEXT_STRONG,
 } from '@/lib/brandTheme';
+
+const countPillClassName = `inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium ${BLUE_CYAN_SOFT_SURFACE} ${BLUE_CYAN_BORDER} ${BLUE_CYAN_TEXT}`;
 
 export interface AdminApiKeysViewModel {
   totalApiKeys: number;
@@ -135,22 +137,15 @@ const AdminApiKeysView: React.FC<AdminApiKeysViewProps> = ({ viewModel }) => {
       <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
         <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/50 min-h-[88px]">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-            <div className="flex-shrink-0">
+            <div className="flex flex-col gap-2 flex-shrink-0">
               <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
                 <Key className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
                 API Key 管理
               </CardTitle>
-              <CardDescription className="text-slate-500 dark:text-slate-400 mt-1">
-                {hasAnyFilter() ? (
-                  <span className="flex items-center gap-2">
-                    <Filter className={`w-3.5 h-3.5 ${BLUE_CYAN_ICON}`} />
-                    <span className={`${BLUE_CYAN_TEXT} font-medium`}>已应用筛选条件</span>
-                    <span className="text-slate-500 dark:text-slate-400">· 共 {totalApiKeys} 条记录</span>
-                  </span>
-                ) : (
-                  '管理系统的 API Keys，控制用户访问权限'
-                )}
-              </CardDescription>
+              <div className={countPillClassName}>
+                <span className={`inline-block h-2 w-2 rounded-full bg-cyan-500 ${isLoadingKeys ? 'animate-pulse' : ''}`} />
+                {isLoadingKeys ? '同步中' : `共 ${totalApiKeys} 条记录`}
+              </div>
             </div>
 
             <AnimatePresence mode="wait">
@@ -184,7 +179,6 @@ const AdminApiKeysView: React.FC<AdminApiKeysViewProps> = ({ viewModel }) => {
                   <div className={`flex items-center gap-2 px-3 py-1.5 ${BLUE_CYAN_SOFT_SURFACE} border ${BLUE_CYAN_BORDER} rounded-lg`}>
                     <Filter className={`w-4 h-4 ${BLUE_CYAN_ICON}`} />
                     <span className={`text-sm font-medium ${BLUE_CYAN_TEXT_STRONG}`}>已应用筛选条件</span>
-                    <span className="text-sm text-slate-500 dark:text-slate-400">· 共 {totalApiKeys} 条</span>
                   </div>
                   <Button variant="ghost" size="sm" onClick={onClearAllFilters} className="flex items-center gap-2 h-9">
                     <X className="w-4 h-4" />

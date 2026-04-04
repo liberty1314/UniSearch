@@ -1,34 +1,52 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AppleApiKeyTable } from '@/components/admin/AppleApiKeyTable';
 
-vi.mock('@/components/AppleTable', () => ({
-  AppleTable: ({
+let receivedShowCount: boolean | undefined;
+let overlayClose: ReturnType<typeof vi.fn>;
+
+vi.mock('@/components/admin/AdminDataTable', () => ({
+  AdminDataTable: ({
+    title,
     data,
     columns,
+    showCount,
     renderMobileItem,
+    renderDesktopOverlay,
   }: {
+    title?: string;
     data: Array<Record<string, unknown>>;
     columns: Array<{
       key: string;
       title: React.ReactNode;
       render?: (item: Record<string, unknown>) => React.ReactNode;
     }>;
+    showCount?: boolean;
     renderMobileItem?: (item: Record<string, unknown>) => React.ReactNode;
-  }) => (
-    <div>
-      {data.map((item, index) => (
-        <div key={index}>
-          {columns.map((column) => (
-            <div key={column.key} data-testid={`col-${column.key}`}>
-              {column.render ? column.render(item) : column.title}
-            </div>
-          ))}
-          {renderMobileItem ? <div data-testid="mobile-item">{renderMobileItem(item)}</div> : null}
-        </div>
-      ))}
-    </div>
-  ),
+    renderDesktopOverlay?: (item: Record<string, unknown>, close: () => void) => React.ReactNode;
+  }) => {
+    receivedShowCount = showCount;
+    overlayClose = vi.fn();
+
+    return (
+      <div>
+        <div data-testid="table-title">{title}</div>
+        {data.map((item, index) => (
+          <div key={index}>
+            {columns.map((column) => (
+              <div key={column.key} data-testid={`col-${column.key}`}>
+                {column.render ? column.render(item) : column.title}
+              </div>
+            ))}
+            {renderDesktopOverlay && index === 0 ? (
+              <div data-testid="desktop-overlay">{renderDesktopOverlay(item, overlayClose as unknown as () => void)}</div>
+            ) : null}
+            {renderMobileItem ? <div data-testid="mobile-item">{renderMobileItem(item)}</div> : null}
+          </div>
+        ))}
+      </div>
+    );
+  },
 }));
 
 describe('AppleApiKeyTable', () => {
@@ -67,13 +85,15 @@ describe('AppleApiKeyTable', () => {
       is_unlimited: false,
     };
 
+    const onCopyKey = vi.fn();
+
     const { container } = render(
       <AppleApiKeyTable
         apiKeys={[permanentKey, pendingKey]}
         selectedKeys={new Set<string>()}
         onSelectKey={vi.fn()}
         onSelectAll={vi.fn()}
-        onCopyKey={vi.fn()}
+        onCopyKey={onCopyKey}
         onEditClick={vi.fn()}
         onDeleteClick={vi.fn()}
         onToggleStatus={vi.fn()}
@@ -90,5 +110,18 @@ describe('AppleApiKeyTable', () => {
     expect(markup).toContain('text-cyan-700');
     expect(markup).toContain('hover:bg-cyan-50');
     expect(markup).not.toContain('purple-');
+    expect(receivedShowCount).toBe(false);
+    expect(screen.getByTestId('table-title')).toBeEmptyDOMElement();
+    expect(screen.queryAllByTestId('col-actions')).toHaveLength(0);
+    fireEvent.click(screen.getAllByTitle('复制 API Key')[0]);
+    expect(onCopyKey).toHaveBeenCalledWith(permanentKey.key);
+    fireEvent.click(screen.getByLabelText('关闭详情'));
+    expect(overlayClose).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: '编辑' }));
+    expect(overlayClose).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('desktop-overlay')).toHaveTextContent('编辑');
+    expect(screen.getByTestId('desktop-overlay')).toHaveTextContent('禁用');
+    expect(screen.getByTestId('desktop-overlay')).toHaveTextContent('删除');
+    expect(screen.getByTestId('desktop-overlay')).toHaveTextContent('复制完整密钥');
   });
 });

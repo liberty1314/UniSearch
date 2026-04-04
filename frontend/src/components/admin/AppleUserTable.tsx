@@ -1,9 +1,9 @@
-import React from 'react';
-import { AppleTable, AppleTableColumn } from '@/components/AppleTable';
+import React, { useState } from 'react';
+import { AdminDataTable, AdminDataTableColumn } from '@/components/admin/AdminDataTable';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, KeyRound, Power, PowerOff } from 'lucide-react';
+import { Edit, Trash2, KeyRound, Power, PowerOff, Shield, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { UserInfo } from '@/types/api';
@@ -43,6 +43,8 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
   isBatchOperating,
   isLoading,
 }) => {
+  const [activeUser, setActiveUser] = useState<UserInfo | null>(null);
+
   /**
    * 获取角色徽章样式
    */
@@ -60,7 +62,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
   /**
    * 列配置
    */
-  const columns: AppleTableColumn<UserInfo>[] = [
+  const columns: AdminDataTableColumn<UserInfo>[] = [
     {
       key: 'select',
       title: '',
@@ -172,72 +174,123 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
         );
       },
     },
-    {
-      key: 'actions',
-      title: '操作',
-      align: 'right',
-      render: (user) => {
-        const isCurrentUser = user.id === currentUserId;
-
-        return (
-          <div className="flex items-center justify-end gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                onEditClick(user);
-              }}
-              disabled={isDeleting || isBatchOperating}
-              className={BLUE_CYAN_ACTION_HOVER}
-              title="编辑"
-            >
-              <Edit className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                onResetPasswordClick(user);
-              }}
-              disabled={isDeleting || isBatchOperating}
-              className="hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-600"
-              title="重置密码"
-            >
-              <KeyRound className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                onToggleStatus(user.id, !user.is_enabled);
-              }}
-              disabled={isCurrentUser || isDeleting || isBatchOperating}
-              className={`${BLUE_CYAN_ACTION_HOVER} text-cyan-700 dark:text-cyan-300`}
-              title={user.is_enabled ? '禁用' : '启用'}
-            >
-              {user.is_enabled ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                onDeleteClick(user.id);
-              }}
-              disabled={isCurrentUser || isDeleting || isBatchOperating}
-              className="hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600"
-              title="删除"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
-        );
-      },
-    },
   ];
+
+  const desktopColumns = activeUser ? columns.filter((column) => column.key !== 'select') : columns;
+
+  const renderDesktopOverlay = (user: UserInfo, _close: () => void) => {
+    const isCurrentUser = user.id === currentUserId;
+    const statusConfig = user.is_enabled
+      ? {
+        text: '正常',
+        color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+        icon: <Power className="w-4 h-4" />,
+      }
+      : {
+        text: '已禁用',
+        color: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',
+        icon: <PowerOff className="w-4 h-4" />,
+      };
+
+    return (
+      <div className="space-y-5">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800">
+          <div className="flex items-start gap-4">
+            <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${BLUE_CYAN_AVATAR_GRADIENT} text-lg font-semibold text-white shadow-lg shadow-cyan-500/20`}>
+              {user.username.charAt(0).toUpperCase()}
+            </div>
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="text-xl font-semibold text-slate-900 dark:text-slate-50">{user.username}</h4>
+                <Badge variant={getRoleBadgeVariant(user.role)}>{getRoleText(user.role)}</Badge>
+                {isCurrentUser ? (
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${BLUE_CYAN_TEXT} bg-blue-50 dark:bg-cyan-950/30`}>
+                    <Shield className="h-3.5 w-3.5" />
+                    当前用户
+                  </span>
+                ) : null}
+              </div>
+              <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium ${statusConfig.color}`}>
+                {statusConfig.icon}
+                {statusConfig.text}
+              </div>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                点击操作后沿用当前弹窗和业务流程，不改现有权限规则。
+              </p>
+            </div>
+          </div>
+
+          <Button variant="ghost" size="icon" onClick={_close} className="rounded-full" aria-label="关闭详情" title="关闭详情">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">创建时间</p>
+            <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">{new Date(user.created_at).toLocaleDateString('zh-CN')}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">最后登录</p>
+            <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">
+              {user.last_login_at ? formatDistanceToNow(new Date(user.last_login_at), { addSuffix: true, locale: zhCN }) : '从未登录'}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">账户类型</p>
+            <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">{getRoleText(user.role)}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            className="border-slate-200 dark:border-slate-700"
+            onClick={() => {
+              onEditClick(user);
+            }}
+            disabled={isDeleting || isBatchOperating}
+          >
+            <Edit className="mr-2 h-4 w-4" />
+            编辑
+          </Button>
+          <Button
+            variant="outline"
+            className="border-amber-200 text-amber-600 hover:bg-amber-50 dark:border-amber-800/70 dark:text-amber-300 dark:hover:bg-amber-950/30"
+            onClick={() => {
+              onResetPasswordClick(user);
+            }}
+            disabled={isDeleting || isBatchOperating}
+          >
+            <KeyRound className="mr-2 h-4 w-4" />
+            重置密码
+          </Button>
+          <Button
+            variant="outline"
+            className={`border-cyan-200 text-cyan-700 hover:bg-cyan-50 dark:border-cyan-800/70 dark:text-cyan-300 dark:hover:bg-cyan-950/30 ${BLUE_CYAN_ACTION_HOVER}`}
+            onClick={() => {
+              onToggleStatus(user.id, !user.is_enabled);
+            }}
+            disabled={isCurrentUser || isDeleting || isBatchOperating}
+          >
+            {user.is_enabled ? <PowerOff className="mr-2 h-4 w-4" /> : <Power className="mr-2 h-4 w-4" />}
+            {user.is_enabled ? '禁用' : '启用'}
+          </Button>
+          <Button
+            variant="outline"
+            className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800/70 dark:text-red-300 dark:hover:bg-red-950/30"
+            onClick={() => {
+              onDeleteClick(user.id);
+            }}
+            disabled={isCurrentUser || isDeleting || isBatchOperating}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            删除
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   /**
    * 渲染移动端卡片项
@@ -347,14 +400,18 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
   };
 
   return (
-    <AppleTable
+    <AdminDataTable
       data={users}
-      columns={columns}
+      columns={desktopColumns}
       rowKey={(user) => user.id}
       loading={isLoading}
       emptyText="暂无用户数据"
       hoverable
+      showCount={false}
       renderMobileItem={renderMobileItem}
+      renderDesktopOverlay={renderDesktopOverlay}
+      onOverlayOpenChange={(item) => setActiveUser(item)}
+      disableInteractionsWhenOverlayOpen
     />
   );
 };
