@@ -17,3 +17,10 @@
   - `frontend/src/components/admin/__tests__/AdminDataTable.test.tsx`
   - `frontend/src/components/admin/__tests__/AppleApiKeyTable.test.tsx`
   - `frontend/src/components/admin/__tests__/AppleUserTable.test.tsx`
+
+## [2026-04-04 14:04] style(ui): 优化首页视觉布局与组件展示逻辑
+- **Body**: 优化了首页的 PlatformMarquee 组件展示，调整了 Home 页面中热门分类与功能介绍的布局顺序，并同步更新了相应的测试用例。
+- **Files**:
+  - frontend/src/components/home/PlatformMarquee.tsx
+  - frontend/src/pages/Home.tsx
+  - frontend/src/pages/__tests__/Home.test.tsx

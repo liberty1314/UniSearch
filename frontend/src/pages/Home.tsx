@@ -201,10 +201,7 @@ const Home: React.FC = () => {
         {/* 主要内容区域 */}
         <div className="max-w-6xl mx-auto">
           {!hasSearched ? (
-            <div className="space-y-20 pb-24">
-              {/* 支持平台跑马灯 */}
-              <PlatformMarquee />
-
+            <div className="space-y-16 pb-24">
               {/* 功能特色 - 增强视觉设计 */}
               <div>
                 <motion.div
@@ -268,8 +265,11 @@ const Home: React.FC = () => {
                   </div>
                 )}
                 
-                {/* 热门分类 Bento Grid */}
+                {/* 热门分类滚动轨道 */}
                 <TrendingCategories />
+
+                {/* 支持识别/聚合能力收束条 */}
+                <PlatformMarquee />
               </div>
             </div>
           ) : (

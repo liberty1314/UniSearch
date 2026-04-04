@@ -50,7 +50,12 @@ vi.mock('@/components/SkeletonLoader', () => ({
 
 vi.mock('@/components/home/TrendingCategories', () => ({
   __esModule: true,
-  default: () => <div>trending-categories</div>,
+  default: () => (
+    <section>
+      <h2>探索热门分类</h2>
+      <div>trending-categories</div>
+    </section>
+  ),
 }));
 
 vi.mock('@/components/ui/animated-grid-pattern', () => ({
@@ -114,7 +119,7 @@ describe('Home', () => {
     expect(screen.queryByText('当前账号已登录，绑定 API Key 后即可无限制搜索')).not.toBeInTheDocument();
   });
 
-  it('presents the homepage platform marquee as a capability notice without platform logos', () => {
+  it('places the capability strip after the trending categories section', () => {
     searchAccessStatus = 'search_ready';
 
     render(
@@ -123,10 +128,13 @@ describe('Home', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('heading', { level: 3, name: '支持识别/聚合以下链接类型' })).toBeInTheDocument();
+    const trendingHeading = screen.getByRole('heading', { level: 2, name: '探索热门分类' });
+    const capabilityHeading = screen.getByRole('heading', { level: 3, name: '支持识别/聚合以下链接类型' });
+
+    expect(trendingHeading.compareDocumentPosition(capabilityHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(trendingHeading).toBeInTheDocument();
+    expect(capabilityHeading).toBeInTheDocument();
     expect(screen.queryByRole('heading', { level: 3, name: '全网海量资源・一站聚合搜索' })).not.toBeInTheDocument();
-    expect(screen.queryByAltText('阿里云盘')).not.toBeInTheDocument();
-    expect(screen.queryByAltText('百度网盘')).not.toBeInTheDocument();
     expect(screen.getAllByText('阿里云盘').length).toBeGreaterThan(0);
     expect(screen.getAllByText('百度网盘').length).toBeGreaterThan(0);
   });
