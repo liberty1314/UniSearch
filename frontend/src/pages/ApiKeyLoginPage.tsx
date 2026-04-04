@@ -5,12 +5,12 @@ import { useAuthStore } from '@/stores/authStore';
 import { AuthService } from '@/services/authService';
 import { SystemSettingsService } from '@/services/systemSettingsService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Key, LogIn, Loader2 } from 'lucide-react';
 import AuthBackground from '@/components/auth/AuthBackground';
 import AuthCardShell from '@/components/auth/AuthCardShell';
+import AuthInput from '@/components/auth/AuthInput';
 import { AuthEntryLink, AuthEntryLinksRow } from '@/components/auth/AuthEntryLink';
 import { authVisualPresets } from '@/components/auth/authVisualPresets';
 import { useAuthParticles } from '@/components/auth/useAuthParticles';
@@ -125,24 +125,18 @@ const ApiKeyLoginPage: React.FC = () => {
                             )}
 
                             <div className={cn("space-y-4 transition-all duration-300", isLoading && "opacity-60 scale-[0.98]")}>
-                                <div className="space-y-2">
-                                    <Label htmlFor="apiKey">API Key</Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="apiKey"
-                                            type="text"
-                                            placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                                            value={apiKey}
-                                            onChange={(e) => setApiKey(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                                            className="pl-10 h-12 bg-white/50 dark:bg-gray-900/50 font-mono text-sm"
-                                        />
-                                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    </div>
-                                    <p className="text-xs text-gray-500 dark:text-slate-400">
-                                        格式：sk- 开头的 40 位十六进制字符
-                                    </p>
-                                </div>
+                                <AuthInput
+                                    id="apiKey"
+                                    label="API Key"
+                                    tone="blue"
+                                    icon={<Key className="w-4 h-4" />}
+                                    type="text"
+                                    placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                    value={apiKey}
+                                    onChange={(e) => setApiKey(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                                    className="font-mono !text-sm"
+                                />
 
                                 <div className="flex items-center space-x-2">
                                     <input

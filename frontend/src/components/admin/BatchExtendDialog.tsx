@@ -19,7 +19,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Clock, Loader2 } from 'lucide-react';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
     API_KEY_EXTENSION_OPTIONS,
     convertDaysToHours,

@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { AdminDialogMode, PluginInfo } from '@/types/api';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PluginAddDialog } from './PluginAddDialog';
 import {
   PluginManageWorkspace,

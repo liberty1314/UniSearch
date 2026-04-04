@@ -94,7 +94,7 @@ vi.mock('@/components/ui/select', () => {
   };
 });
 
-vi.mock('../ConfirmDialog', () => ({
+vi.mock('@/components/ui/confirm-dialog', () => ({
   ConfirmDialog: ({
     open,
     title,

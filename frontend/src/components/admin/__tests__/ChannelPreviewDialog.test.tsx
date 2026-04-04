@@ -33,6 +33,8 @@ describe('ChannelPreviewDialog', () => {
       />
     );
 
+    expect(screen.getByRole('dialog', { name: 'TG 频道全量查看' })).toBeInTheDocument();
+
     const errorNode = await screen.findByText('channel-1');
     const enabledHealthyNode = screen.getByText('channel-3');
     const disabledNode = screen.getByText('channel-2');

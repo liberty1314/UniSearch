@@ -5,13 +5,13 @@ import { useAuthStore } from '@/stores/authStore';
 import { AuthService } from '@/services/authService';
 import { SystemSettingsService } from '@/services/systemSettingsService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { User, Lock, LogIn, Eye, EyeOff, ArrowRight, Key, Loader2 } from 'lucide-react';
 import PageLoader from '@/components/PageLoader';
 import AuthBackground from '@/components/auth/AuthBackground';
 import AuthCardShell from '@/components/auth/AuthCardShell';
+import AuthInput from '@/components/auth/AuthInput';
 import { AuthEntryLink, AuthEntryLinksRow } from '@/components/auth/AuthEntryLink';
 import { authVisualPresets } from '@/components/auth/authVisualPresets';
 import { useAuthParticles } from '@/components/auth/useAuthParticles';
@@ -138,44 +138,39 @@ const LoginPage: React.FC = () => {
                             )}
 
                             <div className={cn("space-y-4 transition-all duration-300", isLoading && "opacity-60 scale-[0.98]")}>
-                                <div className="space-y-2">
-                                    <Label htmlFor="username">用户名</Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="username"
-                                            type="text"
-                                            placeholder="请输入用户名"
-                                            value={username}
-                                            onChange={(e) => setUsername(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                                            className="pl-10 h-12 bg-white/50 dark:bg-gray-900/50"
-                                        />
-                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    </div>
-                                </div>
+                                <AuthInput
+                                    id="username"
+                                    label="用户名"
+                                    tone="blue"
+                                    icon={<User className="w-4 h-4" />}
+                                    type="text"
+                                    placeholder="请输入用户名"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                                />
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="password">密码</Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="password"
-                                            type={showPassword ? "text" : "password"}
-                                            placeholder="请输入密码"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                                            className="pl-10 pr-10 h-12 bg-white/50 dark:bg-gray-900/50"
-                                        />
-                                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <AuthInput
+                                    id="password"
+                                    label="密码"
+                                    tone="blue"
+                                    icon={<Lock className="w-4 h-4" />}
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="请输入密码"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                                    endAdornment={(
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                            className="text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-slate-200"
+                                            aria-label={showPassword ? '隐藏密码' : '显示密码'}
                                         >
                                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                         </button>
-                                    </div>
-                                </div>
+                                    )}
+                                />
 
                                 <div className="flex items-center space-x-2">
                                     <input

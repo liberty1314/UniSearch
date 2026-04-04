@@ -4,12 +4,12 @@ import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
 import { AuthService } from '@/services/authService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, Lock, User, Loader2 } from 'lucide-react';
 import AuthBackground from '@/components/auth/AuthBackground';
 import AuthCardShell from '@/components/auth/AuthCardShell';
+import AuthInput from '@/components/auth/AuthInput';
 import AuthSwitchMotion from '@/components/auth/AuthSwitchMotion';
 import { authVisualPresets } from '@/components/auth/authVisualPresets';
 import { cn } from '@/lib/utils';
@@ -135,59 +135,52 @@ const AdminLogin: React.FC = () => {
                             )}
                             <form onSubmit={(e) => { e.preventDefault(); handleAdminLogin(); }} className={cn("space-y-6 transition-all duration-300", isAdminLoading && "opacity-60 scale-[0.98]")}>
                                 <div className="space-y-3 animate-fade-in auth-delay-300">
-                                    <Label htmlFor="username" className="flex items-center gap-2 text-sm font-medium">
-                                        <User className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                                        用户名
-                                    </Label>
-                                    <div className="relative group">
-                                        <Input
-                                            id="username"
-                                            name="username"
-                                            type="text"
-                                            autoComplete="username"
-                                            placeholder="请输入用户名"
-                                            value={username}
-                                            onChange={(e) => setUsername(e.target.value)}
-                                            onKeyDown={handleKeyPress}
-                                            disabled={isAdminLoading}
-                                            className="h-12 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-slate-700 focus:border-rose-500 dark:focus:border-rose-400 focus:ring-2 focus:ring-rose-500/20 focus:outline-none transition-all duration-200"
-                                        />
-                                        <div className="absolute inset-0 rounded-md bg-gradient-to-r from-rose-500/0 via-rose-500/10 to-rose-600/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                                    </div>
+                                    <AuthInput
+                                        id="username"
+                                        name="username"
+                                        label="用户名"
+                                        tone="rose"
+                                        icon={<User className="w-4 h-4" />}
+                                        type="text"
+                                        autoComplete="username"
+                                        placeholder="请输入用户名"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        onKeyDown={handleKeyPress}
+                                        disabled={isAdminLoading}
+                                    />
                                 </div>
 
                                 <div className="space-y-3 animate-fade-in auth-delay-350">
-                                    <Label htmlFor="password" className="flex items-center gap-2 text-sm font-medium">
-                                        <Lock className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                                        管理员密码
-                                    </Label>
-                                    <div className="relative group">
-                                        <Input
-                                            id="password"
-                                            name="password"
-                                            type={showPassword ? 'text' : 'password'}
-                                            autoComplete="current-password"
-                                            placeholder="请输入管理员密码"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            onKeyDown={handleKeyPress}
-                                            disabled={isAdminLoading}
-                                            className="h-12 pr-12 bg-white/50 dark:bg-gray-900/50 border-gray-300 dark:border-slate-700 focus:border-rose-500 dark:focus:border-rose-400 focus:ring-2 focus:ring-rose-500/20 focus:outline-none transition-all duration-200"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 transition-colors duration-200 z-10"
-                                            tabIndex={-1}
-                                        >
-                                            {showPassword ? (
-                                                <EyeOff className="w-5 h-5" />
-                                            ) : (
-                                                <Eye className="w-5 h-5" />
-                                            )}
-                                        </button>
-                                        <div className="absolute inset-0 rounded-md bg-gradient-to-r from-rose-500/0 via-rose-500/10 to-rose-600/0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                                    </div>
+                                    <AuthInput
+                                        id="password"
+                                        name="password"
+                                        label="管理员密码"
+                                        tone="rose"
+                                        icon={<Lock className="w-4 h-4" />}
+                                        type={showPassword ? 'text' : 'password'}
+                                        autoComplete="current-password"
+                                        placeholder="请输入管理员密码"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        onKeyDown={handleKeyPress}
+                                        disabled={isAdminLoading}
+                                        endAdornment={(
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="text-gray-500 transition-colors duration-200 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400"
+                                                aria-label={showPassword ? '隐藏管理员密码' : '显示管理员密码'}
+                                                tabIndex={-1}
+                                            >
+                                                {showPassword ? (
+                                                    <EyeOff className="w-5 h-5" />
+                                                ) : (
+                                                    <Eye className="w-5 h-5" />
+                                                )}
+                                            </button>
+                                        )}
+                                    />
                                 </div>
 
                                 {/* 记住我复选框 */}

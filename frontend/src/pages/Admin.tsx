@@ -1,14 +1,5 @@
 import React from 'react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { CreateKeyDialog } from '@/components/CreateKeyDialog';
 import { EditKeyDialog } from '@/components/admin/EditKeyDialog';
 import { BatchExtendDialog } from '@/components/admin/BatchExtendDialog';
@@ -177,26 +168,16 @@ const Admin: React.FC = () => {
         selectedKeys={apiKeys.pagedApiKeys.filter((key) => apiKeys.selectedKeys.has(key.key))}
       />
 
-      <AlertDialog open={apiKeys.deleteDialogOpen} onOpenChange={apiKeys.setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              您确定要删除这个 API Key 吗？此操作无法撤销，使用该 Key 的用户将无法继续访问系统。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={apiKeys.isDeleting}>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => void apiKeys.handleDeleteConfirm()}
-              disabled={apiKeys.isDeleting}
-              className="bg-red-500 hover:bg-red-600"
-            >
-              {apiKeys.isDeleting ? '删除中...' : '确认删除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={apiKeys.deleteDialogOpen}
+        onOpenChange={apiKeys.setDeleteDialogOpen}
+        title="确认删除"
+        description="您确定要删除这个 API Key 吗？此操作无法撤销，使用该 Key 的用户将无法继续访问系统。"
+        confirmText={apiKeys.isDeleting ? '删除中...' : '确认删除'}
+        variant="destructive"
+        onConfirm={() => void apiKeys.handleDeleteConfirm()}
+        isLoading={apiKeys.isDeleting}
+      />
 
       <CreateUserDialog
         open={users.isCreateUserDialogOpen}
@@ -222,26 +203,16 @@ const Admin: React.FC = () => {
         />
       )}
 
-      <AlertDialog open={users.userToDelete !== null} onOpenChange={(open) => !open && users.setUserToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除用户</AlertDialogTitle>
-            <AlertDialogDescription>
-              您确定要删除这个用户吗？此操作无法撤销，该用户将无法继续访问系统。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={users.isDeletingUser}>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => void users.handleDeleteUserConfirm()}
-              disabled={users.isDeletingUser}
-              className="bg-red-500 hover:bg-red-600"
-            >
-              {users.isDeletingUser ? '删除中...' : '确认删除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={users.userToDelete !== null}
+        onOpenChange={(open) => !open && users.setUserToDelete(null)}
+        title="确认删除用户"
+        description="您确定要删除这个用户吗？此操作无法撤销，该用户将无法继续访问系统。"
+        confirmText={users.isDeletingUser ? '删除中...' : '确认删除'}
+        variant="destructive"
+        onConfirm={() => void users.handleDeleteUserConfirm()}
+        isLoading={users.isDeletingUser}
+      />
 
       <BatchDeleteUsersDialog
         open={users.isBatchDeleteUsersDialogOpen}

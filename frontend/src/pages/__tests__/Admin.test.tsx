@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import Admin from '@/pages/Admin';
 
@@ -57,12 +57,12 @@ vi.mock('@/hooks/useAdminPageController', () => ({
       handleBatchDeleteSuccess: vi.fn(),
       isBatchExportDialogOpen: false,
       setIsBatchExportDialogOpen: vi.fn(),
-      deleteDialogOpen: false,
+      deleteDialogOpen: true,
       setDeleteDialogOpen: vi.fn(),
       handleDeleteConfirm: vi.fn(),
     },
     users: {
-      users: [],
+      users: [{ id: 1, username: 'alice', role: 'user' }],
       getUserStats: vi.fn(() => []),
       selectedUsers: new Set(),
       isLoadingUsers: false,
@@ -100,7 +100,7 @@ vi.mock('@/hooks/useAdminPageController', () => ({
       userToResetPassword: null,
       isResetPasswordDialogOpen: false,
       setIsResetPasswordDialogOpen: vi.fn(),
-      userToDelete: null,
+      userToDelete: { id: 1, username: 'alice', role: 'user' },
       deleteUserDialogOpen: false,
       setDeleteUserDialogOpen: vi.fn(),
       handleDeleteUserConfirm: vi.fn(),
@@ -182,6 +182,10 @@ vi.mock('@/components/admin/ResetPasswordDialog', () => ({
   ResetPasswordDialog: () => null,
 }));
 
+vi.mock('@/components/ui/confirm-dialog', () => ({
+  ConfirmDialog: ({ title }: { title: string }) => <div data-testid="confirm-dialog">{title}</div>,
+}));
+
 vi.mock('@/components/ui/alert-dialog', () => ({
   AlertDialog: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AlertDialogAction: ({ children }: { children: React.ReactNode }) => <button>{children}</button>,
@@ -200,5 +204,13 @@ describe('Admin', () => {
     expect(container.firstChild).toHaveClass('bg-white');
     expect(container.firstChild).not.toHaveClass('from-gray-50');
     expect(container.firstChild).not.toHaveClass('dark:to-nebula-950/20');
+  });
+
+  it('routes simple delete confirmations through the shared ConfirmDialog entry', () => {
+    render(<Admin />);
+
+    expect(screen.getAllByTestId('confirm-dialog')).toHaveLength(2);
+    expect(screen.getByText('确认删除')).toBeInTheDocument();
+    expect(screen.getByText('确认删除用户')).toBeInTheDocument();
   });
 });

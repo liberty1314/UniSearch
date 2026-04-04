@@ -33,6 +33,8 @@ describe('PluginPreviewDialog', () => {
       />
     );
 
+    expect(screen.getByRole('dialog', { name: '插件全量查看' })).toBeInTheDocument();
+
     expect(screen.getByText('plugin-12')).toBeInTheDocument();
     expect(screen.getByText('plugin-11')).toBeInTheDocument();
     expect(screen.getByText('plugin-1')).toBeInTheDocument();

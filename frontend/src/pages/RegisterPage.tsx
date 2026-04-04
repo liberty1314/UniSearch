@@ -3,14 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AuthService } from '@/services/authService';
 import { SystemSettingsService } from '@/services/systemSettingsService';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { User, Lock, UserPlus, Eye, EyeOff, LogIn } from 'lucide-react';
 import PageLoader from '@/components/PageLoader';
 import AuthBackground from '@/components/auth/AuthBackground';
 import AuthCardShell from '@/components/auth/AuthCardShell';
+import AuthInput from '@/components/auth/AuthInput';
 import { AuthEntryLink, AuthEntryLinksRow } from '@/components/auth/AuthEntryLink';
 import { authVisualPresets } from '@/components/auth/authVisualPresets';
 import { useAuthParticles } from '@/components/auth/useAuthParticles';
@@ -32,6 +31,7 @@ const RegisterPage: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [submitAttempted, setSubmitAttempted] = useState(false);
 
     // Animation State
     const particles = useAuthParticles();
@@ -58,6 +58,8 @@ const RegisterPage: React.FC = () => {
     }, [navigate]);
 
     const handleRegister = async () => {
+        setSubmitAttempted(true);
+
         if (!username.trim() || !password.trim() || !confirmPassword.trim()) {
             toast.error('请填写完整的注册信息');
             return;
@@ -96,6 +98,30 @@ const RegisterPage: React.FC = () => {
         }
     };
 
+    const usernameError = !submitAttempted
+        ? undefined
+        : !username.trim()
+            ? '请输入用户名'
+            : username.length < 3 || username.length > 32
+                ? '用户名长度必须在3-32字符之间'
+                : undefined;
+
+    const passwordError = !submitAttempted
+        ? undefined
+        : !password.trim()
+            ? '请输入密码'
+            : password.length < 6 || password.length > 64
+                ? '密码长度必须在6-64字符之间'
+                : undefined;
+
+    const confirmPasswordError = !submitAttempted
+        ? undefined
+        : !confirmPassword.trim()
+            ? '请再次输入密码'
+            : password !== confirmPassword
+                ? '两次输入的密码不一致'
+                : undefined;
+
     if (isLoadingSettings) return <PageLoader isLoading={true} />;
 
     return (
@@ -117,74 +143,68 @@ const RegisterPage: React.FC = () => {
                             <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 bg-clip-text text-transparent animate-auth-gradient">
                                 创建账户
                             </CardTitle>
-                            <CardDescription className="text-center text-base">
-                                注册新的 UniSearch 账户
-                            </CardDescription>
                         </CardHeader>
 
                         <CardContent className="space-y-6">
                             <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="username">用户名</Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="username"
-                                            type="text"
-                                            placeholder="3-32个字符"
-                                            value={username}
-                                            onChange={(e) => setUsername(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
-                                            className="pl-10 h-12 bg-white/50 dark:bg-gray-900/50"
-                                        />
-                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    </div>
-                                </div>
+                                <AuthInput
+                                    id="username"
+                                    label="用户名"
+                                    tone="emerald"
+                                    icon={<User className="w-4 h-4" />}
+                                    type="text"
+                                    placeholder="3-32个字符"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+                                    error={usernameError}
+                                />
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="password">密码</Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="password"
-                                            type={showPassword ? "text" : "password"}
-                                            placeholder="6-64个字符"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
-                                            className="pl-10 pr-10 h-12 bg-white/50 dark:bg-gray-900/50"
-                                        />
-                                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <AuthInput
+                                    id="password"
+                                    label="密码"
+                                    tone="emerald"
+                                    icon={<Lock className="w-4 h-4" />}
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="6-64个字符"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+                                    error={passwordError}
+                                    endAdornment={(
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                            className="text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-slate-200"
+                                            aria-label={showPassword ? '隐藏密码' : '显示密码'}
                                         >
                                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                         </button>
-                                    </div>
-                                </div>
+                                    )}
+                                />
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="confirmPassword">确认密码</Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="confirmPassword"
-                                            type={showConfirmPassword ? "text" : "password"}
-                                            placeholder="请再次输入密码"
-                                            value={confirmPassword}
-                                            onChange={(e) => setConfirmPassword(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
-                                            className="pl-10 pr-10 h-12 bg-white/50 dark:bg-gray-900/50"
-                                        />
-                                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <AuthInput
+                                    id="confirmPassword"
+                                    label="确认密码"
+                                    tone="emerald"
+                                    icon={<Lock className="w-4 h-4" />}
+                                    type={showConfirmPassword ? "text" : "password"}
+                                    placeholder="请再次输入密码"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+                                    error={confirmPasswordError}
+                                    endAdornment={(
                                         <button
                                             type="button"
                                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                            className="text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-slate-200"
+                                            aria-label={showConfirmPassword ? '隐藏确认密码' : '显示确认密码'}
                                         >
                                             {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                         </button>
-                                    </div>
-                                </div>
+                                    )}
+                                />
 
                                 <Button
                                     onClick={handleRegister}
