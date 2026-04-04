@@ -75,6 +75,58 @@ log_header() {
     echo ""
 }
 
+count_csv_items() {
+    local value="${1:-}"
+
+    if [ -z "$value" ]; then
+        echo 0
+        return
+    fi
+
+    local count=0
+    IFS=',' read -ra items <<< "$value"
+    for item in "${items[@]}"; do
+        item="$(echo "$item" | xargs)"
+        if [ -n "$item" ]; then
+            count=$((count + 1))
+        fi
+    done
+
+    echo "$count"
+}
+
+load_project_env() {
+    local env_file=""
+
+    if [ -f "${PROJECT_ROOT}/.env" ]; then
+        env_file="${PROJECT_ROOT}/.env"
+    elif [ -f "${PROJECT_ROOT}/.env.example" ]; then
+        env_file="${PROJECT_ROOT}/.env.example"
+    fi
+
+    if [ -z "$env_file" ]; then
+        log_warning "未找到 .env 或 .env.example，测试容器将使用应用默认值"
+        return 0
+    fi
+
+    log_info "加载项目环境变量: $(basename "$env_file")"
+
+    load_env_value() {
+        local key="$1"
+        local value=""
+
+        value=$(grep -E "^${key}=" "$env_file" | head -n 1 | cut -d'=' -f2- || true)
+        if [ -n "$value" ]; then
+            export "${key}=${value}"
+        fi
+    }
+
+    # 只加载测试容器需要的业务配置，避免覆盖交互输入的构建参数
+    load_env_value "CHANNELS"
+    load_env_value "ENABLED_PLUGINS"
+    load_env_value "CUSTOM_PLUGINS_PATH"
+}
+
 # ============================================
 # 菜单函数
 # ============================================
@@ -243,6 +295,15 @@ build_local_test_image() {
 # 运行本地容器测试
 run_local_container_test() {
     log_header "Step 2: 本地容器测试"
+
+    load_project_env
+
+    echo ""
+    log_info "将传递到测试容器的业务配置:"
+    echo -e "  ${CYAN}频道数量:${NC} $(count_csv_items "${CHANNELS:-}")"
+    echo -e "  ${CYAN}启用插件数量:${NC} $(count_csv_items "${ENABLED_PLUGINS:-}")"
+    echo -e "  ${CYAN}自定义插件配置:${NC} ${CUSTOM_PLUGINS_PATH:-./custom_plugins.json}"
+    echo ""
     
     local network_name="${IMAGE_NAME}-test-network"
     local mysql_container="${IMAGE_NAME}-mysql-test"
@@ -352,27 +413,43 @@ run_local_container_test() {
     
     # 启动应用容器（单容器架构：Nginx + 后端）
     log_info "启动应用容器（Nginx + 后端）..."
+    local app_env_args=(
+        -e TZ=Asia/Shanghai
+        -e PORT=8888
+        -e CACHE_ENABLED=true
+        -e CACHE_PATH=/app/cache
+        -e ASYNC_PLUGIN_ENABLED=true
+        -e API_KEY_ENABLED=false
+        -e DB_HOST="${mysql_container}"
+        -e DB_PORT=3306
+        -e DB_USER=root
+        -e DB_PASSWORD=test_password_123456
+        -e DB_NAME=unisearch_test
+        -e REDIS_HOST="${redis_container}"
+        -e REDIS_PORT=6379
+        -e REDIS_PASSWORD=test_redis_password
+        -e AUTH_JWT_SECRET=test_jwt_secret_key_for_testing_only
+        -e SECRET_MASTER_KEY=test_master_key_for_testing_only_32bytes
+        -e REFRESH_TOKEN_ENCRYPT_KEY=test_refresh_token_key_32bytes_base64
+    )
+
+    if [ -n "${CHANNELS:-}" ]; then
+        app_env_args+=(-e "CHANNELS=${CHANNELS}")
+    fi
+
+    if [ -n "${ENABLED_PLUGINS:-}" ]; then
+        app_env_args+=(-e "ENABLED_PLUGINS=${ENABLED_PLUGINS}")
+    fi
+
+    if [ -n "${CUSTOM_PLUGINS_PATH:-}" ]; then
+        app_env_args+=(-e "CUSTOM_PLUGINS_PATH=${CUSTOM_PLUGINS_PATH}")
+    fi
+
     docker run -d \
         --name "${app_container}" \
         --network "${network_name}" \
         -p 3000:80 \
-        -e TZ=Asia/Shanghai \
-        -e PORT=8888 \
-        -e CACHE_ENABLED=true \
-        -e CACHE_PATH=/app/cache \
-        -e ASYNC_PLUGIN_ENABLED=true \
-        -e API_KEY_ENABLED=false \
-        -e DB_HOST="${mysql_container}" \
-        -e DB_PORT=3306 \
-        -e DB_USER=root \
-        -e DB_PASSWORD=test_password_123456 \
-        -e DB_NAME=unisearch_test \
-        -e REDIS_HOST="${redis_container}" \
-        -e REDIS_PORT=6379 \
-        -e REDIS_PASSWORD=test_redis_password \
-        -e AUTH_JWT_SECRET=test_jwt_secret_key_for_testing_only \
-        -e SECRET_MASTER_KEY=test_master_key_for_testing_only_32bytes \
-        -e REFRESH_TOKEN_ENCRYPT_KEY=test_refresh_token_key_32bytes_base64 \
+        "${app_env_args[@]}" \
         "${TEST_IMAGE_TAG}"
     
     if [ $? -ne 0 ]; then

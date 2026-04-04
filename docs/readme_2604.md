@@ -37,3 +37,9 @@
   - `frontend/src/components/ui/marquee.tsx`
   - `frontend/src/pages/Home.tsx`
   - `frontend/src/pages/__tests__/Home.test.tsx`
+
+## [2026-04-04 23:22:02] feat(deploy): 优化 Dockerfile 插件复制并增强 build.sh 环境加载
+- **内容**: 在 Dockerfile 中添加自定义插件配置的复制指令；同时重构 build.sh，新增环境变量自动加载机制，支持从 .env/.env.example 读取并传递业务配置到本地测试容器，提升容器化测试的灵活性。
+- **文件**:
+  - `Dockerfile`
+  - `scripts/build.sh`

@@ -56,6 +56,7 @@ RUN mkdir -p /app/backend /app/cache /var/log/supervisor
 
 # 从构建阶段复制后端可执行文件
 COPY --from=backend-builder /app/backend/unisearch /app/backend/unisearch
+COPY --from=backend-builder /app/backend/custom_plugins.json /app/backend/custom_plugins.json
 
 # 从构建阶段复制前端构建产物
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
