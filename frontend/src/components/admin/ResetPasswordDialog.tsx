@@ -14,6 +14,10 @@ import { toast } from 'sonner';
 import { UserService } from '../../services/userService';
 import type { UserInfo } from '../../types/api';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+import {
+  validateAccountPassword,
+  validateAccountPasswordConfirmation,
+} from '@/components/account/passwordValidation';
 import { getErrorDataError } from '@/lib/error';
 
 interface ResetPasswordDialogProps {
@@ -60,31 +64,6 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
     }
   }, [open]);
 
-  // 验证新密码
-  const validateNewPassword = (password: string): string | undefined => {
-    if (!password) {
-      return '请输入新密码';
-    }
-    if (password.length < 6) {
-      return '密码长度至少为 6 个字符';
-    }
-    if (password.length > 64) {
-      return '密码长度不能超过 64 个字符';
-    }
-    return undefined;
-  };
-
-  // 验证确认密码
-  const validateConfirmPassword = (password: string): string | undefined => {
-    if (!password) {
-      return '请确认新密码';
-    }
-    if (password !== newPassword) {
-      return '两次输入的密码不一致';
-    }
-    return undefined;
-  };
-
   // 处理新密码输入
   const handleNewPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -92,13 +71,13 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
     
     // 实时验证
     if (errors.newPassword) {
-      const error = validateNewPassword(value);
+      const error = validateAccountPassword(value, { required: true });
       setErrors((prev) => ({ ...prev, newPassword: error }));
     }
     
     // 如果确认密码已输入，重新验证一致性
     if (confirmPassword && errors.confirmPassword) {
-      const confirmError = value !== confirmPassword ? '两次输入的密码不一致' : undefined;
+      const confirmError = validateAccountPasswordConfirmation(confirmPassword, value, { required: true });
       setErrors((prev) => ({ ...prev, confirmPassword: confirmError }));
     }
   };
@@ -110,7 +89,7 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
     
     // 实时验证
     if (errors.confirmPassword) {
-      const error = validateConfirmPassword(value);
+      const error = validateAccountPasswordConfirmation(value, newPassword, { required: true });
       setErrors((prev) => ({ ...prev, confirmPassword: error }));
     }
   };
@@ -124,8 +103,10 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
     }
 
     // 验证所有字段
-    const newPasswordError = validateNewPassword(newPassword);
-    const confirmPasswordError = validateConfirmPassword(confirmPassword);
+    const newPasswordError = validateAccountPassword(newPassword, { required: true });
+    const confirmPasswordError = validateAccountPasswordConfirmation(confirmPassword, newPassword, {
+      required: true,
+    });
 
     if (newPasswordError || confirmPasswordError) {
       setErrors({

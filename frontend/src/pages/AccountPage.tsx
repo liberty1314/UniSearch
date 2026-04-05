@@ -1,44 +1,24 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Sparkles, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
-import { ShieldCheck, UserRound, LockKeyhole, CalendarClock } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import AccountOverviewPanel from '@/components/account/AccountOverviewPanel';
+import AccountSecurityPanel from '@/components/account/AccountSecurityPanel';
+import AccountWorkspaceShell from '@/components/account/AccountWorkspaceShell';
+import type { AccountProfile, AccountSection } from '@/components/account/accountTypes';
+import {
+  validateAccountPassword,
+  validateAccountPasswordConfirmation,
+} from '@/components/account/passwordValidation';
+import PublicPageShell from '@/components/PublicPageShell';
 import { apiClient } from '@/lib/api';
-import { useAuthStore } from '@/stores/authStore';
 import { getErrorMessage } from '@/lib/error';
-
-interface AccountProfile {
-  id: number;
-  username: string;
-  role: string;
-  is_enabled: boolean;
-  last_login_at?: string | null;
-  created_at?: string;
-}
-
-const formatDate = (value?: string | null) => {
-  if (!value) {
-    return '暂无记录';
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '暂无记录';
-  }
-
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
+import { useAuthStore } from '@/stores/authStore';
 
 const AccountPage: React.FC = () => {
   const { username: cachedUsername } = useAuthStore();
   const [profile, setProfile] = useState<AccountProfile | null>(null);
+  const [activeSection, setActiveSection] = useState<AccountSection>('overview');
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -60,45 +40,40 @@ const AccountPage: React.FC = () => {
     void loadProfile();
   }, []);
 
-  const passwordError = useMemo(() => {
-    if (!newPassword) {
-      return '';
-    }
-    if (newPassword.length < 6 || newPassword.length > 64) {
-      return '新密码长度必须在 6-64 个字符之间';
-    }
-    return '';
-  }, [newPassword]);
+  const passwordError = useMemo(
+    () => validateAccountPassword(newPassword, { required: false }),
+    [newPassword]
+  );
 
-  const confirmError = useMemo(() => {
-    if (!confirmPassword) {
-      return '';
-    }
-    if (confirmPassword !== newPassword) {
-      return '两次输入的新密码不一致';
-    }
-    return '';
-  }, [confirmPassword, newPassword]);
+  const confirmError = useMemo(
+    () => validateAccountPasswordConfirmation(confirmPassword, newPassword, { required: false }),
+    [confirmPassword, newPassword]
+  );
 
   const handleChangePassword = async () => {
     if (!currentPassword.trim()) {
       toast.error('请输入当前密码');
       return;
     }
-    if (passwordError) {
-      toast.error(passwordError);
+
+    const nextPasswordError = validateAccountPassword(newPassword.trim(), { required: true });
+    if (nextPasswordError) {
+      toast.error(nextPasswordError);
       return;
     }
-    if (confirmError) {
-      toast.error(confirmError);
-      return;
-    }
-    if (!newPassword.trim() || !confirmPassword.trim()) {
-      toast.error('请完整填写修改密码表单');
+
+    const nextConfirmError = validateAccountPasswordConfirmation(
+      confirmPassword.trim(),
+      newPassword.trim(),
+      { required: true }
+    );
+    if (nextConfirmError) {
+      toast.error(nextConfirmError);
       return;
     }
 
     setIsSaving(true);
+
     try {
       await apiClient.post('/user/change-password', {
         current_password: currentPassword,
@@ -116,114 +91,88 @@ const AccountPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950">
-      <div className="container mx-auto px-4 py-8 pt-24 pb-16">
-        <div className="mx-auto max-w-4xl space-y-6">
-          <div className="space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-600 dark:text-cyan-300">
-              Account
-            </p>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">个人中心</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              管理您的账号信息，并在需要时安全地更新登录密码。
-            </p>
-          </div>
+    <PublicPageShell contentClassName="container mx-auto px-4 py-8 pb-16 pt-24">
+      <div className="mx-auto max-w-7xl space-y-8">
+        <motion.section
+          initial={{ opacity: 0, y: -18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+          className="relative overflow-hidden rounded-[2.4rem] border border-white/60 bg-white/72 px-6 py-7 shadow-[0_24px_60px_rgba(15,23,42,0.06)] backdrop-blur-3xl dark:border-white/[0.08] dark:bg-slate-950/44 dark:shadow-[0_26px_64px_rgba(0,0,0,0.34)] sm:px-8 sm:py-8"
+        >
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/65 to-transparent dark:via-white/[0.15]" />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-16 top-4 h-40 w-40 rounded-full bg-cyan-200/30 blur-3xl dark:bg-cyan-700/10"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -left-12 bottom-0 h-36 w-36 rounded-full bg-blue-200/25 blur-3xl dark:bg-blue-900/12"
+          />
 
-          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-            <Card className="border-slate-200/80 bg-white/80 shadow-[0_18px_48px_rgba(15,23,42,0.05)] backdrop-blur dark:border-white/10 dark:bg-slate-900/70">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
-                  <UserRound className="h-5 w-5 text-cyan-600 dark:text-cyan-300" />
-                  账号信息
-                </CardTitle>
-                <CardDescription>这里展示当前登录账号的基础资料与状态。</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-slate-950/60">
-                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400">用户名</div>
-                    <div className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
-                      {profile?.username || cachedUsername || '加载中'}
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-slate-950/60">
-                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400">角色</div>
-                    <div className="mt-2 flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
-                      <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                      {profile?.role === 'admin' ? '管理员' : '普通用户'}
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-slate-950/60">
-                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400">最近登录</div>
-                    <div className="mt-2 flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
-                      <CalendarClock className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />
-                      {isLoadingProfile ? '加载中...' : formatDate(profile?.last_login_at)}
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-slate-950/60">
-                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400">账号创建时间</div>
-                    <div className="mt-2 text-sm font-medium text-slate-900 dark:text-white">
-                      {isLoadingProfile ? '加载中...' : formatDate(profile?.created_at)}
-                    </div>
-                  </div>
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-5">
+              <div className="flex items-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-blue-500 via-sky-500 to-cyan-400 text-white shadow-[0_20px_40px_rgba(14,165,233,0.24)] ring-2 ring-white/65">
+                  <UserRound className="h-8 w-8" strokeWidth={2.3} />
                 </div>
-              </CardContent>
-            </Card>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.34em] text-slate-400 dark:text-slate-500">
+                    Account Center
+                  </p>
+                  <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+                    个人中心
+                  </h1>
+                </div>
+              </div>
 
-            <Card className="border-slate-200/80 bg-white/80 shadow-[0_18px_48px_rgba(15,23,42,0.05)] backdrop-blur dark:border-white/10 dark:bg-slate-900/70">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
-                  <LockKeyhole className="h-5 w-5 text-cyan-600 dark:text-cyan-300" />
-                  修改密码
-                </CardTitle>
-                <CardDescription>修改密码时必须先验证当前密码。</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="current-password">当前密码</Label>
-                  <input
-                    id="current-password"
-                    type="password"
-                    value={currentPassword}
-                    onChange={(event) => setCurrentPassword(event.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-cyan-400 dark:border-white/10 dark:bg-slate-950/70 dark:text-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">新密码</Label>
-                  <input
-                    id="new-password"
-                    type="password"
-                    value={newPassword}
-                    onChange={(event) => setNewPassword(event.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-cyan-400 dark:border-white/10 dark:bg-slate-950/70 dark:text-white"
-                  />
-                  {passwordError && <p className="text-xs text-red-500">{passwordError}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">确认新密码</Label>
-                  <input
-                    id="confirm-password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-cyan-400 dark:border-white/10 dark:bg-slate-950/70 dark:text-white"
-                  />
-                  {confirmError && <p className="text-xs text-red-500">{confirmError}</p>}
-                </div>
-                <Button
-                  onClick={handleChangePassword}
-                  disabled={isSaving}
-                  className="w-full rounded-xl bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-500 text-white hover:from-blue-500 hover:via-cyan-400 hover:to-sky-400"
-                >
-                  {isSaving ? '保存中...' : '更新密码'}
-                </Button>
-              </CardContent>
-            </Card>
+              <p className="max-w-3xl text-sm leading-7 text-slate-600 dark:text-slate-300/90">
+                用工作台视角管理账户资料与密码安全。页面结构收束为清晰的模块导航，避免信息展示与表单操作混在同一层级。
+              </p>
+            </div>
+
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/70 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700 shadow-sm dark:border-white/10 dark:bg-slate-900/70 dark:text-cyan-300">
+              <Sparkles className="h-3.5 w-3.5" />
+              Workspace Mode
+            </div>
           </div>
-        </div>
+        </motion.section>
+
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12, duration: 0.5, ease: 'easeOut' }}
+        >
+          <AccountWorkspaceShell
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
+            profile={profile}
+            cachedUsername={cachedUsername}
+            isLoadingProfile={isLoadingProfile}
+          >
+            {activeSection === 'overview' ? (
+              <AccountOverviewPanel
+                profile={profile}
+                cachedUsername={cachedUsername}
+                isLoadingProfile={isLoadingProfile}
+              />
+            ) : (
+              <AccountSecurityPanel
+                currentPassword={currentPassword}
+                newPassword={newPassword}
+                confirmPassword={confirmPassword}
+                passwordError={passwordError}
+                confirmError={confirmError}
+                isSaving={isSaving}
+                onCurrentPasswordChange={setCurrentPassword}
+                onNewPasswordChange={setNewPassword}
+                onConfirmPasswordChange={setConfirmPassword}
+                onSubmit={handleChangePassword}
+              />
+            )}
+          </AccountWorkspaceShell>
+        </motion.div>
       </div>
-    </div>
+    </PublicPageShell>
   );
 };
 
