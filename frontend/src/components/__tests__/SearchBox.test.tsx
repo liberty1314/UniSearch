@@ -12,7 +12,6 @@ const {
   navigateMock,
   warningToastMock,
   errorToastMock,
-  resolveDefaultAuthEntryPathMock,
   logoutMock,
 } = vi.hoisted(() => ({
   performSearchMock: vi.fn(),
@@ -22,17 +21,16 @@ const {
   navigateMock: vi.fn(),
   warningToastMock: vi.fn(),
   errorToastMock: vi.fn(),
-  resolveDefaultAuthEntryPathMock: vi.fn(),
   logoutMock: vi.fn(),
 }));
 
 let authState = {
   token: 'jwt-token' as string | null,
-  apiKey: null as string | null,
   isAdmin: false,
+  isAuthenticated: true,
 };
 
-let searchAccessStatus: 'anonymous' | 'session_only' | 'search_ready' | 'api_key_only' = 'session_only';
+let searchAccessStatus: 'anonymous' | 'authenticated' = 'authenticated';
 let searchHistoryState: string[] = [];
 
 vi.mock('react-router-dom', async () => {
@@ -66,12 +64,6 @@ vi.mock('@/stores/searchAccessStore', () => ({
   useSearchAccessStatus: () => ({
     status: searchAccessStatus,
   }),
-}));
-
-vi.mock('@/services/systemSettingsService', () => ({
-  SystemSettingsService: {
-    resolveDefaultAuthEntryPath: resolveDefaultAuthEntryPathMock,
-  },
 }));
 
 vi.mock('sonner', () => ({
@@ -116,15 +108,14 @@ describe('SearchBox', () => {
     navigateMock.mockReset();
     warningToastMock.mockReset();
     errorToastMock.mockReset();
-    resolveDefaultAuthEntryPathMock.mockReset();
     logoutMock.mockReset();
 
     authState = {
       token: 'jwt-token',
-      apiKey: null,
       isAdmin: false,
+      isAuthenticated: true,
     };
-    searchAccessStatus = 'session_only';
+    searchAccessStatus = 'authenticated';
     searchHistoryState = [];
   });
 
@@ -257,25 +248,26 @@ describe('SearchBox', () => {
     });
   });
 
-  it('routes token-only users to API key binding on 403 search errors', async () => {
-    performSearchMock.mockRejectedValue({
-      code: 403,
-      message: '请先绑定 API Key 后再进行搜索',
-    });
+  it('redirects anonymous users to /login before starting a search', async () => {
+    authState = {
+      token: null,
+      isAdmin: false,
+      isAuthenticated: false,
+    };
+    searchAccessStatus = 'anonymous';
 
     render(<SearchBox />);
 
     await userEvent.type(screen.getByPlaceholderText('搜索网盘资源...'), '仙逆');
     await userEvent.click(screen.getByRole('button', { name: '搜索' }));
 
-    await waitFor(() => {
-      expect(warningToastMock).toHaveBeenCalledWith('请先绑定 API Key 后再进行搜索', { duration: 3000 });
-    });
-    expect(navigateMock).toHaveBeenCalledWith('/settings/apikey');
+    expect(performSearchMock).not.toHaveBeenCalled();
+    expect(warningToastMock).toHaveBeenCalledWith('搜索前请先登录', { duration: 3000 });
+    expect(navigateMock).toHaveBeenCalledWith('/login', expect.anything());
   });
 
   it('logs out expired JWT sessions and sends them back to /login', async () => {
-    searchAccessStatus = 'search_ready';
+    searchAccessStatus = 'authenticated';
     performSearchMock.mockRejectedValue({
       code: 401,
       message: '登录状态已失效，请重新登录',
@@ -291,30 +283,5 @@ describe('SearchBox', () => {
     });
     expect(errorToastMock).toHaveBeenCalledWith('登录状态已失效，请重新登录');
     expect(navigateMock).toHaveBeenCalledWith('/login');
-  });
-
-  it('uses system settings to choose the unauthenticated entry route', async () => {
-    authState = {
-      token: null,
-      apiKey: null,
-      isAdmin: false,
-    };
-    searchAccessStatus = 'anonymous';
-    resolveDefaultAuthEntryPathMock.mockResolvedValue('/apikey');
-    performSearchMock.mockRejectedValue({
-      code: 401,
-      message: '请先使用 API Key 登录后再进行搜索',
-    });
-
-    render(<SearchBox />);
-
-    await userEvent.type(screen.getByPlaceholderText('搜索网盘资源...'), '流浪地球');
-    await userEvent.click(screen.getByRole('button', { name: '搜索' }));
-
-    await waitFor(() => {
-      expect(resolveDefaultAuthEntryPathMock).toHaveBeenCalled();
-    });
-    expect(warningToastMock).toHaveBeenCalledWith('请先使用 API Key 登录后再进行搜索', { duration: 3000 });
-    expect(navigateMock).toHaveBeenCalledWith('/apikey');
   });
 });

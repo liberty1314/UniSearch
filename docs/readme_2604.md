@@ -43,3 +43,69 @@
 - **文件**:
   - `Dockerfile`
   - `scripts/build.sh`
+
+## [2026-04-05 13:27:02] feat(auth): 统一认证与账户管理入口
+- **Body**: 重构后端认证与刷新令牌流程，统一前端登录、注册、账户与 API Key 入口，并清理旧页面与相关状态管理。
+- **Files**:
+  - `backend/api/account_auth_flow_test.go`
+  - `backend/api/admin_handler.go`
+  - `backend/api/auth_handler.go`
+  - `backend/api/controller/auth_controller.go`
+  - `backend/api/handler.go`
+  - `backend/api/middleware.go`
+  - `backend/api/middleware/jwt_auth.go`
+  - `backend/api/refresh_token_handler.go`
+  - `backend/api/router.go`
+  - `backend/api/user_handler.go`
+  - `backend/database/migration.go`
+  - `backend/main.go`
+  - `backend/model/user.go`
+  - `backend/service/auth_service.go`
+  - `backend/service/user_service.go`
+  - `backend/util/jwt.go`
+  - `frontend/src/components/CreateKeyDialog.tsx`
+  - `frontend/src/components/MobileMenu.tsx`
+  - `frontend/src/components/Navbar.tsx`
+  - `frontend/src/components/SearchBox.tsx`
+  - `frontend/src/components/SiteFooter.tsx`
+  - `frontend/src/components/__tests__/DisclaimerFooterVisibility.test.tsx`
+  - `frontend/src/components/__tests__/SearchBox.test.tsx`
+  - `frontend/src/components/admin/AdminApiKeysView.tsx`
+  - `frontend/src/components/admin/AppleApiKeyTable.tsx`
+  - `frontend/src/components/admin/BatchCreateDialog.tsx`
+  - `frontend/src/components/admin/BatchDeleteKeysDialog.tsx`
+  - `frontend/src/components/admin/BatchExportDialog.tsx`
+  - `frontend/src/components/admin/BatchExtendDialog.tsx`
+  - `frontend/src/components/admin/EditKeyDialog.tsx`
+  - `frontend/src/components/admin/Sidebar.tsx`
+  - `frontend/src/components/admin/SystemSettingsView.tsx`
+  - `frontend/src/components/admin/__tests__/AppleApiKeyTable.test.tsx`
+  - `frontend/src/components/admin/__tests__/BatchExtendDialog.test.tsx`
+  - `frontend/src/components/admin/__tests__/EditKeyDialog.test.tsx`
+  - `frontend/src/components/admin/apiKeyExtensionOptions.ts`
+  - `frontend/src/components/auth/__tests__/authRouteMotion.test.ts`
+  - `frontend/src/components/auth/authRouteMotion.ts`
+  - `frontend/src/hooks/useAdminPageController.ts`
+  - `frontend/src/lib/api.ts`
+  - `frontend/src/lib/authRefreshManager.ts`
+  - `frontend/src/pages/AccountPage.tsx`
+  - `frontend/src/pages/Admin.tsx`
+  - `frontend/src/pages/AdminLogin.tsx`
+  - `frontend/src/pages/ApiKeyLoginPage.tsx`
+  - `frontend/src/pages/Home.tsx`
+  - `frontend/src/pages/LoginPage.tsx`
+  - `frontend/src/pages/RegisterPage.tsx`
+  - `frontend/src/pages/UserApiKeySettings.tsx`
+  - `frontend/src/pages/__tests__/Admin.test.tsx`
+  - `frontend/src/pages/__tests__/AuthEntryPages.test.tsx`
+  - `frontend/src/pages/__tests__/Home.test.tsx`
+  - `frontend/src/pages/__tests__/UserApiKeySettings.test.tsx`
+  - `frontend/src/routes/AppRoutes.tsx`
+  - `frontend/src/routes/__tests__/AppRoutes.test.tsx`
+  - `frontend/src/services/__tests__/searchService.test.ts`
+  - `frontend/src/services/authService.ts`
+  - `frontend/src/services/systemSettingsService.ts`
+  - `frontend/src/stores/__tests__/searchAccessStore.test.ts`
+  - `frontend/src/stores/authStore.ts`
+  - `frontend/src/stores/searchAccessStore.ts`
+  - `frontend/src/stores/searchStore.ts`

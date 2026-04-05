@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import { useSearchStore, useSearchHistory } from '@/stores/searchStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useSearchAccessStatus } from '@/stores/searchAccessStore';
-import { SystemSettingsService } from '@/services/systemSettingsService';
 import { cn } from '@/lib/utils';
 import { toStyleVars } from '@/lib/styleVars';
 import { getErrorCode, getErrorMessage } from '@/lib/error';
@@ -33,7 +32,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   const [isHoveringHistory, setIsHoveringHistory] = useState(false);
 
   const { searchParams, setSearchParams, performSearch, clearHistory, removeFromHistory, isLoading } = useSearchStore();
-  const { token, apiKey, isAdmin, logout } = useAuthStore();
+  const { token, isAuthenticated, isAdmin, logout } = useAuthStore();
   const { status: searchAccessStatus } = useSearchAccessStatus();
   const navigate = useNavigate();
   const searchHistory = useSearchHistory();
@@ -57,33 +56,15 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     const errorCode = getErrorCode(error);
     const errorMessage = getErrorMessage(error, '搜索失败');
 
-    if (!isAdmin && errorCode === 403 && searchAccessStatus === 'session_only') {
-      toast.warning('请先绑定 API Key 后再进行搜索', { duration: 3000 });
-      navigate('/settings/apikey');
-      return;
-    }
-
     if (errorCode === 401) {
-      if (!isAdmin && token && !apiKey) {
+      if (!isAdmin && token) {
         logout();
         toast.error('登录状态已失效，请重新登录');
         navigate('/login');
         return;
       }
-
-      const entryPath = await SystemSettingsService.resolveDefaultAuthEntryPath();
-      const needsApiKeyLogin =
-        searchAccessStatus === 'anonymous' ||
-        searchAccessStatus === 'api_key_only' ||
-        errorMessage.includes('API Key');
-
-      toast.warning(
-        needsApiKeyLogin
-          ? (entryPath === '/apikey' ? '请先使用 API Key 登录后再进行搜索' : '请先登录后再进行搜索')
-          : errorMessage,
-        { duration: 3000 }
-      );
-      navigate(needsApiKeyLogin ? entryPath : '/login');
+      toast.warning('搜索前请先登录', { duration: 3000 });
+      navigate('/login');
       return;
     }
 
@@ -106,6 +87,18 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   const handleSearch = async () => {
     const keyword = inputValue.trim();
     if (!keyword) return;
+
+    if (!isAuthenticated || searchAccessStatus === 'anonymous') {
+      toast.warning('搜索前请先登录', { duration: 3000 });
+      navigate('/login', {
+        state: {
+          pendingSearch: {
+            keyword,
+          },
+        },
+      });
+      return;
+    }
 
     await executeSearch(keyword);
   };

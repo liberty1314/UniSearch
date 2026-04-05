@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"unisearch/model"
+	"unisearch/util"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -144,13 +145,6 @@ func isDuplicateEntryError(err error) bool {
 	return strings.Contains(errMsg, "duplicate entry") || strings.Contains(errMsg, "error 1062")
 }
 
-func (s *UserService) ensureAdminPermanentAPIKey(userID uint, username string) {
-	apiKeyService := NewAPIKeyService()
-	if _, err := apiKeyService.GetOrCreatePermanentAPIKey(userID); err != nil {
-		fmt.Printf("⚠️  为管理员确保永久 Key 失败 (User: %s, ID: %d): %v\n", username, userID, err)
-	}
-}
-
 func (s *UserService) restoreDeletedUser(user *model.User, passwordHash, role string) error {
 	return s.db.Unscoped().Model(&model.User{}).Where("id = ?", user.ID).Updates(map[string]interface{}{
 		"username":      user.Username,
@@ -212,10 +206,6 @@ func (s *UserService) CreateUser(username, password, role string, restoreIfDelet
 			return nil, false, fmt.Errorf("恢复已删除用户失败: %w", err)
 		}
 
-		if role == "admin" {
-			s.ensureAdminPermanentAPIKey(existingUser.ID, username)
-		}
-
 		user, err := s.GetUserByID(existingUser.ID)
 		if err != nil {
 			return nil, false, err
@@ -238,11 +228,6 @@ func (s *UserService) CreateUser(username, password, role string, restoreIfDelet
 		return nil, false, fmt.Errorf("创建用户失败: %w", err)
 	}
 
-	// 如果是管理员，自动创建永久 Key
-	if role == "admin" {
-		s.ensureAdminPermanentAPIKey(user.ID, username)
-	}
-
 	return user, false, nil
 }
 
@@ -260,9 +245,6 @@ func (s *UserService) UpdateUser(userID uint, username, role string, currentUser
 	if err != nil {
 		return nil, err
 	}
-
-	// 记录原角色
-	oldRole := user.Role
 
 	// 验证用户名
 	if err := s.validateUsername(username); err != nil {
@@ -295,21 +277,6 @@ func (s *UserService) UpdateUser(userID uint, username, role string, currentUser
 		return nil, fmt.Errorf("更新用户失败: %w", err)
 	}
 
-	// 处理角色变更时的永久 Key 管理
-	if oldRole != role {
-		if role == "admin" && oldRole == "user" {
-			// user -> admin: 创建永久 Key
-			s.ensureAdminPermanentAPIKey(user.ID, username)
-		} else if role == "user" && oldRole == "admin" {
-			// admin -> user: 删除永久 Key
-			apiKeyService := NewAPIKeyService()
-			err := apiKeyService.DeletePermanentAPIKey(user.ID)
-			if err != nil {
-				fmt.Printf("⚠️  删除管理员永久 Key 失败: %v\n", err)
-			}
-		}
-	}
-
 	return user, nil
 }
 
@@ -336,6 +303,38 @@ func (s *UserService) ResetPassword(userID uint, newPassword string) error {
 	user.PasswordHash = string(passwordHash)
 	if err := s.db.Save(user).Error; err != nil {
 		return fmt.Errorf("重置密码失败: %w", err)
+	}
+
+	return nil
+}
+
+// ChangePassword 允许用户通过当前密码验证后修改密码。
+func (s *UserService) ChangePassword(userID uint, currentPassword, newPassword string) error {
+	if strings.TrimSpace(currentPassword) == "" {
+		return errors.New("当前密码不能为空")
+	}
+
+	if err := s.validatePassword(newPassword); err != nil {
+		return err
+	}
+
+	user, err := s.GetUserByID(userID)
+	if err != nil {
+		return err
+	}
+
+	if !util.ComparePassword(user.PasswordHash, currentPassword) {
+		return errors.New("当前密码错误")
+	}
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("密码加密失败: %w", err)
+	}
+
+	user.PasswordHash = string(passwordHash)
+	if err := s.db.Save(user).Error; err != nil {
+		return fmt.Errorf("修改密码失败: %w", err)
 	}
 
 	return nil
@@ -499,8 +498,6 @@ func (s *UserService) BatchUpdateRole(userIDs []uint, role string, currentUserID
 		Failed:  []BatchOperationError{},
 	}
 
-	apiKeyService := NewAPIKeyService()
-
 	// 使用事务确保原子性
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		for _, userID := range userIDs {
@@ -532,9 +529,6 @@ func (s *UserService) BatchUpdateRole(userIDs []uint, role string, currentUserID
 				continue
 			}
 
-			// 记录原角色
-			oldRole := user.Role
-
 			// 更新角色
 			user.Role = role
 			if err := tx.Save(&user).Error; err != nil {
@@ -544,22 +538,6 @@ func (s *UserService) BatchUpdateRole(userIDs []uint, role string, currentUserID
 				})
 				result.FailedCount++
 				continue
-			}
-
-			// 处理角色变更时的永久 Key 管理
-			if oldRole != role {
-				if role == "admin" && oldRole == "user" {
-					// user -> admin: 创建永久 Key
-					if _, err := apiKeyService.GetOrCreatePermanentAPIKey(user.ID); err != nil {
-						fmt.Printf("⚠️  为管理员创建永久 Key 失败 (User ID: %d): %v\n", user.ID, err)
-					}
-				} else if role == "user" && oldRole == "admin" {
-					// admin -> user: 删除永久 Key
-					err := apiKeyService.DeletePermanentAPIKey(user.ID)
-					if err != nil {
-						fmt.Printf("⚠️  删除管理员永久 Key 失败 (User ID: %d): %v\n", user.ID, err)
-					}
-				}
 			}
 
 			result.Success = append(result.Success, userID)
@@ -577,9 +555,7 @@ func (s *UserService) BatchUpdateRole(userIDs []uint, role string, currentUserID
 }
 
 // GetDAU 获取日活跃用户数（今日0点起登录的用户数）
-// 统计来源：
-//  1. users 表：通过用户名密码登录的用户
-//  2. api_keys 表：通过 API Key 登录的用户（仅统计未绑定用户账号的 API Key，避免重复计数）
+// 统计来源：users 表中的普通用户。
 func (s *UserService) GetDAU() (int64, error) {
 	now := time.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -595,19 +571,11 @@ func (s *UserService) GetMAU() (int64, error) {
 
 // countActiveUsers 统计指定时间段内的活跃用户数
 func (s *UserService) countActiveUsers(since time.Time) (int64, error) {
-	// 1. 统计 users 表中的活跃用户（排除管理员）
+	// 统计 users 表中的活跃用户（排除管理员）
 	var userCount int64
 	if err := s.db.Model(&model.User{}).Where("last_login_at >= ? AND role != ?", since, "admin").Count(&userCount).Error; err != nil {
 		return 0, fmt.Errorf("统计活跃用户数失败: %w", err)
 	}
 
-	// 2. 统计 api_keys 表中的活跃 API Key（未绑定用户账号的，避免与 users 表重复计数）
-	var apiKeyCount int64
-	if err := s.db.Model(&model.APIKey{}).
-		Where("last_login_at >= ? AND (user_id IS NULL) AND deleted_at IS NULL", since).
-		Count(&apiKeyCount).Error; err != nil {
-		return 0, fmt.Errorf("统计活跃 API Key 用户数失败: %w", err)
-	}
-
-	return userCount + apiKeyCount, nil
+	return userCount, nil
 }

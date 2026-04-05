@@ -22,8 +22,7 @@ describe('DisclaimerFooter route visibility', () => {
     '/',
     '/login',
     '/register',
-    '/apikey',
-    '/settings/apikey',
+    '/account',
     '/disclaimer',
   ])('shows disclaimer on user route: %s', (path) => {
     renderAtPath(path);

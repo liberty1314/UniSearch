@@ -11,7 +11,6 @@ import (
 type Claims struct {
 	Username string `json:"username"`
 	IsAdmin  bool   `json:"is_admin"` // 是否为管理员
-	APIKey   string `json:"api_key"`  // 关联的API Key
 	jwt.RegisteredClaims
 }
 
@@ -21,17 +20,11 @@ type JWTClaims struct {
 	UserID   uint   `json:"user_id"`           // 用户ID
 	Username string `json:"username"`          // 用户名
 	Role     string `json:"role"`              // 用户角色（admin 或 user）
-	APIKey   string `json:"api_key,omitempty"` // API Key（仅用于 API Key 登录）
 	jwt.RegisteredClaims
 }
 
 // GenerateToken 生成JWT token（旧版本，已弃用）
 func GenerateToken(username string, isAdmin bool, secret string, expiry time.Duration) (string, error) {
-	return GenerateTokenWithAPIKey(username, isAdmin, "", secret, expiry)
-}
-
-// GenerateTokenWithAPIKey 生成带API Key的JWT token（旧版本，已弃用）
-func GenerateTokenWithAPIKey(username string, isAdmin bool, apiKey string, secret string, expiry time.Duration) (string, error) {
 	if username == "" {
 		return "", errors.New("username cannot be empty")
 	}
@@ -43,7 +36,6 @@ func GenerateTokenWithAPIKey(username string, isAdmin bool, apiKey string, secre
 	claims := &Claims{
 		Username: username,
 		IsAdmin:  isAdmin,
-		APIKey:   apiKey,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -69,22 +61,6 @@ func GenerateTokenWithAPIKey(username string, isAdmin bool, apiKey string, secre
 //
 // 验证需求：5.5, 5.6, 13.6
 func GenerateJWTToken(userID uint, username, role, secret string, expiry time.Duration) (string, error) {
-	return GenerateJWTTokenWithAPIKey(userID, username, role, "", secret, expiry)
-}
-
-// GenerateJWTTokenWithAPIKey 生成带 API Key 的 JWT Token
-// 参数：
-//   - userID: 用户ID
-//   - username: 用户名
-//   - role: 用户角色（admin 或 user）
-//   - apiKey: API Key（可选，仅用于 API Key 登录）
-//   - secret: JWT 签名密钥
-//   - expiry: Token 过期时间（建议 24 小时）
-//
-// 返回：
-//   - string: 生成的 JWT Token 字符串
-//   - error: 错误信息
-func GenerateJWTTokenWithAPIKey(userID uint, username, role, apiKey, secret string, expiry time.Duration) (string, error) {
 	if username == "" {
 		return "", errors.New("username cannot be empty")
 	}
@@ -100,7 +76,6 @@ func GenerateJWTTokenWithAPIKey(userID uint, username, role, apiKey, secret stri
 		UserID:   userID,
 		Username: username,
 		Role:     role,
-		APIKey:   apiKey,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -179,7 +154,6 @@ func ValidateJWTToken(tokenString string, secret string) (*JWTClaims, error) {
 	}
 
 	// 验证必需字段
-	// 注意：API Key 用户的 user_id 可以为 0，所以不验证 user_id
 	if claims.Username == "" {
 		return nil, errors.New("invalid token: missing username")
 	}

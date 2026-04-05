@@ -66,6 +66,11 @@ type ResetPasswordRequest struct {
 	Password string `json:"password" binding:"required,min=6,max=64"`
 }
 
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" binding:"required,min=1"`
+	NewPassword     string `json:"new_password" binding:"required,min=6,max=64"`
+}
+
 // SetUserStatusRequest 设置用户状态请求
 type SetUserStatusRequest struct {
 	IsEnabled bool `json:"is_enabled"`
@@ -356,6 +361,40 @@ func ResetPasswordHandler(userService *service.UserService) gin.HandlerFunc {
 
 		log.Printf("✓ 密码重置成功: 用户ID %d", userID)
 		respondSuccess(c, SuccessResponse{Message: "密码重置成功"})
+	}
+}
+
+// ChangePasswordHandler 允许当前登录用户修改自己的密码。
+func ChangePasswordHandler(userService *service.UserService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		currentUserID, err := getCurrentUserID(c)
+		if err != nil || currentUserID == 0 {
+			respondError(c, http.StatusUnauthorized, "未授权", "UNAUTHORIZED")
+			return
+		}
+
+		var req ChangePasswordRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			respondError(c, http.StatusBadRequest, "请求参数错误", "INVALID_REQUEST")
+			return
+		}
+
+		if err := userService.ChangePassword(currentUserID, req.CurrentPassword, req.NewPassword); err != nil {
+			switch err.Error() {
+			case "当前密码错误":
+				respondError(c, http.StatusUnauthorized, err.Error(), "CURRENT_PASSWORD_INVALID")
+			case "当前密码不能为空", "密码长度必须在6-64字符之间":
+				respondError(c, http.StatusBadRequest, err.Error(), "INVALID_PASSWORD")
+			case "用户不存在":
+				respondError(c, http.StatusNotFound, err.Error(), "USER_NOT_FOUND")
+			default:
+				log.Printf("✗ 用户修改密码失败: user_id=%d err=%v", currentUserID, err)
+				respondError(c, http.StatusInternalServerError, "修改密码失败", "INTERNAL_SERVER_ERROR")
+			}
+			return
+		}
+
+		respondSuccess(c, SuccessResponse{Message: "密码修改成功"})
 	}
 }
 

@@ -5,12 +5,10 @@ import {
     IoCloseOutline,
     IoSettingsOutline,
     IoLogOutOutline,
-    IoKeyOutline,
     IoPersonCircleOutline,
     IoLogInOutline
 } from 'react-icons/io5';
 import { useAuthStore } from '@/stores/authStore';
-import { useSearchAccessStatus } from '@/stores/searchAccessStore';
 import { AuthService } from '@/services/authService';
 import { toast } from 'sonner';
 import { AnimatedThemeToggler } from '@/components/magicui/animated-theme-toggler';
@@ -29,15 +27,6 @@ interface MobileMenuProps {
 export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItems }) => {
     const navigate = useNavigate();
     const { isAuthenticated, isAdmin, username, logout } = useAuthStore();
-    const { status: searchAccessStatus } = useSearchAccessStatus();
-    const apiKeyEntryLabel = searchAccessStatus === 'session_only' ? '绑定 API Key' : 'API Key 设置';
-    const searchAccessHint = searchAccessStatus === 'session_only'
-        ? '未绑定 API Key'
-        : searchAccessStatus === 'search_ready'
-            ? 'API Key 已绑定'
-            : searchAccessStatus === 'api_key_only'
-                ? 'API Key 登录中'
-                : '普通用户';
 
     const handleLogout = async () => {
         const { refreshToken } = useAuthStore.getState();
@@ -119,20 +108,9 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                                         <p className="font-medium text-gray-900 dark:text-white truncate">
                                             {username}
                                         </p>
-                                        <div className="mt-1 flex items-center gap-2">
-                                            <p className="text-xs text-gray-500 dark:text-slate-400">
-                                                {isAdmin ? '管理员' : '普通用户'}
-                                            </p>
-                                            {!isAdmin && (
-                                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                                                    searchAccessStatus === 'session_only'
-                                                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200'
-                                                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200'
-                                                }`}>
-                                                    {searchAccessHint}
-                                                </span>
-                                            )}
-                                        </div>
+                                        <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+                                            {isAdmin ? '管理员' : '普通用户'}
+                                        </p>
                                     </div>
                                 </div>
                             ) : (
@@ -182,12 +160,12 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                                         </Link>
                                     ) : (
                                         <Link
-                                            to="/settings/apikey"
+                                            to="/account"
                                             onClick={onClose}
                                             className={`flex items-center gap-3 p-3 text-gray-600 dark:text-slate-400 ${BLUE_CYAN_HOVER_TEXT} hover:bg-gray-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors`}
                                         >
-                                            <IoKeyOutline className="w-5 h-5" />
-                                            <span className="font-medium">{apiKeyEntryLabel}</span>
+                                            <IoPersonCircleOutline className="w-5 h-5" />
+                                            <span className="font-medium">个人中心</span>
                                         </Link>
                                     )}
                                 </div>

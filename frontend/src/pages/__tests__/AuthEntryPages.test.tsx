@@ -4,7 +4,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
-import ApiKeyLoginPage from '@/pages/ApiKeyLoginPage';
 import AdminLogin from '@/pages/AdminLogin';
 
 const { navigateMock, getSettingsMock, setTokenMock } = vi.hoisted(() => ({
@@ -101,21 +100,6 @@ describe('Auth entry pages', () => {
 
     expect(container.querySelector('.auth-sparkle-intro')).toBeNull();
     expect(screen.getByRole('button', { name: '立即注册' }).className).not.toContain('hover:scale-[1.02]');
-  });
-
-  it('does not render the decorative sparkle icon on the API key login page', async () => {
-    const { container } = render(
-      <MemoryRouter initialEntries={['/apikey']}>
-        <ApiKeyLoginPage />
-      </MemoryRouter>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('API Key 访问')).toBeInTheDocument();
-    });
-
-    expect(container.querySelector('.auth-sparkle-intro')).toBeNull();
-    expect(screen.getByRole('button', { name: '登录' }).className).not.toContain('hover:scale-[1.02]');
   });
 
   it('does not render the decorative sparkle icon on the admin login page', async () => {

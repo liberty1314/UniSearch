@@ -7,7 +7,7 @@ import { SystemSettingsService } from '@/services/systemSettingsService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { User, Lock, LogIn, Eye, EyeOff, ArrowRight, Key, Loader2 } from 'lucide-react';
+import { User, Lock, LogIn, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import PageLoader from '@/components/PageLoader';
 import AuthBackground from '@/components/auth/AuthBackground';
 import AuthCardShell from '@/components/auth/AuthCardShell';
@@ -47,19 +47,6 @@ const LoginPage: React.FC = () => {
             try {
                 const settings = await SystemSettingsService.getSettings();
                 setEnableUserSignup(settings.enable_user_signup);
-
-                if (!settings.enable_user_auth) {
-                    navigate('/apikey');
-                    return;
-                }
-
-                if (!settings.enable_user_login) {
-                    if (settings.enable_user_signup) {
-                        navigate('/register');
-                    } else {
-                        navigate('/apikey');
-                    }
-                }
             } catch (error) {
                 console.error('Failed to load settings:', error);
             } finally {
@@ -83,11 +70,22 @@ const LoginPage: React.FC = () => {
                     response.access_token,
                     response.username,
                     false,
-                    undefined,
                     response.refresh_token || null
                 );
                 toast.success('登录成功，欢迎访问 UniSearch！');
-                navigate('/');
+                const nextKeyword = (location.state as { pendingSearch?: { keyword?: string } } | null)?.pendingSearch?.keyword?.trim();
+                if (nextKeyword) {
+                    navigate('/', {
+                        replace: true,
+                        state: {
+                            resumeSearch: {
+                                keyword: nextKeyword,
+                            },
+                        },
+                    });
+                } else {
+                    navigate('/');
+                }
             } else {
                 toast.error('登录失败：服务器未返回有效令牌');
             }
@@ -216,12 +214,6 @@ const LoginPage: React.FC = () => {
                                         icon={ArrowRight}
                                     />
                                 )}
-                                <AuthEntryLink
-                                    to="/apikey"
-                                    state={{ authTransition: 'forward', from: '/login' }}
-                                    label="API Key"
-                                    icon={Key}
-                                />
                             </AuthEntryLinksRow>
                         </CardContent>
                     </Card>

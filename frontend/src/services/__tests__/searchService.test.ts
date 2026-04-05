@@ -21,7 +21,7 @@ describe('SearchService', () => {
   it('forwards search API errors without dropping the status code', async () => {
     const apiError = {
       code: 401,
-      message: '请提供 API Key 或登录后使用',
+      message: '请先登录后再进行搜索',
     };
     postMock.mockRejectedValue(apiError);
 

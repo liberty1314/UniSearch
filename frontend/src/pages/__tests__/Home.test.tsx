@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Home from '@/pages/Home';
 
-let searchAccessStatus: 'anonymous' | 'session_only' | 'search_ready' | 'api_key_only' = 'session_only';
+let searchAccessStatus: 'anonymous' | 'authenticated' = 'authenticated';
 let searchKeyword = '';
 let searchResults: Array<{ id: number }> = [];
 
@@ -88,13 +88,13 @@ vi.mock('@/stores/searchAccessStore', () => ({
 
 describe('Home', () => {
   beforeEach(() => {
-    searchAccessStatus = 'session_only';
+    searchAccessStatus = 'authenticated';
     searchKeyword = '';
     searchResults = [];
   });
 
-  it('shows a lightweight API key hint for session-only users', () => {
-    searchAccessStatus = 'session_only';
+  it('renders the public homepage shell for guests without showing legacy API key prompts', () => {
+    searchAccessStatus = 'anonymous';
 
     render(
       <MemoryRouter>
@@ -102,25 +102,12 @@ describe('Home', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('当前账号已登录，绑定 API Key 后即可无限制搜索')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '去绑定' })).toHaveAttribute('href', '/settings/apikey');
-    expect(screen.queryByText('SEARCH ACCESS')).not.toBeInTheDocument();
-  });
-
-  it('hides the API key hint for users who are already search-ready', () => {
-    searchAccessStatus = 'search_ready';
-
-    render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>
-    );
-
+    expect(screen.getByText('UniSearch')).toBeInTheDocument();
     expect(screen.queryByText('当前账号已登录，绑定 API Key 后即可无限制搜索')).not.toBeInTheDocument();
   });
 
   it('places the capability strip after the trending categories section', () => {
-    searchAccessStatus = 'search_ready';
+    searchAccessStatus = 'authenticated';
 
     render(
       <MemoryRouter>
@@ -140,7 +127,7 @@ describe('Home', () => {
   });
 
   it('renders elevated feature cards with dedicated depth layers', () => {
-    searchAccessStatus = 'search_ready';
+    searchAccessStatus = 'authenticated';
 
     render(
       <MemoryRouter>
@@ -154,7 +141,7 @@ describe('Home', () => {
   });
 
   it('tones feature card surfaces for dark backgrounds with matte slate panels', () => {
-    searchAccessStatus = 'search_ready';
+    searchAccessStatus = 'authenticated';
 
     render(
       <MemoryRouter>
@@ -171,7 +158,7 @@ describe('Home', () => {
   });
 
   it('uses the shared grid-backed page shell in the default state', () => {
-    searchAccessStatus = 'search_ready';
+    searchAccessStatus = 'authenticated';
 
     const { container } = render(
       <MemoryRouter>
@@ -187,7 +174,7 @@ describe('Home', () => {
   });
 
   it('keeps homepage hero and section typography on the blue/cyan theme axis', () => {
-    searchAccessStatus = 'search_ready';
+    searchAccessStatus = 'authenticated';
 
     render(
       <MemoryRouter>
@@ -209,7 +196,7 @@ describe('Home', () => {
   });
 
   it('uses neutral copy for homepage feature descriptions instead of enumerating platform brands', () => {
-    searchAccessStatus = 'search_ready';
+    searchAccessStatus = 'authenticated';
 
     render(
       <MemoryRouter>

@@ -66,9 +66,8 @@ const AdminLogin: React.FC = () => {
             // 保存 Token 和可选的 Refresh Token 到状态管理（明确设置 isAdmin = true）
             setToken(
                 response.access_token,
-                'admin',
-                true, // 管理员登录，明确设置为 true
-                null,
+                response.username || username.trim(),
+                true,
                 response.refresh_token || null
             );
 

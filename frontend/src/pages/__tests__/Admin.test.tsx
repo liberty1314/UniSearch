@@ -4,63 +4,8 @@ import Admin from '@/pages/Admin';
 
 vi.mock('@/hooks/useAdminPageController', () => ({
   useAdminPageController: () => ({
-    currentView: 'api-keys',
+    currentView: 'user-management',
     setCurrentView: vi.fn(),
-    apiKeys: {
-      totalApiKeys: 0,
-      pagedApiKeys: [],
-      isLoadingKeys: false,
-      isDeleting: false,
-      isBatchOperating: false,
-      apiKeyCurrentPage: 1,
-      apiKeyPageSize: 10,
-      apiKeyTotalPages: 1,
-      selectedKeys: new Set(),
-      apiKeySearchInput: '',
-      statusFilter: '',
-      availableStatusOptions: [],
-      hasAnyFilter: false,
-      isKeyExpired: vi.fn(() => false),
-      handleApiKeySearchInputChange: vi.fn(),
-      handleApiKeySearchSubmit: vi.fn(),
-      setStatusFilter: vi.fn(),
-      handleClearAllFilters: vi.fn(),
-      loadApiKeys: vi.fn(),
-      handleOpenBatchCreate: vi.fn(),
-      setIsCreateDialogOpen: vi.fn(),
-      handleBatchExtend: vi.fn(),
-      handleBatchDelete: vi.fn(),
-      handleBatchExport: vi.fn(),
-      handleClearSelection: vi.fn(),
-      handleSelectKey: vi.fn(),
-      handleSelectAll: vi.fn(),
-      handleCopyKey: vi.fn(),
-      handleEditClick: vi.fn(),
-      handleDeleteClick: vi.fn(),
-      handleToggleApiKeyStatus: vi.fn(),
-      handleApiKeyPageChange: vi.fn(),
-      handleApiKeyPageSizeChange: vi.fn(),
-      isCreateDialogOpen: false,
-      handleCreateSuccess: vi.fn(),
-      keyToEdit: null,
-      isEditDialogOpen: false,
-      setIsEditDialogOpen: vi.fn(),
-      handleEditSuccess: vi.fn(),
-      isBatchExtendDialogOpen: false,
-      setIsBatchExtendDialogOpen: vi.fn(),
-      handleBatchExtendSuccess: vi.fn(),
-      isBatchCreateDialogOpen: false,
-      setIsBatchCreateDialogOpen: vi.fn(),
-      handleBatchCreateSuccess: vi.fn(),
-      isBatchDeleteDialogOpen: false,
-      setIsBatchDeleteDialogOpen: vi.fn(),
-      handleBatchDeleteSuccess: vi.fn(),
-      isBatchExportDialogOpen: false,
-      setIsBatchExportDialogOpen: vi.fn(),
-      deleteDialogOpen: true,
-      setDeleteDialogOpen: vi.fn(),
-      handleDeleteConfirm: vi.fn(),
-    },
     users: {
       users: [{ id: 1, username: 'alice', role: 'user' }],
       getUserStats: vi.fn(() => []),
@@ -100,16 +45,12 @@ vi.mock('@/hooks/useAdminPageController', () => ({
       userToResetPassword: null,
       isResetPasswordDialogOpen: false,
       setIsResetPasswordDialogOpen: vi.fn(),
-      userToDelete: { id: 1, username: 'alice', role: 'user' },
-      deleteUserDialogOpen: false,
-      setDeleteUserDialogOpen: vi.fn(),
+      userToDelete: 1,
       handleDeleteUserConfirm: vi.fn(),
       isBatchDeleteUsersDialogOpen: false,
       setIsBatchDeleteUsersDialogOpen: vi.fn(),
-      handleBatchDeleteUsersSuccess: vi.fn(),
       isBatchUpdateRoleDialogOpen: false,
       setIsBatchUpdateRoleDialogOpen: vi.fn(),
-      handleBatchUpdateRoleSuccess: vi.fn(),
     },
   }),
 }));
@@ -130,36 +71,8 @@ vi.mock('@/components/admin/AnnouncementManagement', () => ({
   AnnouncementManagement: () => <div>AnnouncementManagement</div>,
 }));
 
-vi.mock('@/components/admin/AdminApiKeysView', () => ({
-  default: () => <div>AdminApiKeysView</div>,
-}));
-
 vi.mock('@/components/admin/AdminUsersView', () => ({
   default: () => <div>AdminUsersView</div>,
-}));
-
-vi.mock('@/components/CreateKeyDialog', () => ({
-  CreateKeyDialog: () => null,
-}));
-
-vi.mock('@/components/admin/EditKeyDialog', () => ({
-  EditKeyDialog: () => null,
-}));
-
-vi.mock('@/components/admin/BatchExtendDialog', () => ({
-  BatchExtendDialog: () => null,
-}));
-
-vi.mock('@/components/admin/BatchCreateDialog', () => ({
-  BatchCreateDialog: () => null,
-}));
-
-vi.mock('@/components/admin/BatchDeleteKeysDialog', () => ({
-  BatchDeleteKeysDialog: () => null,
-}));
-
-vi.mock('@/components/admin/BatchExportDialog', () => ({
-  BatchExportDialog: () => null,
 }));
 
 vi.mock('@/components/admin/BatchDeleteDialog', () => ({
@@ -209,8 +122,7 @@ describe('Admin', () => {
   it('routes simple delete confirmations through the shared ConfirmDialog entry', () => {
     render(<Admin />);
 
-    expect(screen.getAllByTestId('confirm-dialog')).toHaveLength(2);
-    expect(screen.getByText('确认删除')).toBeInTheDocument();
+    expect(screen.getAllByTestId('confirm-dialog')).toHaveLength(1);
     expect(screen.getByText('确认删除用户')).toBeInTheDocument();
   });
 });

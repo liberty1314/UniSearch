@@ -112,7 +112,7 @@ func (s *AuthService) Register(username, password string) (*model.User, error) {
 // 返回：
 //   - token: JWT Token 字符串
 //   - user: 用户对象（不包含密码哈希）
-//   - apiKey: 管理员永久 API Key（仅管理员返回，普通用户为空字符串）
+//   - apiKey: 保留兼容返回值，当前始终为空字符串
 //   - err: 错误信息
 //
 // 验证需求：5.1-5.7
@@ -172,21 +172,8 @@ func (s *AuthService) Login(username, password string) (token string, user *mode
 		// 不影响登录流程，继续执行
 	}
 
-	// 如果是管理员，获取或创建永久 API Key
-	permanentAPIKey := ""
-	if dbUser.IsAdmin() {
-		apiKeyService := NewAPIKeyService()
-		keyObj, err := apiKeyService.GetOrCreatePermanentAPIKey(dbUser.ID)
-		if err != nil {
-			log.Printf("⚠️  获取管理员永久 Key 失败: %v", err)
-			// 不影响登录流程，继续执行
-		} else {
-			permanentAPIKey = keyObj.Key
-		}
-	}
-
 	log.Printf("✓ 用户登录成功: %s (ID: %d, Role: %s)", dbUser.Username, dbUser.ID, dbUser.Role)
-	return token, &dbUser, permanentAPIKey, nil
+	return token, &dbUser, "", nil
 }
 
 // UpdateLastLoginAtByUserID 根据用户ID更新最后登录时间

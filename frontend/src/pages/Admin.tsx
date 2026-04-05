@@ -1,11 +1,5 @@
 import React from 'react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { CreateKeyDialog } from '@/components/CreateKeyDialog';
-import { EditKeyDialog } from '@/components/admin/EditKeyDialog';
-import { BatchExtendDialog } from '@/components/admin/BatchExtendDialog';
-import { BatchCreateDialog } from '@/components/admin/BatchCreateDialog';
-import { BatchDeleteKeysDialog } from '@/components/admin/BatchDeleteKeysDialog';
-import { BatchExportDialog } from '@/components/admin/BatchExportDialog';
 import { BatchDeleteDialog as BatchDeleteUsersDialog } from '@/components/admin/BatchDeleteDialog';
 import { BatchUpdateRoleDialog } from '@/components/admin/BatchUpdateRoleDialog';
 import { CreateUserDialog } from '@/components/admin/CreateUserDialog';
@@ -15,48 +9,11 @@ import { Sidebar } from '@/components/admin/Sidebar';
 import { SystemInfoView } from '@/components/admin/SystemInfoView';
 import { SystemSettingsView } from '@/components/admin/SystemSettingsView';
 import { AnnouncementManagement } from '@/components/admin/AnnouncementManagement';
-import AdminApiKeysView, { type AdminApiKeysViewModel } from '@/components/admin/AdminApiKeysView';
 import AdminUsersView, { type AdminUsersViewModel } from '@/components/admin/AdminUsersView';
 import { useAdminPageController } from '@/hooks/useAdminPageController';
 
 const Admin: React.FC = () => {
-  const { currentView, setCurrentView, apiKeys, users } = useAdminPageController();
-
-  const apiKeysViewModel: AdminApiKeysViewModel = {
-    totalApiKeys: apiKeys.totalApiKeys,
-    pagedApiKeys: apiKeys.pagedApiKeys,
-    isLoadingKeys: apiKeys.isLoadingKeys,
-    isDeleting: apiKeys.isDeleting,
-    isBatchOperating: apiKeys.isBatchOperating,
-    apiKeyCurrentPage: apiKeys.apiKeyCurrentPage,
-    apiKeyPageSize: apiKeys.apiKeyPageSize,
-    apiKeyTotalPages: apiKeys.apiKeyTotalPages,
-    selectedKeys: apiKeys.selectedKeys,
-    apiKeySearchInput: apiKeys.apiKeySearchInput,
-    statusFilter: apiKeys.statusFilter,
-    availableStatusOptions: apiKeys.availableStatusOptions,
-    hasAnyFilter: apiKeys.hasAnyFilter,
-    isKeyExpired: apiKeys.isKeyExpired,
-    onApiKeySearchInputChange: apiKeys.handleApiKeySearchInputChange,
-    onApiKeySearchSubmit: apiKeys.handleApiKeySearchSubmit,
-    onStatusFilterChange: (values) => apiKeys.setStatusFilter(values[values.length - 1] ?? ''),
-    onClearAllFilters: apiKeys.handleClearAllFilters,
-    onRefresh: () => void apiKeys.loadApiKeys(),
-    onOpenBatchCreate: apiKeys.handleOpenBatchCreate,
-    onOpenCreateKey: () => apiKeys.setIsCreateDialogOpen(true),
-    onBatchExtend: apiKeys.handleBatchExtend,
-    onBatchDelete: apiKeys.handleBatchDelete,
-    onBatchExport: apiKeys.handleBatchExport,
-    onClearSelection: apiKeys.handleClearSelection,
-    onSelectKey: apiKeys.handleSelectKey,
-    onSelectAll: apiKeys.handleSelectAll,
-    onCopyKey: (key) => void apiKeys.handleCopyKey(key),
-    onEditClick: apiKeys.handleEditClick,
-    onDeleteClick: apiKeys.handleDeleteClick,
-    onToggleStatus: (key, isEnabled) => void apiKeys.handleToggleApiKeyStatus(key, isEnabled),
-    onPageChange: apiKeys.handleApiKeyPageChange,
-    onPageSizeChange: apiKeys.handleApiKeyPageSizeChange,
-  };
+  const { currentView, setCurrentView, users } = useAdminPageController();
 
   const usersViewModel: AdminUsersViewModel = {
     users: users.users,
@@ -98,10 +55,6 @@ const Admin: React.FC = () => {
 
       <div className="flex-1 h-full overflow-y-auto">
         <div className="container mx-auto px-4 py-6 space-y-6 lg:px-8 lg:py-8">
-          {currentView === 'api-keys' && (
-            <AdminApiKeysView viewModel={apiKeysViewModel} />
-          )}
-
           {currentView === 'user-management' && (
             <AdminUsersView viewModel={usersViewModel} />
           )}
@@ -111,73 +64,6 @@ const Admin: React.FC = () => {
           {currentView === 'announcement-management' && <AnnouncementManagement />}
         </div>
       </div>
-
-      <CreateKeyDialog
-        open={apiKeys.isCreateDialogOpen}
-        onOpenChange={apiKeys.setIsCreateDialogOpen}
-        onSuccess={apiKeys.handleCreateSuccess}
-      />
-
-      {apiKeys.keyToEdit && (
-        <EditKeyDialog
-          open={apiKeys.isEditDialogOpen}
-          onOpenChange={apiKeys.setIsEditDialogOpen}
-          apiKey={apiKeys.keyToEdit}
-          onSuccess={apiKeys.handleEditSuccess}
-        />
-      )}
-
-      <BatchExtendDialog
-        open={apiKeys.isBatchExtendDialogOpen}
-        onOpenChange={(open) => {
-          apiKeys.setIsBatchExtendDialogOpen(open);
-          if (!open) {
-            apiKeys.setIsBatchOperating(false);
-          }
-        }}
-        selectedKeys={Array.from(apiKeys.selectedKeys)}
-        onSuccess={apiKeys.handleBatchExtendSuccess}
-      />
-
-      <BatchCreateDialog
-        open={apiKeys.isBatchCreateDialogOpen}
-        onOpenChange={(open) => {
-          apiKeys.setIsBatchCreateDialogOpen(open);
-          if (!open) {
-            apiKeys.setIsBatchOperating(false);
-          }
-        }}
-        onSuccess={apiKeys.handleBatchCreateSuccess}
-      />
-
-      <BatchDeleteKeysDialog
-        open={apiKeys.isBatchDeleteDialogOpen}
-        onOpenChange={(open) => {
-          apiKeys.setIsBatchDeleteDialogOpen(open);
-          if (!open) {
-            apiKeys.setIsBatchOperating(false);
-          }
-        }}
-        selectedKeys={Array.from(apiKeys.selectedKeys)}
-        onSuccess={apiKeys.handleBatchDeleteSuccess}
-      />
-
-      <BatchExportDialog
-        open={apiKeys.isBatchExportDialogOpen}
-        onOpenChange={apiKeys.setIsBatchExportDialogOpen}
-        selectedKeys={apiKeys.pagedApiKeys.filter((key) => apiKeys.selectedKeys.has(key.key))}
-      />
-
-      <ConfirmDialog
-        open={apiKeys.deleteDialogOpen}
-        onOpenChange={apiKeys.setDeleteDialogOpen}
-        title="确认删除"
-        description="您确定要删除这个 API Key 吗？此操作无法撤销，使用该 Key 的用户将无法继续访问系统。"
-        confirmText={apiKeys.isDeleting ? '删除中...' : '确认删除'}
-        variant="destructive"
-        onConfirm={() => void apiKeys.handleDeleteConfirm()}
-        isLoading={apiKeys.isDeleting}
-      />
 
       <CreateUserDialog
         open={users.isCreateUserDialogOpen}

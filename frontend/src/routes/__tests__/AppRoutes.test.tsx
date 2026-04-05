@@ -42,10 +42,6 @@ vi.mock('@/pages/RegisterPage', () => ({
   default: () => <div>Register Page</div>,
 }));
 
-vi.mock('@/pages/ApiKeyLoginPage', () => ({
-  default: () => <div>API Key Login Page</div>,
-}));
-
 vi.mock('@/pages/AdminLogin', () => ({
   default: () => <div>Admin Login Page</div>,
 }));
@@ -54,8 +50,8 @@ vi.mock('@/pages/Admin', () => ({
   default: () => <div>Admin Page</div>,
 }));
 
-vi.mock('@/pages/UserApiKeySettings', () => ({
-  default: () => <div>User API Key Settings</div>,
+vi.mock('@/pages/AccountPage', () => ({
+  default: () => <div>Account Page</div>,
 }));
 
 vi.mock('@/pages/DisclaimerPage', () => ({
@@ -70,18 +66,18 @@ const renderRoutesAt = (path: string) =>
   );
 
 describe('AppRoutes', () => {
-  it('renders the API key login page at /apikey and hides the site footer', async () => {
-    renderRoutesAt('/apikey');
+  it('renders the account page at /account', async () => {
+    renderRoutesAt('/account');
 
-    expect(await screen.findByText('API Key Login Page')).toBeInTheDocument();
-    expect(screen.queryByTestId('site-footer')).not.toBeInTheDocument();
+    expect(await screen.findByText('Account Page')).toBeInTheDocument();
+    expect(screen.getByTestId('site-footer')).toBeInTheDocument();
   });
 
-  it('does not resolve /auth/apikey and falls back to 404', async () => {
-    renderRoutesAt('/auth/apikey');
+  it('does not resolve /apikey and falls back to 404', async () => {
+    renderRoutesAt('/apikey');
 
     expect(await screen.findByText('页面未找到')).toBeInTheDocument();
-    expect(screen.queryByText('API Key Login Page')).not.toBeInTheDocument();
+    expect(screen.queryByText('Account Page')).not.toBeInTheDocument();
     expect(screen.queryByTestId('navbar')).not.toBeInTheDocument();
     expect(screen.queryByTestId('site-footer')).not.toBeInTheDocument();
   });

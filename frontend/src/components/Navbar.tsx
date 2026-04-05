@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, ArrowRight, User, LogOut, LayoutDashboard, Key } from 'lucide-react';
+import { Menu, ArrowRight, User, LogOut, LayoutDashboard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { MobileMenu } from '@/components/MobileMenu';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { useAuthStore } from '@/stores/authStore';
-import { useSearchAccessStatus } from '@/stores/searchAccessStore';
 import { useAnnouncementStore } from '@/stores/announcementStore';
 import { useAdminStore } from '@/stores/adminStore';
 import { AnnouncementPanel } from './AnnouncementPanel';
@@ -37,7 +36,6 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
 
   // Auth State
   const { isAuthenticated, isAdmin, logout, username } = useAuthStore();
-  const { status: searchAccessStatus } = useSearchAccessStatus();
 
   // Announcement State
   const { getUnreadAnnouncements } = useAnnouncementStore();
@@ -86,16 +84,6 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
   const navItems: Array<{ path: string; label: string; icon: React.ComponentType<{ className?: string }> }> = [
     // Add nav items if needed
   ];
-  const apiKeyEntryLabel = searchAccessStatus === 'session_only' ? '绑定 API Key' : 'API Key 设置';
-  const searchAccessHint = searchAccessStatus === 'session_only'
-    ? '未绑定 API Key'
-    : searchAccessStatus === 'search_ready'
-      ? 'API Key 已绑定'
-      : searchAccessStatus === 'api_key_only'
-        ? 'API Key 登录中'
-        : '普通用户';
-  const showNormalUserHint = isAuthenticated && !isAdmin;
-
   return (
     <>
       <motion.nav
@@ -156,9 +144,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                       "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-200 outline-none focus:outline-none",
                       isUserMenuOpen
                         ? "bg-white/20 border-transparent text-blue-600 dark:text-cyan-300"
-                        : searchAccessStatus === 'session_only'
-                          ? "border-amber-200/80 bg-amber-50/80 text-amber-800 hover:bg-amber-100/80 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100"
-                          : "border-transparent hover:bg-white/10 hover:border-white/20 text-gray-700 dark:text-gray-200"
+                        : "border-transparent hover:bg-white/10 hover:border-white/20 text-gray-700 dark:text-gray-200"
                     )}
                   >
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-white font-bold text-sm shadow-sm">
@@ -184,18 +170,6 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                             <p className="text-xs text-gray-500 dark:text-slate-400">
                               {isAdmin ? '管理员' : '普通用户'}
                             </p>
-                            {showNormalUserHint && (
-                              <span
-                                className={cn(
-                                  'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                                  searchAccessStatus === 'session_only'
-                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200'
-                                    : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200'
-                                )}
-                              >
-                                {searchAccessHint}
-                              </span>
-                            )}
                           </div>
                         </div>
 
@@ -211,12 +185,12 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                             </Link>
                           ) : (
                             <Link
-                              to="/settings/apikey"
+                              to="/account"
                               onClick={() => setIsUserMenuOpen(false)}
                               className={`flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 ${BLUE_CYAN_HOVER_SURFACE} ${BLUE_CYAN_HOVER_TEXT} rounded-lg transition-colors`}
                             >
-                              <Key className="w-4 h-4" />
-                              <span>{apiKeyEntryLabel}</span>
+                              <User className="w-4 h-4" />
+                              <span>个人中心</span>
                             </Link>
                           )}
                         </div>

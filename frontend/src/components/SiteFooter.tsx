@@ -33,7 +33,7 @@ const SiteFooter: React.FC = () => {
             socialLinks={[]}
             mainLinks={[
               { href: '/', label: '首页' },
-              { href: '/settings/apikey', label: 'API Key 设置' },
+              { href: '/account', label: '个人中心' },
               { href: '/disclaimer', label: '免责声明' },
             ]}
             legalLinks={[

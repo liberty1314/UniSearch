@@ -3,7 +3,6 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	"unisearch/api/controller"
-	"unisearch/api/middleware"
 	"unisearch/config"
 	"unisearch/plugin"
 	"unisearch/service"
@@ -15,8 +14,6 @@ import (
 func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService, systemSettingsService *service.SystemSettingsService, announcementService *service.AnnouncementService, tgChannelService *service.TGChannelService, pluginHealthService *service.PluginHealthService, pluginStateService *service.PluginStateService, tgChannelHealthService *service.TGChannelHealthService) *gin.Engine {
 	// 设置搜索服务
 	SetSearchService(searchService)
-	// 设置API Key服务
-	SetAPIKeyService(apiKeyService)
 	// 设置系统设置服务
 	SetSystemSettingsService(systemSettingsService)
 	// 设置 TG 频道服务
@@ -25,8 +22,6 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 
 	// 创建控制器实例
 	authController := controller.NewAuthController(authService)
-	apiKeyController := controller.NewAPIKeyController(apiKeyService)
-	userAPIKeyController := controller.NewUserAPIKeyController(apiKeyService)
 
 	// 设置为生产模式
 	gin.SetMode(gin.ReleaseMode)
@@ -54,10 +49,8 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			// 用户注册接口
 			auth.POST("/register", authController.Register)
 
-			// 用户登录接口（统一接口，支持数据库用户、API Key、记住我）
+			// 用户登录接口（统一接口，支持数据库用户与记住我）
 			auth.POST("/login", func(c *gin.Context) {
-				// 注入服务到上下文
-				c.Set("apiKeyService", apiKeyService)
 				c.Set("refreshTokenService", refreshTokenService)
 				authController.Login(c)
 			})
@@ -65,10 +58,6 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			// Token 验证接口
 			auth.GET("/validate", authController.ValidateToken)
 
-			// 原有登录接口（保持向后兼容）
-			auth.POST("/login-legacy", LoginHandler(apiKeyService))
-			// 新增：支持"记住我"的登录接口
-			auth.POST("/login-remember", UserLoginWithRememberHandler(apiKeyService, refreshTokenService))
 			// 新增：刷新访问令牌
 			auth.POST("/refresh", RefreshAccessTokenHandler(refreshTokenService))
 			// 新增：撤销刷新令牌（登出）
@@ -89,38 +78,18 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 		// 需求: 13.4
 		api.POST("/system-settings/announcement-enabled", JWTMiddleware(), AdminMiddleware(), SetAnnouncementFeatureEnabledHandler(systemSettingsService))
 
-		// ========== 搜索接口（支持混合访问模式）==========
-		// 验证需求：10.1, 10.3
-		// 可以使用手动输入的 API Key 或 JWT Token
-		api.POST("/search", SearchHandler)
-		api.GET("/search", SearchHandler) // 添加GET方式支持
+		// ========== 搜索接口（仅支持 JWT 登录）==========
+		api.POST("/search", SearchJWTMiddleware(), SearchHandler)
+		api.GET("/search", SearchJWTMiddleware(), SearchHandler)
 
 		// ========== 用户接口（需要 JWT 认证）==========
 		// 验证需求：6.1, 8.1
 		user := api.Group("/user")
 		user.Use(JWTMiddleware()) // 应用 JWT 中间件
 		{
-			// API Key 管理（新接口）
-			user.POST("/apikey", userAPIKeyController.BindAPIKey)     // 绑定/更新 API Key
-			user.GET("/apikey", userAPIKeyController.GetAPIKey)       // 获取绑定的 API Key
-			user.DELETE("/apikey", userAPIKeyController.UnbindAPIKey) // 解绑 API Key
-
-			// 原有接口（保持向后兼容，已弃用）
-			// 验证需求：2.5, 7.1
-			user.POST("/apikey/bind",
-				middleware.DeprecatedMiddleware("此接口已弃用，请使用 POST /api/user/apikey"),
-				apiKeyController.BindAPIKey)
-			user.GET("/apikey-info",
-				middleware.DeprecatedMiddleware("此接口已弃用，请使用 GET /api/user/apikey"),
-				GetUserAPIKeyInfoHandler(apiKeyService))
-
-			// 保留 /apikey/info 接口（向后兼容）
-			user.GET("/apikey/info",
-				middleware.DeprecatedMiddleware("此接口已弃用，请使用 GET /api/user/apikey"),
-				apiKeyController.GetAPIKeyInfo)
-
 			// 获取当前用户信息
 			user.GET("/me", authController.GetCurrentUser)
+			user.POST("/change-password", ChangePasswordHandler(userService))
 		}
 
 		// ========== 公告接口（需要 JWT 认证）==========
@@ -158,27 +127,6 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 				users.POST("/batch-update-role", BatchUpdateRoleHandler(userService)) // 批量修改角色
 			}
 
-			// API Key 管理
-			apikey := admin.Group("/apikey")
-			{
-				// 生成 API Key
-				apikey.POST("/generate", apiKeyController.GenerateAPIKey)
-				// 列出所有 API Keys
-				apikey.GET("/list", apiKeyController.ListAPIKeys)
-				// 删除 API Key
-				apikey.DELETE("/:id", apiKeyController.DeleteAPIKey)
-				// 更新 API Key 状态
-				apikey.PUT("/:id/status", apiKeyController.UpdateAPIKeyStatus)
-			}
-
-			// 原有接口（保持向后兼容）
-			admin.GET("/keys", ListAPIKeysHandler(apiKeyService))
-			admin.POST("/keys", CreateAPIKeyHandler(apiKeyService))
-			admin.DELETE("/keys/:key", DeleteAPIKeyHandler(apiKeyService))
-			admin.PATCH("/keys/:key", UpdateAPIKeyHandler(apiKeyService))                                                          // 新增：更新API Key
-			admin.POST("/keys/batch-extend", BatchExtendAPIKeysHandler(apiKeyService))                                             // 新增：批量延长
-			admin.POST("/keys/batch-create", BatchCreateAPIKeysHandler(apiKeyService))                                             // 新增：批量创建
-			admin.POST("/keys/batch-delete", BatchDeleteAPIKeysHandler(apiKeyService))                                             // 新增：批量删除
 			admin.GET("/system-info", GetSystemInfoHandler(searchService, userService, pluginHealthService, pluginStateService))   // 更新：获取系统信息（包含插件状态 + 用户活跃度）
 			admin.POST("/plugins/:pluginName/test", TestPluginHandler(searchService, pluginHealthService))                         // 新增：测试插件
 			admin.POST("/plugins", CreatePluginHandler(pluginHealthService, pluginStateService))                                   // 新增：创建插件
@@ -288,7 +236,7 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 
 			response := gin.H{
 				"status":          "ok",
-				"auth_enabled":    config.AppConfig.AuthEnabled || config.AppConfig.APIKeyEnabled, // 更新认证状态判断
+				"auth_enabled":    config.AppConfig.AuthEnabled,
 				"plugins_enabled": pluginsEnabled,
 				"channels":        channels,
 				"channels_count":  channelsCount,

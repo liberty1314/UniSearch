@@ -118,13 +118,6 @@ func initApp() {
 		log.Fatalf("❌ 创建默认管理员失败: %v", err)
 	}
 
-	// 4. 执行 JSON 数据迁移（如果需要）
-	log.Println("正在检查 JSON 数据迁移...")
-	if err := database.MigrateFromDefaultJSONFile(); err != nil {
-		// 数据迁移失败不应该导致系统无法启动，只记录警告
-		log.Printf("⚠️  JSON 数据迁移失败: %v", err)
-	}
-
 	log.Println("✓ 数据库初始化完成")
 	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
@@ -205,15 +198,6 @@ func startServer() {
 
 	// 更新默认并发数（使用实际插件数）
 	config.UpdateDefaultConcurrency(len(pluginManager.GetPlugins()))
-
-	// 初始化 API Key 服务（管理后台需要，必须始终初始化）
-	var apiKeyService *service.APIKeyService
-	apiKeyService = service.NewAPIKeyService()
-	if config.AppConfig.APIKeyEnabled {
-		fmt.Println("API Key 服务已启动（认证已启用）")
-	} else {
-		fmt.Println("API Key 服务已启动（仅用于管理，认证未启用）")
-	}
 
 	// 初始化 Refresh Token 服务（记住密码功能）
 	var refreshTokenService *service.RefreshTokenService
@@ -297,7 +281,7 @@ func startServer() {
 	// 设置路由
 	router := api.SetupRouter(
 		searchService,
-		apiKeyService,
+		nil,
 		authService,
 		refreshTokenService,
 		userService,

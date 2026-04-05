@@ -46,10 +46,7 @@ export class SystemSettingsService {
     }
 
     static async resolveDefaultAuthEntryPath(force = false): Promise<string> {
-        const settings = await this.getSettingsCached(force);
-        if (!settings.enable_user_auth || !settings.enable_user_login) {
-            return '/apikey';
-        }
+        await this.getSettingsCached(force);
         return '/login';
     }
 

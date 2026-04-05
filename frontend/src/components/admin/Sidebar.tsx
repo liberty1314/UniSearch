@@ -1,5 +1,5 @@
 import React from 'react';
-import { Key, Activity, X, Users, Settings, Megaphone } from 'lucide-react';
+import { Activity, X, Users, Settings, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { useAdminStore } from '@/stores/adminStore';
@@ -12,7 +12,7 @@ import {
 /**
  * 管理视图类型
  */
-export type AdminView = 'api-keys' | 'system-info' | 'user-management' | 'system-settings' | 'announcement-management';
+export type AdminView = 'system-info' | 'user-management' | 'system-settings' | 'announcement-management';
 
 /**
  * 导航项配置
@@ -61,11 +61,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             id: 'system-info',
             label: '系统监控',
             icon: <Activity className="w-5 h-5" />,
-        },
-        {
-            id: 'api-keys',
-            label: 'API Key 管理',
-            icon: <Key className="w-5 h-5" />,
         },
         {
             id: 'user-management',

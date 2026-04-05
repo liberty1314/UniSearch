@@ -132,7 +132,7 @@ export const useSearchStore = create<SearchState>()(devtools(
           get().addToHistory(finalParams.keyword);
         }
       } catch (error) {
-        // 特殊处理：将 API Key 绑定/登录引导错误继续抛给调用方处理跳转
+        // 特殊处理：将登录引导错误继续抛给调用方处理跳转
         const errorCode = getErrorCode(error);
         if (errorCode === 401 || errorCode === 403 || errorCode === 404) {
           set({

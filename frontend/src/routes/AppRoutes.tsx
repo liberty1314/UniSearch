@@ -18,10 +18,9 @@ import {
 const Home = lazy(() => import('@/pages/Home'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/pages/RegisterPage'));
-const ApiKeyLoginPage = lazy(() => import('@/pages/ApiKeyLoginPage'));
+const AccountPage = lazy(() => import('@/pages/AccountPage'));
 const AdminLogin = lazy(() => import('@/pages/AdminLogin'));
 const Admin = lazy(() => import('@/pages/Admin'));
-const UserApiKeySettings = lazy(() => import('@/pages/UserApiKeySettings'));
 const DisclaimerPage = lazy(() => import('@/pages/DisclaimerPage'));
 
 const TOAST_CONFIG = {
@@ -47,12 +46,11 @@ const KNOWN_ROUTE_PATTERNS = [
   '/',
   '/login',
   '/register',
-  '/apikey',
+  '/account',
   '/disclaimer',
   '/auth',
   '/admin/login',
   '/admin',
-  '/settings/apikey',
 ];
 
 const AppRoutes: React.FC = () => {
@@ -83,11 +81,7 @@ const AppRoutes: React.FC = () => {
           <Routes>
             <Route
               path="/"
-              element={renderLazyRoute(
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              )}
+              element={renderLazyRoute(<Home />)}
             />
             <Route
               path="/login"
@@ -106,11 +100,11 @@ const AppRoutes: React.FC = () => {
               )}
             />
             <Route
-              path="/apikey"
+              path="/account"
               element={renderLazyRoute(
-                <GuestRoute>
-                  <ApiKeyLoginPage />
-                </GuestRoute>
+                <ProtectedRoute>
+                  <AccountPage />
+                </ProtectedRoute>
               )}
             />
             <Route path="/disclaimer" element={renderLazyRoute(<DisclaimerPage />)} />
@@ -129,14 +123,6 @@ const AppRoutes: React.FC = () => {
                 <AdminRoute>
                   <Admin />
                 </AdminRoute>
-              )}
-            />
-            <Route
-              path="/settings/apikey"
-              element={renderLazyRoute(
-                <ProtectedRoute>
-                  <UserApiKeySettings />
-                </ProtectedRoute>
               )}
             />
             <Route path="*" element={<NotFoundPage />} />

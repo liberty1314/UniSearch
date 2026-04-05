@@ -4,12 +4,12 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Settings, RefreshCw, Shield, Key, LogIn, UserPlus, Globe, Copy as CopyIcon, Save } from 'lucide-react';
+import { Settings, RefreshCw, Shield, LogIn, UserPlus, Globe, Save } from 'lucide-react';
 import { SystemSettingsService } from '@/services/systemSettingsService';
 import { useAuthStore } from '@/stores/authStore';
 import { getErrorDataError, getErrorMessage } from '@/lib/error';
 import { BLUE_CYAN_ICON } from '@/lib/brandTheme';
-import { buildCopyFormatPreview, getCopyFormatTemplate, resolvePublicSiteUrl } from '@/lib/publicSiteConfig';
+import { resolvePublicSiteUrl } from '@/lib/publicSiteConfig';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -23,7 +23,6 @@ export const SystemSettingsView: React.FC = () => {
     const [enableUserLogin, setEnableUserLogin] = useState<boolean>(true);
     const [enableUserSignup, setEnableUserSignup] = useState<boolean>(true);
     const [publicSiteUrl, setPublicSiteUrl] = useState<string>(resolvePublicSiteUrl());
-    const [defaultCopyFormatTemplate, setDefaultCopyFormatTemplate] = useState<string>(getCopyFormatTemplate());
     
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [isSaving, setIsSaving] = useState<string | null>(null);
@@ -34,7 +33,6 @@ export const SystemSettingsView: React.FC = () => {
         enableUserLogin: true,
         enableUserSignup: true,
         publicSiteUrl: resolvePublicSiteUrl(),
-        defaultCopyFormatTemplate: getCopyFormatTemplate(),
     });
 
     /**
@@ -50,13 +48,11 @@ export const SystemSettingsView: React.FC = () => {
             setEnableUserLogin(settings.enable_user_login);
             setEnableUserSignup(settings.enable_user_signup);
             setPublicSiteUrl(resolvePublicSiteUrl(settings));
-            setDefaultCopyFormatTemplate(getCopyFormatTemplate(settings));
             setOriginalValues({
                 enableUserAuth: settings.enable_user_auth,
                 enableUserLogin: settings.enable_user_login,
                 enableUserSignup: settings.enable_user_signup,
                 publicSiteUrl: resolvePublicSiteUrl(settings),
-                defaultCopyFormatTemplate: getCopyFormatTemplate(settings),
             });
         } catch (error) {
             console.error('加载系统设置失败:', error);
@@ -86,7 +82,7 @@ export const SystemSettingsView: React.FC = () => {
                 setEnableUserSignup(result.enable_user_signup);
             }
             
-            toast.success(checked ? '已启用用户登录注册功能' : '已禁用用户登录注册功能，仅保留 API Key 登录');
+            toast.success(checked ? '已启用用户登录注册功能' : '已禁用用户登录注册功能');
         } catch (error) {
             console.error('保存系统设置失败:', error);
             setEnableUserAuth(originalValues.enableUserAuth);
@@ -151,22 +147,17 @@ export const SystemSettingsView: React.FC = () => {
         try {
             const result = await SystemSettingsService.updateSettings(token, {
                 public_site_url: publicSiteUrl.trim(),
-                default_copy_format_template: defaultCopyFormatTemplate.trim(),
             });
             const resolvedSiteUrl = resolvePublicSiteUrl(result);
-            const resolvedTemplate = getCopyFormatTemplate(result);
             setPublicSiteUrl(resolvedSiteUrl);
-            setDefaultCopyFormatTemplate(resolvedTemplate);
             setOriginalValues(prev => ({
                 ...prev,
                 publicSiteUrl: resolvedSiteUrl,
-                defaultCopyFormatTemplate: resolvedTemplate,
             }));
             toast.success('公开展示配置已更新');
         } catch (error) {
             console.error('保存系统设置失败:', error);
             setPublicSiteUrl(originalValues.publicSiteUrl);
-            setDefaultCopyFormatTemplate(originalValues.defaultCopyFormatTemplate);
             toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
         } finally {
             setIsSaving(null);
@@ -226,19 +217,13 @@ export const SystemSettingsView: React.FC = () => {
                                         启用用户登录注册功能
                                     </Label>
                                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">主开关：控制是否启用用户认证功能</p>
-                                    <div className="mt-3 space-y-2">
-                                        <div className="flex items-center gap-2 text-sm">
-                                            <div className={`w-2 h-2 rounded-full ${enableUserAuth ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                                            <span className="text-slate-600 dark:text-slate-300">{enableUserAuth ? '已启用' : '已禁用'}</span>
-                                        </div>
-                                        {!enableUserAuth && (
-                                            <div className="text-xs text-slate-500 dark:text-slate-400 pl-4 flex items-center gap-2">
-                                                <Key className="w-3 h-3" />
-                                                仅支持 API Key 登录
+                                        <div className="mt-3 space-y-2">
+                                            <div className="flex items-center gap-2 text-sm">
+                                                <div className={`w-2 h-2 rounded-full ${enableUserAuth ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                                                <span className="text-slate-600 dark:text-slate-300">{enableUserAuth ? '已启用' : '已禁用'}</span>
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
-                                </div>
                                 <div className="flex-shrink-0 ml-4">{renderToggle(enableUserAuth, handleToggleAuth, isSaving === 'auth')}</div>
                             </div>
 
@@ -286,7 +271,7 @@ export const SystemSettingsView: React.FC = () => {
                         <Globe className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
                         公开展示配置
                     </CardTitle>
-                    <CardDescription className="text-slate-500 dark:text-slate-400">配置站点 URL 和 API Key 复制默认模板</CardDescription>
+                    <CardDescription className="text-slate-500 dark:text-slate-400">配置公开站点 URL</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 p-6">
                     <div className="space-y-2">
@@ -298,23 +283,6 @@ export const SystemSettingsView: React.FC = () => {
                             placeholder={resolvePublicSiteUrl()}
                             disabled={isLoading || isSaving === 'display'}
                         />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="default-copy-format-template">默认复制模板</Label>
-                        <textarea
-                            id="default-copy-format-template"
-                            value={defaultCopyFormatTemplate}
-                            onChange={(e) => setDefaultCopyFormatTemplate(e.target.value)}
-                            placeholder={getCopyFormatTemplate()}
-                            disabled={isLoading || isSaving === 'display'}
-                            rows={3}
-                            className="flex min-h-[96px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus-visible:border-cyan-500 focus-visible:ring-2 focus-visible:ring-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
-                        />
-                        <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                            <CopyIcon className="h-3.5 w-3.5" />
-                            示例：{buildCopyFormatPreview({ public_site_url: publicSiteUrl, default_copy_format_template: defaultCopyFormatTemplate }, 'sk-xxx')}
-                        </p>
                     </div>
 
                     <div className="flex justify-end">

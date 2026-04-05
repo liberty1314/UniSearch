@@ -2,7 +2,6 @@ package api
 
 import (
 	// "fmt"
-	"log"
 	"net/http"
 	// "os"
 
@@ -18,107 +17,16 @@ import (
 // 保存搜索服务的实例
 var searchService *service.SearchService
 
-// 保存API Key服务的实例
-var apiKeyService *service.APIKeyService
-
 // SetSearchService 设置搜索服务实例
 func SetSearchService(service *service.SearchService) {
 	searchService = service
 }
 
-// SetAPIKeyService 设置API Key服务实例
-func SetAPIKeyService(service *service.APIKeyService) {
-	apiKeyService = service
-}
-
 // SearchHandler 搜索处理函数
-// 实现混合访问模式：
-// 1. 优先使用请求中的手动输入 API Key（从 Header X-API-Key 或查询参数 key）
-// 2. 如果无 API Key 但有 JWT Token，使用用户绑定的 Key
-// 3. 如果既无 API Key 也无 Token，返回错误
-// 验证需求：9.1-9.9, 10.5, 14.2, 14.3
+// 仅允许已登录账号执行搜索。
 func SearchHandler(c *gin.Context) {
 	var req model.SearchRequest
 	var err error
-	var apiKeyStr string
-	var jwtTokenValid bool
-	var jwtTokenInvalid bool
-
-	// ========== 混合访问模式：获取 API Key ==========
-
-	// 1. 优先使用请求中的手动输入 API Key（从 Header 或查询参数）
-	apiKeyStr = c.GetHeader("X-API-Key")
-	if apiKeyStr == "" {
-		apiKeyStr = c.Query("key")
-	}
-
-	// 2. 如果无手动输入的 API Key，尝试从 JWT Token 获取用户绑定的 Key
-	if apiKeyStr == "" {
-		// 检查是否有 JWT Token（从 Authorization Header）
-		authHeader := c.GetHeader("Authorization")
-		if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
-			token := strings.TrimPrefix(authHeader, "Bearer ")
-			// 验证 JWT Token（使用新版本的 ValidateJWTToken）
-			claims, err := util.ValidateJWTToken(token, config.AppConfig.AuthJWTSecret)
-			if err == nil && claims.UserID > 0 {
-				jwtTokenValid = true
-				// 从数据库获取用户绑定的 API Key
-				if apiKeyService != nil {
-					userAPIKey, err := apiKeyService.GetUserAPIKey(claims.UserID)
-					if err == nil && userAPIKey != nil {
-						apiKeyStr = userAPIKey.Key
-					} else if err != nil && !strings.Contains(err.Error(), "未绑定 API Key") {
-						c.JSON(http.StatusInternalServerError, model.NewErrorResponse(500, "查询用户 API Key 失败"))
-						return
-					}
-				}
-			} else {
-				jwtTokenInvalid = true
-			}
-		}
-	}
-
-	// 3. 如果既无 API Key 也无有效的 JWT Token，返回错误
-	if apiKeyStr == "" {
-		if jwtTokenInvalid {
-			c.JSON(http.StatusUnauthorized, model.NewErrorResponse(401, "登录状态已失效，请重新登录"))
-			return
-		}
-		if jwtTokenValid {
-			c.JSON(http.StatusForbidden, model.NewErrorResponse(403, "请先绑定 API Key 后再进行搜索"))
-			return
-		}
-		c.JSON(http.StatusUnauthorized, model.NewErrorResponse(401, "请先使用 API Key 登录后再进行搜索"))
-		return
-	}
-
-	// ========== 验证 API Key 有效性 ==========
-
-	if apiKeyService == nil {
-		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(500, "API Key 服务未初始化"))
-		return
-	}
-
-	// 验证 API Key（检查 is_enabled 和 expires_at）
-	apiKey, err := apiKeyService.ValidateAPIKey(apiKeyStr)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, model.NewErrorResponse(401, "API Key 无效或已过期"))
-		return
-	}
-
-	// ========== 检查每日搜索限额 ==========
-
-	// 检查并重置每日计数（如果是新的一天）
-	if err := apiKeyService.CheckAndResetDailyCount(apiKey); err != nil {
-		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(500, "检查搜索限制失败: "+err.Error()))
-		return
-	}
-
-	// 检查是否可以搜索（每日限额）
-	if !apiKey.CanSearch() {
-		c.JSON(http.StatusTooManyRequests, model.NewErrorResponse(429, "今日搜索次数已达上限"))
-		return
-	}
 
 	// 根据请求方法不同处理参数
 	if c.Request.Method == http.MethodGet {
@@ -318,27 +226,6 @@ func SearchHandler(c *gin.Context) {
 	// 应用过滤器
 	if req.Filter != nil {
 		result = applyResultFilter(result, req.Filter, req.ResultType)
-	}
-
-	// ========== 搜索成功后，更新 API Key 使用统计 ==========
-
-	// 更新 first_used_at（如果是首次使用）、today_search_count、last_search_date
-	if err := apiKeyService.UpdateAPIKeyUsage(apiKeyStr); err != nil {
-		// 记录错误但不影响搜索结果返回
-		log.Printf("⚠ 更新 API Key 使用统计失败: %v", err)
-	}
-
-	// 更新 API Key 最后登录时间
-	if err := apiKeyService.UpdateLastLoginAt(apiKeyStr); err != nil {
-		log.Printf("⚠ 更新 API Key 最后登录时间失败: %v", err)
-	}
-
-	// 如果 API Key 绑定了用户，同步更新用户最后登录时间
-	if apiKey.UserID != nil {
-		authService := service.NewAuthService()
-		if err := authService.UpdateLastLoginAtByUserID(*apiKey.UserID); err != nil {
-			log.Printf("⚠ 更新用户最后登录时间失败: user_id=%d err=%v", *apiKey.UserID, err)
-		}
 	}
 
 	// 包装SearchResponse到标准响应格式中

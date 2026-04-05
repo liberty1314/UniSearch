@@ -9,7 +9,6 @@ import (
 	"time"
 	"unisearch/config"
 	"unisearch/service"
-	"unisearch/util"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -44,7 +43,7 @@ type RegisterResponse struct {
 // LoginRequest 用户登录请求结构（支持记住我）
 type LoginRequest struct {
 	Username          string `json:"username" binding:"required"` // 用户名
-	Password          string `json:"password" binding:"required"` // 密码或 API Key
+	Password          string `json:"password" binding:"required"` // 密码
 	RememberMe        bool   `json:"remember_me"`                 // 是否记住我（可选）
 	DeviceFingerprint string `json:"device_fingerprint"`          // 设备指纹（可选）
 }
@@ -142,10 +141,7 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 
 // Login 处理用户登录请求（统一接口）
 // POST /api/auth/login
-// 支持三种登录方式：
-// 1. 数据库用户登录（用户名 + 密码）
-// 2. API Key 登录（任意用户名 + API Key）
-// 3. 支持"记住我"功能（返回 refresh_token）
+// 仅支持用户名密码登录，并可按需返回 refresh_token。
 func (ctrl *AuthController) Login(c *gin.Context) {
 	var req LoginRequest
 
@@ -183,103 +179,8 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 		return
 	}
 
-	// 检查是否为 API Key 登录（密码为 sk- 开头的43位字符）
-	if len(req.Password) == 43 && req.Password[:3] == "sk-" {
-		ctrl.handleAPIKeyLogin(c, req)
-		return
-	}
-
-	// 数据库用户登录
 	ctrl.handleDatabaseUserLogin(c, req)
 }
-
-// handleAPIKeyLogin 处理 API Key 登录
-func (ctrl *AuthController) handleAPIKeyLogin(c *gin.Context, req LoginRequest) {
-	// 获取 API Key 服务（从路由上下文）
-	apiKeyServiceInterface, exists := c.Get("apiKeyService")
-	if !exists {
-		log.Printf("✗ API Key 服务未初始化")
-		c.JSON(500, LoginResponse{
-			Code:    500,
-			Message: "服务暂时不可用",
-			Data:    nil,
-		})
-		return
-	}
-
-	apiKeyService, ok := apiKeyServiceInterface.(*service.APIKeyService)
-	if !ok || apiKeyService == nil {
-		log.Printf("✗ API Key 服务类型错误")
-		c.JSON(500, LoginResponse{
-			Code:    500,
-			Message: "服务暂时不可用",
-			Data:    nil,
-		})
-		return
-	}
-
-	// 验证 API Key
-	valid, err := apiKeyService.ValidateKey(req.Password)
-	if err != nil {
-		log.Printf("✗ API Key 验证失败: %v", err)
-		c.JSON(500, LoginResponse{
-			Code:    500,
-			Message: "验证失败",
-			Data:    nil,
-		})
-		return
-	}
-
-	if !valid {
-		log.Printf("✗ API Key 无效或已过期: %s", req.Password[:10]+"...")
-		c.JSON(401, LoginResponse{
-			Code:    401,
-			Message: "API Key 无效或已过期",
-			Data:    nil,
-		})
-		return
-	}
-
-	// 生成 Access Token（携带 API Key 信息）
-	accessToken, err := ctrl.generateAPIKeyToken(req.Password)
-	if err != nil {
-		log.Printf("✗ 生成 Token 失败: %v", err)
-		c.JSON(500, LoginResponse{
-			Code:    500,
-			Message: "生成令牌失败",
-			Data:    nil,
-		})
-		return
-	}
-
-	// 更新 API Key 最后登录时间
-	if err := apiKeyService.UpdateLastLoginAt(req.Password); err != nil {
-		log.Printf("⚠ 更新 API Key 最后登录时间失败: %v", err)
-	}
-
-	// 构建响应数据
-	loginData := LoginData{
-		AccessToken: accessToken,
-		ExpiresAt:   ctrl.getTokenExpiryTime(),
-		Username:    "user", // API Key 用户统一使用 "user"
-	}
-
-	// 如果启用"记住我"，生成刷新令牌
-	if req.RememberMe {
-		refreshToken := ctrl.generateRefreshToken(c, "apikey_user", false, req.DeviceFingerprint)
-		if refreshToken != nil {
-			loginData.RefreshToken = refreshToken
-		}
-	}
-
-	log.Printf("✓ API Key 登录成功: %s", req.Password[:10]+"...")
-	c.JSON(200, LoginResponse{
-		Code:    200,
-		Message: "登录成功",
-		Data:    loginData,
-	})
-}
-
 // handleDatabaseUserLogin 处理数据库用户登录
 func (ctrl *AuthController) handleDatabaseUserLogin(c *gin.Context, req LoginRequest) {
 	// 调用服务层进行登录
@@ -338,24 +239,6 @@ func (ctrl *AuthController) handleDatabaseUserLogin(c *gin.Context, req LoginReq
 		Message: "登录成功",
 		Data:    loginData,
 	})
-}
-
-// generateAPIKeyToken 生成 API Key 用户的 Token
-func (ctrl *AuthController) generateAPIKeyToken(apiKey string) (string, error) {
-	// 使用新版 GenerateJWTTokenWithAPIKey 生成 Token
-	// API Key 用户使用虚拟 user_id = 0，role = "user"，并携带 API Key 信息
-	token, err := util.GenerateJWTTokenWithAPIKey(
-		0,      // API Key 用户使用虚拟 user_id = 0
-		"user", // 用户名固定为 "user"
-		"user", // 角色为普通用户
-		apiKey, // 携带 API Key 信息
-		config.AppConfig.AuthJWTSecret,
-		config.AppConfig.AuthTokenExpiry,
-	)
-	if err != nil {
-		return "", err
-	}
-	return token, nil
 }
 
 // generateRefreshToken 生成刷新令牌

@@ -22,8 +22,6 @@ type RetryableRequestConfig = InternalAxiosRequestConfig & {
 
 const AUTH_ENDPOINTS_EXCLUDED_FROM_REFRESH = [
   '/auth/login',
-  '/auth/login-legacy',
-  '/auth/login-remember',
   '/auth/register',
   '/auth/refresh',
   '/auth/revoke',
@@ -62,11 +60,6 @@ class ApiClient {
         // 添加 JWT Token（如果存在）
         if (authStore.token) {
           config.headers.Authorization = `Bearer ${authStore.token}`;
-        }
-
-        // 添加 API Key（如果存在）
-        if (authStore.apiKey) {
-          config.headers['X-API-Key'] = authStore.apiKey;
         }
 
         return config;
@@ -114,21 +107,13 @@ class ApiClient {
         const originalRequest = error.config as RetryableRequestConfig | undefined;
         const requestURL = this.normalizeRequestURL(originalRequest?.url);
         const isSearchRequest = requestURL.startsWith('/search');
-        const responseMessage = this.extractApiErrorMessage(error.response?.data);
-        const isSearchCredentialGuidance =
-          isSearchRequest &&
-          (
-            responseMessage === '请先绑定 API Key 后再进行搜索' ||
-            responseMessage === '请先使用 API Key 登录后再进行搜索' ||
-            responseMessage === 'API Key 无效或已过期'
-          );
 
         // 处理 401 未授权错误：先尝试刷新并重试一次，失败再登出
         if (error.response?.status === 401 && originalRequest) {
           const isExcludedAuthEndpoint = this.isExcludedAuthEndpoint(requestURL);
           const skipAuthRefresh = originalRequest.skipAuthRefresh === true;
 
-          if (!isExcludedAuthEndpoint && !skipAuthRefresh && !originalRequest._retry && !isSearchCredentialGuidance) {
+          if (!isExcludedAuthEndpoint && !skipAuthRefresh && !originalRequest._retry) {
             const authStore = useAuthStore.getState();
             if (authStore.refreshToken) {
               originalRequest._retry = true;
@@ -150,7 +135,7 @@ class ApiClient {
           }
 
           // 登录相关接口 401 不触发全局登出
-          if (!isExcludedAuthEndpoint && !isSearchRequest && !isSearchCredentialGuidance) {
+          if (!isExcludedAuthEndpoint && !isSearchRequest) {
             const authStore = useAuthStore.getState();
             authStore.logout();
 
@@ -158,8 +143,7 @@ class ApiClient {
             const currentPath = window.location.pathname;
             const isAuthPage =
               currentPath.includes('/login') ||
-              currentPath.startsWith('/auth') ||
-              currentPath === '/apikey';
+              currentPath.startsWith('/auth');
             if (!isAuthPage) {
               window.location.href = '/login';
             }
@@ -279,8 +263,8 @@ class ApiClient {
    * POST 请求
    * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async post<T = unknown>(url: string, data?: unknown): Promise<T> {
-    const response = await this.instance.post<T>(url, data);
+  async post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.instance.post<T>(url, data, config);
     return response.data;
   }
 
@@ -288,8 +272,8 @@ class ApiClient {
    * PUT 请求
    * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async put<T = unknown>(url: string, data?: unknown): Promise<T> {
-    const response = await this.instance.put<T>(url, data);
+  async put<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.instance.put<T>(url, data, config);
     return response.data;
   }
 
@@ -297,8 +281,8 @@ class ApiClient {
    * PATCH 请求
    * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async patch<T = unknown>(url: string, data?: unknown): Promise<T> {
-    const response = await this.instance.patch<T>(url, data);
+  async patch<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.instance.patch<T>(url, data, config);
     return response.data;
   }
 
@@ -306,8 +290,8 @@ class ApiClient {
    * DELETE 请求
    * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async delete<T = unknown>(url: string): Promise<T> {
-    const response = await this.instance.delete<T>(url);
+  async delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.instance.delete<T>(url, config);
     return response.data;
   }
 

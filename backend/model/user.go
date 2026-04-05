@@ -16,9 +16,6 @@ type User struct {
 	CreatedAt    time.Time      `json:"created_at"`                                   // 创建时间
 	UpdatedAt    time.Time      `json:"updated_at"`                                   // 更新时间
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`                               // 软删除时间（索引，不在JSON中序列化）
-
-	// 关联关系：一个用户可以拥有多个API Key
-	APIKeys []APIKey `gorm:"foreignKey:UserID" json:"-"` // 关联的API Keys（不在JSON中序列化）
 }
 
 // TableName 指定表名

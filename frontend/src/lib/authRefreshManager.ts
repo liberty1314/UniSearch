@@ -61,7 +61,6 @@ export async function refreshAuthTokenSingleFlight(): Promise<RefreshTokenRespon
       payload.access_token,
       latestState.username || 'user',
       latestState.isAdmin,
-      latestState.apiKey,
       payload.refresh_token
     );
 

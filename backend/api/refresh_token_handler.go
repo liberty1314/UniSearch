@@ -39,7 +39,6 @@ type LoginWithRememberResponse struct {
 	ExpiresAt    int64   `json:"expires_at"`
 	RefreshToken *string `json:"refresh_token,omitempty"` // 仅在 remember_me=true 时返回
 	Username     string  `json:"username"`
-	APIKey       string  `json:"api_key,omitempty"` // 管理员永久 API Key（仅管理员返回）
 }
 
 // generateDeviceFingerprint 生成设备指纹（服务端备用方案）
@@ -73,7 +72,7 @@ func AdminLoginWithRememberHandler(refreshTokenService *service.RefreshTokenServ
 
 		// 使用认证服务进行登录验证
 		authService := service.NewAuthService()
-		accessToken, user, apiKey, err := authService.Login(req.Username, req.Password)
+		accessToken, user, _, err := authService.Login(req.Username, req.Password)
 		if err != nil {
 			c.JSON(401, gin.H{
 				"error": "用户名或密码错误",
@@ -95,7 +94,6 @@ func AdminLoginWithRememberHandler(refreshTokenService *service.RefreshTokenServ
 			AccessToken: accessToken,
 			ExpiresAt:   time.Now().Add(config.AppConfig.AuthTokenExpiry).Unix(),
 			Username:    user.Username,
-			APIKey:      apiKey, // 返回管理员永久 API Key
 		}
 
 		// 如果勾选"记住我"，生成 Refresh Token
@@ -130,81 +128,11 @@ func AdminLoginWithRememberHandler(refreshTokenService *service.RefreshTokenServ
 }
 
 // UserLoginWithRememberHandler 普通用户登录（支持记住密码）
-func UserLoginWithRememberHandler(apiKeyService *service.APIKeyService, refreshTokenService *service.RefreshTokenService) gin.HandlerFunc {
+func UserLoginWithRememberHandler(refreshTokenService *service.RefreshTokenService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req LoginWithRememberRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(400, gin.H{"error": "参数错误：用户名和密码不能为空"})
-			return
-		}
-
-		// 检查是否为 API Key 登录（密码为 sk- 开头的43位字符）
-		if len(req.Password) == 43 && req.Password[:3] == "sk-" {
-			// API Key 登录逻辑
-			if !config.AppConfig.APIKeyEnabled || apiKeyService == nil {
-				c.JSON(403, gin.H{"error": "API Key 认证功能未启用"})
-				return
-			}
-
-			// 验证 API Key
-			valid, err := apiKeyService.ValidateKey(req.Password)
-			if err != nil {
-				c.JSON(500, gin.H{"error": "验证 API Key 失败"})
-				return
-			}
-
-			if !valid {
-				c.JSON(401, gin.H{"error": "API Key 无效或已过期"})
-				return
-			}
-
-			// 生成 Access Token（携带 API Key 信息，用于搜索计数）
-			accessToken, err := util.GenerateTokenWithAPIKey(
-				"apikey_user",
-				false,
-				req.Password, // 包含 API Key
-				config.AppConfig.AuthJWTSecret,
-				config.AppConfig.AuthTokenExpiry,
-			)
-			if err != nil {
-				c.JSON(500, gin.H{"error": "生成令牌失败"})
-				return
-			}
-
-			// 更新 API Key 最后登录时间
-			if err := apiKeyService.UpdateLastLoginAt(req.Password); err != nil {
-				// 仅记录日志，不影响登录流程
-				println("警告: 更新 API Key 最后登录时间失败:", err.Error())
-			}
-
-			response := LoginWithRememberResponse{
-				AccessToken: accessToken,
-				ExpiresAt:   time.Now().Add(config.AppConfig.AuthTokenExpiry).Unix(),
-				Username:    "user",
-			}
-
-			// API Key 用户也支持"记住我"
-			if req.RememberMe && config.AppConfig.RefreshTokenEnabled && refreshTokenService != nil {
-				deviceFingerprint := req.DeviceFingerprint
-				if deviceFingerprint == "" {
-					deviceFingerprint = generateDeviceFingerprint(c)
-				}
-
-				refreshToken, err := refreshTokenService.CreateToken(
-					"apikey_user",
-					false,
-					deviceFingerprint,
-					config.AppConfig.RefreshTokenTTL,
-				)
-				if err == nil {
-					encryptedToken, err := refreshTokenService.EncryptForClient(refreshToken.Token)
-					if err == nil {
-						response.RefreshToken = &encryptedToken
-					}
-				}
-			}
-
-			c.JSON(200, response)
 			return
 		}
 
@@ -397,22 +325,8 @@ func RefreshAccessTokenHandler(refreshTokenService *service.RefreshTokenService)
 	}
 }
 
-// generateAccessTokenFromRefreshRecord 根据刷新令牌记录生成新版 JWT Token
-// 映射规则：
-// 1. API Key 登录用户（username=apikey_user）-> user_id=0, username=user, role=user
-// 2. 数据库用户 -> 使用真实 user_id/username/role
-// 3. 兼容兜底（历史/配置用户）-> user_id=0，role 根据 isAdmin 推导
+// generateAccessTokenFromRefreshRecord 根据刷新令牌记录生成新版 JWT Token。
 func generateAccessTokenFromRefreshRecord(username string, isAdmin bool) (string, error) {
-	if username == "apikey_user" {
-		return util.GenerateJWTToken(
-			0,
-			"user",
-			"user",
-			config.AppConfig.AuthJWTSecret,
-			config.AppConfig.AuthTokenExpiry,
-		)
-	}
-
 	authService := service.NewAuthService()
 	dbUser, err := authService.GetUserByUsername(username)
 	if err == nil && dbUser != nil {

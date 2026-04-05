@@ -8,7 +8,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"unisearch/config"
-	"unisearch/service"
 	"unisearch/util"
 )
 
@@ -17,7 +16,7 @@ func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-API-Key")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
@@ -75,49 +74,28 @@ func LoggerMiddleware() gin.HandlerFunc {
 	}
 }
 
-// AuthMiddleware JWT和API Key双层认证中间件
-func AuthMiddleware(apiKeyService *service.APIKeyService) gin.HandlerFunc {
+// AuthMiddleware 基础认证中间件，仅接受 JWT。
+func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 1. 检查是否启用认证
-		if !config.AppConfig.AuthEnabled && !config.AppConfig.APIKeyEnabled {
+		if !config.AppConfig.AuthEnabled {
 			c.Next()
 			return
 		}
 
-		// 2. 检查公开路径
 		if isPublicPath(c.Request.URL.Path) {
 			c.Next()
 			return
 		}
 
-		// 3. 优先检查 JWT
 		if token := extractBearerToken(c); token != "" {
-			if claims, err := util.ValidateToken(token, config.AppConfig.AuthJWTSecret); err == nil {
+			if claims, err := util.ValidateJWTToken(token, config.AppConfig.AuthJWTSecret); err == nil {
+				c.Set("user_id", claims.UserID)
 				c.Set("username", claims.Username)
-				c.Set("is_admin", claims.IsAdmin)
-				c.Set("auth_type", "jwt")
-				// 如果JWT中包含API Key信息，也保存下来
-				if claims.APIKey != "" {
-					c.Set("api_key", claims.APIKey)
-				}
+				c.Set("role", claims.Role)
 				c.Next()
 				return
 			}
 		}
-
-		// 4. 降级检查 API Key
-		if config.AppConfig.APIKeyEnabled && apiKeyService != nil {
-			if apiKey := extractAPIKey(c); apiKey != "" {
-				if valid, err := apiKeyService.ValidateKey(apiKey); err == nil && valid {
-					c.Set("auth_type", "apikey")
-					c.Set("api_key", apiKey)
-					c.Next()
-					return
-				}
-			}
-		}
-
-		// 5. 认证失败
 		c.JSON(401, gin.H{
 			"error": "未授权：缺少有效的认证凭据",
 			"code":  "AUTH_REQUIRED",
@@ -197,9 +175,36 @@ func JWTMiddleware() gin.HandlerFunc {
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
-		if claims.APIKey != "" {
-			c.Set("api_key", claims.APIKey)
+		c.Next()
+	}
+}
+
+// SearchJWTMiddleware 为搜索接口提供专用登录提示。
+func SearchJWTMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := extractBearerToken(c)
+		if token == "" {
+			c.JSON(401, gin.H{
+				"code":    401,
+				"message": "请先登录后再进行搜索",
+			})
+			c.Abort()
+			return
 		}
+
+		claims, err := util.ValidateJWTToken(token, config.AppConfig.AuthJWTSecret)
+		if err != nil {
+			c.JSON(401, gin.H{
+				"code":    401,
+				"message": "登录状态已失效，请重新登录",
+			})
+			c.Abort()
+			return
+		}
+
+		c.Set("user_id", claims.UserID)
+		c.Set("username", claims.Username)
+		c.Set("role", claims.Role)
 		c.Next()
 	}
 }
@@ -227,31 +232,16 @@ func extractBearerToken(c *gin.Context) string {
 	return strings.TrimPrefix(authHeader, bearerPrefix)
 }
 
-// extractAPIKey 从请求头或查询参数提取 API Key
-func extractAPIKey(c *gin.Context) string {
-	// 优先从请求头获取
-	apiKey := c.GetHeader("X-API-Key")
-	if apiKey != "" {
-		return apiKey
-	}
-
-	// 降级从查询参数获取
-	return c.Query("key")
-}
-
 // isPublicPath 检查是否为公开路径
 func isPublicPath(path string) bool {
 	publicPaths := []string{
 		"/api/auth/register", // 新增：用户注册接口
 		"/api/auth/login",
-		"/api/auth/login-legacy",   // 原有登录接口
-		"/api/auth/login-remember", // 新增：支持记住我的登录
 		"/api/auth/refresh",        // 新增：刷新令牌
 		"/api/auth/revoke",         // 新增：撤销令牌
 		"/api/auth/validate",       // 新增：Token 验证接口
 		"/api/auth/logout",
 		"/api/health",
-		"/api/search",               // 搜索接口支持混合访问模式
 		"/api/admin/login",          // 管理员登录接口无需认证
 		"/api/admin/login-remember", // 新增：支持记住我的管理员登录
 	}
