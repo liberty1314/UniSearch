@@ -17,6 +17,7 @@ import {
     BLUE_CYAN_HOVER_TEXT,
     BLUE_CYAN_TEXT_GRADIENT,
 } from '@/lib/brandTheme';
+import { buildAdminUrl } from '@/lib/adminRoute';
 
 interface MobileMenuProps {
     isOpen: boolean;
@@ -151,7 +152,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
 
                                     {isAdmin ? (
                                         <Link
-                                            to="/admin"
+                                            to={buildAdminUrl()}
                                             onClick={onClose}
                                             className={`flex items-center gap-3 p-3 text-gray-600 dark:text-slate-400 ${BLUE_CYAN_HOVER_TEXT} hover:bg-gray-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors`}
                                         >

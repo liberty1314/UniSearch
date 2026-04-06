@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Home from '@/pages/Home';
+import type { SearchAccessStatus } from '@/stores/searchAccessStore';
 
-let searchAccessStatus: 'anonymous' | 'authenticated' = 'authenticated';
+let searchAccessStatus: SearchAccessStatus = 'authenticated';
 let searchKeyword = '';
 let searchResults: Array<{ id: number }> = [];
 
@@ -213,7 +214,7 @@ describe('Home', () => {
   });
 
   it('keeps the shared grid-backed shell in the searched state', () => {
-    searchAccessStatus = 'search_ready';
+    searchAccessStatus = 'authenticated';
     searchKeyword = '电影';
     searchResults = [{ id: 1 }];
 

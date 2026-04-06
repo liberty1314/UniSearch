@@ -4,7 +4,7 @@ import Admin from '@/pages/Admin';
 
 vi.mock('@/hooks/useAdminPageController', () => ({
   useAdminPageController: () => ({
-    currentView: 'user-management',
+    currentView: 'user_management',
     setCurrentView: vi.fn(),
     users: {
       users: [{ id: 1, username: 'alice', role: 'user' }],

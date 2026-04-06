@@ -15,6 +15,8 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
     const location = useLocation();
     const previousPathRef = React.useRef(location.pathname);
     const previousPath = previousPathRef.current;
+    const isCurrentAdminRoute = location.pathname.startsWith('/admin');
+    const isPreviousAdminRoute = previousPath.startsWith('/admin');
 
     const isAuthToAuthTransition =
         previousPath !== location.pathname &&
@@ -24,6 +26,10 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
     React.useEffect(() => {
         previousPathRef.current = location.pathname;
     }, [location.pathname]);
+
+    if (isCurrentAdminRoute || isPreviousAdminRoute) {
+        return <>{children}</>;
+    }
 
     const pageVariants = {
         initial: isAuthToAuthTransition

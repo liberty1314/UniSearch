@@ -1,15 +1,17 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import AdminLogin from '@/pages/AdminLogin';
 
-const { navigateMock, getSettingsMock, setTokenMock } = vi.hoisted(() => ({
+const { navigateMock, getSettingsMock, setTokenMock, adminLoginWithRememberMock } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   getSettingsMock: vi.fn(),
   setTokenMock: vi.fn(),
+  adminLoginWithRememberMock: vi.fn(),
 }));
 
 vi.mock('sonner', () => ({
@@ -32,6 +34,12 @@ vi.mock('@/stores/authStore', () => ({
   useAuthStore: () => ({
     setToken: setTokenMock,
   }),
+}));
+
+vi.mock('@/services/authService', () => ({
+  AuthService: {
+    adminLoginWithRemember: adminLoginWithRememberMock,
+  },
 }));
 
 vi.mock('@/services/systemSettingsService', () => ({
@@ -69,6 +77,7 @@ describe('Auth entry pages', () => {
     navigateMock.mockReset();
     getSettingsMock.mockReset();
     setTokenMock.mockReset();
+    adminLoginWithRememberMock.mockReset();
     getSettingsMock.mockResolvedValue({
       enable_user_auth: true,
       enable_user_login: true,
@@ -115,5 +124,36 @@ describe('Auth entry pages', () => {
 
     expect(container.querySelector('.auth-sparkle-intro')).toBeNull();
     expect(screen.getByRole('button', { name: '登录后台' }).className).not.toContain('hover:scale-[1.02]');
+  });
+
+  it('does not perform an extra client-side navigate after successful admin login', async () => {
+    adminLoginWithRememberMock.mockResolvedValue({
+      access_token: 'token',
+      refresh_token: 'refresh',
+      username: 'admin',
+    });
+
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/admin/login']}>
+        <AdminLogin />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('管理员登录')).toBeInTheDocument();
+    });
+
+    await user.type(screen.getByLabelText('用户名'), 'admin');
+    await user.type(screen.getByLabelText('管理员密码'), 'secret');
+    await user.click(screen.getByRole('button', { name: '登录后台' }));
+
+    await waitFor(() => {
+      expect(setTokenMock).toHaveBeenCalledWith('token', 'admin', true, 'refresh');
+    });
+
+    expect(adminLoginWithRememberMock).toHaveBeenCalledWith('admin', 'secret', false);
+    expect(navigateMock).not.toHaveBeenCalled();
   });
 });

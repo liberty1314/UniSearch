@@ -1,17 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { UserService } from '@/services/userService';
 import { useAuthStore } from '@/stores/authStore';
 import type { UserInfo } from '@/types/api';
-import type { AdminView } from '@/components/admin/Sidebar';
-
-const ALLOWED_ADMIN_VIEWS: AdminView[] = [
-  'system-info',
-  'user-management',
-  'system-settings',
-  'announcement-management',
-];
+import {
+  buildAdminUrl,
+  DEFAULT_ADMIN_VIEW,
+  isAdminView,
+  type AdminView,
+} from '@/lib/adminRoute';
 
 const USER_ROLE_FILTER_OPTIONS = [
   { label: '管理员', value: 'admin', color: '#8b5cf6' },
@@ -20,13 +18,12 @@ const USER_ROLE_FILTER_OPTIONS = [
 
 export function useAdminPageController() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAdmin, logout } = useAuthStore();
-
-  const [searchParams] = useState(() => new URLSearchParams(window.location.search));
-  const [currentView, setCurrentView] = useState<AdminView>(() => {
-    const viewParam = searchParams.get('view') as AdminView | null;
-    return viewParam && ALLOWED_ADMIN_VIEWS.includes(viewParam) ? viewParam : 'system-info';
-  });
+  const currentView = useMemo<AdminView>(() => {
+    const viewParam = searchParams.get('view');
+    return isAdminView(viewParam) ? viewParam : DEFAULT_ADMIN_VIEW;
+  }, [searchParams]);
 
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -85,6 +82,17 @@ export function useAdminPageController() {
     };
   }, []);
 
+  useEffect(() => {
+    const viewParam = searchParams.get('view');
+    if (viewParam === currentView) {
+      return;
+    }
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.set('view', currentView);
+    setSearchParams(nextSearchParams, { replace: true });
+  }, [currentView, searchParams, setSearchParams]);
+
   const loadUsers = useCallback(async (page?: number) => {
     setIsLoadingUsers(true);
     try {
@@ -113,10 +121,14 @@ export function useAdminPageController() {
   }, [currentPage, handleAdminError, pageSize, userActiveSearchKeyword, userRoleFilter]);
 
   useEffect(() => {
-    if (isAdmin && currentView === 'user-management') {
+    if (isAdmin && currentView === 'user_management') {
       void loadUsers(1);
     }
   }, [currentView, isAdmin, loadUsers, userActiveSearchKeyword, userRoleFilter]);
+
+  const setCurrentView = useCallback((view: AdminView) => {
+    navigate(buildAdminUrl(view));
+  }, [navigate]);
 
   const handleSelectUser = useCallback((userId: number, checked: boolean) => {
     setSelectedUsers((prev) => {

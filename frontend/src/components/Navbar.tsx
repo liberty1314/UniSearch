@@ -17,6 +17,7 @@ import {
   BLUE_CYAN_HOVER_TEXT,
   BLUE_CYAN_TEXT_GRADIENT_WITH_DARK,
 } from '@/lib/brandTheme';
+import { buildAdminUrl } from '@/lib/adminRoute';
 
 interface NavbarProps {
   className?: string;
@@ -176,7 +177,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                         <div className="p-1">
                           {isAdmin ? (
                             <Link
-                              to="/admin"
+                              to={buildAdminUrl()}
                               onClick={() => setIsUserMenuOpen(false)}
                               className={`flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 ${BLUE_CYAN_HOVER_SURFACE} ${BLUE_CYAN_HOVER_TEXT} rounded-lg transition-colors`}
                             >

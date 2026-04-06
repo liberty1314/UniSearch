@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
 import { AuthService } from '@/services/authService';
@@ -23,8 +23,6 @@ import { getErrorMessage, getErrorStatus } from '@/lib/error';
  * 提供管理员密码登录方式
  */
 const AdminLogin: React.FC = () => {
-    // 路由导航
-    const navigate = useNavigate();
     const location = useLocation();
 
     // 认证状态管理
@@ -72,9 +70,6 @@ const AdminLogin: React.FC = () => {
             );
 
             toast.success('登录成功，欢迎访问 UniSearch！');
-
-            // 跳转到后台管理页面的系统监控视图
-            navigate('/admin?view=system-info');
         } catch (error) {
             console.error('管理员登录失败:', error);
 

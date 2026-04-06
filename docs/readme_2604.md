@@ -109,3 +109,13 @@
   - `frontend/src/stores/authStore.ts`
   - `frontend/src/stores/searchAccessStore.ts`
   - `frontend/src/stores/searchStore.ts`
+
+## [2026-04-06 17:39:36] refactor(frontend): 重构管理员登录重定向逻辑并优化路由守卫测试
+- **内容**: 移除了 AdminLogin 中冗余的客户端跳转逻辑，统一由 RouteGuards 处理管理员重定向；同步修复了 Admin、AuthEntryPages 和 Home 的单元测试，并新增了 RouteGuards 的测试用例。
+- **文件**:
+  - frontend/src/pages/AdminLogin.tsx
+  - frontend/src/pages/__tests__/Admin.test.tsx
+  - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
+  - frontend/src/pages/__tests__/Home.test.tsx
+  - frontend/src/routes/RouteGuards.tsx
+  - frontend/src/routes/__tests__/RouteGuards.test.tsx

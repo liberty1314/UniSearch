@@ -55,13 +55,13 @@ const Admin: React.FC = () => {
 
       <div className="flex-1 h-full overflow-y-auto">
         <div className="container mx-auto px-4 py-6 space-y-6 lg:px-8 lg:py-8">
-          {currentView === 'user-management' && (
+          {currentView === 'user_management' && (
             <AdminUsersView viewModel={usersViewModel} />
           )}
 
-          {currentView === 'system-info' && <SystemInfoView />}
-          {currentView === 'system-settings' && <SystemSettingsView />}
-          {currentView === 'announcement-management' && <AnnouncementManagement />}
+          {currentView === 'system_info' && <SystemInfoView />}
+          {currentView === 'system_settings' && <SystemSettingsView />}
+          {currentView === 'announcement_management' && <AnnouncementManagement />}
         </div>
       </div>
 

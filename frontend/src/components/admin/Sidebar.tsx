@@ -8,11 +8,7 @@ import {
     BLUE_CYAN_GRADIENT,
     BLUE_CYAN_HOVER_TEXT,
 } from '@/lib/brandTheme';
-
-/**
- * 管理视图类型
- */
-export type AdminView = 'system-info' | 'user-management' | 'system-settings' | 'announcement-management';
+import type { AdminView } from '@/lib/adminRoute';
 
 /**
  * 导航项配置
@@ -58,22 +54,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
      */
     const navItems: NavItem[] = [
         {
-            id: 'system-info',
+            id: 'system_info',
             label: '系统监控',
             icon: <Activity className="w-5 h-5" />,
         },
         {
-            id: 'user-management',
+            id: 'user_management',
             label: '用户管理',
             icon: <Users className="w-5 h-5" />,
         },
         {
-            id: 'announcement-management',
+            id: 'announcement_management',
             label: '公告管理',
             icon: <Megaphone className="w-5 h-5" />,
         },
         {
-            id: 'system-settings',
+            id: 'system_settings',
             label: '系统设置',
             icon: <Settings className="w-5 h-5" />,
         },

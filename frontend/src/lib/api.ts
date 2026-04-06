@@ -15,6 +15,10 @@ type ApiErrorResponse = ApiResponse & {
   error?: string;
 };
 
+export type ApiRequestConfig = AxiosRequestConfig & {
+  skipAuthRefresh?: boolean;
+};
+
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
   skipAuthRefresh?: boolean;
@@ -254,7 +258,7 @@ class ApiClient {
    * GET 请求
    * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  async get<T = unknown>(url: string, config?: ApiRequestConfig): Promise<T> {
     const response = await this.instance.get<T>(url, config);
     return response.data;
   }
@@ -263,7 +267,7 @@ class ApiClient {
    * POST 请求
    * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+  async post<T = unknown>(url: string, data?: unknown, config?: ApiRequestConfig): Promise<T> {
     const response = await this.instance.post<T>(url, data, config);
     return response.data;
   }
@@ -272,7 +276,7 @@ class ApiClient {
    * PUT 请求
    * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async put<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+  async put<T = unknown>(url: string, data?: unknown, config?: ApiRequestConfig): Promise<T> {
     const response = await this.instance.put<T>(url, data, config);
     return response.data;
   }
@@ -281,7 +285,7 @@ class ApiClient {
    * PATCH 请求
    * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async patch<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+  async patch<T = unknown>(url: string, data?: unknown, config?: ApiRequestConfig): Promise<T> {
     const response = await this.instance.patch<T>(url, data, config);
     return response.data;
   }
@@ -290,7 +294,7 @@ class ApiClient {
    * DELETE 请求
    * 注意：响应拦截器已自动解包 data 字段，此方法直接返回业务数据
    */
-  async delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  async delete<T = unknown>(url: string, config?: ApiRequestConfig): Promise<T> {
     const response = await this.instance.delete<T>(url, config);
     return response.data;
   }
