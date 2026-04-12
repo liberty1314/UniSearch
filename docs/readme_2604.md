@@ -119,3 +119,16 @@
   - frontend/src/pages/__tests__/Home.test.tsx
   - frontend/src/routes/RouteGuards.tsx
   - frontend/src/routes/__tests__/RouteGuards.test.tsx
+
+## 2026-04-12
+**Header**: `feat(ui): 引入首页独立底部运动组件 CinematicFooter`
+**Body**: 新增基于 framer-motion 和 gsap 的动画底部，针对首页（`/`）独立渲染视觉效果更丰富的 CinematicFooter，其他路由保持使用普通 SiteFooter；并完善了相关组件的路由隔离与单元测试。
+**Files**:
+- frontend/package.json
+- frontend/pnpm-lock.yaml
+- frontend/src/components/ui/motion-footer.tsx
+- frontend/src/components/ui/__tests__/motion-footer.test.tsx
+- frontend/src/routes/AppRoutes.tsx
+- frontend/src/routes/__tests__/AppRoutes.test.tsx
+- frontend/src/components/__tests__/SiteFooter.test.tsx
+- frontend/vite.config.ts

@@ -15,6 +15,10 @@ vi.mock('@/components/SiteFooter', () => ({
   default: () => <div data-testid="site-footer" />,
 }));
 
+vi.mock('@/components/ui/motion-footer', () => ({
+  CinematicFooter: () => <div data-testid="cinematic-footer" />,
+}));
+
 vi.mock('@/components/PageTransition', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -66,11 +70,20 @@ const renderRoutesAt = (path: string) =>
   );
 
 describe('AppRoutes', () => {
+  it('renders the cinematic footer only on the home page', async () => {
+    renderRoutesAt('/');
+
+    expect(await screen.findByText('Home Page')).toBeInTheDocument();
+    expect(screen.getByTestId('cinematic-footer')).toBeInTheDocument();
+    expect(screen.queryByTestId('site-footer')).not.toBeInTheDocument();
+  });
+
   it('renders the account page at /account', async () => {
     renderRoutesAt('/account');
 
     expect(await screen.findByText('Account Page')).toBeInTheDocument();
     expect(screen.getByTestId('site-footer')).toBeInTheDocument();
+    expect(screen.queryByTestId('cinematic-footer')).not.toBeInTheDocument();
   });
 
   it('does not resolve /apikey and falls back to 404', async () => {
@@ -80,6 +93,7 @@ describe('AppRoutes', () => {
     expect(screen.queryByText('Account Page')).not.toBeInTheDocument();
     expect(screen.queryByTestId('navbar')).not.toBeInTheDocument();
     expect(screen.queryByTestId('site-footer')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('cinematic-footer')).not.toBeInTheDocument();
   });
 
   it('uses a pure white light shell for standard pages but keeps auth page shell unchanged', async () => {

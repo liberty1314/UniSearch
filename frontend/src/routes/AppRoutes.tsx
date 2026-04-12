@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import { AnnouncementProvider } from '@/components/AnnouncementProvider';
 import SiteFooter from '@/components/SiteFooter';
 import PageTransition from '@/components/PageTransition';
+import { CinematicFooter } from '@/components/ui/motion-footer';
 import NotFoundPage from '@/components/ui/page-not-found';
 import ScrollToTop from './ScrollToTop';
 import { isAuthRoute } from '@/components/auth/authRouteMotion';
@@ -65,6 +66,7 @@ const AppRoutes: React.FC = () => {
     !pathname.startsWith('/admin') &&
     pathname !== '/auth' &&
     !isStandaloneAuthPage;
+  const showCinematicFooter = showSiteFooter && pathname === '/';
   const showNavbar = !isNotFoundRoute;
   const appShellClassName = isNotFoundRoute
     ? 'bg-black'
@@ -130,7 +132,7 @@ const AppRoutes: React.FC = () => {
         </PageTransition>
       </main>
 
-      {showSiteFooter && <SiteFooter />}
+      {showCinematicFooter ? <CinematicFooter /> : showSiteFooter && <SiteFooter />}
       <Toaster {...TOAST_CONFIG} />
     </div>
   );

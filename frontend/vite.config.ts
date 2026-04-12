@@ -19,7 +19,7 @@ export default defineConfig(() => {
           manualChunks: {
             'react-vendor': ['react', 'react-dom'],
             'router-vendor': ['react-router-dom'],
-            'motion-vendor': ['framer-motion', 'motion'],
+            'motion-vendor': ['framer-motion', 'motion', 'gsap'],
             'radix-vendor': [
               '@radix-ui/react-alert-dialog',
               '@radix-ui/react-checkbox',
