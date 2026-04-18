@@ -1,21 +1,27 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-import CloudTypeFilter from '@/components/CloudTypeFilter';
-import { CloudType } from '@/types/api';
+import React from "react";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import CloudTypeFilter from "@/components/CloudTypeFilter";
+import { CloudType } from "@/types/api";
 
-vi.mock('@/components/magicui/cool-mode', () => ({
+vi.mock("@/components/magicui/cool-mode", () => ({
   CoolMode: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('framer-motion', () => ({
+vi.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement> & { layout?: boolean }) => {
+    div: ({
+      children,
+      ...props
+    }: React.HTMLAttributes<HTMLDivElement> & { layout?: boolean }) => {
       const domProps = { ...props };
       delete domProps.layout;
       return <div {...domProps}>{children}</div>;
     },
-    button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    button: ({
+      children,
+      ...props
+    }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
       whileHover?: unknown;
       whileTap?: unknown;
       layout?: boolean;
@@ -30,7 +36,7 @@ vi.mock('framer-motion', () => ({
   LayoutGroup: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('@/stores/searchStore', () => ({
+vi.mock("@/stores/searchStore", () => ({
   useSearchStore: () => ({
     searchParams: {
       cloudTypes: [
@@ -51,20 +57,30 @@ vi.mock('@/stores/searchStore', () => ({
   }),
 }));
 
-describe('CloudTypeFilter', () => {
-  it('renders the filter panel without the outer halo layer', () => {
+describe("CloudTypeFilter", () => {
+  it("renders the filter panel without the outer halo layer", () => {
     const { container } = render(<CloudTypeFilter />);
 
-    expect(screen.getByRole('heading', { name: '来源筛选' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /全选状态|选择全部/ })).toBeInTheDocument();
-    const filterSurface = screen.getByTestId('cloud-type-filter-surface');
-    expect(filterSurface).toHaveClass('bg-white/60');
-    expect(filterSurface).toHaveClass('dark:bg-slate-950/40');
-    expect(filterSurface).toHaveClass('border-white/60');
-    expect(filterSurface).toHaveClass('dark:border-white/[0.06]');
+    expect(
+      screen.getByRole("heading", { name: "来源筛选" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: /取消全选所有网盘类型|全选所有网盘类型/,
+      }),
+    ).toBeInTheDocument();
+    const filterSurface = screen.getByTestId("cloud-type-filter-surface");
+    expect(filterSurface).toHaveClass("bg-white/60");
+    expect(filterSurface).toHaveClass("dark:bg-slate-950/40");
+    expect(filterSurface).toHaveClass("border-white/60");
+    expect(filterSurface).toHaveClass("dark:border-white/[0.06]");
 
-    const hasOuterHaloLayer = Array.from(container.querySelectorAll('div')).some((node) =>
-      typeof node.className === 'string' && node.className.includes('via-purple-500/10')
+    const hasOuterHaloLayer = Array.from(
+      container.querySelectorAll("div"),
+    ).some(
+      (node) =>
+        typeof node.className === "string" &&
+        node.className.includes("via-purple-500/10"),
     );
 
     expect(hasOuterHaloLayer).toBe(false);

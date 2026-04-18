@@ -1,16 +1,18 @@
-import React from 'react';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { BatchDeleteDialog as BatchDeleteUsersDialog } from '@/components/admin/BatchDeleteDialog';
-import { BatchUpdateRoleDialog } from '@/components/admin/BatchUpdateRoleDialog';
-import { CreateUserDialog } from '@/components/admin/CreateUserDialog';
-import { EditUserDialog } from '@/components/admin/EditUserDialog';
-import { ResetPasswordDialog } from '@/components/admin/ResetPasswordDialog';
-import { Sidebar } from '@/components/admin/Sidebar';
-import { SystemInfoView } from '@/components/admin/SystemInfoView';
-import { SystemSettingsView } from '@/components/admin/SystemSettingsView';
-import { AnnouncementManagement } from '@/components/admin/AnnouncementManagement';
-import AdminUsersView, { type AdminUsersViewModel } from '@/components/admin/AdminUsersView';
-import { useAdminPageController } from '@/hooks/useAdminPageController';
+import React from "react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { BatchDeleteDialog as BatchDeleteUsersDialog } from "@/components/admin/BatchDeleteDialog";
+import { BatchUpdateRoleDialog } from "@/components/admin/BatchUpdateRoleDialog";
+import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
+import { EditUserDialog } from "@/components/admin/EditUserDialog";
+import { ResetPasswordDialog } from "@/components/admin/ResetPasswordDialog";
+import { Sidebar } from "@/components/admin/Sidebar";
+import { SystemInfoView } from "@/components/admin/SystemInfoView";
+import { SystemSettingsView } from "@/components/admin/SystemSettingsView";
+import { AnnouncementManagement } from "@/components/admin/AnnouncementManagement";
+import AdminUsersView, {
+  type AdminUsersViewModel,
+} from "@/components/admin/AdminUsersView";
+import { useAdminPageController } from "@/hooks/useAdminPageController";
 
 const Admin: React.FC = () => {
   const { currentView, setCurrentView, users } = useAdminPageController();
@@ -21,7 +23,7 @@ const Admin: React.FC = () => {
     selectedUsers: users.selectedUsers,
     isLoadingUsers: users.isLoadingUsers,
     isDeletingUser: users.isDeletingUser,
-    isBatchOperatingUsers: users.isBatchOperatingUsers,
+    isBatchOperatingUsers: users.isBatchOperating,
     userSearchInput: users.userSearchInput,
     userRoleFilter: users.userRoleFilter,
     roleFilterOptions: [...users.roleFilterOptions],
@@ -43,7 +45,8 @@ const Admin: React.FC = () => {
     onEditUser: users.handleEditUser,
     onResetPassword: users.handleResetPassword,
     onDeleteUser: users.handleDeleteUser,
-    onToggleStatus: (userId, isEnabled) => void users.handleToggleStatus(userId, isEnabled),
+    onToggleStatus: (userId, isEnabled) =>
+      void users.handleToggleStatus(userId, isEnabled),
     onPageChange: users.handlePageChange,
   };
 
@@ -55,26 +58,28 @@ const Admin: React.FC = () => {
 
       <div className="flex-1 h-full overflow-y-auto">
         <div className="container mx-auto px-4 py-6 space-y-6 lg:px-8 lg:py-8">
-          {currentView === 'user_management' && (
+          {currentView === "user_management" && (
             <AdminUsersView viewModel={usersViewModel} />
           )}
 
-          {currentView === 'system_info' && <SystemInfoView />}
-          {currentView === 'system_settings' && <SystemSettingsView />}
-          {currentView === 'announcement_management' && <AnnouncementManagement />}
+          {currentView === "system_info" && <SystemInfoView />}
+          {currentView === "system_settings" && <SystemSettingsView />}
+          {currentView === "announcement_management" && (
+            <AnnouncementManagement />
+          )}
         </div>
       </div>
 
       <CreateUserDialog
-        open={users.isCreateUserDialogOpen}
-        onOpenChange={users.setIsCreateUserDialogOpen}
+        open={users.activeDialog === "create-user"}
+        onOpenChange={(open) => !open && users.closeDialog()}
         onSuccess={users.handleUserOperationSuccess}
       />
 
       {users.userToEdit && (
         <EditUserDialog
-          open={users.isEditUserDialogOpen}
-          onOpenChange={users.setIsEditUserDialogOpen}
+          open={users.activeDialog === "edit-user"}
+          onOpenChange={(open) => !open && users.closeDialog()}
           user={users.userToEdit}
           onSuccess={users.handleUserOperationSuccess}
         />
@@ -82,8 +87,8 @@ const Admin: React.FC = () => {
 
       {users.userToResetPassword && (
         <ResetPasswordDialog
-          open={users.isResetPasswordDialogOpen}
-          onOpenChange={users.setIsResetPasswordDialogOpen}
+          open={users.activeDialog === "reset-password"}
+          onOpenChange={(open) => !open && users.closeDialog()}
           user={users.userToResetPassword}
           onSuccess={users.handleUserOperationSuccess}
         />
@@ -94,32 +99,22 @@ const Admin: React.FC = () => {
         onOpenChange={(open) => !open && users.setUserToDelete(null)}
         title="确认删除用户"
         description="您确定要删除这个用户吗？此操作无法撤销，该用户将无法继续访问系统。"
-        confirmText={users.isDeletingUser ? '删除中...' : '确认删除'}
+        confirmText={users.isDeletingUser ? "删除中..." : "确认删除"}
         variant="destructive"
         onConfirm={() => void users.handleDeleteUserConfirm()}
         isLoading={users.isDeletingUser}
       />
 
       <BatchDeleteUsersDialog
-        open={users.isBatchDeleteUsersDialogOpen}
-        onOpenChange={(open) => {
-          users.setIsBatchDeleteUsersDialogOpen(open);
-          if (!open) {
-            users.setIsBatchOperatingUsers(false);
-          }
-        }}
+        open={users.activeDialog === "batch-delete"}
+        onOpenChange={(open) => !open && users.closeDialog()}
         users={users.users.filter((u) => users.selectedUsers.has(u.id))}
         onSuccess={users.handleUserOperationSuccess}
       />
 
       <BatchUpdateRoleDialog
-        open={users.isBatchUpdateRoleDialogOpen}
-        onOpenChange={(open) => {
-          users.setIsBatchUpdateRoleDialogOpen(open);
-          if (!open) {
-            users.setIsBatchOperatingUsers(false);
-          }
-        }}
+        open={users.activeDialog === "batch-update-role"}
+        onOpenChange={(open) => !open && users.closeDialog()}
         users={users.users.filter((u) => users.selectedUsers.has(u.id))}
         onSuccess={users.handleUserOperationSuccess}
       />

@@ -14,27 +14,26 @@ export const PlatformMarquee = () => {
         className="mb-8 max-w-3xl"
       />
 
-      <div className="relative flex w-full flex-col items-center justify-center overflow-hidden">
+      <div 
+        className="relative flex w-full flex-col items-center justify-center overflow-hidden"
+        style={{
+          maskImage: 'linear-gradient(to right, transparent, black 120px, black calc(100% - 120px), transparent)',
+          WebkitMaskImage: 'linear-gradient(to right, transparent, black 120px, black calc(100% - 120px), transparent)'
+        }}
+      >
         <Marquee repeat={2} pauseOnHover className="[--duration:38s] [--gap:4rem] sm:[--gap:5rem] py-6">
           {platformThemes.map((platform) => (
             <div
               key={platform.type}
               className={cn(
-                "group relative flex items-center justify-center gap-3 rounded-[1.5rem] px-7 py-3 transition-all duration-300 cursor-pointer overflow-hidden",
-                "bg-white/40 border border-white/50 backdrop-blur-3xl dark:bg-white/5 dark:border-white/10",
-                "shadow-[0_8px_32px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.5)]",
-                "hover:-translate-y-0.5 hover:scale-105 hover:bg-white/60 hover:shadow-[0_16px_48px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.8)]",
-                "active:scale-95",
-                "dark:shadow-[0_8px_32px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)]",
-                "dark:hover:shadow-[0_16px_48px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.2)] dark:hover:bg-white/10",
+                "group relative flex items-center justify-center gap-3 rounded-[1.4rem] px-6 py-3 transition-colors duration-300 cursor-pointer overflow-hidden",
+                "bg-white/60 border-[0.5px] border-white/80 backdrop-blur-md dark:bg-slate-800/40 dark:border-white/10",
+                "shadow-[0_2px_12px_rgba(0,0,0,0.04)]",
+                "hover:bg-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]",
+                "active:bg-slate-50",
+                "dark:hover:bg-slate-700/60",
               )}
             >
-              <div 
-                className={cn(
-                  "absolute inset-0 opacity-0 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity duration-300",
-                  platform.color
-                )}
-              />
               <div className={cn(
                 "w-2.5 h-2.5 rounded-full border border-white/20 dark:border-white/10 shadow-[0_0_10px_rgba(0,0,0,0.1)] dark:shadow-[0_0_10px_rgba(255,255,255,0.1)] relative z-10",
                 platform.color
@@ -46,8 +45,7 @@ export const PlatformMarquee = () => {
           ))}
         </Marquee>
 
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-[#F9FAFB] dark:from-[#020617] to-transparent"></div>
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-1/4 bg-gradient-to-l from-[#F9FAFB] dark:from-[#020617] to-transparent"></div>
+
       </div>
     </div>
   );

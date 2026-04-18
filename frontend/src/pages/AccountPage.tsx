@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import AccountOverviewPanel from '@/components/account/AccountOverviewPanel';
@@ -114,7 +114,7 @@ const AccountPage: React.FC = () => {
                   <p className="text-xs font-semibold uppercase tracking-[0.34em] text-slate-400 dark:text-slate-500">
                     Account Center
                   </p>
-                  <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+                  <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-800 dark:text-white sm:text-4xl">
                     个人中心
                   </h1>
                 </div>
@@ -140,26 +140,44 @@ const AccountPage: React.FC = () => {
             cachedUsername={cachedUsername}
             isLoadingProfile={isLoadingProfile}
           >
-            {activeSection === 'overview' ? (
-              <AccountOverviewPanel
-                profile={profile}
-                cachedUsername={cachedUsername}
-                isLoadingProfile={isLoadingProfile}
-              />
-            ) : (
-              <AccountSecurityPanel
-                currentPassword={currentPassword}
-                newPassword={newPassword}
-                confirmPassword={confirmPassword}
-                passwordError={passwordError}
-                confirmError={confirmError}
-                isSaving={isSaving}
-                onCurrentPasswordChange={setCurrentPassword}
-                onNewPasswordChange={setNewPassword}
-                onConfirmPasswordChange={setConfirmPassword}
-                onSubmit={handleChangePassword}
-              />
-            )}
+            <AnimatePresence mode="wait">
+              {activeSection === 'overview' ? (
+                <motion.div
+                  key="overview"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <AccountOverviewPanel
+                    profile={profile}
+                    cachedUsername={cachedUsername}
+                    isLoadingProfile={isLoadingProfile}
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="security"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <AccountSecurityPanel
+                    currentPassword={currentPassword}
+                    newPassword={newPassword}
+                    confirmPassword={confirmPassword}
+                    passwordError={passwordError}
+                    confirmError={confirmError}
+                    isSaving={isSaving}
+                    onCurrentPasswordChange={setCurrentPassword}
+                    onNewPasswordChange={setNewPassword}
+                    onConfirmPasswordChange={setConfirmPassword}
+                    onSubmit={handleChangePassword}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </AccountWorkspaceShell>
         </motion.div>
       </div>

@@ -1,7 +1,8 @@
-import React from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { useAutoRefreshToken } from '@/hooks/useAutoRefreshToken';
-import AppRoutes from '@/routes/AppRoutes';
+import React from "react";
+import { BrowserRouter as Router } from "react-router-dom";
+import { useAutoRefreshToken } from "@/hooks/useAutoRefreshToken";
+import AppRoutes from "@/routes/AppRoutes";
+import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 
 const App: React.FC = () => {
   // 启用自动刷新令牌功能
@@ -10,12 +11,12 @@ const App: React.FC = () => {
   // 主题初始化：优先使用保存的偏好，其次使用系统设置
   React.useEffect(() => {
     const root = document.documentElement;
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const saved = localStorage.getItem('theme');
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const saved = localStorage.getItem("theme");
 
     const apply = () => {
-      const shouldDark = saved ? saved === 'dark' : mediaQuery.matches;
-      root.classList.toggle('dark', shouldDark);
+      const shouldDark = saved ? saved === "dark" : mediaQuery.matches;
+      root.classList.toggle("dark", shouldDark);
     };
 
     apply();
@@ -24,17 +25,16 @@ const App: React.FC = () => {
         apply();
       }
     };
-    mediaQuery.addEventListener('change', handler);
-    return () => mediaQuery.removeEventListener('change', handler);
+    mediaQuery.addEventListener("change", handler);
+    return () => mediaQuery.removeEventListener("change", handler);
   }, []);
 
   return (
-    <>
-
+    <GlobalErrorBoundary>
       <Router>
         <AppRoutes />
-      </Router >
-    </>
+      </Router>
+    </GlobalErrorBoundary>
   );
 };
 

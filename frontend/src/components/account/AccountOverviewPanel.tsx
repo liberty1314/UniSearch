@@ -2,7 +2,6 @@ import React from 'react';
 import { AlertTriangle, CalendarClock, Clock3, ShieldCheck, UserRound } from 'lucide-react';
 import type { AccountProfile } from '@/components/account/accountTypes';
 import { getAccountRoleLabel } from '@/components/account/accountTypes';
-import AccountSectionHero from '@/components/account/AccountSectionHero';
 import {
   ACCOUNT_PANEL_SURFACE_CLASSES,
   ACCOUNT_PANEL_SURFACE_HOVER_CLASSES,
@@ -75,13 +74,6 @@ const AccountOverviewPanel: React.FC<AccountOverviewPanelProps> = ({
 
   return (
     <section className="space-y-6">
-      <AccountSectionHero
-        eyebrow="Workspace"
-        title="账号工作台"
-        badgeLabel="ACCOUNT OVERVIEW"
-        accentClassName="bg-cyan-200/25 dark:bg-cyan-700/10"
-      />
-
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map(({ key, label, value, Icon, iconClass, accentClass }) => (
           <div
@@ -96,7 +88,7 @@ const AccountOverviewPanel: React.FC<AccountOverviewPanelProps> = ({
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
                   {label}
                 </p>
-                <p className={`text-base font-semibold leading-6 text-slate-950 transition-colors dark:text-white ${accentClass}`}>
+                <p className={`text-base font-semibold leading-6 text-slate-800 transition-colors dark:text-white ${accentClass}`}>
                   {value}
                 </p>
               </div>
@@ -110,21 +102,21 @@ const AccountOverviewPanel: React.FC<AccountOverviewPanelProps> = ({
           <div className="max-w-2xl space-y-3">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
-              <h3 className="text-lg font-semibold text-slate-950 dark:text-white">安全提示</h3>
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white">安全提示</h3>
             </div>
             <p className="text-sm leading-7 text-slate-600 dark:text-slate-300/90">
-              建议定期更新密码，不在公共设备保存登录态，并避免在多个平台重复使用相同密码。修改密码后，旧凭证应立即失效。
+              建议定期更新密码，不在公共设备保存登录态，并避免在多个平台重复使用相同密码。
             </p>
           </div>
 
-          <div className="grid gap-2 text-sm text-slate-500 dark:text-slate-400">
+          {/* <div className="grid gap-2 text-sm text-slate-500 dark:text-slate-400">
             <div className="rounded-xl border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/40">
               密码建议长度 8 位以上
             </div>
             <div className="rounded-xl border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/40">
               完成修改后建议重新登录已授权设备
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </section>

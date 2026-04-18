@@ -1,225 +1,277 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { toast } from 'sonner';
-import { useAuthStore } from '@/stores/authStore';
-import { AuthService } from '@/services/authService';
-import { SystemSettingsService } from '@/services/systemSettingsService';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { User, Lock, LogIn, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
-import AuthBackground from '@/components/auth/AuthBackground';
-import AuthCardShell from '@/components/auth/AuthCardShell';
-import AuthInput from '@/components/auth/AuthInput';
-import { AuthEntryLink, AuthEntryLinksRow } from '@/components/auth/AuthEntryLink';
-import { authVisualPresets } from '@/components/auth/authVisualPresets';
-import { useAuthParticles } from '@/components/auth/useAuthParticles';
-import AuthSwitchMotion from '@/components/auth/AuthSwitchMotion';
-import { resolveAuthDirection, type AuthTransitionState } from '@/components/auth/authRouteMotion';
-import { getErrorMessage, getErrorStatus } from '@/lib/error';
-import { cn } from '@/lib/utils';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { toast } from "sonner";
+import { useAuthStore } from "@/stores/authStore";
+import { AuthService } from "@/services/authService";
+import { SystemSettingsService } from "@/services/systemSettingsService";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  User,
+  Lock,
+  LogIn,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Loader2,
+} from "lucide-react";
+import AuthBackground from "@/components/auth/AuthBackground";
+import AuthCardShell from "@/components/auth/AuthCardShell";
+import AuthInput from "@/components/auth/AuthInput";
+import {
+  AuthEntryLink,
+  AuthEntryLinksRow,
+} from "@/components/auth/AuthEntryLink";
+import { authVisualPresets } from "@/components/auth/authVisualPresets";
+import { useAuthParticles } from "@/components/auth/useAuthParticles";
+import AuthSwitchMotion from "@/components/auth/AuthSwitchMotion";
+import {
+  resolveAuthDirection,
+  type AuthTransitionState,
+} from "@/components/auth/authRouteMotion";
+import { getErrorMessage, getErrorStatus } from "@/lib/error";
+import { cn } from "@/lib/utils";
 
 const LoginPage: React.FC = () => {
-    const navigate = useNavigate();
-    const location = useLocation();
-    const { setToken } = useAuthStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { setToken } = useAuthStore();
 
-    // System Settings
-    const [enableUserSignup, setEnableUserSignup] = useState<boolean>(true);
-    const [isLoadingSettings, setIsLoadingSettings] = useState<boolean>(true);
+  // System Settings
+  const [enableUserSignup, setEnableUserSignup] = useState<boolean>(true);
+  const [isLoadingSettings, setIsLoadingSettings] = useState<boolean>(true);
 
-    // Form State
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+  // Form State
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-    // Animation State
-    const particles = useAuthParticles();
-    const routeState = location.state as AuthTransitionState | null;
-    const authDirection = resolveAuthDirection(routeState?.from, location.pathname, routeState);
+  // Animation State
+  const particles = useAuthParticles();
+  const routeState = location.state as AuthTransitionState | null;
+  const authDirection = resolveAuthDirection(
+    routeState?.from,
+    location.pathname,
+    routeState,
+  );
 
-    // Load Settings
-    useEffect(() => {
-        const loadSettings = async () => {
-            try {
-                const settings = await SystemSettingsService.getSettings();
-                setEnableUserSignup(settings.enable_user_signup);
-            } catch (error) {
-                console.error('Failed to load settings:', error);
-            } finally {
-                setIsLoadingSettings(false);
-            }
-        };
-        loadSettings();
-    }, [navigate]);
-
-    const handleLogin = async () => {
-        if (!username.trim() || !password.trim()) {
-            toast.error('请输入用户名和密码');
-            return;
-        }
-
-        setIsLoading(true);
-        try {
-            const response = await AuthService.userLogin(username.trim(), password, rememberMe);
-            if (response && response.access_token) {
-                setToken(
-                    response.access_token,
-                    response.username,
-                    false,
-                    response.refresh_token || null
-                );
-                toast.success('登录成功，欢迎访问 UniSearch！');
-                const nextKeyword = (location.state as { pendingSearch?: { keyword?: string } } | null)?.pendingSearch?.keyword?.trim();
-                if (nextKeyword) {
-                    navigate('/', {
-                        replace: true,
-                        state: {
-                            resumeSearch: {
-                                keyword: nextKeyword,
-                            },
-                        },
-                    });
-                } else {
-                    navigate('/');
-                }
-            } else {
-                toast.error('登录失败：服务器未返回有效令牌');
-            }
-        } catch (error) {
-            console.error('Login failed:', error);
-            if (getErrorStatus(error) === 401) {
-                toast.error('用户名或密码错误');
-            } else if (getErrorStatus(error) === 429) {
-                toast.error('请求过于频繁，请稍后再试');
-            } else {
-                toast.error('登录失败：' + getErrorMessage(error));
-            }
-        } finally {
-            setIsLoading(false);
-        }
+  // Load Settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settings = await SystemSettingsService.getSettings();
+        setEnableUserSignup(settings.enable_user_signup);
+      } catch (error) {
+        console.error("Failed to load settings:", error);
+      } finally {
+        setIsLoadingSettings(false);
+      }
     };
+    loadSettings();
+  }, [navigate]);
 
-    if (isLoadingSettings) return null;
+  const handleLogin = async () => {
+    if (!username.trim() || !password.trim()) {
+      toast.error("请输入用户名和密码");
+      return;
+    }
 
-    return (
-        <div className="obsidian-shell min-h-screen w-full flex items-center justify-center bg-gray-50 px-4 pt-20 overflow-y-auto relative">
-            <AuthBackground preset={authVisualPresets.loginPage} particles={particles} />
+    setIsLoading(true);
+    try {
+      const response = await AuthService.userLogin(
+        username.trim(),
+        password,
+        rememberMe,
+      );
+      if (response && response.access_token) {
+        setToken(
+          response.access_token,
+          response.username,
+          false,
+          response.refresh_token || null,
+        );
+        toast.success("登录成功，欢迎访问 UniSearch！");
+        const nextKeyword = (
+          location.state as { pendingSearch?: { keyword?: string } } | null
+        )?.pendingSearch?.keyword?.trim();
+        if (nextKeyword) {
+          navigate("/", {
+            replace: true,
+            state: {
+              resumeSearch: {
+                keyword: nextKeyword,
+              },
+            },
+          });
+        } else {
+          navigate("/");
+        }
+      } else {
+        toast.error("登录失败：服务器未返回有效令牌");
+      }
+    } catch (error) {
+      console.error("Login failed:", error);
+      if (getErrorStatus(error) === 401) {
+        toast.error("用户名或密码错误");
+      } else if (getErrorStatus(error) === 429) {
+        toast.error("请求过于频繁，请稍后再试");
+      } else {
+        toast.error("登录失败：" + getErrorMessage(error));
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-            {/* Login Card */}
-            <AuthCardShell glowClassName={authVisualPresets.loginPage.cardGlowGradientClass}>
-                <AuthSwitchMotion routeKey={location.pathname} direction={authDirection}>
-                    <Card className="relative glass-panel shadow-2xl border-blue-200 dark:border-blue-800">
-                        <CardHeader className="space-y-3 pb-6">
-                            <div className="flex justify-center mb-2">
-                                <div className="relative group">
-                                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
-                                        <LogIn className="w-8 h-8 text-white auth-icon-intro" />
-                                    </div>
-                                </div>
-                            </div>
-                            <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-500 bg-clip-text text-transparent animate-auth-gradient">
-                                欢迎回来
-                            </CardTitle>
-                            <CardDescription className="text-center text-base">
-                                登录您的 UniSearch 账户
-                            </CardDescription>
-                        </CardHeader>
+  return (
+    <div className="obsidian-shell min-h-screen w-full flex items-center justify-center bg-gray-50 px-4 pt-20 overflow-y-auto relative">
+      <AuthBackground
+        preset={authVisualPresets.loginPage}
+        particles={particles}
+      />
 
-                        <CardContent className="space-y-6 relative">
-                            {/* 加载遮罩与模糊层 */}
-                            {isLoading && (
-                                <div className="absolute inset-x-0 -top-20 bottom-0 bg-white/5 dark:bg-gray-900/20 backdrop-blur-[2px] z-10 rounded-xl transition-all duration-300" />
-                            )}
+      {/* Login Card */}
+      <AuthCardShell
+        glowClassName={authVisualPresets.loginPage.cardGlowGradientClass}
+      >
+        <AuthSwitchMotion
+          routeKey={location.pathname}
+          direction={authDirection}
+        >
+          <Card className="relative glass-panel shadow-2xl border-blue-200 dark:border-blue-800">
+            <CardHeader className="space-y-3 pb-6">
+              <div className="flex justify-center mb-2">
+                <div className="relative group">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+                    <LogIn className="w-8 h-8 text-white auth-icon-intro" />
+                  </div>
+                </div>
+              </div>
+              <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-500 bg-clip-text text-transparent animate-auth-gradient">
+                欢迎回来
+              </CardTitle>
+              <CardDescription className="text-center text-base">
+                登录您的 UniSearch 账户
+              </CardDescription>
+            </CardHeader>
 
-                            <div className={cn("space-y-4 transition-all duration-300", isLoading && "opacity-60 scale-[0.98]")}>
-                                <AuthInput
-                                    id="username"
-                                    label="用户名"
-                                    tone="blue"
-                                    icon={<User className="w-4 h-4" />}
-                                    type="text"
-                                    placeholder="请输入用户名"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                                />
+            <CardContent className="space-y-6 relative">
+              {/* 加载遮罩与模糊层 */}
+              {isLoading && (
+                <div className="absolute inset-x-0 -top-20 bottom-0 bg-white/5 dark:bg-gray-900/20 backdrop-blur-[2px] z-10 rounded-xl transition-all duration-300" />
+              )}
 
-                                <AuthInput
-                                    id="password"
-                                    label="密码"
-                                    tone="blue"
-                                    icon={<Lock className="w-4 h-4" />}
-                                    type={showPassword ? "text" : "password"}
-                                    placeholder="请输入密码"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                                    endAdornment={(
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-slate-200"
-                                            aria-label={showPassword ? '隐藏密码' : '显示密码'}
-                                        >
-                                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                        </button>
-                                    )}
-                                />
+              <div
+                className={cn(
+                  "space-y-4 transition-all duration-300",
+                  isLoading && "opacity-60 scale-[0.98]",
+                )}
+              >
+                <AuthInput
+                  id="username"
+                  label="用户名"
+                  tone="blue"
+                  icon={<User className="w-4 h-4" />}
+                  type="text"
+                  placeholder="请输入用户名"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                />
 
-                                <div className="flex items-center space-x-2">
-                                    <input
-                                        type="checkbox"
-                                        id="remember-me"
-                                        checked={rememberMe}
-                                        onChange={(e) => setRememberMe(e.target.checked)}
-                                        className="w-4 h-4 text-blue-500 rounded border-gray-300 focus:ring-blue-500"
-                                    />
-                                    <Label htmlFor="remember-me" className="text-sm font-medium cursor-pointer">
-                                        记住我（30天内自动登录）
-                                    </Label>
-                                </div>
+                <AuthInput
+                  id="password"
+                  label="密码"
+                  tone="blue"
+                  icon={<Lock className="w-4 h-4" />}
+                  type={showPassword ? "text" : "password"}
+                  placeholder="请输入密码"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                  endAdornment={
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-slate-200"
+                      aria-label={showPassword ? "隐藏密码" : "显示密码"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  }
+                />
 
-                                <Button
-                                    onClick={handleLogin}
-                                    disabled={isLoading || !username.trim() || !password.trim()}
-                                    className="relative w-full h-12 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600 text-white font-medium shadow-lg hover:shadow-2xl transform active:scale-[0.98] transition-all duration-300 overflow-hidden"
-                                >
-                                    {/* 文字淡入淡出 */}
-                                    <span className={cn(
-                                        "flex items-center justify-center transition-all duration-300",
-                                        isLoading ? "opacity-0 scale-90" : "opacity-100 scale-100"
-                                    )}>
-                                        登录
-                                    </span>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="remember-me"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 text-blue-500 rounded border-gray-300 focus:ring-blue-500"
+                  />
+                  <Label
+                    htmlFor="remember-me"
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    记住我（30天内自动登录）
+                  </Label>
+                </div>
 
-                                    {/* 光圈 Loader 浮现 */}
-                                    {isLoading && (
-                                        <div className="absolute inset-0 flex items-center justify-center animate-in fade-in zoom-in duration-300">
-                                            <Loader2 className="w-5 h-5 animate-spin drop-shadow-md" />
-                                        </div>
-                                    )}
-                                </Button>
-                            </div>
+                <Button
+                  onClick={handleLogin}
+                  disabled={isLoading || !username.trim() || !password.trim()}
+                  className="relative w-full h-12 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600 text-white font-medium shadow-lg hover:shadow-2xl transform active:scale-[0.98] transition-all duration-300 overflow-hidden"
+                >
+                  {/* 文字淡入淡出 */}
+                  <span
+                    className={cn(
+                      "flex items-center justify-center transition-all duration-300",
+                      isLoading
+                        ? "opacity-0 scale-90"
+                        : "opacity-100 scale-100",
+                    )}
+                  >
+                    登录
+                  </span>
 
-                            <AuthEntryLinksRow>
-                                {enableUserSignup && (
-                                    <AuthEntryLink
-                                        to="/register"
-                                        state={{ authTransition: 'forward', from: '/login' }}
-                                        label="注册账号"
-                                        icon={ArrowRight}
-                                    />
-                                )}
-                            </AuthEntryLinksRow>
-                        </CardContent>
-                    </Card>
-                </AuthSwitchMotion>
-            </AuthCardShell>
-        </div>
-    );
+                  {/* 光圈 Loader 浮现 */}
+                  {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center animate-in fade-in zoom-in duration-300">
+                      <Loader2 className="w-5 h-5 animate-spin drop-shadow-md" />
+                    </div>
+                  )}
+                </Button>
+              </div>
+
+              <AuthEntryLinksRow>
+                {!isLoadingSettings && enableUserSignup && (
+                  <AuthEntryLink
+                    to="/register"
+                    state={{ authTransition: "forward", from: "/login" }}
+                    label="注册账号"
+                    icon={ArrowRight}
+                  />
+                )}
+              </AuthEntryLinksRow>
+            </CardContent>
+          </Card>
+        </AuthSwitchMotion>
+      </AuthCardShell>
+    </div>
+  );
 };
 
 export default LoginPage;

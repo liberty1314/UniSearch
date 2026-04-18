@@ -1,24 +1,51 @@
-import { CloudType, type CloudTypeValue } from '@/types/api';
+import { CloudType, type CloudTypeValue } from "@/types/api";
+import { CLOUD_TYPE_MAP } from "@/utils/cloudTypeUtils";
+
+// ─── 类型 ─────────────────────────────────────────────────────────────────────
 
 export type PlatformTheme = {
   type: CloudTypeValue;
   name: string;
+  /** 实心背景色 class，用于跑马灯 / CloudTypeFilter 标签 */
   color: string;
+  /** 阴影 class，用于标签悬停效果 */
   shadow: string;
 };
 
-export const platformThemes: PlatformTheme[] = [
-  { type: CloudType.BAIDU, name: '百度网盘', color: 'bg-blue-500', shadow: 'shadow-blue-500/30' },
-  { type: CloudType.ALIYUN, name: '阿里云盘', color: 'bg-orange-500', shadow: 'shadow-orange-500/30' },
-  { type: CloudType.QUARK, name: '夸克网盘', color: 'bg-purple-500', shadow: 'shadow-purple-500/30' },
-  { type: CloudType.TIANYI, name: '天翼云盘', color: 'bg-cyan-500', shadow: 'shadow-cyan-500/30' },
-  { type: CloudType.UC, name: 'UC网盘', color: 'bg-green-500', shadow: 'shadow-green-500/30' },
-  { type: CloudType.MOBILE, name: '移动云盘', color: 'bg-indigo-500', shadow: 'shadow-indigo-500/30' },
-  { type: CloudType.ONE_ONE_FIVE, name: '115网盘', color: 'bg-red-500', shadow: 'shadow-red-500/30' },
-  { type: CloudType.XUNLEI, name: '迅雷网盘', color: 'bg-yellow-500', shadow: 'shadow-yellow-500/30' },
-  { type: CloudType.ONE_TWO_THREE, name: '123网盘', color: 'bg-teal-500', shadow: 'shadow-teal-500/30' },
-  { type: CloudType.MAGNET, name: '磁力链接', color: 'bg-slate-600', shadow: 'shadow-gray-500/30' },
-  { type: CloudType.LANZOU, name: '蓝奏云', color: 'bg-sky-500', shadow: 'shadow-blue-600/30' },
+// ─── 展示顺序（影响 CloudTypeFilter 和 PlatformMarquee 的视觉顺序）────────────
+
+const PLATFORM_DISPLAY_ORDER: CloudTypeValue[] = [
+  CloudType.BAIDU,
+  CloudType.ALIYUN,
+  CloudType.QUARK,
+  CloudType.TIANYI,
+  CloudType.UC,
+  CloudType.MOBILE,
+  CloudType.ONE_ONE_FIVE,
+  CloudType.XUNLEI,
+  CloudType.ONE_TWO_THREE,
+  CloudType.MAGNET,
+  CloudType.LANZOU,
 ];
 
-export const platformThemeTypes = platformThemes.map((theme) => theme.type);
+// ─── 从 cloudTypeUtils 单一数据源派生，彻底消除重复维护 ───────────────────────
+
+/**
+ * 平台主题数组。
+ *
+ * 数据来源为 `cloudTypeUtils.ts` 的 `CLOUD_TYPE_MAP`，不再独立维护。
+ * 新增或修改网盘类型时，只需更新 `cloudTypeUtils.ts` 即可同步生效。
+ */
+export const platformThemes: PlatformTheme[] = PLATFORM_DISPLAY_ORDER.map(
+  (type) => {
+    const info = CLOUD_TYPE_MAP[type];
+    return {
+      type,
+      name: info.name,
+      color: info.tagColor,
+      shadow: info.tagShadow,
+    };
+  },
+);
+
+export const platformThemeTypes = platformThemes.map((t) => t.type);

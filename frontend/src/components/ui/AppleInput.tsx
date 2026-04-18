@@ -118,35 +118,40 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
           )}
         </div>
 
-        {/* 错误提示动画 */}
-        <AnimatePresence mode="wait">
-          {error && (
-            <motion.div
-              id={errorId}
-              role="alert"
-              initial={{ opacity: 0, y: -8, height: 0 }}
-              animate={{ opacity: 1, y: 0, height: 'auto' }}
-              exit={{ opacity: 0, y: -8, height: 0 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="overflow-hidden"
-            >
-              <div className="flex items-center gap-1.5 mt-2 text-sm text-red-600 dark:text-red-400">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* 辅助文本 */}
-        {!error && helperText && (
-          <p
-            id={helperId}
-            className="mt-2 text-sm text-gray-500 dark:text-slate-400"
-          >
-            {helperText}
-          </p>
-        )}
+        {/* 底部信息区 (使用绝对定位防止撑开布局) */}
+        <div className="relative h-6 mt-1">
+          <AnimatePresence mode="wait">
+            {error ? (
+              <motion.div
+                key="error"
+                id={errorId}
+                role="alert"
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="absolute inset-x-0 top-0 flex items-center gap-1.5 text-xs text-red-500 dark:text-red-400"
+              >
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">{error}</span>
+              </motion.div>
+            ) : helperText ? (
+              <motion.div
+                key="helper"
+                id={helperId}
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="absolute inset-x-0 top-0"
+              >
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                  {helperText}
+                </p>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+        </div>
       </div>
     );
   }

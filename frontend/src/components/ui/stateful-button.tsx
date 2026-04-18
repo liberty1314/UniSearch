@@ -1,7 +1,7 @@
 "use client";
 import { cn } from "@/lib/utils";
 import React, { useImperativeHandle } from "react";
-import { motion, useAnimate } from "motion/react";
+import { motion, useAnimate } from "framer-motion";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   className?: string;
@@ -13,128 +13,145 @@ export interface StatefulButtonHandle {
   reset: () => void;
 }
 
-export const Button = React.forwardRef<StatefulButtonHandle, ButtonProps>(({ className, children, ...props }, ref) => {
-  const [scope, animate] = useAnimate();
-  const cancelledRef = React.useRef(false);
+export const Button = React.forwardRef<StatefulButtonHandle, ButtonProps>(
+  ({ className, children, ...props }, ref) => {
+    const [scope, animate] = useAnimate();
+    const cancelledRef = React.useRef(false);
 
-  const animateLoading = React.useCallback(async () => {
-    await animate(
-      ".loader",
-      {
-        width: "20px",
-        scale: 1,
-        display: "block",
-      },
-      {
-        duration: 0.2,
-      },
-    );
-  }, [animate]);
-
-  const animateSuccess = React.useCallback(async () => {
-    await animate(
-      ".loader",
-      {
-        width: "0px",
-        scale: 0,
-        display: "none",
-      },
-      {
-        duration: 0.2,
-      },
-    );
-    await animate(
-      ".check",
-      {
-        width: "20px",
-        scale: 1,
-        display: "block",
-      },
-      {
-        duration: 0.2,
-      },
-    );
-
-    await animate(
-      ".check",
-      {
-        width: "0px",
-        scale: 0,
-        display: "none",
-      },
-      {
-        delay: 2,
-        duration: 0.2,
-      },
-    );
-  }, [animate]);
-
-  const run = React.useCallback(async (fn?: () => void | Promise<void>) => {
-    cancelledRef.current = false;
-    await animateLoading();
-    if (fn) {
-      await fn();
-    }
-    if (cancelledRef.current) {
-      // 如果在执行期间被重置，确保视觉状态回到初始
+    const animateLoading = React.useCallback(async () => {
       await animate(
-        [
-          [".loader", { width: "0px", scale: 0, display: "none" }, { duration: 0.01 }],
-          [".check", { width: "0px", scale: 0, display: "none" }, { duration: 0.01 }],
-        ]
+        ".loader",
+        {
+          width: "20px",
+          scale: 1,
+          display: "block",
+        },
+        {
+          duration: 0.2,
+        },
       );
-      return;
-    }
-    await animateSuccess();
-  }, [animateLoading, animateSuccess, animate]);
+    }, [animate]);
 
-  const reset = React.useCallback(() => {
-    cancelledRef.current = true;
-    // 立即复位到初始状态
-    animate(
-      [
-        [".loader", { width: "0px", scale: 0, display: "none" }, { duration: 0.01 }],
-        [".check", { width: "0px", scale: 0, display: "none" }, { duration: 0.01 }],
-      ]
+    const animateSuccess = React.useCallback(async () => {
+      await animate(
+        ".loader",
+        {
+          width: "0px",
+          scale: 0,
+          display: "none",
+        },
+        {
+          duration: 0.2,
+        },
+      );
+      await animate(
+        ".check",
+        {
+          width: "20px",
+          scale: 1,
+          display: "block",
+        },
+        {
+          duration: 0.2,
+        },
+      );
+
+      await animate(
+        ".check",
+        {
+          width: "0px",
+          scale: 0,
+          display: "none",
+        },
+        {
+          delay: 2,
+          duration: 0.2,
+        },
+      );
+    }, [animate]);
+
+    const run = React.useCallback(
+      async (fn?: () => void | Promise<void>) => {
+        cancelledRef.current = false;
+        await animateLoading();
+        if (fn) {
+          await fn();
+        }
+        if (cancelledRef.current) {
+          // 如果在执行期间被重置，确保视觉状态回到初始
+          await animate([
+            [
+              ".loader",
+              { width: "0px", scale: 0, display: "none" },
+              { duration: 0.01 },
+            ],
+            [
+              ".check",
+              { width: "0px", scale: 0, display: "none" },
+              { duration: 0.01 },
+            ],
+          ]);
+          return;
+        }
+        await animateSuccess();
+      },
+      [animateLoading, animateSuccess, animate],
     );
-  }, [animate]);
 
-  useImperativeHandle(ref, () => ({ run, reset }), [run, reset]);
+    const reset = React.useCallback(() => {
+      cancelledRef.current = true;
+      // 立即复位到初始状态
+      animate([
+        [
+          ".loader",
+          { width: "0px", scale: 0, display: "none" },
+          { duration: 0.01 },
+        ],
+        [
+          ".check",
+          { width: "0px", scale: 0, display: "none" },
+          { duration: 0.01 },
+        ],
+      ]);
+    }, [animate]);
 
-  const handleClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
-    await run(() => props.onClick?.(event));
-  };
+    useImperativeHandle(ref, () => ({ run, reset }), [run, reset]);
 
-  const buttonProps = {
-    ...props,
-    onClick: undefined,
-    onDrag: undefined,
-    onDragStart: undefined,
-    onDragEnd: undefined,
-    onAnimationStart: undefined,
-    onAnimationEnd: undefined,
-  };
+    const handleClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
+      await run(() => props.onClick?.(event));
+    };
 
-  return (
-    <motion.button
-      layout
-      layoutId="button"
-      ref={scope}
-      className={cn(
-        "flex min-w-[120px] cursor-pointer items-center justify-center gap-2 rounded-full bg-apple-blue px-4 py-2 font-medium text-white transition duration-200 hover:bg-apple-blue/90",
-        className,
-      )}
-      {...buttonProps}
-      onClick={handleClick}
-    >
-      <motion.div layout className="flex items-center gap-2">
-        <Loader />
-        <CheckIcon />
-        <motion.span layout>{children}</motion.span>
-      </motion.div>
-    </motion.button>
-  );
-});
+    const buttonProps = {
+      ...props,
+      onClick: undefined,
+      onDrag: undefined,
+      onDragStart: undefined,
+      onDragEnd: undefined,
+      onAnimationStart: undefined,
+      onAnimationEnd: undefined,
+    };
+
+    return (
+      <motion.button
+        layout
+        layoutId="button"
+        ref={scope}
+        className={cn(
+          "flex min-w-[120px] cursor-pointer items-center justify-center gap-2 rounded-full bg-apple-blue px-4 py-2 font-medium text-white transition duration-200 hover:bg-apple-blue/90",
+          className,
+        )}
+        {...buttonProps}
+        onClick={handleClick}
+      >
+        <motion.div layout className="flex items-center gap-2">
+          <Loader />
+          <CheckIcon />
+          <motion.span layout>{children}</motion.span>
+        </motion.div>
+      </motion.button>
+    );
+  },
+);
 
 const Loader = () => {
   return (

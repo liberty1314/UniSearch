@@ -1,6 +1,5 @@
 import React from 'react';
 import { Fingerprint, LockKeyhole } from 'lucide-react';
-import AccountSectionHero from '@/components/account/AccountSectionHero';
 import {
   ACCOUNT_PANEL_SURFACE_CLASSES,
   ACCOUNT_PANEL_SURFACE_HOVER_CLASSES,
@@ -35,13 +34,6 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
 }) => {
   return (
     <section className="space-y-6">
-      <AccountSectionHero
-        eyebrow="Security"
-        title="安全设置"
-        badgeLabel="ACCOUNT SECURITY"
-        accentClassName="bg-cyan-200/20 dark:bg-cyan-700/10"
-      />
-
       <div className={`${ACCOUNT_PANEL_SURFACE_CLASSES} ${ACCOUNT_PANEL_SURFACE_HOVER_CLASSES} p-6 sm:p-7`}>
         <form
           className="relative space-y-5"
@@ -59,8 +51,8 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
             placeholder="请输入当前密码"
             autoComplete="current-password"
             startAdornment={<LockKeyhole className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />}
-            className="h-12 rounded-2xl border-white/60 bg-white/75 dark:border-white/10 dark:bg-slate-900/55"
-            containerClassName="space-y-2"
+            className="h-12 rounded-xl border-[0.5px] border-slate-300 bg-white shadow-sm hover:border-slate-400 focus:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all dark:border-slate-600 dark:bg-slate-900"
+            containerClassName="space-y-1.5"
           />
 
           <AppleInput
@@ -74,8 +66,8 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
             error={passwordError}
             helperText="密码长度需控制在 6-64 个字符之间"
             startAdornment={<Fingerprint className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />}
-            className="h-12 rounded-2xl border-white/60 bg-white/75 dark:border-white/10 dark:bg-slate-900/55"
-            containerClassName="space-y-2"
+            className="h-12 rounded-xl border-[0.5px] border-slate-300 bg-white shadow-sm hover:border-slate-400 focus:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all dark:border-slate-600 dark:bg-slate-900"
+            containerClassName="space-y-1.5"
           />
 
           <AppleInput
@@ -88,14 +80,11 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
             autoComplete="new-password"
             error={confirmError}
             startAdornment={<Fingerprint className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />}
-            className="h-12 rounded-2xl border-white/60 bg-white/75 dark:border-white/10 dark:bg-slate-900/55"
-            containerClassName="space-y-2"
+            className="h-12 rounded-xl border-[0.5px] border-slate-300 bg-white shadow-sm hover:border-slate-400 focus:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all dark:border-slate-600 dark:bg-slate-900"
+            containerClassName="space-y-1.5"
           />
 
-          <div className="flex flex-col gap-3 border-t border-white/60 pt-4 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              保存后将立即使用新密码生效。
-            </p>
+          <div className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-end">
             <Button
               type="submit"
               loading={isSaving}
