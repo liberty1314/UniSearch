@@ -4,7 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Filter, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toStyleVars } from '@/lib/styleVars';
-import { BLUE_CYAN_ICON } from '@/lib/brandTheme';
+import {
+    ADMIN_GENTLE_SPRING,
+    ADMIN_HOVERABLE_BUTTON_CLASSES,
+} from '@/components/admin/adminDesign';
 
 export interface FilterOption {
     label: string;
@@ -83,11 +86,11 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
                     setIsOpen(!isOpen);
                 }}
                 className={`
-                    group flex items-center justify-center w-7 h-7 rounded-md
-                    transition-all duration-200
+                    group flex h-7 w-7 items-center justify-center rounded-full
+                    border-[0.5px] transition-all duration-200
                     ${hasSelection
-                        ? 'bg-blue-100 dark:bg-cyan-950/50 text-blue-600 dark:text-cyan-300'
-                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        ? 'border-cyan-200/60 bg-cyan-50/80 text-cyan-600 shadow-sm dark:border-cyan-900/30 dark:bg-cyan-950/30 dark:text-cyan-300'
+                        : 'border-slate-200/50 bg-white/40 text-slate-400 shadow-sm backdrop-blur-md hover:text-slate-600 dark:border-white/10 dark:bg-slate-800/40 dark:hover:text-slate-300'
                     }
                 `}
                 title="筛选"
@@ -110,15 +113,15 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
 
                         {/* 下拉菜单 - 使用 fixed 定位 */}
                         <motion.div
-                            initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                            initial={{ opacity: 0, y: -8, scale: 0.96 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                            transition={{ duration: 0.15 }}
+                            exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                            transition={ADMIN_GENTLE_SPRING}
                             style={toStyleVars({
                                 '--dropdown-top': `${dropdownPosition.top}px`,
                                 '--dropdown-left': `${dropdownPosition.left}px`,
                             })}
-                            className="fixed z-[9999] table-filter-dropdown w-[140px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl overflow-hidden"
+                            className="fixed z-[9999] table-filter-dropdown w-[150px] overflow-hidden rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/70 shadow-[0_18px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70"
                         >
                             <div className="p-2 space-y-0.5">
                                 {options.map((option, index) => {
@@ -135,11 +138,11 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
                                                 handleToggle(option.value);
                                             }}
                                             className={`
-                                                w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm
+                                                w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm
                                                 transition-all duration-150
                                                 ${isSelected
-                                                    ? 'bg-blue-50 dark:bg-cyan-950/30 text-blue-700 dark:text-cyan-300'
-                                                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                                                    ? 'bg-cyan-50/80 text-cyan-700 dark:bg-cyan-950/30 dark:text-cyan-300'
+                                                    : 'text-slate-700 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-white/5'
                                                 }
                                             `}
                                         >
@@ -153,21 +156,21 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
                                                 {option.label}
                                             </span>
                                             {isSelected && (
-                                                <motion.div
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                                                >
-                                                    <Check className={`w-4 h-4 ${BLUE_CYAN_ICON}`} />
-                                                </motion.div>
-                                            )}
+                                                    <motion.div
+                                                        initial={{ scale: 0 }}
+                                                        animate={{ scale: 1 }}
+                                                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                                                    >
+                                                    <Check className="w-4 h-4 text-cyan-600 dark:text-cyan-300" />
+                                                    </motion.div>
+                                                )}
                                         </motion.button>
                                     );
                                 })}
                             </div>
 
                             {multiSelect && hasSelection && (
-                                <div className="border-t border-slate-200 dark:border-slate-700 p-2">
+                                <div className="border-t border-slate-200/50 p-2 dark:border-white/5">
                                     <Button
                                         variant="ghost"
                                         size="sm"
@@ -177,7 +180,7 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
                                             handleClear(e);
                                             setIsOpen(false);
                                         }}
-                                        className="w-full text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                                        className={ADMIN_HOVERABLE_BUTTON_CLASSES + ' w-full text-xs text-slate-600 dark:text-slate-300'}
                                     >
                                         <X className="w-3 h-3 mr-1" />
                                         清除筛选

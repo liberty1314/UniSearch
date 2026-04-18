@@ -187,3 +187,22 @@
 - frontend/src/routes/__tests__/AppRoutes.test.tsx
 - frontend/src/components/__tests__/SiteFooter.test.tsx
 - frontend/vite.config.ts
+
+## [2026-04-18 23:02:24] style(admin): 统一后台管理页玻璃拟态设计语言
+- **内容**: 抽离后台共享设计常量，统一侧边栏、卡片、表格、分页与输入框的玻璃拟态样式；让管理后台与账户工作区保持一致的视觉语言和交互动效。
+- **文件**:
+  - frontend/src/components/account/accountDesign.ts
+  - frontend/src/components/admin/AdminDataTable.tsx
+  - frontend/src/components/admin/AdminUsersView.tsx
+  - frontend/src/components/admin/AnnouncementManagement.tsx
+  - frontend/src/components/admin/ApplePagination.tsx
+  - frontend/src/components/admin/AppleUserTable.tsx
+  - frontend/src/components/admin/BatchActionsBar.tsx
+  - frontend/src/components/admin/Sidebar.tsx
+  - frontend/src/components/admin/StatsCard.tsx
+  - frontend/src/components/admin/SystemInfoView.tsx
+  - frontend/src/components/admin/SystemSettingsView.tsx
+  - frontend/src/components/admin/TableFilterDropdown.tsx
+  - frontend/src/components/admin/adminDesign.ts
+  - frontend/src/components/ui/AppleInput.tsx
+  - frontend/src/pages/Admin.tsx

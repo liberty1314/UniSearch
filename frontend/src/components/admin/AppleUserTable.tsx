@@ -8,10 +8,9 @@ import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { UserInfo } from '@/types/api';
 import {
-  BLUE_CYAN_ACTION_HOVER,
-  BLUE_CYAN_AVATAR_GRADIENT,
-  BLUE_CYAN_TEXT,
-} from '@/lib/brandTheme';
+  ADMIN_HOVERABLE_BUTTON_CLASSES,
+} from '@/components/admin/adminDesign';
+import { cn } from '@/lib/utils';
 
 interface AppleUserTableProps {
   users: UserInfo[];
@@ -81,15 +80,15 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
       key: 'username',
       title: '用户名',
       sortable: true,
-      render: (user) => (
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-full ${BLUE_CYAN_AVATAR_GRADIENT} flex items-center justify-center text-white font-semibold text-sm flex-shrink-0`}>
+          render: (user) => (
+            <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border-[0.5px] border-slate-200/50 bg-white/50 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200">
             {user.username.charAt(0).toUpperCase()}
           </div>
           <div className="flex flex-col min-w-0">
             <span className="font-medium truncate">{user.username}</span>
             {user.id === currentUserId && (
-              <span className={`text-xs ${BLUE_CYAN_TEXT}`}>
+              <span className="text-xs text-blue-600 dark:text-cyan-300">
                 当前用户
               </span>
             )}
@@ -196,7 +195,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
       <div className="space-y-5">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800">
           <div className="flex items-start gap-4">
-            <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${BLUE_CYAN_AVATAR_GRADIENT} text-lg font-semibold text-white shadow-lg shadow-cyan-500/20`}>
+            <div className="flex h-14 w-14 items-center justify-center rounded-[1.35rem] border-[0.5px] border-slate-200/50 bg-white/50 text-lg font-semibold text-slate-700 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200">
               {user.username.charAt(0).toUpperCase()}
             </div>
             <div className="space-y-2">
@@ -204,7 +203,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
                 <h4 className="text-xl font-semibold text-slate-900 dark:text-slate-50">{user.username}</h4>
                 <Badge variant={getRoleBadgeVariant(user.role)}>{getRoleText(user.role)}</Badge>
                 {isCurrentUser ? (
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${BLUE_CYAN_TEXT} bg-blue-50 dark:bg-cyan-950/30`}>
+                  <span className="inline-flex items-center gap-1 rounded-full border-[0.5px] border-cyan-200/50 bg-cyan-50/70 px-2.5 py-1 text-xs font-medium text-cyan-700 dark:border-cyan-900/30 dark:bg-cyan-950/25 dark:text-cyan-300">
                     <Shield className="h-3.5 w-3.5" />
                     当前用户
                   </span>
@@ -245,7 +244,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
         <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="outline"
-            className="border-slate-200 dark:border-slate-700"
+            className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
             onClick={() => {
               onEditClick(user);
             }}
@@ -256,7 +255,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
           </Button>
           <Button
             variant="outline"
-            className="border-amber-200 text-amber-600 hover:bg-amber-50 dark:border-amber-800/70 dark:text-amber-300 dark:hover:bg-amber-950/30"
+            className="border-[0.5px] border-amber-200/60 text-amber-600 hover:bg-amber-50/80 dark:border-amber-900/40 dark:text-amber-300 dark:hover:bg-amber-950/30"
             onClick={() => {
               onResetPasswordClick(user);
             }}
@@ -267,7 +266,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
           </Button>
           <Button
             variant="outline"
-            className={`border-cyan-200 text-cyan-700 hover:bg-cyan-50 dark:border-cyan-800/70 dark:text-cyan-300 dark:hover:bg-cyan-950/30 ${BLUE_CYAN_ACTION_HOVER}`}
+            className="border-[0.5px] border-cyan-200/60 text-cyan-700 hover:bg-cyan-50/80 dark:border-cyan-900/40 dark:text-cyan-300 dark:hover:bg-cyan-950/30"
             onClick={() => {
               onToggleStatus(user.id, !user.is_enabled);
             }}
@@ -278,7 +277,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
           </Button>
           <Button
             variant="outline"
-            className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800/70 dark:text-red-300 dark:hover:bg-red-950/30"
+            className="border-[0.5px] border-red-200/60 text-red-600 hover:bg-red-50/80 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-950/30"
             onClick={() => {
               onDeleteClick(user.id);
             }}
@@ -322,7 +321,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
               className="h-5 w-5"
             />
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full ${BLUE_CYAN_AVATAR_GRADIENT} flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}>
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-[0.5px] border-slate-200/50 bg-white/50 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200">
                 {user.username.charAt(0).toUpperCase()}
               </div>
               <div className="flex flex-col">
@@ -341,7 +340,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
         </div>
 
         {/* Content: Stats */}
-        <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-800/40 p-2 rounded-lg">
+        <div className="grid grid-cols-2 gap-2 rounded-[1rem] border-[0.5px] border-slate-200/50 bg-white/40 p-2 text-xs text-gray-500 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-400">
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] uppercase tracking-wider opacity-70">创建时间</span>
             <span>{new Date(user.created_at).toLocaleDateString('zh-CN')}</span>
@@ -353,13 +352,13 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
         </div>
 
         {/* Footer: Actions */}
-        <div className="flex items-center justify-end gap-1 pt-1 border-t border-gray-100 dark:border-slate-800/50">
+        <div className="flex items-center justify-end gap-1 border-t border-slate-200/50 pt-1 dark:border-white/5">
           <Button
             variant="ghost"
             size="sm"
             onClick={(e) => { e.stopPropagation(); onEditClick(user); }}
             disabled={isDeleting || isBatchOperating}
-            className={`h-8 w-8 p-0 ${BLUE_CYAN_ACTION_HOVER}`}
+            className="h-8 w-8 p-0 rounded-full border border-transparent hover:bg-white/60 dark:hover:bg-white/5"
           >
             <Edit className="w-4 h-4 text-gray-600 dark:text-slate-300" />
           </Button>
@@ -379,7 +378,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
                 size="sm"
                 onClick={(e) => { e.stopPropagation(); onToggleStatus(user.id, !user.is_enabled); }}
                 disabled={isDeleting || isBatchOperating}
-                className={`h-8 w-8 p-0 ${BLUE_CYAN_ACTION_HOVER}`}
+                className="h-8 w-8 p-0 rounded-full border border-transparent hover:bg-white/60 dark:hover:bg-white/5"
               >
                 {user.is_enabled ? <PowerOff className="w-4 h-4 text-cyan-700 dark:text-cyan-300" /> : <Power className="w-4 h-4 text-cyan-700 dark:text-cyan-300" />}
               </Button>

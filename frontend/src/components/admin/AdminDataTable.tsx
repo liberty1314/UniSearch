@@ -4,12 +4,9 @@ import { ChevronDown, ChevronUp, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toStyleVars } from '@/lib/styleVars';
 import {
-  BLUE_CYAN_BORDER,
-  BLUE_CYAN_SOFT_SURFACE,
-  BLUE_CYAN_TEXT,
-  BLUE_CYAN_TEXT_STRONG,
-  BLUE_CYAN_ICON,
-} from '@/lib/brandTheme';
+  ADMIN_PANEL_SURFACE_CLASSES,
+  ADMIN_PANEL_SURFACE_HOVER_CLASSES,
+} from '@/components/admin/adminDesign';
 
 export interface AdminDataTableColumn<T> {
   key: string;
@@ -170,12 +167,12 @@ export function AdminDataTable<T extends object>({
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
-          className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${BLUE_CYAN_BORDER} ${BLUE_CYAN_SOFT_SURFACE}`}
+          className="flex h-12 w-12 items-center justify-center rounded-2xl border-[0.5px] border-slate-200/50 bg-white/40 backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40"
         >
-          <Database className={`h-5 w-5 ${BLUE_CYAN_ICON}`} />
+          <Database className="h-5 w-5 text-blue-600 dark:text-cyan-300" />
         </motion.div>
         <div className="space-y-1">
-          <p className={`text-sm font-semibold ${BLUE_CYAN_TEXT_STRONG}`}>正在整理列表数据</p>
+          <p className="text-sm font-semibold text-slate-800 dark:text-white">正在整理列表数据</p>
           <p className="text-xs text-slate-500 dark:text-slate-400">同步当前筛选结果与状态信息</p>
         </div>
       </div>
@@ -185,11 +182,11 @@ export function AdminDataTable<T extends object>({
   const renderEmpty = () => (
     <div className="flex min-h-[260px] items-center justify-center px-6 py-14">
       <div className="flex max-w-sm flex-col items-center gap-4 text-center">
-        <div className={`flex h-14 w-14 items-center justify-center rounded-2xl border ${BLUE_CYAN_BORDER} ${BLUE_CYAN_SOFT_SURFACE}`}>
-          <Database className={`h-5 w-5 ${BLUE_CYAN_ICON}`} />
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border-[0.5px] border-slate-200/50 bg-white/40 backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40">
+          <Database className="h-5 w-5 text-blue-600 dark:text-cyan-300" />
         </div>
         <div className="space-y-1">
-          <p className={`text-sm font-semibold ${BLUE_CYAN_TEXT_STRONG}`}>{emptyText}</p>
+          <p className="text-sm font-semibold text-slate-800 dark:text-white">{emptyText}</p>
           <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
             当前筛选条件下没有可展示的记录，稍后可以调整筛选或刷新列表。
           </p>
@@ -231,7 +228,7 @@ export function AdminDataTable<T extends object>({
                           className={cn(
                             'h-3 w-3 -mb-1 transition-colors',
                             sortKey === column.key && sortDirection === 'asc'
-                              ? BLUE_CYAN_ICON
+                              ? 'text-blue-600 dark:text-cyan-300'
                               : 'text-slate-300 dark:text-slate-600'
                           )}
                         />
@@ -239,7 +236,7 @@ export function AdminDataTable<T extends object>({
                           className={cn(
                             'h-3 w-3 transition-colors',
                             sortKey === column.key && sortDirection === 'desc'
-                              ? BLUE_CYAN_ICON
+                              ? 'text-blue-600 dark:text-cyan-300'
                               : 'text-slate-300 dark:text-slate-600'
                           )}
                         />
@@ -260,10 +257,10 @@ export function AdminDataTable<T extends object>({
                   exit={shouldReduceMotion ? undefined : { opacity: 0, y: -8 }}
                   transition={{ duration: 0.2, delay: shouldReduceMotion ? 0 : index * 0.02 }}
                   className={cn(
-                    'rounded-2xl bg-white dark:bg-slate-900/70',
-                    activeOverlayItem && rowKey(item) === rowKey(activeOverlayItem) && 'ring-1 ring-cyan-300/80 dark:ring-cyan-700/70',
+                    'rounded-2xl bg-white/40 dark:bg-slate-900/40',
+                    activeOverlayItem && rowKey(item) === rowKey(activeOverlayItem) && 'ring-1 ring-cyan-200/70 dark:ring-cyan-700/70',
                     activeOverlayItem && disableInteractionsWhenOverlayOpen && rowKey(item) !== rowKey(activeOverlayItem) && 'opacity-35',
-                    hoverable && 'hover:bg-slate-50 dark:hover:bg-slate-800/70',
+                    hoverable && 'hover:bg-white/60 dark:hover:bg-slate-800/60',
                     (onRowClick || renderDesktopOverlay) && 'cursor-pointer'
                   )}
                   onClick={() => handleDesktopRowClick(item, index)}
@@ -271,9 +268,9 @@ export function AdminDataTable<T extends object>({
                 >
                   {columns.map((column) => (
                     <td
-                      key={column.key}
-                      className={cn(
-                        'border-y border-slate-200/80 px-4 py-4 text-sm text-slate-800 dark:border-slate-800 dark:text-slate-100',
+                    key={column.key}
+                    className={cn(
+                        'border-y border-slate-200/60 px-4 py-4 text-sm text-slate-800 dark:border-white/5 dark:text-slate-100',
                         'first:rounded-l-2xl first:border-l last:rounded-r-2xl last:border-r',
                         column.align === 'center' && 'text-center',
                         column.align === 'right' && 'text-right'
@@ -297,14 +294,14 @@ export function AdminDataTable<T extends object>({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="absolute inset-0 z-10 flex rounded-[24px] bg-white/88 backdrop-blur-sm dark:bg-slate-950/88"
+            className="absolute inset-0 z-10 flex rounded-[1.5rem] bg-white/72 backdrop-blur-md dark:bg-slate-950/72"
           >
             <motion.div
               initial={shouldReduceMotion ? false : { opacity: 0, y: 12, scale: 0.98 }}
               animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
               exit={shouldReduceMotion ? undefined : { opacity: 0, y: 12, scale: 0.98 }}
               transition={{ duration: 0.2 }}
-              className="flex-1 overflow-auto rounded-[24px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(255,255,255,0.96))] p-5 shadow-[0_24px_60px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(2,6,23,0.98))]"
+              className="flex-1 overflow-auto rounded-[1.5rem] border-[0.5px] border-slate-200/50 bg-white/80 p-5 shadow-[0_24px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/90"
             >
               {renderDesktopOverlay(activeOverlayItem, closeOverlay)}
             </motion.div>
@@ -325,7 +322,7 @@ export function AdminDataTable<T extends object>({
             exit={shouldReduceMotion ? undefined : { opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.18, delay: shouldReduceMotion ? 0 : index * 0.02 }}
             className={cn(
-              'overflow-hidden rounded-2xl border border-slate-200/80 bg-white px-4 py-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/70',
+              'overflow-hidden rounded-2xl border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/40',
               onRowClick && 'cursor-pointer'
             )}
             onClick={() => onRowClick?.(item, index)}
@@ -358,17 +355,19 @@ export function AdminDataTable<T extends object>({
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-[28px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.92))] shadow-[0_24px_70px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] dark:shadow-[0_24px_70px_rgba(2,6,23,0.55)]',
+        ADMIN_PANEL_SURFACE_CLASSES,
+        ADMIN_PANEL_SURFACE_HOVER_CLASSES,
+        'relative overflow-hidden rounded-[1.75rem] shadow-[0_24px_70px_rgba(15,23,42,0.08)] dark:shadow-[0_24px_70px_rgba(2,6,23,0.55)]',
         className
       )}
       role="region"
       aria-label="数据表格"
     >
-      <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/80 to-transparent" />
+      <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-white/20" />
 
       {showCount && (
         <div className="flex justify-end px-5 pt-4">
-          <div className={`inline-flex items-center gap-2 self-start rounded-full border px-3 py-1.5 text-xs font-medium ${BLUE_CYAN_SOFT_SURFACE} ${BLUE_CYAN_BORDER} ${BLUE_CYAN_TEXT}`}>
+          <div className="inline-flex items-center gap-2 self-start rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-300">
             <span className={`inline-block h-2 w-2 rounded-full bg-cyan-500 ${loading ? 'animate-pulse' : ''}`} />
             {loading ? '同步中' : `共 ${sortedData.length} ${countLabel}`}
           </div>

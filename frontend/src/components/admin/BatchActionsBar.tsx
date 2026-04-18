@@ -1,12 +1,8 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Clock, X, Trash2, Download } from 'lucide-react';
-import {
-    BLUE_CYAN_BORDER,
-    BLUE_CYAN_SOFT_SURFACE,
-    BLUE_CYAN_TEXT,
-    BLUE_CYAN_TEXT_STRONG,
-} from '@/lib/brandTheme';
+import { cn } from '@/lib/utils';
+import { ADMIN_HOVERABLE_BUTTON_CLASSES } from '@/components/admin/adminDesign';
 
 /**
  * BatchActionsBar 组件属性
@@ -52,8 +48,8 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
     return (
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* 左侧：选中数量 */}
-            <div className={`flex items-center gap-2 px-3 py-1.5 ${BLUE_CYAN_SOFT_SURFACE} border ${BLUE_CYAN_BORDER} rounded-lg`}>
-                <span className={`text-sm font-medium ${BLUE_CYAN_TEXT_STRONG} hidden sm:inline`}>
+            <div className="flex items-center gap-2 rounded-[1.1rem] border-[0.5px] border-cyan-200/50 bg-cyan-50/60 px-3 py-1.5 shadow-sm dark:border-cyan-900/30 dark:bg-cyan-950/20">
+                <span className="hidden text-sm font-medium text-cyan-900 dark:text-cyan-100 sm:inline">
                     已选中 {selectedCount} 个
                 </span>
             </div>
@@ -64,7 +60,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={onBatchExtend}
-                    className="flex items-center gap-2 h-9"
+                    className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'flex h-9 items-center gap-2 border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
                     disabled={disabled}
                 >
                     <Clock className="w-4 h-4" />
@@ -74,7 +70,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={onBatchExport}
-                    className={`flex items-center gap-2 h-9 ${BLUE_CYAN_TEXT} hover:text-blue-800 dark:hover:text-cyan-200 hover:bg-blue-50 dark:hover:bg-cyan-950/30`}
+                    className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'flex h-9 items-center gap-2 border-slate-200/50 text-slate-700 hover:text-slate-900 dark:border-white/10 dark:text-slate-200')}
                     disabled={disabled}
                 >
                     <Download className="w-4 h-4" />
@@ -84,7 +80,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={onBatchDelete}
-                    className="flex items-center gap-2 h-9 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
+                    className="flex h-9 items-center gap-2 rounded-full border-[0.5px] border-red-200/60 text-red-600 hover:bg-red-50/80 hover:text-red-700 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
                     disabled={disabled}
                 >
                     <Trash2 className="w-4 h-4" />
@@ -94,7 +90,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={onClearSelection}
-                    className="flex items-center gap-2 h-9"
+                    className="flex h-9 items-center gap-2 rounded-full border-[0.5px] border-slate-200/50 bg-white/40 text-slate-700 backdrop-blur-md hover:bg-white/60 dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200 dark:hover:bg-slate-800/60"
                     disabled={disabled}
                 >
                     <X className="w-4 h-4" />

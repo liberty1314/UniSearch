@@ -35,9 +35,9 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
     const errorId = `${inputId}-error`;
     const helperId = `${inputId}-helper`;
     const toneClasses = {
-      blue: 'focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500/20 dark:focus:ring-blue-400/20',
-      emerald: 'focus:border-emerald-500 dark:focus:border-emerald-400 focus:ring-emerald-500/20 dark:focus:ring-emerald-400/20',
-      rose: 'focus:border-rose-500 dark:focus:border-rose-400 focus:ring-rose-500/20 dark:focus:ring-rose-400/20',
+      blue: 'focus:border-blue-400 dark:focus:border-blue-300 focus:ring-blue-500/15 dark:focus:ring-blue-400/15',
+      emerald: 'focus:border-emerald-400 dark:focus:border-emerald-300 focus:ring-emerald-500/15 dark:focus:ring-emerald-400/15',
+      rose: 'focus:border-rose-400 dark:focus:border-rose-300 focus:ring-rose-500/15 dark:focus:ring-rose-400/15',
     } as const;
 
     return (
@@ -68,14 +68,14 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
             aria-describedby={
               error ? errorId : helperText ? helperId : undefined
             }
-            className={cn(
-              // 基础样式
-              'w-full px-4 py-3 text-base rounded-xl',
+          className={cn(
+            // 基础样式
+              'w-full px-4 py-3 text-base rounded-[1rem]',
               startAdornment && 'pl-11',
               endAdornment && 'pr-12',
-              'bg-white/80 dark:bg-slate-800/80',
-              'border border-gray-200 dark:border-slate-700',
-              'backdrop-blur-sm',
+              'bg-white/60 dark:bg-slate-900/40',
+              'border-[0.5px] border-slate-200/70 dark:border-white/10',
+              'backdrop-blur-xl backdrop-saturate-[180%]',
               
               // 字体与文本
               'text-gray-900 dark:text-gray-100',
@@ -88,13 +88,13 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
               'focus:outline-none',
               'focus:ring-4',
               toneClasses[tone],
-              'focus:bg-white dark:focus:bg-gray-800',
+              'focus:bg-white/80 dark:focus:bg-slate-900/60',
               
               // 错误状态
               error && [
-                'border-red-500 dark:border-red-400',
-                'focus:ring-red-500/20 dark:focus:ring-red-400/20',
-                'focus:border-red-500 dark:focus:border-red-400',
+                'border-red-400 dark:border-red-300',
+                'focus:ring-red-500/15 dark:focus:ring-red-400/15',
+                'focus:border-red-400 dark:focus:border-red-300',
               ],
               
               // 禁用状态

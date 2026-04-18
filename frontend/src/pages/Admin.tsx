@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { BatchDeleteDialog as BatchDeleteUsersDialog } from "@/components/admin/BatchDeleteDialog";
 import { BatchUpdateRoleDialog } from "@/components/admin/BatchUpdateRoleDialog";
@@ -13,6 +14,12 @@ import AdminUsersView, {
   type AdminUsersViewModel,
 } from "@/components/admin/AdminUsersView";
 import { useAdminPageController } from "@/hooks/useAdminPageController";
+import {
+  ADMIN_CONTENT_WRAPPER_CLASSES,
+  ADMIN_PAGE_BACKDROP_CLASSES,
+  ADMIN_PAGE_SHELL_CLASSES,
+} from "@/components/admin/adminDesign";
+import { cn } from "@/lib/utils";
 
 const Admin: React.FC = () => {
   const { currentView, setCurrentView, users } = useAdminPageController();
@@ -51,22 +58,33 @@ const Admin: React.FC = () => {
   };
 
   return (
-    <div className="obsidian-shell fixed inset-0 top-16 flex w-full bg-white">
-      <div className="hidden lg:block flex-shrink-0 w-[288px]" />
+    <div className={cn(ADMIN_PAGE_SHELL_CLASSES, "fixed inset-0 top-16 overflow-hidden")}>
+      <div className={ADMIN_PAGE_BACKDROP_CLASSES} />
 
-      <Sidebar currentView={currentView} onViewChange={setCurrentView} />
+      <div className="relative flex h-full w-full">
+        <Sidebar currentView={currentView} onViewChange={setCurrentView} />
 
-      <div className="flex-1 h-full overflow-y-auto">
-        <div className="container mx-auto px-4 py-6 space-y-6 lg:px-8 lg:py-8">
-          {currentView === "user_management" && (
-            <AdminUsersView viewModel={usersViewModel} />
-          )}
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto lg:pl-[300px]">
+          <div className={ADMIN_CONTENT_WRAPPER_CLASSES}>
+            <div className="min-w-0 flex-1 space-y-6">
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.12, duration: 0.5, ease: "easeOut" }}
+                className="space-y-6"
+              >
+                {currentView === "user_management" && (
+                  <AdminUsersView viewModel={usersViewModel} />
+                )}
 
-          {currentView === "system_info" && <SystemInfoView />}
-          {currentView === "system_settings" && <SystemSettingsView />}
-          {currentView === "announcement_management" && (
-            <AnnouncementManagement />
-          )}
+                {currentView === "system_info" && <SystemInfoView />}
+                {currentView === "system_settings" && <SystemSettingsView />}
+                {currentView === "announcement_management" && (
+                  <AnnouncementManagement />
+                )}
+              </motion.div>
+            </div>
+          </div>
         </div>
       </div>
 

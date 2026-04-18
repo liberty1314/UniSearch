@@ -5,20 +5,19 @@ import type { UserInfo } from '@/types/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import { StatsCard } from './StatsCard';
 import { TableFilterDropdown } from './TableFilterDropdown';
 import { AppleUserTable } from './AppleUserTable';
 import { ApplePagination } from './ApplePagination';
 import {
-  BLUE_CYAN_BORDER,
-  BLUE_CYAN_BUTTON,
-  BLUE_CYAN_ICON,
-  BLUE_CYAN_SOFT_SURFACE,
-  BLUE_CYAN_TEXT,
-  BLUE_CYAN_TEXT_STRONG,
-} from '@/lib/brandTheme';
+  ADMIN_PANEL_SURFACE_CLASSES,
+  ADMIN_PANEL_SURFACE_HOVER_CLASSES,
+  ADMIN_HOVERABLE_BUTTON_CLASSES,
+} from '@/components/admin/adminDesign';
 
-const countPillClassName = `inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium ${BLUE_CYAN_SOFT_SURFACE} ${BLUE_CYAN_BORDER} ${BLUE_CYAN_TEXT}`;
+const countPillClassName =
+  'inline-flex items-center gap-2 rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-300';
 
 interface UserStats {
   total: number;
@@ -110,12 +109,12 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ viewModel }) => {
         <StatsCard title="管理员数量" value={userStats.admins} icon={Shield} color="purple" index={3} />
       </div>
 
-      <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-        <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/50 min-h-[88px]">
+      <Card className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden')}>
+        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/30 min-h-[88px]">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div className="flex flex-col gap-2 flex-shrink-0">
               <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-                <Users className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
+                <Users className="w-5 h-5 text-blue-600 dark:text-cyan-300" />
                 用户管理
               </CardTitle>
               <div className={countPillClassName}>
@@ -134,9 +133,9 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ viewModel }) => {
                   transition={{ duration: 0.2 }}
                   className="flex flex-wrap items-center gap-2 sm:gap-3"
                 >
-                  <div className={`flex items-center gap-2 px-3 py-1.5 ${BLUE_CYAN_SOFT_SURFACE} border ${BLUE_CYAN_BORDER} rounded-lg`}>
-                    <CheckCircle2 className={`w-4 h-4 ${BLUE_CYAN_ICON}`} />
-                    <span className={`text-sm font-medium ${BLUE_CYAN_TEXT_STRONG} hidden sm:inline`}>
+                  <div className="flex items-center gap-2 rounded-[1.1rem] border-[0.5px] border-cyan-200/50 bg-cyan-50/60 px-3 py-1.5 shadow-sm dark:border-cyan-900/30 dark:bg-cyan-950/20">
+                    <CheckCircle2 className="w-4 h-4 text-cyan-600 dark:text-cyan-300" />
+                    <span className="hidden text-sm font-medium text-cyan-900 dark:text-cyan-100 sm:inline">
                       已选中 {selectedUsers.size} 个用户
                     </span>
                   </div>
@@ -145,7 +144,7 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ viewModel }) => {
                     size="sm"
                     onClick={onBatchUpdateRole}
                     disabled={isLoadingUsers || isBatchOperatingUsers || isDeletingUser}
-                    className="border-slate-200 dark:border-slate-700"
+                    className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
                   >
                     <Shield className="w-4 h-4 sm:mr-1" />
                     <span className="hidden sm:inline">批量修改角色</span>
@@ -155,7 +154,7 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ viewModel }) => {
                     size="sm"
                     onClick={onBatchDeleteUsers}
                     disabled={isLoadingUsers || isBatchOperatingUsers || isDeletingUser}
-                    className="border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30"
+                    className="border-[0.5px] border-red-200/60 text-red-600 hover:bg-red-50/80 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-950/30"
                   >
                     <X className="w-4 h-4 sm:mr-1" />
                     <span className="hidden sm:inline">批量删除</span>
@@ -190,7 +189,7 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ viewModel }) => {
                           onUserSearchSubmit();
                         }
                       }}
-                      className="pl-9 w-full sm:w-48 h-9 text-sm border-slate-200 dark:border-slate-700"
+                      className="h-9 w-full border-[0.5px] border-slate-200/70 bg-white/60 pl-9 text-sm shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/40 sm:w-48"
                     />
                   </div>
 
@@ -208,7 +207,7 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ viewModel }) => {
                       size="sm"
                       onClick={onRefresh}
                       disabled={isLoadingUsers || isBatchOperatingUsers}
-                      className="border-slate-200 dark:border-slate-700"
+                      className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
                     >
                       <RefreshCw className={`w-4 h-4 ${isLoadingUsers ? 'animate-spin' : ''}`} />
                     </Button>
@@ -217,7 +216,7 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ viewModel }) => {
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                     <Button
                       onClick={onCreateUser}
-                      className={`flex items-center gap-2 ${BLUE_CYAN_BUTTON} shadow-lg shadow-cyan-500/25`}
+                      className="flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 px-4 text-white shadow-[0_12px_24px_rgba(14,165,233,0.18)] hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600"
                       disabled={isLoadingUsers || isBatchOperatingUsers}
                     >
                       <Plus className="w-4 h-4" />
@@ -229,24 +228,24 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ viewModel }) => {
             </AnimatePresence>
           </div>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent className="p-5 sm:p-6">
           {isLoadingUsers ? (
             <div className="text-center py-12">
               <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="inline-block">
-                <RefreshCw className={`w-8 h-8 ${BLUE_CYAN_ICON}`} />
+                <RefreshCw className="w-8 h-8 text-blue-600 dark:text-cyan-300" />
               </motion.div>
               <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
             </div>
           ) : users.length === 0 ? (
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-12">
-              <div className="inline-flex p-4 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
-                <Users className="w-8 h-8 text-slate-400" />
+              <div className="inline-flex rounded-[1.35rem] border-[0.5px] border-slate-200/50 bg-white/40 p-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40 mb-4">
+                <Users className="w-8 h-8 text-slate-400 dark:text-slate-500" />
               </div>
               <p className="text-slate-500 dark:text-slate-400 mb-4">
                 {hasUserFilters ? '没有找到匹配的用户' : '暂无用户'}
               </p>
               {!hasUserFilters && (
-                <Button onClick={onCreateUser} className={BLUE_CYAN_BUTTON}>
+                <Button onClick={onCreateUser} className="rounded-full bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 px-4 text-white shadow-[0_12px_24px_rgba(14,165,233,0.18)] hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600">
                   <Plus className="w-4 h-4 mr-2" />
                   创建第一个用户
                 </Button>

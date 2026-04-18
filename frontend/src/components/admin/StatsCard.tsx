@@ -1,8 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { LucideIcon } from 'lucide-react';
-import { AppleCard } from '@/components/ui/AppleCard';
-import { BLUE_CYAN_ICON, BLUE_CYAN_SOFT_SURFACE, BLUE_CYAN_SOFT_SURFACE_STRONG } from '@/lib/brandTheme';
+import { cn } from '@/lib/utils';
+import {
+    ADMIN_PANEL_SURFACE_CLASSES,
+    ADMIN_PANEL_SURFACE_HOVER_CLASSES,
+} from '@/components/admin/adminDesign';
 
 interface StatsCardProps {
     title: string;
@@ -18,29 +21,29 @@ interface StatsCardProps {
 
 const colorClasses = {
     nebula: {
-        bg: BLUE_CYAN_SOFT_SURFACE,
-        icon: BLUE_CYAN_ICON,
-        iconBg: BLUE_CYAN_SOFT_SURFACE_STRONG,
+        tint: 'from-blue-500/12 to-cyan-500/12',
+        icon: 'text-blue-600 dark:text-cyan-300',
+        iconBg: 'bg-blue-50/70 dark:bg-cyan-950/25',
     },
     blue: {
-        bg: BLUE_CYAN_SOFT_SURFACE,
-        icon: BLUE_CYAN_ICON,
-        iconBg: BLUE_CYAN_SOFT_SURFACE_STRONG,
+        tint: 'from-blue-500/12 to-cyan-500/12',
+        icon: 'text-blue-600 dark:text-cyan-300',
+        iconBg: 'bg-blue-50/70 dark:bg-cyan-950/25',
     },
     emerald: {
-        bg: 'bg-emerald-50 dark:bg-emerald-950/20',
+        tint: 'from-emerald-500/12 to-teal-500/12',
         icon: 'text-emerald-600 dark:text-emerald-400',
-        iconBg: 'bg-emerald-100 dark:bg-emerald-900/30',
+        iconBg: 'bg-emerald-50/80 dark:bg-emerald-900/25',
     },
     amber: {
-        bg: 'bg-amber-50 dark:bg-amber-950/20',
+        tint: 'from-amber-500/12 to-orange-500/12',
         icon: 'text-amber-600 dark:text-amber-400',
-        iconBg: 'bg-amber-100 dark:bg-amber-900/30',
+        iconBg: 'bg-amber-50/80 dark:bg-amber-900/25',
     },
     purple: {
-        bg: 'bg-cyan-50 dark:bg-cyan-950/25',
-        icon: 'text-cyan-700 dark:text-cyan-300',
-        iconBg: 'bg-cyan-100 dark:bg-cyan-950/45',
+        tint: 'from-sky-500/12 to-indigo-500/12',
+        icon: 'text-sky-600 dark:text-sky-300',
+        iconBg: 'bg-sky-50/80 dark:bg-sky-900/25',
     },
 };
 
@@ -58,37 +61,41 @@ export const StatsCard: React.FC<StatsCardProps> = ({
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
+            transition={{ duration: 0.3, delay: index * 0.08 }}
         >
-            <AppleCard className="h-full min-w-0">
-                <div className="p-4 sm:p-6 md:p-8">
-                    {/* 背景装饰 */}
-                    <div className={`absolute top-0 right-0 w-32 h-32 ${colors.bg} rounded-full blur-3xl opacity-30 -z-0`} />
+            <div
+                className={cn(
+                    ADMIN_PANEL_SURFACE_CLASSES,
+                    ADMIN_PANEL_SURFACE_HOVER_CLASSES,
+                    'relative h-full min-w-0 overflow-hidden p-5 sm:p-6'
+                )}
+            >
+                <div className={cn(
+                    'pointer-events-none absolute inset-x-6 top-0 h-24 rounded-full blur-3xl opacity-100',
+                    `bg-gradient-to-br ${colors.tint}`
+                )} />
 
-                    <div className="relative z-10">
-                        {/* 图标 */}
-                        <div className={`inline-flex p-3 rounded-xl ${colors.iconBg} mb-4`}>
-                            <Icon className={`w-6 h-6 ${colors.icon}`} />
-                        </div>
+                <div className="relative z-10 flex h-full flex-col gap-4">
+                    <div className={cn('inline-flex h-12 w-12 items-center justify-center rounded-[1.1rem] border-[0.5px] border-slate-200/50 backdrop-blur-md dark:border-white/10', colors.iconBg)}>
+                        <Icon className={cn('h-5 w-5', colors.icon)} />
+                    </div>
 
-                        {/* 标题 */}
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
+                    <div className="space-y-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
                             {title}
                         </p>
-
-                        {/* 数值 */}
-                        <div className="flex items-end justify-between">
-                            <h3 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-white truncate">
+                        <div className="flex items-end justify-between gap-3">
+                            <h3 className="min-w-0 truncate text-2xl font-semibold tracking-tight text-slate-800 dark:text-white sm:text-[2rem]">
                                 {value}
                             </h3>
-
-                            {/* 趋势指示器 */}
                             {trend && (
                                 <span
-                                    className={`text-xs font-semibold px-2 py-1 rounded-full ${trend.isPositive
-                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                        }`}
+                                    className={cn(
+                                        'inline-flex shrink-0 items-center gap-1 rounded-full border-[0.5px] px-2.5 py-1 text-[11px] font-medium backdrop-blur-md',
+                                        trend.isPositive
+                                            ? 'border-emerald-200/60 bg-emerald-50/60 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-950/25 dark:text-emerald-300'
+                                            : 'border-rose-200/60 bg-rose-50/60 text-rose-700 dark:border-rose-400/20 dark:bg-rose-950/25 dark:text-rose-300'
+                                    )}
                                 >
                                     {trend.isPositive ? '↑' : '↓'} {trend.value}
                                 </span>
@@ -96,7 +103,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
                         </div>
                     </div>
                 </div>
-            </AppleCard>
+            </div>
         </motion.div>
     );
 };

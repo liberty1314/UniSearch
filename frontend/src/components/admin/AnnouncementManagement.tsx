@@ -23,7 +23,12 @@ import {
 import { AnnouncementService } from '@/services/announcementService';
 import type { Announcement, AnnouncementPriority, CreateAnnouncementRequest, UpdateAnnouncementRequest } from '@/types/api';
 import { getErrorMessage } from '@/lib/error';
-import { BLUE_CYAN_BUTTON, BLUE_CYAN_ICON } from '@/lib/brandTheme';
+import { cn } from '@/lib/utils';
+import {
+  ADMIN_HOVERABLE_BUTTON_CLASSES,
+  ADMIN_PANEL_SURFACE_CLASSES,
+  ADMIN_PANEL_SURFACE_HOVER_CLASSES,
+} from '@/components/admin/adminDesign';
 
 /**
  * 公告表单数据
@@ -317,8 +322,8 @@ export const AnnouncementManagement: React.FC = () => {
     <button
       onClick={() => onChange(!checked)}
       disabled={disabled}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${checked ? 'bg-gradient-to-r from-blue-600 to-cyan-500' : 'bg-gray-300 dark:bg-slate-600'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full border-[0.5px] transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-950 ${checked ? 'border-cyan-200/50 bg-gradient-to-r from-blue-600 to-cyan-500' : 'border-slate-200/50 bg-gray-300 dark:border-white/10 dark:bg-slate-600'
+        } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
     >
       <span
         className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'
@@ -337,21 +342,21 @@ export const AnnouncementManagement: React.FC = () => {
       {/* 页面标题 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <Megaphone className={`w-6 h-6 ${BLUE_CYAN_ICON}`} />
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-800 dark:text-white">
+            <Megaphone className="h-6 w-6 text-blue-600 dark:text-cyan-300" />
             系统公告管理
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             管理系统公告的创建、编辑和发布
           </p>
         </div>
       </div>
 
       {/* 功能开关卡片 */}
-      <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-        <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/80">
+      <Card className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden')}>
+        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/30">
           <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-            <Megaphone className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
+            <Megaphone className="w-5 h-5 text-blue-600 dark:text-cyan-300" />
             公告功能设置
           </CardTitle>
           <CardDescription className="text-slate-500 dark:text-slate-400">
@@ -366,15 +371,15 @@ export const AnnouncementManagement: React.FC = () => {
                 transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                 className="inline-block"
               >
-                <RefreshCw className={`w-8 h-8 ${BLUE_CYAN_ICON}`} />
+                <RefreshCw className="w-8 h-8 text-blue-600 dark:text-cyan-300" />
               </motion.div>
               <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
             </div>
           ) : (
-            <div className="flex items-start justify-between p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80">
+            <div className="flex items-start justify-between rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 p-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40">
               <div className="flex-1">
                 <Label className="text-base font-medium text-slate-800 dark:text-white flex items-center gap-2">
-                  <Megaphone className={`w-4 h-4 ${BLUE_CYAN_ICON}`} />
+                  <Megaphone className="w-4 h-4 text-blue-600 dark:text-cyan-300" />
                   启用系统公告功能
                 </Label>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -406,8 +411,8 @@ export const AnnouncementManagement: React.FC = () => {
       </Card>
 
       {/* 公告列表卡片 */}
-      <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-        <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/80">
+      <Card className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden')}>
+        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/30">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
@@ -419,7 +424,7 @@ export const AnnouncementManagement: React.FC = () => {
             </div>
             <Button
               onClick={handleCreate}
-              className={BLUE_CYAN_BUTTON}
+            className="rounded-full bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white shadow-[0_12px_24px_rgba(14,165,233,0.18)] hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600"
             >
               <Plus className="w-4 h-4 mr-2" />
               创建公告
@@ -431,10 +436,10 @@ export const AnnouncementManagement: React.FC = () => {
             <div className="text-center py-12">
               <Megaphone className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
               <p className="text-slate-500 dark:text-slate-400">暂无公告</p>
-              <Button
-                onClick={handleCreate}
-                variant="outline"
-                className="mt-4"
+            <Button
+              onClick={handleCreate}
+              variant="outline"
+              className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'mt-4 border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 创建第一个公告
@@ -447,7 +452,7 @@ export const AnnouncementManagement: React.FC = () => {
                   key={announcement.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow"
+                  className="rounded-[1.35rem] border-[0.5px] border-slate-200/50 bg-white/40 p-4 shadow-sm backdrop-blur-md transition-all hover:shadow-[0_16px_32px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-800/40"
                 >
                   <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                     <div className="flex-1">
@@ -497,6 +502,7 @@ export const AnnouncementManagement: React.FC = () => {
                         variant="outline"
                         size="sm"
                         title={announcement.is_enabled ? '禁用' : '启用'}
+                        className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
                       >
                         {announcement.is_enabled ? (
                           <PowerOff className="w-4 h-4" />
@@ -509,6 +515,7 @@ export const AnnouncementManagement: React.FC = () => {
                         variant="outline"
                         size="sm"
                         title="编辑"
+                        className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -517,7 +524,7 @@ export const AnnouncementManagement: React.FC = () => {
                         variant="outline"
                         size="sm"
                         title="删除"
-                        className="text-red-600 hover:text-red-700 hover:border-red-600"
+                        className="border-[0.5px] border-red-200/60 text-red-600 hover:border-red-300 hover:bg-red-50/80 hover:text-red-700 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-950/20 dark:hover:text-red-200"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -536,6 +543,7 @@ export const AnnouncementManagement: React.FC = () => {
                 disabled={currentPage === 1}
                 variant="outline"
                 size="sm"
+                className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
               >
                 上一页
               </Button>
@@ -547,6 +555,7 @@ export const AnnouncementManagement: React.FC = () => {
                 disabled={currentPage === totalPages}
                 variant="outline"
                 size="sm"
+                className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
               >
                 下一页
               </Button>
@@ -648,8 +657,8 @@ export const AnnouncementManagement: React.FC = () => {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setFormData({ ...formData, is_enabled: !formData.is_enabled })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${formData.is_enabled ? 'bg-gradient-to-r from-blue-600 to-cyan-500' : 'bg-gray-300 dark:bg-slate-600'
-                  }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full border-[0.5px] transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-950 ${formData.is_enabled ? 'border-cyan-200/50 bg-gradient-to-r from-blue-600 to-cyan-500' : 'border-slate-200/50 bg-gray-300 dark:border-white/10 dark:bg-slate-600'
+          }`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.is_enabled ? 'translate-x-6' : 'translate-x-1'

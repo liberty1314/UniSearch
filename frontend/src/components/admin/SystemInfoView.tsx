@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { StatsCard } from './StatsCard';
 import { PluginManageDialog } from './PluginManageDialog';
 import { ChannelManageDialog } from './ChannelManageDialog';
@@ -24,7 +25,11 @@ import {
 import { useAuthStore } from '@/stores/authStore';
 import type { AdminDialogMode, SystemInfoResponse, TGChannel, ListTGChannelsResponse } from '@/types/api';
 import { toast } from 'sonner';
-import { BLUE_CYAN_BUTTON, BLUE_CYAN_ICON } from '@/lib/brandTheme';
+import {
+  ADMIN_HOVERABLE_BUTTON_CLASSES,
+  ADMIN_PANEL_SURFACE_CLASSES,
+  ADMIN_PANEL_SURFACE_HOVER_CLASSES,
+} from '@/components/admin/adminDesign';
 
 const SYSTEM_INFO_CACHE_TTL_MS = 1500;
 
@@ -227,7 +232,7 @@ export const SystemInfoView: React.FC = () => {
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
           className="inline-block"
         >
-          <RefreshCw className={`w-8 h-8 ${BLUE_CYAN_ICON}`} />
+          <RefreshCw className="w-8 h-8 text-blue-600 dark:text-cyan-300" />
         </motion.div>
         <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
       </div>
@@ -294,12 +299,12 @@ export const SystemInfoView: React.FC = () => {
         />
       </div>
 
-      <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-        <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/50">
+      <Card className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden')}>
+        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/30">
           <div className="flex items-center justify-between gap-2">
             <div>
               <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-                <Radio className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
+                <Radio className="w-5 h-5 text-blue-600 dark:text-cyan-300" />
                 Telegram 频道摘要
                 <Badge variant="outline" className="ml-1 text-xs">
                   {channelSummary.total}
@@ -318,7 +323,7 @@ export const SystemInfoView: React.FC = () => {
                     setChannelDialogMode('view');
                     setIsChannelManageDialogOpen(true);
                   }}
-                  className="cursor-pointer"
+                  className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'cursor-pointer border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
                 >
                   <Eye className="w-4 h-4 mr-1" />
                   查看全部
@@ -332,7 +337,7 @@ export const SystemInfoView: React.FC = () => {
                     setChannelDialogMode('edit');
                     setIsChannelManageDialogOpen(true);
                   }}
-                  className={`${BLUE_CYAN_BUTTON} shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer`}
+                  className="cursor-pointer rounded-full bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white shadow-[0_12px_24px_rgba(14,165,233,0.18)] hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600"
                 >
                   <Edit className="w-4 h-4 mr-1" />
                   编辑
@@ -343,7 +348,7 @@ export const SystemInfoView: React.FC = () => {
         </CardHeader>
         <CardContent className="p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 px-4 py-3">
+            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40">
               <p className="text-xs text-slate-500 dark:text-slate-400">总频道（数据库）</p>
               <p className="text-xl font-semibold text-slate-800 dark:text-slate-100">{channelSummary.total}</p>
             </div>
@@ -355,7 +360,7 @@ export const SystemInfoView: React.FC = () => {
               <p className="text-xs text-red-700 dark:text-red-300">异常</p>
               <p className="text-xl font-semibold text-red-700 dark:text-red-300">{channelSummary.error}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 px-4 py-3">
+            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/40">
               <p className="text-xs text-slate-500 dark:text-slate-400">已禁用</p>
               <p className="text-xl font-semibold text-slate-700 dark:text-slate-200">{channelSummary.disabled}</p>
             </div>
@@ -366,12 +371,12 @@ export const SystemInfoView: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-        <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/50">
+      <Card className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden')}>
+        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/30">
           <div className="flex items-center justify-between gap-2">
             <div>
               <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-                <Activity className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
+                <Activity className="w-5 h-5 text-blue-600 dark:text-cyan-300" />
                 插件状态摘要
               </CardTitle>
               <CardDescription className="text-slate-500 dark:text-slate-400">
@@ -387,7 +392,7 @@ export const SystemInfoView: React.FC = () => {
                     setPluginDialogMode('view');
                     setIsPluginManageDialogOpen(true);
                   }}
-                  className="cursor-pointer"
+                  className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'cursor-pointer border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
                 >
                   <Eye className="w-4 h-4 mr-1" />
                   查看全部
@@ -401,7 +406,7 @@ export const SystemInfoView: React.FC = () => {
                     setPluginDialogMode('edit');
                     setIsPluginManageDialogOpen(true);
                   }}
-                  className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+                  className="cursor-pointer rounded-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-[0_12px_24px_rgba(16,185,129,0.16)] hover:from-emerald-700 hover:to-emerald-600"
                 >
                   <Edit className="w-4 h-4 mr-1" />
                   编辑
@@ -412,7 +417,7 @@ export const SystemInfoView: React.FC = () => {
         </CardHeader>
         <CardContent className="p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 px-4 py-3">
+            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40">
               <p className="text-xs text-slate-500 dark:text-slate-400">总插件</p>
               <p className="text-xl font-semibold text-slate-800 dark:text-slate-100">{pluginSummary.total}</p>
             </div>
@@ -424,7 +429,7 @@ export const SystemInfoView: React.FC = () => {
               <p className="text-xs text-red-700 dark:text-red-300">异常</p>
               <p className="text-xl font-semibold text-red-700 dark:text-red-300">{pluginSummary.error}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 px-4 py-3">
+            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/40">
               <p className="text-xs text-slate-500 dark:text-slate-400">不活跃</p>
               <p className="text-xl font-semibold text-slate-700 dark:text-slate-200">{pluginSummary.inactive}</p>
             </div>
@@ -432,10 +437,10 @@ export const SystemInfoView: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card className="border-gray-100 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-        <CardHeader className="border-b border-gray-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/50">
+      <Card className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden')}>
+        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/30">
           <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-            <Server className={`w-5 h-5 ${BLUE_CYAN_ICON}`} />
+            <Server className="w-5 h-5 text-blue-600 dark:text-cyan-300" />
             系统配置
           </CardTitle>
           <CardDescription className="text-slate-500 dark:text-slate-400">
@@ -446,7 +451,7 @@ export const SystemInfoView: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                <Database className={`w-4 h-4 ${BLUE_CYAN_ICON}`} />
+                <Database className="w-4 h-4 text-blue-600 dark:text-cyan-300" />
                 缓存配置
               </div>
               <div className="space-y-2 pl-6 text-sm">
