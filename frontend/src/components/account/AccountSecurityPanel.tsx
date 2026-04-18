@@ -1,5 +1,6 @@
 import React from 'react';
 import { Fingerprint, LockKeyhole } from 'lucide-react';
+import AccountSectionHero from '@/components/account/AccountSectionHero';
 import { AppleInput } from '@/components/ui/AppleInput';
 import { Button } from '@/components/ui/button';
 
@@ -30,37 +31,16 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
 }) => {
   return (
     <section className="space-y-6">
-      <div className="relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/72 p-7 shadow-[0_20px_48px_rgba(15,23,42,0.05)] backdrop-blur-3xl dark:border-white/[0.08] dark:bg-slate-950/42 dark:shadow-[0_22px_56px_rgba(0,0,0,0.34)] sm:p-8">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/[0.15]" />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-10 bottom-0 h-36 w-36 rounded-full bg-cyan-200/20 blur-3xl dark:bg-cyan-700/10"
-        />
+      <AccountSectionHero
+        eyebrow="Security"
+        title="安全设置"
+        badgeLabel="ACCOUNT SECURITY"
+        accentClassName="bg-cyan-200/20 dark:bg-cyan-700/10"
+      />
 
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-[1.1rem] bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-500 text-white shadow-[0_16px_32px_rgba(14,165,233,0.22)]">
-                <Fingerprint className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400 dark:text-slate-500">
-                  Security
-                </p>
-                <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 dark:text-white">
-                  安全设置
-                </h2>
-              </div>
-            </div>
-            <p className="max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300/90">
-              修改密码前需要先验证当前密码。新密码应避免复用历史常用密码，并确保只有你本人掌握。
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/72 p-6 shadow-[0_18px_42px_rgba(15,23,42,0.05)] backdrop-blur-3xl dark:border-white/[0.08] dark:bg-slate-950/42 dark:shadow-[0_20px_48px_rgba(0,0,0,0.34)] sm:p-7">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/[0.15]" />
+      <div className="relative overflow-hidden rounded-[2.5rem] border border-white/40 bg-white/20 p-6 shadow-[0_8px_32px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.5)] backdrop-blur-3xl dark:border-white/10 dark:bg-white/5 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.05)] transition-[background-color,border-color,box-shadow] duration-500 hover:bg-white/30 hover:shadow-[0_20px_64px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)] dark:hover:bg-white/10 dark:hover:border-white/20 dark:hover:shadow-[0_20px_64px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] group sm:p-7">
+        <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/40" />
+        <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-white/75 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/30" />
         <form
           className="relative space-y-5"
           onSubmit={(event) => {

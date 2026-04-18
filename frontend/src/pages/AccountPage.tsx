@@ -97,16 +97,17 @@ const AccountPage: React.FC = () => {
           initial={{ opacity: 0, y: -18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="relative overflow-hidden rounded-[2.4rem] border border-white/60 bg-white/72 px-6 py-7 shadow-[0_24px_60px_rgba(15,23,42,0.06)] backdrop-blur-3xl dark:border-white/[0.08] dark:bg-slate-950/44 dark:shadow-[0_26px_64px_rgba(0,0,0,0.34)] sm:px-8 sm:py-8"
+          className="relative overflow-hidden rounded-[2.5rem] border border-white/40 bg-white/20 px-6 py-7 shadow-[0_8px_32px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.5)] backdrop-blur-3xl dark:border-white/10 dark:bg-white/5 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.05)] sm:px-8 sm:py-8 transition-[background-color,border-color,box-shadow] duration-500 hover:bg-white/30 hover:shadow-[0_20px_64px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)] dark:hover:bg-white/10 dark:hover:border-white/20 dark:hover:shadow-[0_20px_64px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] group"
         >
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/65 to-transparent dark:via-white/[0.15]" />
+          <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/40" />
+          <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-white/75 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/30" />
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute -right-16 top-4 h-40 w-40 rounded-full bg-cyan-200/30 blur-3xl dark:bg-cyan-700/10"
+            className="pointer-events-none absolute -right-16 top-4 h-40 w-40 rounded-full bg-cyan-200/30 blur-3xl dark:bg-cyan-700/10 transition-transform duration-500 group-hover:scale-110"
           />
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute -left-12 bottom-0 h-36 w-36 rounded-full bg-blue-200/25 blur-3xl dark:bg-blue-900/12"
+            className="pointer-events-none absolute -left-12 bottom-0 h-36 w-36 rounded-full bg-blue-200/25 blur-3xl dark:bg-blue-900/12 transition-transform duration-500 group-hover:scale-110"
           />
 
           <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
@@ -124,10 +125,6 @@ const AccountPage: React.FC = () => {
                   </h1>
                 </div>
               </div>
-
-              <p className="max-w-3xl text-sm leading-7 text-slate-600 dark:text-slate-300/90">
-                用工作台视角管理账户资料与密码安全。页面结构收束为清晰的模块导航，避免信息展示与表单操作混在同一层级。
-              </p>
             </div>
 
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/70 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700 shadow-sm dark:border-white/10 dark:bg-slate-900/70 dark:text-cyan-300">

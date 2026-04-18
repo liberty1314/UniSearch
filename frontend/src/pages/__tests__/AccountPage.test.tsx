@@ -92,6 +92,7 @@ describe('AccountPage', () => {
     expect(await screen.findByRole('button', { name: /账号概览/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /修改密码/ })).toBeInTheDocument();
     expect(screen.getByText('账号工作台')).toBeInTheDocument();
+    expect(screen.getByText('ACCOUNT OVERVIEW')).toBeInTheDocument();
     expect(screen.getByText('安全提示')).toBeInTheDocument();
 
     expect(screen.queryByLabelText('当前密码')).not.toBeInTheDocument();
@@ -99,6 +100,7 @@ describe('AccountPage', () => {
     await user.click(screen.getByRole('button', { name: /修改密码/ }));
 
     expect(screen.getByText('安全设置')).toBeInTheDocument();
+    expect(screen.getByText('ACCOUNT SECURITY')).toBeInTheDocument();
     expect(screen.getByLabelText('当前密码')).toBeInTheDocument();
     expect(screen.queryByText('安全提示')).not.toBeInTheDocument();
   });

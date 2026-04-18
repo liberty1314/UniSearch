@@ -1,8 +1,8 @@
 import React from 'react';
 import { AlertTriangle, CalendarClock, Clock3, ShieldCheck, UserRound } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import type { AccountProfile } from '@/components/account/accountTypes';
 import { getAccountRoleLabel } from '@/components/account/accountTypes';
+import AccountSectionHero from '@/components/account/AccountSectionHero';
 
 interface AccountOverviewPanelProps {
   profile: AccountProfile | null;
@@ -71,43 +71,24 @@ const AccountOverviewPanel: React.FC<AccountOverviewPanelProps> = ({
 
   return (
     <section className="space-y-6">
-      <div className="relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/72 p-7 shadow-[0_20px_48px_rgba(15,23,42,0.05)] backdrop-blur-3xl dark:border-white/[0.08] dark:bg-slate-950/42 dark:shadow-[0_22px_56px_rgba(0,0,0,0.34)] sm:p-8">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/[0.15]" />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-14 top-4 h-36 w-36 rounded-full bg-cyan-200/25 blur-3xl dark:bg-cyan-700/10"
-        />
-
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">
-                Workspace
-              </p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 dark:text-white">
-                账号工作台
-              </h2>
-            </div>
-            <p className="max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300/90">
-              统一查看当前账户状态、身份信息和最近登录时间。这里保留关键资料概览，把高频安全操作收束到单独模块中。
-            </p>
-          </div>
-
-          <Badge variant="info" className="w-fit border border-blue-200/80 bg-blue-100/85 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-blue-700 dark:border-blue-400/20 dark:bg-blue-500/10 dark:text-cyan-300">
-            Account Overview
-          </Badge>
-        </div>
-      </div>
+      <AccountSectionHero
+        eyebrow="Workspace"
+        title="账号工作台"
+        badgeLabel="ACCOUNT OVERVIEW"
+        accentClassName="bg-cyan-200/25 dark:bg-cyan-700/10"
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map(({ key, label, value, Icon, iconGradient, accentClass }) => (
           <div
             key={key}
-            className="group relative overflow-hidden rounded-[1.8rem] border border-white/60 bg-white/72 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.05)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 dark:border-white/[0.08] dark:bg-slate-950/42 dark:shadow-[0_18px_42px_rgba(0,0,0,0.32)]"
+            className="group relative overflow-hidden rounded-[1.8rem] border border-white/40 bg-white/20 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.5)] backdrop-blur-2xl transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_64px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)] hover:bg-white/30 dark:border-white/10 dark:bg-white/5 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.05)] dark:hover:bg-white/10 dark:hover:border-white/20 dark:hover:shadow-[0_20px_64px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)]"
           >
+            <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/40" />
+            <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-white/75 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/30" />
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute -right-10 top-8 h-24 w-24 rounded-full bg-white/30 blur-3xl dark:bg-white/[0.03]"
+              className="pointer-events-none absolute -right-10 top-8 h-24 w-24 rounded-full bg-white/40 blur-3xl transition-transform duration-500 group-hover:scale-110 dark:bg-white/[0.05]"
             />
             <div className="relative space-y-4">
               <div className={`flex h-12 w-12 items-center justify-center rounded-[1.1rem] bg-gradient-to-br ${iconGradient} text-white shadow-[0_14px_30px_rgba(14,165,233,0.18)]`}>
@@ -126,8 +107,9 @@ const AccountOverviewPanel: React.FC<AccountOverviewPanelProps> = ({
         ))}
       </div>
 
-      <div className="relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/72 p-6 shadow-[0_18px_42px_rgba(15,23,42,0.05)] backdrop-blur-3xl dark:border-white/[0.08] dark:bg-slate-950/42 dark:shadow-[0_20px_48px_rgba(0,0,0,0.34)] sm:p-7">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/[0.15]" />
+      <div className="relative overflow-hidden rounded-[2.5rem] border border-white/40 bg-white/20 p-6 shadow-[0_8px_32px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.5)] backdrop-blur-3xl dark:border-white/10 dark:bg-white/5 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.05)] transition-[background-color,border-color,box-shadow] duration-500 hover:bg-white/30 hover:shadow-[0_20px_64px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)] dark:hover:bg-white/10 dark:hover:border-white/20 dark:hover:shadow-[0_20px_64px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] group sm:p-7">
+        <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/40" />
+        <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-white/75 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/30" />
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl space-y-3">
             <div className="flex items-center gap-2">

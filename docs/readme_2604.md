@@ -1,5 +1,16 @@
 # 2026年04月 开发日志
 
+## [2026-04-18 13:25:08] style(ui): 统一账号工作台与安全设置设计语言
+- **Body**: 抽取账号区块的共享 hero 与表面样式 token，统一账号工作台与安全设置的标题层、徽章层、卡片层和交互层级，提升两块页面的一致性与可维护性。
+- **Files**:
+  - `frontend/src/components/account/AccountOverviewPanel.tsx`
+  - `frontend/src/components/account/AccountSectionHero.tsx`
+  - `frontend/src/components/account/AccountSecurityPanel.tsx`
+  - `frontend/src/components/account/AccountWorkspaceShell.tsx`
+  - `frontend/src/components/account/accountDesign.ts`
+  - `frontend/src/pages/AccountPage.tsx`
+  - `frontend/src/pages/__tests__/AccountPage.test.tsx`
+
 ## [2026-04-18 13:09:33] style(ui): 统一全站暗色曜石玻璃背景
 - **Body**: 抽取全站暗色曜石玻璃语义层，统一公开页、认证页、后台页与页脚的深色基底，并同步收敛首页的跑马灯、热门分类与页脚视觉层级。
 - **Files**:
