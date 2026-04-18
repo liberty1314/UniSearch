@@ -6,7 +6,6 @@ import SearchBox from '@/components/SearchBox';
 import CloudTypeFilter from '@/components/CloudTypeFilter';
 import SearchResults from '@/components/SearchResults';
 import { SparklesText } from "@/components/magicui/sparkles-text";
-import GradientText from '@/components/GradientText';
 import { useSearchStore } from '@/stores/searchStore';
 import { useSearchAccessStatus } from '@/stores/searchAccessStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -25,10 +24,6 @@ const featureCards = [
     iconGradient: 'from-blue-500 via-sky-500 to-cyan-400',
     iconGlow: 'shadow-[0_18px_32px_rgba(14,165,233,0.24)] group-hover:shadow-[0_22px_40px_rgba(14,165,233,0.28)]',
     accentText: 'group-hover:text-blue-500',
-    accentBorder: 'group-hover:border-blue-400/28 dark:group-hover:border-blue-400/42',
-    depthGlow: 'from-blue-200/45 via-sky-100/20 to-cyan-200/38 dark:from-slate-800/72 dark:via-blue-950/28 dark:to-cyan-950/42',
-    surfaceTint: 'from-blue-500/[0.10] via-sky-100/20 to-cyan-500/[0.08] dark:from-blue-400/[0.12] dark:via-slate-950/10 dark:to-cyan-400/[0.10]',
-    edgeTint: 'from-blue-400/40 via-white/55 to-cyan-300/38 dark:from-blue-400/34 dark:via-slate-400/12 dark:to-cyan-400/28',
   },
   {
     title: '智能匹配',
@@ -37,10 +32,6 @@ const featureCards = [
     iconGradient: 'from-emerald-500 via-teal-500 to-green-400',
     iconGlow: 'shadow-[0_18px_32px_rgba(16,185,129,0.24)] group-hover:shadow-[0_22px_40px_rgba(16,185,129,0.28)]',
     accentText: 'group-hover:text-teal-500',
-    accentBorder: 'group-hover:border-teal-400/28 dark:group-hover:border-teal-400/42',
-    depthGlow: 'from-emerald-200/45 via-teal-100/20 to-green-200/38 dark:from-slate-800/72 dark:via-emerald-950/28 dark:to-teal-950/42',
-    surfaceTint: 'from-emerald-500/[0.10] via-teal-100/18 to-green-500/[0.08] dark:from-emerald-400/[0.12] dark:via-slate-950/10 dark:to-teal-400/[0.10]',
-    edgeTint: 'from-emerald-400/40 via-white/55 to-teal-300/38 dark:from-emerald-400/34 dark:via-slate-400/12 dark:to-teal-400/28',
   },
   {
     title: '实时更新',
@@ -49,10 +40,6 @@ const featureCards = [
     iconGradient: 'from-amber-500 via-orange-500 to-yellow-400',
     iconGlow: 'shadow-[0_18px_32px_rgba(245,158,11,0.24)] group-hover:shadow-[0_22px_40px_rgba(245,158,11,0.28)]',
     accentText: 'group-hover:text-amber-500',
-    accentBorder: 'group-hover:border-amber-400/28 dark:group-hover:border-amber-400/42',
-    depthGlow: 'from-amber-200/45 via-orange-100/20 to-yellow-200/38 dark:from-slate-800/72 dark:via-amber-950/28 dark:to-orange-950/42',
-    surfaceTint: 'from-amber-500/[0.10] via-orange-100/18 to-yellow-500/[0.08] dark:from-amber-400/[0.12] dark:via-slate-950/10 dark:to-orange-400/[0.10]',
-    edgeTint: 'from-amber-400/40 via-white/55 to-orange-300/38 dark:from-amber-400/34 dark:via-slate-400/12 dark:to-orange-400/28',
   },
 ] as const;
 
@@ -108,22 +95,17 @@ const Home: React.FC = () => {
           >
 
 
-            <SparklesText colors={{ first: "#0ea5e9", second: "#06b6d4" }}>
-              <GradientText
-                className="text-5xl md:text-7xl font-bold mb-6 tracking-tight"
-                colors={["#3b82f6", "#0ea5e9", "#06b6d4"]}
-                animationSpeed={6}
-                showBorder={false}
-              >
+            <SparklesText colors={{ first: "#3b82f6", second: "#06b6d4" }} className="mb-6">
+              <span className="text-5xl md:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-500 dark:from-blue-400 dark:via-sky-300 dark:to-cyan-300 drop-shadow-sm">
                 UniSearch
-              </GradientText>
+              </span>
             </SparklesText>
 
             <motion.h2
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.6 }}
-              className="text-2xl sm:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-cyan-600 to-blue-700 dark:from-cyan-300 dark:via-blue-300 dark:to-cyan-400 font-bold tracking-tight mb-4 animate-[pulse_4s_ease-in-out_infinite] animate-gradient-breath-slow drop-shadow-sm dark:drop-shadow-[0_2px_12px_rgba(8,145,178,0.2)]"
+              className="text-2xl sm:text-3xl font-semibold tracking-tight text-blue-950/80 dark:text-cyan-100/80 mb-4 drop-shadow-sm"
             >
               智能网盘资源搜索引擎
             </motion.h2>
@@ -151,7 +133,7 @@ const Home: React.FC = () => {
                 { value: 100, suffix: 'w+', label: '资源索引' },
                 { value: 99, suffix: '%', label: '搜索准确率' },
               ].map(({ value, suffix, label }) => (
-                <div key={label} className="group relative flex flex-col items-center gap-1.5 px-6 py-3 min-w-[124px] rounded-[1.5rem] bg-white/60 dark:bg-slate-950/40 border border-white/60 dark:border-white/[0.08] shadow-[0_8px_32px_rgba(15,23,42,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-3xl hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-[0_16px_48px_rgba(0,0,0,0.5)] transition-all duration-300">
+                <div key={label} className="group relative flex flex-col items-center gap-1.5 px-6 py-3 min-w-[124px] rounded-[1.5rem] bg-white/40 dark:bg-slate-950/40 border-[0.5px] border-slate-200/50 dark:border-white/10 shadow-sm backdrop-blur-3xl hover:-translate-y-1 hover:bg-white/60 hover:shadow-md dark:hover:bg-slate-800/40 transition-all duration-300">
                   <p className="text-3xl font-extrabold text-slate-800 dark:text-white tabular-nums tracking-tight">
                     <NumberTicker value={value} delay={0.9} />
                     <span>{suffix}</span>
@@ -226,10 +208,7 @@ const Home: React.FC = () => {
                           className="group relative cursor-pointer"
                         >
                           {/* 顶级净玻璃层级拟态 (Pristine Glassmorphism) */}
-                          <div className="relative h-full overflow-hidden rounded-[2rem] bg-white/60 dark:bg-slate-950/40 border border-white/60 dark:border-white/[0.08] shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] backdrop-blur-3xl transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_24px_64px_rgba(15,23,42,0.08)] dark:hover:shadow-[0_24px_64px_rgba(0,0,0,0.6)] p-8">
-                            {/* 边框发光伪影 - 极致细微 */}
-                            <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-white/[0.15] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                            <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-white/[0.15] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          <div className="relative h-full overflow-hidden rounded-[2rem] bg-white/40 dark:bg-slate-950/40 border-[0.5px] border-slate-200/50 dark:border-white/[0.08] shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] backdrop-blur-3xl transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_24px_64px_rgba(15,23,42,0.08)] dark:hover:shadow-[0_24px_64px_rgba(0,0,0,0.6)] p-8">
                             
                             {/* 背景光晕点缀 */}
                             <div
@@ -246,7 +225,7 @@ const Home: React.FC = () => {
                                 {feature.title}
                               </h3>
 
-                              <p className="text-center leading-relaxed text-gray-600 dark:text-slate-300/90 text-[15px]">
+                              <p className="text-center leading-relaxed text-slate-600 dark:text-slate-300/90 text-[15px]">
                                 {feature.description}
                               </p>
                             </div>

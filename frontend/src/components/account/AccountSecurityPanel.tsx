@@ -1,6 +1,10 @@
 import React from 'react';
 import { Fingerprint, LockKeyhole } from 'lucide-react';
 import AccountSectionHero from '@/components/account/AccountSectionHero';
+import {
+  ACCOUNT_PANEL_SURFACE_CLASSES,
+  ACCOUNT_PANEL_SURFACE_HOVER_CLASSES,
+} from '@/components/account/accountDesign';
 import { AppleInput } from '@/components/ui/AppleInput';
 import { Button } from '@/components/ui/button';
 
@@ -38,9 +42,7 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
         accentClassName="bg-cyan-200/20 dark:bg-cyan-700/10"
       />
 
-      <div className="relative overflow-hidden rounded-[2.5rem] border border-white/40 bg-white/20 p-6 shadow-[0_8px_32px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.5)] backdrop-blur-3xl dark:border-white/10 dark:bg-white/5 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.05)] transition-[background-color,border-color,box-shadow] duration-500 hover:bg-white/30 hover:shadow-[0_20px_64px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)] dark:hover:bg-white/10 dark:hover:border-white/20 dark:hover:shadow-[0_20px_64px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] group sm:p-7">
-        <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/40" />
-        <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-white/75 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/30" />
+      <div className={`${ACCOUNT_PANEL_SURFACE_CLASSES} ${ACCOUNT_PANEL_SURFACE_HOVER_CLASSES} p-6 sm:p-7`}>
         <form
           className="relative space-y-5"
           onSubmit={(event) => {
@@ -97,7 +99,7 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
             <Button
               type="submit"
               loading={isSaving}
-              className="h-11 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-500 px-6 text-white shadow-[0_12px_28px_rgba(6,182,212,0.25)] hover:from-blue-500 hover:via-cyan-400 hover:to-sky-400 hover:shadow-[0_16px_36px_rgba(6,182,212,0.32)]"
+              className="h-11 rounded-[8px] bg-[#0071e3] px-6 text-[17px] font-normal text-white shadow-none hover:bg-[#0077ED] active:bg-[#ededf2] active:text-[#1d1d1f]"
             >
               {isSaving ? '保存中...' : '更新密码'}
             </Button>

@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { User, Lock, LogIn, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
-import PageLoader from '@/components/PageLoader';
 import AuthBackground from '@/components/auth/AuthBackground';
 import AuthCardShell from '@/components/auth/AuthCardShell';
 import AuthInput from '@/components/auth/AuthInput';
@@ -103,7 +102,7 @@ const LoginPage: React.FC = () => {
         }
     };
 
-    if (isLoadingSettings) return <PageLoader isLoading={true} />;
+    if (isLoadingSettings) return null;
 
     return (
         <div className="obsidian-shell min-h-screen w-full flex items-center justify-center bg-gray-50 px-4 pt-20 overflow-y-auto relative">

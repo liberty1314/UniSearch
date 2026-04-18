@@ -6,7 +6,6 @@ import { SystemSettingsService } from '@/services/systemSettingsService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { User, Lock, UserPlus, Eye, EyeOff, LogIn } from 'lucide-react';
-import PageLoader from '@/components/PageLoader';
 import AuthBackground from '@/components/auth/AuthBackground';
 import AuthCardShell from '@/components/auth/AuthCardShell';
 import AuthInput from '@/components/auth/AuthInput';
@@ -122,7 +121,7 @@ const RegisterPage: React.FC = () => {
                 ? '两次输入的密码不一致'
                 : undefined;
 
-    if (isLoadingSettings) return <PageLoader isLoading={true} />;
+    if (isLoadingSettings) return null;
 
     return (
         <div className="obsidian-shell min-h-screen w-full flex items-center justify-center bg-gray-50 px-4 pt-20 overflow-y-auto relative">

@@ -98,21 +98,22 @@ export const TrendingCategories = () => {
               whileInView={{ opacity: 1, y: 0, filter: "blur(0px)", scale: 1 }}
               viewport={{ once: true, margin: "-50px" }}
               transition={{ delay: index * 0.12, duration: 0.7, type: "spring", bounce: 0.3 }}
-              whileHover={{ y: -6, scale: 1.015 }}
-              whileTap={{ scale: 0.98 }}
-              data-testid="trending-category-card"
-              data-glass-panel="true"
-              className={cn(
-                "group relative flex h-full min-h-[220px] flex-col justify-between overflow-hidden rounded-[2.5rem] cursor-pointer",
-                bentoClass,
-                "border border-white/40 bg-white/20 p-5 text-left backdrop-blur-2xl transition-[background-color,border-color,box-shadow] duration-500",
-                "shadow-[0_8px_32px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.5)]",
-                "hover:shadow-[0_20px_64px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)] hover:bg-white/30",
-                "dark:border-white/10 dark:bg-white/5 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.05)]",
-                "dark:hover:bg-white/10 dark:hover:border-white/20 dark:hover:shadow-[0_20px_64px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)]",
-                "md:min-h-[240px] md:p-6"
-              )}
+              className={cn("h-full h-full min-h-[220px] md:min-h-[240px]", bentoClass)}
             >
+              <div
+                data-testid="trending-category-card"
+                data-glass-panel="true"
+                className={cn(
+                  "group relative flex h-full flex-col justify-between overflow-hidden rounded-[2.5rem] cursor-pointer",
+                  "border border-white/40 bg-white/20 p-5 text-left backdrop-blur-3xl transition-all duration-500",
+                  "shadow-[0_12px_40px_rgba(15,23,42,0.04),inset_0_1px_1px_rgba(255,255,255,0.5)]",
+                  "hover:-translate-y-2 hover:shadow-[0_24px_64px_rgba(15,23,42,0.08),inset_0_1px_1px_rgba(255,255,255,0.8)] hover:bg-white/30",
+                  "active:scale-[0.98]",
+                  "dark:border-white/10 dark:bg-white/5 dark:shadow-[0_12px_40px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.05)]",
+                  "dark:hover:bg-white/10 dark:hover:border-white/20 dark:hover:shadow-[0_24px_64px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.1)]",
+                  "md:p-6"
+                )}
+              >
               <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/40" />
               <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-white/75 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/30" />
               <div
@@ -168,8 +169,6 @@ export const TrendingCategories = () => {
                   <div className="flex flex-wrap gap-2.5">
                     {category.chips.map((chip, chipIndex) => (
                       <motion.span
-                        whileHover={{ scale: 1.08, y: -2 }}
-                        whileTap={{ scale: 0.95 }}
                         initial={{ opacity: 0, x: -10 }}
                         whileInView={{ opacity: 1, x: 0 }}
                         viewport={{ once: true }}
@@ -177,7 +176,7 @@ export const TrendingCategories = () => {
                         key={chip}
                         data-testid="trending-category-chip"
                         className={cn(
-                          "inline-flex items-center rounded-full border border-white/30 bg-white/20 px-3.5 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm backdrop-blur-md transition-colors duration-300 hover:bg-white/40 cursor-pointer",
+                          "inline-flex items-center rounded-full border border-white/30 bg-white/20 px-3.5 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:scale-105 hover:bg-white/40 active:scale-95 cursor-pointer",
                           "dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10",
                           category.accentBorder
                         )}
@@ -193,6 +192,7 @@ export const TrendingCategories = () => {
                 aria-hidden="true"
                 className="pointer-events-none absolute -bottom-10 -right-10 h-32 w-32 rounded-full bg-white/25 blur-3xl transition-all duration-500 group-hover:scale-110 group-hover:opacity-100 dark:bg-white/[0.03]"
               />
+              </div>
             </motion.div>
           );
         })}

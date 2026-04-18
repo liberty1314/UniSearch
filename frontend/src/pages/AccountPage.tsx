@@ -7,6 +7,10 @@ import AccountSecurityPanel from '@/components/account/AccountSecurityPanel';
 import AccountWorkspaceShell from '@/components/account/AccountWorkspaceShell';
 import type { AccountProfile, AccountSection } from '@/components/account/accountTypes';
 import {
+  ACCOUNT_PANEL_SURFACE_CLASSES,
+  ACCOUNT_PANEL_SURFACE_HOVER_CLASSES,
+} from '@/components/account/accountDesign';
+import {
   validateAccountPassword,
   validateAccountPasswordConfirmation,
 } from '@/components/account/passwordValidation';
@@ -97,24 +101,14 @@ const AccountPage: React.FC = () => {
           initial={{ opacity: 0, y: -18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="relative overflow-hidden rounded-[2.5rem] border border-white/40 bg-white/20 px-6 py-7 shadow-[0_8px_32px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.5)] backdrop-blur-3xl dark:border-white/10 dark:bg-white/5 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.05)] sm:px-8 sm:py-8 transition-[background-color,border-color,box-shadow] duration-500 hover:bg-white/30 hover:shadow-[0_20px_64px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)] dark:hover:bg-white/10 dark:hover:border-white/20 dark:hover:shadow-[0_20px_64px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] group"
+          className={`${ACCOUNT_PANEL_SURFACE_CLASSES} ${ACCOUNT_PANEL_SURFACE_HOVER_CLASSES} px-6 py-7 sm:px-8 sm:py-8`}
         >
-          <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/40" />
-          <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-white/75 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/30" />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -right-16 top-4 h-40 w-40 rounded-full bg-cyan-200/30 blur-3xl dark:bg-cyan-700/10 transition-transform duration-500 group-hover:scale-110"
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -left-12 bottom-0 h-36 w-36 rounded-full bg-blue-200/25 blur-3xl dark:bg-blue-900/12 transition-transform duration-500 group-hover:scale-110"
-          />
 
           <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-5">
               <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-blue-500 via-sky-500 to-cyan-400 text-white shadow-[0_20px_40px_rgba(14,165,233,0.24)] ring-2 ring-white/65">
-                  <UserRound className="h-8 w-8" strokeWidth={2.3} />
+                <div className="flex h-16 w-16 items-center justify-center rounded-[1.5rem] border-[0.5px] border-slate-200/50 bg-white/40 text-slate-700 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200">
+                  <UserRound className="h-8 w-8" strokeWidth={2} />
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.34em] text-slate-400 dark:text-slate-500">
@@ -127,7 +121,7 @@ const AccountPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/70 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700 shadow-sm dark:border-white/10 dark:bg-slate-900/70 dark:text-cyan-300">
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-600 shadow-[0_4px_20px_rgba(0,0,0,0.03)] backdrop-blur-md transition-all dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-300">
               <Sparkles className="h-3.5 w-3.5" />
               Workspace Mode
             </div>

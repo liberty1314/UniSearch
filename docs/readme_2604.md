@@ -1,5 +1,25 @@
 # 2026年04月 开发日志
 
+## [2026-04-18 15:18:42] style(ui): 统一首页、账号页与认证页视觉层级
+- **Body**: 收敛首页、账号页和认证页的玻璃拟态视觉，简化启动页为轻量加载态，并统一搜索框、热门分类、平台标签与账号面板的交互反馈，提升整体一致性。
+- **Files**:
+  - `README.md`
+  - `frontend/src/App.tsx`
+  - `frontend/src/components/PageLoader.tsx`
+  - `frontend/src/components/SearchBox.tsx`
+  - `frontend/src/components/account/AccountOverviewPanel.tsx`
+  - `frontend/src/components/account/AccountSectionHero.tsx`
+  - `frontend/src/components/account/AccountSecurityPanel.tsx`
+  - `frontend/src/components/account/AccountWorkspaceShell.tsx`
+  - `frontend/src/components/account/accountDesign.ts`
+  - `frontend/src/components/home/PlatformMarquee.tsx`
+  - `frontend/src/components/home/TrendingCategories.tsx`
+  - `frontend/src/components/home/platformThemes.ts`
+  - `frontend/src/pages/AccountPage.tsx`
+  - `frontend/src/pages/Home.tsx`
+  - `frontend/src/pages/LoginPage.tsx`
+  - `frontend/src/pages/RegisterPage.tsx`
+
 ## [2026-04-18 13:25:08] style(ui): 统一账号工作台与安全设置设计语言
 - **Body**: 抽取账号区块的共享 hero 与表面样式 token，统一账号工作台与安全设置的标题层、徽章层、卡片层和交互层级，提升两块页面的一致性与可维护性。
 - **Files**:

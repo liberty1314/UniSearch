@@ -170,21 +170,14 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
       <div
         aria-hidden="true"
         className={cn(
-          'pointer-events-none absolute inset-x-8 inset-y-1 rounded-[2rem] bg-gradient-to-r from-blue-200/30 via-cyan-200/28 to-sky-200/26 opacity-0 blur-3xl transition-opacity duration-300 dark:from-cyan-400/18 dark:via-sky-400/14 dark:to-blue-500/10',
+          'pointer-events-none absolute inset-x-6 inset-y-0 rounded-[2rem] bg-slate-900/5 opacity-0 blur-[60px] transition-all duration-500 dark:bg-white/5',
           isFocused && 'opacity-100'
-        )}
-      />
-      <div
-        aria-hidden="true"
-        className={cn(
-          'pointer-events-none absolute inset-x-6 inset-y-0 rounded-[2rem] opacity-0 blur-[72px] transition-all duration-300 dark:bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_62%)]',
-          isFocused && 'dark:opacity-100'
         )}
       />
       <div
         data-testid="search-box-surface"
         className={cn(
-          'relative z-10 overflow-hidden rounded-[2rem] bg-white/60 dark:bg-slate-950/40 backdrop-blur-3xl border border-white/60 dark:border-white/[0.08] shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] transition-all duration-500 group-focus-within:-translate-y-1 group-focus-within:border-blue-300/60 dark:group-focus-within:border-white/[0.15] group-focus-within:shadow-[0_32px_80px_rgba(37,99,235,0.12)] dark:group-focus-within:shadow-[0_32px_80px_rgba(0,0,0,0.6)]'
+          'relative z-10 overflow-hidden rounded-[2rem] bg-white/40 dark:bg-slate-900/40 backdrop-blur-[24px] border-[0.5px] border-slate-200/50 dark:border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] transition-all duration-500 group-focus-within:-translate-y-1 group-focus-within:border-slate-300/60 dark:group-focus-within:border-white/[0.15] group-focus-within:shadow-[0_20px_60px_rgba(0,0,0,0.08)] dark:group-focus-within:shadow-[0_20px_60px_rgba(0,0,0,0.3)] group-focus-within:bg-white/50 dark:group-focus-within:bg-slate-800/40'
         )}
       >
         <svg className="absolute left-6 top-1/2 z-20 h-6 w-6 -translate-y-1/2 text-slate-400 transition-colors duration-300 group-focus-within:text-blue-500 dark:text-slate-500 dark:group-focus-within:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -230,7 +223,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
       {showHistory && visibleSearchHistory.length > 0 && (
         <div
           data-testid="search-history-surface"
-          className="absolute left-0 right-0 top-full z-50 mt-3 animate-in overflow-hidden fade-in slide-in-from-top-3 duration-300 rounded-[2rem] bg-white/70 dark:bg-slate-950/50 backdrop-blur-3xl border border-white/60 dark:border-white/[0.08] shadow-[0_24px_64px_rgba(15,23,42,0.08)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.5)]"
+          className="absolute left-0 right-0 top-full z-50 mt-3 animate-in overflow-hidden fade-in slide-in-from-top-3 duration-300 rounded-[2rem] bg-white/40 dark:bg-slate-900/40 backdrop-blur-[24px] border-[0.5px] border-slate-200/50 dark:border-white/10 shadow-[0_24px_64px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.4)]"
           onMouseEnter={() => setIsHoveringHistory(true)}
           onMouseLeave={() => {
             setIsHoveringHistory(false);
@@ -269,7 +262,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
                   <button
                     type="button"
                     onClick={() => handleSelectHistory(keyword)}
-                    className="history-chip-delay inline-flex max-w-full items-center rounded-full border border-slate-200/60 bg-white/60 px-4 py-2 text-left text-[14px] font-medium text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/50 hover:text-blue-600 hover:shadow-md dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-slate-300 dark:shadow-[0_12px_24px_rgba(0,0,0,0.2)] dark:hover:border-white/[0.12] dark:hover:bg-white/[0.08] dark:hover:text-white"
+                    className="history-chip-delay inline-flex max-w-full items-center rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-2 text-left text-[14px] font-medium text-slate-700 shadow-sm backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/60 hover:shadow-[0_8px_16px_rgba(0,0,0,0.06)] dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
                     aria-label={`使用历史记录搜索 ${keyword}`}
                   >
                     <span className="truncate max-w-[12rem] leading-none">{keyword}</span>

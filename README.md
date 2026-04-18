@@ -305,7 +305,7 @@ UniSearch/
 ├── docs/                      # 项目文档
 │   ├── api_reference.md      # API 接口文档
 │   ├── admin_guide.md        # 管理后台使用指南
-│   └── readme_2601.md        # 开发日志
+│   └── readme_2604.md        # 开发日志
 │
 ├── scripts/                   # 自动化脚本
 │   ├── local.sh              # 本地开发启动
@@ -326,7 +326,7 @@ UniSearch/
 |------|------|
 | [管理后台使用指南](docs/admin_guide.md) | 管理后台功能详解和操作指南 |
 | [API 接口文档](docs/api_reference.md) | 完整的 API 接口文档 |
-| [开发日志](docs/readme_2601.md) | 2026年01月开发记录 |
+| [开发日志](docs/readme_2604.md) | 2026年04月开发记录 |
 
 ### 快速链接
 
