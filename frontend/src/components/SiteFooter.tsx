@@ -16,16 +16,16 @@ const SiteFooter: React.FC = () => {
         <div className={`absolute inset-0 ${BLUE_CYAN_DIVIDER_PRIMARY} animate-shimmer`} />
         <div className={`absolute inset-0 ${BLUE_CYAN_DIVIDER_SECONDARY} animate-shimmer`} style={{ animationDelay: '0.75s' }} />
       </div>
-      <div className="relative bg-white/60 backdrop-blur-2xl dark:bg-slate-950/80 transition-colors duration-500">
+      <div className="obsidian-glass-shell relative bg-white/20 backdrop-blur-3xl border-t border-white/40 shadow-[0_-8px_32px_rgba(0,0,0,0.02),inset_0_1px_0_rgba(255,255,255,0.6)] transition-colors duration-500">
         <div className="container mx-auto">
           <Footer
-            showHeader={false}
+            showHeader={true}
             logo={
-              <div className="relative flex h-10 w-10 items-center justify-center">
+              <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-white/30 dark:bg-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] backdrop-blur-md">
                 <img
                   src="/Uni.png"
                   alt="UniSearch"
-                  className="h-8 w-8 object-contain"
+                  className="h-6 w-6 object-contain drop-shadow-sm"
                 />
               </div>
             }

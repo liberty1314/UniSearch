@@ -41,6 +41,20 @@ describe('CinematicFooter', () => {
     );
   });
 
+  it('uses restrained Apple-style glass tokens instead of the old neon palette', () => {
+    const { container } = render(<CinematicFooter />);
+
+    const styleTag = container.querySelector('style');
+    expect(styleTag).not.toBeNull();
+
+    const styles = styleTag?.textContent ?? '';
+    expect(styles).toContain('#0071e3');
+    expect(styles).toContain('rgba(29, 29, 31, 0.82)');
+    expect(styles).toContain('.footer-aurora');
+    expect(styles).toContain('.footer-marquee-band');
+    expect(styles).not.toContain('--footer-cyan');
+  });
+
   it('scrolls back to the top from the primary search button', () => {
     render(<CinematicFooter />);
 

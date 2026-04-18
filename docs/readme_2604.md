@@ -1,5 +1,29 @@
 # 2026年04月 开发日志
 
+## [2026-04-18 13:09:33] style(ui): 统一全站暗色曜石玻璃背景
+- **Body**: 抽取全站暗色曜石玻璃语义层，统一公开页、认证页、后台页与页脚的深色基底，并同步收敛首页的跑马灯、热门分类与页脚视觉层级。
+- **Files**:
+  - `.gitignore`
+  - `frontend/src/components/DisclaimerFooter.tsx`
+  - `frontend/src/components/PublicPageShell.tsx`
+  - `frontend/src/components/SiteFooter.tsx`
+  - `frontend/src/components/__tests__/DisclaimerFooter.test.tsx`
+  - `frontend/src/components/__tests__/SiteFooter.test.tsx`
+  - `frontend/src/components/home/PlatformMarquee.tsx`
+  - `frontend/src/components/home/TrendingCategories.tsx`
+  - `frontend/src/components/ui/__tests__/motion-footer.test.tsx`
+  - `frontend/src/components/ui/motion-footer.tsx`
+  - `frontend/src/index.css`
+  - `frontend/src/pages/Admin.tsx`
+  - `frontend/src/pages/AdminLogin.tsx`
+  - `frontend/src/pages/DisclaimerPage.tsx`
+  - `frontend/src/pages/LoginPage.tsx`
+  - `frontend/src/pages/RegisterPage.tsx`
+  - `frontend/src/pages/__tests__/Admin.test.tsx`
+  - `frontend/src/pages/__tests__/Home.test.tsx`
+  - `frontend/src/routes/AppRoutes.tsx`
+  - `frontend/src/routes/__tests__/AppRoutes.test.tsx`
+
 ## [2026-04-04 10:32:02] refactor(frontend): 重构登录页密码输入组件并优化测试
 - **内容**: 将注册环节的密码与确认密码输入框替换为统一样式的 `AuthInput` 组件并补充多语言属性，提升视觉表现与无障碍交互；同时调整 Admin 页面测试，复用公共的 `ConfirmDialog` 桩组件以提高自动化测试健壮性。
 - **文件**:

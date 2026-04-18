@@ -106,7 +106,7 @@ const LoginPage: React.FC = () => {
     if (isLoadingSettings) return <PageLoader isLoading={true} />;
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 pt-20 overflow-y-auto relative">
+        <div className="obsidian-shell min-h-screen w-full flex items-center justify-center bg-gray-50 px-4 pt-20 overflow-y-auto relative">
             <AuthBackground preset={authVisualPresets.loginPage} particles={particles} />
 
             {/* Login Card */}

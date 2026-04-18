@@ -27,45 +27,98 @@ const STYLES = `
 .cinematic-footer-wrapper {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
-
-  --footer-blue: #2563eb;
-  --footer-sky: #0ea5e9;
-  --footer-cyan: #06b6d4;
-  --footer-ink: #0f172a;
-  --footer-muted-ink: #475569;
-  --pill-bg-1: color-mix(in oklch, white 82%, var(--footer-sky) 18%);
-  --pill-bg-2: color-mix(in oklch, white 90%, var(--footer-cyan) 10%);
-  --pill-shadow: color-mix(in oklch, var(--footer-sky) 24%, transparent);
-  --pill-highlight: rgba(255, 255, 255, 0.78);
-  --pill-inset-shadow: rgba(14, 165, 233, 0.16);
-  --pill-border: color-mix(in oklch, var(--footer-sky) 34%, white 66%);
-
-  --pill-bg-1-hover: color-mix(in oklch, white 68%, var(--footer-blue) 32%);
-  --pill-bg-2-hover: color-mix(in oklch, white 76%, var(--footer-cyan) 24%);
-  --pill-border-hover: color-mix(in oklch, var(--footer-sky) 72%, white 28%);
-  --pill-shadow-hover: color-mix(in oklch, var(--footer-cyan) 36%, transparent);
-  --pill-highlight-hover: rgba(255, 255, 255, 0.92);
+  --footer-blue: #0071e3;
+  --footer-link-blue: #2997ff;
+  --footer-ink: #f5f5f7;
+  --footer-muted-ink: rgba(255, 255, 255, 0.72);
+  --pill-bg-1: rgba(29, 29, 31, 0.82);
+  --pill-bg-2: rgba(42, 42, 45, 0.7);
+  --pill-shadow: rgba(0, 0, 0, 0.36);
+  --pill-highlight: rgba(255, 255, 255, 0.12);
+  --pill-inset-shadow: rgba(0, 0, 0, 0.28);
+  --pill-border: rgba(255, 255, 255, 0.12);
+  --pill-bg-1-hover: rgba(36, 36, 38, 0.9);
+  --pill-bg-2-hover: rgba(54, 54, 58, 0.78);
+  --pill-border-hover: rgba(255, 255, 255, 0.18);
+  --pill-shadow-hover: rgba(0, 0, 0, 0.44);
+  --pill-highlight-hover: rgba(255, 255, 255, 0.16);
 }
 
 .dark .cinematic-footer-wrapper {
-  --footer-ink: #f8fafc;
-  --footer-muted-ink: #a5f3fc;
-  --pill-bg-1: color-mix(in oklch, #0f172a 78%, var(--footer-sky) 22%);
-  --pill-bg-2: color-mix(in oklch, #020617 82%, var(--footer-cyan) 18%);
-  --pill-shadow: color-mix(in oklch, var(--footer-cyan) 26%, transparent);
-  --pill-highlight: rgba(255, 255, 255, 0.16);
-  --pill-inset-shadow: rgba(2, 6, 23, 0.8);
-  --pill-border: color-mix(in oklch, var(--footer-cyan) 44%, transparent);
-  --pill-bg-1-hover: color-mix(in oklch, #172554 62%, var(--footer-sky) 38%);
-  --pill-bg-2-hover: color-mix(in oklch, #083344 68%, var(--footer-cyan) 32%);
-  --pill-border-hover: color-mix(in oklch, var(--footer-cyan) 76%, white 24%);
-  --pill-shadow-hover: color-mix(in oklch, var(--footer-sky) 42%, transparent);
-  --pill-highlight-hover: rgba(255, 255, 255, 0.22);
+  --footer-ink: #ffffff;
+  --footer-muted-ink: rgba(255, 255, 255, 0.76);
+  --pill-bg-1: rgba(29, 29, 31, 0.84);
+  --pill-bg-2: rgba(42, 42, 45, 0.74);
+  --pill-shadow: rgba(0, 0, 0, 0.48);
+  --pill-border: rgba(255, 255, 255, 0.1);
+  --pill-bg-1-hover: rgba(36, 36, 38, 0.9);
+  --pill-bg-2-hover: rgba(58, 58, 62, 0.8);
+  --pill-border-hover: rgba(255, 255, 255, 0.16);
+  --pill-shadow-hover: rgba(0, 0, 0, 0.56);
+}
+
+.footer-primary-pill {
+  background: linear-gradient(135deg, #0071e3 0%, #0077ed 100%);
+  border-color: rgba(125, 196, 255, 0.4);
+  box-shadow:
+    0 22px 42px -18px rgba(0, 113, 227, 0.56),
+    inset 0 1px 1px rgba(255, 255, 255, 0.32);
+  color: white;
+}
+
+.footer-primary-pill:hover {
+  background: linear-gradient(135deg, #0077ed 0%, #2997ff 100%);
+  border-color: rgba(153, 214, 255, 0.5);
+  color: white;
+}
+
+.footer-giant-bg-text {
+  font-size: 5.75rem;
+  line-height: 0.85;
+  font-weight: 900;
+  letter-spacing: 0;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(41, 151, 255, 0.03) 48%, transparent 70%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+@media (min-width: 640px) {
+  .footer-giant-bg-text { font-size: 8rem; }
+}
+
+@media (min-width: 768px) {
+  .footer-giant-bg-text { font-size: 12rem; }
+}
+
+@media (min-width: 1280px) {
+  .footer-giant-bg-text { font-size: 16rem; }
+}
+
+.footer-text-glow {
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.94) 58%, rgba(41, 151, 255, 0.85) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 12px 28px rgba(255, 255, 255, 0.08));
+}
+
+.footer-marquee-band {
+  background: linear-gradient(90deg, rgba(29, 29, 31, 0.82), rgba(39, 39, 41, 0.84), rgba(29, 29, 31, 0.82));
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.dark .footer-marquee-band {
+  background: linear-gradient(90deg, rgba(29, 29, 31, 0.84), rgba(42, 42, 45, 0.86), rgba(29, 29, 31, 0.84));
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 @keyframes footer-breathe {
   0% { opacity: 0.55; filter: saturate(0.9); }
-  100% { opacity: 0.95; filter: saturate(1.15); }
+  100% { opacity: 0.95; filter: saturate(1.05); }
 }
 
 @keyframes footer-scroll-marquee {
@@ -74,8 +127,8 @@ const STYLES = `
 }
 
 @keyframes footer-heartbeat {
-  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px color-mix(in oklch, hsl(var(--destructive)) 50%, transparent)); }
-  15%, 45% { transform: scale(1.15); filter: drop-shadow(0 0 10px color-mix(in oklch, hsl(var(--destructive)) 80%, transparent)); }
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(0, 113, 227, 0.18)); }
+  15%, 45% { transform: scale(1.15); filter: drop-shadow(0 0 10px rgba(0, 113, 227, 0.3)); }
   30% { transform: scale(1); }
 }
 
@@ -94,17 +147,17 @@ const STYLES = `
 .footer-bg-grid {
   background-size: 60px 60px;
   background-image:
-    linear-gradient(to right, rgba(14, 165, 233, 0.11) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(6, 182, 212, 0.1) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
   mask-image: linear-gradient(to bottom, transparent, black 28%, black 72%, transparent);
   -webkit-mask-image: linear-gradient(to bottom, transparent, black 28%, black 72%, transparent);
 }
 
 .footer-aurora {
   background:
-    radial-gradient(circle at 28% 34%, rgba(37, 99, 235, 0.28) 0%, rgba(37, 99, 235, 0.1) 28%, transparent 54%),
-    radial-gradient(circle at 72% 28%, rgba(6, 182, 212, 0.3) 0%, rgba(6, 182, 212, 0.11) 30%, transparent 58%),
-    linear-gradient(115deg, rgba(219, 234, 254, 0.42), rgba(255, 255, 255, 0) 48%, rgba(207, 250, 254, 0.46));
+    radial-gradient(circle at 28% 34%, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.03) 28%, transparent 54%),
+    radial-gradient(circle at 72% 28%, rgba(41, 151, 255, 0.14) 0%, rgba(41, 151, 255, 0.04) 30%, transparent 58%),
+    linear-gradient(115deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 48%, rgba(255, 255, 255, 0.04));
 }
 
 .footer-glass-pill {
@@ -130,67 +183,8 @@ const STYLES = `
   color: var(--footer-ink);
 }
 
-.footer-primary-pill {
-  background: linear-gradient(135deg, #2563eb 0%, #0ea5e9 52%, #06b6d4 100%);
-  border-color: rgba(14, 165, 233, 0.7);
-  box-shadow:
-    0 22px 42px -18px rgba(14, 165, 233, 0.78),
-    inset 0 1px 1px rgba(255, 255, 255, 0.38);
-  color: white;
-}
-
-.footer-primary-pill:hover {
-  background: linear-gradient(135deg, #1d4ed8 0%, #0284c7 48%, #0891b2 100%);
-  border-color: rgba(103, 232, 249, 0.88);
-  color: white;
-}
-
 .footer-secondary-pill {
   color: var(--footer-muted-ink);
-}
-
-.footer-giant-bg-text {
-  font-size: 5.75rem;
-  line-height: 0.85;
-  font-weight: 900;
-  letter-spacing: 0;
-  color: transparent;
-  -webkit-text-stroke: 1px rgba(14, 165, 233, 0.18);
-  background: linear-gradient(180deg, rgba(37, 99, 235, 0.16) 0%, rgba(6, 182, 212, 0.05) 48%, transparent 70%);
-  -webkit-background-clip: text;
-  background-clip: text;
-}
-
-@media (min-width: 640px) {
-  .footer-giant-bg-text { font-size: 8rem; }
-}
-
-@media (min-width: 768px) {
-  .footer-giant-bg-text { font-size: 12rem; }
-}
-
-@media (min-width: 1280px) {
-  .footer-giant-bg-text { font-size: 16rem; }
-}
-
-.footer-text-glow {
-  background: linear-gradient(120deg, #1d4ed8 0%, #0284c7 42%, #06b6d4 72%, #2563eb 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 12px 28px rgba(14, 165, 233, 0.18));
-}
-
-.footer-marquee-band {
-  background: linear-gradient(90deg, rgba(239, 246, 255, 0.86), rgba(224, 242, 254, 0.88), rgba(236, 254, 255, 0.86));
-  border-color: rgba(14, 165, 233, 0.18);
-  color: #0369a1;
-}
-
-.dark .footer-marquee-band {
-  background: linear-gradient(90deg, rgba(15, 23, 42, 0.82), rgba(8, 47, 73, 0.76), rgba(8, 51, 68, 0.76));
-  border-color: rgba(34, 211, 238, 0.18);
-  color: #a5f3fc;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -312,13 +306,13 @@ MagneticButton.displayName = "MagneticButton";
 const MarqueeItem = () => (
   <div className="flex items-center space-x-10 px-5">
     <span>聚合搜索</span>
-    <Sparkles aria-hidden="true" className="h-3.5 w-3.5 text-cyan-500/70" />
+    <Sparkles aria-hidden="true" className="h-3.5 w-3.5 text-white/55" />
     <span>清晰访问</span>
-    <Sparkles aria-hidden="true" className="h-3.5 w-3.5 text-blue-500/70" />
+    <Sparkles aria-hidden="true" className="h-3.5 w-3.5 text-blue-300/70" />
     <span>统一入口</span>
-    <Sparkles aria-hidden="true" className="h-3.5 w-3.5 text-cyan-500/70" />
+    <Sparkles aria-hidden="true" className="h-3.5 w-3.5 text-white/55" />
     <span>隐私优先</span>
-    <Sparkles aria-hidden="true" className="h-3.5 w-3.5 text-blue-500/70" />
+    <Sparkles aria-hidden="true" className="h-3.5 w-3.5 text-blue-300/70" />
   </div>
 );
 
@@ -385,7 +379,7 @@ export function CinematicFooter() {
         className="relative h-screen w-full"
         style={{ clipPath: "polygon(0% 0, 100% 0%, 100% 100%, 0 100%)" }}
       >
-        <footer className="cinematic-footer-wrapper fixed bottom-0 left-0 flex h-screen w-full flex-col justify-between overflow-hidden bg-gradient-to-br from-sky-50 via-white to-cyan-50 text-slate-950 dark:from-slate-950 dark:via-blue-950/30 dark:to-cyan-950/20 dark:text-slate-50">
+        <footer className="cinematic-footer-wrapper obsidian-glass-shell fixed bottom-0 left-0 flex h-screen w-full flex-col justify-between overflow-hidden bg-gradient-to-br from-[#050505] via-[#101010] to-[#1d1d1f] text-slate-50 dark:text-slate-50">
           <div className="footer-aurora animate-footer-breathe pointer-events-none absolute inset-0 z-0 blur-3xl" />
           <div className="footer-bg-grid pointer-events-none absolute inset-0 z-0" />
 
@@ -404,7 +398,7 @@ export function CinematicFooter() {
           </div>
 
           <div className="relative z-10 mx-auto mt-20 flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-6">
-            <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-lg border border-cyan-200/70 bg-white/82 shadow-[0_20px_48px_-24px_rgba(14,165,233,0.68)] backdrop-blur-md dark:border-cyan-400/20 dark:bg-slate-950/58">
+            <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-lg border border-white/14 bg-[rgba(29,29,31,0.76)] shadow-[0_20px_48px_-24px_rgba(0,0,0,0.56)] backdrop-blur-md dark:border-white/10 dark:bg-[rgba(29,29,31,0.82)]">
               <img src="/Uni.png" alt="UniSearch" className="h-11 w-11 object-contain" />
             </div>
 
@@ -432,7 +426,7 @@ export function CinematicFooter() {
                   href="/account"
                   className="footer-glass-pill group flex items-center gap-3 px-8 py-4 text-sm font-bold md:text-base"
                 >
-                  <UserRound aria-hidden="true" className="h-5 w-5 text-sky-700/70 transition-colors group-hover:text-sky-700 dark:text-cyan-200/70 dark:group-hover:text-cyan-100" />
+                  <UserRound aria-hidden="true" className="h-5 w-5 text-blue-200/72 transition-colors group-hover:text-blue-100 dark:text-blue-200/72 dark:group-hover:text-white" />
                   个人中心
                 </MagneticButton>
               </div>
@@ -459,22 +453,22 @@ export function CinematicFooter() {
           </div>
 
           <div className="relative z-20 flex w-full flex-col items-center justify-between gap-5 px-6 pb-8 md:flex-row md:px-12">
-            <div className="order-2 text-center text-[10px] font-semibold uppercase text-slate-500 md:order-1 md:text-xs dark:text-cyan-100/58">
+            <div className="order-2 text-center text-[10px] font-semibold uppercase text-white/44 md:order-1 md:text-xs dark:text-white/44">
               © {currentYear} UniSearch. All rights reserved.
             </div>
 
-            <div className="footer-glass-pill order-1 flex cursor-default items-center gap-2 border-border/50 px-5 py-3 md:order-2">
-              <span className="text-[10px] font-bold uppercase text-slate-500 md:text-xs dark:text-cyan-100/62">Built for</span>
-              <ShieldCheck aria-hidden="true" className="animate-footer-heartbeat h-4 w-4 text-sky-500" />
-              <span className="text-[10px] font-bold uppercase text-slate-500 md:text-xs dark:text-cyan-100/62">clean access by</span>
-              <span className="ml-1 text-xs font-black text-slate-950 md:text-sm dark:text-white">UniSearch</span>
+            <div className="footer-glass-pill order-1 flex cursor-default items-center gap-2 border-white/10 px-5 py-3 md:order-2">
+              <span className="text-[10px] font-bold uppercase text-white/44 md:text-xs dark:text-white/44">Built for</span>
+              <ShieldCheck aria-hidden="true" className="animate-footer-heartbeat h-4 w-4 text-[#2997ff]" />
+              <span className="text-[10px] font-bold uppercase text-white/44 md:text-xs dark:text-white/44">clean access by</span>
+              <span className="ml-1 text-xs font-black text-white md:text-sm dark:text-white">UniSearch</span>
             </div>
 
             <MagneticButton
               as="button"
               onClick={scrollToTop}
               aria-label="返回顶部"
-              className="footer-glass-pill group order-3 flex h-12 w-12 items-center justify-center text-sky-700 hover:text-sky-800 dark:text-cyan-100 dark:hover:text-white"
+              className="footer-glass-pill group order-3 flex h-12 w-12 items-center justify-center text-blue-200 hover:text-white dark:text-blue-200 dark:hover:text-white"
             >
               <ArrowUp
                 aria-hidden="true"

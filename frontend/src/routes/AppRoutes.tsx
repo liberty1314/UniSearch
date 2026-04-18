@@ -70,10 +70,12 @@ const AppRoutes: React.FC = () => {
   const showNavbar = !isNotFoundRoute;
   const appShellClassName = isNotFoundRoute
     ? 'bg-black'
-    : `${isStandaloneAuthPage ? 'bg-gray-50' : 'bg-white'} dark:bg-slate-950`;
+    : isStandaloneAuthPage
+      ? 'bg-gray-50'
+      : 'bg-white';
 
   return (
-    <div className={`${appShellClassName} transition-colors duration-200`}>
+    <div className={`${appShellClassName} obsidian-shell transition-colors duration-200`}>
       <ScrollToTop />
       {showNavbar && <Navbar />}
       <AnnouncementProvider />

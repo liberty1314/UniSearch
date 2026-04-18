@@ -96,18 +96,18 @@ describe('AppRoutes', () => {
     expect(screen.queryByTestId('cinematic-footer')).not.toBeInTheDocument();
   });
 
-  it('uses a pure white light shell for standard pages but keeps auth page shell unchanged', async () => {
+  it('uses the shared obsidian shell for standard pages but keeps auth page shell unchanged', async () => {
     const { container, unmount } = renderRoutesAt('/');
 
     expect(await screen.findByText('Home Page')).toBeInTheDocument();
     expect(container.firstChild).toHaveClass('bg-white');
-    expect(container.firstChild).not.toHaveClass('bg-gray-50');
+    expect(container.firstChild).toHaveClass('obsidian-shell');
 
     unmount();
 
     const loginRender = renderRoutesAt('/login');
     expect(await screen.findByText('Login Page')).toBeInTheDocument();
     expect(loginRender.container.firstChild).toHaveClass('bg-gray-50');
-    expect(loginRender.container.firstChild).not.toHaveClass('bg-white');
+    expect(loginRender.container.firstChild).toHaveClass('obsidian-shell');
   });
 });

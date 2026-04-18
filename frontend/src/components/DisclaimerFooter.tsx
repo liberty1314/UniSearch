@@ -4,7 +4,7 @@ import { BLUE_CYAN_LINK_ACCENT } from '@/lib/brandTheme';
 
 const DisclaimerFooter: React.FC = () => {
   return (
-    <footer className="relative overflow-hidden border-t border-gray-200/70 dark:border-white/10 bg-white/55 dark:bg-slate-950/55 backdrop-blur-nebula">
+    <footer className="obsidian-glass-shell relative overflow-hidden border-t border-gray-200/70 bg-white/55 backdrop-blur-nebula">
       <div className={`pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/60 to-transparent dark:via-cyan-400/50`} />
 
       <div className="container mx-auto px-4 py-4 sm:py-5">

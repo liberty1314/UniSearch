@@ -48,7 +48,7 @@ const Admin: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 top-16 flex w-full bg-white dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-950 dark:to-cyan-950/20">
+    <div className="obsidian-shell fixed inset-0 top-16 flex w-full bg-white">
       <div className="hidden lg:block flex-shrink-0 w-[288px]" />
 
       <Sidebar currentView={currentView} onViewChange={setCurrentView} />

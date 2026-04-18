@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Marquee } from '@/components/ui/marquee';
 import { platformThemes } from '@/components/home/platformThemes';
 import { cn } from '@/lib/utils';
@@ -17,18 +18,33 @@ export const PlatformMarquee = () => {
       <div className="relative flex w-full flex-col items-center justify-center overflow-hidden">
         <Marquee repeat={2} pauseOnHover className="[--duration:38s] [--gap:4rem] sm:[--gap:5rem] py-6">
           {platformThemes.map((platform) => (
-            <div
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               key={platform.type}
               className={cn(
-                "group flex items-center justify-center rounded-full border border-transparent bg-gradient-to-r px-6 py-3 text-white backdrop-blur-md shadow-md transition-all duration-300 cursor-default hover:-translate-y-1 hover:shadow-lg ring-1 ring-white/20 dark:ring-white/10",
-                platform.color,
-                platform.shadow
+                "group relative flex items-center justify-center gap-3 rounded-[1.5rem] px-7 py-3 transition-all duration-500 cursor-pointer overflow-hidden",
+                "bg-white/40 border border-white/50 backdrop-blur-3xl dark:bg-white/5 dark:border-white/10",
+                "shadow-[0_8px_32px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.5)]",
+                "hover:shadow-[0_16px_48px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.8)] hover:bg-white/60",
+                "dark:shadow-[0_8px_32px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)]",
+                "dark:hover:shadow-[0_16px_48px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.2)] dark:hover:bg-white/10",
               )}
             >
-              <span className="text-sm sm:text-base font-semibold text-white/95 transition-colors duration-300 group-hover:text-white">
+              <div 
+                className={cn(
+                  "absolute inset-0 opacity-0 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity duration-500 bg-gradient-to-r",
+                  platform.color
+                )}
+              />
+              <div className={cn(
+                "w-2.5 h-2.5 rounded-full bg-gradient-to-br border border-white/20 dark:border-white/10 shadow-[0_0_10px_rgba(0,0,0,0.1)] dark:shadow-[0_0_10px_rgba(255,255,255,0.1)] relative z-10",
+                platform.color
+              )} />
+              <span className="relative z-10 text-[15px] font-bold tracking-wide text-slate-700 dark:text-slate-200 transition-colors duration-300 group-hover:text-slate-900 dark:group-hover:text-white">
                 {platform.name}
               </span>
-            </div>
+            </motion.div>
           ))}
         </Marquee>
 

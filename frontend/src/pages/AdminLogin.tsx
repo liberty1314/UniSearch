@@ -96,7 +96,7 @@ const AdminLogin: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 pt-16 overflow-hidden relative">
+        <div className="obsidian-shell min-h-screen w-full flex items-center justify-center bg-gray-50 px-4 pt-16 overflow-hidden relative">
             <AuthBackground preset={authVisualPresets.adminLogin} particles={particles} />
 
             {/* 登录卡片 */}

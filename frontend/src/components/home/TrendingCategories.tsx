@@ -85,24 +85,36 @@ export const TrendingCategories = () => {
         />
       </motion.div>
 
-      <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 md:auto-rows-fr xl:gap-5">
+      <div className="grid grid-cols-1 gap-5 p-4 md:grid-cols-12 md:auto-rows-[minmax(240px,auto)] xl:gap-6 lg:px-2">
         {categories.map((category, index) => {
           const Icon = category.icon;
+          const bentoClass = index === 0 || index === 3 ? "md:col-span-7" : "md:col-span-5";
+
           return (
             <motion.div
+              layout
               key={category.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1, duration: 0.5 }}
+              initial={{ opacity: 0, y: 40, filter: "blur(12px)", scale: 0.96 }}
+              whileInView={{ opacity: 1, y: 0, filter: "blur(0px)", scale: 1 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ delay: index * 0.12, duration: 0.7, type: "spring", bounce: 0.3 }}
+              whileHover={{ y: -6, scale: 1.015 }}
+              whileTap={{ scale: 0.98 }}
               data-testid="trending-category-card"
               data-glass-panel="true"
               className={cn(
-                "group relative flex h-full min-h-[220px] flex-col justify-between overflow-hidden rounded-[2rem] border border-white/70 bg-white/68 p-4 text-left shadow-[0_12px_34px_rgba(15,23,42,0.05)] backdrop-blur-3xl transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_18px_44px_rgba(15,23,42,0.08)] dark:border-slate-700/55 dark:bg-slate-950/80 dark:shadow-[0_14px_38px_rgba(0,0,0,0.36)] dark:hover:shadow-[0_22px_54px_rgba(0,0,0,0.48)] md:min-h-[240px] md:p-5"
+                "group relative flex h-full min-h-[220px] flex-col justify-between overflow-hidden rounded-[2.5rem] cursor-pointer",
+                bentoClass,
+                "border border-white/40 bg-white/20 p-5 text-left backdrop-blur-2xl transition-[background-color,border-color,box-shadow] duration-500",
+                "shadow-[0_8px_32px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.5)]",
+                "hover:shadow-[0_20px_64px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)] hover:bg-white/30",
+                "dark:border-white/10 dark:bg-white/5 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.05)]",
+                "dark:hover:bg-white/10 dark:hover:border-white/20 dark:hover:shadow-[0_20px_64px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)]",
+                "md:min-h-[240px] md:p-6"
               )}
             >
-              <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/20" />
-              <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-white/75 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/15" />
+              <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/40" />
+              <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-white/75 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-white/30" />
               <div
                 aria-hidden="true"
                 className={cn(
@@ -112,56 +124,66 @@ export const TrendingCategories = () => {
               />
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.36),rgba(255,255,255,0.08)_30%,transparent_68%)] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_32%,transparent_100%)]"
+                className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.2),rgba(255,255,255,0.05)_30%,transparent_68%)] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_32%,transparent_100%)]"
               />
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute -right-10 top-8 h-28 w-28 rounded-full bg-white/35 blur-3xl transition-all duration-500 group-hover:scale-105 dark:bg-white/[0.04]"
+                className="pointer-events-none absolute -right-10 top-8 h-28 w-28 rounded-full bg-white/40 blur-3xl transition-all duration-500 group-hover:scale-105 dark:bg-white/[0.05]"
               />
 
               <div className="relative z-10 flex items-start gap-3">
-                <div
+                <motion.div
+                  whileHover={{ scale: 1.15, rotate: 6 }}
+                  whileTap={{ scale: 0.9 }}
                   data-testid="trending-category-badge"
                   className={cn(
-                    "flex items-center justify-center rounded-[1.35rem] bg-gradient-to-br text-white ring-2 ring-white/60 transition-all duration-500 group-hover:-translate-y-1 group-hover:scale-105 group-hover:rotate-3 dark:ring-white/12",
-                    "h-12 w-12 md:h-14 md:w-14",
+                    "flex items-center justify-center rounded-[1.25rem] bg-gradient-to-br text-white ring-1 ring-white/60 transition-shadow duration-500 dark:ring-white/20",
+                    "h-12 w-12 shadow-[inset_0_1px_2px_rgba(255,255,255,0.5)] md:h-14 md:w-14",
                     category.badgeGradient,
                     category.badgeShadow
                   )}
                 >
-                  <Icon className="h-6 w-6 transition-transform duration-300 group-hover:scale-105 md:h-7 md:w-7" strokeWidth={2} />
-                </div>
+                  <Icon className="h-6 w-6 md:h-7 md:w-7" strokeWidth={2} />
+                </motion.div>
               </div>
 
-              <div className="relative z-10 mt-5 flex flex-1 flex-col justify-between">
+              <div className="relative z-10 mt-6 flex flex-1 flex-col justify-between">
                 <div>
-                  <div className="mb-3 inline-flex items-center rounded-full border border-white/70 bg-white/65 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 shadow-sm backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-900/65 dark:text-slate-500">
+                  <div className="mb-3.5 inline-flex items-center rounded-full border border-white/40 bg-white/30 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                    <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-current opacity-70"></span>
                     热门搜索
                   </div>
-                  <h3 className={cn("mb-3 text-[1.3rem] font-bold leading-tight text-slate-900 transition-colors duration-300 dark:text-white md:text-[1.4rem]", category.accentText)}>
+                  <h3 className={cn("mb-2.5 text-xl font-bold tracking-tight text-slate-800 transition-colors duration-300 dark:text-slate-100 md:text-2xl", category.accentText)}>
                     {category.title}
                   </h3>
-                  <p className="max-w-sm text-sm font-medium leading-6 text-slate-600 dark:text-slate-300/90">
+                  <p className="max-w-sm text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300/80">
                     {category.description}
                   </p>
                 </div>
 
-                <div className="mt-5">
+                <div className="mt-6">
                   <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
                     热门标签
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {category.chips.map((chip) => (
-                      <span
+                  <div className="flex flex-wrap gap-2.5">
+                    {category.chips.map((chip, chipIndex) => (
+                      <motion.span
+                        whileHover={{ scale: 1.08, y: -2 }}
+                        whileTap={{ scale: 0.95 }}
+                        initial={{ opacity: 0, x: -10 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: index * 0.12 + chipIndex * 0.08 + 0.3, type: "spring", stiffness: 300 }}
                         key={chip}
                         data-testid="trending-category-chip"
                         className={cn(
-                          "inline-flex items-center rounded-full border border-white/70 bg-white/68 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm backdrop-blur-xl transition-all duration-300 dark:border-slate-700/60 dark:bg-slate-900/72 dark:text-slate-300",
+                          "inline-flex items-center rounded-full border border-white/30 bg-white/20 px-3.5 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm backdrop-blur-md transition-colors duration-300 hover:bg-white/40 cursor-pointer",
+                          "dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10",
                           category.accentBorder
                         )}
                       >
                         {chip}
-                      </span>
+                      </motion.span>
                     ))}
                   </div>
                 </div>

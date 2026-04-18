@@ -17,6 +17,7 @@ describe('SiteFooter', () => {
     expect(screen.getByRole('link', { name: '联系我们' })).toBeInTheDocument();
     expect(screen.getByText(/Search smarter\. Access cleanly\./)).toBeInTheDocument();
     expect(screen.queryByText('UNISEARCH')).not.toBeInTheDocument();
+    expect(container.querySelector('div.obsidian-glass-shell')).toBeTruthy();
 
     const dividerLayers = Array.from(
       container.querySelectorAll('.absolute.inset-0')

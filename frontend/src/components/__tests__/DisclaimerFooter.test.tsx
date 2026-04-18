@@ -15,10 +15,9 @@ describe('DisclaimerFooter', () => {
     const divider = container.querySelector('.pointer-events-none') as HTMLElement;
     expect(disclaimerLink).toBeInTheDocument();
     expect(disclaimerLink).toHaveAttribute('href', '/disclaimer');
+    expect(container.firstChild).toHaveClass('obsidian-glass-shell');
     expect(divider.className).toContain('via-blue-500/60');
-    expect(divider.className).toContain('dark:via-cyan-400/50');
     expect(disclaimerLink.className).toContain('hover:text-blue-600');
-    expect(disclaimerLink.className).toContain('dark:hover:text-cyan-300');
     expect(disclaimerLink.className).not.toContain('nebula');
   });
 });

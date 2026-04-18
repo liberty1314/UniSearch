@@ -16,7 +16,7 @@ const PublicPageShell: React.FC<PublicPageShellProps> = ({
   return (
     <div
       className={cn(
-        'min-h-screen bg-white dark:bg-gradient-to-b dark:from-gray-900 dark:via-gray-900 dark:to-slate-950 transition-colors duration-500 relative overflow-hidden',
+        'obsidian-shell min-h-screen bg-white transition-colors duration-500 relative overflow-hidden',
         className
       )}
     >

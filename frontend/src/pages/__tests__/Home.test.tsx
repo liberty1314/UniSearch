@@ -168,8 +168,7 @@ describe('Home', () => {
     );
 
     expect(container.firstChild).toHaveClass('bg-white');
-    expect(container.firstChild).not.toHaveClass('bg-gray-50');
-    expect(container.firstChild).toHaveClass('dark:from-gray-900');
+    expect(container.firstChild).toHaveClass('obsidian-shell');
     expect(screen.getByTestId('animated-grid')).toBeInTheDocument();
     expect(screen.getByTestId('public-page-glow')).toBeInTheDocument();
   });

@@ -115,8 +115,7 @@ describe('Admin', () => {
     const { container } = render(<Admin />);
 
     expect(container.firstChild).toHaveClass('bg-white');
-    expect(container.firstChild).not.toHaveClass('from-gray-50');
-    expect(container.firstChild).not.toHaveClass('dark:to-nebula-950/20');
+    expect(container.firstChild).toHaveClass('obsidian-shell');
   });
 
   it('routes simple delete confirmations through the shared ConfirmDialog entry', () => {
