@@ -35,6 +35,20 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
   return (
     <section className="space-y-6">
       <div className={`${ACCOUNT_PANEL_SURFACE_CLASSES} ${ACCOUNT_PANEL_SURFACE_HOVER_CLASSES} p-6 sm:p-7`}>
+        <div className="relative flex flex-col gap-2">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.28em] text-slate-400 dark:text-slate-500">
+            ACCOUNT SECURITY
+          </p>
+          <h2 className="text-2xl font-semibold tracking-tight text-slate-800 dark:text-white">
+            安全设置
+          </h2>
+          <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">
+            更新登录密码，并确保当前账户的基础访问凭证保持最新状态。
+          </p>
+        </div>
+      </div>
+
+      <div className={`${ACCOUNT_PANEL_SURFACE_CLASSES} ${ACCOUNT_PANEL_SURFACE_HOVER_CLASSES} p-6 sm:p-7`}>
         <form
           className="relative space-y-5"
           onSubmit={(event) => {

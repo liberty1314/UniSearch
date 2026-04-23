@@ -92,7 +92,6 @@ export const TrendingCategories = () => {
 
           return (
             <motion.div
-              layout
               key={category.id}
               initial={{ opacity: 0, y: 40, filter: "blur(12px)", scale: 0.96 }}
               whileInView={{ opacity: 1, y: 0, filter: "blur(0px)", scale: 1 }}
@@ -104,13 +103,13 @@ export const TrendingCategories = () => {
                 data-testid="trending-category-card"
                 data-glass-panel="true"
                 className={cn(
-                  "group relative flex h-full flex-col justify-between overflow-hidden rounded-[2.5rem] cursor-pointer",
-                  "border border-white/40 bg-white/20 p-5 text-left backdrop-blur-3xl transition-all duration-500",
+                  "group relative flex h-full min-h-[220px] flex-col justify-between overflow-hidden rounded-[2.5rem] p-5 text-left transition-all duration-500 md:min-h-[240px]",
+                  "cursor-pointer border border-white/40 bg-white/20 backdrop-blur-3xl",
                   "shadow-[0_12px_40px_rgba(15,23,42,0.04),inset_0_1px_1px_rgba(255,255,255,0.5)]",
                   "hover:-translate-y-2 hover:shadow-[0_24px_64px_rgba(15,23,42,0.08),inset_0_1px_1px_rgba(255,255,255,0.8)] hover:bg-white/30",
                   "active:scale-[0.98]",
-                  "dark:border-white/10 dark:bg-white/5 dark:shadow-[0_12px_40px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.05)]",
-                  "dark:hover:bg-white/10 dark:hover:border-white/20 dark:hover:shadow-[0_24px_64px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.1)]",
+                  "dark:border-slate-700/55 dark:bg-slate-950/80 dark:shadow-[0_12px_40px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.05)]",
+                  "dark:hover:border-slate-600/70 dark:hover:bg-slate-900/85 dark:hover:shadow-[0_24px_64px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.08)]",
                   "md:p-6"
                 )}
               >
@@ -133,9 +132,7 @@ export const TrendingCategories = () => {
               />
 
               <div className="relative z-10 flex items-start gap-3">
-                <motion.div
-                  whileHover={{ scale: 1.15, rotate: 6 }}
-                  whileTap={{ scale: 0.9 }}
+                <div
                   data-testid="trending-category-badge"
                   className={cn(
                     "flex items-center justify-center rounded-[1.25rem] bg-gradient-to-br text-white ring-1 ring-white/60 transition-shadow duration-500 dark:ring-white/20",
@@ -145,7 +142,7 @@ export const TrendingCategories = () => {
                   )}
                 >
                   <Icon className="h-6 w-6 md:h-7 md:w-7" strokeWidth={2} />
-                </motion.div>
+                </div>
               </div>
 
               <div className="relative z-10 mt-6 flex flex-1 flex-col justify-between">
@@ -168,13 +165,10 @@ export const TrendingCategories = () => {
                   </div>
                   <div className="flex flex-wrap gap-2.5">
                     {category.chips.map((chip, chipIndex) => (
-                      <motion.span
-                        initial={{ opacity: 0, x: -10 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: index * 0.12 + chipIndex * 0.08 + 0.3, type: "spring", stiffness: 300 }}
+                      <span
                         key={chip}
                         data-testid="trending-category-chip"
+                        style={{ transitionDelay: `${(index * 0.12 + chipIndex * 0.08 + 0.3).toFixed(2)}s` }}
                         className={cn(
                           "inline-flex items-center rounded-full border border-white/30 bg-white/20 px-3.5 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:scale-105 hover:bg-white/40 active:scale-95 cursor-pointer",
                           "dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10",
@@ -182,7 +176,7 @@ export const TrendingCategories = () => {
                         )}
                       >
                         {chip}
-                      </motion.span>
+                      </span>
                     ))}
                   </div>
                 </div>

@@ -1,5 +1,22 @@
 # 2026年04月 开发日志
 
+## [2026-04-23 20:51:42] style(ui): 统一首页搜索与工作区视觉语言
+- **Body**: 收敛首页、搜索框、来源筛选、平台跑马灯、热门分类和加载页的蓝青玻璃态设计语言，并补齐账户中心、后台统计卡片、用户表格与输入焦点态的视觉一致性；同步修复相关测试漂移，恢复前端全量测试基线。
+- **Files**:
+  - `frontend/src/components/CloudTypeFilter.tsx`
+  - `frontend/src/components/PageLoader.tsx`
+  - `frontend/src/components/SearchBox.tsx`
+  - `frontend/src/components/account/AccountOverviewPanel.tsx`
+  - `frontend/src/components/account/AccountSecurityPanel.tsx`
+  - `frontend/src/components/account/AccountWorkspaceShell.tsx`
+  - `frontend/src/components/admin/AppleUserTable.tsx`
+  - `frontend/src/components/admin/StatsCard.tsx`
+  - `frontend/src/components/home/PlatformMarquee.tsx`
+  - `frontend/src/components/home/TrendingCategories.tsx`
+  - `frontend/src/components/ui/AppleInput.tsx`
+  - `frontend/src/pages/Admin.tsx`
+  - `frontend/src/pages/Home.tsx`
+
 ## [2026-04-18 15:18:42] style(ui): 统一首页、账号页与认证页视觉层级
 - **Body**: 收敛首页、账号页和认证页的玻璃拟态视觉，简化启动页为轻量加载态，并统一搜索框、热门分类、平台标签与账号面板的交互反馈，提升整体一致性。
 - **Files**:

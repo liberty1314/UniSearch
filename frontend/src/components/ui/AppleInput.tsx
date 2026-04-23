@@ -35,9 +35,9 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
     const errorId = `${inputId}-error`;
     const helperId = `${inputId}-helper`;
     const toneClasses = {
-      blue: 'focus:border-blue-400 dark:focus:border-blue-300 focus:ring-blue-500/15 dark:focus:ring-blue-400/15',
-      emerald: 'focus:border-emerald-400 dark:focus:border-emerald-300 focus:ring-emerald-500/15 dark:focus:ring-emerald-400/15',
-      rose: 'focus:border-rose-400 dark:focus:border-rose-300 focus:ring-rose-500/15 dark:focus:ring-rose-400/15',
+      blue: 'focus:border-blue-500 dark:focus:border-blue-300 focus:ring-blue-500/20 dark:focus:ring-blue-400/20',
+      emerald: 'focus:border-emerald-500 dark:focus:border-emerald-300 focus:ring-emerald-500/20 dark:focus:ring-emerald-400/20',
+      rose: 'focus:border-rose-500 dark:focus:border-rose-300 focus:ring-rose-500/20 dark:focus:ring-rose-400/20',
     } as const;
 
     return (
@@ -93,8 +93,8 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
               // 错误状态
               error && [
                 'border-red-400 dark:border-red-300',
-                'focus:ring-red-500/15 dark:focus:ring-red-400/15',
-                'focus:border-red-400 dark:focus:border-red-300',
+                'focus:ring-red-500/20 dark:focus:ring-red-400/20',
+                'focus:border-red-500 dark:focus:border-red-300',
               ],
               
               // 禁用状态

@@ -58,84 +58,86 @@ const Admin: React.FC = () => {
   };
 
   return (
-    <div className={cn(ADMIN_PAGE_SHELL_CLASSES, "fixed inset-0 top-16 overflow-hidden")}>
-      <div className={ADMIN_PAGE_BACKDROP_CLASSES} />
+    <div className="obsidian-shell bg-white dark:bg-black">
+      <div className={cn(ADMIN_PAGE_SHELL_CLASSES, "fixed inset-0 top-16 overflow-hidden")}>
+        <div className={ADMIN_PAGE_BACKDROP_CLASSES} />
 
-      <div className="relative flex h-full w-full">
-        <Sidebar currentView={currentView} onViewChange={setCurrentView} />
+        <div className="relative flex h-full w-full">
+          <Sidebar currentView={currentView} onViewChange={setCurrentView} />
 
-        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto lg:pl-[300px]">
-          <div className={ADMIN_CONTENT_WRAPPER_CLASSES}>
-            <div className="min-w-0 flex-1 space-y-6">
-              <motion.div
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.12, duration: 0.5, ease: "easeOut" }}
-                className="space-y-6"
-              >
-                {currentView === "user_management" && (
-                  <AdminUsersView viewModel={usersViewModel} />
-                )}
+          <div className="flex min-w-0 flex-1 flex-col overflow-y-auto lg:pl-[300px]">
+            <div className={ADMIN_CONTENT_WRAPPER_CLASSES}>
+              <div className="min-w-0 flex-1 space-y-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.12, duration: 0.5, ease: "easeOut" }}
+                  className="space-y-6"
+                >
+                  {currentView === "user_management" && (
+                    <AdminUsersView viewModel={usersViewModel} />
+                  )}
 
-                {currentView === "system_info" && <SystemInfoView />}
-                {currentView === "system_settings" && <SystemSettingsView />}
-                {currentView === "announcement_management" && (
-                  <AnnouncementManagement />
-                )}
-              </motion.div>
+                  {currentView === "system_info" && <SystemInfoView />}
+                  {currentView === "system_settings" && <SystemSettingsView />}
+                  {currentView === "announcement_management" && (
+                    <AnnouncementManagement />
+                  )}
+                </motion.div>
+              </div>
             </div>
           </div>
         </div>
+
+        <CreateUserDialog
+          open={users.activeDialog === "create-user"}
+          onOpenChange={(open) => !open && users.closeDialog()}
+          onSuccess={users.handleUserOperationSuccess}
+        />
+
+        {users.userToEdit && (
+          <EditUserDialog
+            open={users.activeDialog === "edit-user"}
+            onOpenChange={(open) => !open && users.closeDialog()}
+            user={users.userToEdit}
+            onSuccess={users.handleUserOperationSuccess}
+          />
+        )}
+
+        {users.userToResetPassword && (
+          <ResetPasswordDialog
+            open={users.activeDialog === "reset-password"}
+            onOpenChange={(open) => !open && users.closeDialog()}
+            user={users.userToResetPassword}
+            onSuccess={users.handleUserOperationSuccess}
+          />
+        )}
+
+        <ConfirmDialog
+          open={users.userToDelete !== null}
+          onOpenChange={(open) => !open && users.setUserToDelete(null)}
+          title="确认删除用户"
+          description="您确定要删除这个用户吗？此操作无法撤销，该用户将无法继续访问系统。"
+          confirmText={users.isDeletingUser ? "删除中..." : "确认删除"}
+          variant="destructive"
+          onConfirm={() => void users.handleDeleteUserConfirm()}
+          isLoading={users.isDeletingUser}
+        />
+
+        <BatchDeleteUsersDialog
+          open={users.activeDialog === "batch-delete"}
+          onOpenChange={(open) => !open && users.closeDialog()}
+          users={users.users.filter((u) => users.selectedUsers.has(u.id))}
+          onSuccess={users.handleUserOperationSuccess}
+        />
+
+        <BatchUpdateRoleDialog
+          open={users.activeDialog === "batch-update-role"}
+          onOpenChange={(open) => !open && users.closeDialog()}
+          users={users.users.filter((u) => users.selectedUsers.has(u.id))}
+          onSuccess={users.handleUserOperationSuccess}
+        />
       </div>
-
-      <CreateUserDialog
-        open={users.activeDialog === "create-user"}
-        onOpenChange={(open) => !open && users.closeDialog()}
-        onSuccess={users.handleUserOperationSuccess}
-      />
-
-      {users.userToEdit && (
-        <EditUserDialog
-          open={users.activeDialog === "edit-user"}
-          onOpenChange={(open) => !open && users.closeDialog()}
-          user={users.userToEdit}
-          onSuccess={users.handleUserOperationSuccess}
-        />
-      )}
-
-      {users.userToResetPassword && (
-        <ResetPasswordDialog
-          open={users.activeDialog === "reset-password"}
-          onOpenChange={(open) => !open && users.closeDialog()}
-          user={users.userToResetPassword}
-          onSuccess={users.handleUserOperationSuccess}
-        />
-      )}
-
-      <ConfirmDialog
-        open={users.userToDelete !== null}
-        onOpenChange={(open) => !open && users.setUserToDelete(null)}
-        title="确认删除用户"
-        description="您确定要删除这个用户吗？此操作无法撤销，该用户将无法继续访问系统。"
-        confirmText={users.isDeletingUser ? "删除中..." : "确认删除"}
-        variant="destructive"
-        onConfirm={() => void users.handleDeleteUserConfirm()}
-        isLoading={users.isDeletingUser}
-      />
-
-      <BatchDeleteUsersDialog
-        open={users.activeDialog === "batch-delete"}
-        onOpenChange={(open) => !open && users.closeDialog()}
-        users={users.users.filter((u) => users.selectedUsers.has(u.id))}
-        onSuccess={users.handleUserOperationSuccess}
-      />
-
-      <BatchUpdateRoleDialog
-        open={users.activeDialog === "batch-update-role"}
-        onOpenChange={(open) => !open && users.closeDialog()}
-        users={users.users.filter((u) => users.selectedUsers.has(u.id))}
-        onSuccess={users.handleUserOperationSuccess}
-      />
     </div>
   );
 };

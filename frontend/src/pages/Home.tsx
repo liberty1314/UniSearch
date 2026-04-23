@@ -5,7 +5,7 @@ import { Layers, Sparkles, Activity } from "lucide-react";
 import SearchBox from "@/components/SearchBox";
 import CloudTypeFilter from "@/components/CloudTypeFilter";
 import SearchResults from "@/components/SearchResults";
-import { SparklesText } from "@/components/magicui/sparkles-text";
+import GradientText from "@/components/GradientText";
 import { useSearchStore } from "@/stores/searchStore";
 import { useSearchAccessStatus } from "@/stores/searchAccessStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -86,20 +86,18 @@ const Home: React.FC = () => {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         >
-          <SparklesText
-            colors={{ first: "#3b82f6", second: "#06b6d4" }}
-            className="mb-6"
+          <GradientText
+            colors={["#3b82f6", "#0ea5e9", "#06b6d4"]}
+            className="mb-6 text-5xl font-extrabold tracking-tight md:text-7xl"
           >
-            <span className="text-5xl md:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-500 dark:from-blue-400 dark:via-sky-300 dark:to-cyan-300 drop-shadow-sm">
-              UniSearch
-            </span>
-          </SparklesText>
+            UniSearch
+          </GradientText>
 
           <motion.h2
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.6 }}
-            className="text-2xl sm:text-3xl font-semibold tracking-tight text-blue-950/80 dark:text-cyan-100/80 mb-4 drop-shadow-sm"
+            className="mb-4 bg-gradient-to-r from-blue-950 via-cyan-600 to-sky-500 bg-clip-text text-2xl font-semibold tracking-tight text-transparent dark:from-blue-100 dark:via-cyan-300 dark:to-sky-200 sm:text-3xl"
           >
             智能网盘资源搜索引擎
           </motion.h2>

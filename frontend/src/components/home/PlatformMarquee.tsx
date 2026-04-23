@@ -1,7 +1,6 @@
 import React from 'react';
 import { Marquee } from '@/components/ui/marquee';
 import { platformThemes } from '@/components/home/platformThemes';
-import { cn } from '@/lib/utils';
 import HomeSectionHeader from '@/components/home/HomeSectionHeader';
 
 export const PlatformMarquee = () => {
@@ -25,26 +24,21 @@ export const PlatformMarquee = () => {
           {platformThemes.map((platform) => (
             <div
               key={platform.type}
-              className={cn(
-                "group relative flex items-center justify-center gap-3 rounded-[1.4rem] px-6 py-3 transition-colors duration-300 cursor-pointer overflow-hidden",
-                "bg-white/60 border-[0.5px] border-white/80 backdrop-blur-md dark:bg-slate-800/40 dark:border-white/10",
-                "shadow-[0_2px_12px_rgba(0,0,0,0.04)]",
-                "hover:bg-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]",
-                "active:bg-slate-50",
-                "dark:hover:bg-slate-700/60",
-              )}
+              className={[
+                'group relative flex cursor-pointer items-center justify-center gap-3 overflow-hidden rounded-[1.4rem] bg-gradient-to-r px-6 py-3 text-white transition-all duration-300',
+                platform.color,
+                platform.shadow,
+                'shadow-[0_8px_24px_rgba(15,23,42,0.14)] hover:-translate-y-0.5 hover:brightness-105 hover:shadow-[0_12px_28px_rgba(15,23,42,0.18)] active:scale-[0.98]',
+              ].join(' ')}
             >
-              <div className={cn(
-                "w-2.5 h-2.5 rounded-full border border-white/20 dark:border-white/10 shadow-[0_0_10px_rgba(0,0,0,0.1)] dark:shadow-[0_0_10px_rgba(255,255,255,0.1)] relative z-10",
-                platform.color
-              )} />
-              <span className="relative z-10 text-[15px] font-bold tracking-wide text-slate-700 dark:text-slate-200 transition-colors duration-300 group-hover:text-slate-900 dark:group-hover:text-white">
+              <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.24),transparent_45%,rgba(255,255,255,0.08))] opacity-80" />
+              <div className="relative z-10 h-2.5 w-2.5 rounded-full border border-white/30 bg-white/90 shadow-[0_0_10px_rgba(255,255,255,0.35)]" />
+              <span className="relative z-10 text-[15px] font-bold tracking-wide text-white">
                 {platform.name}
               </span>
             </div>
           ))}
         </Marquee>
-
 
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, memo, useRef } from "react";
-import { motion, LayoutGroup } from "framer-motion";
+import { motion } from "framer-motion";
 import { IoCheckmarkCircle, IoEllipseOutline } from "react-icons/io5";
 import { type CloudTypeValue } from "@/types/api";
 import { useSearchStore } from "@/stores/searchStore";
@@ -114,7 +114,7 @@ const CloudTypeFilter: React.FC = () => {
         {/* 内容容器 */}
         <div
           data-testid="cloud-type-filter-surface"
-          className="relative overflow-hidden p-6 sm:p-8 rounded-[2rem] bg-white/40 dark:bg-slate-950/40 backdrop-blur-3xl border-[0.5px] border-slate-200/50 dark:border-white/[0.08] shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] transition-all duration-500 hover:shadow-[0_16px_48px_rgba(15,23,42,0.06)] dark:hover:shadow-[0_16px_48px_rgba(0,0,0,0.4)]"
+          className="relative overflow-hidden rounded-[2rem] border-[0.5px] border-white/60 bg-white/60 p-6 shadow-[0_12px_40px_rgba(15,23,42,0.04)] backdrop-blur-3xl transition-all duration-500 hover:shadow-[0_16px_48px_rgba(15,23,42,0.06)] dark:border-white/[0.06] dark:bg-slate-950/40 dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_16px_48px_rgba(0,0,0,0.4)] sm:p-8"
         >
           {/* 顶部栏：标题与全选 */}
           <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
@@ -135,8 +135,8 @@ const CloudTypeFilter: React.FC = () => {
                 </svg>
               </div>
               <div className="min-w-[150px]">
-                <h3 className="text-xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
-                  筛选
+                <h3 className="text-xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100">
+                  来源筛选
                 </h3>
                 <p className="text-[14px] text-slate-500 dark:text-slate-400 mt-0.5 truncate font-medium">
                   {isAllSelected
@@ -175,32 +175,28 @@ const CloudTypeFilter: React.FC = () => {
           </div>
 
           {/* 筛选标签网格 (6, 5 对称排布) */}
-          <LayoutGroup>
-            <motion.div layout className="relative z-10 flex flex-col items-center gap-3 w-full">
-              {/* 第一行: 6 个 */}
-              <motion.div layout className="flex flex-wrap justify-center gap-3 w-full">
-                {cloudTypeConfigs.slice(0, 6).map((config) => (
-                  <CloudTypeTag
-                    key={config.type}
-                    config={config}
-                    isSelected={isTypeSelected(config.type)}
-                    onToggle={handleTypeToggle}
-                  />
-                ))}
-              </motion.div>
-              {/* 第二行: 剩下 5 个 */}
-              <motion.div layout className="flex flex-wrap justify-center gap-3 w-full">
-                {cloudTypeConfigs.slice(6).map((config) => (
-                  <CloudTypeTag
-                    key={config.type}
-                    config={config}
-                    isSelected={isTypeSelected(config.type)}
-                    onToggle={handleTypeToggle}
-                  />
-                ))}
-              </motion.div>
-            </motion.div>
-          </LayoutGroup>
+          <div className="relative z-10 flex w-full flex-col items-center gap-3">
+            <div className="flex w-full flex-wrap justify-center gap-3">
+              {cloudTypeConfigs.slice(0, 6).map((config) => (
+                <CloudTypeTag
+                  key={config.type}
+                  config={config}
+                  isSelected={isTypeSelected(config.type)}
+                  onToggle={handleTypeToggle}
+                />
+              ))}
+            </div>
+            <div className="flex w-full flex-wrap justify-center gap-3">
+              {cloudTypeConfigs.slice(6).map((config) => (
+                <CloudTypeTag
+                  key={config.type}
+                  config={config}
+                  isSelected={isTypeSelected(config.type)}
+                  onToggle={handleTypeToggle}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </motion.div>

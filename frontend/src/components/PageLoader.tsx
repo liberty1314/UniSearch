@@ -10,6 +10,8 @@ const PageLoader: React.FC<PageLoaderProps> = ({ isLoading, onComplete }) => {
     const [progress, setProgress] = useState(0);
     const [visible, setVisible] = useState(true);
 
+    const stageLabels = ['搜索核心', '主题', '导航', '搜索'];
+
     // 进度模拟
     useEffect(() => {
         if (!isLoading) return;
@@ -61,31 +63,86 @@ const PageLoader: React.FC<PageLoaderProps> = ({ isLoading, onComplete }) => {
     return (
         <div
             className={cn(
-                'fixed inset-0 z-[9999] overflow-hidden bg-[#f5f5f7] dark:bg-[#000000] flex flex-col items-center justify-center transition-opacity duration-700 ease-out',
+                'fixed inset-0 z-[9999] overflow-hidden bg-[#f5f5f7] dark:bg-[#000000] transition-opacity duration-700 ease-out',
                 visible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
             )}
             onTransitionEnd={handleTransitionEnd}
         >
-            <div className="flex flex-col items-center animate-in fade-in duration-1000 zoom-in-[0.98]">
-                <img
-                    src="/Uni.png"
-                    alt="UniSearch Logo"
-                    className="h-[72px] w-[72px] object-contain mb-10 dark:brightness-110 drop-shadow-sm dark:drop-shadow-none"
-                />
+            <div className="relative flex min-h-screen flex-col items-center justify-center px-6">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.14),transparent_28%),radial-gradient(circle_at_bottom,rgba(6,182,212,0.12),transparent_24%)]" />
 
-                <div 
-                    className="h-[3px] w-[200px] overflow-hidden rounded-full bg-[#d2d2d7] dark:bg-[#333336]"
-                >
-                    <div 
-                        className="h-full bg-[#1d1d1f] dark:bg-[#ffffff] transition-[width] duration-300 ease-out rounded-full"
-                        style={{ width: `${progress}%` }}
-                    />
+                <div className="relative z-10 flex flex-col items-center animate-in fade-in duration-1000 zoom-in-[0.98]">
+                    <div
+                        data-testid="page-loader-orbit"
+                        className="relative mb-10 flex h-36 w-36 items-center justify-center rounded-full border border-white/50 bg-white/45 shadow-[0_32px_80px_rgba(37,99,235,0.12)] backdrop-blur-3xl motion-reduce:animate-none dark:border-white/10 dark:bg-slate-950/55 dark:shadow-[0_32px_80px_rgba(8,145,178,0.16)]"
+                    >
+                        <div className="absolute inset-3 rounded-full border border-blue-200/60 dark:border-cyan-900/50" />
+                        <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_180deg,rgba(56,189,248,0.08),rgba(59,130,246,0.35),rgba(6,182,212,0.5),rgba(56,189,248,0.08))] blur-xl motion-safe:animate-spin motion-reduce:animate-none" />
+                        <div
+                            data-testid="page-loader-core-shell"
+                            className="relative flex h-24 w-24 items-center justify-center rounded-full border border-white/70 bg-gradient-to-br from-white via-blue-50 to-cyan-50 shadow-[0_16px_40px_rgba(37,99,235,0.16)] dark:border-white/10 dark:from-slate-900 dark:via-blue-950 dark:to-cyan-950"
+                        >
+                            <img
+                                src="/Uni.png"
+                                alt="UniSearch Logo"
+                                className="h-[52px] w-[52px] object-contain dark:brightness-110"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="mb-5 text-center">
+                        <p
+                            data-testid="page-loader-stage"
+                            className="text-[12px] font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400"
+                        >
+                            {progress >= 100 ? '启动完成' : '正在唤醒搜索引擎'}
+                        </p>
+                        <p className="mt-3 text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+                            {progress >= 100 ? '即将进入 UniSearch 工作区' : '同步导航、主题与搜索能力'}
+                        </p>
+                    </div>
+
+                    <div
+                        data-testid="page-loader-status-row"
+                        className="mb-10 flex flex-wrap items-center justify-center gap-2"
+                    >
+                        {stageLabels.map((label) => (
+                            <span
+                                key={label}
+                                className="inline-flex items-center rounded-full border border-slate-200/80 bg-white/70 px-3 py-1 text-[11px] font-medium text-slate-600 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-300"
+                            >
+                                {label}
+                            </span>
+                        ))}
+                        {progress >= 100 ? (
+                            <span className="inline-flex items-center rounded-full border border-cyan-200/80 bg-cyan-50/90 px-3 py-1 text-[11px] font-semibold text-cyan-700 shadow-sm dark:border-cyan-900/40 dark:bg-cyan-950/40 dark:text-cyan-300">
+                                已就绪
+                            </span>
+                        ) : null}
+                    </div>
                 </div>
 
-                <div className="mt-6 opacity-0 animate-in fade-in delay-300 duration-1000 fill-mode-forwards text-center">
-                    <p className="text-[12px] font-medium tracking-[0.02em] text-[#1d1d1f]/60 dark:text-white/60">
-                        {progress >= 100 ? '启动完成' : '正在唤醒搜索引擎...'}
-                    </p>
+                <div
+                    data-testid="page-loader-bottom-progress"
+                    className="pointer-events-none absolute inset-x-0 bottom-0 z-10 border-t border-slate-200/80 bg-white/70 px-6 py-5 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/70"
+                >
+                    <div className="mx-auto flex max-w-5xl items-center gap-5">
+                        <div className="min-w-0 flex-1">
+                            <div className="mb-2 flex items-center justify-between text-[12px] font-medium text-slate-500 dark:text-slate-400">
+                                <span>{progress >= 100 ? '当前进度' : '当前进度'}</span>
+                                <span>{Math.round(progress)}%</span>
+                            </div>
+                            <div
+                                data-testid="page-loader-progress-track"
+                                className="h-[4px] overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800"
+                            >
+                                <div
+                                    className="h-full rounded-full bg-gradient-to-r from-sky-400 via-blue-500 to-cyan-500 transition-[width] duration-300 ease-out motion-reduce:animate-none"
+                                    style={{ width: `${progress}%` }}
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

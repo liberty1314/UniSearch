@@ -80,9 +80,9 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
       key: 'username',
       title: '用户名',
       sortable: true,
-          render: (user) => (
-            <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border-[0.5px] border-slate-200/50 bg-white/50 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200">
+      render: (user) => (
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border-[0.5px] border-cyan-100/70 bg-gradient-to-br from-blue-500 to-cyan-500 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(14,165,233,0.22)] dark:border-cyan-400/20">
             {user.username.charAt(0).toUpperCase()}
           </div>
           <div className="flex flex-col min-w-0">
@@ -195,7 +195,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
       <div className="space-y-5">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800">
           <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-[1.35rem] border-[0.5px] border-slate-200/50 bg-white/50 text-lg font-semibold text-slate-700 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200">
+            <div className="flex h-14 w-14 items-center justify-center rounded-[1.35rem] border-[0.5px] border-cyan-100/70 bg-gradient-to-br from-blue-500 to-cyan-500 text-lg font-semibold text-white shadow-[0_14px_30px_rgba(14,165,233,0.24)] dark:border-cyan-400/20">
               {user.username.charAt(0).toUpperCase()}
             </div>
             <div className="space-y-2">
@@ -266,7 +266,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
           </Button>
           <Button
             variant="outline"
-            className="border-[0.5px] border-cyan-200/60 text-cyan-700 hover:bg-cyan-50/80 dark:border-cyan-900/40 dark:text-cyan-300 dark:hover:bg-cyan-950/30"
+            className="border-[0.5px] border-cyan-200/60 text-cyan-700 hover:bg-cyan-50 dark:border-cyan-900/40 dark:text-cyan-300 dark:hover:bg-cyan-950/30"
             onClick={() => {
               onToggleStatus(user.id, !user.is_enabled);
             }}
@@ -321,7 +321,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
               className="h-5 w-5"
             />
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-[0.5px] border-slate-200/50 bg-white/50 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-[0.5px] border-cyan-100/70 bg-gradient-to-br from-blue-500 to-cyan-500 text-xs font-semibold text-white shadow-[0_8px_18px_rgba(14,165,233,0.18)] dark:border-cyan-400/20">
                 {user.username.charAt(0).toUpperCase()}
               </div>
               <div className="flex flex-col">
@@ -378,7 +378,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
                 size="sm"
                 onClick={(e) => { e.stopPropagation(); onToggleStatus(user.id, !user.is_enabled); }}
                 disabled={isDeleting || isBatchOperating}
-                className="h-8 w-8 p-0 rounded-full border border-transparent hover:bg-white/60 dark:hover:bg-white/5"
+                className="h-8 w-8 rounded-full border border-transparent p-0 hover:bg-cyan-50 dark:hover:bg-cyan-950/20"
               >
                 {user.is_enabled ? <PowerOff className="w-4 h-4 text-cyan-700 dark:text-cyan-300" /> : <Power className="w-4 h-4 text-cyan-700 dark:text-cyan-300" />}
               </Button>

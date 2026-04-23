@@ -41,9 +41,9 @@ const colorClasses = {
         iconBg: 'bg-amber-50/80 dark:bg-amber-900/25',
     },
     purple: {
-        tint: 'from-sky-500/12 to-indigo-500/12',
-        icon: 'text-sky-600 dark:text-sky-300',
-        iconBg: 'bg-sky-50/80 dark:bg-sky-900/25',
+        tint: 'from-cyan-500/12 to-blue-500/12',
+        icon: 'text-cyan-700 dark:text-cyan-300',
+        iconBg: 'bg-cyan-50/80 dark:bg-cyan-950/25',
     },
 };
 
