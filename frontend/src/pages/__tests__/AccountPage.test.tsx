@@ -89,18 +89,24 @@ describe('AccountPage', () => {
 
     render(<AccountPage />);
 
+    expect(await screen.findByText('欢迎回来，alice')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /账号概览/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /修改密码/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^修改密码$/ })).toBeInTheDocument();
     expect(screen.getByText('账号工作台')).toBeInTheDocument();
     expect(screen.getByText('ACCOUNT OVERVIEW')).toBeInTheDocument();
+    expect(screen.getByText('身份说明')).toBeInTheDocument();
+    expect(screen.getByText('活跃状态')).toBeInTheDocument();
+    expect(screen.getByText('快捷动作')).toBeInTheDocument();
     expect(screen.getByText('安全提示')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '立即修改密码' })).toBeInTheDocument();
 
     expect(screen.queryByLabelText('当前密码')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /修改密码/ }));
+    await user.click(screen.getByRole('button', { name: '立即修改密码' }));
 
     expect(screen.getByText('安全设置')).toBeInTheDocument();
     expect(screen.getByText('ACCOUNT SECURITY')).toBeInTheDocument();
+    expect(screen.getByText('密码更新建议')).toBeInTheDocument();
     expect(screen.getByLabelText('当前密码')).toBeInTheDocument();
     expect(screen.queryByText('安全提示')).not.toBeInTheDocument();
   });
@@ -120,8 +126,8 @@ describe('AccountPage', () => {
 
     render(<AccountPage />);
 
-    await screen.findByRole('button', { name: /修改密码/ });
-    await user.click(screen.getByRole('button', { name: /修改密码/ }));
+    await screen.findByRole('button', { name: /^修改密码$/ });
+    await user.click(screen.getByRole('button', { name: /^修改密码$/ }));
     await user.type(screen.getByLabelText('当前密码'), 'old-password');
     await user.type(screen.getByLabelText('新密码'), 'new-password');
     await user.type(screen.getByLabelText('确认新密码'), 'different-password');
@@ -138,8 +144,8 @@ describe('AccountPage', () => {
 
     render(<AccountPage />);
 
-    await screen.findByRole('button', { name: /修改密码/ });
-    await user.click(screen.getByRole('button', { name: /修改密码/ }));
+    await screen.findByRole('button', { name: /^修改密码$/ });
+    await user.click(screen.getByRole('button', { name: /^修改密码$/ }));
 
     const currentPasswordInput = screen.getByLabelText('当前密码') as HTMLInputElement;
     const newPasswordInput = screen.getByLabelText('新密码') as HTMLInputElement;

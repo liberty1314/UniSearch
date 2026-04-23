@@ -1,15 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import AccountOverviewPanel from '@/components/account/AccountOverviewPanel';
 import AccountSecurityPanel from '@/components/account/AccountSecurityPanel';
 import AccountWorkspaceShell from '@/components/account/AccountWorkspaceShell';
 import type { AccountProfile, AccountSection } from '@/components/account/accountTypes';
-import {
-  ACCOUNT_PANEL_SURFACE_CLASSES,
-  ACCOUNT_PANEL_SURFACE_HOVER_CLASSES,
-} from '@/components/account/accountDesign';
 import {
   validateAccountPassword,
   validateAccountPasswordConfirmation,
@@ -97,37 +92,6 @@ const AccountPage: React.FC = () => {
   return (
     <PublicPageShell contentClassName="container mx-auto px-4 py-8 pb-16 pt-24">
       <div className="mx-auto max-w-7xl space-y-8">
-        <motion.section
-          initial={{ opacity: 0, y: -18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-          className={`${ACCOUNT_PANEL_SURFACE_CLASSES} ${ACCOUNT_PANEL_SURFACE_HOVER_CLASSES} px-6 py-7 sm:px-8 sm:py-8`}
-        >
-
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-5">
-              <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-[1.5rem] border-[0.5px] border-slate-200/50 bg-white/40 text-slate-700 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200">
-                  <UserRound className="h-8 w-8" strokeWidth={2} />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.34em] text-slate-400 dark:text-slate-500">
-                    Account Center
-                  </p>
-                  <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-800 dark:text-white sm:text-4xl">
-                    个人中心
-                  </h1>
-                </div>
-              </div>
-            </div>
-
-            <div className="inline-flex w-fit items-center gap-2 rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-600 shadow-[0_4px_20px_rgba(0,0,0,0.03)] backdrop-blur-md transition-all dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-300">
-              <Sparkles className="h-3.5 w-3.5" />
-              Workspace Mode
-            </div>
-          </div>
-        </motion.section>
-
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -153,6 +117,7 @@ const AccountPage: React.FC = () => {
                     profile={profile}
                     cachedUsername={cachedUsername}
                     isLoadingProfile={isLoadingProfile}
+                    onOpenSecurity={() => setActiveSection('security')}
                   />
                 </motion.div>
               ) : (

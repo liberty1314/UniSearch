@@ -223,3 +223,17 @@
   - frontend/src/components/admin/adminDesign.ts
   - frontend/src/components/ui/AppleInput.tsx
   - frontend/src/pages/Admin.tsx
+
+## [2026-04-23 23:29:22] refactor(frontend): 重构个人中心页面工作台布局
+- **内容**: 按“上横幅，下双栏”的新骨架重构个人中心页面，新增欢迎横幅、核心信息卡和展示型模块，并保持现有账号资料与密码修改数据流不变；同步补充设计文档、实施计划和页面测试。
+- **文件**:
+  - docs/superpowers/plans/2026-04-23-account-page-redesign.md
+  - docs/superpowers/specs/2026-04-23-account-page-redesign-design.md
+  - frontend/src/components/account/AccountHeroBanner.tsx
+  - frontend/src/components/account/AccountOverviewHighlights.tsx
+  - frontend/src/components/account/AccountOverviewPanel.tsx
+  - frontend/src/components/account/AccountOverviewShowcase.tsx
+  - frontend/src/components/account/AccountSecurityPanel.tsx
+  - frontend/src/components/account/AccountWorkspaceShell.tsx
+  - frontend/src/pages/AccountPage.tsx
+  - frontend/src/pages/__tests__/AccountPage.test.tsx
