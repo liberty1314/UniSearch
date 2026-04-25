@@ -26,11 +26,13 @@ func NewUserService(db *gorm.DB) *UserService {
 
 // UserListResult 用户列表查询结果
 type UserListResult struct {
-	Users      []model.User `json:"users"`
-	Total      int64        `json:"total"`
-	Page       int          `json:"page"`
-	PageSize   int          `json:"page_size"`
-	TotalPages int          `json:"total_pages"`
+	Users                 []model.User      `json:"users"`
+	MonthlyLoginDays      map[uint][]string `json:"monthly_login_days"`
+	MonthlyLoginDayCounts map[uint]int      `json:"monthly_login_day_counts"`
+	Total                 int64             `json:"total"`
+	Page                  int               `json:"page"`
+	PageSize              int               `json:"page_size"`
+	TotalPages            int               `json:"total_pages"`
 }
 
 // BatchOperationResult 批量操作结果
@@ -77,20 +79,61 @@ func (s *UserService) ListUsers(page, pageSize int, keyword, role string) (*User
 	// 计算总页数
 	totalPages := int((total + int64(pageSize) - 1) / int64(pageSize))
 
-	// 分页查询（按最后登录时间降序排序，未登录的排在后面，再按创建时间降序）
+	// 分页查询：启用用户优先，禁用用户置底；同组内按最近登录和创建时间排序。
 	var users []model.User
 	offset := (page - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("last_login_at IS NULL ASC, last_login_at DESC, created_at DESC").Find(&users).Error; err != nil {
+	if err := query.Offset(offset).Limit(pageSize).Order("CASE WHEN is_enabled THEN 0 ELSE 1 END ASC, last_login_at IS NULL ASC, last_login_at DESC, created_at DESC").Find(&users).Error; err != nil {
 		return nil, fmt.Errorf("查询用户列表失败: %w", err)
 	}
 
+	monthlyLoginDays, monthlyLoginDayCounts, err := s.listCurrentMonthLoginDays(users)
+	if err != nil {
+		return nil, err
+	}
+
 	return &UserListResult{
-		Users:      users,
-		Total:      total,
-		Page:       page,
-		PageSize:   pageSize,
-		TotalPages: totalPages,
+		Users:                 users,
+		MonthlyLoginDays:      monthlyLoginDays,
+		MonthlyLoginDayCounts: monthlyLoginDayCounts,
+		Total:                 total,
+		Page:                  page,
+		PageSize:              pageSize,
+		TotalPages:            totalPages,
 	}, nil
+}
+
+func (s *UserService) listCurrentMonthLoginDays(users []model.User) (map[uint][]string, map[uint]int, error) {
+	loginDays := make(map[uint][]string, len(users))
+	loginDayCounts := make(map[uint]int, len(users))
+	if len(users) == 0 {
+		return loginDays, loginDayCounts, nil
+	}
+
+	userIDs := make([]uint, 0, len(users))
+	for _, user := range users {
+		userIDs = append(userIDs, user.ID)
+		loginDays[user.ID] = []string{}
+		loginDayCounts[user.ID] = 0
+	}
+
+	now := time.Now()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+	nextMonthStart := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+
+	var stats []model.UserLoginDailyStat
+	if err := s.db.
+		Where("user_id IN ? AND login_date >= ? AND login_date < ?", userIDs, monthStart, nextMonthStart).
+		Order("login_date ASC").
+		Find(&stats).Error; err != nil {
+		return nil, nil, fmt.Errorf("查询用户月登录统计失败: %w", err)
+	}
+
+	for _, stat := range stats {
+		loginDays[stat.UserID] = append(loginDays[stat.UserID], stat.LoginDate)
+		loginDayCounts[stat.UserID] = len(loginDays[stat.UserID])
+	}
+
+	return loginDays, loginDayCounts, nil
 }
 
 // GetUserByID 根据ID获取用户

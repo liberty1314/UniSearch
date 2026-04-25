@@ -231,7 +231,7 @@ export const BatchDeleteDialog: React.FC<BatchDeleteDialogProps> = ({
   // 确认删除对话框
   return (
     <AlertDialog open={open} onOpenChange={handleClose}>
-      <AlertDialogContent className="sm:max-w-[500px]">
+      <AlertDialogContent className="sm:max-w-[500px]" closeDisabled={isSubmitting}>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-500" />

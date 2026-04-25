@@ -25,7 +25,7 @@ type mockAccountSearchPlugin struct {
 	name string
 }
 
-func (m *mockAccountSearchPlugin) Name() string { return m.name }
+func (m *mockAccountSearchPlugin) Name() string  { return m.name }
 func (m *mockAccountSearchPlugin) Priority() int { return 1 }
 func (m *mockAccountSearchPlugin) AsyncSearch(
 	keyword string,
@@ -35,9 +35,9 @@ func (m *mockAccountSearchPlugin) AsyncSearch(
 ) ([]model.SearchResult, error) {
 	return m.Search(keyword, nil)
 }
-func (m *mockAccountSearchPlugin) SetMainCacheKey(_ string)      {}
-func (m *mockAccountSearchPlugin) SetCurrentKeyword(_ string)    {}
-func (m *mockAccountSearchPlugin) SkipServiceFilter() bool       { return false }
+func (m *mockAccountSearchPlugin) SetMainCacheKey(_ string)   {}
+func (m *mockAccountSearchPlugin) SetCurrentKeyword(_ string) {}
+func (m *mockAccountSearchPlugin) SkipServiceFilter() bool    { return false }
 func (m *mockAccountSearchPlugin) Search(keyword string, _ map[string]interface{}) ([]model.SearchResult, error) {
 	return []model.SearchResult{
 		{
@@ -59,7 +59,7 @@ func newAccountFlowTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("open sqlite db: %v", err)
 	}
 
-	if err := db.AutoMigrate(&model.User{}, &model.SystemSettings{}, &model.RefreshToken{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.SystemSettings{}, &model.RefreshToken{}, &model.UserLoginDailyStat{}); err != nil {
 		t.Fatalf("auto migrate test db: %v", err)
 	}
 
@@ -173,6 +173,106 @@ func TestSearchAllowsAuthenticatedAccountWithoutAPIKey(t *testing.T) {
 	}
 }
 
+func TestSearchRecordsDailyLoginStatForAuthenticatedAccount(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := newAccountFlowTestDB(t)
+	user := createAccountFlowUser(t, db, "alice", "password123")
+	router := newAccountFlowRouter(t, db)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/search", bytes.NewBufferString(`{"kw":"仙逆","src":"plugin","plugins":["mock"]}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+issueJWT(t, user))
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	today := time.Now().Format("2006-01-02")
+	var stat model.UserLoginDailyStat
+	if err := db.Where("user_id = ? AND login_date = ?", user.ID, today).First(&stat).Error; err != nil {
+		t.Fatalf("expected daily login stat for search request: %v", err)
+	}
+	if stat.LoginCount != 1 {
+		t.Fatalf("expected login_count to be 1 after one search-triggered stat, got %d", stat.LoginCount)
+	}
+
+	var refreshedUser model.User
+	if err := db.First(&refreshedUser, user.ID).Error; err != nil {
+		t.Fatalf("reload user: %v", err)
+	}
+	if refreshedUser.LastLoginAt == nil {
+		t.Fatal("expected search request to refresh last_login_at")
+	}
+}
+
+func TestAuthenticatedUserRequestRecordsDailyActivityStat(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := newAccountFlowTestDB(t)
+	user := createAccountFlowUser(t, db, "alice", "password123")
+	router := newAccountFlowRouter(t, db)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/user/me", nil)
+	req.Header.Set("Authorization", "Bearer "+issueJWT(t, user))
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	today := time.Now().Format("2006-01-02")
+	var stat model.UserLoginDailyStat
+	if err := db.Where("user_id = ? AND login_date = ?", user.ID, today).First(&stat).Error; err != nil {
+		t.Fatalf("expected daily activity stat for authenticated request: %v", err)
+	}
+	if stat.LoginCount != 1 {
+		t.Fatalf("expected login_count to stay at 1 for the first authenticated activity, got %d", stat.LoginCount)
+	}
+
+	var refreshedUser model.User
+	if err := db.First(&refreshedUser, user.ID).Error; err != nil {
+		t.Fatalf("reload user: %v", err)
+	}
+	if refreshedUser.LastLoginAt == nil {
+		t.Fatal("expected authenticated request to refresh last_login_at")
+	}
+}
+
+func TestAuthenticatedUserRequestDoesNotIncrementExistingDailyStat(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := newAccountFlowTestDB(t)
+	user := createAccountFlowUser(t, db, "alice", "password123")
+	router := newAccountFlowRouter(t, db)
+
+	authService := service.NewAuthService()
+	if _, _, _, err := authService.Login("alice", "password123"); err != nil {
+		t.Fatalf("expected login to succeed, got %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/user/me", nil)
+	req.Header.Set("Authorization", "Bearer "+issueJWT(t, user))
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	today := time.Now().Format("2006-01-02")
+	var stat model.UserLoginDailyStat
+	if err := db.Where("user_id = ? AND login_date = ?", user.ID, today).First(&stat).Error; err != nil {
+		t.Fatalf("expected existing daily stat to remain queryable: %v", err)
+	}
+	if stat.LoginCount != 1 {
+		t.Fatalf("expected authenticated activity to preserve existing daily login_count, got %d", stat.LoginCount)
+	}
+}
+
 func TestLoginRejectsAPIKeyStylePasswordAsNormalCredential(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := newAccountFlowTestDB(t)
@@ -188,6 +288,29 @@ func TestLoginRejectsAPIKeyStylePasswordAsNormalCredential(t *testing.T) {
 
 	if recorder.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestLoginRecordsDailyLoginStat(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := newAccountFlowTestDB(t)
+	createAccountFlowUser(t, db, "alice", "password123")
+
+	authService := service.NewAuthService()
+	if _, _, _, err := authService.Login("alice", "password123"); err != nil {
+		t.Fatalf("expected first login to succeed, got %v", err)
+	}
+	if _, _, _, err := authService.Login("alice", "password123"); err != nil {
+		t.Fatalf("expected second login to succeed, got %v", err)
+	}
+
+	today := time.Now().Format("2006-01-02")
+	var stat model.UserLoginDailyStat
+	if err := db.Where("login_date = ?", today).First(&stat).Error; err != nil {
+		t.Fatalf("expected daily login stat for today: %v", err)
+	}
+	if stat.LoginCount != 2 {
+		t.Fatalf("expected login_count to be 2, got %d", stat.LoginCount)
 	}
 }
 

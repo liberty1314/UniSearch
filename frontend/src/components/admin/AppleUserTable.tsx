@@ -26,6 +26,25 @@ interface AppleUserTableProps {
   isLoading: boolean;
 }
 
+const USER_TABLE_GRID_GAP_CLASS_NAME = 'gap-x-5';
+const USER_TABLE_GRID_TEMPLATE_COLUMNS = [
+  'minmax(0,0.72fr)',
+  'minmax(0,1.45fr)',
+  'minmax(0,0.55fr)',
+  'minmax(0,0.78fr)',
+  'minmax(0,0.9fr)',
+  'minmax(0,1.5fr)',
+  'minmax(0,0.75fr)',
+].join(' ');
+const USER_TABLE_GRID_TEMPLATE_COLUMNS_WITHOUT_SELECT = [
+  'minmax(0,1.45fr)',
+  'minmax(0,0.55fr)',
+  'minmax(0,0.78fr)',
+  'minmax(0,0.9fr)',
+  'minmax(0,1.5fr)',
+  'minmax(0,0.75fr)',
+].join(' ');
+
 /**
  * Apple 风格用户表格组件
  */
@@ -58,37 +77,140 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
     return role === 'admin' ? '管理员' : '用户';
   };
 
+  const getStatusConfig = (user: UserInfo) => {
+    return user.is_enabled
+      ? {
+        text: '正常',
+        badgeClassName: 'bg-green-500/10 text-green-600 border-green-500/30 dark:text-green-300',
+        gradientClassName: 'from-green-500/10 to-transparent',
+        icon: <Power className="w-4 h-4" />,
+      }
+      : {
+        text: '已禁用',
+        badgeClassName: 'bg-red-500/10 text-red-600 border-red-500/30 dark:text-red-300',
+        gradientClassName: 'from-red-500/10 to-transparent',
+        icon: <PowerOff className="w-4 h-4" />,
+      };
+  };
+
+  const getCurrentMonthDayCount = () => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  };
+
+  const getMonthlyLoginDays = (user: UserInfo) => {
+    return user.monthly_login_days ?? [];
+  };
+
+  const getMonthlyLoginDayCount = (user: UserInfo) => {
+    return user.monthly_login_day_count ?? getMonthlyLoginDays(user).length;
+  };
+
+  const renderMonthlyLoginBars = (user: UserInfo) => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const dayCount = getCurrentMonthDayCount();
+    const loginDaySet = new Set(getMonthlyLoginDays(user));
+    const loggedInDays = getMonthlyLoginDayCount(user);
+
+    return (
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">已登录 {loggedInDays} 天</div>
+          <div className="mt-1 flex max-w-full gap-0.5 overflow-hidden" aria-label={`本月登录 ${loggedInDays} 天`}>
+            {Array.from({ length: dayCount }).map((_, index) => {
+              const date = new Date(currentYear, currentMonth, index + 1);
+              const dateKey = [
+                date.getFullYear(),
+                String(date.getMonth() + 1).padStart(2, '0'),
+                String(date.getDate()).padStart(2, '0'),
+              ].join('-');
+              const hasLogin = loginDaySet.has(dateKey);
+
+              return (
+              <span
+                key={index}
+                data-month-login-day={dateKey}
+                title={`${dateKey}${hasLogin ? ' 已登录' : ' 未登录'}`}
+                className={cn(
+                  'h-5 w-1 flex-1 rounded-full border transition-all duration-500',
+                  hasLogin
+                    ? 'border-cyan-400/30 bg-cyan-500/70 dark:border-cyan-300/30 dark:bg-cyan-300/80'
+                    : user.is_enabled
+                      ? 'border-slate-200/70 bg-slate-200/40 dark:border-white/10 dark:bg-white/10'
+                      : 'border-red-200/40 bg-red-300/20 dark:border-red-900/30 dark:bg-red-950/30'
+                )}
+              />
+              );
+            })}
+          </div>
+        </div>
+        <span className="min-w-12 text-sm font-semibold tabular-nums text-slate-700 dark:text-slate-200">{loggedInDays}/{dayCount}</span>
+      </div>
+    );
+  };
+
+  const renderUserAvatar = (user: UserInfo, sizeClassName = 'h-10 w-10', textClassName = 'text-sm') => (
+    <div
+      className={cn(
+        'flex flex-shrink-0 items-center justify-center rounded-2xl border-[0.5px] border-cyan-100/70 bg-gradient-to-br from-blue-500 to-cyan-500 font-semibold text-white shadow-[0_10px_24px_rgba(14,165,233,0.22)] dark:border-cyan-400/20',
+        sizeClassName,
+        textClassName
+      )}
+    >
+      {user.username.charAt(0).toUpperCase()}
+    </div>
+  );
+
+  const renderStatusBadge = (user: UserInfo, iconClassName = 'w-4 h-4') => {
+    const statusConfig = getStatusConfig(user);
+
+    return (
+      <div className={cn('inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium', statusConfig.badgeClassName)}>
+        {React.cloneElement(statusConfig.icon, { className: iconClassName })}
+        {statusConfig.text}
+      </div>
+    );
+  };
+
   /**
    * 列配置
    */
   const columns: AdminDataTableColumn<UserInfo>[] = [
     {
       key: 'select',
-      title: '',
-      width: '48px',
-      render: (user) => (
-        <Checkbox
-          checked={selectedUsers.has(user.id)}
-          onCheckedChange={(checked) => onSelectUser(user.id, checked as boolean)}
-          disabled={user.id === currentUserId || isLoading || isBatchOperating || isDeleting}
-          aria-label={`选择 ${user.username}`}
-          onClick={(e: React.MouseEvent) => e.stopPropagation()}
-        />
+      title: 'No',
+      width: '72px',
+      render: (user, index) => (
+        <div className="flex min-h-10 items-center gap-2">
+          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center">
+            <Checkbox
+              checked={selectedUsers.has(user.id)}
+              onCheckedChange={(checked) => onSelectUser(user.id, checked as boolean)}
+              disabled={user.id === currentUserId || isLoading || isBatchOperating || isDeleting}
+              aria-label={`选择 ${user.username}`}
+              className="h-4 w-4"
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            />
+          </span>
+          <span className="text-2xl font-bold text-slate-300 dark:text-slate-600">
+            {String(index + 1).padStart(2, '0')}
+          </span>
+        </div>
       ),
     },
     {
-      key: 'username',
-      title: '用户名',
+      key: 'user',
+      title: '用户身份',
       sortable: true,
       render: (user) => (
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border-[0.5px] border-cyan-100/70 bg-gradient-to-br from-blue-500 to-cyan-500 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(14,165,233,0.22)] dark:border-cyan-400/20">
-            {user.username.charAt(0).toUpperCase()}
-          </div>
+        <div className="flex min-h-10 items-center gap-3">
+          {renderUserAvatar(user)}
           <div className="flex flex-col min-w-0">
-            <span className="font-medium truncate">{user.username}</span>
+            <span className="truncate text-base font-semibold text-slate-900 dark:text-slate-50">{user.username}</span>
             {user.id === currentUserId && (
-              <span className="text-xs text-blue-600 dark:text-cyan-300">
+              <span className="text-xs font-medium text-blue-600 dark:text-cyan-300">
                 当前用户
               </span>
             )}
@@ -115,7 +237,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
       hideOnMobile: true,
       render: (user) => (
         <div className="flex flex-col">
-          <span className="text-sm">
+          <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
             {new Date(user.created_at).toLocaleDateString('zh-CN')}
           </span>
           <span className="text-xs text-gray-500 dark:text-slate-400">
@@ -134,7 +256,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
       render: (user) =>
         user.last_login_at ? (
           <div className="flex flex-col">
-            <span className="text-sm">
+            <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
               {new Date(user.last_login_at).toLocaleDateString('zh-CN')}
             </span>
             <span className="text-xs text-gray-500 dark:text-slate-400">
@@ -149,29 +271,16 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
         ),
     },
     {
+      key: 'monthly_login',
+      title: '本月登录',
+      hideOnMobile: true,
+      render: (user) => renderMonthlyLoginBars(user),
+    },
+    {
       key: 'status',
       title: '状态',
       align: 'center',
-      render: (user) => {
-        const statusConfig = user.is_enabled
-          ? {
-            text: '正常',
-            color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
-            icon: <Power className="w-4 h-4" />,
-          }
-          : {
-            text: '已禁用',
-            color: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',
-            icon: <PowerOff className="w-4 h-4" />,
-          };
-
-        return (
-          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
-            {statusConfig.icon}
-            {statusConfig.text}
-          </div>
-        );
-      },
+      render: (user) => renderStatusBadge(user),
     },
   ];
 
@@ -179,26 +288,14 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
 
   const renderDesktopOverlay = (user: UserInfo, _close: () => void) => {
     const isCurrentUser = user.id === currentUserId;
-    const statusConfig = user.is_enabled
-      ? {
-        text: '正常',
-        color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
-        icon: <Power className="w-4 h-4" />,
-      }
-      : {
-        text: '已禁用',
-        color: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',
-        icon: <PowerOff className="w-4 h-4" />,
-      };
 
     return (
-      <div className="space-y-5">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800">
+      <div className="space-y-4">
+        <div className="relative flex items-start justify-between gap-4 overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-r from-slate-50/90 to-transparent p-4 dark:border-white/10 dark:from-slate-900/80">
+          <div className={cn('pointer-events-none absolute inset-0 bg-gradient-to-l', getStatusConfig(user).gradientClassName)} />
           <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-[1.35rem] border-[0.5px] border-cyan-100/70 bg-gradient-to-br from-blue-500 to-cyan-500 text-lg font-semibold text-white shadow-[0_14px_30px_rgba(14,165,233,0.24)] dark:border-cyan-400/20">
-              {user.username.charAt(0).toUpperCase()}
-            </div>
-            <div className="space-y-2">
+            {renderUserAvatar(user, 'h-14 w-14', 'text-lg')}
+            <div className="relative space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <h4 className="text-xl font-semibold text-slate-900 dark:text-slate-50">{user.username}</h4>
                 <Badge variant={getRoleBadgeVariant(user.role)}>{getRoleText(user.role)}</Badge>
@@ -209,12 +306,9 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
                   </span>
                 ) : null}
               </div>
-              <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium ${statusConfig.color}`}>
-                {statusConfig.icon}
-                {statusConfig.text}
-              </div>
+              {renderStatusBadge(user)}
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                点击操作后沿用当前弹窗和业务流程，不改现有权限规则。
+                点击操作后沿用当前弹窗和业务流程，不修改现有权限规则。
               </p>
             </div>
           </div>
@@ -239,6 +333,11 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">账户类型</p>
             <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">{getRoleText(user.role)}</p>
           </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">本月登录情况</p>
+          {renderMonthlyLoginBars(user)}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -296,17 +395,6 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
    */
   const renderMobileItem = (user: UserInfo) => {
     const isCurrentUser = user.id === currentUserId;
-    const statusConfig = user.is_enabled
-      ? {
-        text: '正常',
-        color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
-        icon: <Power className="w-3 h-3" />,
-      }
-      : {
-        text: '已禁用',
-        color: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',
-        icon: <PowerOff className="w-3 h-3" />,
-      };
 
     return (
       <div className="flex flex-col gap-3">
@@ -321,9 +409,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
               className="h-5 w-5"
             />
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-[0.5px] border-cyan-100/70 bg-gradient-to-br from-blue-500 to-cyan-500 text-xs font-semibold text-white shadow-[0_8px_18px_rgba(14,165,233,0.18)] dark:border-cyan-400/20">
-                {user.username.charAt(0).toUpperCase()}
-              </div>
+              {renderUserAvatar(user, 'h-8 w-8 rounded-full', 'text-xs')}
               <div className="flex flex-col">
                 <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{user.username}</span>
                 <span className="text-[10px] text-gray-500 dark:text-slate-400">
@@ -333,10 +419,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
             </div>
           </div>
 
-          <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${statusConfig.color}`}>
-            {statusConfig.icon}
-            <span>{statusConfig.text}</span>
-          </div>
+          {renderStatusBadge(user, 'w-3 h-3')}
         </div>
 
         {/* Content: Stats */}
@@ -411,6 +494,14 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
       renderDesktopOverlay={renderDesktopOverlay}
       onOverlayOpenChange={(item) => setActiveUser(item)}
       disableInteractionsWhenOverlayOpen
+      desktopVariant="management-grid"
+      desktopGridGapClassName={USER_TABLE_GRID_GAP_CLASS_NAME}
+      desktopGridTemplateColumns={
+        activeUser
+          ? USER_TABLE_GRID_TEMPLATE_COLUMNS_WITHOUT_SELECT
+          : USER_TABLE_GRID_TEMPLATE_COLUMNS
+      }
+      getRowAccentClassName={(user) => getStatusConfig(user).gradientClassName}
     />
   );
 };

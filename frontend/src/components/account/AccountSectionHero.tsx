@@ -13,14 +13,12 @@ interface AccountSectionHeroProps {
   eyebrow: string;
   title: string;
   badgeLabel: string;
-  accentClassName?: string;
 }
 
 const AccountSectionHero: React.FC<AccountSectionHeroProps> = ({
   eyebrow,
   title,
   badgeLabel,
-  accentClassName,
 }) => {
   return (
     <div

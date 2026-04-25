@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -109,6 +109,40 @@ describe('Auth entry pages', () => {
 
     expect(container.querySelector('.auth-sparkle-intro')).toBeNull();
     expect(screen.getByRole('button', { name: '立即注册' }).className).not.toContain('hover:scale-[1.02]');
+  });
+
+  it('keeps login and register pages on the same fixed auth layout footprint', async () => {
+    const loginRender = render(
+      <MemoryRouter initialEntries={['/login']}>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('欢迎回来');
+
+    const loginRoot = loginRender.container.firstChild as HTMLElement;
+    const loginCard = loginRender.container.querySelector('.glass-panel') as HTMLElement;
+
+    expect(loginRoot).toHaveClass('min-h-dvh');
+    expect(loginRoot).toHaveClass('overflow-hidden');
+    expect(loginRoot).not.toHaveClass('overflow-y-auto');
+    expect(loginCard.className).toContain('min-h-[35rem]');
+
+    cleanup();
+
+    const registerRender = render(
+      <MemoryRouter initialEntries={['/register']}>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('创建账户');
+
+    const registerRoot = registerRender.container.firstChild as HTMLElement;
+    const registerCard = registerRender.container.querySelector('.glass-panel') as HTMLElement;
+
+    expect(registerRoot.className).toBe(loginRoot.className);
+    expect(registerCard.className).toContain('min-h-[35rem]');
   });
 
   it('does not render the decorative sparkle icon on the admin login page', async () => {

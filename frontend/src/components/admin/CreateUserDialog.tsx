@@ -335,7 +335,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
             </Dialog>
 
             <AlertDialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
-                <AlertDialogContent>
+                <AlertDialogContent closeDisabled={isLoading}>
                     <AlertDialogHeader>
                         <AlertDialogTitle>恢复已删除账号</AlertDialogTitle>
                         <AlertDialogDescription>

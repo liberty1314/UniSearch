@@ -10,6 +10,7 @@ vi.mock('framer-motion', () => ({
     h2: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => <h2 {...props}>{children}</h2>,
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useReducedMotion: () => false,
 }));
 
 describe('AnnouncementDialog', () => {

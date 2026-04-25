@@ -1,5 +1,6 @@
 import * as React from "react"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
+import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button-variants"
@@ -8,6 +9,7 @@ import {
     dialogShellDescriptionClassName,
     dialogShellFooterClassName,
     dialogShellHeaderClassName,
+    dialogShellCloseClassName,
     dialogShellOverlayClassName,
     dialogShellTitleClassName,
 } from "@/components/ui/dialog-shell"
@@ -35,8 +37,11 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName
 
 const AlertDialogContent = React.forwardRef<
     React.ElementRef<typeof AlertDialogPrimitive.Content>,
-    React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
->(({ className, ...props }, ref) => (
+    React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content> & {
+        showCloseButton?: boolean
+        closeDisabled?: boolean
+    }
+>(({ className, children, showCloseButton = true, closeDisabled = false, ...props }, ref) => (
     <AlertDialogPortal>
         <AlertDialogOverlay />
         <AlertDialogPrimitive.Content
@@ -46,7 +51,18 @@ const AlertDialogContent = React.forwardRef<
                 className
             )}
             {...props}
-        />
+        >
+            {children}
+            {showCloseButton ? (
+                <AlertDialogPrimitive.Cancel
+                    className={dialogShellCloseClassName}
+                    disabled={closeDisabled}
+                >
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">关闭弹窗</span>
+                </AlertDialogPrimitive.Cancel>
+            ) : null}
+        </AlertDialogPrimitive.Content>
     </AlertDialogPortal>
 ))
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName

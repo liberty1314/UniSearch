@@ -719,6 +719,8 @@ export interface UserInfo {
   role: 'admin' | 'user';
   is_enabled: boolean;
   last_login_at: string | null;
+  monthly_login_days?: string[];
+  monthly_login_day_count?: number;
   created_at: string;
   updated_at: string;
 }

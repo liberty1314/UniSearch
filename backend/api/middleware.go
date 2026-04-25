@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
 	"time"
@@ -10,6 +11,37 @@ import (
 	"unisearch/config"
 	"unisearch/util"
 )
+
+func recordAuthenticatedRequestActivity(c *gin.Context) {
+	if authService == nil {
+		return
+	}
+
+	rawUserID, exists := c.Get("user_id")
+	if !exists {
+		return
+	}
+
+	var userID uint
+	switch value := rawUserID.(type) {
+	case uint:
+		userID = value
+	case uint64:
+		userID = uint(value)
+	case int:
+		if value > 0 {
+			userID = uint(value)
+		}
+	}
+
+	if userID == 0 {
+		return
+	}
+
+	if err := authService.MarkUserActiveByUserID(userID); err != nil {
+		log.Printf("⚠️  记录用户活跃统计失败: path=%s user_id=%d err=%v", c.Request.URL.Path, userID, err)
+	}
+}
 
 // CORSMiddleware 跨域中间件
 func CORSMiddleware() gin.HandlerFunc {
@@ -92,6 +124,7 @@ func AuthMiddleware() gin.HandlerFunc {
 				c.Set("user_id", claims.UserID)
 				c.Set("username", claims.Username)
 				c.Set("role", claims.Role)
+				recordAuthenticatedRequestActivity(c)
 				c.Next()
 				return
 			}
@@ -175,6 +208,7 @@ func JWTMiddleware() gin.HandlerFunc {
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
+		recordAuthenticatedRequestActivity(c)
 		c.Next()
 	}
 }
@@ -205,6 +239,7 @@ func SearchJWTMiddleware() gin.HandlerFunc {
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
+		recordAuthenticatedRequestActivity(c)
 		c.Next()
 	}
 }
@@ -237,9 +272,9 @@ func isPublicPath(path string) bool {
 	publicPaths := []string{
 		"/api/auth/register", // 新增：用户注册接口
 		"/api/auth/login",
-		"/api/auth/refresh",        // 新增：刷新令牌
-		"/api/auth/revoke",         // 新增：撤销令牌
-		"/api/auth/validate",       // 新增：Token 验证接口
+		"/api/auth/refresh",  // 新增：刷新令牌
+		"/api/auth/revoke",   // 新增：撤销令牌
+		"/api/auth/validate", // 新增：Token 验证接口
 		"/api/auth/logout",
 		"/api/health",
 		"/api/admin/login",          // 管理员登录接口无需认证

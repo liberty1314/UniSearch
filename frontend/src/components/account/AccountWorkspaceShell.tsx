@@ -1,5 +1,5 @@
 import React from 'react';
-import { Fingerprint, LayoutDashboard, ShieldCheck, UserRound } from 'lucide-react';
+import { Fingerprint, LayoutDashboard, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import AccountHeroBanner from '@/components/account/AccountHeroBanner';

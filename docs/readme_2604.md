@@ -237,3 +237,48 @@
   - frontend/src/components/account/AccountWorkspaceShell.tsx
   - frontend/src/pages/AccountPage.tsx
   - frontend/src/pages/__tests__/AccountPage.test.tsx
+
+## [2026-04-25 20:21:06 CST] feat(auth): 增加月度登录统计并统一认证与管理界面
+- **内容**: 后端新增用户月度登录/活跃统计写入与查询，认证链路补充相关测试；前端统一登录、注册与管理员用户列表的展示结构，并增强后台表格交互体验。
+- **文件**:
+  - backend/api/account_auth_flow_test.go
+  - backend/api/handler.go
+  - backend/api/middleware.go
+  - backend/api/router.go
+  - backend/api/user_handler.go
+  - backend/database/migration.go
+  - backend/model/user_login_daily_stat.go
+  - backend/service/auth_service.go
+  - backend/service/user_service.go
+  - backend/service/user_service_test.go
+  - frontend/package.json
+  - frontend/pnpm-lock.yaml
+  - frontend/src/components/__tests__/AnnouncementDialog.test.tsx
+  - frontend/src/components/account/AccountSectionHero.tsx
+  - frontend/src/components/account/AccountWorkspaceShell.tsx
+  - frontend/src/components/admin/AdminDataTable.tsx
+  - frontend/src/components/admin/AdminUsersView.tsx
+  - frontend/src/components/admin/AppleUserTable.tsx
+  - frontend/src/components/admin/BatchDeleteDialog.tsx
+  - frontend/src/components/admin/ChannelManageWorkspace.tsx
+  - frontend/src/components/admin/CreateUserDialog.tsx
+  - frontend/src/components/admin/PluginManageWorkspace.tsx
+  - frontend/src/components/admin/__tests__/AdminDataTable.test.tsx
+  - frontend/src/components/admin/__tests__/AdminUsersView.test.tsx
+  - frontend/src/components/admin/__tests__/AppleUserTable.test.tsx
+  - frontend/src/components/admin/__tests__/ChannelManageDialog.test.tsx
+  - frontend/src/components/admin/__tests__/CreateUserDialog.test.tsx
+  - frontend/src/components/admin/__tests__/PluginManageDialog.test.tsx
+  - frontend/src/components/admin/__tests__/PluginManageWorkspace.test.tsx
+  - frontend/src/components/auth/authEntryLayout.ts
+  - frontend/src/components/ui/__tests__/ConfirmDialog.test.tsx
+  - frontend/src/components/ui/alert-dialog.tsx
+  - frontend/src/components/ui/confirm-dialog.tsx
+  - frontend/src/components/ui/dialog-shell.ts
+  - frontend/src/components/ui/dialog.tsx
+  - frontend/src/components/ui/server-management-table.tsx
+  - frontend/src/pages/LoginPage.tsx
+  - frontend/src/pages/RegisterPage.tsx
+  - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
+  - frontend/src/stores/searchAccessStore.ts
+  - frontend/src/types/api.ts

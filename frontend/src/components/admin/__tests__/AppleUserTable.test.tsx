@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { AppleUserTable } from '@/components/admin/AppleUserTable';
 
 let receivedShowCount: boolean | undefined;
+let receivedDesktopGridGapClassName: string | undefined;
+let receivedDesktopGridTemplateColumns: string | undefined;
 let overlayClose: ReturnType<typeof vi.fn>;
 
 vi.mock('@/components/admin/AdminDataTable', () => ({
@@ -11,6 +13,10 @@ vi.mock('@/components/admin/AdminDataTable', () => ({
     data,
     columns,
     showCount,
+    desktopVariant,
+    desktopGridGapClassName,
+    desktopGridTemplateColumns,
+    getRowAccentClassName,
     renderMobileItem,
     renderDesktopOverlay,
   }: {
@@ -19,24 +25,34 @@ vi.mock('@/components/admin/AdminDataTable', () => ({
     columns: Array<{
       key: string;
       title: React.ReactNode;
-      render?: (item: Record<string, unknown>) => React.ReactNode;
+      desktopGridClassName?: string;
+      render?: (item: Record<string, unknown>, index: number) => React.ReactNode;
     }>;
     showCount?: boolean;
+    desktopVariant?: string;
+    desktopGridGapClassName?: string;
+    desktopGridTemplateColumns?: string;
+    getRowAccentClassName?: (item: Record<string, unknown>) => string;
     renderMobileItem?: (item: Record<string, unknown>) => React.ReactNode;
     renderDesktopOverlay?: (item: Record<string, unknown>, close: () => void) => React.ReactNode;
   }) => {
     receivedShowCount = showCount;
+    receivedDesktopGridGapClassName = desktopGridGapClassName;
+    receivedDesktopGridTemplateColumns = desktopGridTemplateColumns;
 
     return (
       <div>
         <div data-testid="table-title">{title}</div>
+        <div data-testid="desktop-variant">{desktopVariant}</div>
         {data.map((item, index) => {
           overlayClose = vi.fn();
           return (
             <div key={index}>
+              <div data-testid="row-accent">{getRowAccentClassName?.(item)}</div>
               {columns.map((column) => (
-                <div key={column.key} data-testid={`col-${column.key}`}>
-                  {column.render ? column.render(item) : column.title}
+                <div key={column.key} data-testid={`col-${column.key}`} className={column.desktopGridClassName}>
+                  <span data-testid={`col-title-${column.key}`}>{column.title}</span>
+                  {column.render ? column.render(item, index) : column.title}
                 </div>
               ))}
               {renderDesktopOverlay && index === 0 ? (
@@ -52,7 +68,7 @@ vi.mock('@/components/admin/AdminDataTable', () => ({
 }));
 
 describe('AppleUserTable', () => {
-  it('uses blue/cyan accents instead of purple in avatars and status actions', () => {
+  it('使用蓝青色强调并为桌面用户表格传入内容感知列模板', () => {
     const user = {
       id: 2,
       username: 'alice',
@@ -61,6 +77,8 @@ describe('AppleUserTable', () => {
       updated_at: '2026-03-10T00:00:00Z',
       last_login_at: '2026-03-10T00:00:00Z',
       is_enabled: true,
+      monthly_login_days: ['2026-04-01', '2026-04-03', '2026-04-10'],
+      monthly_login_day_count: 3,
     };
 
     const { container } = render(
@@ -85,9 +103,21 @@ describe('AppleUserTable', () => {
     expect(markup).toContain('to-cyan-500');
     expect(markup).toContain('hover:bg-cyan-50');
     expect(markup).toContain('text-cyan-700');
+    expect(markup).toContain('from-green-500/10');
     expect(markup).not.toContain('apple-purple');
     expect(markup).not.toContain('purple-');
     expect(receivedShowCount).toBe(false);
+    expect(receivedDesktopGridGapClassName).toBe('gap-x-5');
+    expect(receivedDesktopGridTemplateColumns).toContain('minmax(0,0.72fr)');
+    expect(receivedDesktopGridTemplateColumns).toContain('minmax(0,1.45fr)');
+    expect(receivedDesktopGridTemplateColumns).toContain('minmax(0,1.5fr)');
+    expect(screen.getByTestId('desktop-variant')).toHaveTextContent('management-grid');
+    expect(screen.getByTestId('row-accent')).toHaveTextContent('from-green-500/10 to-transparent');
+    expect(screen.queryAllByTestId('col-select')).toHaveLength(1);
+    expect(screen.getByTestId('col-user')).not.toHaveClass('col-span-4');
+    expect(screen.getByTestId('col-monthly_login')).toHaveTextContent('本月登录');
+    expect(screen.getByTestId('col-monthly_login')).toHaveTextContent('已登录 3 天');
+    expect(screen.getByTestId('col-monthly_login').querySelectorAll('[data-month-login-day]')).toHaveLength(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate());
     expect(screen.getByTestId('table-title')).toBeEmptyDOMElement();
     expect(screen.queryAllByTestId('col-actions')).toHaveLength(0);
     fireEvent.click(screen.getByLabelText('关闭详情'));
@@ -98,5 +128,7 @@ describe('AppleUserTable', () => {
     expect(screen.getByTestId('desktop-overlay')).toHaveTextContent('重置密码');
     expect(screen.getByTestId('desktop-overlay')).toHaveTextContent('禁用');
     expect(screen.getByTestId('desktop-overlay')).toHaveTextContent('删除');
+    expect(screen.getByTestId('desktop-overlay')).toHaveTextContent('本月登录情况');
+    expect(screen.getByTestId('desktop-overlay')).toHaveTextContent('已登录 3 天');
   });
 });

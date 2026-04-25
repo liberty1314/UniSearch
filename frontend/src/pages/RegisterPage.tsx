@@ -1,11 +1,25 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { AuthService } from "@/services/authService";
 import { SystemSettingsService } from "@/services/systemSettingsService";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, Lock, UserPlus, Eye, EyeOff, LogIn } from "lucide-react";
+import {
+  User,
+  Lock,
+  UserPlus,
+  Eye,
+  EyeOff,
+  LogIn,
+  Loader2,
+} from "lucide-react";
 import AuthBackground from "@/components/auth/AuthBackground";
 import AuthCardShell from "@/components/auth/AuthCardShell";
 import AuthInput from "@/components/auth/AuthInput";
@@ -20,7 +34,18 @@ import {
   resolveAuthDirection,
   type AuthTransitionState,
 } from "@/components/auth/authRouteMotion";
+import {
+  AUTH_ENTRY_CARD_BASE_CLASS,
+  AUTH_ENTRY_CARD_CONTENT_CLASS,
+  AUTH_ENTRY_CARD_DESCRIPTION_CLASS,
+  AUTH_ENTRY_CARD_HEADER_CLASS,
+  AUTH_ENTRY_CARD_SHELL_CLASS,
+  AUTH_ENTRY_CARD_TITLE_CLASS,
+  AUTH_ENTRY_FORM_STACK_CLASS,
+  AUTH_ENTRY_PAGE_CONTAINER_CLASS,
+} from "@/components/auth/authEntryLayout";
 import { getErrorDataError, getErrorMessage } from "@/lib/error";
+import { cn } from "@/lib/utils";
 
 // ─── 密码强度计算 ─────────────────────────────────────────────────────────────
 
@@ -42,18 +67,18 @@ const calcPasswordStrength = (pwd: string): 0 | 1 | 2 | 3 => {
 };
 
 const STRENGTH_LABELS = ["", "弱", "中", "强"] as const;
-const STRENGTH_SEGMENT_COLORS = [
-  "", // 0 — 未达最低长度，不显示
-  "bg-red-400", // 1 — 弱
-  "bg-yellow-400", // 2 — 中
-  "bg-emerald-400", // 3 — 强
-] as const;
-const STRENGTH_TEXT_COLORS = [
-  "",
-  "text-red-500",
-  "text-yellow-500",
-  "text-emerald-500",
-] as const;
+
+const getPasswordStrengthHelperText = (password: string) => {
+  if (!password) {
+    return "密码长度需在 6-64 个字符之间";
+  }
+
+  const passwordStrength = calcPasswordStrength(password);
+  const strengthLabel =
+    passwordStrength > 0 ? STRENGTH_LABELS[passwordStrength] : "太短";
+
+  return `密码强度：${strengthLabel}`;
+};
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -70,12 +95,6 @@ const RegisterPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
-
-  // 密码强度（useMemo 避免每次渲染重算）
-  const passwordStrength = useMemo(
-    () => calcPasswordStrength(password),
-    [password],
-  );
 
   // Animation State
   const particles = useAuthParticles();
@@ -173,7 +192,7 @@ const RegisterPage: React.FC = () => {
   if (isLoadingSettings) return null; // 等待系统配置，此期间页面空白时间极短（30s 缓存命中后几乎无感知）
 
   return (
-    <div className="obsidian-shell min-h-screen w-full flex items-center justify-center bg-gray-50 px-4 pt-20 overflow-y-auto relative">
+    <div className={AUTH_ENTRY_PAGE_CONTAINER_CLASS}>
       <AuthBackground
         preset={authVisualPresets.registerPage}
         particles={particles}
@@ -182,27 +201,50 @@ const RegisterPage: React.FC = () => {
       {/* Register Card */}
       <AuthCardShell
         glowClassName={authVisualPresets.registerPage.cardGlowGradientClass}
+        className={AUTH_ENTRY_CARD_SHELL_CLASS}
       >
         <AuthSwitchMotion
           routeKey={location.pathname}
           direction={authDirection}
         >
-          <Card className="relative glass-panel shadow-2xl border-emerald-200 dark:border-emerald-800">
-            <CardHeader className="space-y-3 pb-6">
+          <Card
+            className={cn(
+              AUTH_ENTRY_CARD_BASE_CLASS,
+              "border-emerald-200 dark:border-emerald-800",
+            )}
+          >
+            <CardHeader className={AUTH_ENTRY_CARD_HEADER_CLASS}>
               <div className="flex justify-center mb-2">
                 <div className="relative group">
-                  <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
-                    <UserPlus className="w-8 h-8 text-white auth-icon-intro" />
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg transition-all duration-500 group-hover:scale-105 group-hover:rotate-3">
+                    <UserPlus className="h-7 w-7 text-white auth-icon-intro" />
                   </div>
                 </div>
               </div>
-              <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 bg-clip-text text-transparent animate-auth-gradient">
+              <CardTitle
+                className={cn(
+                  AUTH_ENTRY_CARD_TITLE_CLASS,
+                  "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 bg-clip-text text-transparent",
+                )}
+              >
                 创建账户
               </CardTitle>
+              <CardDescription className={AUTH_ENTRY_CARD_DESCRIPTION_CLASS}>
+                完成注册后即可返回登录页继续使用
+              </CardDescription>
             </CardHeader>
 
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
+            <CardContent className={AUTH_ENTRY_CARD_CONTENT_CLASS}>
+              {isLoading && (
+                <div className="absolute inset-x-0 -top-20 bottom-0 z-10 rounded-xl bg-white/5 backdrop-blur-[2px] transition-all duration-300 dark:bg-gray-900/20" />
+              )}
+
+              <div
+                className={cn(
+                  `${AUTH_ENTRY_FORM_STACK_CLASS} transition-all duration-300`,
+                  isLoading && "opacity-60 scale-[0.98]",
+                )}
+              >
                 <AuthInput
                   id="username"
                   label="用户名"
@@ -228,6 +270,11 @@ const RegisterPage: React.FC = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleRegister()}
                     error={passwordError}
+                    helperText={
+                      passwordError
+                        ? undefined
+                        : getPasswordStrengthHelperText(password)
+                    }
                     endAdornment={
                       <button
                         type="button"
@@ -243,41 +290,6 @@ const RegisterPage: React.FC = () => {
                       </button>
                     }
                   />
-
-                  {/* 密码强度指示条（仅在有输入时显示） */}
-                  {password && (
-                    <div
-                      className="flex items-center gap-2 mt-2 px-1"
-                      aria-label={`密码强度：${STRENGTH_LABELS[passwordStrength] || "太短"}`}
-                      aria-live="polite"
-                    >
-                      {/* 三段强度条 */}
-                      <div className="flex gap-1 flex-1" role="presentation">
-                        {([1, 2, 3] as const).map((level) => (
-                          <div
-                            key={level}
-                            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                              passwordStrength >= level
-                                ? STRENGTH_SEGMENT_COLORS[passwordStrength]
-                                : "bg-gray-200 dark:bg-gray-700"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      {/* 强度标签 */}
-                      <span
-                        className={`text-xs font-medium transition-colors duration-300 min-w-[1.5rem] text-right ${
-                          passwordStrength > 0
-                            ? STRENGTH_TEXT_COLORS[passwordStrength]
-                            : "text-gray-400 dark:text-slate-500"
-                        }`}
-                      >
-                        {passwordStrength > 0
-                          ? STRENGTH_LABELS[passwordStrength]
-                          : "太短"}
-                      </span>
-                    </div>
-                  )}
                 </div>
 
                 <AuthInput
@@ -319,13 +331,28 @@ const RegisterPage: React.FC = () => {
                     !password.trim() ||
                     !confirmPassword.trim()
                   }
-                  className="w-full h-12 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 hover:from-emerald-700 hover:via-emerald-600 hover:to-teal-600 text-white font-medium shadow-lg hover:shadow-2xl transform active:scale-[0.98] transition-all duration-200"
+                  className="relative h-12 w-full overflow-hidden bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 font-medium text-white shadow-lg transition-all duration-300 hover:from-emerald-700 hover:via-emerald-600 hover:to-teal-600 hover:shadow-2xl active:scale-[0.98]"
                 >
-                  {isLoading ? "注册中..." : "立即注册"}
+                  <span
+                    className={cn(
+                      "flex items-center justify-center transition-all duration-300",
+                      isLoading
+                        ? "opacity-0 scale-90"
+                        : "opacity-100 scale-100",
+                    )}
+                  >
+                    立即注册
+                  </span>
+
+                  {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center animate-in fade-in zoom-in duration-300">
+                      <Loader2 className="h-5 w-5 animate-spin drop-shadow-md" />
+                    </div>
+                  )}
                 </Button>
               </div>
 
-              <AuthEntryLinksRow prefixText="已有账号？">
+              <AuthEntryLinksRow prefixText="已有账号？" className="mt-2">
                 <AuthEntryLink
                   to="/login"
                   state={{ authTransition: "backward", from: "/register" }}

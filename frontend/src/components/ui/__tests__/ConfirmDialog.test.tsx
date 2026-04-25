@@ -16,9 +16,7 @@ describe('ConfirmDialog', () => {
     );
 
     const dialog = screen.getByRole('alertdialog', { name: '删除确认' });
-    expect(dialog).toHaveClass('bg-white/80');
-    expect(dialog).toHaveClass('dark:bg-slate-900/80');
-    expect(dialog).toHaveClass('backdrop-blur-xl');
-    expect(dialog).toHaveClass('sm:rounded-2xl');
+    expect(dialog).toHaveClass('modal-shell-surface');
+    expect(screen.getByRole('button', { name: '关闭弹窗' })).toHaveClass('modal-shell-close');
   });
 });

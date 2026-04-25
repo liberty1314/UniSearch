@@ -34,7 +34,7 @@ function getImmediateStatus(snapshot: AuthSnapshot): SearchAccessStatus | null {
   return 'authenticated';
 }
 
-export const useSearchAccessStore = create<SearchAccessState>((set, get) => ({
+export const useSearchAccessStore = create<SearchAccessState>((set) => ({
   status: 'anonymous',
   isLoading: false,
   initialized: false,

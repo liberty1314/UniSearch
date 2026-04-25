@@ -15,6 +15,9 @@ describe('CreateUserDialog', () => {
       />
     );
 
+    expect(screen.getByRole('dialog', { name: '创建用户' })).toHaveClass('modal-shell-surface');
+    expect(screen.getByRole('button', { name: '关闭弹窗' })).toHaveClass('modal-shell-close');
+
     const passwordInput = screen.getByLabelText('密码') as HTMLInputElement;
     const confirmPasswordInput = screen.getByLabelText('确认密码') as HTMLInputElement;
 

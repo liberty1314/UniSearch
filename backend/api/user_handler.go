@@ -33,13 +33,15 @@ type ListUsersResponse struct {
 
 // UserInfo 用户信息
 type UserInfo struct {
-	ID          uint       `json:"id"`
-	Username    string     `json:"username"`
-	Role        string     `json:"role"`
-	IsEnabled   bool       `json:"is_enabled"`
-	LastLoginAt *time.Time `json:"last_login_at"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID                   uint       `json:"id"`
+	Username             string     `json:"username"`
+	Role                 string     `json:"role"`
+	IsEnabled            bool       `json:"is_enabled"`
+	LastLoginAt          *time.Time `json:"last_login_at"`
+	MonthlyLoginDays     []string   `json:"monthly_login_days"`
+	MonthlyLoginDayCount int        `json:"monthly_login_day_count"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
 }
 
 type CreateUserResponse struct {
@@ -131,22 +133,32 @@ func getCurrentUserID(c *gin.Context) (uint, error) {
 
 // convertToUserInfo 将 model.User 转换为 UserInfo
 func convertToUserInfo(user *model.User) UserInfo {
+	return convertToUserInfoWithMonthlyLogin(user, nil, 0)
+}
+
+func convertToUserInfoWithMonthlyLogin(user *model.User, monthlyLoginDays []string, monthlyLoginDayCount int) UserInfo {
+	if monthlyLoginDays == nil {
+		monthlyLoginDays = []string{}
+	}
+
 	return UserInfo{
-		ID:          user.ID,
-		Username:    user.Username,
-		Role:        user.Role,
-		IsEnabled:   user.IsEnabled,
-		LastLoginAt: user.LastLoginAt,
-		CreatedAt:   user.CreatedAt,
-		UpdatedAt:   user.UpdatedAt,
+		ID:                   user.ID,
+		Username:             user.Username,
+		Role:                 user.Role,
+		IsEnabled:            user.IsEnabled,
+		LastLoginAt:          user.LastLoginAt,
+		MonthlyLoginDays:     monthlyLoginDays,
+		MonthlyLoginDayCount: monthlyLoginDayCount,
+		CreatedAt:            user.CreatedAt,
+		UpdatedAt:            user.UpdatedAt,
 	}
 }
 
 // convertToUserInfoList 将 []model.User 转换为 []UserInfo
-func convertToUserInfoList(users []model.User) []UserInfo {
+func convertToUserInfoList(users []model.User, monthlyLoginDays map[uint][]string, monthlyLoginDayCounts map[uint]int) []UserInfo {
 	result := make([]UserInfo, len(users))
 	for i, user := range users {
-		result[i] = convertToUserInfo(&user)
+		result[i] = convertToUserInfoWithMonthlyLogin(&user, monthlyLoginDays[user.ID], monthlyLoginDayCounts[user.ID])
 	}
 	return result
 }
@@ -194,7 +206,7 @@ func ListUsersHandler(userService *service.UserService) gin.HandlerFunc {
 
 		// 转换为响应格式
 		response := ListUsersResponse{
-			Users:      convertToUserInfoList(result.Users),
+			Users:      convertToUserInfoList(result.Users, result.MonthlyLoginDays, result.MonthlyLoginDayCounts),
 			Total:      result.Total,
 			Page:       result.Page,
 			PageSize:   result.PageSize,

@@ -36,6 +36,16 @@ import {
   resolveAuthDirection,
   type AuthTransitionState,
 } from "@/components/auth/authRouteMotion";
+import {
+  AUTH_ENTRY_CARD_BASE_CLASS,
+  AUTH_ENTRY_CARD_CONTENT_CLASS,
+  AUTH_ENTRY_CARD_DESCRIPTION_CLASS,
+  AUTH_ENTRY_CARD_HEADER_CLASS,
+  AUTH_ENTRY_CARD_SHELL_CLASS,
+  AUTH_ENTRY_CARD_TITLE_CLASS,
+  AUTH_ENTRY_FORM_STACK_CLASS,
+  AUTH_ENTRY_PAGE_CONTAINER_CLASS,
+} from "@/components/auth/authEntryLayout";
 import { getErrorMessage, getErrorStatus } from "@/lib/error";
 import { cn } from "@/lib/utils";
 
@@ -133,7 +143,7 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="obsidian-shell min-h-screen w-full flex items-center justify-center bg-gray-50 px-4 pt-20 overflow-y-auto relative">
+    <div className={AUTH_ENTRY_PAGE_CONTAINER_CLASS}>
       <AuthBackground
         preset={authVisualPresets.loginPage}
         particles={particles}
@@ -142,29 +152,40 @@ const LoginPage: React.FC = () => {
       {/* Login Card */}
       <AuthCardShell
         glowClassName={authVisualPresets.loginPage.cardGlowGradientClass}
+        className={AUTH_ENTRY_CARD_SHELL_CLASS}
       >
         <AuthSwitchMotion
           routeKey={location.pathname}
           direction={authDirection}
         >
-          <Card className="relative glass-panel shadow-2xl border-blue-200 dark:border-blue-800">
-            <CardHeader className="space-y-3 pb-6">
+          <Card
+            className={cn(
+              AUTH_ENTRY_CARD_BASE_CLASS,
+              "border-blue-200 dark:border-blue-800",
+            )}
+          >
+            <CardHeader className={AUTH_ENTRY_CARD_HEADER_CLASS}>
               <div className="flex justify-center mb-2">
                 <div className="relative group">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
-                    <LogIn className="w-8 h-8 text-white auth-icon-intro" />
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg transition-all duration-500 group-hover:scale-105 group-hover:rotate-3">
+                    <LogIn className="h-7 w-7 text-white auth-icon-intro" />
                   </div>
                 </div>
               </div>
-              <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-500 bg-clip-text text-transparent animate-auth-gradient">
+              <CardTitle
+                className={cn(
+                  AUTH_ENTRY_CARD_TITLE_CLASS,
+                  "bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-500 bg-clip-text text-transparent",
+                )}
+              >
                 欢迎回来
               </CardTitle>
-              <CardDescription className="text-center text-base">
+              <CardDescription className={AUTH_ENTRY_CARD_DESCRIPTION_CLASS}>
                 登录您的 UniSearch 账户
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="space-y-6 relative">
+            <CardContent className={AUTH_ENTRY_CARD_CONTENT_CLASS}>
               {/* 加载遮罩与模糊层 */}
               {isLoading && (
                 <div className="absolute inset-x-0 -top-20 bottom-0 bg-white/5 dark:bg-gray-900/20 backdrop-blur-[2px] z-10 rounded-xl transition-all duration-300" />
@@ -172,7 +193,7 @@ const LoginPage: React.FC = () => {
 
               <div
                 className={cn(
-                  "space-y-4 transition-all duration-300",
+                  `${AUTH_ENTRY_FORM_STACK_CLASS} transition-all duration-300`,
                   isLoading && "opacity-60 scale-[0.98]",
                 )}
               >
@@ -256,7 +277,7 @@ const LoginPage: React.FC = () => {
                 </Button>
               </div>
 
-              <AuthEntryLinksRow>
+              <AuthEntryLinksRow className="mt-2">
                 {!isLoadingSettings && enableUserSignup && (
                   <AuthEntryLink
                     to="/register"

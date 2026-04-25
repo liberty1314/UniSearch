@@ -175,21 +175,22 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ viewModel }) => {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.2 }}
-                  className="flex flex-wrap items-center gap-2 sm:gap-3"
+                  className="flex w-full flex-wrap items-center justify-end gap-2 sm:gap-3"
                 >
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10 pointer-events-none" />
+                  <div data-testid="user-search-control" className="relative h-9 w-full sm:w-64 lg:w-80">
                     <Input
                       type="text"
                       placeholder="搜索用户名..."
                       value={userSearchInput}
+                      startAdornment={<Search data-testid="user-search-icon" className="h-4 w-4 text-slate-400" />}
                       onChange={(e) => onUserSearchInputChange(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           onUserSearchSubmit();
                         }
                       }}
-                      className="h-9 w-full border-[0.5px] border-slate-200/70 bg-white/60 pl-9 text-sm shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/40 sm:w-48"
+                      containerClassName="h-9 [&>div:last-child]:hidden"
+                      className="h-9 w-full border-[0.5px] border-slate-200/70 bg-white/60 py-0 text-sm leading-9 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/40"
                     />
                   </div>
 

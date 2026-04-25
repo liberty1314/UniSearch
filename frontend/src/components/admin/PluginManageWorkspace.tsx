@@ -1,5 +1,5 @@
 import React from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   Activity,
   CheckCircle2,
@@ -19,6 +19,14 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AdminWorkspaceFooter } from './AdminWorkspaceFooter';
 import { AdminWorkspaceToolbar } from './AdminWorkspaceToolbar';
+import {
+  dialogShellCloseClassName,
+  dialogShellOverlayClassName,
+  dialogShellOverlayMotionProps,
+  dialogShellPanelClassName,
+  dialogShellViewportClassName,
+  getDialogShellSurfaceMotionProps,
+} from '@/components/ui/dialog-shell';
 import { type UnifiedStatusFilter } from './previewFilters';
 import {
   PAGE_SIZE,
@@ -73,6 +81,7 @@ const getTestIcon = (status: TestStatus) => {
 };
 
 export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps) {
+  const shouldReduceMotion = useReducedMotion();
   const {
     isOpen,
     isReadOnly,
@@ -110,21 +119,16 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
       {isOpen && (
         <>
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm"
+            {...dialogShellOverlayMotionProps}
+            className={dialogShellOverlayClassName}
             onClick={onClose}
           />
 
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className={dialogShellViewportClassName}>
             <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 16 }}
-              transition={{ duration: 0.2 }}
+              {...getDialogShellSurfaceMotionProps(shouldReduceMotion)}
               onClick={(event) => event.stopPropagation()}
-              className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+              className={`${dialogShellPanelClassName} flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden`}
             >
               <div className="border-b border-slate-200 bg-gradient-to-r from-blue-50 via-blue-50 to-cyan-50 px-6 py-4 dark:border-slate-700 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
                 <div className="flex items-start justify-between gap-3">
@@ -142,7 +146,7 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
                   </div>
                   <button
                     onClick={onClose}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
+                    className={dialogShellCloseClassName}
                     aria-label="关闭插件管理"
                   >
                     <X className="h-5 w-5 text-slate-600 dark:text-slate-300" />

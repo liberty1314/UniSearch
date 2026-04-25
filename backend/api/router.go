@@ -14,6 +14,7 @@ import (
 func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService, systemSettingsService *service.SystemSettingsService, announcementService *service.AnnouncementService, tgChannelService *service.TGChannelService, pluginHealthService *service.PluginHealthService, pluginStateService *service.PluginStateService, tgChannelHealthService *service.TGChannelHealthService) *gin.Engine {
 	// 设置搜索服务
 	SetSearchService(searchService)
+	SetAuthService(authService)
 	// 设置系统设置服务
 	SetSystemSettingsService(systemSettingsService)
 	// 设置 TG 频道服务

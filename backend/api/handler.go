@@ -16,10 +16,16 @@ import (
 
 // 保存搜索服务的实例
 var searchService *service.SearchService
+var authService *service.AuthService
 
 // SetSearchService 设置搜索服务实例
 func SetSearchService(service *service.SearchService) {
 	searchService = service
+}
+
+// SetAuthService 设置认证服务实例
+func SetAuthService(service *service.AuthService) {
+	authService = service
 }
 
 // SearchHandler 搜索处理函数

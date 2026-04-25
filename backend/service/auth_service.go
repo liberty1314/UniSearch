@@ -12,6 +12,7 @@ import (
 	"unisearch/util"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // AuthService 用户认证服务
@@ -33,6 +34,51 @@ func NewAuthService() *AuthService {
 	return &AuthService{
 		db: database.GetDB(),
 	}
+}
+
+func (s *AuthService) recordDailyLogin(userID uint, now time.Time) error {
+	if userID == 0 {
+		return errors.New("用户ID不能为空")
+	}
+
+	stat := model.UserLoginDailyStat{
+		UserID:     userID,
+		LoginDate:  now.Format("2006-01-02"),
+		LoginCount: 1,
+	}
+
+	return s.db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{
+			{Name: "user_id"},
+			{Name: "login_date"},
+		},
+		DoUpdates: clause.Assignments(map[string]interface{}{
+			"login_count": gorm.Expr("login_count + ?", 1),
+			"updated_at":  now,
+		}),
+	}).Create(&stat).Error
+}
+
+func (s *AuthService) ensureDailyActivity(userID uint, now time.Time) error {
+	if userID == 0 {
+		return errors.New("用户ID不能为空")
+	}
+
+	stat := model.UserLoginDailyStat{
+		UserID:     userID,
+		LoginDate:  now.Format("2006-01-02"),
+		LoginCount: 1,
+	}
+
+	return s.db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{
+			{Name: "user_id"},
+			{Name: "login_date"},
+		},
+		DoUpdates: clause.Assignments(map[string]interface{}{
+			"updated_at": now,
+		}),
+	}).Create(&stat).Error
 }
 
 // Register 用户注册
@@ -171,6 +217,10 @@ func (s *AuthService) Login(username, password string) (token string, user *mode
 		log.Printf("⚠️  更新最后登录时间失败: %v", err)
 		// 不影响登录流程，继续执行
 	}
+	if err := s.recordDailyLogin(dbUser.ID, now); err != nil {
+		log.Printf("⚠️  记录用户日登录统计失败: %v", err)
+		// 不影响登录流程，继续执行
+	}
 
 	log.Printf("✓ 用户登录成功: %s (ID: %d, Role: %s)", dbUser.Username, dbUser.ID, dbUser.Role)
 	return token, &dbUser, "", nil
@@ -191,6 +241,33 @@ func (s *AuthService) UpdateLastLoginAtByUserID(userID uint) error {
 	}
 	if result.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound
+	}
+	if err := s.recordDailyLogin(userID, now); err != nil {
+		return fmt.Errorf("记录用户日登录统计失败: %w", err)
+	}
+
+	return nil
+}
+
+// MarkUserActiveByUserID 根据用户ID刷新最后活跃时间，并确保当天存在活跃记录。
+// 与真实登录不同，该方法不会重复增加当天 login_count，避免高频访问放大统计值。
+func (s *AuthService) MarkUserActiveByUserID(userID uint) error {
+	if userID == 0 {
+		return errors.New("用户ID不能为空")
+	}
+
+	now := time.Now()
+	result := s.db.Model(&model.User{}).
+		Where("id = ?", userID).
+		Update("last_login_at", now)
+	if result.Error != nil {
+		return fmt.Errorf("更新最后登录时间失败: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	if err := s.ensureDailyActivity(userID, now); err != nil {
+		return fmt.Errorf("记录用户日活跃统计失败: %w", err)
 	}
 
 	return nil
