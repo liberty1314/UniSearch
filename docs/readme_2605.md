@@ -17,3 +17,10 @@
   - `nginx.conf`
   - `scripts/sync-production-config.sh`
   - `supervisord.conf`
+
+## [2026-05-01 12:06:39] refactor(deploy): 调整插件加载默认行为
+- **Body**: 修正 `ENABLED_PLUGINS` 的默认语义，区分“未设置”与“显式为空”，避免 Zeabur 环境下因为变量缺省导致插件未加载。
+- **Files**:
+  - `README.md`
+  - `backend/plugin/plugin.go`
+  - `docs/zeabur-deploy.md`

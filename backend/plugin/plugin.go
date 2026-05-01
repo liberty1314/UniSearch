@@ -127,9 +127,18 @@ func (pm *PluginManager) RegisterAllGlobalPlugins() {
 }
 
 // RegisterGlobalPluginsWithFilter 根据 ENABLED_PLUGINS 过滤注册全局插件
-// enabledPlugins 为 nil 或空切片时，不启用任何插件
+// enabledPlugins 为 nil 时，加载全部插件（未设置 ENABLED_PLUGINS 的默认行为）
+// enabledPlugins 为空切片时，不启用任何插件（ENABLED_PLUGINS="" 的行为）
 func (pm *PluginManager) RegisterGlobalPluginsWithFilter(enabledPlugins []string) {
-	if enabledPlugins == nil || len(enabledPlugins) == 0 {
+	// nil 表示未设置 ENABLED_PLUGINS，加载全部插件
+	if enabledPlugins == nil {
+		fmt.Println("ENABLED_PLUGINS 未设置，加载全部插件")
+		pm.RegisterAllGlobalPlugins()
+		return
+	}
+
+	// 空切片表示显式设置为空，不加载任何插件
+	if len(enabledPlugins) == 0 {
 		fmt.Println("插件列表为空 (ENABLED_PLUGINS=\"\")，未加载任何插件")
 		return
 	}
