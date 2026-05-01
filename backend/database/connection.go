@@ -17,7 +17,7 @@ var DB *gorm.DB
 
 // InitDB 初始化数据库连接
 // 从环境变量读取数据库配置，构建 MySQL DSN 连接字符串，使用 GORM 连接数据库
-// 验证需求：2.1, 12.5
+// 如果目标数据库不存在则自动创建
 func InitDB() error {
 	// 从配置中读取数据库参数
 	dbHost := config.AppConfig.DBHost
@@ -31,14 +31,36 @@ func InitDB() error {
 		return fmt.Errorf("数据库名称 (DB_NAME) 未设置，请在 .env 文件中配置")
 	}
 
-	// 构建 MySQL DSN 连接字符串
-	// 格式: username:password@tcp(host:port)/dbname?charset=utf8mb4&parseTime=True&loc=Local
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		dbUser,
-		dbPassword,
-		dbHost,
-		dbPort,
+	// 第一步：先连接 MySQL（不指定数据库名），确保目标数据库存在
+	rootDSN := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=True&loc=Local",
+		dbUser, dbPassword, dbHost, dbPort,
+	)
+
+	rootDB, err := gorm.Open(mysql.Open(rootDSN), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
+	if err != nil {
+		return fmt.Errorf("连接 MySQL 服务器失败: %w", err)
+	}
+
+	// 自动创建数据库（如果不存在）
+	createSQL := fmt.Sprintf(
+		"CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
 		dbName,
+	)
+	if err := rootDB.Exec(createSQL).Error; err != nil {
+		return fmt.Errorf("创建数据库 '%s' 失败: %w", dbName, err)
+	}
+	log.Printf("✓ 数据库 '%s' 已就绪", dbName)
+
+	// 关闭临时连接
+	if sqlDB, err := rootDB.DB(); err == nil {
+		sqlDB.Close()
+	}
+
+	// 第二步：连接到目标数据库
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		dbUser, dbPassword, dbHost, dbPort, dbName,
 	)
 
 	// 配置 GORM 日志

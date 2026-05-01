@@ -1,31 +1,41 @@
 services:
-  # 前端服务
-  frontend:
+  # UniSearch 主应用（单容器：前端 + 后端 + Nginx）
+  app:
     build:
-      context: ./frontend
+      context: .
       dockerfile: Dockerfile
-      target: production
-    container_name: unisearch-frontend
+    container_name: unisearch-app
     restart: unless-stopped
     ports:
-      - "3000:80"
-    depends_on:
-      backend:
-        condition: service_healthy
+      - "80:80"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=unisearch
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
+      - REDIS_TTL=3600
+    volumes:
+      - app-cache:/app/cache
     networks:
       - unisearch-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/health"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
-    environment:
-      - NODE_ENV=production
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`localhost`)"
-      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      start_period: 15s
 
   # MySQL 数据库服务
   mysql:
@@ -52,10 +62,8 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --default-authentication-plugin=mysql_native_password
-    labels:
-      - "com.unisearch.service=database"
 
-  # Redis 缓存服务
+  # Redis 缓存服务（可选）
   redis:
     image: redis:7-alpine
     container_name: unisearch-redis
@@ -73,73 +81,14 @@ services:
       timeout: 3s
       retries: 3
       start_period: 5s
-    labels:
-      - "com.unisearch.service=cache"
-
-  # 后端服务
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: unisearch-backend
-    restart: unless-stopped
-    ports:
-      - "8888:8888"
-    env_file:
-      - .env.docker
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=
-      - REDIS_DB=0
-      - REDIS_TTL=3600
-    volumes:
-      - backend-cache:/app/cache
-      - backend-refresh-tokens:/app/data
-    networks:
-      - unisearch-network
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8888/api/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`localhost`) && PathPrefix(`/api`)"
-      - "traefik.http.services.backend.loadbalancer.server.port=8888"
-
-  # 可选：Nginx反向代理（如果需要更复杂的路由配置）
-  # nginx:
-  #   image: nginx:alpine
-  #   container_name: unisearch-nginx
-  #   restart: unless-stopped
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-  #     - ./nginx/ssl:/etc/nginx/ssl:ro
-  #   depends_on:
-  #     - frontend
-  #     - backend
-  #   networks:
-  #     - unisearch-network
 
 volumes:
   mysql-data:
     name: unisearch-mysql-data
   redis-data:
     name: unisearch-redis-data
-  backend-cache:
-    name: unisearch-backend-cache
-  backend-refresh-tokens:
-    name: unisearch-backend-refresh-tokens
+  app-cache:
+    name: unisearch-app-cache
 
 networks:
   unisearch-network:
