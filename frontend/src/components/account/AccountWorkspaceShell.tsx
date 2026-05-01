@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Fingerprint, LayoutDashboard, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -81,7 +82,11 @@ const AccountWorkspaceShell: React.FC<AccountWorkspaceShellProps> = ({
                   return (
                     <li key={id} className="relative z-0">
                       {isActive ? (
-                        <div className="absolute inset-0 z-0 rounded-[1.4rem] border-[0.5px] border-slate-200/60 bg-white shadow-[0_4px_24px_rgba(0,0,0,0.08)] dark:border-white/10 dark:bg-slate-800" />
+                        <motion.div 
+                          layoutId="activeAccountNavBg"
+                          className="absolute inset-0 z-0 rounded-[1.4rem] border-[0.5px] border-white/60 bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06),0_1px_3px_rgb(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-800/80" 
+                          transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                        />
                       ) : null}
                       <Button
                         type="button"
@@ -90,15 +95,19 @@ const AccountWorkspaceShell: React.FC<AccountWorkspaceShellProps> = ({
                         aria-pressed={isActive}
                         className={cn(
                           'relative z-10 h-auto w-full justify-start rounded-[1.4rem] border border-transparent bg-transparent px-4 py-4 text-left shadow-none transition-colors duration-300',
-                          !isActive && 'hover:bg-slate-100/50 dark:hover:bg-slate-900/40'
+                          !isActive && 'hover:bg-slate-100/50 dark:hover:bg-slate-800/40'
                         )}
                       >
                         <span className="flex w-full items-center gap-3">
-                          <span className="relative flex h-9 w-9 shrink-0 items-center justify-center">
+                          <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
                             {isActive ? (
-                              <div className="absolute inset-0 z-0 rounded-2xl bg-white shadow-[0_4px_16px_rgba(37,99,235,0.15)] ring-[0.5px] ring-slate-900/5 dark:bg-slate-800 dark:ring-white/10 dark:shadow-[0_4px_16px_rgba(96,165,250,0.2)]" />
+                              <motion.div 
+                                layoutId="activeAccountNavIconBg"
+                                className="absolute inset-0 z-0 rounded-[14px] bg-white shadow-[0_4px_16px_rgba(37,99,235,0.15)] ring-[0.5px] ring-slate-900/5 dark:bg-slate-800 dark:ring-white/10 dark:shadow-[0_4px_16px_rgba(96,165,250,0.2)]" 
+                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                              />
                             ) : (
-                              <div className="absolute inset-0 z-0 rounded-2xl border-[0.5px] border-slate-200/50 bg-white/40 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40" />
+                              <div className="absolute inset-0 z-0 rounded-[14px] border-[0.5px] border-white/60 bg-white/40 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40" />
                             )}
                             <Icon
                               className={cn(

@@ -26,7 +26,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
     const hasPassword = Boolean(link.password?.trim());
 
     const handleAction = () => {
-      onLinkClick(link.url, link.password || "", cloudInfo.name, hasPassword);
+      onLinkClick(link.url, link.password || "", cloudType, hasPassword);
     };
 
     const handleClick = (e: React.MouseEvent) => {

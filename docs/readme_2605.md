@@ -24,3 +24,21 @@
   - `README.md`
   - `backend/plugin/plugin.go`
   - `docs/zeabur-deploy.md`
+
+## [2026-05-01 15:38:14] style(frontend): 统一公告与账户区视觉语言
+- **Body**: 将公告弹窗与访问码弹窗切换为 Markdown 渲染并收敛交互样式，统一账户概览、搜索结果卡片与后台公告编辑的视觉语言，同时补充前端依赖与排版插件。
+- **Files**:
+  - `.playwright-mcp/page-2026-05-01T06-06-39-849Z.yml`
+  - `frontend/package.json`
+  - `frontend/pnpm-lock.yaml`
+  - `frontend/src/components/AnnouncementDialog.tsx`
+  - `frontend/src/components/PasswordModal.tsx`
+  - `frontend/src/components/__tests__/PasswordModal.test.tsx`
+  - `frontend/src/components/account/AccountOverviewHighlights.tsx`
+  - `frontend/src/components/account/AccountOverviewShowcase.tsx`
+  - `frontend/src/components/account/AccountWorkspaceShell.tsx`
+  - `frontend/src/components/account/accountDesign.ts`
+  - `frontend/src/components/admin/AnnouncementManagement.tsx`
+  - `frontend/src/components/home/SearchResultGridCard.tsx`
+  - `frontend/src/components/home/SearchResultListItem.tsx`
+  - `frontend/tailwind.config.js`

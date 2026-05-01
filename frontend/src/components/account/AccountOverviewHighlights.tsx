@@ -77,20 +77,20 @@ const AccountOverviewHighlights: React.FC<AccountOverviewHighlightsProps> = ({
       {cards.map(({ key, label, value, Icon, iconClass, accentClass }) => (
         <div
           key={key}
-          className={`${ACCOUNT_PANEL_SURFACE_CLASSES} ${ACCOUNT_PANEL_SURFACE_HOVER_CLASSES} p-5 hover:-translate-y-1`}
+          className={`${ACCOUNT_PANEL_SURFACE_CLASSES} ${ACCOUNT_PANEL_SURFACE_HOVER_CLASSES} p-5 sm:p-6`}
         >
-          <div className="relative space-y-4">
+          <div className="relative flex flex-col justify-between h-full space-y-6">
             <div
-              className={`flex h-12 w-12 items-center justify-center rounded-[1.2rem] border-[0.5px] border-slate-200/50 bg-white/40 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40 ${iconClass}`}
+              className={`flex h-12 w-12 items-center justify-center rounded-[14px] border-[0.5px] border-white/80 bg-gradient-to-b from-white/80 to-white/40 shadow-[inset_0_1px_4px_rgba(255,255,255,0.6),0_4px_12px_rgba(0,0,0,0.04)] backdrop-blur-md dark:border-white/10 dark:from-slate-800/80 dark:to-slate-800/40 dark:shadow-[inset_0_1px_4px_rgba(255,255,255,0.05),0_4px_12px_rgba(0,0,0,0.2)] transition-transform duration-500 group-hover:scale-110 ${iconClass}`}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-5 w-5" strokeWidth={2.5} />
             </div>
-            <div className="space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
                 {label}
               </p>
               <p
-                className={`text-base font-semibold leading-6 text-slate-800 transition-colors dark:text-white ${accentClass}`}
+                className={`text-[17px] font-semibold tracking-tight leading-6 text-slate-800 transition-colors duration-300 dark:text-white ${accentClass}`}
               >
                 {value}
               </p>

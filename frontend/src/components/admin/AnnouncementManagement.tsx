@@ -597,12 +597,12 @@ export const AnnouncementManagement: React.FC = () => {
                 id="content"
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                placeholder="请输入公告内容（支持HTML格式）"
+                placeholder="请输入公告内容（支持Markdown语法）"
                 rows={8}
                 className="font-mono text-sm"
               />
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                提示：可以使用HTML标签格式化内容，如 &lt;p&gt;、&lt;strong&gt;、&lt;br&gt; 等
+                提示：可以使用Markdown语法格式化内容，如 **加粗**、*斜体*、# 标题 等
               </p>
             </div>
 

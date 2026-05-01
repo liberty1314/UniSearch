@@ -45,7 +45,7 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
 
     /** 业务动作：提取为独立函数，供鼠标点击和键盘事件共用 */
     const handleAction = () => {
-      onLinkClick(link.url, link.password ?? "", cloudInfo.name, hasPassword);
+      onLinkClick(link.url, link.password ?? "", cloudType, hasPassword);
     };
 
     const handleClick = (e: React.MouseEvent) => {
