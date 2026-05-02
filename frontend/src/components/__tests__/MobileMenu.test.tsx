@@ -30,7 +30,7 @@ vi.mock('sonner', () => ({
   },
 }));
 
-vi.mock('@/components/magicui/animated-theme-toggler', () => ({
+vi.mock('@/components/ui/animated-theme-toggler', () => ({
   AnimatedThemeToggler: () => <div>theme toggle</div>,
 }));
 

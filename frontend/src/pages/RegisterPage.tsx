@@ -325,13 +325,14 @@ const RegisterPage: React.FC = () => {
 
                 <Button
                   onClick={handleRegister}
+                  variant="glass"
                   disabled={
                     isLoading ||
                     !username.trim() ||
                     !password.trim() ||
                     !confirmPassword.trim()
                   }
-                  className="relative h-12 w-full overflow-hidden bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 font-medium text-white shadow-lg transition-all duration-300 hover:from-emerald-700 hover:via-emerald-600 hover:to-teal-600 hover:shadow-2xl active:scale-[0.98]"
+                  className="relative h-12 w-full overflow-hidden border-emerald-200/60 bg-gradient-to-r from-emerald-600/95 via-emerald-500/95 to-teal-500/95 font-medium text-white shadow-glass-strong transition-all duration-300 hover:shadow-glass-strong dark:border-emerald-200/20"
                 >
                   <span
                     className={cn(

@@ -6,7 +6,7 @@ const DisclaimerPage: React.FC = () => {
   return (
     <div className="obsidian-shell min-h-screen bg-white">
       <div className="container mx-auto px-4 pt-24 pb-16 sm:pb-20">
-        <article className="relative max-w-4xl mx-auto overflow-hidden bg-white/80 dark:bg-slate-900/75 border border-gray-200/70 dark:border-white/10 rounded-2xl shadow-card">
+        <article className="glass-card-premium relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-gray-200/70 dark:border-white/10">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-nebula-500/70 to-transparent dark:via-nebula-300/70" />
 
           <header className="px-6 sm:px-8 pt-7 sm:pt-9 pb-5 border-b border-gray-200/70 dark:border-white/10">

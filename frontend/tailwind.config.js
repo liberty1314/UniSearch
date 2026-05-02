@@ -149,7 +149,10 @@ export default {
 				'nebula-hover': '0 0 25px rgba(139, 92, 246, 0.5)',
 				'cosmic': '0 0 15px rgba(14, 165, 233, 0.3)',
 				'cosmic-hover': '0 0 25px rgba(14, 165, 233, 0.5)',
-				'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.37)'
+				'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+				'glass-soft': '0 10px 28px rgba(15, 23, 42, 0.08)',
+				'glass-strong': '0 18px 46px rgba(15, 23, 42, 0.14)',
+				'glass-dark': '0 18px 46px rgba(0, 0, 0, 0.42)'
 			},
 			animation: {
 				'fade-in': 'fadeIn 0.5s ease-out forwards',

@@ -69,26 +69,12 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
               error ? errorId : helperText ? helperId : undefined
             }
           className={cn(
-            // 基础样式
-              'w-full px-4 py-3 text-base rounded-[1rem]',
+              'glass-input px-4 py-3 text-base',
               startAdornment && 'pl-11',
               endAdornment && 'pr-12',
-              'bg-white/60 dark:bg-slate-900/40',
-              'border-[0.5px] border-slate-200/70 dark:border-white/10',
-              'backdrop-blur-xl backdrop-saturate-[180%]',
-              
-              // 字体与文本
-              'text-gray-900 dark:text-gray-100',
-              'placeholder:text-gray-400 dark:placeholder:text-gray-500',
-              
-              // 过渡动画
               'transition-all duration-200 ease-out',
-              
-              // 聚焦状态 (Apple 风格光晕)
-              'focus:outline-none',
-              'focus:ring-4',
               toneClasses[tone],
-              'focus:bg-white/80 dark:focus:bg-slate-900/60',
+              'focus:bg-white/82 dark:focus:bg-slate-900/62',
               
               // 错误状态
               error && [
@@ -98,8 +84,7 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
               ],
               
               // 禁用状态
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              'disabled:bg-gray-100 dark:disabled:bg-gray-900',
+              'disabled:bg-gray-100/75 dark:disabled:bg-slate-900/66',
               
               // 移动端优化 (防止 iOS 自动缩放)
               'text-[16px] sm:text-base',

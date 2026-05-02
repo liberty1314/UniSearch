@@ -253,8 +253,9 @@ const LoginPage: React.FC = () => {
 
                 <Button
                   onClick={handleLogin}
+                  variant="glass"
                   disabled={isLoading || !username.trim() || !password.trim()}
-                  className="relative w-full h-12 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600 text-white font-medium shadow-lg hover:shadow-2xl transform active:scale-[0.98] transition-all duration-300 overflow-hidden"
+                  className="relative h-12 w-full overflow-hidden border-cyan-200/60 bg-gradient-to-r from-blue-600/95 via-blue-500/95 to-cyan-500/95 text-white shadow-glass-strong hover:shadow-glass-strong dark:border-cyan-200/20"
                 >
                   {/* 文字淡入淡出 */}
                   <span

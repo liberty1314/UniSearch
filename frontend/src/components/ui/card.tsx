@@ -9,7 +9,7 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "glass-card-premium text-slate-800 dark:text-slate-100",
+      "glass-card-premium text-slate-800 dark:text-slate-100 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/90 before:to-transparent dark:before:via-cyan-200/20",
       className
     )}
     {...props}

@@ -102,7 +102,7 @@ const AdminLogin: React.FC = () => {
             {/* 登录卡片 */}
             <AuthCardShell glowClassName={authVisualPresets.adminLogin.cardGlowGradientClass}>
                 <AuthSwitchMotion routeKey={location.pathname} direction={authDirection}>
-                    <Card className="relative glass-panel shadow-2xl border-rose-200 dark:border-rose-900/50">
+                    <Card className="relative border-rose-200/65 dark:border-rose-900/50">
                         <CardHeader className="space-y-3 pb-6">
                             {/* Logo 或图标 */}
                             <div className="flex justify-center mb-2">
@@ -197,8 +197,9 @@ const AdminLogin: React.FC = () => {
                                 <div className="animate-fade-in auth-delay-400">
                                     <Button
                                         type="submit"
+                                        variant="glass"
                                         disabled={isAdminLoading || !username.trim() || !password.trim()}
-                                        className="w-full h-12 bg-gradient-to-r from-rose-600 via-rose-500 to-rose-700 hover:from-rose-700 hover:via-rose-600 hover:to-rose-800 text-white font-medium shadow-lg hover:shadow-2xl transform active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden group"
+                                        className="group relative h-12 w-full overflow-hidden border-rose-200/60 bg-gradient-to-r from-rose-600/95 via-rose-500/95 to-rose-700/95 text-white shadow-glass-strong transition-all duration-200 disabled:transform-none dark:border-rose-200/20"
                                     >
                                         {/* 按钮光泽效果 */}
                                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>

@@ -16,16 +16,16 @@ export const ADMIN_CONTENT_WRAPPER_CLASSES =
   'relative mx-auto flex w-full max-w-[1720px] gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8';
 
 export const ADMIN_PAGE_HEADER_CLASSES =
-  'relative overflow-hidden rounded-[1.5rem] bg-white/40 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-[24px] backdrop-saturate-[180%] border-[0.5px] border-slate-200/50 dark:bg-slate-900/40 dark:border-white/10 dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] transition-all duration-500';
+  'glass-card-premium relative overflow-hidden rounded-[1.5rem] border-slate-200/55 dark:border-white/10';
 
 export const ADMIN_PAGE_HEADER_HOVER_CLASSES =
-  'hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] hover:bg-white/50 dark:hover:bg-slate-800/50';
+  'hover:shadow-glass-strong hover:bg-white/68 dark:hover:bg-slate-900/58';
 
 export const ADMIN_SECTION_HEADER_CLASSES =
   'flex items-center justify-between gap-4';
 
 export const ADMIN_SECTION_ICON_CLASSES =
-  'flex h-16 w-16 items-center justify-center rounded-[1.5rem] border-[0.5px] border-slate-200/50 bg-white/40 text-slate-700 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200';
+  'glass-toolbar flex h-16 w-16 items-center justify-center rounded-[1.5rem] text-slate-700 dark:text-slate-200';
 
 export const ADMIN_PANEL_SURFACE_CLASSES = ACCOUNT_PANEL_SURFACE_CLASSES;
 export const ADMIN_PANEL_SURFACE_HOVER_CLASSES = ACCOUNT_PANEL_SURFACE_HOVER_CLASSES;
@@ -34,7 +34,7 @@ export const ADMIN_PANEL_TITLE_CLASSES = ACCOUNT_PANEL_TITLE_CLASSES;
 export const ADMIN_PANEL_BADGE_CLASSES = ACCOUNT_PANEL_BADGE_CLASSES;
 
 export const ADMIN_SUBTLE_RAIL_CLASSES =
-  'border-[0.5px] border-slate-200/50 bg-white/40 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/40 dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)]';
+  'glass-panel';
 
 export const ADMIN_GENTLE_SPRING = { type: 'spring', stiffness: 260, damping: 26 } as const;
 

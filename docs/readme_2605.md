@@ -84,3 +84,29 @@
   - `frontend/src/components/ui/button.tsx`
   - `frontend/src/components/ui/card.tsx`
   - `frontend/src/components/ui/textarea.tsx`
+
+## [2026-05-02 20:20:31] style(frontend): 收敛全站玻璃主题样式
+- **Body**: 统一全站玻璃拟物化变量、按钮、卡片、对话框和输入框样式，并同步调整登录、注册、免责声明与空状态页面，保证视觉语言一致。
+- **Files**:
+  - `frontend/src/components/MobileMenu.tsx`
+  - `frontend/src/components/SearchResults.tsx`
+  - `frontend/src/components/__tests__/MobileMenu.test.tsx`
+  - `frontend/src/components/admin/SystemSettingsView.tsx`
+  - `frontend/src/components/admin/adminDesign.ts`
+  - `frontend/src/components/auth/authEntryLayout.ts`
+  - `frontend/src/components/ui/AppleInput.tsx`
+  - `frontend/src/components/ui/animated-theme-toggler.tsx`
+  - `frontend/src/components/ui/apple-switch.tsx`
+  - `frontend/src/components/ui/button-variants.ts`
+  - `frontend/src/components/ui/button.tsx`
+  - `frontend/src/components/ui/card.tsx`
+  - `frontend/src/components/ui/dialog-shell.ts`
+  - `frontend/src/components/ui/page-not-found.tsx`
+  - `frontend/src/components/ui/textarea.tsx`
+  - `frontend/src/index.css`
+  - `frontend/src/pages/AdminLogin.tsx`
+  - `frontend/src/pages/DisclaimerPage.tsx`
+  - `frontend/src/pages/Home.tsx`
+  - `frontend/src/pages/LoginPage.tsx`
+  - `frontend/src/pages/RegisterPage.tsx`
+  - `frontend/tailwind.config.js`

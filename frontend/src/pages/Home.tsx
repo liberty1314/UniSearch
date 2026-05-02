@@ -130,7 +130,7 @@ const Home: React.FC = () => {
             ].map(({ value, suffix, label }) => (
               <div
                 key={label}
-                className="group relative flex flex-col items-center gap-1.5 px-6 py-3 min-w-[124px] rounded-[1.5rem] bg-white/40 dark:bg-slate-950/40 border-[0.5px] border-slate-200/50 dark:border-white/10 shadow-sm backdrop-blur-3xl hover:-translate-y-1 hover:bg-white/60 hover:shadow-md dark:hover:bg-slate-800/40 transition-all duration-300"
+                className="group glass-panel relative flex min-w-[124px] flex-col items-center gap-1.5 px-6 py-3 hover:-translate-y-1.5 hover:shadow-glass-strong dark:hover:shadow-glass-dark transition-all duration-300"
               >
                 <p className="text-3xl font-extrabold text-slate-800 dark:text-white tabular-nums tracking-tight">
                   <NumberTicker value={value} delay={0.9} />

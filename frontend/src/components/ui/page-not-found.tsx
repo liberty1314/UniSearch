@@ -84,7 +84,7 @@ function MessageDisplay() {
   return (
     <div className="absolute inset-0 z-[100] flex items-center justify-center px-6 py-10 sm:px-10">
       <div
-        className={`flex max-w-3xl flex-col items-center rounded-[2rem] border border-white/80 bg-white/84 px-6 py-8 text-center text-slate-900 ${SURFACE_GLOW} backdrop-blur-xl transition-opacity duration-500 sm:px-10 ${
+        className={`glass-card-premium flex max-w-3xl flex-col items-center rounded-[2rem] border border-white/80 px-6 py-8 text-center text-slate-900 ${SURFACE_GLOW} transition-opacity duration-500 sm:px-10 ${
           isVisible ? 'opacity-100' : 'opacity-0'
         }`}
       >
@@ -101,7 +101,7 @@ function MessageDisplay() {
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="group inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white/85 px-6 py-2 text-base font-medium text-slate-700 shadow-[0_12px_28px_rgba(15,23,42,0.06)] transition-all duration-300 ease-in-out hover:scale-[1.03] hover:border-cyan-300 hover:text-cyan-700"
+            className="glass-toolbar group inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-6 py-2 text-base font-medium text-slate-700 transition-all duration-300 ease-in-out hover:scale-[1.03] hover:border-cyan-300 hover:text-cyan-700"
           >
             <ArrowLeft className="h-5 w-5 transition-transform duration-300 group-hover:-translate-x-1" />
             返回上一页
@@ -109,7 +109,7 @@ function MessageDisplay() {
           <button
             type="button"
             onClick={() => navigate('/')}
-            className={`group inline-flex min-h-11 items-center gap-2 rounded-xl ${PRIMARY_BUTTON_GRADIENT} px-6 py-2 text-base font-medium text-white shadow-button transition-all duration-300 ease-in-out hover:scale-[1.03] hover:shadow-button-hover`}
+            className={`group inline-flex min-h-11 items-center gap-2 rounded-xl ${PRIMARY_BUTTON_GRADIENT} border border-cyan-200/60 px-6 py-2 text-base font-medium text-white shadow-glass-strong transition-all duration-300 ease-in-out hover:scale-[1.03] hover:shadow-glass-strong dark:border-cyan-200/20`}
           >
             <House className="h-5 w-5 transition-transform duration-300 group-hover:translate-y-[-1px]" />
             回到首页

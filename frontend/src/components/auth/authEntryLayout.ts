@@ -4,7 +4,7 @@ export const AUTH_ENTRY_PAGE_CONTAINER_CLASS =
 export const AUTH_ENTRY_CARD_SHELL_CLASS = "max-w-[26rem]";
 
 export const AUTH_ENTRY_CARD_BASE_CLASS =
-  "relative min-h-[34rem] sm:min-h-[35rem] glass-panel shadow-2xl";
+  "relative min-h-[34rem] sm:min-h-[35rem] glass-card-premium";
 
 export const AUTH_ENTRY_CARD_HEADER_CLASS = "space-y-2.5 pb-4 sm:pb-5";
 

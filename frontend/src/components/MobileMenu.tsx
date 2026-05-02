@@ -11,7 +11,7 @@ import {
 import { useAuthStore } from '@/stores/authStore';
 import { AuthService } from '@/services/authService';
 import { toast } from 'sonner';
-import { AnimatedThemeToggler } from '@/components/magicui/animated-theme-toggler';
+import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import {
     BLUE_CYAN_GRADIENT,
     BLUE_CYAN_HOVER_TEXT,

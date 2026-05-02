@@ -219,7 +219,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           whileInView={{ opacity: 1 }}
           className="text-center py-8"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100/50 dark:border dark:border-cyan-300/10 dark:bg-slate-900/72 rounded-full text-xs text-gray-500 dark:text-slate-400">
+          <div className="glass-toolbar inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs text-gray-500 dark:text-slate-400">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
             已加载全部 {allSortedResults.length} 条结果
           </div>
