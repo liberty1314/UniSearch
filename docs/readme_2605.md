@@ -58,3 +58,19 @@
   - `frontend/src/pages/AccountPage.tsx`
   - `frontend/src/pages/Home.tsx`
   - `frontend/src/routes/AppRoutes.tsx`
+
+## [2026-05-02 16:18:56] style(frontend): 重构后台管理页交互结构
+- **Body**: 将后台用户与系统设置页面拆分为独立控制器和基础组件，新增苹果风开关与骨架屏样式，收敛页面入口和全局样式以统一后台管理体验。
+- **Files**:
+  - `.playwright-mcp/page-2026-05-01T06-06-39-849Z.yml`
+  - `frontend/src/components/admin/AdminUsersView.tsx`
+  - `frontend/src/components/admin/SystemSettingsView.tsx`
+  - `frontend/src/components/admin/__tests__/AdminUsersView.test.tsx`
+  - `frontend/src/components/ui/apple-switch.tsx`
+  - `frontend/src/components/ui/skeleton.tsx`
+  - `frontend/src/config/constants.ts`
+  - `frontend/src/hooks/useAdminPageController.ts`
+  - `frontend/src/hooks/useAdminUsers.ts`
+  - `frontend/src/hooks/useSystemSettingsController.ts`
+  - `frontend/src/index.css`
+  - `frontend/src/pages/Admin.tsx`

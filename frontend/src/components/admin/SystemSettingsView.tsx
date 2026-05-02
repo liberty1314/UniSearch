@@ -1,303 +1,154 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Settings, RefreshCw, Shield, LogIn, UserPlus, Globe, Save } from 'lucide-react';
-import { SystemSettingsService } from '@/services/systemSettingsService';
-import { useAuthStore } from '@/stores/authStore';
-import { getErrorDataError, getErrorMessage } from '@/lib/error';
-import { resolvePublicSiteUrl } from '@/lib/publicSiteConfig';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import {
-  ADMIN_HOVERABLE_BUTTON_CLASSES,
-  ADMIN_PANEL_SURFACE_CLASSES,
-  ADMIN_PANEL_SURFACE_HOVER_CLASSES,
-} from '@/components/admin/adminDesign';
+import { AppleSwitch } from '@/components/ui/apple-switch';
+import { useSystemSettingsController } from '@/hooks/useSystemSettingsController';
+import { resolvePublicSiteUrl } from '@/lib/publicSiteConfig';
 
-/**
- * 系统设置视图组件
- */
 export const SystemSettingsView: React.FC = () => {
-    const { token } = useAuthStore();
-    
-    // 状态管理
-    const [enableUserAuth, setEnableUserAuth] = useState<boolean>(true);
-    const [enableUserLogin, setEnableUserLogin] = useState<boolean>(true);
-    const [enableUserSignup, setEnableUserSignup] = useState<boolean>(true);
-    const [publicSiteUrl, setPublicSiteUrl] = useState<string>(resolvePublicSiteUrl());
-    
-    const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [isSaving, setIsSaving] = useState<string | null>(null);
-    
-    // 原始值（用于错误恢复）
-    const [originalValues, setOriginalValues] = useState({
-        enableUserAuth: true,
-        enableUserLogin: true,
-        enableUserSignup: true,
-        publicSiteUrl: resolvePublicSiteUrl(),
-    });
+    const { state, actions } = useSystemSettingsController();
 
-    /**
-     * 加载系统设置
-     */
-    const loadSettings = useCallback(async () => {
-        if (!token) return;
+    const {
+        enableUserAuth,
+        enableUserLogin,
+        enableUserSignup,
+        publicSiteUrl,
+        isLoading,
+        isSaving,
+    } = state;
 
-        setIsLoading(true);
-        try {
-            const settings = await SystemSettingsService.getSettingsAdmin(token);
-            setEnableUserAuth(settings.enable_user_auth);
-            setEnableUserLogin(settings.enable_user_login);
-            setEnableUserSignup(settings.enable_user_signup);
-            setPublicSiteUrl(resolvePublicSiteUrl(settings));
-            setOriginalValues({
-                enableUserAuth: settings.enable_user_auth,
-                enableUserLogin: settings.enable_user_login,
-                enableUserSignup: settings.enable_user_signup,
-                publicSiteUrl: resolvePublicSiteUrl(settings),
-            });
-        } catch (error) {
-            console.error('加载系统设置失败:', error);
-            toast.error('加载系统设置失败：' + (getErrorDataError(error) || getErrorMessage(error)));
-        } finally {
-            setIsLoading(false);
-        }
-    }, [token]);
-
-    /**
-     * 处理主开关变化
-     */
-    const handleToggleAuth = async (checked: boolean) => {
-        if (!token) return;
-
-        setEnableUserAuth(checked);
-        setIsSaving('auth');
-
-        try {
-            const result = await SystemSettingsService.updateSettings(token, {
-                enable_user_auth: checked,
-            });
-            setOriginalValues(prev => ({ ...prev, enableUserAuth: checked }));
-            
-            if (!checked) {
-                setEnableUserLogin(result.enable_user_login);
-                setEnableUserSignup(result.enable_user_signup);
-            }
-            
-            toast.success(checked ? '已启用用户登录注册功能' : '已禁用用户登录注册功能');
-        } catch (error) {
-            console.error('保存系统设置失败:', error);
-            setEnableUserAuth(originalValues.enableUserAuth);
-            toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
-        } finally {
-            setIsSaving(null);
-        }
-    };
-
-    /**
-     * 处理登录开关变化
-     */
-    const handleToggleLogin = async (checked: boolean) => {
-        if (!token) return;
-
-        setEnableUserLogin(checked);
-        setIsSaving('login');
-
-        try {
-            await SystemSettingsService.updateSettings(token, {
-                enable_user_login: checked,
-            });
-            setOriginalValues(prev => ({ ...prev, enableUserLogin: checked }));
-            toast.success(checked ? '已启用用户登录功能' : '已禁用用户登录功能');
-        } catch (error) {
-            console.error('保存系统设置失败:', error);
-            setEnableUserLogin(originalValues.enableUserLogin);
-            toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
-        } finally {
-            setIsSaving(null);
-        }
-    };
-
-    /**
-     * 处理注册开关变化
-     */
-    const handleToggleSignup = async (checked: boolean) => {
-        if (!token) return;
-
-        setEnableUserSignup(checked);
-        setIsSaving('signup');
-
-        try {
-            await SystemSettingsService.updateSettings(token, {
-                enable_user_signup: checked,
-            });
-            setOriginalValues(prev => ({ ...prev, enableUserSignup: checked }));
-            toast.success(checked ? '已启用用户注册功能' : '已禁用用户注册功能');
-        } catch (error) {
-            console.error('保存系统设置失败:', error);
-            setEnableUserSignup(originalValues.enableUserSignup);
-            toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
-        } finally {
-            setIsSaving(null);
-        }
-    };
-
-    const handleSaveDisplayConfig = async () => {
-        if (!token) return;
-
-        setIsSaving('display');
-        try {
-            const result = await SystemSettingsService.updateSettings(token, {
-                public_site_url: publicSiteUrl.trim(),
-            });
-            const resolvedSiteUrl = resolvePublicSiteUrl(result);
-            setPublicSiteUrl(resolvedSiteUrl);
-            setOriginalValues(prev => ({
-                ...prev,
-                publicSiteUrl: resolvedSiteUrl,
-            }));
-            toast.success('公开展示配置已更新');
-        } catch (error) {
-            console.error('保存系统设置失败:', error);
-            setPublicSiteUrl(originalValues.publicSiteUrl);
-            toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
-        } finally {
-            setIsSaving(null);
-        }
-    };
-
-    useEffect(() => {
-        loadSettings();
-    }, [loadSettings]);
-
-    const renderToggle = (checked: boolean, onChange: (checked: boolean) => void, disabled: boolean) => (
-        <button
-            onClick={() => onChange(!checked)}
-            disabled={disabled}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${
-            checked ? 'border-cyan-200/50 bg-gradient-to-r from-blue-600 to-cyan-500' : 'border-slate-200/50 bg-gray-300 dark:border-white/10 dark:bg-slate-600'
-        } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-        >
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
-        </button>
-    );
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[60vh]">
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="inline-block">
+                    <RefreshCw className="w-10 h-10 text-blue-500" />
+                </motion.div>
+                <p className="mt-4 text-slate-500 dark:text-slate-400 font-medium">加载设置中...</p>
+            </div>
+        );
+    }
 
     return (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-6">
-            <div className="flex items-center justify-between">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-8 max-w-4xl mx-auto pb-12">
+            <div className="flex items-center justify-between px-2">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                        <Settings className="w-6 h-6 text-blue-600 dark:text-cyan-300" />
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
+                        <Settings className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                         系统设置
                     </h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">配置系统全局设置和功能开关</p>
+                    <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">配置系统的核心认证策略与全局公开站点信息</p>
                 </div>
             </div>
 
-            <Card className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden')}>
-                <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/30">
-                    <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-                        <Shield className="w-5 h-5 text-blue-600 dark:text-cyan-300" />
-                        登录认证设置
-                    </CardTitle>
-                    <CardDescription className="text-slate-500 dark:text-slate-400">控制用户登录和注册功能的可用性</CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                    {isLoading ? (
-                        <div className="text-center py-12">
-                            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="inline-block">
-                                <RefreshCw className="w-8 h-8 text-blue-600 dark:text-cyan-300" />
-                            </motion.div>
-                            <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            <div className="flex items-start justify-between rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 p-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40">
-                                <div className="flex-1">
-                                    <Label className="text-base font-medium text-slate-800 dark:text-white flex items-center gap-2">
-                                        <Shield className="w-4 h-4 text-blue-600 dark:text-cyan-300" />
-                                        启用用户登录注册功能
-                                    </Label>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">主开关：控制是否启用用户认证功能</p>
-                                        <div className="mt-3 space-y-2">
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <div className={`w-2 h-2 rounded-full ${enableUserAuth ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                                                <span className="text-slate-600 dark:text-slate-300">{enableUserAuth ? '已启用' : '已禁用'}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                <div className="flex-shrink-0 ml-4">{renderToggle(enableUserAuth, handleToggleAuth, isSaving === 'auth')}</div>
+            {/* Apple iOS Style Settings Group - Authentication */}
+            <div className="space-y-3">
+                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider px-4">登录认证与用户</h2>
+                <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-[1.5rem] overflow-hidden shadow-sm">
+                    {/* Item 1: Enable User Auth */}
+                    <div className="flex items-center justify-between p-5 sm:px-6 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                        <div className="flex items-start gap-4">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
+                                <Shield className="w-5 h-5" />
                             </div>
-
-                            {enableUserAuth && (
-                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="ml-6 space-y-4 border-l-2 border-blue-200 dark:border-cyan-800/70 pl-4">
-                                    <div className="flex items-start justify-between rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/30 p-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/30">
-                                        <div className="flex-1">
-                                            <Label className="text-base font-medium text-slate-800 dark:text-white flex items-center gap-2">
-                                                <LogIn className="w-4 h-4 text-green-600 dark:text-green-400" />
-                                                启用用户登录功能
-                                            </Label>
-                                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">允许用户使用用户名密码登录</p>
-                                            <div className="mt-2 flex items-center gap-2 text-xs">
-                                                <div className={`w-2 h-2 rounded-full ${enableUserLogin ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                                                <span className="text-slate-600 dark:text-slate-300">{enableUserLogin ? '已启用' : '已禁用'}</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex-shrink-0 ml-4">{renderToggle(enableUserLogin, handleToggleLogin, isSaving === 'login')}</div>
-                                    </div>
-
-                                    <div className="flex items-start justify-between rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/30 p-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/30">
-                                        <div className="flex-1">
-                                            <Label className="text-base font-medium text-slate-800 dark:text-white flex items-center gap-2">
-                                                <UserPlus className="w-4 h-4 text-cyan-700 dark:text-cyan-300" />
-                                                启用用户注册功能
-                                            </Label>
-                                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">允许新用户注册账号</p>
-                                            <div className="mt-2 flex items-center gap-2 text-xs">
-                                                <div className={`w-2 h-2 rounded-full ${enableUserSignup ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                                                <span className="text-slate-600 dark:text-slate-300">{enableUserSignup ? '已启用' : '已禁用'}</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex-shrink-0 ml-4">{renderToggle(enableUserSignup, handleToggleSignup, isSaving === 'signup')}</div>
-                                    </div>
-                                </motion.div>
-                            )}
+                            <div>
+                                <Label className="text-base font-semibold text-slate-900 dark:text-white cursor-pointer" onClick={() => actions.handleToggleAuth(!enableUserAuth)}>启用用户功能</Label>
+                                <p className="text-sm text-slate-500 mt-1">主开关：全局控制是否开启任何用户相关的认证体系</p>
+                            </div>
                         </div>
-                    )}
-                </CardContent>
-            </Card>
-
-            <Card className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden')}>
-                <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/30">
-                    <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-                        <Globe className="w-5 h-5 text-blue-600 dark:text-cyan-300" />
-                        公开展示配置
-                    </CardTitle>
-                    <CardDescription className="text-slate-500 dark:text-slate-400">配置公开站点 URL</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 p-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="public-site-url">公开站点 URL</Label>
-                        <Input
-                            id="public-site-url"
-                            value={publicSiteUrl}
-                            onChange={(e) => setPublicSiteUrl(e.target.value)}
-                            placeholder={resolvePublicSiteUrl()}
-                            disabled={isLoading || isSaving === 'display'}
+                        <AppleSwitch 
+                            checked={enableUserAuth} 
+                            onCheckedChange={actions.handleToggleAuth} 
+                            disabled={isSaving === 'auth'} 
                         />
                     </div>
 
-                    <div className="flex justify-end">
-                        <Button onClick={handleSaveDisplayConfig} disabled={isLoading || isSaving === 'display'} className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'gap-2 border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}>
-                            <Save className="h-4 w-4" />
-                            {isSaving === 'display' ? '保存中...' : '保存展示配置'}
-                        </Button>
+                    {/* Sub-items for User Auth */}
+                    <AnimatePresence>
+                        {enableUserAuth && (
+                            <motion.div 
+                                initial={{ height: 0, opacity: 0 }} 
+                                animate={{ height: 'auto', opacity: 1 }} 
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden bg-slate-50/30 dark:bg-slate-950/20"
+                            >
+                                <div className="border-t border-slate-100 dark:border-white/5 ml-16">
+                                    <div className="flex items-center justify-between py-4 pr-5 sm:pr-6">
+                                        <div>
+                                            <Label className="text-[15px] font-medium text-slate-800 dark:text-slate-200 cursor-pointer flex items-center gap-2" onClick={() => actions.handleToggleLogin(!enableUserLogin)}>
+                                                <LogIn className="w-4 h-4 text-slate-400" />
+                                                允许登录
+                                            </Label>
+                                            <p className="text-sm text-slate-500 mt-0.5">允许已存在的用户进行密码或授权登录</p>
+                                        </div>
+                                        <AppleSwitch 
+                                            checked={enableUserLogin} 
+                                            onCheckedChange={actions.handleToggleLogin} 
+                                            disabled={isSaving === 'login'} 
+                                        />
+                                    </div>
+                                </div>
+                                <div className="border-t border-slate-100 dark:border-white/5 ml-16">
+                                    <div className="flex items-center justify-between py-4 pr-5 sm:pr-6">
+                                        <div>
+                                            <Label className="text-[15px] font-medium text-slate-800 dark:text-slate-200 cursor-pointer flex items-center gap-2" onClick={() => actions.handleToggleSignup(!enableUserSignup)}>
+                                                <UserPlus className="w-4 h-4 text-slate-400" />
+                                                允许注册
+                                            </Label>
+                                            <p className="text-sm text-slate-500 mt-0.5">开放公共注册通道允许新用户注册账号</p>
+                                        </div>
+                                        <AppleSwitch 
+                                            checked={enableUserSignup} 
+                                            onCheckedChange={actions.handleToggleSignup} 
+                                            disabled={isSaving === 'signup'} 
+                                        />
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            </div>
+
+            {/* Apple iOS Style Settings Group - General Site Info */}
+            <div className="space-y-3">
+                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider px-4">站点展示</h2>
+                <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-[1.5rem] overflow-hidden shadow-sm p-5 sm:p-6 space-y-5">
+                    <div className="flex items-start gap-4">
+                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                            <Globe className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 space-y-4">
+                            <div>
+                                <Label className="text-base font-semibold text-slate-900 dark:text-white">公开站点 URL</Label>
+                                <p className="text-sm text-slate-500 mt-1">此地址将用于邮件通知、全局分享以及系统级的重定向链接</p>
+                            </div>
+                            
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <Input
+                                    id="public-site-url"
+                                    value={publicSiteUrl}
+                                    onChange={(e) => actions.setPublicSiteUrl(e.target.value)}
+                                    placeholder={resolvePublicSiteUrl()}
+                                    disabled={isSaving === 'display'}
+                                    className="flex-1 bg-white/80 dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700 h-11 text-[15px] focus-visible:ring-blue-500 rounded-xl"
+                                />
+                                <Button 
+                                    onClick={actions.handleSaveDisplayConfig} 
+                                    disabled={isSaving === 'display' || publicSiteUrl === ''} 
+                                    className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-[0_8px_16px_rgba(37,99,235,0.2)] transition-all"
+                                >
+                                    {isSaving === 'display' ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                                    {isSaving === 'display' ? '保存中...' : '保存更改'}
+                                </Button>
+                            </div>
+                        </div>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
         </motion.div>
     );
 };
