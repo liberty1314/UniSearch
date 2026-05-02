@@ -96,6 +96,7 @@ describe('Auth entry pages', () => {
 
     expect(container.querySelector('.auth-sparkle-intro')).toBeNull();
     expect(screen.getByRole('button', { name: '登录' }).className).not.toContain('hover:scale-[1.02]');
+    expect(screen.getByRole('button', { name: '登录' }).className).not.toContain(' glass ');
   });
 
   it('does not render the decorative sparkle icon on the register page', async () => {
@@ -109,6 +110,38 @@ describe('Auth entry pages', () => {
 
     expect(container.querySelector('.auth-sparkle-intro')).toBeNull();
     expect(screen.getByRole('button', { name: '立即注册' }).className).not.toContain('hover:scale-[1.02]');
+    expect(screen.getByRole('button', { name: '立即注册' }).className).not.toContain(' glass ');
+  });
+
+  it('keeps auth primary actions available before input state updates so browser autofill cannot lock the page', async () => {
+    const loginRender = render(
+      <MemoryRouter initialEntries={['/login']}>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('button', { name: '登录' })).toBeEnabled();
+    cleanup();
+
+    const registerRender = render(
+      <MemoryRouter initialEntries={['/register']}>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('button', { name: '立即注册' })).toBeEnabled();
+    cleanup();
+
+    render(
+      <MemoryRouter initialEntries={['/admin/login']}>
+        <AdminLogin />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('button', { name: '登录后台' })).toBeEnabled();
+
+    loginRender.unmount();
+    registerRender.unmount();
   });
 
   it('keeps login and register pages on the same fixed auth layout footprint', async () => {
@@ -121,7 +154,7 @@ describe('Auth entry pages', () => {
     await screen.findByText('欢迎回来');
 
     const loginRoot = loginRender.container.firstChild as HTMLElement;
-    const loginCard = loginRender.container.querySelector('.glass-panel') as HTMLElement;
+    const loginCard = loginRender.container.querySelector('.glass-card-premium') as HTMLElement;
 
     expect(loginRoot).toHaveClass('min-h-dvh');
     expect(loginRoot).toHaveClass('overflow-hidden');
@@ -139,7 +172,7 @@ describe('Auth entry pages', () => {
     await screen.findByText('创建账户');
 
     const registerRoot = registerRender.container.firstChild as HTMLElement;
-    const registerCard = registerRender.container.querySelector('.glass-panel') as HTMLElement;
+    const registerCard = registerRender.container.querySelector('.glass-card-premium') as HTMLElement;
 
     expect(registerRoot.className).toBe(loginRoot.className);
     expect(registerCard.className).toContain('min-h-[35rem]');
@@ -158,6 +191,7 @@ describe('Auth entry pages', () => {
 
     expect(container.querySelector('.auth-sparkle-intro')).toBeNull();
     expect(screen.getByRole('button', { name: '登录后台' }).className).not.toContain('hover:scale-[1.02]');
+    expect(screen.getByRole('button', { name: '登录后台' }).className).not.toContain(' glass ');
   });
 
   it('does not perform an extra client-side navigate after successful admin login', async () => {

@@ -191,7 +191,11 @@ const LoginPage: React.FC = () => {
                 <div className="absolute inset-x-0 -top-20 bottom-0 bg-white/5 dark:bg-gray-900/20 backdrop-blur-[2px] z-10 rounded-xl transition-all duration-300" />
               )}
 
-              <div
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleLogin();
+                }}
                 className={cn(
                   `${AUTH_ENTRY_FORM_STACK_CLASS} transition-all duration-300`,
                   isLoading && "opacity-60 scale-[0.98]",
@@ -199,26 +203,32 @@ const LoginPage: React.FC = () => {
               >
                 <AuthInput
                   id="username"
+                  name="username"
                   label="用户名"
                   tone="blue"
                   icon={<User className="w-4 h-4" />}
                   type="text"
+                  autoComplete="username"
                   placeholder="请输入用户名"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                  disabled={isLoading}
                 />
 
                 <AuthInput
                   id="password"
+                  name="password"
                   label="密码"
                   tone="blue"
                   icon={<Lock className="w-4 h-4" />}
                   type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   placeholder="请输入密码"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                  disabled={isLoading}
                   endAdornment={
                     <button
                       type="button"
@@ -241,6 +251,7 @@ const LoginPage: React.FC = () => {
                     id="remember-me"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
+                    disabled={isLoading}
                     className="w-4 h-4 text-blue-500 rounded border-gray-300 focus:ring-blue-500"
                   />
                   <Label
@@ -252,9 +263,9 @@ const LoginPage: React.FC = () => {
                 </div>
 
                 <Button
-                  onClick={handleLogin}
-                  variant="glass"
-                  disabled={isLoading || !username.trim() || !password.trim()}
+                  type="submit"
+                  variant="primary"
+                  disabled={isLoading}
                   className="relative h-12 w-full overflow-hidden border-cyan-200/60 bg-gradient-to-r from-blue-600/95 via-blue-500/95 to-cyan-500/95 text-white shadow-glass-strong hover:shadow-glass-strong dark:border-cyan-200/20"
                 >
                   {/* 文字淡入淡出 */}
@@ -276,7 +287,7 @@ const LoginPage: React.FC = () => {
                     </div>
                   )}
                 </Button>
-              </div>
+              </form>
 
               <AuthEntryLinksRow className="mt-2">
                 {!isLoadingSettings && enableUserSignup && (

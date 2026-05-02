@@ -11,6 +11,8 @@ export default defineConfig(() => {
       globals: true,
       environment: "jsdom",
       setupFiles: "./src/test/setup.ts",
+      testTimeout: 15000,
+      hookTimeout: 15000,
     },
     build: {
       sourcemap: "hidden" as const,

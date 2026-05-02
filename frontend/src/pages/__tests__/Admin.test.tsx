@@ -72,7 +72,12 @@ vi.mock('@/components/admin/AnnouncementManagement', () => ({
 }));
 
 vi.mock('@/components/admin/AdminUsersView', () => ({
-  default: () => <div>AdminUsersView</div>,
+  default: () => (
+    <>
+      <div>AdminUsersView</div>
+      <div data-testid="confirm-dialog">确认删除用户</div>
+    </>
+  ),
 }));
 
 vi.mock('@/components/admin/BatchDeleteDialog', () => ({

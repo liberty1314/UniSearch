@@ -239,7 +239,11 @@ const RegisterPage: React.FC = () => {
                 <div className="absolute inset-x-0 -top-20 bottom-0 z-10 rounded-xl bg-white/5 backdrop-blur-[2px] transition-all duration-300 dark:bg-gray-900/20" />
               )}
 
-              <div
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleRegister();
+                }}
                 className={cn(
                   `${AUTH_ENTRY_FORM_STACK_CLASS} transition-all duration-300`,
                   isLoading && "opacity-60 scale-[0.98]",
@@ -247,29 +251,35 @@ const RegisterPage: React.FC = () => {
               >
                 <AuthInput
                   id="username"
+                  name="username"
                   label="用户名"
                   tone="emerald"
                   icon={<User className="w-4 h-4" />}
                   type="text"
+                  autoComplete="username"
                   placeholder="3-32个字符"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleRegister()}
                   error={usernameError}
+                  disabled={isLoading}
                 />
 
                 <div>
                   <AuthInput
                     id="password"
+                    name="password"
                     label="密码"
                     tone="emerald"
                     icon={<Lock className="w-4 h-4" />}
                     type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
                     placeholder="6-64个字符"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleRegister()}
                     error={passwordError}
+                    disabled={isLoading}
                     helperText={
                       passwordError
                         ? undefined
@@ -294,15 +304,18 @@ const RegisterPage: React.FC = () => {
 
                 <AuthInput
                   id="confirmPassword"
+                  name="confirmPassword"
                   label="确认密码"
                   tone="emerald"
                   icon={<Lock className="w-4 h-4" />}
                   type={showConfirmPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   placeholder="请再次输入密码"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleRegister()}
                   error={confirmPasswordError}
+                  disabled={isLoading}
                   endAdornment={
                     <button
                       type="button"
@@ -324,14 +337,9 @@ const RegisterPage: React.FC = () => {
                 />
 
                 <Button
-                  onClick={handleRegister}
-                  variant="glass"
-                  disabled={
-                    isLoading ||
-                    !username.trim() ||
-                    !password.trim() ||
-                    !confirmPassword.trim()
-                  }
+                  type="submit"
+                  variant="primary"
+                  disabled={isLoading}
                   className="relative h-12 w-full overflow-hidden border-emerald-200/60 bg-gradient-to-r from-emerald-600/95 via-emerald-500/95 to-teal-500/95 font-medium text-white shadow-glass-strong transition-all duration-300 hover:shadow-glass-strong dark:border-emerald-200/20"
                 >
                   <span
@@ -351,7 +359,7 @@ const RegisterPage: React.FC = () => {
                     </div>
                   )}
                 </Button>
-              </div>
+              </form>
 
               <AuthEntryLinksRow prefixText="已有账号？" className="mt-2">
                 <AuthEntryLink

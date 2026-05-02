@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { HelmetProvider } from 'react-helmet-async';
 import AccountPage from '@/pages/AccountPage';
 
 const { getMock, postMock, toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
@@ -21,8 +22,16 @@ vi.mock('sonner', () => ({
 vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
-    section: ({ children, ...props }: React.HTMLAttributes<HTMLElement>) => <section {...props}>{children}</section>,
+    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement> & Record<string, unknown>) => {
+      const { initial, animate, exit, transition, whileHover, whileTap, layout, layoutId, ...rest } = props;
+      void initial; void animate; void exit; void transition; void whileHover; void whileTap; void layout; void layoutId;
+      return <div {...rest}>{children}</div>;
+    },
+    section: ({ children, ...props }: React.HTMLAttributes<HTMLElement> & Record<string, unknown>) => {
+      const { initial, animate, exit, transition, whileHover, whileTap, layout, layoutId, ...rest } = props;
+      void initial; void animate; void exit; void transition; void whileHover; void whileTap; void layout; void layoutId;
+      return <section {...rest}>{children}</section>;
+    },
   },
 }));
 
@@ -68,6 +77,13 @@ vi.mock('@/lib/error', () => ({
 }));
 
 describe('AccountPage', () => {
+  const renderAccountPage = () =>
+    render(
+      <HelmetProvider>
+        <AccountPage />
+      </HelmetProvider>
+    );
+
   beforeEach(() => {
     getMock.mockReset();
     postMock.mockReset();
@@ -87,7 +103,7 @@ describe('AccountPage', () => {
   it('renders account workspace navigation and toggles between overview and security modules', async () => {
     const user = userEvent.setup();
 
-    render(<AccountPage />);
+    renderAccountPage();
 
     expect(await screen.findByText('欢迎回来，alice')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /账号概览/ })).toBeInTheDocument();
@@ -114,7 +130,7 @@ describe('AccountPage', () => {
   it('shows a toast when profile loading fails', async () => {
     getMock.mockRejectedValueOnce(new Error('boom'));
 
-    render(<AccountPage />);
+    renderAccountPage();
 
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith('加载个人中心失败');
@@ -124,7 +140,7 @@ describe('AccountPage', () => {
   it('blocks password submission when confirmation does not match', async () => {
     const user = userEvent.setup();
 
-    render(<AccountPage />);
+    renderAccountPage();
 
     await screen.findByRole('button', { name: /^修改密码$/ });
     await user.click(screen.getByRole('button', { name: /^修改密码$/ }));
@@ -142,7 +158,7 @@ describe('AccountPage', () => {
 
     postMock.mockResolvedValueOnce({});
 
-    render(<AccountPage />);
+    renderAccountPage();
 
     await screen.findByRole('button', { name: /^修改密码$/ });
     await user.click(screen.getByRole('button', { name: /^修改密码$/ }));

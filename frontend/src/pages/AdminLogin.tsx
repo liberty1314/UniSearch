@@ -197,8 +197,8 @@ const AdminLogin: React.FC = () => {
                                 <div className="animate-fade-in auth-delay-400">
                                     <Button
                                         type="submit"
-                                        variant="glass"
-                                        disabled={isAdminLoading || !username.trim() || !password.trim()}
+                                        variant="primary"
+                                        disabled={isAdminLoading}
                                         className="group relative h-12 w-full overflow-hidden border-rose-200/60 bg-gradient-to-r from-rose-600/95 via-rose-500/95 to-rose-700/95 text-white shadow-glass-strong transition-all duration-200 disabled:transform-none dark:border-rose-200/20"
                                     >
                                         {/* 按钮光泽效果 */}

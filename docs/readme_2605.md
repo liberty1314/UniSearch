@@ -110,3 +110,18 @@
   - `frontend/src/pages/LoginPage.tsx`
   - `frontend/src/pages/RegisterPage.tsx`
   - `frontend/tailwind.config.js`
+
+## [2026-05-02 21:08:13] refactor(frontend): 统一认证页表单提交流程并补强测试适配
+- **Body**: 将登录、注册和后台登录改为标准表单提交，补充自动填充与禁用态处理，并同步修正相关测试与 Vite 超时配置。
+- **Files**:
+  - `frontend/index.html`
+  - `frontend/src/components/admin/__tests__/ChannelPreviewDialog.test.tsx`
+  - `frontend/src/components/home/__tests__/TrendingCategories.test.tsx`
+  - `frontend/src/pages/AdminLogin.tsx`
+  - `frontend/src/pages/LoginPage.tsx`
+  - `frontend/src/pages/RegisterPage.tsx`
+  - `frontend/src/pages/__tests__/AccountPage.test.tsx`
+  - `frontend/src/pages/__tests__/Admin.test.tsx`
+  - `frontend/src/pages/__tests__/AuthEntryPages.test.tsx`
+  - `frontend/src/pages/__tests__/Home.test.tsx`
+  - `frontend/vite.config.ts`

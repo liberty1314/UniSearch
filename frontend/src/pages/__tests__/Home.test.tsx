@@ -2,6 +2,7 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import Home from '@/pages/Home';
 import type { SearchAccessStatus } from '@/stores/searchAccessStore';
 
@@ -88,6 +89,15 @@ vi.mock('@/stores/searchAccessStore', () => ({
 }));
 
 describe('Home', () => {
+  const renderHome = () =>
+    render(
+      <HelmetProvider>
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>
+      </HelmetProvider>
+    );
+
   beforeEach(() => {
     searchAccessStatus = 'authenticated';
     searchKeyword = '';
@@ -97,11 +107,7 @@ describe('Home', () => {
   it('renders the public homepage shell for guests without showing legacy API key prompts', () => {
     searchAccessStatus = 'anonymous';
 
-    render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>
-    );
+    renderHome();
 
     expect(screen.getByText('UniSearch')).toBeInTheDocument();
     expect(screen.queryByText('当前账号已登录，绑定 API Key 后即可无限制搜索')).not.toBeInTheDocument();
@@ -110,11 +116,7 @@ describe('Home', () => {
   it('places the capability strip after the trending categories section', () => {
     searchAccessStatus = 'authenticated';
 
-    render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>
-    );
+    renderHome();
 
     const trendingHeading = screen.getByRole('heading', { level: 2, name: '探索热门分类' });
     const capabilityHeading = screen.getByRole('heading', { level: 2, name: '支持识别 / 聚合以下链接类型' });
@@ -130,11 +132,7 @@ describe('Home', () => {
   it('renders elevated feature cards with dedicated depth layers', () => {
     searchAccessStatus = 'authenticated';
 
-    render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>
-    );
+    renderHome();
 
     expect(screen.getByText('多平台搜索')).toBeInTheDocument();
     expect(screen.getByText('智能匹配')).toBeInTheDocument();
@@ -144,28 +142,20 @@ describe('Home', () => {
   it('tones feature card surfaces for dark backgrounds with matte slate panels', () => {
     searchAccessStatus = 'authenticated';
 
-    render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>
-    );
+    renderHome();
 
     const featureCard = screen.getByText('多平台搜索').closest('div.group');
-    const featureSurface = featureCard?.querySelector('div.relative.h-full');
+    const featureSurface = featureCard?.querySelector('div.glass-card-premium');
 
     expect(featureSurface).not.toBeNull();
-    expect(featureSurface).toHaveClass('dark:bg-slate-950/40');
-    expect(featureSurface).toHaveClass('dark:border-white/[0.08]');
+    expect(featureSurface).toHaveClass('glass-card-premium');
+    expect(featureSurface).toHaveClass('p-8');
   });
 
   it('uses the shared grid-backed page shell in the default state', () => {
     searchAccessStatus = 'authenticated';
 
-    const { container } = render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>
-    );
+    const { container } = renderHome();
 
     expect(container.firstChild).toHaveClass('bg-white');
     expect(container.firstChild).toHaveClass('obsidian-shell');
@@ -176,11 +166,7 @@ describe('Home', () => {
   it('keeps homepage hero and section typography on the blue/cyan theme axis', () => {
     searchAccessStatus = 'authenticated';
 
-    render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>
-    );
+    renderHome();
 
     const heroTitle = screen.getByTestId('gradient-text');
     const heroSubtitle = screen.getByRole('heading', { level: 2, name: '智能网盘资源搜索引擎' });
@@ -198,11 +184,7 @@ describe('Home', () => {
   it('uses neutral copy for homepage feature descriptions instead of enumerating platform brands', () => {
     searchAccessStatus = 'authenticated';
 
-    render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>
-    );
+    renderHome();
 
     expect(
       screen.getByText('支持多种主流网盘链接类型识别与聚合搜索，一站式完成检索')
@@ -217,11 +199,7 @@ describe('Home', () => {
     searchKeyword = '电影';
     searchResults = [{ id: 1 }];
 
-    render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>
-    );
+    renderHome();
 
     expect(screen.getByText('search-results')).toBeInTheDocument();
     expect(screen.getByTestId('animated-grid')).toBeInTheDocument();

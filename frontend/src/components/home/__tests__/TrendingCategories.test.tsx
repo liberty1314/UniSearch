@@ -50,8 +50,7 @@ describe('TrendingCategories', () => {
 
     cards.forEach((card) => {
       expect(card).toHaveAttribute('data-glass-panel', 'true');
-      expect(card).toHaveClass('dark:bg-slate-950/80');
-      expect(card).toHaveClass('dark:border-slate-700/55');
+      expect(card).toHaveClass('glass-card-premium');
       expect(card).toHaveClass('md:min-h-[240px]');
       expect(card).not.toHaveAttribute('data-layout');
       expect(card).not.toHaveClass('xl:grid');
