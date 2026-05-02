@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Film, BookOpen, MonitorPlay, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import HomeSectionHeader from '@/components/home/HomeSectionHeader';
+import { Card } from '@/components/ui/card';
 
 type Category = {
   id: number;
@@ -99,17 +100,14 @@ export const TrendingCategories = () => {
               transition={{ delay: index * 0.12, duration: 0.7, type: "spring", bounce: 0.3 }}
               className={cn("h-full h-full min-h-[220px] md:min-h-[240px]", bentoClass)}
             >
-              <div
+              <Card
                 data-testid="trending-category-card"
                 data-glass-panel="true"
                 className={cn(
-                  "group relative flex h-full min-h-[220px] flex-col justify-between overflow-hidden rounded-[2.5rem] p-5 text-left transition-all duration-500 md:min-h-[240px]",
-                  "cursor-pointer border border-white/40 bg-white/20 backdrop-blur-3xl",
-                  "shadow-[0_12px_40px_rgba(15,23,42,0.04),inset_0_1px_1px_rgba(255,255,255,0.5)]",
-                  "hover:-translate-y-2 hover:shadow-[0_24px_64px_rgba(15,23,42,0.08),inset_0_1px_1px_rgba(255,255,255,0.8)] hover:bg-white/30",
+                  "group flex h-full min-h-[220px] flex-col justify-between p-5 text-left transition-all duration-500 md:min-h-[240px]",
+                  "cursor-pointer hover:-translate-y-2 hover:shadow-[0_24px_64px_rgba(15,23,42,0.08),inset_0_1px_1px_rgba(255,255,255,0.8)] hover:bg-white/30",
                   "active:scale-[0.98]",
-                  "dark:border-slate-700/55 dark:bg-slate-950/80 dark:shadow-[0_12px_40px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.05)]",
-                  "dark:hover:border-slate-600/70 dark:hover:bg-slate-900/85 dark:hover:shadow-[0_24px_64px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.08)]",
+                  "dark:hover:bg-slate-900/85 dark:hover:shadow-[0_24px_64px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.08)]",
                   "md:p-6"
                 )}
               >
@@ -186,7 +184,7 @@ export const TrendingCategories = () => {
                 aria-hidden="true"
                 className="pointer-events-none absolute -bottom-10 -right-10 h-32 w-32 rounded-full bg-white/25 blur-3xl transition-all duration-500 group-hover:scale-110 group-hover:opacity-100 dark:bg-white/[0.03]"
               />
-              </div>
+              </Card>
             </motion.div>
           );
         })}

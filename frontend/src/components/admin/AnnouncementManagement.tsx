@@ -24,6 +24,7 @@ import { AnnouncementService } from '@/services/announcementService';
 import type { Announcement, AnnouncementPriority, CreateAnnouncementRequest, UpdateAnnouncementRequest } from '@/types/api';
 import { getErrorMessage } from '@/lib/error';
 import { cn } from '@/lib/utils';
+import { AppleSwitch } from '@/components/ui/apple-switch';
 import {
   ADMIN_HOVERABLE_BUTTON_CLASSES,
   ADMIN_PANEL_SURFACE_CLASSES,
@@ -316,20 +317,10 @@ export const AnnouncementManagement: React.FC = () => {
   };
 
   /**
-   * 渲染开关组件
+   * 渲染开关组件（为了保持代码兼容，直接转发给 AppleSwitch）
    */
   const renderToggle = (checked: boolean, onChange: (checked: boolean) => void, disabled: boolean) => (
-    <button
-      onClick={() => onChange(!checked)}
-      disabled={disabled}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full border-[0.5px] transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-950 ${checked ? 'border-cyan-200/50 bg-gradient-to-r from-blue-600 to-cyan-500' : 'border-slate-200/50 bg-gray-300 dark:border-white/10 dark:bg-slate-600'
-        } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'
-          }`}
-      />
-    </button>
+    <AppleSwitch checked={checked} onCheckedChange={onChange} disabled={disabled} />
   );
 
   return (
@@ -655,16 +646,10 @@ export const AnnouncementManagement: React.FC = () => {
 
             {/* 启用状态 */}
             <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setFormData({ ...formData, is_enabled: !formData.is_enabled })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full border-[0.5px] transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-950 ${formData.is_enabled ? 'border-cyan-200/50 bg-gradient-to-r from-blue-600 to-cyan-500' : 'border-slate-200/50 bg-gray-300 dark:border-white/10 dark:bg-slate-600'
-          }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.is_enabled ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                />
-              </button>
+              <AppleSwitch 
+                checked={formData.is_enabled} 
+                onCheckedChange={(checked) => setFormData({ ...formData, is_enabled: checked })} 
+              />
               <Label>启用公告</Label>
             </div>
           </div>

@@ -74,3 +74,13 @@
   - `frontend/src/hooks/useSystemSettingsController.ts`
   - `frontend/src/index.css`
   - `frontend/src/pages/Admin.tsx`
+
+## [2026-05-02 17:51:05] style(frontend): 统一按钮卡片与后台表单样式
+- **Body**: 继续收敛前端基础 UI 组件的玻璃态和苹果风样式，统一按钮、卡片、输入框与公告表单的视觉表现，减少分散的局部样式实现。
+- **Files**:
+  - `frontend/src/components/admin/AnnouncementManagement.tsx`
+  - `frontend/src/components/home/TrendingCategories.tsx`
+  - `frontend/src/components/ui/apple-switch.tsx`
+  - `frontend/src/components/ui/button.tsx`
+  - `frontend/src/components/ui/card.tsx`
+  - `frontend/src/components/ui/textarea.tsx`

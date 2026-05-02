@@ -27,41 +27,19 @@ export const AppleSwitch: React.FC<AppleSwitchProps> = ({
         }
       }}
       className={cn(
-        'group relative inline-flex h-[32px] w-[52px] shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
+        'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-[0.5px] transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-950',
         checked 
-          ? 'bg-blue-500 hover:bg-blue-600' 
-          : 'bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600',
-        disabled && 'cursor-not-allowed opacity-50',
+          ? 'border-cyan-200/50 bg-gradient-to-r from-blue-600 to-cyan-500' 
+          : 'border-slate-200/50 bg-gray-300 dark:border-white/10 dark:bg-slate-600',
+        disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
         className
       )}
     >
       <span className="sr-only">Toggle</span>
-      
-      {/* Background shadow for extra depth */}
       <span
-        aria-hidden="true"
         className={cn(
-          'pointer-events-none absolute h-full w-full rounded-full border shadow-inner transition-colors duration-300',
-          checked 
-            ? 'border-blue-600/20' 
-            : 'border-black/5 dark:border-white/5'
-        )}
-      />
-
-      <motion.span
-        initial={false}
-        animate={{
-          x: checked ? 20 : 2,
-        }}
-        transition={{
-          type: 'spring',
-          stiffness: 500,
-          damping: 30,
-        }}
-        className={cn(
-          'pointer-events-none absolute left-0 inline-block h-[28px] w-[28px] rounded-full bg-white shadow-[0_3px_8px_rgba(0,0,0,0.15),0_3px_1px_rgba(0,0,0,0.06)] ring-0 transition-shadow',
-          !disabled && 'group-active:w-[34px]',
-          checked && !disabled && 'group-active:ml-[-6px]'
+          'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+          checked ? 'translate-x-6' : 'translate-x-1'
         )}
       />
     </button>
