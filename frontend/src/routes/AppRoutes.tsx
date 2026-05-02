@@ -24,14 +24,9 @@ const AdminLogin = lazy(() => import('@/pages/AdminLogin'));
 const Admin = lazy(() => import('@/pages/Admin'));
 const DisclaimerPage = lazy(() => import('@/pages/DisclaimerPage'));
 
-const TOAST_CONFIG = {
-  position: 'top-right' as const,
-  offset: '72px',
-  toastOptions: {
-    duration: 2000,
-  },
-  closeButton: true,
-};
+import { TOAST_CONFIG, KNOWN_ROUTE_PATTERNS } from '@/config/constants';
+
+
 
 const RouteFallback: React.FC = () => (
   <div className="flex min-h-[40vh] items-center justify-center">
@@ -42,17 +37,6 @@ const RouteFallback: React.FC = () => (
 const renderLazyRoute = (element: React.ReactNode) => (
   <Suspense fallback={<RouteFallback />}>{element}</Suspense>
 );
-
-const KNOWN_ROUTE_PATTERNS = [
-  '/',
-  '/login',
-  '/register',
-  '/account',
-  '/disclaimer',
-  '/auth',
-  '/admin/login',
-  '/admin',
-];
 
 const AppRoutes: React.FC = () => {
   const { pathname } = useLocation();

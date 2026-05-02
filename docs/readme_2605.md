@@ -42,3 +42,19 @@
   - `frontend/src/components/home/SearchResultGridCard.tsx`
   - `frontend/src/components/home/SearchResultListItem.tsx`
   - `frontend/tailwind.config.js`
+
+## [2026-05-02 14:20:06] style(frontend): 统一首页与个人中心视觉结构
+- **Body**: 抽取公共 SEO 与特性卡片组件，统一首页与个人中心的玻璃态视觉结构，并收敛路由常量与全局样式入口，降低页面级重复实现。
+- **Files**:
+  - `frontend/package.json`
+  - `frontend/pnpm-lock.yaml`
+  - `frontend/src/components/SEO.tsx`
+  - `frontend/src/components/account/AccountHeroBanner.tsx`
+  - `frontend/src/components/account/AccountSecurityPanel.tsx`
+  - `frontend/src/components/home/FeatureCard.tsx`
+  - `frontend/src/config/constants.ts`
+  - `frontend/src/index.css`
+  - `frontend/src/main.tsx`
+  - `frontend/src/pages/AccountPage.tsx`
+  - `frontend/src/pages/Home.tsx`
+  - `frontend/src/routes/AppRoutes.tsx`

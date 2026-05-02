@@ -110,7 +110,7 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
             </div>
           </form>
 
-          <aside className="rounded-[1.4rem] border-[0.5px] border-slate-200/50 bg-white/45 p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/45 dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)]">
+          <aside className="glass-panel p-5">
             <div className="space-y-4">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">

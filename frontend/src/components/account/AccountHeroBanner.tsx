@@ -81,13 +81,13 @@ const AccountHeroBanner: React.FC<AccountHeroBannerProps> = ({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:w-[360px] lg:grid-cols-1">
-          <div className="rounded-[1.4rem] border-[0.5px] border-slate-200/60 bg-white/55 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.05)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-800/45 dark:shadow-[0_12px_30px_rgba(0,0,0,0.2)]">
+          <div className="glass-panel p-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
               身份标签
             </p>
             <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-white">{roleSummary}</p>
           </div>
-          <div className="rounded-[1.4rem] border-[0.5px] border-slate-200/60 bg-white/55 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.05)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-800/45 dark:shadow-[0_12px_30px_rgba(0,0,0,0.2)]">
+          <div className="glass-panel p-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
               状态摘要
             </p>

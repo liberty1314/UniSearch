@@ -12,9 +12,11 @@ import { useAuthStore } from "@/stores/authStore";
 
 import { NumberTicker } from "@/components/ui/number-ticker";
 import PublicPageShell from "@/components/PublicPageShell";
+import SEO from "@/components/SEO";
 import PlatformMarquee from "@/components/home/PlatformMarquee";
 import TrendingCategories from "@/components/home/TrendingCategories";
 import HomeSectionHeader from "@/components/home/HomeSectionHeader";
+import FeatureCard from "@/components/home/FeatureCard";
 
 const featureCards = [
   {
@@ -74,6 +76,7 @@ const Home: React.FC = () => {
 
   return (
     <PublicPageShell contentClassName="container mx-auto px-4 py-8 pt-24 pb-16">
+      <SEO />
       {/* 页面头部 - 增强品牌形象 */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -190,49 +193,13 @@ const Home: React.FC = () => {
               </motion.div>
 
               <div className="grid grid-cols-1 gap-10 md:grid-cols-3 [perspective:1600px]">
-                {featureCards.map((feature, index) => {
-                  const { Icon } = feature;
-
-                  return (
-                    <motion.div
-                      key={feature.title}
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 1 + index * 0.1, duration: 0.5 }}
-                      className="group relative cursor-pointer"
-                    >
-                      {/* 顶级净玻璃层级拟态 (Pristine Glassmorphism) */}
-                      <div className="relative h-full overflow-hidden rounded-[2rem] bg-white/40 dark:bg-slate-950/40 border-[0.5px] border-slate-200/50 dark:border-white/[0.08] shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] backdrop-blur-3xl transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_24px_64px_rgba(15,23,42,0.08)] dark:hover:shadow-[0_24px_64px_rgba(0,0,0,0.6)] p-8">
-                        {/* 背景光晕点缀 */}
-                        <div
-                          aria-hidden="true"
-                          className="pointer-events-none absolute -right-10 top-10 h-32 w-32 rounded-full bg-white/30 blur-3xl transition-all duration-500 group-hover:scale-110 group-hover:opacity-100 dark:bg-white/[0.03]"
-                        />
-
-                        <div className="relative z-10 flex flex-col h-full">
-                          <div
-                            className={`mx-auto mb-8 flex h-16 w-16 items-center justify-center rounded-[1.25rem] bg-gradient-to-br ${feature.iconGradient} text-white ring-2 ring-white/60 transition-all duration-500 group-hover:-translate-y-1 group-hover:scale-110 group-hover:rotate-6 ${feature.iconGlow}`}
-                          >
-                            <Icon
-                              className="h-8 w-8 transition-transform duration-300 group-hover:scale-105"
-                              strokeWidth={2}
-                            />
-                          </div>
-
-                          <h3
-                            className={`mb-4 text-center text-xl font-bold text-gray-900 transition-all duration-300 dark:text-white ${feature.accentText}`}
-                          >
-                            {feature.title}
-                          </h3>
-
-                          <p className="text-center leading-relaxed text-slate-600 dark:text-slate-300/90 text-[15px]">
-                            {feature.description}
-                          </p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                {featureCards.map((feature, index) => (
+                  <FeatureCard
+                    key={feature.title}
+                    {...feature}
+                    index={index}
+                  />
+                ))}
               </div>
 
               {/* 热门分类滚动轨道 */}

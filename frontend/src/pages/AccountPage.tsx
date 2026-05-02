@@ -10,6 +10,7 @@ import {
   validateAccountPasswordConfirmation,
 } from '@/components/account/passwordValidation';
 import PublicPageShell from '@/components/PublicPageShell';
+import SEO from '@/components/SEO';
 import { apiClient } from '@/lib/api';
 import { getErrorMessage } from '@/lib/error';
 import { useAuthStore } from '@/stores/authStore';
@@ -91,6 +92,7 @@ const AccountPage: React.FC = () => {
 
   return (
     <PublicPageShell contentClassName="container mx-auto px-4 py-8 pb-16 pt-24">
+      <SEO title="个人中心 | UniSearch" description="管理您的 UniSearch 账号与安全设置。" />
       <div className="mx-auto max-w-7xl space-y-8">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
