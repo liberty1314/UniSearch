@@ -354,7 +354,7 @@ logs/
 .cursor/
 .claude/
 .agent/
-.codex/
+.codex/*
 .superpowers/
 
 # 测试文件

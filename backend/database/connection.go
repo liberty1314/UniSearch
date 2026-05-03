@@ -64,7 +64,17 @@ func InitDB() error {
 	)
 
 	// 配置 GORM 日志
-	gormLogger := logger.Default.LogMode(logger.Info)
+	// 说明：系统设置等服务会使用“查不到则创建默认记录”的正常初始化模式，
+	// 这类 ErrRecordNotFound 不应在运行日志中表现为错误。
+	gormLogger := logger.New(
+		log.New(log.Writer(), "\r\n", log.LstdFlags),
+		logger.Config{
+			SlowThreshold:             time.Second,
+			LogLevel:                  logger.Info,
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  false,
+		},
+	)
 
 	// 使用 GORM 连接数据库
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{

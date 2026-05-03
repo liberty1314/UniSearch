@@ -125,3 +125,11 @@
   - `frontend/src/pages/__tests__/AuthEntryPages.test.tsx`
   - `frontend/src/pages/__tests__/Home.test.tsx`
   - `frontend/vite.config.ts`
+
+## [2026-05-03 09:38:20] chore(deploy): 收敛日志输出并调整仓库忽略规则
+- **Body**: 将数据库连接的“查无记录”场景降噪，关闭静态资源缺失日志，并把 `.codex` 目录忽略规则收紧到具体子项；同时移除已暂存的旧操作记录文件。
+- **Files**:
+  - `.Codex/operations-log.md`
+  - `.gitignore`
+  - `backend/database/connection.go`
+  - `nginx.conf`
