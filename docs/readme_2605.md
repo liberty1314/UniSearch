@@ -133,3 +133,9 @@
   - `.gitignore`
   - `backend/database/connection.go`
   - `nginx.conf`
+
+## [2026-05-05 10:18:32] test(frontend): 补充角色下拉层级回归测试
+- **Body**: 为编辑用户弹窗补充下拉浮层层级的回归测试，并将通用 select 浮层层级上调，避免被弹窗内容遮挡。
+- **Files**:
+  - `frontend/src/components/admin/__tests__/EditUserDialog.test.tsx`
+  - `frontend/src/components/ui/select.tsx`
