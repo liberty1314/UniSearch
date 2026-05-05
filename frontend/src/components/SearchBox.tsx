@@ -23,6 +23,12 @@ interface SearchBoxProps {
 
 const MAX_VISIBLE_HISTORY_ITEMS = MAX_SEARCH_HISTORY;
 
+const getCurrentRouteSnapshot = () => ({
+  pathname: window.location.pathname || "/",
+  search: window.location.search || "",
+  hash: window.location.hash || "",
+});
+
 export const SearchBox: React.FC<SearchBoxProps> = ({
   className,
   placeholder = "搜索网盘资源...",
@@ -31,9 +37,9 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const buttonRef = useRef<StatefulButtonHandle>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [isHoveringHistory, setIsHoveringHistory] = useState(false);
 
   const {
     searchParams,
@@ -66,6 +72,32 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     }
   }, [autoFocus]);
 
+  useEffect(() => {
+    if (!showHistory) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!wrapperRef.current?.contains(event.target as Node)) {
+        setShowHistory(false);
+      }
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+      if (!wrapperRef.current?.contains(event.target as Node)) {
+        setShowHistory(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("focusin", handleFocusIn);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("focusin", handleFocusIn);
+    };
+  }, [showHistory]);
+
   const handleSearchError = async (error: unknown) => {
     const errorCode = getErrorCode(error);
     const errorMessage = getErrorMessage(error, "搜索失败");
@@ -78,7 +110,11 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
         return;
       }
       toast.warning("搜索前请先登录", { duration: 3000 });
-      navigate("/login");
+      navigate("/login", {
+        state: {
+          from: getCurrentRouteSnapshot(),
+        },
+      });
       return;
     }
 
@@ -106,6 +142,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
       toast.warning("搜索前请先登录", { duration: 3000 });
       navigate("/login", {
         state: {
+          from: getCurrentRouteSnapshot(),
           pendingSearch: {
             keyword,
           },
@@ -143,12 +180,6 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
 
   const handleBlur = () => {
     setIsFocused(false);
-    // 延迟隐藏历史记录，以便点击历史项目
-    setTimeout(() => {
-      if (!isHoveringHistory) {
-        setShowHistory(false);
-      }
-    }, 200);
   };
 
   // 清空输入
@@ -180,7 +211,10 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   };
 
   return (
-    <div className={cn("relative w-full max-w-2xl mx-auto group", className)}>
+    <div
+      ref={wrapperRef}
+      className={cn("relative w-full max-w-2xl mx-auto group", className)}
+    >
       <div
         aria-hidden="true"
         className={cn(
@@ -248,11 +282,6 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
         <div
           data-testid="search-history-surface"
           className="absolute left-0 right-0 top-full z-50 mt-3 animate-in overflow-hidden rounded-[2rem] border-[0.5px] border-white/60 bg-white/70 shadow-[0_24px_64px_rgba(0,0,0,0.08)] backdrop-blur-[24px] fade-in slide-in-from-top-3 duration-300 dark:border-white/[0.08] dark:bg-slate-950/50 dark:shadow-[0_24px_64px_rgba(0,0,0,0.4)]"
-          onMouseEnter={() => setIsHoveringHistory(true)}
-          onMouseLeave={() => {
-            setIsHoveringHistory(false);
-            if (!isFocused) setShowHistory(false);
-          }}
         >
           <div
             data-testid="search-history-header"

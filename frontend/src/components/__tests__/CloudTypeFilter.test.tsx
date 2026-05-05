@@ -1,8 +1,35 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import CloudTypeFilter from "@/components/CloudTypeFilter";
 import { CloudType } from "@/types/api";
+
+const { setSearchParamsMock, performSearchMock } = vi.hoisted(() => ({
+  setSearchParamsMock: vi.fn(),
+  performSearchMock: vi.fn(),
+}));
+
+const CLICK_DELAY_MS = 220;
+const LONG_PRESS_DELAY_MS = 450;
+const ALL_CLOUD_TYPES = [
+  CloudType.BAIDU,
+  CloudType.ALIYUN,
+  CloudType.QUARK,
+  CloudType.TIANYI,
+  CloudType.UC,
+  CloudType.MOBILE,
+  CloudType.ONE_ONE_FIVE,
+  CloudType.XUNLEI,
+  CloudType.ONE_TWO_THREE,
+  CloudType.MAGNET,
+  CloudType.LANZOU,
+];
+
+let searchParamsState = {
+  keyword: "流浪地球",
+  cloudTypes: ALL_CLOUD_TYPES,
+};
 
 vi.mock("@/components/magicui/cool-mode", () => ({
   CoolMode: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -38,26 +65,37 @@ vi.mock("framer-motion", () => ({
 
 vi.mock("@/stores/searchStore", () => ({
   useSearchStore: () => ({
-    searchParams: {
-      cloudTypes: [
-        CloudType.BAIDU,
-        CloudType.ALIYUN,
-        CloudType.QUARK,
-        CloudType.TIANYI,
-        CloudType.UC,
-        CloudType.MOBILE,
-        CloudType.ONE_ONE_FIVE,
-        CloudType.XUNLEI,
-        CloudType.ONE_TWO_THREE,
-        CloudType.MAGNET,
-        CloudType.LANZOU,
-      ],
+    searchParams: searchParamsState,
+    setSearchParams: setSearchParamsMock,
+    performSearch: performSearchMock,
+    searchResults: {
+      merged_by_type: {
+        quark: [],
+      },
     },
-    setSearchParams: vi.fn(),
   }),
 }));
 
+vi.mock("@/hooks/useDebouncedValue", () => ({
+  useDebouncedValue: <T,>(value: T) => value,
+}));
+
 describe("CloudTypeFilter", () => {
+  beforeEach(() => {
+    searchParamsState = {
+      keyword: "流浪地球",
+      cloudTypes: ALL_CLOUD_TYPES,
+    };
+    setSearchParamsMock.mockReset();
+    performSearchMock.mockReset();
+    setSearchParamsMock.mockImplementation((params) => {
+      searchParamsState = {
+        ...searchParamsState,
+        ...params,
+      };
+    });
+  });
+
   it("renders the filter panel without the outer halo layer", () => {
     const { container } = render(<CloudTypeFilter />);
 
@@ -74,6 +112,9 @@ describe("CloudTypeFilter", () => {
     expect(filterSurface).toHaveClass("dark:bg-slate-950/40");
     expect(filterSurface).toHaveClass("border-white/60");
     expect(filterSurface).toHaveClass("dark:border-white/[0.06]");
+    expect(
+      screen.getByText("单击多选，双击或长按仅看此源"),
+    ).toBeInTheDocument();
 
     const hasOuterHaloLayer = Array.from(
       container.querySelectorAll("div"),
@@ -84,5 +125,115 @@ describe("CloudTypeFilter", () => {
     );
 
     expect(hasOuterHaloLayer).toBe(false);
+  });
+
+  it("re-runs search with updated cloud types when a source chip is toggled", async () => {
+    performSearchMock.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    render(<CloudTypeFilter />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "百度网盘（已选中，单击取消，双击或长按仅看此源）",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(setSearchParamsMock).toHaveBeenCalledWith({
+        cloudTypes: ALL_CLOUD_TYPES.filter((type) => type !== CloudType.BAIDU),
+      });
+    });
+
+    await waitFor(() => {
+      expect(performSearchMock).toHaveBeenCalled();
+    });
+  });
+
+  it("keeps only the chosen source when a chip is double-clicked", async () => {
+    performSearchMock.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    render(<CloudTypeFilter />);
+
+    await user.dblClick(
+      screen.getByRole("button", {
+        name: "百度网盘（已选中，单击取消，双击或长按仅看此源）",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(setSearchParamsMock).toHaveBeenCalledTimes(1);
+      expect(setSearchParamsMock).toHaveBeenCalledWith({
+        cloudTypes: [CloudType.BAIDU],
+      });
+    });
+
+    await waitFor(() => {
+      expect(performSearchMock).toHaveBeenCalled();
+      expect(performSearchMock).toHaveBeenLastCalledWith(
+        { cloudTypes: [CloudType.BAIDU] },
+        { preserveResults: true },
+      );
+    });
+  });
+
+  it("keeps only the chosen source after a long press without falling back to a normal click toggle", async () => {
+    performSearchMock.mockResolvedValue(undefined);
+    vi.useFakeTimers();
+
+    try {
+      render(<CloudTypeFilter />);
+
+      const target = screen.getByRole("button", {
+        name: "百度网盘（已选中，单击取消，双击或长按仅看此源）",
+      });
+
+      fireEvent.pointerDown(target, { pointerType: "touch" });
+      await act(async () => {
+        vi.advanceTimersByTime(LONG_PRESS_DELAY_MS);
+      });
+      fireEvent.pointerUp(target, { pointerType: "touch" });
+      fireEvent.click(target);
+      await act(async () => {
+        vi.advanceTimersByTime(CLICK_DELAY_MS);
+      });
+
+      expect(setSearchParamsMock).toHaveBeenCalledTimes(1);
+      expect(setSearchParamsMock).toHaveBeenCalledWith({
+        cloudTypes: [CloudType.BAIDU],
+      });
+      expect(performSearchMock).toHaveBeenCalled();
+      expect(performSearchMock).toHaveBeenLastCalledWith(
+        { cloudTypes: [CloudType.BAIDU] },
+        { preserveResults: true },
+      );
+    } finally {
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not re-run search when the chip is already the only selected source", async () => {
+    searchParamsState = {
+      keyword: "流浪地球",
+      cloudTypes: [CloudType.BAIDU],
+    };
+    const user = userEvent.setup();
+
+    render(<CloudTypeFilter />);
+
+    await user.dblClick(
+      screen.getByRole("button", {
+        name: "百度网盘（已选中，单击取消，双击或长按仅看此源）",
+      }),
+    );
+
+    await new Promise((resolve) =>
+      window.setTimeout(resolve, CLICK_DELAY_MS + 40),
+    );
+
+    expect(setSearchParamsMock).not.toHaveBeenCalled();
+    expect(performSearchMock).not.toHaveBeenCalled();
   });
 });

@@ -7,11 +7,20 @@ import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import AdminLogin from '@/pages/AdminLogin';
 
-const { navigateMock, getSettingsMock, setTokenMock, adminLoginWithRememberMock } = vi.hoisted(() => ({
+const {
+  navigateMock,
+  getSettingsMock,
+  setTokenMock,
+  adminLoginWithRememberMock,
+  userLoginMock,
+  registerMock,
+} = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   getSettingsMock: vi.fn(),
   setTokenMock: vi.fn(),
   adminLoginWithRememberMock: vi.fn(),
+  userLoginMock: vi.fn(),
+  registerMock: vi.fn(),
 }));
 
 vi.mock('sonner', () => ({
@@ -39,6 +48,8 @@ vi.mock('@/stores/authStore', () => ({
 vi.mock('@/services/authService', () => ({
   AuthService: {
     adminLoginWithRemember: adminLoginWithRememberMock,
+    userLogin: userLoginMock,
+    register: registerMock,
   },
 }));
 
@@ -78,6 +89,8 @@ describe('Auth entry pages', () => {
     getSettingsMock.mockReset();
     setTokenMock.mockReset();
     adminLoginWithRememberMock.mockReset();
+    userLoginMock.mockReset();
+    registerMock.mockReset();
     getSettingsMock.mockResolvedValue({
       enable_user_auth: true,
       enable_user_login: true,
@@ -223,5 +236,145 @@ describe('Auth entry pages', () => {
 
     expect(adminLoginWithRememberMock).toHaveBeenCalledWith('admin', 'secret', false);
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('resumes the pending homepage search after user login succeeds', async () => {
+    userLoginMock.mockResolvedValue({
+      access_token: 'token',
+      refresh_token: 'refresh',
+      username: 'neo',
+    });
+
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: '/login',
+            state: {
+              from: {
+                pathname: '/',
+                search: '',
+              },
+              pendingSearch: {
+                keyword: '三体',
+              },
+            },
+          },
+        ]}
+      >
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('欢迎回来');
+
+    await user.type(screen.getByLabelText('用户名'), 'neo');
+    await user.type(screen.getByLabelText('密码'), 'matrix');
+    await user.click(screen.getByRole('button', { name: '登录' }));
+
+    await waitFor(() => {
+      expect(userLoginMock).toHaveBeenCalledWith('neo', 'matrix', false);
+    });
+
+    expect(navigateMock).toHaveBeenCalledWith('/', {
+      replace: true,
+      state: {
+        resumeSearch: {
+          keyword: '三体',
+        },
+      },
+    });
+  });
+
+  it('submits the user login form only once when enter is pressed in the password field', async () => {
+    userLoginMock.mockResolvedValue({
+      access_token: 'token',
+      refresh_token: 'refresh',
+      username: 'neo',
+    });
+
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('欢迎回来');
+
+    await user.type(screen.getByLabelText('用户名'), 'neo');
+    await user.type(screen.getByLabelText('密码'), 'matrix{Enter}');
+
+    await waitFor(() => {
+      expect(userLoginMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('submits the register form only once when enter is pressed in the confirmation field', async () => {
+    registerMock.mockResolvedValue({
+      user_id: 1,
+      username: 'trinity',
+    });
+
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/register']}>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('创建账户');
+
+    await user.type(screen.getByLabelText('用户名'), 'trinity');
+    await user.type(screen.getByLabelText(/^密码$/), 'secret123');
+    await user.type(screen.getByLabelText('确认密码'), 'secret123{Enter}');
+
+    await waitFor(() => {
+      expect(registerMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('submits the admin login form only once when enter is pressed in the password field', async () => {
+    adminLoginWithRememberMock.mockResolvedValue({
+      access_token: 'token',
+      refresh_token: 'refresh',
+      username: 'admin',
+    });
+
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/admin/login']}>
+        <AdminLogin />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('管理员登录')).toBeInTheDocument();
+    });
+
+    await user.type(screen.getByLabelText('用户名'), 'admin');
+    await user.type(screen.getByLabelText('管理员密码'), 'secret{Enter}');
+
+    await waitFor(() => {
+      expect(adminLoginWithRememberMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('keeps the register shell visible while waiting for system settings', () => {
+    getSettingsMock.mockImplementation(() => new Promise(() => {}));
+
+    render(
+      <MemoryRouter initialEntries={['/register']}>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByTestId('auth-background')).toBeInTheDocument();
+    expect(screen.getByText('正在加载注册配置...')).toBeInTheDocument();
   });
 });

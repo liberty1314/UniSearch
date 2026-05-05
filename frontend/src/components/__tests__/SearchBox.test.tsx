@@ -264,6 +264,19 @@ describe("SearchBox", () => {
     });
   });
 
+  it("closes the history panel immediately when clicking outside the search surface", async () => {
+    searchHistoryState = ["海贼王"];
+
+    render(<SearchBox />);
+
+    await userEvent.click(screen.getByPlaceholderText("搜索网盘资源..."));
+    expect(screen.getByText("最近搜索")).toBeInTheDocument();
+
+    await userEvent.click(document.body);
+
+    expect(screen.queryByText("最近搜索")).not.toBeInTheDocument();
+  });
+
   it("closes the history panel when escape is pressed", async () => {
     searchHistoryState = ["海贼王"];
 
@@ -300,7 +313,19 @@ describe("SearchBox", () => {
     expect(warningToastMock).toHaveBeenCalledWith("搜索前请先登录", {
       duration: 3000,
     });
-    expect(navigateMock).toHaveBeenCalledWith("/login", expect.anything());
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/login",
+      expect.objectContaining({
+        state: expect.objectContaining({
+          pendingSearch: {
+            keyword: "仙逆",
+          },
+          from: expect.objectContaining({
+            pathname: "/",
+          }),
+        }),
+      }),
+    );
   });
 
   it("logs out expired JWT sessions and sends them back to /login", async () => {

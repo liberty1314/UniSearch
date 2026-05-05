@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Layers, Sparkles, Activity } from "lucide-react";
@@ -55,6 +55,7 @@ const Home: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
+  const handledResumeSearchRef = useRef<string | null>(null);
 
   useEffect(() => {
     const state = location.state as {
@@ -63,12 +64,31 @@ const Home: React.FC = () => {
     const keyword = state?.resumeSearch?.keyword?.trim();
 
     if (!isAuthenticated || !keyword) {
+      if (!keyword) {
+        handledResumeSearchRef.current = null;
+      }
       return;
     }
 
-    void performSearch({ keyword });
+    const resumeKey = `${location.pathname}:${keyword}`;
+    if (handledResumeSearchRef.current === resumeKey) {
+      return;
+    }
+
+    handledResumeSearchRef.current = resumeKey;
+    void performSearch(
+      { keyword },
+      { preserveResults: Boolean(searchResults) },
+    );
     navigate("/", { replace: true });
-  }, [isAuthenticated, location.state, navigate, performSearch]);
+  }, [
+    isAuthenticated,
+    location.pathname,
+    location.state,
+    navigate,
+    performSearch,
+    searchResults,
+  ]);
 
   const hasSearched =
     searchParams.keyword ||

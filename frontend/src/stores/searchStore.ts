@@ -21,9 +21,13 @@ interface SearchState {
 
   // 加载状态
   isLoading: boolean;
+  isRefreshing: boolean;
 
   // 错误信息
   error: string | null;
+
+  // 最近一次成功完成的搜索参数快照
+  lastCompletedSearchParams: SearchParams | null;
 
   // 搜索历史
   searchHistory: string[];
@@ -39,7 +43,10 @@ interface SearchState {
 
   // 操作方法
   setSearchParams: (params: Partial<SearchParams>) => void;
-  performSearch: (params?: Partial<SearchParams>) => Promise<void>;
+  performSearch: (
+    params?: Partial<SearchParams>,
+    options?: { preserveResults?: boolean },
+  ) => Promise<void>;
   clearResults: () => void;
   setError: (error: string | null) => void;
   addToHistory: (keyword: string) => void;
@@ -65,6 +72,25 @@ const defaultSearchParams: SearchParams = {
   ext: {},
 };
 
+const normalizeSearchParams = (params: SearchParams): SearchParams => ({
+  ...params,
+  cloudTypes: [...(params.cloudTypes || [])],
+  channels: [...(params.channels || [])],
+  plugins: [...(params.plugins || [])],
+});
+
+const areSearchParamsEqual = (
+  left: SearchParams | null,
+  right: SearchParams,
+): boolean => {
+  if (!left) {
+    return false;
+  }
+
+  return JSON.stringify(normalizeSearchParams(left)) ===
+    JSON.stringify(normalizeSearchParams(right));
+};
+
 /**
  * 搜索状态管理
  */
@@ -75,7 +101,9 @@ export const useSearchStore = create<SearchState>()(
       searchParams: defaultSearchParams,
       searchResults: null,
       isLoading: false,
+      isRefreshing: false,
       error: null,
+      lastCompletedSearchParams: null,
       searchHistory: JSON.parse(
         localStorage.getItem("unisearch_search_history") || "[]",
       ),
@@ -97,9 +125,14 @@ export const useSearchStore = create<SearchState>()(
       /**
        * 执行搜索
        */
-      performSearch: async (params) => {
+      performSearch: async (params, options) => {
         const state = get();
         const finalParams = { ...state.searchParams, ...params };
+        const preserveResults = Boolean(
+          (options?.preserveResults ||
+            areSearchParamsEqual(state.lastCompletedSearchParams, finalParams)) &&
+            state.searchResults,
+        );
 
         // 验证搜索参数
         const validation = SearchService.validateSearchParams(finalParams);
@@ -109,9 +142,10 @@ export const useSearchStore = create<SearchState>()(
         }
 
         set({
-          isLoading: true,
+          isLoading: !preserveResults,
+          isRefreshing: preserveResults,
           error: null,
-          searchResults: null,
+          searchResults: preserveResults ? state.searchResults : null,
           searchParams: finalParams,
           displayedCount: state.pageSize, // 重置为初始显示数量
           hasMore: false,
@@ -129,6 +163,8 @@ export const useSearchStore = create<SearchState>()(
           set({
             searchResults: results,
             isLoading: false,
+            isRefreshing: false,
+            lastCompletedSearchParams: normalizeSearchParams(finalParams),
             hasMore: totalCount > state.pageSize, // 判断是否有更多数据
           });
 
@@ -143,7 +179,8 @@ export const useSearchStore = create<SearchState>()(
             set({
               error: getErrorMessage(error, "搜索失败"),
               isLoading: false,
-              searchResults: null,
+              isRefreshing: false,
+              searchResults: preserveResults ? state.searchResults : null,
             });
             // 抛出错误，让调用方处理跳转逻辑
             throw error;
@@ -152,7 +189,8 @@ export const useSearchStore = create<SearchState>()(
           set({
             error: getErrorMessage(error, "搜索失败"),
             isLoading: false,
-            searchResults: null,
+            isRefreshing: false,
+            searchResults: preserveResults ? state.searchResults : null,
           });
         }
       },
@@ -164,6 +202,7 @@ export const useSearchStore = create<SearchState>()(
         set((state) => ({
           searchResults: null,
           error: null,
+          isRefreshing: false,
           displayedCount: state.pageSize,
           hasMore: false,
           searchParams: { ...state.searchParams, keyword: "" },
@@ -269,7 +308,9 @@ export const useSearchStore = create<SearchState>()(
           searchParams: defaultSearchParams,
           searchResults: null,
           isLoading: false,
+          isRefreshing: false,
           error: null,
+          lastCompletedSearchParams: null,
           displayedCount: state.pageSize,
           hasMore: false,
         }));

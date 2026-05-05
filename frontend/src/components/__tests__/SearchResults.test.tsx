@@ -1,30 +1,33 @@
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import SearchResults from '@/components/SearchResults';
 
-vi.mock('@/stores/searchStore', () => ({
-  useSearchStore: () => ({
-    searchResults: {
-      merged_by_type: {
-        quark: [
-          {
-            url: 'https://example.com/resource',
-            password: '',
-            note: '你的名字 4K',
-            datetime: '2026-03-15T00:00:00Z',
-          },
-        ],
-      },
+let searchStoreState = {
+  searchResults: {
+    merged_by_type: {
+      quark: [
+        {
+          url: 'https://example.com/resource',
+          password: '',
+          note: '你的名字 4K',
+          datetime: '2026-03-15T00:00:00Z',
+        },
+      ],
     },
-    isLoading: false,
-    error: '',
-    hasMore: false,
-    loadMore: vi.fn(),
-    searchParams: { keyword: '你的名字' },
-    performSearch: vi.fn(),
-    displayedCount: 48,
-  }),
+  },
+  isLoading: false,
+  isRefreshing: false,
+  error: '',
+  hasMore: false,
+  loadMore: vi.fn(),
+  searchParams: { keyword: '你的名字' },
+  performSearch: vi.fn(),
+  displayedCount: 48,
+};
+
+vi.mock('@/stores/searchStore', () => ({
+  useSearchStore: () => searchStoreState,
 }));
 
 vi.mock('@/hooks/useDebouncedValue', () => ({
@@ -67,7 +70,30 @@ vi.mock('framer-motion', () => ({
 }));
 
 describe('SearchResults', () => {
-  it('adds a light results panel around semi-solid glass cards', () => {
+  beforeEach(() => {
+    searchStoreState = {
+      searchResults: {
+        merged_by_type: {
+          quark: [
+            {
+              url: 'https://example.com/resource',
+              password: '',
+              note: '你的名字 4K',
+              datetime: '2026-03-15T00:00:00Z',
+            },
+          ],
+        },
+      },
+      isLoading: false,
+      isRefreshing: false,
+      error: '',
+      hasMore: false,
+      loadMore: vi.fn(),
+      searchParams: { keyword: '你的名字' },
+      performSearch: vi.fn(),
+      displayedCount: 48,
+    };
+
     class MockIntersectionObserver {
       observe = vi.fn();
       unobserve = vi.fn();
@@ -75,7 +101,9 @@ describe('SearchResults', () => {
     }
 
     vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
+  });
 
+  it('adds a light results panel around semi-solid glass cards', () => {
     render(<SearchResults />);
 
     const stage = screen.getByTestId('search-results-stage');
@@ -101,5 +129,35 @@ describe('SearchResults', () => {
     expect(toolbar).toHaveClass('flex');
     expect(toolbar).toHaveClass('items-center');
     expect(toolbar).toHaveClass('justify-between');
+  });
+
+  it('shows a refresh hint without clearing previous results during in-place refresh', () => {
+    searchStoreState = {
+      ...searchStoreState,
+      isRefreshing: true,
+    };
+
+    render(<SearchResults />);
+
+    expect(screen.getByText('刷新中')).toBeInTheDocument();
+    expect(screen.getByTestId('search-result-grid-card')).toBeInTheDocument();
+  });
+
+  it('switches from mobile list to desktop grid when the viewport crosses the breakpoint', () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 520,
+    });
+
+    render(<SearchResults />);
+
+    const stage = screen.getByTestId('search-results-stage');
+    expect(stage.className).toContain('flex flex-col');
+
+    window.innerWidth = 1280;
+    fireEvent(window, new Event('resize'));
+
+    expect(stage.className).toContain('grid grid-cols-1');
   });
 });

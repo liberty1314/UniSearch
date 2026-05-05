@@ -32,6 +32,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   const {
     searchResults,
     isLoading,
+    isRefreshing,
     error,
     hasMore,
     loadMore,
@@ -41,11 +42,18 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   } = useSearchStore();
 
   const debouncedIsLoading = useDebouncedValue(isLoading, 200);
+  const hasManualViewPreferenceRef = useRef(false);
+
+  const getResponsiveViewMode = useCallback(
+    (): ViewMode =>
+      typeof window !== "undefined" && window.innerWidth < 640
+        ? "list"
+        : "grid",
+    [],
+  );
 
   // 移动端（< 640px）默认使用列表视图，桌面端默认网格视图
-  const [viewMode, setViewMode] = useState<ViewMode>(() =>
-    typeof window !== "undefined" && window.innerWidth < 640 ? "list" : "grid",
-  );
+  const [viewMode, setViewMode] = useState<ViewMode>(getResponsiveViewMode);
   const [passwordModal, setPasswordModal] = useState<{
     isOpen: boolean;
     password: string;
@@ -61,6 +69,21 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   // ── 无限滚动观察器 ─────────────────────────────────────────────────────────
 
   const observerTarget = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (hasManualViewPreferenceRef.current) {
+        return;
+      }
+
+      setViewMode(getResponsiveViewMode());
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [getResponsiveViewMode]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -120,6 +143,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     setPasswordModal({ isOpen: false, password: "", url: "", cloudType: "" });
   }, []);
 
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    hasManualViewPreferenceRef.current = true;
+    setViewMode(mode);
+  }, []);
+
   // ─────────────────────────────────────────────────────────────────────────
   // 渲染：空状态（error / 无结果 / 无关键词）
   // ─────────────────────────────────────────────────────────────────────────
@@ -163,7 +191,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           totalCount={allSortedResults.length}
           displayedCount={displayedResults.length}
           viewMode={viewMode}
-          onViewModeChange={setViewMode}
+          onViewModeChange={handleViewModeChange}
+          isRefreshing={isRefreshing}
         />
       )}
 

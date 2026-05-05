@@ -44,6 +44,10 @@ const AdminLogin: React.FC = () => {
      * 处理管理员登录（用户名+密码）
      */
     const handleAdminLogin = async () => {
+        if (isAdminLoading) {
+            return;
+        }
+
         // 验证输入
         if (!username.trim()) {
             toast.error('请输入用户名');
@@ -83,15 +87,6 @@ const AdminLogin: React.FC = () => {
             }
         } finally {
             setIsAdminLoading(false);
-        }
-    };
-
-    /**
-     * 处理 Enter 键提交
-     */
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            handleAdminLogin();
         }
     };
 
@@ -140,7 +135,6 @@ const AdminLogin: React.FC = () => {
                                         placeholder="请输入用户名"
                                         value={username}
                                         onChange={(e) => setUsername(e.target.value)}
-                                        onKeyDown={handleKeyPress}
                                         disabled={isAdminLoading}
                                     />
                                 </div>
@@ -157,7 +151,6 @@ const AdminLogin: React.FC = () => {
                                         placeholder="请输入管理员密码"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        onKeyDown={handleKeyPress}
                                         disabled={isAdminLoading}
                                         endAdornment={(
                                             <button

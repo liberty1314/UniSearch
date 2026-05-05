@@ -139,3 +139,22 @@
 - **Files**:
   - `frontend/src/components/admin/__tests__/EditUserDialog.test.tsx`
   - `frontend/src/components/ui/select.tsx`
+
+## [2026-05-05 19:43:52] refactor(frontend): 收敛搜索交互与路由恢复逻辑
+- **Body**: 为搜索框、结果刷新、分类筛选和路由守卫统一补齐状态恢复逻辑，并同步完善相关回归测试，避免登录前后与切换视图时的状态丢失。
+- **Files**:
+  - `frontend/src/components/CloudTypeFilter.tsx`
+  - `frontend/src/components/SearchBox.tsx`
+  - `frontend/src/components/SearchResults.tsx`
+  - `frontend/src/components/__tests__/CloudTypeFilter.test.tsx`
+  - `frontend/src/components/__tests__/SearchBox.test.tsx`
+  - `frontend/src/components/__tests__/SearchResults.test.tsx`
+  - `frontend/src/components/home/SearchResultsToolbar.tsx`
+  - `frontend/src/pages/AdminLogin.tsx`
+  - `frontend/src/pages/Home.tsx`
+  - `frontend/src/pages/LoginPage.tsx`
+  - `frontend/src/pages/RegisterPage.tsx`
+  - `frontend/src/pages/__tests__/AuthEntryPages.test.tsx`
+  - `frontend/src/routes/RouteGuards.tsx`
+  - `frontend/src/routes/__tests__/RouteGuards.test.tsx`
+  - `frontend/src/stores/searchStore.ts`

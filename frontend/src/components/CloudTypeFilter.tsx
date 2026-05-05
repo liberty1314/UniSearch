@@ -1,4 +1,4 @@
-import React, { useEffect, memo, useRef } from "react";
+import React, { useEffect, memo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { IoCheckmarkCircle, IoEllipseOutline } from "react-icons/io5";
 import { type CloudTypeValue } from "@/types/api";
@@ -10,6 +10,7 @@ import {
   platformThemeTypes,
   type PlatformTheme,
 } from "@/components/home/platformThemes";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 // --- Sub-components ---
 
@@ -17,19 +18,89 @@ interface CloudTypeTagProps {
   config: PlatformTheme;
   isSelected: boolean;
   onToggle: (type: CloudTypeValue) => void;
+  onSelectOnly: (type: CloudTypeValue) => void;
 }
 
+const CLICK_DELAY_MS = 220;
+const LONG_PRESS_DELAY_MS = 450;
+
 const CloudTypeTag = memo(
-  ({ config, isSelected, onToggle }: CloudTypeTagProps) => {
+  ({ config, isSelected, onToggle, onSelectOnly }: CloudTypeTagProps) => {
+    const clickTimerRef = useRef<number | null>(null);
+    const longPressTimerRef = useRef<number | null>(null);
+    const suppressNextClickRef = useRef(false);
+
+    const clearClickTimer = () => {
+      if (clickTimerRef.current) {
+        window.clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+      }
+    };
+
+    const clearLongPressTimer = () => {
+      if (longPressTimerRef.current) {
+        window.clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    };
+
+    useEffect(() => {
+      return () => {
+        clearClickTimer();
+        clearLongPressTimer();
+      };
+    }, []);
+
+    const handleClick = () => {
+      if (suppressNextClickRef.current) {
+        suppressNextClickRef.current = false;
+        return;
+      }
+
+      clearClickTimer();
+      clickTimerRef.current = window.setTimeout(() => {
+        onToggle(config.type);
+        clickTimerRef.current = null;
+      }, CLICK_DELAY_MS);
+    };
+
+    const handleDoubleClick = () => {
+      clearClickTimer();
+      onSelectOnly(config.type);
+    };
+
+    const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.pointerType === "mouse") {
+        return;
+      }
+
+      clearLongPressTimer();
+      longPressTimerRef.current = window.setTimeout(() => {
+        suppressNextClickRef.current = true;
+        clearClickTimer();
+        onSelectOnly(config.type);
+        longPressTimerRef.current = null;
+      }, LONG_PRESS_DELAY_MS);
+    };
+
+    const handlePointerEnd = () => {
+      clearLongPressTimer();
+    };
+
     return (
       <CoolMode options={{ particleCount: 12, speedHorz: 5, speedUp: 15 }}>
         <motion.button
           layout
-          onClick={() => onToggle(config.type)}
+          onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerEnd}
+          onPointerLeave={handlePointerEnd}
+          onPointerCancel={handlePointerEnd}
           whileHover={{ scale: 1.05, y: -2 }}
           whileTap={{ scale: 0.95 }}
           aria-pressed={isSelected}
-          aria-label={`${config.name}${isSelected ? "（已选中，点击取消）" : "（未选中，点击选择）"}`}
+          aria-label={`${config.name}${isSelected ? "（已选中，单击取消，双击或长按仅看此源）" : "（未选中，单击选择，双击或长按仅看此源）"}`}
           className={cn(
             "relative flex items-center px-5 py-2.5 rounded-[1rem] text-[13.5px] font-semibold transition-colors transition-shadow duration-300 border box-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2",
             isSelected
@@ -53,56 +124,118 @@ CloudTypeTag.displayName = "CloudTypeTag";
  * 网盘类型筛选器组件 - Premium Design & Zero Layout Shift
  */
 const CloudTypeFilter: React.FC = () => {
-  const { searchParams, setSearchParams } = useSearchStore();
+  const { searchParams, setSearchParams, performSearch } = useSearchStore();
 
   const cloudTypeConfigs = platformThemes;
-
   const allTypes = platformThemeTypes;
+  const getValidTypes = (types?: CloudTypeValue[]) => {
+    const validTypes = (types || []).filter((type) => allTypes.includes(type));
+    return validTypes.length > 0 ? validTypes : allTypes;
+  };
+
+  const [selectedTypes, setSelectedTypes] = useState<CloudTypeValue[]>(() =>
+    getValidTypes(searchParams.cloudTypes),
+  );
+  const debouncedSelectedTypes = useDebouncedValue(selectedTypes, 150);
   const hasInitializedCloudTypesRef = useRef(false);
+  const shouldSkipNextSearchRef = useRef(true);
+  const lastTriggeredSearchSnapshotRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (hasInitializedCloudTypesRef.current) {
       return;
     }
 
-    const currentTypes = searchParams.cloudTypes || [];
-    const validTypes = currentTypes.filter((type) => allTypes.includes(type));
+    const validTypes = getValidTypes(searchParams.cloudTypes);
+    if (JSON.stringify(selectedTypes) !== JSON.stringify(validTypes)) {
+      shouldSkipNextSearchRef.current = true;
+      setSelectedTypes(validTypes);
+    }
 
-    if (
-      currentTypes.length === 0 ||
-      validTypes.length !== currentTypes.length
-    ) {
-      setSearchParams({ cloudTypes: allTypes });
+    if ((searchParams.cloudTypes || []).length !== validTypes.length) {
+      setSearchParams({ cloudTypes: validTypes });
     }
 
     hasInitializedCloudTypesRef.current = true;
-  }, [allTypes, searchParams.cloudTypes, setSearchParams]);
+  }, [allTypes, searchParams.cloudTypes, selectedTypes, setSearchParams]);
 
-  const selectedTypes = searchParams.cloudTypes || [];
+  useEffect(() => {
+    if (!hasInitializedCloudTypesRef.current) {
+      return;
+    }
+
+    const nextTypes = getValidTypes(searchParams.cloudTypes);
+    const currentSnapshot = JSON.stringify(selectedTypes);
+    const nextSnapshot = JSON.stringify(nextTypes);
+
+    if (currentSnapshot !== nextSnapshot) {
+      shouldSkipNextSearchRef.current = true;
+      setSelectedTypes(nextTypes);
+    }
+  }, [allTypes, searchParams.cloudTypes, selectedTypes]);
+
+  useEffect(() => {
+    if (shouldSkipNextSearchRef.current) {
+      shouldSkipNextSearchRef.current = false;
+      return;
+    }
+
+    if (!searchParams.keyword?.trim()) {
+      return;
+    }
+
+    const selectionSnapshot = JSON.stringify(debouncedSelectedTypes);
+    if (lastTriggeredSearchSnapshotRef.current === selectionSnapshot) {
+      return;
+    }
+
+    lastTriggeredSearchSnapshotRef.current = selectionSnapshot;
+
+    void performSearch(
+      { cloudTypes: debouncedSelectedTypes },
+      { preserveResults: true },
+    );
+  }, [debouncedSelectedTypes, performSearch, searchParams.keyword]);
+
   const isAllSelected = selectedTypes.length === cloudTypeConfigs.length;
 
   const handleTypeToggle = (type: CloudTypeValue) => {
-    const currentTypes = searchParams.cloudTypes || [];
+    const currentTypes = selectedTypes;
     let newTypes: CloudTypeValue[];
 
     if (currentTypes.includes(type)) {
+      if (currentTypes.length === 1) {
+        return;
+      }
       newTypes = currentTypes.filter((t) => t !== type);
     } else {
       newTypes = [...currentTypes, type];
     }
+
+    setSelectedTypes(newTypes);
     setSearchParams({ cloudTypes: newTypes });
+  };
+
+  const handleSelectOnly = (type: CloudTypeValue) => {
+    if (selectedTypes.length === 1 && selectedTypes[0] === type) {
+      return;
+    }
+
+    setSelectedTypes([type]);
+    setSearchParams({ cloudTypes: [type] });
   };
 
   const handleSelectAll = () => {
     if (isAllSelected) {
-      setSearchParams({ cloudTypes: [] });
-    } else {
-      setSearchParams({ cloudTypes: allTypes });
+      return;
     }
+
+    setSelectedTypes(allTypes);
+    setSearchParams({ cloudTypes: allTypes });
   };
 
   const isTypeSelected = (type: CloudTypeValue) =>
-    searchParams.cloudTypes?.includes(type) ?? false;
+    selectedTypes.includes(type);
 
   return (
     <motion.div
@@ -142,6 +275,9 @@ const CloudTypeFilter: React.FC = () => {
                   {isAllSelected
                     ? "已聚合全网顶级资源平台"
                     : `已精准定位 ${selectedTypes.length} 个优质来源`}
+                </p>
+                <p className="mt-1 text-[12px] text-slate-400 dark:text-slate-500 font-medium">
+                  单击多选，双击或长按仅看此源
                 </p>
               </div>
             </div>
@@ -183,6 +319,7 @@ const CloudTypeFilter: React.FC = () => {
                   config={config}
                   isSelected={isTypeSelected(config.type)}
                   onToggle={handleTypeToggle}
+                  onSelectOnly={handleSelectOnly}
                 />
               ))}
             </div>
@@ -193,6 +330,7 @@ const CloudTypeFilter: React.FC = () => {
                   config={config}
                   isSelected={isTypeSelected(config.type)}
                   onToggle={handleTypeToggle}
+                  onSelectOnly={handleSelectOnly}
                 />
               ))}
             </div>

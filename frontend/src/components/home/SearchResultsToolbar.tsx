@@ -15,6 +15,8 @@ interface SearchResultsToolbarProps {
   viewMode: ViewMode;
   /** 视图模式切换回调 */
   onViewModeChange: (mode: ViewMode) => void;
+  /** 已有结果上的刷新态 */
+  isRefreshing?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -26,7 +28,14 @@ interface SearchResultsToolbarProps {
  * 从 SearchResults 中拆分出来，职责单一、易于独立测试。
  */
 export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
-  React.memo(({ totalCount, displayedCount, viewMode, onViewModeChange }) => {
+  React.memo(
+    ({
+      totalCount,
+      displayedCount,
+      viewMode,
+      onViewModeChange,
+      isRefreshing = false,
+    }) => {
     const handleToggle = () =>
       onViewModeChange(viewMode === "grid" ? "list" : "grid");
 
@@ -48,6 +57,11 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
             {displayedCount < totalCount && (
               <span className="text-slate-400 dark:text-slate-500 text-[13px] ml-1">
                 (已显示 {displayedCount})
+              </span>
+            )}
+            {isRefreshing && (
+              <span className="text-[13px] text-cyan-600 dark:text-cyan-400">
+                刷新中
               </span>
             )}
           </div>
@@ -86,6 +100,7 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
         </button>
       </motion.div>
     );
-  });
+    },
+  );
 
 SearchResultsToolbar.displayName = "SearchResultsToolbar";

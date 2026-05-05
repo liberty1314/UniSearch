@@ -49,6 +49,25 @@ import {
 import { getErrorMessage, getErrorStatus } from "@/lib/error";
 import { cn } from "@/lib/utils";
 
+interface RedirectLocationState {
+  from?: {
+    pathname?: string;
+    search?: string;
+  };
+  pendingSearch?: {
+    keyword?: string;
+  };
+}
+
+const resolveRedirectTarget = (
+  locationState: RedirectLocationState | null,
+  fallback = "/",
+) => {
+  const pathname = locationState?.from?.pathname;
+  const search = locationState?.from?.search || "";
+  return pathname ? `${pathname}${search}` : fallback;
+};
+
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -69,7 +88,7 @@ const LoginPage: React.FC = () => {
   const particles = useAuthParticles();
   const routeState = location.state as AuthTransitionState | null;
   const authDirection = resolveAuthDirection(
-    routeState?.from,
+    typeof routeState?.from === "string" ? routeState.from : undefined,
     location.pathname,
     routeState,
   );
@@ -90,6 +109,10 @@ const LoginPage: React.FC = () => {
   }, [navigate]);
 
   const handleLogin = async () => {
+    if (isLoading) {
+      return;
+    }
+
     if (!username.trim() || !password.trim()) {
       toast.error("请输入用户名和密码");
       return;
@@ -110,11 +133,11 @@ const LoginPage: React.FC = () => {
           response.refresh_token || null,
         );
         toast.success("登录成功，欢迎访问 UniSearch！");
-        const nextKeyword = (
-          location.state as { pendingSearch?: { keyword?: string } } | null
-        )?.pendingSearch?.keyword?.trim();
+        const redirectState = location.state as RedirectLocationState | null;
+        const nextKeyword = redirectState?.pendingSearch?.keyword?.trim();
+        const redirectTarget = resolveRedirectTarget(redirectState);
         if (nextKeyword) {
-          navigate("/", {
+          navigate(redirectTarget, {
             replace: true,
             state: {
               resumeSearch: {
@@ -122,8 +145,10 @@ const LoginPage: React.FC = () => {
               },
             },
           });
+        } else if (redirectTarget !== "/") {
+          navigate(redirectTarget, { replace: true });
         } else {
-          navigate("/");
+          navigate("/", { replace: true });
         }
       } else {
         toast.error("登录失败：服务器未返回有效令牌");
@@ -212,7 +237,6 @@ const LoginPage: React.FC = () => {
                   placeholder="请输入用户名"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleLogin()}
                   disabled={isLoading}
                 />
 
@@ -227,7 +251,6 @@ const LoginPage: React.FC = () => {
                   placeholder="请输入密码"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleLogin()}
                   disabled={isLoading}
                   endAdornment={
                     <button

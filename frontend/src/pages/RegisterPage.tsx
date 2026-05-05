@@ -100,7 +100,7 @@ const RegisterPage: React.FC = () => {
   const particles = useAuthParticles();
   const routeState = location.state as AuthTransitionState | null;
   const authDirection = resolveAuthDirection(
-    routeState?.from,
+    typeof routeState?.from === "string" ? routeState.from : undefined,
     location.pathname,
     routeState,
   );
@@ -125,6 +125,10 @@ const RegisterPage: React.FC = () => {
   }, [navigate]);
 
   const handleRegister = async () => {
+    if (isLoading) {
+      return;
+    }
+
     setSubmitAttempted(true);
 
     if (!username.trim() || !password.trim() || !confirmPassword.trim()) {
@@ -189,7 +193,46 @@ const RegisterPage: React.FC = () => {
         ? "两次输入的密码不一致"
         : undefined;
 
-  if (isLoadingSettings) return null; // 等待系统配置，此期间页面空白时间极短（30s 缓存命中后几乎无感知）
+  if (isLoadingSettings) {
+    return (
+      <div className={AUTH_ENTRY_PAGE_CONTAINER_CLASS}>
+        <AuthBackground
+          preset={authVisualPresets.registerPage}
+          particles={particles}
+        />
+        <AuthCardShell
+          glowClassName={authVisualPresets.registerPage.cardGlowGradientClass}
+          className={AUTH_ENTRY_CARD_SHELL_CLASS}
+        >
+          <Card
+            className={cn(
+              AUTH_ENTRY_CARD_BASE_CLASS,
+              "border-emerald-200 dark:border-emerald-800",
+            )}
+          >
+            <CardHeader className={AUTH_ENTRY_CARD_HEADER_CLASS}>
+              <CardTitle className={AUTH_ENTRY_CARD_TITLE_CLASS}>
+                正在加载注册配置...
+              </CardTitle>
+              <CardDescription className={AUTH_ENTRY_CARD_DESCRIPTION_CLASS}>
+                请稍候，系统正在准备注册入口。
+              </CardDescription>
+            </CardHeader>
+            <CardContent className={AUTH_ENTRY_CARD_CONTENT_CLASS}>
+              <div
+                className={cn(
+                  AUTH_ENTRY_FORM_STACK_CLASS,
+                  "text-sm text-slate-500 dark:text-slate-400",
+                )}
+              >
+                正在同步系统设置，请稍后继续填写注册信息。
+              </div>
+            </CardContent>
+          </Card>
+        </AuthCardShell>
+      </div>
+    );
+  }
 
   return (
     <div className={AUTH_ENTRY_PAGE_CONTAINER_CLASS}>
@@ -260,7 +303,6 @@ const RegisterPage: React.FC = () => {
                   placeholder="3-32个字符"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleRegister()}
                   error={usernameError}
                   disabled={isLoading}
                 />
@@ -277,7 +319,6 @@ const RegisterPage: React.FC = () => {
                     placeholder="6-64个字符"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleRegister()}
                     error={passwordError}
                     disabled={isLoading}
                     helperText={
@@ -313,7 +354,6 @@ const RegisterPage: React.FC = () => {
                   placeholder="请再次输入密码"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleRegister()}
                   error={confirmPasswordError}
                   disabled={isLoading}
                   endAdornment={
