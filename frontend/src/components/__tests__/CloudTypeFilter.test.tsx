@@ -1,5 +1,5 @@
 import React from "react";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CloudTypeFilter from "@/components/CloudTypeFilter";
@@ -11,7 +11,6 @@ const { setSearchParamsMock, performSearchMock } = vi.hoisted(() => ({
 }));
 
 const CLICK_DELAY_MS = 220;
-const LONG_PRESS_DELAY_MS = 450;
 const ALL_CLOUD_TYPES = [
   CloudType.BAIDU,
   CloudType.ALIYUN,
@@ -32,7 +31,17 @@ let searchParamsState = {
 };
 
 vi.mock("@/components/magicui/cool-mode", () => ({
-  CoolMode: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  CoolMode: ({
+    children,
+    triggerMode,
+  }: {
+    children: React.ReactNode;
+    triggerMode?: string;
+  }) => (
+    <div data-testid="cool-mode" data-trigger-mode={triggerMode}>
+      {children}
+    </div>
+  ),
 }));
 
 vi.mock("framer-motion", () => ({
@@ -113,8 +122,13 @@ describe("CloudTypeFilter", () => {
     expect(filterSurface).toHaveClass("border-white/60");
     expect(filterSurface).toHaveClass("dark:border-white/[0.06]");
     expect(
-      screen.getByText("单击多选，双击或长按仅看此源"),
+      screen.getByText("单击多选，双击仅看此源"),
     ).toBeInTheDocument();
+    expect(
+      screen.getAllByTestId("cool-mode").every((node) =>
+        node.getAttribute("data-trigger-mode") === "mouse",
+      ),
+    ).toBe(true);
 
     const hasOuterHaloLayer = Array.from(
       container.querySelectorAll("div"),
@@ -135,7 +149,7 @@ describe("CloudTypeFilter", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "百度网盘（已选中，单击取消，双击或长按仅看此源）",
+        name: "百度网盘（已选中，单击取消，双击仅看此源）",
       }),
     );
 
@@ -158,7 +172,7 @@ describe("CloudTypeFilter", () => {
 
     await user.dblClick(
       screen.getByRole("button", {
-        name: "百度网盘（已选中，单击取消，双击或长按仅看此源）",
+        name: "百度网盘（已选中，单击取消，双击仅看此源）",
       }),
     );
 
@@ -178,40 +192,22 @@ describe("CloudTypeFilter", () => {
     });
   });
 
-  it("keeps only the chosen source after a long press without falling back to a normal click toggle", async () => {
-    performSearchMock.mockResolvedValue(undefined);
-    vi.useFakeTimers();
+  it("does not narrow the selection on touch hold without a double click", async () => {
+    render(<CloudTypeFilter />);
 
-    try {
-      render(<CloudTypeFilter />);
+    const target = screen.getByRole("button", {
+      name: "百度网盘（已选中，单击取消，双击仅看此源）",
+    });
 
-      const target = screen.getByRole("button", {
-        name: "百度网盘（已选中，单击取消，双击或长按仅看此源）",
-      });
+    fireEvent.pointerDown(target, { pointerType: "touch" });
+    fireEvent.pointerUp(target, { pointerType: "touch" });
 
-      fireEvent.pointerDown(target, { pointerType: "touch" });
-      await act(async () => {
-        vi.advanceTimersByTime(LONG_PRESS_DELAY_MS);
-      });
-      fireEvent.pointerUp(target, { pointerType: "touch" });
-      fireEvent.click(target);
-      await act(async () => {
-        vi.advanceTimersByTime(CLICK_DELAY_MS);
-      });
+    await new Promise((resolve) =>
+      window.setTimeout(resolve, CLICK_DELAY_MS + 40),
+    );
 
-      expect(setSearchParamsMock).toHaveBeenCalledTimes(1);
-      expect(setSearchParamsMock).toHaveBeenCalledWith({
-        cloudTypes: [CloudType.BAIDU],
-      });
-      expect(performSearchMock).toHaveBeenCalled();
-      expect(performSearchMock).toHaveBeenLastCalledWith(
-        { cloudTypes: [CloudType.BAIDU] },
-        { preserveResults: true },
-      );
-    } finally {
-      vi.runOnlyPendingTimers();
-      vi.useRealTimers();
-    }
+    expect(setSearchParamsMock).not.toHaveBeenCalled();
+    expect(performSearchMock).not.toHaveBeenCalled();
   });
 
   it("does not re-run search when the chip is already the only selected source", async () => {
@@ -225,7 +221,7 @@ describe("CloudTypeFilter", () => {
 
     await user.dblClick(
       screen.getByRole("button", {
-        name: "百度网盘（已选中，单击取消，双击或长按仅看此源）",
+        name: "百度网盘（已选中，单击取消，双击仅看此源）",
       }),
     );
 

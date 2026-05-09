@@ -158,3 +158,13 @@
   - `frontend/src/routes/RouteGuards.tsx`
   - `frontend/src/routes/__tests__/RouteGuards.test.tsx`
   - `frontend/src/stores/searchStore.ts`
+
+## [2026-05-09 08:14:55] chore(frontend): 清理旧设计文档并调整云类型筛选交互
+- **Body**: 删除过时的个人中心设计方案文档，收紧仓库忽略规则，并优化云类型筛选的触控交互与回归测试。
+- **Files**:
+  - `.gitignore`
+  - `docs/superpowers/plans/2026-04-23-account-page-redesign.md`
+  - `docs/superpowers/specs/2026-04-23-account-page-redesign-design.md`
+  - `frontend/src/components/CloudTypeFilter.tsx`
+  - `frontend/src/components/__tests__/CloudTypeFilter.test.tsx`
+  - `frontend/src/components/magicui/cool-mode.tsx`

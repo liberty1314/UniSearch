@@ -22,13 +22,10 @@ interface CloudTypeTagProps {
 }
 
 const CLICK_DELAY_MS = 220;
-const LONG_PRESS_DELAY_MS = 450;
 
 const CloudTypeTag = memo(
   ({ config, isSelected, onToggle, onSelectOnly }: CloudTypeTagProps) => {
     const clickTimerRef = useRef<number | null>(null);
-    const longPressTimerRef = useRef<number | null>(null);
-    const suppressNextClickRef = useRef(false);
 
     const clearClickTimer = () => {
       if (clickTimerRef.current) {
@@ -37,26 +34,13 @@ const CloudTypeTag = memo(
       }
     };
 
-    const clearLongPressTimer = () => {
-      if (longPressTimerRef.current) {
-        window.clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-    };
-
     useEffect(() => {
       return () => {
         clearClickTimer();
-        clearLongPressTimer();
       };
     }, []);
 
     const handleClick = () => {
-      if (suppressNextClickRef.current) {
-        suppressNextClickRef.current = false;
-        return;
-      }
-
       clearClickTimer();
       clickTimerRef.current = window.setTimeout(() => {
         onToggle(config.type);
@@ -69,38 +53,19 @@ const CloudTypeTag = memo(
       onSelectOnly(config.type);
     };
 
-    const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-      if (event.pointerType === "mouse") {
-        return;
-      }
-
-      clearLongPressTimer();
-      longPressTimerRef.current = window.setTimeout(() => {
-        suppressNextClickRef.current = true;
-        clearClickTimer();
-        onSelectOnly(config.type);
-        longPressTimerRef.current = null;
-      }, LONG_PRESS_DELAY_MS);
-    };
-
-    const handlePointerEnd = () => {
-      clearLongPressTimer();
-    };
-
     return (
-      <CoolMode options={{ particleCount: 12, speedHorz: 5, speedUp: 15 }}>
+      <CoolMode
+        options={{ particleCount: 12, speedHorz: 5, speedUp: 15 }}
+        triggerMode="mouse"
+      >
         <motion.button
           layout
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerEnd}
-          onPointerLeave={handlePointerEnd}
-          onPointerCancel={handlePointerEnd}
           whileHover={{ scale: 1.05, y: -2 }}
           whileTap={{ scale: 0.95 }}
           aria-pressed={isSelected}
-          aria-label={`${config.name}${isSelected ? "（已选中，单击取消，双击或长按仅看此源）" : "（未选中，单击选择，双击或长按仅看此源）"}`}
+          aria-label={`${config.name}${isSelected ? "（已选中，单击取消，双击仅看此源）" : "（未选中，单击选择，双击仅看此源）"}`}
           className={cn(
             "relative flex items-center px-5 py-2.5 rounded-[1rem] text-[13.5px] font-semibold transition-colors transition-shadow duration-300 border box-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2",
             isSelected
@@ -277,7 +242,7 @@ const CloudTypeFilter: React.FC = () => {
                     : `已精准定位 ${selectedTypes.length} 个优质来源`}
                 </p>
                 <p className="mt-1 text-[12px] text-slate-400 dark:text-slate-500 font-medium">
-                  单击多选，双击或长按仅看此源
+                  单击多选，双击仅看此源
                 </p>
               </div>
             </div>

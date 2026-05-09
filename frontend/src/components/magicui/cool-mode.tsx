@@ -28,6 +28,8 @@ export interface CoolParticleOptions extends BaseParticleOptions {
   speedUp?: number;
 }
 
+type CoolModeTriggerMode = "all" | "mouse";
+
 const getContainer = () => {
   const id = "_coolMode_effect";
   const existingContainer = document.getElementById(id);
@@ -53,6 +55,7 @@ let instanceCounter = 0;
 const applyParticleEffect = (
   element: HTMLElement,
   options?: CoolParticleOptions,
+  triggerMode: CoolModeTriggerMode = "all",
 ): (() => void) => {
   instanceCounter++;
 
@@ -182,7 +185,8 @@ const applyParticleEffect = (
 
   loop();
 
-  const isTouchInteraction = "ontouchstart" in window;
+  const isTouchInteraction =
+    triggerMode !== "mouse" && "ontouchstart" in window;
 
   const tap = isTouchInteraction ? "touchstart" : "mousedown";
   const tapEnd = isTouchInteraction ? "touchend" : "mouseup";
@@ -210,6 +214,11 @@ const applyParticleEffect = (
   element.addEventListener(move, updateMousePosition, { passive: true });
   element.addEventListener(tap, tapHandler, { passive: true });
   element.addEventListener(tapEnd, disableAutoAddParticle, { passive: true });
+  if (isTouchInteraction) {
+    element.addEventListener("touchcancel", disableAutoAddParticle, {
+      passive: true,
+    });
+  }
   element.addEventListener("mouseleave", disableAutoAddParticle, {
     passive: true,
   });
@@ -218,6 +227,9 @@ const applyParticleEffect = (
     element.removeEventListener(move, updateMousePosition);
     element.removeEventListener(tap, tapHandler);
     element.removeEventListener(tapEnd, disableAutoAddParticle);
+    if (isTouchInteraction) {
+      element.removeEventListener("touchcancel", disableAutoAddParticle);
+    }
     element.removeEventListener("mouseleave", disableAutoAddParticle);
 
     const interval = setInterval(() => {
@@ -236,16 +248,21 @@ const applyParticleEffect = (
 interface CoolModeProps {
   children: ReactNode;
   options?: CoolParticleOptions;
+  triggerMode?: CoolModeTriggerMode;
 }
 
-export const CoolMode: React.FC<CoolModeProps> = ({ children, options }) => {
+export const CoolMode: React.FC<CoolModeProps> = ({
+  children,
+  options,
+  triggerMode = "all",
+}) => {
   const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (ref.current) {
-      return applyParticleEffect(ref.current, options);
+      return applyParticleEffect(ref.current, options, triggerMode);
     }
-  }, [options]);
+  }, [options, triggerMode]);
 
   return React.cloneElement(children as React.ReactElement, { ref });
 };
