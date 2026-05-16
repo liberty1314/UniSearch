@@ -8,12 +8,18 @@ export type AddPluginForm = {
   url: string;
   priority: number;
   description: string;
+  version: string;
+  category: string;
+  capabilitiesText: string;
 };
 
 export type EditPluginForm = {
   priority: number;
   description: string;
   url: string;
+  version: string;
+  category: string;
+  capabilitiesText: string;
 };
 
 export const PAGE_SIZE = 10;
@@ -43,4 +49,16 @@ export const createEmptyAddPluginForm = (): AddPluginForm => ({
   url: '',
   priority: 3,
   description: '',
+  version: '0.0.0',
+  category: 'search',
+  capabilitiesText: 'resource.search',
 });
+
+export const parseCapabilitiesInput = (value: string): string[] =>
+  value
+    .split(/[\s,，]+/)
+    .map((capability) => capability.trim())
+    .filter(Boolean);
+
+export const formatCapabilitiesInput = (capabilities?: string[]): string =>
+  capabilities?.length ? capabilities.join(', ') : 'resource.search';

@@ -96,6 +96,7 @@ export const ApplePagination: React.FC<ApplePaginationProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-sm text-slate-600 dark:text-slate-400">每页</span>
             <select
+              aria-label="每页条数"
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
               disabled={isLoading}

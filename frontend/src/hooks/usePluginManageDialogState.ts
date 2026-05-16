@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PluginInfo } from '@/types/api';
 import {
   createEmptyAddPluginForm,
+  formatCapabilitiesInput,
   type AddPluginForm,
   type EditPluginForm,
   type URLTestStatus,
@@ -51,6 +52,9 @@ export function usePluginManageDialogState(
     priority: 0,
     description: '',
     url: '',
+    version: '0.0.0',
+    category: 'search',
+    capabilitiesText: 'resource.search',
   });
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>({
     open: false,
@@ -100,6 +104,9 @@ export function usePluginManageDialogState(
       priority: plugin.priority,
       description: plugin.description,
       url: plugin.url || '',
+      version: plugin.version || '0.0.0',
+      category: plugin.category || 'search',
+      capabilitiesText: formatCapabilitiesInput(plugin.capabilities),
     });
   }, []);
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuthStore } from "@/stores/authStore";
 import {
@@ -11,13 +11,14 @@ import {
 
 export function useAdminPageController() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAdmin } = useAuthStore();
   
   const currentView = useMemo<AdminView>(() => {
-    const viewParam = searchParams.get("view");
+    const viewParam = new URLSearchParams(location.search).get("view");
     return isAdminView(viewParam) ? viewParam : DEFAULT_ADMIN_VIEW;
-  }, [searchParams]);
+  }, [location.search]);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -34,15 +35,14 @@ export function useAdminPageController() {
   }, []);
 
   useEffect(() => {
-    const viewParam = searchParams.get("view");
+    const nextSearchParams = new URLSearchParams(location.search);
+    const viewParam = nextSearchParams.get("view");
     if (viewParam === currentView) {
       return;
     }
-
-    const nextSearchParams = new URLSearchParams(searchParams);
     nextSearchParams.set("view", currentView);
     setSearchParams(nextSearchParams, { replace: true });
-  }, [currentView, searchParams, setSearchParams]);
+  }, [currentView, location.search, setSearchParams]);
 
   const setCurrentView = useCallback(
     (view: AdminView) => {

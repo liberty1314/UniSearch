@@ -5,15 +5,47 @@ import SearchResults from '@/components/SearchResults';
 
 let searchStoreState = {
   searchResults: {
-    merged_by_type: {
-      quark: [
-        {
-          url: 'https://example.com/resource',
-          password: '',
-          note: '你的名字 4K',
-          datetime: '2026-03-15T00:00:00Z',
-        },
-      ],
+    total: 1,
+    resources: [
+      {
+        id: 'resource-1',
+        title: '你的名字 4K',
+        description: '新海诚动画电影资源',
+        source: { type: 'plugin', id: 'pansearch', name: 'PanSearch' },
+        media_type: 'movie',
+        target_type: 'share',
+        links: [
+          {
+            type: 'quark',
+            url: 'https://example.com/resource',
+            password: '',
+            title: '你的名字 4K',
+            datetime: '2026-03-15T00:00:00Z',
+          },
+        ],
+        capabilities: { searchable: true, downloadable: true },
+        actions: [
+          {
+            key: 'link.quark.open',
+            label: '打开夸克',
+            type: 'open_link',
+            payload: { url: 'https://example.com/resource', link_type: 'quark' },
+          },
+        ],
+        detail: { content: '详情内容', url: 'https://example.com/detail' },
+        tags: ['动画'],
+        images: [],
+        meta: { score: 9 },
+        published_at: '2026-03-15T00:00:00Z',
+      },
+    ],
+    facets: {
+      cloud_types: { quark: 1 },
+      source_types: { plugin: 1 },
+      media_types: { movie: 1 },
+      target_types: { share: 1 },
+      capabilities: { downloadable: 1 },
+      action_types: { open_link: 1 },
     },
   },
   isLoading: false,
@@ -73,15 +105,47 @@ describe('SearchResults', () => {
   beforeEach(() => {
     searchStoreState = {
       searchResults: {
-        merged_by_type: {
-          quark: [
-            {
-              url: 'https://example.com/resource',
-              password: '',
-              note: '你的名字 4K',
-              datetime: '2026-03-15T00:00:00Z',
-            },
-          ],
+        total: 1,
+        resources: [
+          {
+            id: 'resource-1',
+            title: '你的名字 4K',
+            description: '新海诚动画电影资源',
+            source: { type: 'plugin', id: 'pansearch', name: 'PanSearch' },
+            media_type: 'movie',
+            target_type: 'share',
+            links: [
+              {
+                type: 'quark',
+                url: 'https://example.com/resource',
+                password: '',
+                title: '你的名字 4K',
+                datetime: '2026-03-15T00:00:00Z',
+              },
+            ],
+            capabilities: { searchable: true, downloadable: true },
+            actions: [
+              {
+                key: 'link.quark.open',
+                label: '打开夸克',
+                type: 'open_link',
+                payload: { url: 'https://example.com/resource', link_type: 'quark' },
+              },
+            ],
+            detail: { content: '详情内容', url: 'https://example.com/detail' },
+            tags: ['动画'],
+            images: [],
+            meta: { score: 9 },
+            published_at: '2026-03-15T00:00:00Z',
+          },
+        ],
+        facets: {
+          cloud_types: { quark: 1 },
+          source_types: { plugin: 1 },
+          media_types: { movie: 1 },
+          target_types: { share: 1 },
+          capabilities: { downloadable: 1 },
+          action_types: { open_link: 1 },
         },
       },
       isLoading: false,
@@ -129,6 +193,19 @@ describe('SearchResults', () => {
     expect(toolbar).toHaveClass('flex');
     expect(toolbar).toHaveClass('items-center');
     expect(toolbar).toHaveClass('justify-between');
+  });
+
+  it('renders resource source metadata and opens resource details', () => {
+    render(<SearchResults />);
+
+    expect(screen.getByText('PanSearch')).toBeInTheDocument();
+    expect(screen.getByText('movie')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('search-result-grid-card-wrapper'));
+
+    expect(screen.getByText('资源详情')).toBeInTheDocument();
+    expect(screen.getByText('详情内容')).toBeInTheDocument();
+    expect(screen.getByText('https://example.com/resource')).toBeInTheDocument();
   });
 
   it('shows a refresh hint without clearing previous results during in-place refresh', () => {

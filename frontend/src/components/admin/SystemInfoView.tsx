@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { StatsCard } from './StatsCard';
-import { PluginManageDialog } from './PluginManageDialog';
-import { ChannelManageDialog } from './ChannelManageDialog';
 import {
   Activity,
+  ArrowUpRight,
   RefreshCw,
   Server,
   Database,
@@ -17,19 +16,17 @@ import {
   CheckCircle2,
   Layers,
   Radio,
-  Edit,
   Users,
   TrendingUp,
-  Eye,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
-import type { AdminDialogMode, SystemInfoResponse, TGChannel, ListTGChannelsResponse } from '@/types/api';
+import type { SystemInfoResponse, TGChannel, ListTGChannelsResponse } from '@/types/api';
 import { toast } from 'sonner';
 import {
-  ADMIN_HOVERABLE_BUTTON_CLASSES,
   ADMIN_PANEL_SURFACE_CLASSES,
   ADMIN_PANEL_SURFACE_HOVER_CLASSES,
 } from '@/components/admin/adminDesign';
+import { buildAdminUrl } from '@/lib/adminRoute';
 
 const SYSTEM_INFO_CACHE_TTL_MS = 1500;
 
@@ -113,17 +110,14 @@ const fetchChannelSummary = async (token: string): Promise<{ total: number; enab
  *
  * 功能：
  * - 显示系统统计信息（插件数、频道数、缓存状态等）
- * - 显示 TG 频道和插件的摘要统计，并通过只读弹窗查看全量
+ * - 显示 TG 频道和插件的摘要统计，并跳转到独立管理页
  * - 显示系统配置信息（缓存、并发、代理等）
  */
 export const SystemInfoView: React.FC = () => {
+  const navigate = useNavigate();
   const { token } = useAuthStore();
   const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isPluginManageDialogOpen, setIsPluginManageDialogOpen] = useState<boolean>(false);
-  const [isChannelManageDialogOpen, setIsChannelManageDialogOpen] = useState<boolean>(false);
-  const [pluginDialogMode, setPluginDialogMode] = useState<AdminDialogMode>('edit');
-  const [channelDialogMode, setChannelDialogMode] = useState<AdminDialogMode>('edit');
   const [channelSummary, setChannelSummary] = useState({
     total: 0,
     enabled: 0,
@@ -203,13 +197,6 @@ export const SystemInfoView: React.FC = () => {
     return url.replace(/(:\/\/)([^:]+):([^@]+)@/, '$1***:***@');
   };
 
-  /**
-   * 插件/频道管理成功后的回调
-   */
-  const handleManageSuccess = () => {
-    loadSystemInfo(true, true);
-  };
-
   const pluginSummary = useMemo(() => {
     const plugins = systemInfo?.plugins ?? [];
     const active = plugins.filter((plugin) => plugin.is_enabled && (plugin.status === 'active' || plugin.status === 'custom')).length;
@@ -223,6 +210,22 @@ export const SystemInfoView: React.FC = () => {
       inactive,
     };
   }, [systemInfo?.plugins]);
+
+  const createCardNavigationProps = useCallback((targetView: 'channel_management' | 'plugin_management') => {
+    const targetUrl = buildAdminUrl(targetView);
+
+    return {
+      role: 'button' as const,
+      tabIndex: 0,
+      onClick: () => navigate(targetUrl),
+      onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          navigate(targetUrl);
+        }
+      },
+    };
+  }, [navigate]);
 
   if (isLoading) {
     return (
@@ -299,7 +302,15 @@ export const SystemInfoView: React.FC = () => {
         />
       </div>
 
-      <Card className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden')}>
+      <Card
+        className={cn(
+          ADMIN_PANEL_SURFACE_CLASSES,
+          ADMIN_PANEL_SURFACE_HOVER_CLASSES,
+          'overflow-hidden cursor-pointer transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60',
+        )}
+        aria-label="进入 Telegram 频道管理页"
+        {...createCardNavigationProps('channel_management')}
+      >
         <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/30">
           <div className="flex items-center justify-between gap-2">
             <div>
@@ -311,38 +322,12 @@ export const SystemInfoView: React.FC = () => {
                 </Badge>
               </CardTitle>
               <CardDescription className="text-slate-500 dark:text-slate-400">
-                首页已折叠展示，点击查看全部查看完整列表
+                系统监控仅保留摘要，点击进入完整管理页
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setChannelDialogMode('view');
-                    setIsChannelManageDialogOpen(true);
-                  }}
-                  className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'cursor-pointer border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
-                >
-                  <Eye className="w-4 h-4 mr-1" />
-                  查看全部
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => {
-                    setChannelDialogMode('edit');
-                    setIsChannelManageDialogOpen(true);
-                  }}
-                  className="cursor-pointer rounded-full bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white shadow-[0_12px_24px_rgba(14,165,233,0.18)] hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600"
-                >
-                  <Edit className="w-4 h-4 mr-1" />
-                  编辑
-                </Button>
-              </motion.div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300">
+              点击进入管理页
+              <ArrowUpRight className="h-3.5 w-3.5" />
             </div>
           </div>
         </CardHeader>
@@ -371,7 +356,15 @@ export const SystemInfoView: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden')}>
+      <Card
+        className={cn(
+          ADMIN_PANEL_SURFACE_CLASSES,
+          ADMIN_PANEL_SURFACE_HOVER_CLASSES,
+          'overflow-hidden cursor-pointer transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60',
+        )}
+        aria-label="进入插件中心管理页"
+        {...createCardNavigationProps('plugin_management')}
+      >
         <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/30">
           <div className="flex items-center justify-between gap-2">
             <div>
@@ -380,38 +373,12 @@ export const SystemInfoView: React.FC = () => {
                 插件状态摘要
               </CardTitle>
               <CardDescription className="text-slate-500 dark:text-slate-400">
-                首页已折叠展示，点击查看全部查看完整列表
+                系统监控仅保留摘要，点击进入完整管理页
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setPluginDialogMode('view');
-                    setIsPluginManageDialogOpen(true);
-                  }}
-                  className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'cursor-pointer border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
-                >
-                  <Eye className="w-4 h-4 mr-1" />
-                  查看全部
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => {
-                    setPluginDialogMode('edit');
-                    setIsPluginManageDialogOpen(true);
-                  }}
-                  className="cursor-pointer rounded-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-[0_12px_24px_rgba(16,185,129,0.16)] hover:from-emerald-700 hover:to-emerald-600"
-                >
-                  <Edit className="w-4 h-4 mr-1" />
-                  编辑
-                </Button>
-              </motion.div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300">
+              点击进入管理页
+              <ArrowUpRight className="h-3.5 w-3.5" />
             </div>
           </div>
         </CardHeader>
@@ -560,22 +527,6 @@ export const SystemInfoView: React.FC = () => {
         </CardContent>
       </Card>
 
-      <PluginManageDialog
-        isOpen={isPluginManageDialogOpen}
-        onClose={() => setIsPluginManageDialogOpen(false)}
-        onSuccess={handleManageSuccess}
-        token={token || ''}
-        plugins={systemInfo.plugins}
-        mode={pluginDialogMode}
-      />
-
-      <ChannelManageDialog
-        isOpen={isChannelManageDialogOpen}
-        onClose={() => setIsChannelManageDialogOpen(false)}
-        onSuccess={handleManageSuccess}
-        token={token || ''}
-        mode={channelDialogMode}
-      />
     </motion.div>
   );
 };

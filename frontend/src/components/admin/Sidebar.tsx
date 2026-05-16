@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Megaphone, Settings, Users, X } from 'lucide-react';
+import { Activity, Layers, Megaphone, Radio, Settings, Users, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -27,6 +27,8 @@ interface SidebarProps {
 
 const navItems: NavItem[] = [
     { id: 'system_info', label: '系统监控', icon: <Activity className="h-4 w-4" /> },
+    { id: 'channel_management', label: 'Telegram 频道', icon: <Radio className="h-4 w-4" /> },
+    { id: 'plugin_management', label: '插件中心', icon: <Layers className="h-4 w-4" /> },
     { id: 'user_management', label: '用户管理', icon: <Users className="h-4 w-4" /> },
     { id: 'announcement_management', label: '公告管理', icon: <Megaphone className="h-4 w-4" /> },
     { id: 'system_settings', label: '系统设置', icon: <Settings className="h-4 w-4" /> },

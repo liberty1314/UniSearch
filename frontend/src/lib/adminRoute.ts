@@ -1,5 +1,7 @@
 export const ADMIN_VIEWS = [
   'system_info',
+  'channel_management',
+  'plugin_management',
   'user_management',
   'system_settings',
   'announcement_management',

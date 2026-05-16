@@ -78,8 +78,17 @@ vi.mock("@/stores/searchStore", () => ({
     setSearchParams: setSearchParamsMock,
     performSearch: performSearchMock,
     searchResults: {
-      merged_by_type: {
-        quark: [],
+      total: 0,
+      resources: [],
+      facets: {
+        cloud_types: {
+          quark: 0,
+        },
+        source_types: {},
+        media_types: {},
+        target_types: {},
+        capabilities: {},
+        action_types: {},
       },
     },
   }),

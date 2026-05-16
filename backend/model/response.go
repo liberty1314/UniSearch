@@ -13,15 +13,79 @@ type Link struct {
 
 // SearchResult 搜索结果
 type SearchResult struct {
-	MessageID string    `json:"message_id" sonic:"message_id"`
-	UniqueID  string    `json:"unique_id" sonic:"unique_id"` // 全局唯一ID
-	Channel   string    `json:"channel" sonic:"channel"`
-	Datetime  time.Time `json:"datetime" sonic:"datetime"`
-	Title     string    `json:"title" sonic:"title"`
-	Content   string    `json:"content" sonic:"content"`
-	Links     []Link    `json:"links" sonic:"links"`
-	Tags      []string  `json:"tags,omitempty" sonic:"tags,omitempty"`
-	Images    []string  `json:"images,omitempty" sonic:"images,omitempty"` // TG消息中的图片链接
+	MessageID      string                 `json:"message_id" sonic:"message_id"`
+	UniqueID       string                 `json:"unique_id" sonic:"unique_id"` // 全局唯一ID
+	Channel        string                 `json:"channel" sonic:"channel"`
+	Datetime       time.Time              `json:"datetime" sonic:"datetime"`
+	Title          string                 `json:"title" sonic:"title"`
+	Content        string                 `json:"content" sonic:"content"`
+	Links          []Link                 `json:"links" sonic:"links"`
+	Tags           []string               `json:"tags,omitempty" sonic:"tags,omitempty"`
+	Images         []string               `json:"images,omitempty" sonic:"images,omitempty"` // TG消息中的图片链接
+	SourcePluginID string                 `json:"source_plugin_id,omitempty" sonic:"source_plugin_id,omitempty"`
+	SourceType     string                 `json:"source_type,omitempty" sonic:"source_type,omitempty"`
+	SourceName     string                 `json:"source_name,omitempty" sonic:"source_name,omitempty"`
+	MediaType      string                 `json:"media_type,omitempty" sonic:"media_type,omitempty"`
+	TargetType     string                 `json:"target_type,omitempty" sonic:"target_type,omitempty"`
+	DetailURL      string                 `json:"detail_url,omitempty" sonic:"detail_url,omitempty"`
+	Capabilities   ResourceCapabilities   `json:"capabilities,omitempty" sonic:"capabilities,omitempty"`
+	Actions        []ResourceAction       `json:"actions,omitempty" sonic:"actions,omitempty"`
+	Meta           map[string]interface{} `json:"meta,omitempty" sonic:"meta,omitempty"`
+}
+
+// ResourceSource 描述资源来自哪个搜索源，供前端统一展示和筛选。
+type ResourceSource struct {
+	Type     string `json:"type" sonic:"type"`
+	ID       string `json:"id,omitempty" sonic:"id,omitempty"`
+	Name     string `json:"name,omitempty" sonic:"name,omitempty"`
+	Channel  string `json:"channel,omitempty" sonic:"channel,omitempty"`
+	PluginID string `json:"plugin_id,omitempty" sonic:"plugin_id,omitempty"`
+}
+
+// ResourceLink 描述资源对象内的单个可访问链接。
+type ResourceLink struct {
+	Type      string    `json:"type" sonic:"type"`
+	URL       string    `json:"url" sonic:"url"`
+	Password  string    `json:"password,omitempty" sonic:"password,omitempty"`
+	Title     string    `json:"title,omitempty" sonic:"title,omitempty"`
+	WorkTitle string    `json:"work_title,omitempty" sonic:"work_title,omitempty"`
+	Datetime  time.Time `json:"datetime,omitempty" sonic:"datetime,omitempty"`
+}
+
+// ResourceDetail 承载资源详情页和原始内容，避免卡片层直接依赖插件私有字段。
+type ResourceDetail struct {
+	URL       string `json:"url,omitempty" sonic:"url,omitempty"`
+	Content   string `json:"content,omitempty" sonic:"content,omitempty"`
+	MessageID string `json:"message_id,omitempty" sonic:"message_id,omitempty"`
+	UniqueID  string `json:"unique_id,omitempty" sonic:"unique_id,omitempty"`
+}
+
+// ResourceFacets 是资源协议的统一筛选计数。
+type ResourceFacets struct {
+	CloudTypes   map[string]int `json:"cloud_types" sonic:"cloud_types"`
+	SourceTypes  map[string]int `json:"source_types" sonic:"source_types"`
+	MediaTypes   map[string]int `json:"media_types" sonic:"media_types"`
+	TargetTypes  map[string]int `json:"target_types" sonic:"target_types"`
+	Capabilities map[string]int `json:"capabilities" sonic:"capabilities"`
+	ActionTypes  map[string]int `json:"action_types" sonic:"action_types"`
+}
+
+// ResourceObject 是搜索 HTTP 响应的唯一结果载体。
+type ResourceObject struct {
+	ID           string                 `json:"id" sonic:"id"`
+	Title        string                 `json:"title" sonic:"title"`
+	Description  string                 `json:"description,omitempty" sonic:"description,omitempty"`
+	Source       ResourceSource         `json:"source" sonic:"source"`
+	MediaType    string                 `json:"media_type,omitempty" sonic:"media_type,omitempty"`
+	TargetType   string                 `json:"target_type,omitempty" sonic:"target_type,omitempty"`
+	Links        []ResourceLink         `json:"links" sonic:"links"`
+	Capabilities ResourceCapabilities   `json:"capabilities" sonic:"capabilities"`
+	Actions      []ResourceAction       `json:"actions" sonic:"actions"`
+	Detail       ResourceDetail         `json:"detail" sonic:"detail"`
+	Tags         []string               `json:"tags,omitempty" sonic:"tags,omitempty"`
+	Images       []string               `json:"images,omitempty" sonic:"images,omitempty"`
+	Meta         map[string]interface{} `json:"meta,omitempty" sonic:"meta,omitempty"`
+	PublishedAt  time.Time              `json:"published_at,omitempty" sonic:"published_at,omitempty"`
 }
 
 // MergedLink 合并后的网盘链接
@@ -39,9 +103,9 @@ type MergedLinks map[string][]MergedLink
 
 // SearchResponse 搜索响应
 type SearchResponse struct {
-	Total        int            `json:"total" sonic:"total"`
-	Results      []SearchResult `json:"results,omitempty" sonic:"results,omitempty"`
-	MergedByType MergedLinks    `json:"merged_by_type,omitempty" sonic:"merged_by_type,omitempty"`
+	Total     int              `json:"total" sonic:"total"`
+	Resources []ResourceObject `json:"resources" sonic:"resources"`
+	Facets    ResourceFacets   `json:"facets" sonic:"facets"`
 }
 
 // Response API通用响应

@@ -25,7 +25,10 @@ import {
   pluginStatusText,
   resolvePluginStatus,
 } from './pluginManageDialogShared';
-import { usePluginManageController } from '@/hooks/usePluginManageController';
+import {
+  usePluginManageController,
+  type UsePluginManageControllerResult,
+} from '@/hooks/usePluginManageController';
 import { usePagedListScrollReset } from '@/hooks/usePagedListScrollReset';
 
 interface PluginManageDialogProps {
@@ -37,34 +40,35 @@ interface PluginManageDialogProps {
   mode?: AdminDialogMode;
 }
 
-export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
-  isOpen,
-  onClose,
-  onSuccess,
-  token,
-  plugins,
-  mode = 'edit',
-}) => {
-  const listContainerRef = useRef<HTMLDivElement>(null);
-  const controller = usePluginManageController({
-    isOpen,
-    onClose,
-    onSuccess,
-    token,
-    plugins,
-    mode,
-  });
-  usePagedListScrollReset(listContainerRef, controller.currentPage);
+export type PluginManageSurfacePresentation = 'modal' | 'page';
 
-  if (!isOpen) return null;
+interface PluginManageSurfaceProps {
+  controller: UsePluginManageControllerResult;
+  listContainerRef: React.RefObject<HTMLDivElement | null>;
+  presentation: PluginManageSurfacePresentation;
+}
 
+export function PluginManageSurface({
+  controller,
+  listContainerRef,
+  presentation,
+}: PluginManageSurfaceProps) {
   const workspace: PluginManageWorkspaceViewModel = {
-    isOpen,
+    isOpen: true,
+    presentation,
     isReadOnly: controller.isReadOnly,
     isOperationBusy: controller.isOperationBusy,
     isBatchTesting: controller.isBatchTesting,
     localPluginsCount: controller.localPlugins.length,
+    searchKeyword: controller.searchKeyword,
     statusFilter: controller.statusFilter,
+    sourceFilter: controller.sourceFilter,
+    categoryFilter: controller.categoryFilter,
+    capabilityFilter: controller.capabilityFilter,
+    availableCategories: controller.availableCategories,
+    availableCapabilities: controller.availableCapabilities,
+    isCatalogLoading: controller.isCatalogLoading,
+    catalogVersion: controller.catalogVersion,
     filteredItemsCount: controller.filteredItems.length,
     currentPage: controller.currentPage,
     totalPages: controller.totalPages,
@@ -75,7 +79,11 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
     testingStatus: controller.testingStatus,
     listContainerRef,
     onClose: controller.handleClose,
+    onSetSearchKeyword: controller.setSearchKeyword,
     onSetStatusFilter: controller.setStatusFilter,
+    onSetSourceFilter: controller.setSourceFilter,
+    onSetCategoryFilter: controller.setCategoryFilter,
+    onSetCapabilityFilter: controller.setCapabilityFilter,
     onOpenAddDialog: controller.openAddDialog,
     onBatchToggle: (nextEnabled) => void controller.handleBatchTogglePlugins(nextEnabled),
     onOpenBatchDeleteConfirm: () => controller.setBatchDeleteConfirmOpen(true),
@@ -88,14 +96,16 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
     onOpenEditDialog: controller.openEditDialog,
     onOpenDeleteConfirm: (pluginName) => controller.setDeleteConfirm({ open: true, pluginName }),
     onPageChange: controller.setCurrentPage,
+    onInstallPlugin: (plugin) => void controller.handleInstallPlugin(plugin),
   };
+
+  const workspaceNode = presentation === 'modal'
+    ? createPortal(<PluginManageWorkspace workspace={workspace} />, document.body)
+    : <PluginManageWorkspace workspace={workspace} />;
 
   return (
     <>
-      {createPortal(
-        <PluginManageWorkspace workspace={workspace} />,
-        document.body
-      )}
+      {workspaceNode}
 
       <PluginAddDialog
         open={controller.addDialogOpen}
@@ -154,9 +164,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
 
                 <div>
                   <p className="text-slate-500 dark:text-slate-400">状态</p>
-                  <Badge
-                    className={pluginStatusBadgeClass(resolvePluginStatus(controller.activeDetailPlugin))}
-                  >
+                  <Badge className={pluginStatusBadgeClass(resolvePluginStatus(controller.activeDetailPlugin))}>
                     {pluginStatusText(resolvePluginStatus(controller.activeDetailPlugin))}
                   </Badge>
                 </div>
@@ -166,15 +174,131 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                   <p className="font-medium">{controller.activeDetailPlugin.description || '无描述'}</p>
                 </div>
 
-                {controller.activeDetailPlugin.url && (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <p className="text-slate-500 dark:text-slate-400">作者</p>
+                    <p className="font-medium">{controller.activeDetailPlugin.author || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 dark:text-slate-400">来源类型</p>
+                    <p className="font-medium">
+                      {controller.activeDetailPlugin.source_type || controller.activeDetailPlugin.plugin_type}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="font-medium text-slate-700 dark:text-slate-200">插件清单</p>
+                    <Badge variant="outline">
+                      {controller.activeDetailPlugin.manifest_status === 'complete' ? '完整' : '生成'}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                    <div>
+                      <p className="text-slate-500 dark:text-slate-400">插件 ID</p>
+                      <p className="break-all font-medium">{controller.activeDetailPlugin.id || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 dark:text-slate-400">版本</p>
+                      <p className="font-medium">{controller.activeDetailPlugin.version || '0.0.0'}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 dark:text-slate-400">分类</p>
+                      <p className="font-medium">{controller.activeDetailPlugin.category || 'search'}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 dark:text-slate-400">来源</p>
+                      <p className="font-medium">{controller.activeDetailPlugin.resource?.source_label || controller.activeDetailPlugin.name}</p>
+                    </div>
+                  </div>
+                  {controller.activeDetailPlugin.resource?.supported_media_types?.length ? (
+                    <div className="mt-2">
+                      <p className="text-slate-500 dark:text-slate-400">资源类型</p>
+                      <p className="font-medium">
+                        {controller.activeDetailPlugin.resource.supported_media_types.join(' / ')}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                    <p className="text-slate-500 dark:text-slate-400">安装方式</p>
+                    <p className="mt-1 font-medium">
+                      {controller.activeDetailPlugin.install?.type || 'local'}
+                    </p>
+                    {controller.activeDetailPlugin.install?.url ? (
+                      <p className="mt-2 break-all text-xs text-slate-500 dark:text-slate-400">
+                        {controller.activeDetailPlugin.install.url}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                    <p className="text-slate-500 dark:text-slate-400">健康状态</p>
+                    <p className="mt-1 font-medium">
+                      {controller.activeDetailPlugin.health
+                        ? controller.activeDetailPlugin.health.is_healthy
+                          ? '健康'
+                          : '异常'
+                        : '未测试'}
+                    </p>
+                    {controller.activeDetailPlugin.health?.last_error ? (
+                      <p className="mt-2 text-xs text-red-500 dark:text-red-300">
+                        {controller.activeDetailPlugin.health.last_error}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+
+                {controller.activeDetailPlugin.capabilities?.length ? (
+                  <div>
+                    <p className="mb-2 text-slate-500 dark:text-slate-400">能力</p>
+                    <div className="flex flex-wrap gap-2">
+                      {controller.activeDetailPlugin.capabilities.map((capability) => (
+                        <Badge key={capability} variant="outline">
+                          {capability}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {controller.activeDetailPlugin.config_schema?.length ? (
+                  <div>
+                    <p className="mb-2 text-slate-500 dark:text-slate-400">配置项</p>
+                    <div className="space-y-2">
+                      {controller.activeDetailPlugin.config_schema.map((field) => (
+                        <div key={field.key} className="rounded-md border border-slate-200 p-2 dark:border-slate-700">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-medium">{field.label || field.key}</p>
+                            <Badge variant="outline">{field.type}</Badge>
+                          </div>
+                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            {field.description || field.key}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {controller.activeDetailPlugin.url ? (
                   <div>
                     <p className="text-slate-500 dark:text-slate-400">URL</p>
                     <p className="break-all font-medium">{controller.activeDetailPlugin.url}</p>
                   </div>
-                )}
+                ) : null}
+
+                {controller.activeDetailPlugin.homepage ? (
+                  <div>
+                    <p className="text-slate-500 dark:text-slate-400">主页</p>
+                    <p className="break-all font-medium">{controller.activeDetailPlugin.homepage}</p>
+                  </div>
+                ) : null}
               </div>
 
-              {!controller.isReadOnly && controller.activeDetailPlugin.plugin_type === 'custom' && (
+              {!controller.isReadOnly && controller.activeDetailPlugin.plugin_type === 'custom' ? (
                 <DialogFooter>
                   <Button
                     variant="outline"
@@ -187,7 +311,7 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                     编辑该插件
                   </Button>
                 </DialogFooter>
-              )}
+              ) : null}
             </>
           ) : null}
         </DialogContent>
@@ -255,6 +379,47 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
                     }
                   />
                 </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <Label>版本</Label>
+                    <Input
+                      value={controller.editForm.version}
+                      onChange={(event) =>
+                        controller.setEditForm((prev) => ({
+                          ...prev,
+                          version: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>分类</Label>
+                    <Input
+                      value={controller.editForm.category}
+                      onChange={(event) =>
+                        controller.setEditForm((prev) => ({
+                          ...prev,
+                          category: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>能力</Label>
+                  <Input
+                    value={controller.editForm.capabilitiesText}
+                    onChange={(event) =>
+                      controller.setEditForm((prev) => ({
+                        ...prev,
+                        capabilitiesText: event.target.value,
+                      }))
+                    }
+                    placeholder="resource.search, resource.search.handoff"
+                  />
+                </div>
               </div>
 
               <DialogFooter>
@@ -295,5 +460,35 @@ export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
         isLoading={controller.isBatchDeleting}
       />
     </>
+  );
+}
+
+export const PluginManageDialog: React.FC<PluginManageDialogProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  token,
+  plugins,
+  mode = 'edit',
+}) => {
+  const listContainerRef = useRef<HTMLDivElement>(null);
+  const controller = usePluginManageController({
+    isOpen,
+    onClose,
+    onSuccess,
+    token,
+    plugins,
+    mode,
+  });
+  usePagedListScrollReset(listContainerRef, controller.currentPage);
+
+  if (!isOpen) return null;
+
+  return (
+    <PluginManageSurface
+      controller={controller}
+      listContainerRef={listContainerRef}
+      presentation="modal"
+    />
   );
 };

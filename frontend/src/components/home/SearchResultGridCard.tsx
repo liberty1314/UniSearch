@@ -1,12 +1,13 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { IoKeyOutline, IoTimeOutline } from "react-icons/io5";
+import { IoFlashOutline, IoKeyOutline, IoTimeOutline } from "react-icons/io5";
 import { cn } from "@/lib/utils";
 import {
   getCloudTypeInfo,
   formatResultTime,
   type ResultItem,
 } from "@/utils/cloudTypeUtils";
+import type { ResourceAction } from "@/types/api";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -14,16 +15,8 @@ interface SearchResultGridCardProps {
   item: ResultItem;
   /** 在当前已渲染列表中的绝对下标，用于错落入场延迟 */
   index: number;
-  /**
-   * 点击链接回调，由父组件 useCallback 包裹保证引用稳定，
-   * 以使 React.memo 的 props 浅比较有效。
-   */
-  onLinkClick: (
-    url: string,
-    password: string,
-    cloudTypeName: string,
-    hasPassword: boolean,
-  ) => void;
+  onOpenDetail: (item: ResultItem) => void;
+  onActionClick: (action: ResourceAction, item: ResultItem) => void;
 }
 
 // ─── 组件 ─────────────────────────────────────────────────────────────────────
@@ -38,14 +31,14 @@ interface SearchResultGridCardProps {
  *   因此旧卡片不会重放入场动画，只有新挂载的卡片会动画进入。
  */
 export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
-  ({ item, index, onLinkClick }) => {
-    const { link, cloudType, datetime } = item;
+  ({ item, index, onOpenDetail, onActionClick }) => {
+    const { resource, primaryLink, cloudType, datetime } = item;
     const cloudInfo = getCloudTypeInfo(cloudType);
-    const hasPassword = Boolean(link.password?.trim());
+    const hasPassword = Boolean(primaryLink?.password?.trim());
+    const visibleActions = resource.actions.slice(0, 2);
 
-    /** 业务动作：提取为独立函数，供鼠标点击和键盘事件共用 */
     const handleAction = () => {
-      onLinkClick(link.url, link.password ?? "", cloudType, hasPassword);
+      onOpenDetail(item);
     };
 
     const handleClick = (e: React.MouseEvent) => {
@@ -61,7 +54,7 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
       }
     };
 
-    const ariaLabel = `${cloudInfo.name}资源：${link.note || "未命名资源"}${
+    const ariaLabel = `${cloudInfo.name}资源：${resource.title || "未命名资源"}${
       hasPassword ? "（需要访问码）" : ""
     }`;
 
@@ -106,45 +99,91 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
           {/* 标题 */}
           <div className="flex-1 mb-4 min-h-[3.5rem]">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg line-clamp-2 leading-snug group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-purple-600 dark:group-hover:from-blue-400 dark:group-hover:to-purple-400 transition-all duration-300">
-              {link.note || "未命名资源"}
+              {resource.title || "未命名资源"}
             </h3>
+            {resource.description ? (
+              <p className="mt-2 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">
+                {resource.description}
+              </p>
+            ) : null}
           </div>
 
-          {/* 元数据行（时间 + 大小） */}
+          <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+            <span className="rounded-full border border-slate-200/70 bg-slate-50 px-2.5 py-1 text-slate-600 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-300">
+              {resource.source.name || resource.source.id || resource.source.type}
+            </span>
+            {resource.media_type ? (
+              <span className="rounded-full border border-cyan-200/60 bg-cyan-50 px-2.5 py-1 text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-500/10 dark:text-cyan-200">
+                {resource.media_type}
+              </span>
+            ) : null}
+            {resource.target_type ? (
+              <span className="rounded-full border border-amber-200/60 bg-amber-50 px-2.5 py-1 text-amber-700 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200">
+                {resource.target_type}
+              </span>
+            ) : null}
+          </div>
+
+          {/* 元数据行（时间） */}
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-slate-400 mb-4 px-1">
             <div className="flex items-center gap-1.5">
               <IoTimeOutline className="w-3.5 h-3.5" />
               <span>{formatResultTime(datetime)}</span>
             </div>
-            {link.size && (
-              <div className="bg-gray-100 dark:border dark:border-cyan-300/10 dark:bg-slate-900/72 px-2 py-0.5 rounded-full">
-                {link.size}
-              </div>
-            )}
+            <span>{resource.links.length} 个链接</span>
           </div>
 
           {/* 底部：网盘类型徽章 + 访问码标记 */}
-          <div className="mt-auto pt-3 border-t border-slate-200/50 dark:border-white/[0.04] flex items-center justify-between">
-            <div
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
-                cloudInfo.bg,
-                cloudInfo.text,
-                cloudInfo.border,
+          <div className="mt-auto pt-3 border-t border-slate-200/50 dark:border-white/[0.04] space-y-3">
+            <div className="flex items-center justify-between">
+              <div
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+                  cloudInfo.bg,
+                  cloudInfo.text,
+                  cloudInfo.border,
+                )}
+              >
+                {cloudInfo.name}
+              </div>
+
+              {hasPassword && (
+                <div
+                  className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-emerald-400/[0.08] text-green-600 dark:text-emerald-200 text-xs font-medium rounded-full border border-green-200/50 dark:border-emerald-300/16"
+                  title="需要访问码"
+                >
+                  <IoKeyOutline className="w-3 h-3" />
+                  <span>有码</span>
+                </div>
               )}
-            >
-              {cloudInfo.name}
             </div>
 
-            {hasPassword && (
-              <div
-                className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-emerald-400/[0.08] text-green-600 dark:text-emerald-200 text-xs font-medium rounded-full border border-green-200/50 dark:border-emerald-300/16"
-                title="需要访问码"
+            <div className="flex flex-wrap gap-2">
+              {visibleActions.map((action) => (
+                <button
+                  key={action.key}
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onActionClick(action, item);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-full border border-slate-200/70 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-blue-300 hover:text-blue-600 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-200 dark:hover:border-cyan-300/30 dark:hover:text-cyan-200"
+                >
+                  <IoFlashOutline className="h-3.5 w-3.5" />
+                  {action.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onOpenDetail(item);
+                }}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200/70 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-slate-300"
               >
-                <IoKeyOutline className="w-3 h-3" />
-                <span>有码</span>
-              </div>
-            )}
+                查看详情
+              </button>
+            </div>
           </div>
         </div>
       </motion.div>

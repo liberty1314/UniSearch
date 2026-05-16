@@ -41,7 +41,7 @@ describe('SearchService', () => {
   });
 
   it('strips empty search request fields before submitting', async () => {
-    postMock.mockResolvedValue({ merged_by_type: {}, results: [], total: 0 });
+    postMock.mockResolvedValue({ resources: [], facets: {}, total: 0 });
 
     await SearchService.search({
       keyword: '仙逆',

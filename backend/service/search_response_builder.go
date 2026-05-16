@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+	"hash/fnv"
 	"regexp"
 	"sort"
 	"strings"
@@ -61,50 +63,368 @@ func (searchResponseBuilder) Build(results []model.SearchResult, request Normali
 	orderedResults := append([]model.SearchResult(nil), results...)
 	sortResultsByTimeAndKeywords(orderedResults)
 
-	filteredResults, mergedLinks := buildResponseArtifacts(orderedResults, request.Keyword, request.CloudTypes)
+	resources := buildResourceObjects(orderedResults, request.Keyword, request.CloudTypes)
 
-	response := model.SearchResponse{
-		Total:        len(filteredResults),
-		Results:      filteredResults,
-		MergedByType: mergedLinks,
+	return model.SearchResponse{
+		Total:     len(resources),
+		Resources: resources,
+		Facets:    BuildResourceFacets(resources),
 	}
-	if request.ResultType == "merged_by_type" {
-		response.Total = countMergedLinks(mergedLinks)
-	}
-
-	return filterResponseByType(response, request.ResultType)
 }
 
-func countMergedLinks(mergedLinks model.MergedLinks) int {
-	total := 0
-	for _, links := range mergedLinks {
-		total += len(links)
+func buildResourceObjects(results []model.SearchResult, keyword string, cloudTypes []string) []model.ResourceObject {
+	resources := make([]model.ResourceObject, 0, len(results))
+	lowerKeyword := strings.ToLower(strings.TrimSpace(keyword))
+	allowedCloudTypes := buildAllowedCloudTypes(cloudTypes)
+
+	for _, result := range results {
+		if !shouldDisplayResourceResult(result, lowerKeyword) {
+			continue
+		}
+
+		linkTitleMap := extractLinkTitlePairs(result.Content)
+		if len(linkTitleMap) == 0 && len(result.Links) > 0 && !strings.Contains(result.Content, "\n") {
+			backfillLinkTitlesFromInlineContent(linkTitleMap, result)
+		}
+
+		resourceLinks := buildResourceLinks(result, linkTitleMap, allowedCloudTypes)
+		if len(allowedCloudTypes) > 0 && len(resourceLinks) == 0 {
+			continue
+		}
+
+		resource := model.ResourceObject{
+			ID:           resolveResourceID(result),
+			Title:        resolveResourceTitle(result),
+			Description:  buildResourceDescription(result),
+			Source:       buildResourceSource(result),
+			MediaType:    strings.TrimSpace(result.MediaType),
+			TargetType:   resolveTargetType(result, resourceLinks),
+			Links:        resourceLinks,
+			Capabilities: resolveResourceCapabilities(result, resourceLinks),
+			Actions:      resolveResourceActions(result, resourceLinks),
+			Detail: model.ResourceDetail{
+				URL:       strings.TrimSpace(result.DetailURL),
+				Content:   result.Content,
+				MessageID: result.MessageID,
+				UniqueID:  result.UniqueID,
+			},
+			Tags:        append([]string(nil), result.Tags...),
+			Images:      append([]string(nil), result.Images...),
+			Meta:        cloneMeta(result.Meta),
+			PublishedAt: result.Datetime,
+		}
+		resources = append(resources, resource)
 	}
-	return total
+
+	return resources
 }
 
-func filterResponseByType(response model.SearchResponse, resultType string) model.SearchResponse {
-	switch resultType {
-	case "merged_by_type":
-		return model.SearchResponse{
-			Total:        response.Total,
-			MergedByType: response.MergedByType,
-			Results:      nil,
+func shouldDisplayResourceResult(result model.SearchResult, lowerKeyword string) bool {
+	if len(result.Links) == 0 && strings.TrimSpace(result.DetailURL) != "" {
+		return true
+	}
+	if lowerKeyword != "" && strings.Contains(strings.ToLower(result.Title), lowerKeyword) {
+		return true
+	}
+	if shouldSkipKeywordFilter(result) {
+		return true
+	}
+	source := getResultSource(result)
+	pluginLevel := getPluginLevelBySource(source)
+	return !result.Datetime.IsZero() || getKeywordPriority(result.Title) > 0 || pluginLevel <= 2
+}
+
+func buildResourceLinks(result model.SearchResult, linkTitleMap map[string]string, allowedCloudTypes map[string]bool) []model.ResourceLink {
+	resourceLinks := make([]model.ResourceLink, 0, len(result.Links))
+
+	for _, link := range result.Links {
+		linkType := normalizeLinkType(link.Type, link.URL)
+		if len(allowedCloudTypes) > 0 && !allowedCloudTypes[linkType] {
+			continue
 		}
-	case "all":
-		return response
-	case "results":
-		return model.SearchResponse{
-			Total:   response.Total,
-			Results: response.Results,
+
+		title := strings.TrimSpace(link.WorkTitle)
+		if title == "" {
+			title = resolveMergedLinkTitle(result, link.URL, linkTitleMap)
 		}
-	default:
-		return model.SearchResponse{
-			Total:        response.Total,
-			MergedByType: response.MergedByType,
-			Results:      nil,
+
+		datetime := link.Datetime
+		if datetime.IsZero() {
+			datetime = result.Datetime
+		}
+
+		resourceLinks = append(resourceLinks, model.ResourceLink{
+			Type:      linkType,
+			URL:       link.URL,
+			Password:  link.Password,
+			Title:     title,
+			WorkTitle: link.WorkTitle,
+			Datetime:  datetime,
+		})
+	}
+
+	return resourceLinks
+}
+
+func normalizeLinkType(explicitType string, url string) string {
+	linkType := strings.ToLower(strings.TrimSpace(explicitType))
+	if linkType == "" {
+		linkType = strings.ToLower(strings.TrimSpace(util.GetLinkType(url)))
+	}
+	if linkType == "" {
+		return "unknown"
+	}
+	return linkType
+}
+
+func resolveResourceID(result model.SearchResult) string {
+	if strings.TrimSpace(result.UniqueID) != "" {
+		return strings.TrimSpace(result.UniqueID)
+	}
+	if strings.TrimSpace(result.MessageID) != "" {
+		return strings.TrimSpace(result.MessageID)
+	}
+
+	hash := fnv.New32a()
+	_, _ = hash.Write([]byte(result.Title))
+	_, _ = hash.Write([]byte(result.DetailURL))
+	for _, link := range result.Links {
+		_, _ = hash.Write([]byte(link.URL))
+	}
+	return fmt.Sprintf("resource-%08x", hash.Sum32())
+}
+
+func resolveResourceTitle(result model.SearchResult) string {
+	title := cleanTitle(result.Title)
+	if title != "" {
+		return title
+	}
+	if strings.TrimSpace(result.DetailURL) != "" {
+		return result.DetailURL
+	}
+	return "未命名资源"
+}
+
+func buildResourceDescription(result model.SearchResult) string {
+	content := cleanTitle(result.Content)
+	if content == "" || content == resolveResourceTitle(result) {
+		return ""
+	}
+	if len([]rune(content)) <= 180 {
+		return content
+	}
+	runes := []rune(content)
+	return string(runes[:180]) + "..."
+}
+
+func buildResourceSource(result model.SearchResult) model.ResourceSource {
+	sourceType := strings.TrimSpace(result.SourceType)
+	sourceID := strings.TrimSpace(result.SourcePluginID)
+	sourceName := strings.TrimSpace(result.SourceName)
+
+	if result.Channel != "" {
+		if sourceType == "" {
+			sourceType = "tg"
+		}
+		if sourceID == "" {
+			sourceID = result.Channel
+		}
+		if sourceName == "" {
+			sourceName = result.Channel
+		}
+		return model.ResourceSource{
+			Type:    sourceType,
+			ID:      sourceID,
+			Name:    sourceName,
+			Channel: result.Channel,
 		}
 	}
+
+	if sourceID == "" && result.UniqueID != "" && strings.Contains(result.UniqueID, "-") {
+		parts := strings.SplitN(result.UniqueID, "-", 2)
+		sourceID = parts[0]
+	}
+	if sourceType == "" {
+		if sourceID != "" {
+			sourceType = "plugin"
+		} else {
+			sourceType = "unknown"
+		}
+	}
+	if sourceName == "" {
+		sourceName = sourceID
+	}
+
+	return model.ResourceSource{
+		Type:     sourceType,
+		ID:       sourceID,
+		Name:     sourceName,
+		PluginID: sourceID,
+	}
+}
+
+func resolveTargetType(result model.SearchResult, links []model.ResourceLink) string {
+	if strings.TrimSpace(result.TargetType) != "" {
+		return strings.TrimSpace(result.TargetType)
+	}
+	for _, link := range links {
+		if link.Type == "magnet" || link.Type == "ed2k" {
+			return "download"
+		}
+	}
+	if len(links) > 0 {
+		return "share"
+	}
+	if strings.TrimSpace(result.DetailURL) != "" {
+		return "detail"
+	}
+	return ""
+}
+
+func resolveResourceCapabilities(result model.SearchResult, links []model.ResourceLink) model.ResourceCapabilities {
+	capabilities := result.Capabilities
+	if capabilities.Searchable || capabilities.OfficialSearchable ||
+		capabilities.ShareSearchable || capabilities.Downloadable || capabilities.Strmable {
+		return capabilities
+	}
+
+	capabilities.Searchable = true
+	if len(links) > 0 {
+		capabilities.ShareSearchable = true
+		capabilities.Downloadable = true
+	}
+	return capabilities
+}
+
+func resolveResourceActions(result model.SearchResult, links []model.ResourceLink) []model.ResourceAction {
+	if len(result.Actions) > 0 {
+		actions := make([]model.ResourceAction, len(result.Actions))
+		copy(actions, result.Actions)
+		return actions
+	}
+
+	actions := make([]model.ResourceAction, 0, len(links)+1)
+	for _, link := range links {
+		payload := map[string]interface{}{
+			"url":        link.URL,
+			"link_type":  link.Type,
+			"title":      link.Title,
+			"work_title": link.WorkTitle,
+		}
+		if strings.TrimSpace(link.Password) != "" {
+			payload["password"] = link.Password
+		}
+		actions = append(actions, model.ResourceAction{
+			Key:     "link." + link.Type + ".open",
+			Label:   "打开" + link.Type,
+			Type:    "open_link",
+			Style:   "primary",
+			Payload: payload,
+		})
+	}
+
+	if len(actions) == 0 && strings.TrimSpace(result.DetailURL) != "" {
+		actions = append(actions, model.ResourceAction{
+			Key:   "detail.open",
+			Label: "打开详情",
+			Type:  "open_detail",
+			Payload: map[string]interface{}{
+				"url": result.DetailURL,
+			},
+		})
+	}
+
+	return actions
+}
+
+func cloneMeta(meta map[string]interface{}) map[string]interface{} {
+	if meta == nil {
+		return nil
+	}
+	cloned := make(map[string]interface{}, len(meta))
+	for key, value := range meta {
+		cloned[key] = value
+	}
+	return cloned
+}
+
+// BuildResourceFacets 基于当前资源列表重算统一筛选计数。
+func BuildResourceFacets(resources []model.ResourceObject) model.ResourceFacets {
+	facets := model.ResourceFacets{
+		CloudTypes:   make(map[string]int),
+		SourceTypes:  make(map[string]int),
+		MediaTypes:   make(map[string]int),
+		TargetTypes:  make(map[string]int),
+		Capabilities: make(map[string]int),
+		ActionTypes:  make(map[string]int),
+	}
+
+	for _, resource := range resources {
+		incrementFacet(facets.SourceTypes, resource.Source.Type)
+		incrementFacet(facets.MediaTypes, resource.MediaType)
+		incrementFacet(facets.TargetTypes, resource.TargetType)
+		for linkType := range collectResourceLinkTypes(resource) {
+			incrementFacet(facets.CloudTypes, linkType)
+		}
+		for capability := range collectResourceCapabilities(resource.Capabilities) {
+			incrementFacet(facets.Capabilities, capability)
+		}
+		for actionType := range collectResourceActionTypes(resource.Actions) {
+			incrementFacet(facets.ActionTypes, actionType)
+		}
+	}
+
+	return facets
+}
+
+func incrementFacet(facet map[string]int, key string) {
+	normalized := strings.ToLower(strings.TrimSpace(key))
+	if normalized == "" {
+		return
+	}
+	facet[normalized]++
+}
+
+func collectResourceLinkTypes(resource model.ResourceObject) map[string]struct{} {
+	types := make(map[string]struct{}, len(resource.Links))
+	for _, link := range resource.Links {
+		normalized := strings.ToLower(strings.TrimSpace(link.Type))
+		if normalized != "" {
+			types[normalized] = struct{}{}
+		}
+	}
+	return types
+}
+
+func collectResourceCapabilities(capabilities model.ResourceCapabilities) map[string]struct{} {
+	result := make(map[string]struct{}, 5)
+	if capabilities.Searchable {
+		result["searchable"] = struct{}{}
+	}
+	if capabilities.OfficialSearchable {
+		result["official_searchable"] = struct{}{}
+	}
+	if capabilities.ShareSearchable {
+		result["share_searchable"] = struct{}{}
+	}
+	if capabilities.Downloadable {
+		result["downloadable"] = struct{}{}
+	}
+	if capabilities.Strmable {
+		result["strmable"] = struct{}{}
+	}
+	return result
+}
+
+func collectResourceActionTypes(actions []model.ResourceAction) map[string]struct{} {
+	types := make(map[string]struct{}, len(actions))
+	for _, action := range actions {
+		normalized := strings.ToLower(strings.TrimSpace(action.Type))
+		if normalized != "" {
+			types[normalized] = struct{}{}
+		}
+	}
+	return types
 }
 
 func buildResponseArtifacts(results []model.SearchResult, keyword string, cloudTypes []string) ([]model.SearchResult, model.MergedLinks) {

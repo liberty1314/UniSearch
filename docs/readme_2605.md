@@ -168,3 +168,45 @@
   - `frontend/src/components/CloudTypeFilter.tsx`
   - `frontend/src/components/__tests__/CloudTypeFilter.test.tsx`
   - `frontend/src/components/magicui/cool-mode.tsx`
+
+## [2026-05-17 02:00:19] feat(plugin): 引入插件目录与统一资源结果模型
+- **Body**: 新增插件目录、清单与校验能力，统一后端搜索结果与插件元数据结构，并同步重构前端插件管理与资源展示页面。
+- **Files**:
+  - `backend/api/admin_handler.go`
+  - `backend/api/filter.go`
+  - `backend/api/filter_test.go`
+  - `backend/api/plugin_center_handler.go`
+  - `backend/api/plugin_center_handler_test.go`
+  - `backend/api/plugin_manifest_response_test.go`
+  - `backend/api/router.go`
+  - `backend/config/custom_plugins.go`
+  - `backend/custom_plugins.json`
+  - `backend/model/plugin_catalog.go`
+  - `backend/model/plugin_manifest.go`
+  - `backend/model/request.go`
+  - `backend/model/response.go`
+  - `backend/plugin/baseasyncplugin.go`
+  - `backend/plugin/manifest.go`
+  - `backend/plugin/manifest_test.go`
+  - `backend/plugin/pansearch/pansearch.go`
+  - `backend/plugin/thepiratebay/thepiratebay.go`
+  - `backend/plugin_market.default.json`
+  - `backend/service/plugin_catalog_service.go`
+  - `backend/service/plugin_catalog_service_test.go`
+  - `backend/service/plugin_health_service.go`
+  - `backend/service/search_response_builder.go`
+  - `backend/service/search_response_builder_test.go`
+  - `backend/tools/validate_plugin_manifests.go`
+  - `docs/插件开发指南.md`
+  - `frontend/src/components/SearchResults.tsx`
+  - `frontend/src/components/admin/AdminWorkspacePageFrame.tsx`
+  - `frontend/src/components/admin/ChannelManagementView.tsx`
+  - `frontend/src/components/admin/PluginManagementView.tsx`
+  - `frontend/src/components/admin/PluginManageDialog.tsx`
+  - `frontend/src/components/admin/PluginManageWorkspace.tsx`
+  - `frontend/src/components/admin/__tests__/PluginManagementView.test.tsx`
+  - `frontend/src/hooks/usePluginManageController.ts`
+  - `frontend/src/pages/Admin.tsx`
+  - `frontend/src/stores/searchStore.ts`
+  - `frontend/src/types/api.ts`
+  - `frontend/src/utils/searchResultSorter.ts`

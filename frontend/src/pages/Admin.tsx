@@ -4,6 +4,8 @@ import { Sidebar } from "@/components/admin/Sidebar";
 import { SystemInfoView } from "@/components/admin/SystemInfoView";
 import { SystemSettingsView } from "@/components/admin/SystemSettingsView";
 import { AnnouncementManagement } from "@/components/admin/AnnouncementManagement";
+import { ChannelManagementView } from "@/components/admin/ChannelManagementView";
+import { PluginManagementView } from "@/components/admin/PluginManagementView";
 import AdminUsersView from "@/components/admin/AdminUsersView";
 import { useAdminPageController } from "@/hooks/useAdminPageController";
 import {
@@ -35,6 +37,8 @@ const Admin: React.FC = () => {
                 >
                   {currentView === "user_management" && <AdminUsersView />}
                   {currentView === "system_info" && <SystemInfoView />}
+                  {currentView === "channel_management" && <ChannelManagementView />}
+                  {currentView === "plugin_management" && <PluginManagementView />}
                   {currentView === "system_settings" && <SystemSettingsView />}
                   {currentView === "announcement_management" && <AnnouncementManagement />}
                 </motion.div>

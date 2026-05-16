@@ -8,7 +8,7 @@ import type { SearchAccessStatus } from '@/stores/searchAccessStore';
 
 let searchAccessStatus: SearchAccessStatus = 'authenticated';
 let searchKeyword = '';
-let searchResults: Array<{ id: number }> = [];
+let searchResults: Array<{ id: string }> = [];
 
 vi.mock('@/components/SearchBox', () => ({
   __esModule: true,
@@ -77,7 +77,27 @@ vi.mock('@/components/ui/number-ticker', () => ({
 vi.mock('@/stores/searchStore', () => ({
   useSearchStore: () => ({
     searchParams: { keyword: searchKeyword },
-    searchResults: searchResults.length > 0 ? { results: searchResults } : null,
+    searchResults: searchResults.length > 0 ? {
+      total: searchResults.length,
+      resources: searchResults.map((item) => ({
+        id: item.id,
+        title: item.id,
+        source: { type: 'plugin', name: '测试来源' },
+        links: [],
+        capabilities: {},
+        actions: [],
+        detail: {},
+      })),
+      facets: {
+        cloud_types: {},
+        source_types: {},
+        media_types: {},
+        target_types: {},
+        capabilities: {},
+        action_types: {},
+      },
+    } : null,
+    performSearch: vi.fn(),
   }),
 }));
 
@@ -197,7 +217,7 @@ describe('Home', () => {
   it('keeps the shared grid-backed shell in the searched state', () => {
     searchAccessStatus = 'authenticated';
     searchKeyword = '电影';
-    searchResults = [{ id: 1 }];
+    searchResults = [{ id: '1' }];
 
     renderHome();
 

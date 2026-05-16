@@ -154,11 +154,7 @@ export const useSearchStore = create<SearchState>()(
         try {
           const results = await SearchService.search(finalParams);
 
-          // 计算总结果数量
-          const totalCount = Object.values(results.merged_by_type || {}).reduce(
-            (sum, links) => sum + links.length,
-            0,
-          );
+          const totalCount = results.resources?.length ?? 0;
 
           set({
             searchResults: results,
@@ -286,10 +282,7 @@ export const useSearchStore = create<SearchState>()(
           return;
         }
 
-        // 计算总结果数量
-        const totalCount = Object.values(
-          state.searchResults.merged_by_type || {},
-        ).reduce((sum, links) => sum + links.length, 0);
+        const totalCount = state.searchResults.resources?.length ?? 0;
 
         // 增加显示数量
         const newDisplayedCount = state.displayedCount + state.pageSize;

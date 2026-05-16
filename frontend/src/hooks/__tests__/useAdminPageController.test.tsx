@@ -44,6 +44,8 @@ const ControllerProbe = () => {
       <div data-testid="current-view">{currentView}</div>
       <div data-testid="location">{`${location.pathname}${location.search}`}</div>
       <button onClick={() => setCurrentView('system_settings')}>go settings</button>
+      <button onClick={() => setCurrentView('channel_management')}>go channels</button>
+      <button onClick={() => setCurrentView('plugin_management')}>go plugins</button>
     </div>
   );
 };
@@ -105,5 +107,23 @@ describe('useAdminPageController', () => {
       expect(screen.getByTestId('location')).toHaveTextContent('/admin?view=system_settings');
     });
     expect(screen.getByTestId('current-view')).toHaveTextContent('system_settings');
+  });
+
+  it('recognizes the channel management view as a legal admin view', async () => {
+    renderProbe('/admin?view=channel_management');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent('/admin?view=channel_management');
+    });
+    expect(screen.getByTestId('current-view')).toHaveTextContent('channel_management');
+  });
+
+  it('recognizes the plugin management view as a legal admin view', async () => {
+    renderProbe('/admin?view=plugin_management');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent('/admin?view=plugin_management');
+    });
+    expect(screen.getByTestId('current-view')).toHaveTextContent('plugin_management');
   });
 });

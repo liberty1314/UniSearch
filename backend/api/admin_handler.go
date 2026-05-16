@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"unisearch/config"
+	"unisearch/model"
 	"unisearch/plugin"
 	"unisearch/service"
 )
@@ -224,13 +225,24 @@ type SystemInfoResponse struct {
 
 // PluginInfoResponse 插件信息响应
 type PluginInfoResponse struct {
-	Name        string `json:"name"`
-	Priority    int    `json:"priority"`
-	Status      string `json:"status"`
-	PluginType  string `json:"plugin_type"` // builtin | custom
-	IsEnabled   bool   `json:"is_enabled"`
-	Description string `json:"description"`
-	URL         string `json:"url,omitempty"`
+	Name            string                    `json:"name"`
+	Priority        int                       `json:"priority"`
+	Status          string                    `json:"status"`
+	PluginType      string                    `json:"plugin_type"` // builtin | custom
+	IsEnabled       bool                      `json:"is_enabled"`
+	Description     string                    `json:"description"`
+	URL             string                    `json:"url,omitempty"`
+	ID              string                    `json:"id"`
+	Version         string                    `json:"version"`
+	Category        string                    `json:"category"`
+	CoreVersion     string                    `json:"core_version"`
+	ContractVersion string                    `json:"contract_version"`
+	Capabilities    []string                  `json:"capabilities"`
+	Permissions     []string                  `json:"permissions"`
+	ConfigSchema    []model.PluginConfigField `json:"config_schema"`
+	Resource        model.ResourceDescriptor  `json:"resource"`
+	UI              model.PluginUIMetadata    `json:"ui"`
+	ManifestStatus  string                    `json:"manifest_status"`
 }
 
 // SystemStatsResponse 系统统计响应
@@ -329,14 +341,22 @@ func GetSystemInfoHandler(searchService *service.SearchService, userService *ser
 				status = resolvePluginStatusByHealthMap(p.Name(), "active", healthMap)
 			}
 
-			pluginInfos = append(pluginInfos, PluginInfoResponse{
-				Name:        p.Name(),
-				Priority:    p.Priority(),
-				Status:      status,
-				PluginType:  "builtin",
-				IsEnabled:   isEnabled,
-				Description: getPluginDescription(p.Name()),
-			})
+			manifest := plugin.ResolvePluginManifest(p)
+			description := manifest.Description
+			if strings.TrimSpace(description) == "" {
+				description = getPluginDescription(p.Name())
+			}
+
+			pluginInfos = append(pluginInfos, buildPluginInfoResponse(
+				p.Name(),
+				p.Priority(),
+				status,
+				"builtin",
+				isEnabled,
+				description,
+				"",
+				manifest,
+			))
 		}
 
 		// 获取自定义插件并添加到列表
@@ -351,15 +371,17 @@ func GetSystemInfoHandler(searchService *service.SearchService, userService *ser
 				status = resolvePluginStatusByHealthMap(cp.Name, "custom", healthMap)
 			}
 
-			pluginInfos = append(pluginInfos, PluginInfoResponse{
-				Name:        cp.Name,
-				Priority:    cp.Priority,
-				Status:      status,
-				PluginType:  "custom",
-				IsEnabled:   isEnabled,
-				Description: cp.Description,
-				URL:         cp.URL,
-			})
+			manifest := buildCustomPluginManifest(cp)
+			pluginInfos = append(pluginInfos, buildPluginInfoResponse(
+				cp.Name,
+				cp.Priority,
+				status,
+				"custom",
+				isEnabled,
+				cp.Description,
+				cp.URL,
+				manifest,
+			))
 		}
 
 		activePluginCount := 0
@@ -414,6 +436,82 @@ func GetSystemInfoHandler(searchService *service.SearchService, userService *ser
 		}
 
 		c.JSON(200, response)
+	}
+}
+
+func buildPluginInfoResponse(name string, priority int, status string, pluginType string, isEnabled bool, description string, url string, manifest model.PluginManifest) PluginInfoResponse {
+	if strings.TrimSpace(description) == "" {
+		description = manifest.Description
+	}
+	return PluginInfoResponse{
+		Name:            name,
+		Priority:        priority,
+		Status:          status,
+		PluginType:      pluginType,
+		IsEnabled:       isEnabled,
+		Description:     description,
+		URL:             url,
+		ID:              manifest.ID,
+		Version:         manifest.Version,
+		Category:        manifest.Category,
+		CoreVersion:     manifest.CoreVersion,
+		ContractVersion: manifest.ContractVersion,
+		Capabilities:    manifest.Capabilities,
+		Permissions:     manifest.Permissions,
+		ConfigSchema:    manifest.ConfigSchema,
+		Resource:        manifest.Resource,
+		UI:              manifest.UI,
+		ManifestStatus:  manifest.ManifestStatus,
+	}
+}
+
+func buildCustomPluginManifest(cp config.CustomPlugin) model.PluginManifest {
+	category := strings.TrimSpace(cp.Category)
+	if category == "" {
+		category = "search"
+	}
+	version := strings.TrimSpace(cp.Version)
+	if version == "" {
+		version = "0.0.0"
+	}
+	capabilities := append([]string(nil), cp.Capabilities...)
+	if len(capabilities) == 0 {
+		capabilities = []string{"resource.search"}
+	}
+
+	return model.PluginManifest{
+		ID:              "search." + strings.TrimSpace(cp.Name),
+		Name:            cp.Name,
+		Version:         version,
+		Category:        category,
+		Description:     cp.Description,
+		CoreVersion:     ">=1.0.0 <2.0.0",
+		ContractVersion: "1.0",
+		Capabilities:    capabilities,
+		Permissions:     []string{"network"},
+		ConfigSchema: []model.PluginConfigField{
+			{
+				Key:         "url",
+				Label:       "搜索接口 URL",
+				Type:        "string",
+				Required:    true,
+				Default:     cp.URL,
+				Description: "自定义插件的远程搜索接口地址。",
+			},
+		},
+		Resource: model.ResourceDescriptor{
+			SourceLabel:         cp.Name,
+			SourceGroup:         category,
+			SupportedMediaTypes: []string{},
+			TargetTypes:         []string{"share"},
+			Priority:            cp.Priority,
+		},
+		UI: model.PluginUIMetadata{
+			Menus:            []string{},
+			SettingsSections: []string{},
+			TaskTemplates:    []string{},
+		},
+		ManifestStatus: "generated",
 	}
 }
 
@@ -829,10 +927,13 @@ func TestURLHandler() gin.HandlerFunc {
 
 // CreatePluginRequest 创建插件请求
 type CreatePluginRequest struct {
-	Name        string `json:"name" binding:"required"`
-	URL         string `json:"url" binding:"required"`
-	Priority    int    `json:"priority"`
-	Description string `json:"description"`
+	Name         string   `json:"name" binding:"required"`
+	URL          string   `json:"url" binding:"required"`
+	Priority     int      `json:"priority"`
+	Description  string   `json:"description"`
+	Version      string   `json:"version"`
+	Category     string   `json:"category"`
+	Capabilities []string `json:"capabilities"`
 }
 
 // CreatePluginHandler 创建插件
@@ -850,11 +951,14 @@ func CreatePluginHandler(pluginHealthService *service.PluginHealthService, plugi
 		// 添加到自定义插件配置
 		customPlugins := config.GetCustomPluginsConfig()
 		err := customPlugins.AddPlugin(config.CustomPlugin{
-			Name:        req.Name,
-			URL:         req.URL,
-			Priority:    req.Priority,
-			Description: req.Description,
-			Enabled:     true,
+			Name:         req.Name,
+			URL:          req.URL,
+			Priority:     req.Priority,
+			Description:  req.Description,
+			Enabled:      true,
+			Version:      req.Version,
+			Category:     req.Category,
+			Capabilities: req.Capabilities,
 		})
 
 		if err != nil {
@@ -884,17 +988,21 @@ func CreatePluginHandler(pluginHealthService *service.PluginHealthService, plugi
 			}
 		}
 
+		createdPlugin := config.CustomPlugin{
+			Name:         req.Name,
+			URL:          req.URL,
+			Priority:     req.Priority,
+			Description:  req.Description,
+			Enabled:      true,
+			Version:      req.Version,
+			Category:     req.Category,
+			Capabilities: req.Capabilities,
+		}
+		manifest := buildCustomPluginManifest(createdPlugin)
 		c.JSON(200, gin.H{
 			"success": true,
 			"message": "插件添加成功",
-			"plugin": gin.H{
-				"name":        req.Name,
-				"url":         req.URL,
-				"priority":    req.Priority,
-				"description": req.Description,
-				"plugin_type": "custom",
-				"is_enabled":  true,
-			},
+			"plugin":  buildPluginInfoResponse(req.Name, req.Priority, "custom", "custom", true, req.Description, req.URL, manifest),
 		})
 	}
 }
@@ -961,9 +1069,12 @@ func DeletePluginHandler(pluginHealthService *service.PluginHealthService, plugi
 
 // UpdatePluginRequest 更新插件请求
 type UpdatePluginRequest struct {
-	Priority    int    `json:"priority"`
-	Description string `json:"description"`
-	URL         string `json:"url"`
+	Priority     int      `json:"priority"`
+	Description  string   `json:"description"`
+	URL          string   `json:"url"`
+	Version      string   `json:"version"`
+	Category     string   `json:"category"`
+	Capabilities []string `json:"capabilities"`
 }
 
 // UpdatePluginHandler 更新插件
@@ -1004,6 +1115,15 @@ func UpdatePluginHandler(pluginHealthService *service.PluginHealthService, plugi
 		}
 		updatedPlugin.Priority = req.Priority
 		updatedPlugin.Description = req.Description
+		if strings.TrimSpace(req.Version) != "" {
+			updatedPlugin.Version = req.Version
+		}
+		if strings.TrimSpace(req.Category) != "" {
+			updatedPlugin.Category = req.Category
+		}
+		if req.Capabilities != nil {
+			updatedPlugin.Capabilities = req.Capabilities
+		}
 
 		// 更新自定义插件配置
 		err := customPlugins.UpdatePlugin(pluginName, updatedPlugin)
@@ -1035,17 +1155,11 @@ func UpdatePluginHandler(pluginHealthService *service.PluginHealthService, plugi
 			}
 		}
 
+		manifest := buildCustomPluginManifest(updatedPlugin)
 		c.JSON(200, gin.H{
 			"success": true,
 			"message": "插件更新成功",
-			"plugin": gin.H{
-				"name":        pluginName,
-				"url":         updatedPlugin.URL,
-				"priority":    updatedPlugin.Priority,
-				"description": updatedPlugin.Description,
-				"plugin_type": "custom",
-				"is_enabled":  updatedPlugin.Enabled,
-			},
+			"plugin":  buildPluginInfoResponse(pluginName, updatedPlugin.Priority, "custom", "custom", updatedPlugin.Enabled, updatedPlugin.Description, updatedPlugin.URL, manifest),
 		})
 	}
 }

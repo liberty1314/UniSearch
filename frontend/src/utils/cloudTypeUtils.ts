@@ -1,5 +1,5 @@
 import { CloudType } from "@/types/api";
-import type { MergedLink } from "@/types/api";
+import type { ResourceLink, ResourceObject } from "@/types/api";
 
 // ─── 共享类型 ────────────────────────────────────────────────────────────────
 
@@ -27,7 +27,8 @@ export interface CloudTypeStyle {
  * 同时被 SearchResults、SearchResultGridCard、SearchResultListItem 使用
  */
 export interface ResultItem {
-  link: MergedLink & { size?: string | number };
+  resource: ResourceObject;
+  primaryLink?: ResourceLink;
   cloudType: string;
   datetime: number;
 }

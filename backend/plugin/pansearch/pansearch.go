@@ -234,9 +234,33 @@ func (wp *WorkerPool) Close() {
 func NewPanSearchPlugin() *PanSearchAsyncPlugin {
 	timeout := DefaultTimeout
 	maxConcurrent := MaxConcurrent
+	basePlugin := plugin.NewBaseAsyncPlugin("pansearch", 3)
+	basePlugin.SetManifest(model.PluginManifest{
+		ID:              "search.pansearch",
+		Name:            "盘搜",
+		Version:         "1.0.0",
+		Category:        "search",
+		Description:     "基于 PanSearch 的网盘资源搜索插件。",
+		CoreVersion:     ">=1.0.0 <2.0.0",
+		ContractVersion: "1.0",
+		Capabilities:    []string{"resource.search"},
+		Permissions:     []string{"network"},
+		Resource: model.ResourceDescriptor{
+			SourceLabel:         "盘搜",
+			SourceGroup:         "search",
+			SupportedMediaTypes: []string{"movie", "tv", "documentary", "anime", "unknown"},
+			TargetTypes:         []string{"share"},
+			Priority:            3,
+		},
+		UI: model.PluginUIMetadata{
+			Menus:            []string{},
+			SettingsSections: []string{},
+			TaskTemplates:    []string{},
+		},
+	})
 
 	p := &PanSearchAsyncPlugin{
-		BaseAsyncPlugin: plugin.NewBaseAsyncPlugin("pansearch", 3),
+		BaseAsyncPlugin: basePlugin,
 		timeout:         timeout,
 		maxResults:      MaxResults,
 		maxConcurrent:   maxConcurrent,

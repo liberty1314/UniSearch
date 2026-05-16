@@ -92,7 +92,7 @@ const Home: React.FC = () => {
 
   const hasSearched =
     searchParams.keyword ||
-    (searchResults?.results && searchResults.results.length > 0);
+    (searchResults?.resources && searchResults.resources.length > 0);
 
   return (
     <PublicPageShell contentClassName="container mx-auto px-4 py-8 pt-24 pb-16">

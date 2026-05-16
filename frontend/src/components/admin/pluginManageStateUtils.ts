@@ -5,7 +5,7 @@ type PluginNameSet = Set<string>;
 
 export const appendCustomPlugin = (
   plugins: PluginInfo[],
-  nextPlugin: Pick<PluginInfo, 'name' | 'url' | 'priority' | 'description'>
+  nextPlugin: PluginInfo
 ): PluginInfo[] => [
   {
     ...nextPlugin,
@@ -84,15 +84,23 @@ export const removePluginsByName = (
 export const updateEditedPlugin = (
   plugins: PluginInfo[],
   pluginName: string,
-  editForm: EditPluginForm
+  editForm: EditPluginForm,
+  responsePlugin?: PluginInfo
 ): PluginInfo[] =>
   plugins.map((plugin) =>
     plugin.name === pluginName
-      ? {
-          ...plugin,
-          priority: editForm.priority,
-          description: editForm.description,
-          url: editForm.url,
-        }
+      ? responsePlugin
+        ? {
+            ...responsePlugin,
+            status: responsePlugin.status ?? plugin.status,
+            is_enabled: responsePlugin.is_enabled ?? plugin.is_enabled,
+            plugin_type: responsePlugin.plugin_type ?? plugin.plugin_type,
+          }
+        : {
+            ...plugin,
+            priority: editForm.priority,
+            description: editForm.description,
+            url: editForm.url,
+          }
       : plugin
   );

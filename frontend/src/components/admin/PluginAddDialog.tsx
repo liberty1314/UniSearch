@@ -141,6 +141,46 @@ export function PluginAddDialog({
               placeholder="填写插件用途、资源类型等说明"
             />
           </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div>
+              <Label>版本</Label>
+              <Input
+                value={addForm.version}
+                onChange={(event) =>
+                  onAddFormChange((prev) => ({ ...prev, version: event.target.value }))
+                }
+                onKeyDown={onAddFormKeyDown}
+                placeholder="例如：1.0.0"
+              />
+            </div>
+            <div>
+              <Label>分类</Label>
+              <Input
+                value={addForm.category}
+                onChange={(event) =>
+                  onAddFormChange((prev) => ({ ...prev, category: event.target.value }))
+                }
+                onKeyDown={onAddFormKeyDown}
+                placeholder="例如：search"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label>能力</Label>
+            <Input
+              value={addForm.capabilitiesText}
+              onChange={(event) =>
+                onAddFormChange((prev) => ({ ...prev, capabilitiesText: event.target.value }))
+              }
+              onKeyDown={onAddFormKeyDown}
+              placeholder="例如：resource.search, resource.search.handoff"
+            />
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              多个能力可用逗号或空格分隔；留空时后端会按搜索插件补齐默认能力。
+            </p>
+          </div>
         </div>
 
         <DialogFooter>

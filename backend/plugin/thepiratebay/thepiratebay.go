@@ -102,8 +102,34 @@ func createOptimizedHTTPClient() *http.Client {
 
 // NewThePirateBayPlugin 创建新的海盗湾搜索异步插件
 func NewThePirateBayPlugin() *ThePirateBayPlugin {
+	basePlugin := plugin.NewBaseAsyncPluginWithFilter("thepiratebay", 3, true)
+	basePlugin.SetManifest(model.PluginManifest{
+		ID:              "search.thepiratebay",
+		Name:            "The Pirate Bay",
+		Version:         "1.0.0",
+		Category:        "search",
+		Description:     "面向磁力链接的海外资源搜索插件。",
+		CoreVersion:     ">=1.0.0 <2.0.0",
+		ContractVersion: "1.0",
+		Capabilities:    []string{"resource.search", "resource.magnet"},
+		Permissions:     []string{"network"},
+		Resource: model.ResourceDescriptor{
+			SourceLabel:         "The Pirate Bay",
+			SourceGroup:         "search",
+			SupportedMediaTypes: []string{"movie", "tv", "software", "unknown"},
+			TargetTypes:         []string{"magnet"},
+			Priority:            3,
+			SkipServiceFilter:   true,
+		},
+		UI: model.PluginUIMetadata{
+			Menus:            []string{},
+			SettingsSections: []string{},
+			TaskTemplates:    []string{},
+		},
+	})
+
 	return &ThePirateBayPlugin{
-		BaseAsyncPlugin: plugin.NewBaseAsyncPluginWithFilter("thepiratebay", 3, true), // 跳过Service层过滤
+		BaseAsyncPlugin: basePlugin, // 跳过Service层过滤
 		optimizedClient: createOptimizedHTTPClient(),
 	}
 }

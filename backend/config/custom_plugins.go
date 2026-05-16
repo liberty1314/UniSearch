@@ -9,11 +9,14 @@ import (
 
 // CustomPlugin 自定义插件配置
 type CustomPlugin struct {
-	Name        string `json:"name"`
-	URL         string `json:"url"`
-	Priority    int    `json:"priority"`
-	Description string `json:"description"`
-	Enabled     bool   `json:"enabled"`
+	Name         string   `json:"name"`
+	URL          string   `json:"url"`
+	Priority     int      `json:"priority"`
+	Description  string   `json:"description"`
+	Enabled      bool     `json:"enabled"`
+	Version      string   `json:"version,omitempty"`
+	Category     string   `json:"category,omitempty"`
+	Capabilities []string `json:"capabilities,omitempty"`
 }
 
 // CustomPluginsConfig 自定义插件配置管理
@@ -38,6 +41,12 @@ func GetCustomPluginsConfig() *CustomPluginsConfig {
 		customPluginsInstance.Load()
 	})
 	return customPluginsInstance
+}
+
+// ResetCustomPluginsConfigForTest 重置自定义插件配置单例，仅供本地自动化测试隔离使用。
+func ResetCustomPluginsConfigForTest() {
+	customPluginsInstance = nil
+	customPluginsOnce = sync.Once{}
 }
 
 func resolveCustomPluginsPath() string {

@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ApplePagination } from '@/components/admin/ApplePagination';
 import {
   Megaphone,
   RefreshCw,
@@ -59,9 +60,10 @@ export const AnnouncementManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [totalAnnouncements, setTotalAnnouncements] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize] = useState<number>(20);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // 表单状态
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
@@ -112,6 +114,7 @@ export const AnnouncementManagement: React.FC = () => {
         'desc'
       );
       setAnnouncements(response.announcements);
+      setTotalAnnouncements(response.total);
       setTotalPages(response.total_pages);
     } catch (error) {
       console.error('加载公告列表失败:', error);
@@ -263,6 +266,11 @@ export const AnnouncementManagement: React.FC = () => {
       console.error('切换公告状态失败:', error);
       toast.error('操作失败：' + getErrorMessage(error));
     }
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
   };
 
   useEffect(() => {
@@ -523,33 +531,17 @@ export const AnnouncementManagement: React.FC = () => {
                   </div>
                 </motion.div>
               ))}
-            </div>
-          )}
-
-          {/* 分页 */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-6">
-              <Button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                variant="outline"
-                size="sm"
-                className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
-              >
-                上一页
-              </Button>
-              <span className="text-sm text-slate-600 dark:text-slate-400">
-                第 {currentPage} / {totalPages} 页
-              </span>
-              <Button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                variant="outline"
-                size="sm"
-                className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
-              >
-                下一页
-              </Button>
+              {announcements.length > 0 && (
+                <ApplePagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalAnnouncements}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={handlePageSizeChange}
+                  isLoading={isLoading}
+                />
+              )}
             </div>
           )}
         </CardContent>

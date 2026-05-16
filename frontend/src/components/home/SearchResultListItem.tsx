@@ -1,32 +1,30 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { IoKeyOutline, IoTimeOutline } from "react-icons/io5";
+import { IoFlashOutline, IoKeyOutline, IoTimeOutline } from "react-icons/io5";
 import { cn } from "@/lib/utils";
 import {
   getCloudTypeInfo,
   formatResultTime,
   type ResultItem,
 } from "@/utils/cloudTypeUtils";
+import type { ResourceAction } from "@/types/api";
 
 interface SearchResultListItemProps {
   item: ResultItem;
   index: number;
-  onLinkClick: (
-    url: string,
-    password: string,
-    cloudTypeName: string,
-    hasPassword: boolean,
-  ) => void;
+  onOpenDetail: (item: ResultItem) => void;
+  onActionClick: (action: ResourceAction, item: ResultItem) => void;
 }
 
 export const SearchResultListItem = React.memo<SearchResultListItemProps>(
-  ({ item, index, onLinkClick }) => {
-    const { link, cloudType, datetime } = item;
+  ({ item, index, onOpenDetail, onActionClick }) => {
+    const { resource, primaryLink, cloudType, datetime } = item;
     const cloudInfo = getCloudTypeInfo(cloudType);
-    const hasPassword = Boolean(link.password?.trim());
+    const hasPassword = Boolean(primaryLink?.password?.trim());
+    const visibleActions = resource.actions.slice(0, 2);
 
     const handleAction = () => {
-      onLinkClick(link.url, link.password || "", cloudType, hasPassword);
+      onOpenDetail(item);
     };
 
     const handleClick = (e: React.MouseEvent) => {
@@ -46,7 +44,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
       <motion.div
         role="button"
         tabIndex={0}
-        aria-label={`${cloudInfo.name}资源：${link.note || "未命名资源"}${hasPassword ? "（需要访问码）" : ""}`}
+        aria-label={`${cloudInfo.name}资源：${resource.title || "未命名资源"}${hasPassword ? "（需要访问码）" : ""}`}
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{
@@ -77,8 +75,13 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
           {/* 中间：标题 + 元数据 */}
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg line-clamp-1 mb-1 group-hover:text-apple-blue transition-colors">
-              {link.note || "未命名资源"}
+              {resource.title || "未命名资源"}
             </h3>
+            {resource.description ? (
+              <p className="mb-1 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">
+                {resource.description}
+              </p>
+            ) : null}
             <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-slate-400 flex-wrap">
               <span
                 className={cn(
@@ -89,21 +92,43 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
               >
                 {cloudInfo.name}
               </span>
+              <span className="rounded-md border border-slate-200/60 px-2 py-0.5 text-xs text-slate-600 dark:border-white/[0.08] dark:text-slate-300">
+                {resource.source.name || resource.source.id || resource.source.type}
+              </span>
+              {resource.media_type ? <span>{resource.media_type}</span> : null}
               <span className="flex items-center gap-1">
                 <IoTimeOutline className="w-3.5 h-3.5" />
                 {formatResultTime(datetime)}
               </span>
-              {link.size && <span>• {String(link.size)}</span>}
+              <span>• {resource.links.length} 个链接</span>
             </div>
           </div>
 
-          {/* 右侧：访问码标记 */}
-          {hasPassword && (
-            <div className="flex-shrink-0 px-2.5 py-1 bg-green-50 dark:bg-emerald-400/[0.08] text-green-600 dark:text-emerald-200 text-xs font-medium rounded-full border border-green-200/50 dark:border-emerald-300/16 flex items-center gap-1">
-              <IoKeyOutline className="w-3.5 h-3.5" />
-              <span>访问码</span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {visibleActions.map((action) => (
+              <button
+                key={action.key}
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onActionClick(action, item);
+                }}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200/70 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-blue-300 hover:text-blue-600 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-200 dark:hover:border-cyan-300/30 dark:hover:text-cyan-200"
+              >
+                <IoFlashOutline className="h-3.5 w-3.5" />
+                {action.label}
+              </button>
+            ))}
+            {hasPassword && (
+              <div className="flex-shrink-0 px-2.5 py-1 bg-green-50 dark:bg-emerald-400/[0.08] text-green-600 dark:text-emerald-200 text-xs font-medium rounded-full border border-green-200/50 dark:border-emerald-300/16 flex items-center gap-1">
+                <IoKeyOutline className="w-3.5 h-3.5" />
+                <span>访问码</span>
+              </div>
+            )}
+            <div className="rounded-full border border-slate-200/70 px-3 py-1.5 text-xs font-medium text-slate-600 dark:border-white/[0.08] dark:text-slate-300">
+              查看详情
             </div>
-          )}
+          </div>
         </div>
       </motion.div>
     );

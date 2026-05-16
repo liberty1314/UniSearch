@@ -1,0 +1,53 @@
+{
+  "version": "2026.05",
+  "items": [
+    {
+      "id": "search.pansearch-custom-url",
+      "name": "pansearch-custom-url",
+      "version": "1.0.0",
+      "category": "search",
+      "description": "默认市场示例：通过自定义 URL 接入网盘搜索源。",
+      "manifest": {
+        "id": "search.pansearch-custom-url",
+        "name": "pansearch-custom-url",
+        "version": "1.0.0",
+        "category": "search",
+        "description": "通过 URL 模板接入远程搜索接口。",
+        "core_version": ">=1.0.0 <2.0.0",
+        "contract_version": "1.0",
+        "capabilities": ["resource.search", "resource.search.handoff"],
+        "permissions": ["network"],
+        "config_schema": [
+          {
+            "key": "url",
+            "label": "搜索接口 URL",
+            "type": "string",
+            "required": true,
+            "description": "支持远程搜索接口或 URL 模板。",
+            "secret": false
+          }
+        ],
+        "resource": {
+          "source_label": "PanSearch URL",
+          "source_group": "search",
+          "supported_media_types": ["movie", "tv", "document"],
+          "target_types": ["share"],
+          "priority": 3
+        },
+        "ui": {
+          "menus": [],
+          "settings_sections": ["url"],
+          "task_templates": []
+        },
+        "manifest_status": "complete"
+      },
+      "install": {
+        "type": "custom_url",
+        "url": "https://example.com/api/search?kw={{keyword}}"
+      },
+      "tags": ["网盘", "URL", "搜索"],
+      "homepage": "https://example.com",
+      "author": "UniSearch"
+    }
+  ]
+}

@@ -17,10 +17,11 @@ import {
   ChannelManageWorkspace,
   type ChannelManageWorkspaceViewModel,
 } from './ChannelManageWorkspace';
+import { describeChannelHealth } from './channelManageDialogShared';
 import {
-  describeChannelHealth,
-} from './channelManageDialogShared';
-import { useChannelManageController } from '@/hooks/useChannelManageController';
+  useChannelManageController,
+  type UseChannelManageControllerResult,
+} from '@/hooks/useChannelManageController';
 import { usePagedListScrollReset } from '@/hooks/usePagedListScrollReset';
 
 interface ChannelManageDialogProps {
@@ -31,27 +32,22 @@ interface ChannelManageDialogProps {
   mode?: AdminDialogMode;
 }
 
-export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
-  isOpen,
-  onClose,
-  onSuccess,
-  token,
-  mode = 'edit',
-}) => {
-  const listContainerRef = useRef<HTMLDivElement>(null);
-  const controller = useChannelManageController({
-    isOpen,
-    onClose,
-    onSuccess,
-    token,
-    mode,
-  });
-  usePagedListScrollReset(listContainerRef, controller.currentPage);
+export type ChannelManageSurfacePresentation = 'modal' | 'page';
 
-  if (!isOpen) return null;
+interface ChannelManageSurfaceProps {
+  controller: UseChannelManageControllerResult;
+  listContainerRef: React.RefObject<HTMLDivElement | null>;
+  presentation: ChannelManageSurfacePresentation;
+}
 
+export function ChannelManageSurface({
+  controller,
+  listContainerRef,
+  presentation,
+}: ChannelManageSurfaceProps) {
   const workspace: ChannelManageWorkspaceViewModel = {
-    isOpen,
+    isOpen: true,
+    presentation,
     isReadOnly: controller.isReadOnly,
     isOperationBusy: controller.isOperationBusy,
     isBatchTesting: controller.isBatchTesting,
@@ -83,12 +79,13 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
     onPageChange: controller.setCurrentPage,
   };
 
+  const workspaceNode = presentation === 'modal'
+    ? createPortal(<ChannelManageWorkspace workspace={workspace} />, document.body)
+    : <ChannelManageWorkspace workspace={workspace} />;
+
   return (
     <>
-      {createPortal(
-        <ChannelManageWorkspace workspace={workspace} />,
-        document.body
-      )}
+      {workspaceNode}
 
       <ChannelAddDialog
         open={controller.addDialogOpen}
@@ -150,7 +147,7 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                 </div>
               </div>
 
-              {!controller.isReadOnly && (
+              {!controller.isReadOnly ? (
                 <DialogFooter>
                   <Button
                     variant="outline"
@@ -184,7 +181,7 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
                     )}
                   </Button>
                 </DialogFooter>
-              )}
+              ) : null}
             </>
           ) : null}
         </DialogContent>
@@ -215,5 +212,33 @@ export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
         isLoading={controller.isBatchDeleting}
       />
     </>
+  );
+}
+
+export const ChannelManageDialog: React.FC<ChannelManageDialogProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  token,
+  mode = 'edit',
+}) => {
+  const listContainerRef = useRef<HTMLDivElement>(null);
+  const controller = useChannelManageController({
+    isOpen,
+    onClose,
+    onSuccess,
+    token,
+    mode,
+  });
+  usePagedListScrollReset(listContainerRef, controller.currentPage);
+
+  if (!isOpen) return null;
+
+  return (
+    <ChannelManageSurface
+      controller={controller}
+      listContainerRef={listContainerRef}
+      presentation="modal"
+    />
   );
 };

@@ -70,6 +70,11 @@ export type CloudTypeValue =
 export interface FilterConfig {
   include?: string[]; // 包含关键词列表（OR关系）
   exclude?: string[]; // 排除关键词列表（AND关系）
+  source_types?: string[];
+  media_types?: string[];
+  target_types?: string[];
+  capabilities?: string[];
+  action_types?: string[];
 }
 
 /**
@@ -132,6 +137,82 @@ export interface SearchResult {
   links: Link[];
   tags?: string[];
   images?: string[];
+  source_plugin_id?: string;
+  source_type?: string;
+  source_name?: string;
+  media_type?: string;
+  target_type?: string;
+  detail_url?: string;
+  capabilities?: ResourceCapabilities;
+  actions?: ResourceAction[];
+  meta?: Record<string, unknown>;
+}
+
+export interface ResourceCapabilities {
+  searchable?: boolean;
+  official_searchable?: boolean;
+  share_searchable?: boolean;
+  downloadable?: boolean;
+  strmable?: boolean;
+}
+
+export interface ResourceAction {
+  key: string;
+  label: string;
+  type: string;
+  style?: string;
+  target_plugin_id?: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface ResourceSource {
+  type: string;
+  id?: string;
+  name?: string;
+  channel?: string;
+  plugin_id?: string;
+}
+
+export interface ResourceLink {
+  type: string;
+  url: string;
+  password?: string;
+  title?: string;
+  work_title?: string;
+  datetime?: string;
+}
+
+export interface ResourceDetail {
+  url?: string;
+  content?: string;
+  message_id?: string;
+  unique_id?: string;
+}
+
+export interface ResourceFacets {
+  cloud_types: Record<string, number>;
+  source_types: Record<string, number>;
+  media_types: Record<string, number>;
+  target_types: Record<string, number>;
+  capabilities: Record<string, number>;
+  action_types: Record<string, number>;
+}
+
+export interface ResourceObject {
+  id: string;
+  title: string;
+  description?: string;
+  source: ResourceSource;
+  media_type?: string;
+  target_type?: string;
+  links: ResourceLink[];
+  capabilities: ResourceCapabilities;
+  actions: ResourceAction[];
+  detail: ResourceDetail;
+  tags?: string[];
+  images?: string[];
+  meta?: Record<string, unknown>;
+  published_at?: string;
 }
 
 /**
@@ -156,8 +237,8 @@ export type MergedLinks = Record<CloudTypeValue, MergedLink[]>;
  */
 export interface SearchResponse {
   total: number;
-  results?: SearchResult[];
-  merged_by_type?: MergedLinks;
+  resources: ResourceObject[];
+  facets: ResourceFacets;
 }
 
 /**
@@ -541,6 +622,82 @@ export interface PluginInfo {
   is_enabled: boolean;
   description: string;
   url?: string;
+  id?: string;
+  version?: string;
+  category?: string;
+  source_type?: string;
+  core_version?: string;
+  contract_version?: string;
+  capabilities?: string[];
+  permissions?: string[];
+  config_schema?: PluginConfigField[];
+  resource?: ResourceDescriptor;
+  ui?: PluginUIMetadata;
+  manifest_status?: 'complete' | 'generated' | string;
+  manifest?: PluginManifestPayload;
+  install?: PluginCatalogInstall;
+  tags?: string[];
+  homepage?: string;
+  author?: string;
+  is_local?: boolean;
+  is_remote?: boolean;
+  installed?: boolean;
+  health?: PluginHealthSnapshot;
+  available_actions?: string[];
+}
+
+export interface PluginManifestPayload {
+  id: string;
+  name: string;
+  version: string;
+  category: string;
+  description?: string;
+  core_version?: string;
+  contract_version?: string;
+  capabilities?: string[];
+  permissions?: string[];
+  config_schema?: PluginConfigField[];
+  resource?: ResourceDescriptor;
+  ui?: PluginUIMetadata;
+  manifest_status?: string;
+}
+
+export interface PluginCatalogInstall {
+  type: string;
+  url?: string;
+}
+
+export interface PluginHealthSnapshot {
+  is_healthy: boolean;
+  last_checked_at?: string;
+  last_error?: string;
+  check_source?: string;
+}
+
+export interface PluginConfigField {
+  key: string;
+  label: string;
+  type: string;
+  required: boolean;
+  default?: unknown;
+  description?: string;
+  secret?: boolean;
+  group?: string;
+}
+
+export interface ResourceDescriptor {
+  source_label: string;
+  source_group: string;
+  supported_media_types: string[];
+  target_types: string[];
+  priority: number;
+  skip_service_filter?: boolean;
+}
+
+export interface PluginUIMetadata {
+  menus: string[];
+  settings_sections: string[];
+  task_templates: string[];
 }
 
 export interface CreatePluginRequest {
@@ -548,19 +705,45 @@ export interface CreatePluginRequest {
   url: string;
   priority: number;
   description: string;
+  version?: string;
+  category?: string;
+  capabilities?: string[];
 }
 
 export interface CreatePluginResponse {
   success: boolean;
   message: string;
-  plugin?: {
-    name: string;
-    url: string;
-    priority: number;
-    description: string;
-    plugin_type: 'custom';
-    is_enabled: boolean;
-  };
+  plugin?: PluginInfo;
+}
+
+export interface UpdatePluginRequest {
+  url: string;
+  priority: number;
+  description: string;
+  version?: string;
+  category?: string;
+  capabilities?: string[];
+}
+
+export interface UpdatePluginResponse {
+  success: boolean;
+  message: string;
+  plugin?: PluginInfo;
+}
+
+export interface PluginCatalogResponse {
+  version: string;
+  source: string;
+  items: PluginInfo[];
+}
+
+export interface PluginCatalogInstallRequest {
+  id: string;
+}
+
+export interface PluginCatalogInstallResponse {
+  success: boolean;
+  item: PluginInfo;
 }
 
 export interface TestURLRequest {

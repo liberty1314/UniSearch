@@ -128,15 +128,17 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 				users.POST("/batch-update-role", BatchUpdateRoleHandler(userService)) // 批量修改角色
 			}
 
-			admin.GET("/system-info", GetSystemInfoHandler(searchService, userService, pluginHealthService, pluginStateService))   // 更新：获取系统信息（包含插件状态 + 用户活跃度）
-			admin.POST("/plugins/:pluginName/test", TestPluginHandler(searchService, pluginHealthService))                         // 新增：测试插件
-			admin.POST("/plugins", CreatePluginHandler(pluginHealthService, pluginStateService))                                   // 新增：创建插件
-			admin.PUT("/plugins/:pluginName", UpdatePluginHandler(pluginHealthService, pluginStateService))                        // 新增：更新插件
-			admin.DELETE("/plugins/:pluginName", DeletePluginHandler(pluginHealthService, pluginStateService))                     // 新增：删除插件
-			admin.POST("/plugins/:pluginName/status", SetPluginStatusHandler(searchService, pluginStateService))                   // 新增：插件启停
-			admin.POST("/plugins/batch-status", BatchSetPluginStatusHandler(searchService, pluginStateService))                    // 新增：批量插件启停
-			admin.POST("/plugins/batch-delete", BatchDeletePluginsHandler(searchService, pluginHealthService, pluginStateService)) // 新增：批量删除插件
-			admin.POST("/test-url", TestURLHandler())                                                                              // 新增：测试URL连通性
+			admin.GET("/system-info", GetSystemInfoHandler(searchService, userService, pluginHealthService, pluginStateService))     // 更新：获取系统信息（包含插件状态 + 用户活跃度）
+			admin.GET("/plugin-center/catalog", PluginCenterCatalogHandler(searchService, pluginHealthService, pluginStateService))  // 插件中心目录
+			admin.POST("/plugin-center/install", PluginCenterInstallHandler(searchService, pluginHealthService, pluginStateService)) // 插件中心导入远程 URL 插件
+			admin.POST("/plugins/:pluginName/test", TestPluginHandler(searchService, pluginHealthService))                           // 新增：测试插件
+			admin.POST("/plugins", CreatePluginHandler(pluginHealthService, pluginStateService))                                     // 新增：创建插件
+			admin.PUT("/plugins/:pluginName", UpdatePluginHandler(pluginHealthService, pluginStateService))                          // 新增：更新插件
+			admin.DELETE("/plugins/:pluginName", DeletePluginHandler(pluginHealthService, pluginStateService))                       // 新增：删除插件
+			admin.POST("/plugins/:pluginName/status", SetPluginStatusHandler(searchService, pluginStateService))                     // 新增：插件启停
+			admin.POST("/plugins/batch-status", BatchSetPluginStatusHandler(searchService, pluginStateService))                      // 新增：批量插件启停
+			admin.POST("/plugins/batch-delete", BatchDeletePluginsHandler(searchService, pluginHealthService, pluginStateService))   // 新增：批量删除插件
+			admin.POST("/test-url", TestURLHandler())                                                                                // 新增：测试URL连通性
 
 			// 系统设置管理
 			admin.GET("/system-settings", GetSystemSettingsHandler)    // 获取系统设置

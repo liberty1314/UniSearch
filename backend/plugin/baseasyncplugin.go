@@ -209,6 +209,7 @@ type BaseAsyncPlugin struct {
 	finalUpdateTracker map[string]bool                                                       // 追踪已更新的最终结果缓存
 	finalUpdateMutex   sync.RWMutex                                                          // 保护finalUpdateTracker的并发访问
 	skipServiceFilter  bool                                                                  // 是否跳过Service层的关键词过滤
+	manifest           model.PluginManifest                                                  // 插件清单元数据
 }
 
 func newBasePluginHTTPClient(timeout time.Duration, maxIdleConnsPerHost int, maxConnsPerHost int) *http.Client {
@@ -318,6 +319,16 @@ func (p *BaseAsyncPlugin) Priority() int {
 // SkipServiceFilter 返回是否跳过Service层的关键词过滤
 func (p *BaseAsyncPlugin) SkipServiceFilter() bool {
 	return p.skipServiceFilter
+}
+
+// SetManifest 设置插件本地清单元数据。
+func (p *BaseAsyncPlugin) SetManifest(manifest model.PluginManifest) {
+	p.manifest = manifest
+}
+
+// Manifest 返回插件本地清单元数据。
+func (p *BaseAsyncPlugin) Manifest() model.PluginManifest {
+	return p.manifest
 }
 
 // AsyncSearch 异步搜索基础方法

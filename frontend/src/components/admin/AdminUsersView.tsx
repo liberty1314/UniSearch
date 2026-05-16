@@ -62,6 +62,7 @@ const AdminUsersView: React.FC = () => {
     totalPages,
     totalUsers,
     pageSize,
+    handlePageSizeChange,
     handleUserSearchInputChange,
     handleUserSearchSubmit,
     setUserRoleFilter,
@@ -275,13 +276,14 @@ const AdminUsersView: React.FC = () => {
                     isLoading={isLoadingUsers}
                   />
 
-                  {totalPages > 1 && (
+                  {totalUsers > 0 && (
                     <ApplePagination
                       currentPage={currentPage}
                       totalPages={totalPages}
                       totalItems={totalUsers}
                       pageSize={pageSize}
                       onPageChange={handlePageChange}
+                      onPageSizeChange={handlePageSizeChange}
                       isLoading={isLoadingUsers}
                     />
                   )}

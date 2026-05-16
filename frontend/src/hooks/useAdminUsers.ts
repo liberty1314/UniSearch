@@ -26,7 +26,7 @@ export function useAdminUsers() {
   const [userRoleFilter, setUserRoleFilter] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
-  const [pageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [activeDialog, setActiveDialog] = useState<AdminDialogType | null>(null);
   const [userToEdit, setUserToEdit] = useState<UserInfo | null>(null);
@@ -90,9 +90,9 @@ export function useAdminUsers() {
 
   useEffect(() => {
     if (isAdmin) {
-      void loadUsers(1);
+      void loadUsers(currentPage);
     }
-  }, [isAdmin, loadUsers, userActiveSearchKeyword, userRoleFilter]);
+  }, [currentPage, isAdmin, loadUsers, userActiveSearchKeyword, userRoleFilter]);
 
   const handleSelectUser = useCallback((userId: number, checked: boolean) => {
     setSelectedUsers((prev) => {
@@ -223,6 +223,10 @@ export function useAdminUsers() {
       closeDialog();
     },
     handlePageChange: (page: number) => setCurrentPage(page),
+    handlePageSizeChange: (size: number) => {
+      setPageSize(size);
+      setCurrentPage(1);
+    },
     getCurrentUserId,
     getUserStats,
   };

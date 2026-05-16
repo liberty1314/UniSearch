@@ -3,22 +3,26 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { SystemInfoView } from '../SystemInfoView';
 
+const { navigateMock } = vi.hoisted(() => ({
+  navigateMock: vi.fn(),
+}));
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: () => ({ token: 'test-token' }),
 }));
 
-vi.mock('../PluginManageDialog', () => ({
-  PluginManageDialog: ({ isOpen, mode }: { isOpen: boolean; mode?: 'view' | 'edit' }) =>
-    isOpen ? <div data-testid="plugin-manage-dialog">{`plugin-manage-dialog-${mode}`}</div> : null,
-}));
-
-vi.mock('../ChannelManageDialog', () => ({
-  ChannelManageDialog: ({ isOpen, mode }: { isOpen: boolean; mode?: 'view' | 'edit' }) =>
-    isOpen ? <div data-testid="channel-manage-dialog">{`channel-manage-dialog-${mode}`}</div> : null,
-}));
-
 describe('SystemInfoView', () => {
   beforeEach(() => {
+    navigateMock.mockReset();
+
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
 
@@ -112,12 +116,13 @@ describe('SystemInfoView', () => {
     vi.stubGlobal('fetch', fetchMock);
   });
 
-  it('renders summary cards and opens preview/manage dialogs', async () => {
+  it('仅展示摘要卡片并支持跳转到独立管理页', async () => {
     render(<SystemInfoView />);
 
     await screen.findByText('Telegram 频道摘要');
     expect(screen.getByText('插件状态摘要')).toBeInTheDocument();
     expect(screen.getByText(/异常包含启用与禁用频道/)).toBeInTheDocument();
+    expect(screen.getAllByText('点击进入管理页')).toHaveLength(2);
 
     const errorBlocks = screen.getAllByText('异常');
     const errorValues = errorBlocks
@@ -125,22 +130,15 @@ describe('SystemInfoView', () => {
       .filter((value): value is string => Boolean(value));
     expect(errorValues.filter((value) => value === '2').length).toBeGreaterThanOrEqual(2);
 
-    expect(screen.queryByText('未测试')).not.toBeInTheDocument();
     expect(screen.queryByText('plugin-alpha')).not.toBeInTheDocument();
     expect(screen.queryByText('chan-alpha')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '查看全部' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '编辑' })).not.toBeInTheDocument();
 
-    const viewAllButtons = screen.getAllByRole('button', { name: '查看全部' });
-    fireEvent.click(viewAllButtons[0]);
-    expect(await screen.findByText('channel-manage-dialog-view')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '进入 Telegram 频道管理页' }));
+    expect(navigateMock).toHaveBeenNthCalledWith(1, '/admin?view=channel_management');
 
-    fireEvent.click(viewAllButtons[1]);
-    expect(await screen.findByText('plugin-manage-dialog-view')).toBeInTheDocument();
-
-    const editButtons = screen.getAllByRole('button', { name: '编辑' });
-    fireEvent.click(editButtons[0]);
-    expect(await screen.findByText('channel-manage-dialog-edit')).toBeInTheDocument();
-
-    fireEvent.click(editButtons[1]);
-    expect(await screen.findByText('plugin-manage-dialog-edit')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '进入插件中心管理页' }));
+    expect(navigateMock).toHaveBeenNthCalledWith(2, '/admin?view=plugin_management');
   });
 });

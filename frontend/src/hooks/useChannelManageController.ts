@@ -13,7 +13,6 @@ import {
   updateChannelEnabledState,
 } from '@/components/admin/channelManageStateUtils';
 import {
-  CHANNEL_PAGE_SIZE,
   type ChannelTestStatus,
 } from '@/components/admin/channelManageDialogShared';
 import {
@@ -58,8 +57,10 @@ export type UseChannelManageControllerResult = {
   detailChannelId: number | null;
   deleteConfirm: { open: boolean; channel: TGChannel | null };
   batchDeleteConfirmOpen: boolean;
+  searchKeyword: string;
   statusFilter: UnifiedStatusFilter;
   currentPage: number;
+  pageSize: number;
   filteredItems: TGChannel[];
   pagedItems: TGChannel[];
   totalPages: number;
@@ -70,6 +71,9 @@ export type UseChannelManageControllerResult = {
   activeDetailChannel: TGChannel | null;
   isOperationBusy: boolean;
   fetchChannels: () => Promise<void>;
+  clearSelectedChannels: () => void;
+  setPageSize: (value: number) => void;
+  setSearchKeyword: (value: string) => void;
   setStatusFilter: (value: UnifiedStatusFilter) => void;
   setCurrentPage: (page: number) => void;
   setAddDialogOpen: (open: boolean) => void;
@@ -113,6 +117,7 @@ export function useChannelManageController({
     channel: null,
   });
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
+  const [pageSize, setPageSize] = useState(10);
   const {
     testingStatus,
     clearTestingStatus,
@@ -165,6 +170,8 @@ export function useChannelManageController({
   );
 
   const {
+    searchKeyword,
+    setSearchKeyword,
     statusFilter,
     setStatusFilter,
     currentPage,
@@ -183,9 +190,16 @@ export function useChannelManageController({
     items: channels,
     getKey: getChannelKey,
     compareItems: compareChannels,
-    matchesKeyword: () => true,
+    matchesKeyword: (channel, keyword) => {
+      if (!keyword) return true;
+      return [
+        channel.name,
+        channel.last_error || '',
+        channel.health_status || '',
+      ].some((value) => value.toLowerCase().includes(keyword));
+    },
     matchesStatus: matchesChannelStatus,
-    pageSize: CHANNEL_PAGE_SIZE,
+    pageSize,
   });
 
   const selectedChannelPreviewText = useMemo(
@@ -466,11 +480,13 @@ export function useChannelManageController({
     detailChannelId,
     deleteConfirm,
     batchDeleteConfirmOpen,
+    searchKeyword,
     statusFilter,
     currentPage,
     filteredItems,
     pagedItems,
     totalPages,
+    pageSize,
     selectedChannelIds,
     selectedCount,
     selectedChannelPreviewText,
@@ -478,6 +494,9 @@ export function useChannelManageController({
     activeDetailChannel,
     isOperationBusy,
     fetchChannels,
+    clearSelectedChannels: clearSelected,
+    setPageSize,
+    setSearchKeyword,
     setStatusFilter,
     setCurrentPage,
     setAddDialogOpen,

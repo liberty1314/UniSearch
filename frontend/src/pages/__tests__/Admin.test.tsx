@@ -1,57 +1,18 @@
+import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Admin from '@/pages/Admin';
+
+const { currentViewState } = vi.hoisted(() => ({
+  currentViewState: {
+    value: 'user_management',
+  },
+}));
 
 vi.mock('@/hooks/useAdminPageController', () => ({
   useAdminPageController: () => ({
-    currentView: 'user_management',
+    currentView: currentViewState.value,
     setCurrentView: vi.fn(),
-    users: {
-      users: [{ id: 1, username: 'alice', role: 'user' }],
-      getUserStats: vi.fn(() => []),
-      selectedUsers: new Set(),
-      isLoadingUsers: false,
-      isDeletingUser: false,
-      isBatchOperatingUsers: false,
-      userSearchInput: '',
-      userRoleFilter: '',
-      roleFilterOptions: [],
-      hasUserFilters: false,
-      currentPage: 1,
-      totalPages: 1,
-      totalUsers: 0,
-      pageSize: 10,
-      getCurrentUserId: vi.fn(() => ''),
-      handleUserSearchInputChange: vi.fn(),
-      handleUserSearchSubmit: vi.fn(),
-      setUserRoleFilter: vi.fn(),
-      loadUsers: vi.fn(),
-      handleCreateUser: vi.fn(),
-      handleBatchUpdateRole: vi.fn(),
-      handleBatchDeleteUsers: vi.fn(),
-      handleClearUserSelection: vi.fn(),
-      handleSelectUser: vi.fn(),
-      handleEditUser: vi.fn(),
-      handleResetPassword: vi.fn(),
-      handleDeleteUser: vi.fn(),
-      handleToggleStatus: vi.fn(),
-      handlePageChange: vi.fn(),
-      isCreateUserDialogOpen: false,
-      setIsCreateUserDialogOpen: vi.fn(),
-      handleUserOperationSuccess: vi.fn(),
-      userToEdit: null,
-      isEditUserDialogOpen: false,
-      setIsEditUserDialogOpen: vi.fn(),
-      userToResetPassword: null,
-      isResetPasswordDialogOpen: false,
-      setIsResetPasswordDialogOpen: vi.fn(),
-      userToDelete: 1,
-      handleDeleteUserConfirm: vi.fn(),
-      isBatchDeleteUsersDialogOpen: false,
-      setIsBatchDeleteUsersDialogOpen: vi.fn(),
-      isBatchUpdateRoleDialogOpen: false,
-      setIsBatchUpdateRoleDialogOpen: vi.fn(),
-    },
   }),
 }));
 
@@ -69,6 +30,14 @@ vi.mock('@/components/admin/SystemSettingsView', () => ({
 
 vi.mock('@/components/admin/AnnouncementManagement', () => ({
   AnnouncementManagement: () => <div>AnnouncementManagement</div>,
+}));
+
+vi.mock('@/components/admin/ChannelManagementView', () => ({
+  ChannelManagementView: () => <div>ChannelManagementView</div>,
+}));
+
+vi.mock('@/components/admin/PluginManagementView', () => ({
+  PluginManagementView: () => <div>PluginManagementView</div>,
 }));
 
 vi.mock('@/components/admin/AdminUsersView', () => ({
@@ -116,17 +85,39 @@ vi.mock('@/components/ui/alert-dialog', () => ({
 }));
 
 describe('Admin', () => {
-  it('uses a pure white light page background', () => {
+  beforeEach(() => {
+    currentViewState.value = 'user_management';
+  });
+
+  it('使用纯白浅色页背景', () => {
     const { container } = render(<Admin />);
 
     expect(container.firstChild).toHaveClass('bg-white');
     expect(container.firstChild).toHaveClass('obsidian-shell');
   });
 
-  it('routes simple delete confirmations through the shared ConfirmDialog entry', () => {
+  it('在用户管理视图通过共享 ConfirmDialog 入口渲染确认框', () => {
     render(<Admin />);
 
     expect(screen.getAllByTestId('confirm-dialog')).toHaveLength(1);
     expect(screen.getByText('确认删除用户')).toBeInTheDocument();
+  });
+
+  it('在频道管理视图渲染独立页面', () => {
+    currentViewState.value = 'channel_management';
+
+    render(<Admin />);
+
+    expect(screen.getByText('ChannelManagementView')).toBeInTheDocument();
+    expect(screen.queryByText('AdminUsersView')).not.toBeInTheDocument();
+  });
+
+  it('在插件管理视图渲染独立页面', () => {
+    currentViewState.value = 'plugin_management';
+
+    render(<Admin />);
+
+    expect(screen.getByText('PluginManagementView')).toBeInTheDocument();
+    expect(screen.queryByText('AdminUsersView')).not.toBeInTheDocument();
   });
 });
