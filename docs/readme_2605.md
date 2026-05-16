@@ -226,3 +226,16 @@
   - `frontend/src/components/admin/SystemSettingsView.tsx`
   - `frontend/src/hooks/useAnnouncementManagement.ts`
   - `frontend/src/pages/Admin.tsx`
+
+## [2026-05-17 03:17:20] refactor(admin): 收敛后台管理依赖与插件控制逻辑
+- **Body**: 清理后台管理相关组件的冗余依赖，并补齐插件管理流程里的数据刷新关联，减少无效状态和重复导入。
+- **Files**:
+  - `frontend/src/components/CloudTypeFilter.tsx`
+  - `frontend/src/components/admin/AdminContentCard.tsx`
+  - `frontend/src/components/admin/AdminStatusFilter.tsx`
+  - `frontend/src/components/admin/AdminUsersView.tsx`
+  - `frontend/src/components/admin/AnnouncementManagement.tsx`
+  - `frontend/src/components/admin/ChannelManagementView.tsx`
+  - `frontend/src/components/admin/PluginManagementView.tsx`
+  - `frontend/src/hooks/useAdminPageController.ts`
+  - `frontend/src/hooks/usePluginManageController.ts`

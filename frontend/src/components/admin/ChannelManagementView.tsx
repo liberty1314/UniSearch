@@ -31,7 +31,6 @@ import {
   AdminWorkspacePageFrame,
 } from './AdminWorkspacePageFrame';
 import { describeChannelHealth, normalizeChannelHealth } from './channelManageDialogShared';
-import { cn } from '@/lib/utils';
 
 const CHANNEL_STATUS_OPTIONS = [
   { value: 'all', label: '全部' },

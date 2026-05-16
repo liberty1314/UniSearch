@@ -1,6 +1,5 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { ADMIN_PANEL_SURFACE_CLASSES } from '@/components/admin/adminDesign';
 
 interface AdminContentCardProps {
   children: React.ReactNode;
@@ -47,8 +46,9 @@ export function AdminCardLoading({
   text?: string;
 }) {
   return (
-    <div className="flex min-h-[280px] items-center justify-center">
+    <div className="flex min-h-[280px] flex-col items-center justify-center gap-2">
       {icon}
+      {text && <p className="text-sm text-slate-500 dark:text-slate-400">{text}</p>}
     </div>
   );
 }

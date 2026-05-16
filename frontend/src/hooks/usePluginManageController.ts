@@ -382,7 +382,7 @@ export function usePluginManageController({
     } finally {
       setIsAdding(false);
     }
-  }, [dialogState, localPlugins, onSuccess, setCurrentPage, setStatusFilter, token]);
+  }, [dialogState, fetchCatalog, localPlugins, onSuccess, setCurrentPage, setStatusFilter, token]);
 
   const handleAddFormKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== 'Enter') return;
@@ -579,7 +579,7 @@ export function usePluginManageController({
     } finally {
       setIsBatchUpdating(false);
     }
-  }, [selectedPluginNames, setSelectedPlugins, token]);
+  }, [fetchCatalog, selectedPluginNames, setSelectedPlugins, token]);
 
   const handleToggleSelectFiltered = useCallback(() => {
     if (isAllFilteredSelected) {
@@ -610,7 +610,7 @@ export function usePluginManageController({
     } finally {
       setIsBatchDeleting(false);
     }
-  }, [dialogState, selectKey, token]);
+  }, [dialogState, fetchCatalog, selectKey, token]);
 
   const handleBatchDeletePlugins = useCallback(async () => {
     if (selectedPluginNames.size === 0) {
@@ -648,7 +648,7 @@ export function usePluginManageController({
     } finally {
       setIsBatchDeleting(false);
     }
-  }, [dialogState, selectedPluginNames, setSelectedPlugins, token]);
+  }, [dialogState, fetchCatalog, selectedPluginNames, setSelectedPlugins, token]);
 
   const handleSaveEdit = useCallback(async () => {
     if (!dialogState.editingPluginName) return;

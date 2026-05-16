@@ -12,7 +12,7 @@ import {
 export function useAdminPageController() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [, setSearchParams] = useSearchParams();
   const { isAdmin } = useAuthStore();
   
   const currentView = useMemo<AdminView>(() => {

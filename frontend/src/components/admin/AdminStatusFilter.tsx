@@ -8,7 +8,7 @@ export interface StatusFilterOption {
 }
 
 interface AdminStatusFilterProps {
-  options: StatusFilterOption[];
+  options: readonly StatusFilterOption[];
   value: string;
   onChange: (value: string) => void;
 }

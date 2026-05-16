@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,8 +25,6 @@ import type { AnnouncementPriority } from '@/types/api';
 import { cn } from '@/lib/utils';
 import {
   ADMIN_HOVERABLE_BUTTON_CLASSES,
-  ADMIN_PANEL_SURFACE_CLASSES,
-  ADMIN_PANEL_SURFACE_HOVER_CLASSES,
 } from '@/components/admin/adminDesign';
 import {
   AdminContentCard,
@@ -65,7 +62,7 @@ export const AnnouncementManagement: React.FC = () => {
   const {
     featureEnabled, isLoading, isSaving,
     announcements, totalAnnouncements, totalPages, currentPage, pageSize,
-    isFormOpen, formMode, editingAnnouncement, formData,
+    isFormOpen, formMode, formData,
     deleteDialogOpen, deletingAnnouncement,
   } = state;
 

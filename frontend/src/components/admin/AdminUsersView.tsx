@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Filter, Plus, RefreshCw, Search, Shield, UserCheck, UserX, Users, X } from 'lucide-react';
+import { CheckCircle2, Filter, Plus, RefreshCw, Search, Shield, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { StatsCard } from './StatsCard';
+
 import { TableFilterDropdown } from './TableFilterDropdown';
 import { AppleUserTable } from './AppleUserTable';
 import { ApplePagination } from './ApplePagination';
@@ -25,7 +25,6 @@ import { EditUserDialog } from "@/components/admin/EditUserDialog";
 import { ResetPasswordDialog } from "@/components/admin/ResetPasswordDialog";
 
 import {
-  ADMIN_PANEL_SURFACE_CLASSES,
   ADMIN_PANEL_SURFACE_HOVER_CLASSES,
   ADMIN_HOVERABLE_BUTTON_CLASSES,
 } from '@/components/admin/adminDesign';

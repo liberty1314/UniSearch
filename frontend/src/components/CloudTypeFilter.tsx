@@ -1,4 +1,4 @@
-import React, { useEffect, memo, useRef, useState } from "react";
+import React, { useCallback, useEffect, memo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { IoCheckmarkCircle, IoEllipseOutline } from "react-icons/io5";
 import { type CloudTypeValue } from "@/types/api";
@@ -93,10 +93,10 @@ const CloudTypeFilter: React.FC = () => {
 
   const cloudTypeConfigs = platformThemes;
   const allTypes = platformThemeTypes;
-  const getValidTypes = (types?: CloudTypeValue[]) => {
+  const getValidTypes = useCallback((types?: CloudTypeValue[]) => {
     const validTypes = (types || []).filter((type) => allTypes.includes(type));
     return validTypes.length > 0 ? validTypes : allTypes;
-  };
+  }, [allTypes]);
 
   const [selectedTypes, setSelectedTypes] = useState<CloudTypeValue[]>(() =>
     getValidTypes(searchParams.cloudTypes),
@@ -122,7 +122,7 @@ const CloudTypeFilter: React.FC = () => {
     }
 
     hasInitializedCloudTypesRef.current = true;
-  }, [allTypes, searchParams.cloudTypes, selectedTypes, setSearchParams]);
+  }, [allTypes, getValidTypes, searchParams.cloudTypes, selectedTypes, setSearchParams]);
 
   useEffect(() => {
     if (!hasInitializedCloudTypesRef.current) {
@@ -137,7 +137,7 @@ const CloudTypeFilter: React.FC = () => {
       shouldSkipNextSearchRef.current = true;
       setSelectedTypes(nextTypes);
     }
-  }, [allTypes, searchParams.cloudTypes, selectedTypes]);
+  }, [allTypes, getValidTypes, searchParams.cloudTypes, selectedTypes]);
 
   useEffect(() => {
     if (shouldSkipNextSearchRef.current) {

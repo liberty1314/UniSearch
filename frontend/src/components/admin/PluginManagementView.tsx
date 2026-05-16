@@ -2,15 +2,12 @@ import React, { useMemo } from 'react';
 import {
   Activity,
   ArrowUpRight,
-  CheckCircle2,
   CloudDownload,
   Layers,
   Loader2,
   PencilLine,
-  ShieldAlert,
   ToggleLeft,
   ToggleRight,
-  Trash2,
   Zap,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
@@ -21,7 +18,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
 import { ApplePagination } from './ApplePagination';
 import { PluginAddDialog } from './PluginAddDialog';
 import {
