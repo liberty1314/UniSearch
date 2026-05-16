@@ -35,8 +35,8 @@ const Admin: React.FC = () => {
                   transition={{ delay: 0.12, duration: 0.5, ease: "easeOut" }}
                   className="space-y-6"
                 >
-                  {currentView === "user_management" && <AdminUsersView />}
                   {currentView === "system_info" && <SystemInfoView />}
+                  {currentView === "user_management" && <AdminUsersView />}
                   {currentView === "channel_management" && <ChannelManagementView />}
                   {currentView === "plugin_management" && <PluginManagementView />}
                   {currentView === "system_settings" && <SystemSettingsView />}

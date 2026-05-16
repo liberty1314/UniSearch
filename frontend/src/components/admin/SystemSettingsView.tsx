@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { AppleSwitch } from '@/components/ui/apple-switch';
 import { useSystemSettingsController } from '@/hooks/useSystemSettingsController';
 import { resolvePublicSiteUrl } from '@/lib/publicSiteConfig';
+import { cn } from '@/lib/utils';
 
 export const SystemSettingsView: React.FC = () => {
     const { state, actions } = useSystemSettingsController();
@@ -58,19 +59,19 @@ export const SystemSettingsView: React.FC = () => {
                                 <p className="text-sm text-slate-500 mt-1">主开关：全局控制是否开启任何用户相关的认证体系</p>
                             </div>
                         </div>
-                        <AppleSwitch 
-                            checked={enableUserAuth} 
-                            onCheckedChange={actions.handleToggleAuth} 
-                            disabled={isSaving === 'auth'} 
+                        <AppleSwitch
+                            checked={enableUserAuth}
+                            onCheckedChange={actions.handleToggleAuth}
+                            disabled={isSaving === 'auth'}
                         />
                     </div>
 
                     {/* Sub-items for User Auth */}
                     <AnimatePresence>
                         {enableUserAuth && (
-                            <motion.div 
-                                initial={{ height: 0, opacity: 0 }} 
-                                animate={{ height: 'auto', opacity: 1 }} 
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
                                 className="overflow-hidden bg-slate-50/30 dark:bg-slate-950/20"
                             >
@@ -83,10 +84,10 @@ export const SystemSettingsView: React.FC = () => {
                                             </Label>
                                             <p className="text-sm text-slate-500 mt-0.5">允许已存在的用户进行密码或授权登录</p>
                                         </div>
-                                        <AppleSwitch 
-                                            checked={enableUserLogin} 
-                                            onCheckedChange={actions.handleToggleLogin} 
-                                            disabled={isSaving === 'login'} 
+                                        <AppleSwitch
+                                            checked={enableUserLogin}
+                                            onCheckedChange={actions.handleToggleLogin}
+                                            disabled={isSaving === 'login'}
                                         />
                                     </div>
                                 </div>
@@ -99,10 +100,10 @@ export const SystemSettingsView: React.FC = () => {
                                             </Label>
                                             <p className="text-sm text-slate-500 mt-0.5">开放公共注册通道允许新用户注册账号</p>
                                         </div>
-                                        <AppleSwitch 
-                                            checked={enableUserSignup} 
-                                            onCheckedChange={actions.handleToggleSignup} 
-                                            disabled={isSaving === 'signup'} 
+                                        <AppleSwitch
+                                            checked={enableUserSignup}
+                                            onCheckedChange={actions.handleToggleSignup}
+                                            disabled={isSaving === 'signup'}
                                         />
                                     </div>
                                 </div>
@@ -125,7 +126,7 @@ export const SystemSettingsView: React.FC = () => {
                                 <Label className="text-base font-semibold text-slate-900 dark:text-white">公开站点 URL</Label>
                                 <p className="text-sm text-slate-500 mt-1">此地址将用于邮件通知、全局分享以及系统级的重定向链接</p>
                             </div>
-                            
+
                             <div className="flex flex-col sm:flex-row gap-3">
                                 <Input
                                     id="public-site-url"
@@ -135,10 +136,12 @@ export const SystemSettingsView: React.FC = () => {
                                     disabled={isSaving === 'display'}
                                     className="flex-1 bg-white/80 dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700 h-11 text-[15px] focus-visible:ring-blue-500 rounded-xl"
                                 />
-                                <Button 
-                                    onClick={actions.handleSaveDisplayConfig} 
-                                    disabled={isSaving === 'display' || publicSiteUrl === ''} 
-                                    className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-[0_8px_16px_rgba(37,99,235,0.2)] transition-all"
+                                <Button
+                                    onClick={actions.handleSaveDisplayConfig}
+                                    disabled={isSaving === 'display' || publicSiteUrl === ''}
+                                    className={cn(
+                                        'h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-[0_8px_16px_rgba(37,99,235,0.2)] transition-all'
+                                    )}
                                 >
                                     {isSaving === 'display' ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                                     {isSaving === 'display' ? '保存中...' : '保存更改'}

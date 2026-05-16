@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -21,315 +20,61 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
-import { AnnouncementService } from '@/services/announcementService';
-import type { Announcement, AnnouncementPriority, CreateAnnouncementRequest, UpdateAnnouncementRequest } from '@/types/api';
-import { getErrorMessage } from '@/lib/error';
-import { cn } from '@/lib/utils';
 import { AppleSwitch } from '@/components/ui/apple-switch';
+import { useAnnouncementManagement } from '@/hooks/useAnnouncementManagement';
+import type { AnnouncementPriority } from '@/types/api';
+import { cn } from '@/lib/utils';
 import {
   ADMIN_HOVERABLE_BUTTON_CLASSES,
   ADMIN_PANEL_SURFACE_CLASSES,
   ADMIN_PANEL_SURFACE_HOVER_CLASSES,
 } from '@/components/admin/adminDesign';
+import {
+  AdminContentCard,
+} from './AdminWorkspacePageFrame';
 
-/**
- * 公告表单数据
- */
-interface AnnouncementFormData {
-  title: string;
-  content: string;
-  priority: AnnouncementPriority;
-  start_time: string;
-  end_time: string;
-  is_enabled: boolean;
-}
+const getPriorityLabel = (priority: AnnouncementPriority): string => {
+  switch (priority) {
+    case 'high': return '高';
+    case 'medium': return '中';
+    case 'low': return '低';
+    default: return '';
+  }
+};
 
-/**
- * 公告管理主组件
- * 
- * 提供公告功能的完整管理界面，包括：
- * - 功能开关控制（顶部）
- * - 公告列表展示
- * - 公告创建、编辑、删除操作
- * 
- * 验证需求: 4.1, 13.1
- */
-export const AnnouncementManagement: React.FC = () => {
-  // 状态管理
-  const [featureEnabled, setFeatureEnabled] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [totalAnnouncements, setTotalAnnouncements] = useState<number>(0);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+const getPriorityColor = (priority: AnnouncementPriority): string => {
+  switch (priority) {
+    case 'high': return 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30';
+    case 'medium': return 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30';
+    case 'low': return 'text-blue-600 dark:text-cyan-300 bg-blue-100 dark:bg-cyan-950/40';
+    default: return 'text-gray-600 dark:text-slate-400 bg-gray-100 dark:bg-slate-800/40';
+  }
+};
 
-  // 表单状态
-  const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
-  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
-  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
-  const [formData, setFormData] = useState<AnnouncementFormData>({
-    title: '',
-    content: '',
-    priority: 'medium',
-    start_time: new Date().toISOString().slice(0, 16),
-    end_time: '',
-    is_enabled: true,
+const formatDateTime = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
   });
+};
 
-  // 删除确认对话框状态
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const [deletingAnnouncement, setDeletingAnnouncement] = useState<Announcement | null>(null);
+export const AnnouncementManagement: React.FC = () => {
+  const { state, actions } = useAnnouncementManagement();
 
-  // 原始值（用于错误恢复）
-  const [originalFeatureEnabled, setOriginalFeatureEnabled] = useState<boolean>(false);
+  const {
+    featureEnabled, isLoading, isSaving,
+    announcements, totalAnnouncements, totalPages, currentPage, pageSize,
+    isFormOpen, formMode, editingAnnouncement, formData,
+    deleteDialogOpen, deletingAnnouncement,
+  } = state;
 
-  /**
-   * 加载公告功能状态
-   */
-  const loadFeatureStatus = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const enabled = await AnnouncementService.getAnnouncementFeatureEnabled();
-      setFeatureEnabled(enabled);
-      setOriginalFeatureEnabled(enabled);
-    } catch (error) {
-      console.error('加载公告功能状态失败:', error);
-      toast.error('加载功能状态失败：' + getErrorMessage(error));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  /**
-   * 加载公告列表
-   */
-  const loadAnnouncements = useCallback(async () => {
-    try {
-      const response = await AnnouncementService.listAnnouncements(
-        currentPage,
-        pageSize,
-        'created_at',
-        'desc'
-      );
-      setAnnouncements(response.announcements);
-      setTotalAnnouncements(response.total);
-      setTotalPages(response.total_pages);
-    } catch (error) {
-      console.error('加载公告列表失败:', error);
-      toast.error('加载公告列表失败：' + getErrorMessage(error));
-    }
-  }, [currentPage, pageSize]);
-
-  /**
-   * 处理功能开关变化
-   */
-  const handleToggleFeature = async (checked: boolean) => {
-    setFeatureEnabled(checked);
-    setIsSaving(true);
-
-    try {
-      await AnnouncementService.setAnnouncementFeatureEnabled(checked);
-      setOriginalFeatureEnabled(checked);
-      toast.success(checked ? '已启用系统公告功能' : '已禁用系统公告功能');
-    } catch (error) {
-      console.error('保存功能状态失败:', error);
-      setFeatureEnabled(originalFeatureEnabled);
-      toast.error('保存失败：' + getErrorMessage(error));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  /**
-   * 打开创建表单
-   */
-  const handleCreate = () => {
-    setFormMode('create');
-    setFormData({
-      title: '',
-      content: '',
-      priority: 'medium',
-      start_time: new Date().toISOString().slice(0, 16),
-      end_time: '',
-      is_enabled: true,
-    });
-    setIsFormOpen(true);
-  };
-
-  /**
-   * 打开编辑表单
-   */
-  const handleEdit = (announcement: Announcement) => {
-    setFormMode('edit');
-    setEditingAnnouncement(announcement);
-    setFormData({
-      title: announcement.title,
-      content: announcement.content,
-      priority: announcement.priority,
-      start_time: new Date(announcement.start_time).toISOString().slice(0, 16),
-      end_time: announcement.end_time ? new Date(announcement.end_time).toISOString().slice(0, 16) : '',
-      is_enabled: announcement.is_enabled,
-    });
-    setIsFormOpen(true);
-  };
-
-  /**
-   * 提交表单
-   */
-  const handleSubmit = async () => {
-    // 验证必填字段
-    if (!formData.title.trim()) {
-      toast.error('请输入公告标题');
-      return;
-    }
-    if (!formData.content.trim()) {
-      toast.error('请输入公告内容');
-      return;
-    }
-    if (!formData.start_time) {
-      toast.error('请选择生效时间');
-      return;
-    }
-
-    // 验证时间逻辑
-    if (formData.end_time && new Date(formData.end_time) <= new Date(formData.start_time)) {
-      toast.error('失效时间必须晚于生效时间');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const requestData: CreateAnnouncementRequest | UpdateAnnouncementRequest = {
-        title: formData.title.trim(),
-        content: formData.content.trim(),
-        priority: formData.priority,
-        start_time: new Date(formData.start_time).toISOString(),
-        end_time: formData.end_time ? new Date(formData.end_time).toISOString() : undefined,
-        is_enabled: formData.is_enabled,
-      };
-
-      if (formMode === 'create') {
-        await AnnouncementService.createAnnouncement(requestData);
-        toast.success('创建公告成功');
-      } else if (editingAnnouncement) {
-        await AnnouncementService.updateAnnouncement(editingAnnouncement.id, requestData);
-        toast.success('更新公告成功');
-      }
-
-      setIsFormOpen(false);
-      loadAnnouncements();
-    } catch (error) {
-      console.error('保存公告失败:', error);
-      toast.error('保存失败：' + getErrorMessage(error));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  /**
-   * 打开删除确认对话框
-   */
-  const handleDeleteClick = (announcement: Announcement) => {
-    setDeletingAnnouncement(announcement);
-    setDeleteDialogOpen(true);
-  };
-
-  /**
-   * 确认删除
-   */
-  const handleDeleteConfirm = async () => {
-    if (!deletingAnnouncement) return;
-
-    try {
-      await AnnouncementService.deleteAnnouncement(deletingAnnouncement.id);
-      toast.success('删除公告成功');
-      setDeleteDialogOpen(false);
-      setDeletingAnnouncement(null);
-      loadAnnouncements();
-    } catch (error) {
-      console.error('删除公告失败:', error);
-      toast.error('删除失败：' + getErrorMessage(error));
-    }
-  };
-
-  /**
-   * 切换公告状态
-   */
-  const handleToggleStatus = async (announcement: Announcement) => {
-    try {
-      await AnnouncementService.setAnnouncementStatus(announcement.id, !announcement.is_enabled);
-      toast.success(announcement.is_enabled ? '已禁用公告' : '已启用公告');
-      loadAnnouncements();
-    } catch (error) {
-      console.error('切换公告状态失败:', error);
-      toast.error('操作失败：' + getErrorMessage(error));
-    }
-  };
-
-  const handlePageSizeChange = (size: number) => {
-    setPageSize(size);
-    setCurrentPage(1);
-  };
-
-  useEffect(() => {
-    loadFeatureStatus();
-    loadAnnouncements();
-  }, [currentPage, loadFeatureStatus, loadAnnouncements]);
-
-  /**
-   * 获取优先级显示文本
-   */
-  const getPriorityLabel = (priority: AnnouncementPriority): string => {
-    switch (priority) {
-      case 'high':
-        return '高';
-      case 'medium':
-        return '中';
-      case 'low':
-        return '低';
-      default:
-        return '';
-    }
-  };
-
-  /**
-   * 获取优先级颜色
-   */
-  const getPriorityColor = (priority: AnnouncementPriority): string => {
-    switch (priority) {
-      case 'high':
-        return 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30';
-      case 'medium':
-        return 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30';
-      case 'low':
-        return 'text-blue-600 dark:text-cyan-300 bg-blue-100 dark:bg-cyan-950/40';
-      default:
-        return 'text-gray-600 dark:text-slate-400 bg-gray-100 dark:bg-slate-800/40';
-    }
-  };
-
-  /**
-   * 格式化日期时间
-   */
-  const formatDateTime = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  /**
-   * 渲染开关组件（为了保持代码兼容，直接转发给 AppleSwitch）
-   */
-  const renderToggle = (checked: boolean, onChange: (checked: boolean) => void, disabled: boolean) => (
-    <AppleSwitch checked={checked} onCheckedChange={onChange} disabled={disabled} />
-  );
+  const {
+    setFormData, setIsFormOpen, setDeleteDialogOpen,
+    handleToggleFeature, handleCreate, handleEdit, handleSubmit,
+    handleDeleteClick, handleDeleteConfirm, handleToggleStatus,
+    handlePageSizeChange, setCurrentPage,
+  } = actions;
 
   return (
     <motion.div
@@ -351,201 +96,186 @@ export const AnnouncementManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* 功能开关卡片 */}
-      <Card className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden')}>
-        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/30">
-          <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
+      {/* 功能开关卡片 — using AdminContentCard for consistency */}
+      <AdminContentCard padding="md">
+        <div className="mb-5">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-800 dark:text-white">
             <Megaphone className="w-5 h-5 text-blue-600 dark:text-cyan-300" />
             公告功能设置
-          </CardTitle>
-          <CardDescription className="text-slate-500 dark:text-slate-400">
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             控制系统公告功能的全局启用状态
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-6">
-          {isLoading ? (
-            <div className="text-center py-12">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                className="inline-block"
-              >
-                <RefreshCw className="w-8 h-8 text-blue-600 dark:text-cyan-300" />
-              </motion.div>
-              <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
-            </div>
-          ) : (
-            <div className="flex items-start justify-between rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 p-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40">
-              <div className="flex-1">
-                <Label className="text-base font-medium text-slate-800 dark:text-white flex items-center gap-2">
-                  <Megaphone className="w-4 h-4 text-blue-600 dark:text-cyan-300" />
-                  启用系统公告功能
-                </Label>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  启用后，用户登录时将看到有效的系统公告弹窗
-                </p>
-                <div className="mt-3 space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <div
-                      className={`w-2 h-2 rounded-full ${featureEnabled ? 'bg-green-500' : 'bg-gray-400'
-                        }`}
-                    ></div>
-                    <span className="text-slate-600 dark:text-slate-300">
-                      {featureEnabled ? '已启用' : '已禁用'}
-                    </span>
-                  </div>
-                  {!featureEnabled && (
-                    <div className="text-xs text-slate-500 dark:text-slate-400 pl-4">
-                      功能禁用时，用户不会看到任何公告弹窗
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex-shrink-0 ml-4">
-                {renderToggle(featureEnabled, handleToggleFeature, isSaving)}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </p>
+        </div>
 
-      {/* 公告列表卡片 */}
-      <Card className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden')}>
-        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/30">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-                公告列表
-              </CardTitle>
-              <CardDescription className="text-slate-500 dark:text-slate-400">
-                管理系统公告的创建、编辑和发布
-              </CardDescription>
-            </div>
-            <Button
-              onClick={handleCreate}
-            className="rounded-full bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white shadow-[0_12px_24px_rgba(14,165,233,0.18)] hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600"
+        {isLoading ? (
+          <div className="text-center py-12">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              className="inline-block"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              创建公告
-            </Button>
+              <RefreshCw className="w-8 h-8 text-blue-600 dark:text-cyan-300" />
+            </motion.div>
+            <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
           </div>
-        </CardHeader>
-        <CardContent className="p-6">
-          {announcements.length === 0 ? (
-            <div className="text-center py-12">
-              <Megaphone className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-              <p className="text-slate-500 dark:text-slate-400">暂无公告</p>
+        ) : (
+          <div className="flex items-start justify-between rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 p-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40">
+            <div className="flex-1">
+              <Label className="text-base font-medium text-slate-800 dark:text-white flex items-center gap-2">
+                <Megaphone className="w-4 h-4 text-blue-600 dark:text-cyan-300" />
+                启用系统公告功能
+              </Label>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                启用后，用户登录时将看到有效的系统公告弹窗
+              </p>
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <div className={`w-2 h-2 rounded-full ${featureEnabled ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  <span className="text-slate-600 dark:text-slate-300">
+                    {featureEnabled ? '已启用' : '已禁用'}
+                  </span>
+                </div>
+                {!featureEnabled && (
+                  <div className="text-xs text-slate-500 dark:text-slate-400 pl-4">
+                    功能禁用时，用户不会看到任何公告弹窗
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex-shrink-0 ml-4">
+              <AppleSwitch checked={featureEnabled} onCheckedChange={handleToggleFeature} disabled={isSaving} />
+            </div>
+          </div>
+        )}
+      </AdminContentCard>
+
+      {/* 公告列表卡片 — using AdminContentCard for consistency */}
+      <AdminContentCard padding="md">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-800 dark:text-white">
+              公告列表
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              管理系统公告的创建、编辑和发布
+            </p>
+          </div>
+          <Button
+            onClick={handleCreate}
+            className="rounded-full bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white shadow-[0_12px_24px_rgba(14,165,233,0.18)] hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            创建公告
+          </Button>
+        </div>
+
+        {announcements.length === 0 ? (
+          <div className="text-center py-12">
+            <Megaphone className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-500 dark:text-slate-400">暂无公告</p>
             <Button
               onClick={handleCreate}
               variant="outline"
               className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'mt-4 border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              创建第一个公告
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {announcements.map((announcement) => (
+              <motion.div
+                key={announcement.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-[1.35rem] border-[0.5px] border-slate-200/50 bg-white/40 p-4 shadow-sm backdrop-blur-md transition-all hover:shadow-[0_16px_32px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-800/40"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                创建第一个公告
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {announcements.map((announcement) => (
-                <motion.div
-                  key={announcement.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="rounded-[1.35rem] border-[0.5px] border-slate-200/50 bg-white/40 p-4 shadow-sm backdrop-blur-md transition-all hover:shadow-[0_16px_32px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-800/40"
-                >
-                  <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <h3 className="text-lg font-semibold text-slate-800 dark:text-white">
-                          {announcement.title}
-                        </h3>
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(
-                            announcement.priority
-                          )}`}
-                        >
-                          {getPriorityLabel(announcement.priority)}优先级
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold text-slate-800 dark:text-white">
+                        {announcement.title}
+                      </h3>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(announcement.priority)}`}>
+                        {getPriorityLabel(announcement.priority)}优先级
+                      </span>
+                      {announcement.is_enabled ? (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                          已启用
                         </span>
-                        {announcement.is_enabled ? (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                            已启用
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-slate-800/40 dark:text-slate-400">
-                            已禁用
-                          </span>
-                        )}
+                      ) : (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-slate-800/40 dark:text-slate-400">
+                          已禁用
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      className="text-sm text-slate-600 dark:text-slate-400 mb-2 line-clamp-2"
+                      dangerouslySetInnerHTML={{
+                        __html: announcement.content.replace(/<[^>]*>/g, '').slice(0, 100) + '...',
+                      }}
+                    />
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-4 text-xs text-slate-500 dark:text-slate-400">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        生效: {formatDateTime(announcement.start_time)}
                       </div>
-                      <div
-                        className="text-sm text-slate-600 dark:text-slate-400 mb-2 line-clamp-2"
-                        dangerouslySetInnerHTML={{
-                          __html: announcement.content.replace(/<[^>]*>/g, '').slice(0, 100) + '...',
-                        }}
-                      />
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-4 text-xs text-slate-500 dark:text-slate-400">
+                      {announcement.end_time && (
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
-                          生效: {formatDateTime(announcement.start_time)}
+                          失效: {formatDateTime(announcement.end_time)}
                         </div>
-                        {announcement.end_time && (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            失效: {formatDateTime(announcement.end_time)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 self-end sm:self-start">
-                      <Button
-                        onClick={() => handleToggleStatus(announcement)}
-                        variant="outline"
-                        size="sm"
-                        title={announcement.is_enabled ? '禁用' : '启用'}
-                        className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
-                      >
-                        {announcement.is_enabled ? (
-                          <PowerOff className="w-4 h-4" />
-                        ) : (
-                          <Power className="w-4 h-4" />
-                        )}
-                      </Button>
-                      <Button
-                        onClick={() => handleEdit(announcement)}
-                        variant="outline"
-                        size="sm"
-                        title="编辑"
-                        className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        onClick={() => handleDeleteClick(announcement)}
-                        variant="outline"
-                        size="sm"
-                        title="删除"
-                        className="border-[0.5px] border-red-200/60 text-red-600 hover:border-red-300 hover:bg-red-50/80 hover:text-red-700 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-950/20 dark:hover:text-red-200"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      )}
                     </div>
                   </div>
-                </motion.div>
-              ))}
-              {announcements.length > 0 && (
-                <ApplePagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalItems={totalAnnouncements}
-                  pageSize={pageSize}
-                  onPageChange={setCurrentPage}
-                  onPageSizeChange={handlePageSizeChange}
-                  isLoading={isLoading}
-                />
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  <div className="flex items-center gap-2 self-end sm:self-start">
+                    <Button
+                      onClick={() => handleToggleStatus(announcement)}
+                      variant="outline"
+                      size="sm"
+                      title={announcement.is_enabled ? '禁用' : '启用'}
+                      className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
+                    >
+                      {announcement.is_enabled ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
+                    </Button>
+                    <Button
+                      onClick={() => handleEdit(announcement)}
+                      variant="outline"
+                      size="sm"
+                      title="编辑"
+                      className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      onClick={() => handleDeleteClick(announcement)}
+                      variant="outline"
+                      size="sm"
+                      title="删除"
+                      className="border-[0.5px] border-red-200/60 text-red-600 hover:border-red-300 hover:bg-red-50/80 hover:text-red-700 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-950/20 dark:hover:text-red-200"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+            {announcements.length > 0 && (
+              <ApplePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalAnnouncements}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={handlePageSizeChange}
+                isLoading={isLoading}
+              />
+            )}
+          </div>
+        )}
+      </AdminContentCard>
 
       {/* 公告表单对话框 */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -557,7 +287,6 @@ export const AnnouncementManagement: React.FC = () => {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* 标题 */}
             <div className="space-y-2">
               <Label htmlFor="title">
                 标题 <span className="text-red-500">*</span>
@@ -571,7 +300,6 @@ export const AnnouncementManagement: React.FC = () => {
               />
             </div>
 
-            {/* 内容 */}
             <div className="space-y-2">
               <Label htmlFor="content">
                 内容 <span className="text-red-500">*</span>
@@ -589,7 +317,6 @@ export const AnnouncementManagement: React.FC = () => {
               </p>
             </div>
 
-            {/* 优先级 */}
             <div className="space-y-2">
               <Label htmlFor="priority">优先级</Label>
               <Select
@@ -609,7 +336,6 @@ export const AnnouncementManagement: React.FC = () => {
               </Select>
             </div>
 
-            {/* 生效时间 */}
             <div className="space-y-2">
               <Label htmlFor="start_time">
                 生效时间 <span className="text-red-500">*</span>
@@ -622,7 +348,6 @@ export const AnnouncementManagement: React.FC = () => {
               />
             </div>
 
-            {/* 失效时间 */}
             <div className="space-y-2">
               <Label htmlFor="end_time">失效时间（可选）</Label>
               <Input
@@ -636,11 +361,10 @@ export const AnnouncementManagement: React.FC = () => {
               </p>
             </div>
 
-            {/* 启用状态 */}
             <div className="flex items-center space-x-2">
-              <AppleSwitch 
-                checked={formData.is_enabled} 
-                onCheckedChange={(checked) => setFormData({ ...formData, is_enabled: checked })} 
+              <AppleSwitch
+                checked={formData.is_enabled}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_enabled: checked })}
               />
               <Label>启用公告</Label>
             </div>

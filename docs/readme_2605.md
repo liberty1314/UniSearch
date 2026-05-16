@@ -210,3 +210,19 @@
   - `frontend/src/stores/searchStore.ts`
   - `frontend/src/types/api.ts`
   - `frontend/src/utils/searchResultSorter.ts`
+
+## [2026-05-17 02:56:39] refactor(admin): 重构后台管理布局与公告管理状态
+- **Body**: 抽离后台通用卡片与筛选输入，统一用户、公告、频道和插件管理视图，并把公告管理状态收敛到独立 hook，减少页面内重复逻辑。
+- **Files**:
+  - `frontend/src/components/admin/AdminContentCard.tsx`
+  - `frontend/src/components/admin/AdminSearchInput.tsx`
+  - `frontend/src/components/admin/AdminStatusFilter.tsx`
+  - `frontend/src/components/admin/AdminUsersView.tsx`
+  - `frontend/src/components/admin/AdminWorkspacePageFrame.tsx`
+  - `frontend/src/components/admin/AnnouncementManagement.tsx`
+  - `frontend/src/components/admin/ChannelManagementView.tsx`
+  - `frontend/src/components/admin/PluginManagementView.tsx`
+  - `frontend/src/components/admin/Sidebar.tsx`
+  - `frontend/src/components/admin/SystemSettingsView.tsx`
+  - `frontend/src/hooks/useAnnouncementManagement.ts`
+  - `frontend/src/pages/Admin.tsx`

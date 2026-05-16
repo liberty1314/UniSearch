@@ -8,6 +8,11 @@ import {
   ADMIN_PANEL_SURFACE_HOVER_CLASSES,
   ADMIN_HOVERABLE_BUTTON_CLASSES,
 } from '@/components/admin/adminDesign';
+// Re-exports for shared components used across views
+export { AdminContentCard, AdminCardLoading, AdminCardEmpty } from './AdminContentCard';
+export { AdminStatusFilter } from './AdminStatusFilter';
+export { AdminSearchInput } from './AdminSearchInput';
+export type { StatusFilterOption } from './AdminStatusFilter';
 
 interface AdminWorkspacePageProps {
   header: React.ReactNode;

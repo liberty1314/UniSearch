@@ -7,7 +7,6 @@ import {
   Layers,
   Loader2,
   PencilLine,
-  Search,
   ShieldAlert,
   ToggleLeft,
   ToggleRight,
@@ -26,11 +25,15 @@ import { cn } from '@/lib/utils';
 import { ApplePagination } from './ApplePagination';
 import { PluginAddDialog } from './PluginAddDialog';
 import {
+  AdminContentCard,
+  AdminCardEmpty,
   AdminDetailDrawer,
   AdminFilterSurface,
   AdminMetricCard,
   AdminMetricGrid,
+  AdminSearchInput,
   AdminSelectionBar,
+  AdminStatusFilter,
   AdminWorkspaceHero,
   AdminWorkspacePageFrame,
 } from './AdminWorkspacePageFrame';
@@ -41,6 +44,13 @@ import {
 } from './pluginManageDialogShared';
 import type { PluginInfo } from '@/types/api';
 const EMPTY_PAGE_PLUGINS: PluginInfo[] = [];
+
+const PLUGIN_STATUS_OPTIONS = [
+  { value: 'all', label: '全部' },
+  { value: 'enabled', label: '启用' },
+  { value: 'disabled', label: '禁用' },
+  { value: 'error', label: '异常' },
+] as const;
 
 export const PluginManagementView: React.FC = () => {
   const { token } = useAuthStore();
@@ -189,30 +199,17 @@ export const PluginManagementView: React.FC = () => {
         filters={(
           <AdminFilterSurface>
             <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-center gap-2">
-                {(['all', 'enabled', 'disabled', 'error'] as const).map((status) => (
-                  <Button
-                    key={status}
-                    type="button"
-                    size="sm"
-                    variant={controller.statusFilter === status ? 'default' : 'outline'}
-                    onClick={() => controller.setStatusFilter(status)}
-                    className={cn('rounded-full', controller.statusFilter === status && 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white')}
-                  >
-                    {status === 'all' ? '全部' : status === 'enabled' ? '启用' : status === 'disabled' ? '禁用' : '异常'}
-                  </Button>
-                ))}
-              </div>
+              <AdminStatusFilter
+                options={PLUGIN_STATUS_OPTIONS}
+                value={controller.statusFilter}
+                onChange={(v) => controller.setStatusFilter(v as typeof controller.statusFilter)}
+              />
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr),repeat(3,minmax(0,0.8fr)),auto]">
-                <label className="flex items-center gap-2 rounded-[1.1rem] border border-slate-200/70 bg-white/70 px-3 py-2 dark:border-white/10 dark:bg-slate-900/40">
-                  <Search className="h-4 w-4 text-slate-400" />
-                  <input
-                    value={controller.searchKeyword}
-                    onChange={(event) => controller.setSearchKeyword(event.target.value)}
-                    placeholder="搜索名称、描述、能力或标签"
-                    className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
-                  />
-                </label>
+                <AdminSearchInput
+                  value={controller.searchKeyword}
+                  onChange={controller.setSearchKeyword}
+                  placeholder="搜索名称、描述、能力或标签"
+                />
                 <select
                   value={controller.sourceFilter}
                   onChange={(event) => controller.setSourceFilter(event.target.value as 'all' | 'local' | 'remote')}
@@ -282,19 +279,17 @@ export const PluginManagementView: React.FC = () => {
         ) : undefined}
         content={(
           <div className="space-y-4">
-            <section className={cn('overflow-hidden p-4 sm:p-5', 'relative rounded-[1.5rem] border border-white/60 bg-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-[24px] dark:border-white/10 dark:bg-slate-900/40 dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)]')}>
+            <AdminContentCard padding="sm">
               {controller.isCatalogLoading ? (
                 <div className="flex min-h-[280px] items-center justify-center">
                   <Loader2 className="h-7 w-7 animate-spin text-cyan-500" />
                 </div>
               ) : controller.pagedItems.length === 0 ? (
-                <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 text-center">
-                  <Layers className="h-12 w-12 text-slate-300 dark:text-slate-600" />
-                  <div className="space-y-1">
-                    <p className="text-lg font-medium text-slate-800 dark:text-slate-100">没有匹配的插件</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">调整筛选条件，或导入新的 URL 插件。</p>
-                  </div>
-                </div>
+                <AdminCardEmpty
+                  icon={<Layers className="h-12 w-12 text-slate-300 dark:text-slate-600" />}
+                  title="没有匹配的插件"
+                  description="调整筛选条件，或导入新的 URL 插件。"
+                />
               ) : (
                 <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
                   {controller.pagedItems.map((plugin) => {
@@ -376,7 +371,7 @@ export const PluginManagementView: React.FC = () => {
                   })}
                 </div>
               )}
-            </section>
+            </AdminContentCard>
 
             {controller.filteredItems.length > 0 ? (
               <ApplePagination
