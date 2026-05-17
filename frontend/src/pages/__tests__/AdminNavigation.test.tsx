@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -49,6 +49,31 @@ const LocationProbe = () => {
 describe('Admin 导航集成', () => {
   beforeEach(() => {
     document.title = '初始标题';
+  });
+
+  it('系统设置固定放在导航末尾', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin?view=system_info']}>
+        <Routes>
+          <Route
+            path="/admin"
+            element={
+              <>
+                <LocationProbe />
+                <Admin />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const nav = screen.getAllByRole('navigation', { name: '后台模块导航' })[0];
+    const labels = within(nav)
+      .getAllByRole('button')
+      .map((button) => button.textContent?.trim().replace(/\s+/g, ' '));
+
+    expect(labels.at(-1)).toBe('系统设置');
   });
 
   it('点击侧边栏后会同步切换 URL 与页面内容', async () => {

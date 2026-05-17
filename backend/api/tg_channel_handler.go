@@ -8,6 +8,7 @@ import (
 	"time"
 	"unisearch/model"
 	"unisearch/service"
+	"unisearch/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -41,6 +42,7 @@ type TGChannelWithHealthResponse struct {
 	Name          string     `json:"name"`
 	IsEnabled     bool       `json:"is_enabled"`
 	SortOrder     int        `json:"sort_order"`
+	Tags          []string   `json:"tags,omitempty"`
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
 	HealthStatus  string     `json:"health_status"` // healthy | error | untested
@@ -63,6 +65,7 @@ func buildTGChannelWithHealthResponse(channel model.TGChannel, snapshot service.
 		Name:         channel.Name,
 		IsEnabled:    channel.IsEnabled,
 		SortOrder:    channel.SortOrder,
+		Tags:         append([]string(nil), channel.Tags...),
 		CreatedAt:    channel.CreatedAt,
 		UpdatedAt:    channel.UpdatedAt,
 		HealthStatus: "untested",
@@ -154,7 +157,8 @@ func ListTGChannelsHandler(c *gin.Context) {
 
 // AddTGChannelRequest 添加频道请求
 type AddTGChannelRequest struct {
-	Name string `json:"name" binding:"required"`
+	Name string   `json:"name" binding:"required"`
+	Tags []string `json:"tags"`
 }
 
 // AddTGChannelHandler 添加新频道
@@ -170,7 +174,7 @@ func AddTGChannelHandler(c *gin.Context) {
 		return
 	}
 
-	channel, err := tgChannelService.AddChannel(req.Name)
+	channel, err := tgChannelService.AddChannel(req.Name, util.NormalizeTags(req.Tags))
 	if err != nil {
 		// 判断是否为重复错误
 		if strings.Contains(err.Error(), "已存在") {
@@ -186,6 +190,12 @@ func AddTGChannelHandler(c *gin.Context) {
 		"channel": channel,
 	})
 
+	if adminTagService != nil {
+		if err := adminTagService.EnsureTags(model.AdminTagScopeChannel, channel.Tags); err != nil {
+			log.Printf("⚠️  同步频道标签词库失败(%s): %v", channel.Name, err)
+		}
+	}
+
 	if tgChannelHealthService != nil {
 		if err := tgChannelHealthService.ClearStatus(channel.Name); err != nil {
 			log.Printf("⚠️  清理新增频道健康状态失败(%s): %v", channel.Name, err)
@@ -195,9 +205,10 @@ func AddTGChannelHandler(c *gin.Context) {
 
 // UpdateTGChannelRequest 更新频道请求
 type UpdateTGChannelRequest struct {
-	Name      *string `json:"name"`
-	IsEnabled *bool   `json:"is_enabled"`
-	SortOrder *int    `json:"sort_order"`
+	Name      *string   `json:"name"`
+	IsEnabled *bool     `json:"is_enabled"`
+	SortOrder *int      `json:"sort_order"`
+	Tags      *[]string `json:"tags"`
 }
 
 // UpdateTGChannelHandler 更新频道信息
@@ -220,7 +231,7 @@ func UpdateTGChannelHandler(c *gin.Context) {
 		return
 	}
 
-	if req.Name == nil && req.IsEnabled == nil && req.SortOrder == nil {
+	if req.Name == nil && req.IsEnabled == nil && req.SortOrder == nil && req.Tags == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "至少需要提供一个更新字段"})
 		return
 	}
@@ -235,7 +246,7 @@ func UpdateTGChannelHandler(c *gin.Context) {
 		return
 	}
 
-	channel, err := tgChannelService.UpdateChannel(uint(id), req.Name, req.IsEnabled, req.SortOrder)
+	channel, err := tgChannelService.UpdateChannel(uint(id), req.Name, req.IsEnabled, req.SortOrder, req.Tags)
 	if err != nil {
 		if strings.Contains(err.Error(), "不存在") {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -253,6 +264,12 @@ func UpdateTGChannelHandler(c *gin.Context) {
 		"message": "频道更新成功",
 		"channel": channel,
 	})
+
+	if adminTagService != nil {
+		if err := adminTagService.EnsureTags(model.AdminTagScopeChannel, channel.Tags); err != nil {
+			log.Printf("⚠️  同步频道标签词库失败(%s): %v", channel.Name, err)
+		}
+	}
 
 	if tgChannelHealthService != nil && req.Name != nil {
 		oldName := normalizeTGChannelName(oldChannel.Name)
@@ -430,7 +447,7 @@ func BatchSetTGChannelsStatusHandler(c *gin.Context) {
 		}
 		seen[channelID] = struct{}{}
 
-		if _, err := tgChannelService.UpdateChannel(channelID, nil, &isEnabled, nil); err != nil {
+		if _, err := tgChannelService.UpdateChannel(channelID, nil, &isEnabled, nil, nil); err != nil {
 			errMsg := err.Error()
 			errCode := "CHANNEL_UPDATE_FAILED"
 			if strings.Contains(errMsg, "不存在") {

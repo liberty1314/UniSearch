@@ -17,6 +17,7 @@ import {
 } from './RouteGuards';
 
 const Home = lazy(() => import('@/pages/Home'));
+const ResourceDetailPage = lazy(() => import('@/pages/ResourceDetailPage'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/pages/RegisterPage'));
 const AccountPage = lazy(() => import('@/pages/AccountPage'));
@@ -70,6 +71,10 @@ const AppRoutes: React.FC = () => {
             <Route
               path="/"
               element={renderLazyRoute(<Home />)}
+            />
+            <Route
+              path="/resource/:resourceId"
+              element={renderLazyRoute(<ResourceDetailPage />)}
             />
             <Route
               path="/login"

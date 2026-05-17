@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   AlertCircle,
   Loader2,
@@ -15,6 +15,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Label } from '@/components/ui/label';
+import { AdminTagMultiSelect } from './AdminTagMultiSelect';
+import { Input } from '@/components/ui/input';
 import { ChannelAddDialog } from './ChannelAddDialog';
 import { ApplePagination } from './ApplePagination';
 import {
@@ -63,6 +66,22 @@ export const ChannelManagementView: React.FC = () => {
 
   const activeChannel = controller.activeDetailChannel;
 
+  useEffect(() => {
+    if (controller.pagedItems.length === 0) {
+      if (controller.detailChannelId !== null) {
+        controller.setDetailChannelId(null);
+      }
+      return;
+    }
+
+    const hasActiveOnCurrentPage = controller.pagedItems.some(
+      (channel) => channel.id === controller.detailChannelId
+    );
+    if (!hasActiveOnCurrentPage) {
+      controller.setDetailChannelId(controller.pagedItems[0].id);
+    }
+  }, [controller.detailChannelId, controller.pagedItems, controller.setDetailChannelId]);
+
   const selectionBar = controller.selectedCount > 0 ? (
     <AdminSelectionBar
       testId="channel-selection-bar"
@@ -70,6 +89,9 @@ export const ChannelManagementView: React.FC = () => {
       onClear={controller.clearSelectedChannels}
       actions={(
         <>
+          <Button type="button" size="sm" variant="outline" onClick={() => controller.handleToggleSelectFiltered()} className="rounded-full">
+            {controller.isAllFilteredSelected ? '清空筛选选择' : '全选当前筛选'}
+          </Button>
           <Button type="button" size="sm" variant="outline" onClick={() => void controller.handleBatchToggleChannels(true)} className="rounded-full">
             批量启用
           </Button>
@@ -120,28 +142,42 @@ export const ChannelManagementView: React.FC = () => {
         )}
         filters={(
           <AdminFilterSurface>
-            <div className="flex flex-col gap-4">
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,0.92fr),minmax(0,0.92fr),minmax(0,1.35fr)]">
               <AdminStatusFilter
                 options={CHANNEL_STATUS_OPTIONS}
                 value={controller.statusFilter}
                 onChange={(v) => controller.setStatusFilter(v as typeof controller.statusFilter)}
+                ariaLabel="频道状态筛选"
               />
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr),auto]">
-                <AdminSearchInput
-                  value={controller.searchKeyword}
-                  onChange={controller.setSearchKeyword}
-                  placeholder="搜索频道名称或错误信息"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={controller.handleToggleSelectFiltered}
-                  disabled={controller.filteredItems.length === 0 || controller.isOperationBusy}
-                  className="rounded-full"
-                >
-                  {controller.isAllFilteredSelected ? '清空筛选选择' : '全选当前筛选'}
-                </Button>
-              </div>
+              <AdminTagMultiSelect
+                scope="channel"
+                value={controller.selectedTagFilters}
+                options={controller.tagOptions}
+                loading={controller.isTagOptionsLoading}
+                creating={controller.isCreatingTag}
+                updatingTagId={controller.updatingTagId}
+                deletingTagId={controller.deletingTagId}
+                onChange={controller.setSelectedTagFilters}
+                onCreateTag={controller.handleCreateTag}
+                onUpdateTag={controller.handleUpdateTag}
+                onDeleteTag={controller.handleDeleteTag}
+                allowCreate
+                allowManageOptions
+                showSelectedSummary={false}
+                autoSelectCreatedTag={false}
+                maxSelectedVisible={2}
+                searchPlaceholder="搜索频道标签筛选"
+                emptyMessage="暂无频道标签词库"
+                placeholder="按标签筛选"
+                triggerAriaLabel="频道标签筛选"
+                triggerTestId="channel-tag-filter-trigger"
+                panelTestId="channel-tag-filter-panel"
+              />
+              <AdminSearchInput
+                value={controller.searchKeyword}
+                onChange={controller.setSearchKeyword}
+                placeholder="搜索频道名称或错误信息"
+              />
             </div>
           </AdminFilterSurface>
         )}
@@ -202,6 +238,15 @@ export const ChannelManagementView: React.FC = () => {
                               <p className="text-sm text-slate-500 dark:text-slate-400">
                                 {channel.last_error || '暂无错误信息'}
                               </p>
+                              {channel.tags?.length ? (
+                                <div className="flex flex-wrap gap-2">
+                                  {channel.tags.slice(0, 1).map((tag) => (
+                                    <Badge key={`${channel.id}-${tag}`} variant="secondary">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : null}
                             </div>
                           </div>
                           <div className="rounded-[1.1rem] border border-slate-200/70 bg-slate-50/80 p-3 text-sm dark:border-white/10 dark:bg-slate-900/40">
@@ -319,6 +364,54 @@ export const ChannelManagementView: React.FC = () => {
                 <div className="rounded-[1.15rem] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-slate-900/30">
                   <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{activeChannel.last_error || '当前没有记录到错误信息。'}</p>
                 </div>
+                <div className="space-y-3 rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-white/10">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">频道标签</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {activeChannel.tags?.length ? activeChannel.tags.slice(0, 1).map((tag) => (
+                        <Badge key={`${activeChannel.id}-${tag}`} variant="secondary">{tag}</Badge>
+                      )) : (
+                        <span className="text-sm text-slate-500 dark:text-slate-400">当前未设置标签</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="channel-tags">编辑标签</Label>
+                    <div id="channel-tags">
+                      <AdminTagMultiSelect
+                        scope="channel"
+                        value={controller.channelTagsInput}
+                        options={controller.tagOptions}
+                        loading={controller.isTagOptionsLoading}
+                        creating={controller.isCreatingTag}
+                        updatingTagId={controller.updatingTagId}
+                        deletingTagId={controller.deletingTagId}
+                        onChange={controller.setChannelTagsInput}
+                        onCreateTag={controller.handleCreateTag}
+                        onUpdateTag={controller.handleUpdateTag}
+                        onDeleteTag={controller.handleDeleteTag}
+                        allowManageOptions
+                        searchPlaceholder="搜索或新增频道标签"
+                        placeholder="选择一个频道标签，或搜索后新增"
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      频道标签词库独立维护，不与插件标签互通。
+                    </p>
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void controller.handleSaveChannelTags()}
+                        disabled={controller.isSavingTags}
+                        className="rounded-full"
+                      >
+                        {controller.isSavingTags ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+                        保存标签
+                      </Button>
+                    </div>
+                  </div>
+                </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-white/10">
                     <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">启用状态</p>
@@ -347,8 +440,18 @@ export const ChannelManagementView: React.FC = () => {
         open={controller.addDialogOpen}
         isAdding={controller.isAdding}
         newChannelName={controller.newChannelName}
+        newChannelTags={controller.newChannelTags}
+        tagOptions={controller.tagOptions}
+        isTagOptionsLoading={controller.isTagOptionsLoading}
+        isCreatingTag={controller.isCreatingTag}
+        updatingTagId={controller.updatingTagId}
+        deletingTagId={controller.deletingTagId}
         onOpenChange={controller.setAddDialogOpen}
         onChannelNameChange={controller.setNewChannelName}
+        onChannelTagsChange={controller.setNewChannelTags}
+        onCreateTag={controller.handleCreateTag}
+        onUpdateTag={controller.handleUpdateTag}
+        onDeleteTag={controller.handleDeleteTag}
         onSubmit={() => void controller.handleAddChannel()}
       />
 

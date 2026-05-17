@@ -12,6 +12,7 @@ import {
 export { AdminContentCard, AdminCardLoading, AdminCardEmpty } from './AdminContentCard';
 export { AdminStatusFilter } from './AdminStatusFilter';
 export { AdminSearchInput } from './AdminSearchInput';
+export { AdminSelectField } from './AdminSelectField';
 export type { StatusFilterOption } from './AdminStatusFilter';
 
 interface AdminWorkspacePageProps {

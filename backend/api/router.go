@@ -11,7 +11,7 @@ import (
 
 // SetupRouter 设置路由
 // 验证需求：4.1, 5.1, 6.1, 7.1, 8.1, 10.1, 10.3
-func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService, systemSettingsService *service.SystemSettingsService, announcementService *service.AnnouncementService, tgChannelService *service.TGChannelService, pluginHealthService *service.PluginHealthService, pluginStateService *service.PluginStateService, tgChannelHealthService *service.TGChannelHealthService) *gin.Engine {
+func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService, systemSettingsService *service.SystemSettingsService, announcementService *service.AnnouncementService, tgChannelService *service.TGChannelService, pluginHealthService *service.PluginHealthService, pluginStateService *service.PluginStateService, tgChannelHealthService *service.TGChannelHealthService, adminTagService *service.AdminTagService) *gin.Engine {
 	// 设置搜索服务
 	SetSearchService(searchService)
 	SetAuthService(authService)
@@ -20,6 +20,7 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 	// 设置 TG 频道服务
 	SetTGChannelService(tgChannelService)
 	SetTGChannelHealthService(tgChannelHealthService)
+	SetAdminTagService(adminTagService)
 
 	// 创建控制器实例
 	authController := controller.NewAuthController(authService)
@@ -131,6 +132,10 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			admin.GET("/system-info", GetSystemInfoHandler(searchService, userService, pluginHealthService, pluginStateService))     // 更新：获取系统信息（包含插件状态 + 用户活跃度）
 			admin.GET("/plugin-center/catalog", PluginCenterCatalogHandler(searchService, pluginHealthService, pluginStateService))  // 插件中心目录
 			admin.POST("/plugin-center/install", PluginCenterInstallHandler(searchService, pluginHealthService, pluginStateService)) // 插件中心导入远程 URL 插件
+			admin.GET("/tags", ListAdminTagsHandler)                                                                                 // 标签词库列表
+			admin.POST("/tags", CreateAdminTagHandler)                                                                               // 新增标签词库条目
+			admin.PUT("/tags/:id", UpdateAdminTagHandler)                                                                            // 更新标签词库条目
+			admin.DELETE("/tags/:id", DeleteAdminTagHandler)                                                                        // 删除标签词库条目
 			admin.POST("/plugins/:pluginName/test", TestPluginHandler(searchService, pluginHealthService))                           // 新增：测试插件
 			admin.POST("/plugins", CreatePluginHandler(pluginHealthService, pluginStateService))                                     // 新增：创建插件
 			admin.PUT("/plugins/:pluginName", UpdatePluginHandler(pluginHealthService, pluginStateService))                          // 新增：更新插件

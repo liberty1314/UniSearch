@@ -36,6 +36,7 @@ func GetSystemSettingsHandler(c *gin.Context) {
 		"enable_user_auth":             settings.EnableUserAuth,
 		"enable_user_login":            settings.EnableUserLogin,
 		"enable_user_signup":           settings.EnableUserSignup,
+		"enable_resource_detail_page":  settings.EnableResourceDetailPage,
 		"public_site_url":              settings.PublicSiteURL,
 		"default_copy_format_template": settings.DefaultCopyFormatTemplate,
 	})
@@ -56,6 +57,7 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 		EnableUserAuth            *bool   `json:"enable_user_auth"`
 		EnableUserLogin           *bool   `json:"enable_user_login"`
 		EnableUserSignup          *bool   `json:"enable_user_signup"`
+		EnableResourceDetailPage  *bool   `json:"enable_resource_detail_page"`
 		PublicSiteURL             *string `json:"public_site_url"`
 		DefaultCopyFormatTemplate *string `json:"default_copy_format_template"`
 	}
@@ -71,6 +73,7 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 	if req.EnableUserAuth == nil &&
 		req.EnableUserLogin == nil &&
 		req.EnableUserSignup == nil &&
+		req.EnableResourceDetailPage == nil &&
 		req.PublicSiteURL == nil &&
 		req.DefaultCopyFormatTemplate == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -93,6 +96,7 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 	input := service.SystemSettingsUpdateInput{
 		EnableUserLogin:           req.EnableUserLogin,
 		EnableUserSignup:          req.EnableUserSignup,
+		EnableResourceDetailPage:  req.EnableResourceDetailPage,
 		PublicSiteURL:             req.PublicSiteURL,
 		DefaultCopyFormatTemplate: req.DefaultCopyFormatTemplate,
 	}
@@ -115,6 +119,7 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 		"enable_user_auth":             settings.EnableUserAuth,
 		"enable_user_login":            settings.EnableUserLogin,
 		"enable_user_signup":           settings.EnableUserSignup,
+		"enable_resource_detail_page":  settings.EnableResourceDetailPage,
 		"public_site_url":              settings.PublicSiteURL,
 		"default_copy_format_template": settings.DefaultCopyFormatTemplate,
 	})

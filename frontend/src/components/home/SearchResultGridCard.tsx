@@ -1,13 +1,13 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { IoFlashOutline, IoKeyOutline, IoTimeOutline } from "react-icons/io5";
+import { IoChevronForwardOutline, IoKeyOutline, IoTimeOutline } from "react-icons/io5";
 import { cn } from "@/lib/utils";
 import {
   getCloudTypeInfo,
   formatResultTime,
   type ResultItem,
 } from "@/utils/cloudTypeUtils";
-import type { ResourceAction } from "@/types/api";
+import { resolveResourceDisplaySize } from "@/utils/resourceDisplay";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -15,8 +15,10 @@ interface SearchResultGridCardProps {
   item: ResultItem;
   /** 在当前已渲染列表中的绝对下标，用于错落入场延迟 */
   index: number;
+  canOpenResource: boolean;
+  showDetailEntry: boolean;
+  onOpenResource: (item: ResultItem) => void;
   onOpenDetail: (item: ResultItem) => void;
-  onActionClick: (action: ResourceAction, item: ResultItem) => void;
 }
 
 // ─── 组件 ─────────────────────────────────────────────────────────────────────
@@ -31,26 +33,28 @@ interface SearchResultGridCardProps {
  *   因此旧卡片不会重放入场动画，只有新挂载的卡片会动画进入。
  */
 export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
-  ({ item, index, onOpenDetail, onActionClick }) => {
+  ({ item, index, canOpenResource, showDetailEntry, onOpenResource, onOpenDetail }) => {
     const { resource, primaryLink, cloudType, datetime } = item;
     const cloudInfo = getCloudTypeInfo(cloudType);
     const hasPassword = Boolean(primaryLink?.password?.trim());
-    const visibleActions = resource.actions.slice(0, 2);
-
-    const handleAction = () => {
-      onOpenDetail(item);
-    };
+    const sizeLabel = resolveResourceDisplaySize(item);
 
     const handleClick = (e: React.MouseEvent) => {
+      if (!canOpenResource) {
+        return;
+      }
       e.stopPropagation();
-      handleAction();
+      onOpenResource(item);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (!canOpenResource) {
+        return;
+      }
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         e.stopPropagation();
-        handleAction();
+        onOpenResource(item);
       }
     };
 
@@ -69,13 +73,17 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
           duration: 0.4,
           ease: [0.22, 1, 0.36, 1],
         }}
-        whileHover={{ y: -4, scale: 1.01 }}
-        role="button"
-        tabIndex={0}
+        whileHover={canOpenResource ? { y: -4, scale: 1.01 } : { y: -2 }}
+        role={canOpenResource ? "button" : undefined}
+        tabIndex={canOpenResource ? 0 : undefined}
         aria-label={ariaLabel}
-        className="group relative h-full rounded-[24px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
+        className={cn(
+          "group relative h-full rounded-[24px] dark:focus-visible:ring-offset-slate-950",
+          canOpenResource &&
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
+        )}
+        onClick={canOpenResource ? handleClick : undefined}
+        onKeyDown={canOpenResource ? handleKeyDown : undefined}
         data-testid="search-result-grid-card-wrapper"
       >
         {/* 发光底座 */}
@@ -101,36 +109,19 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
             <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg line-clamp-2 leading-snug group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-purple-600 dark:group-hover:from-blue-400 dark:group-hover:to-purple-400 transition-all duration-300">
               {resource.title || "未命名资源"}
             </h3>
-            {resource.description ? (
-              <p className="mt-2 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">
-                {resource.description}
-              </p>
-            ) : null}
           </div>
 
-          <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
-            <span className="rounded-full border border-slate-200/70 bg-slate-50 px-2.5 py-1 text-slate-600 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-300">
-              {resource.source.name || resource.source.id || resource.source.type}
-            </span>
-            {resource.media_type ? (
-              <span className="rounded-full border border-cyan-200/60 bg-cyan-50 px-2.5 py-1 text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-500/10 dark:text-cyan-200">
-                {resource.media_type}
-              </span>
-            ) : null}
-            {resource.target_type ? (
-              <span className="rounded-full border border-amber-200/60 bg-amber-50 px-2.5 py-1 text-amber-700 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200">
-                {resource.target_type}
-              </span>
-            ) : null}
-          </div>
-
-          {/* 元数据行（时间） */}
+          {/* 元数据行（时间 + 大小） */}
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-slate-400 mb-4 px-1">
             <div className="flex items-center gap-1.5">
               <IoTimeOutline className="w-3.5 h-3.5" />
               <span>{formatResultTime(datetime)}</span>
             </div>
-            <span>{resource.links.length} 个链接</span>
+            {sizeLabel ? (
+              <div className="rounded-full bg-gray-100 px-2 py-0.5 dark:border dark:border-cyan-300/10 dark:bg-slate-900/72">
+                {sizeLabel}
+              </div>
+            ) : null}
           </div>
 
           {/* 底部：网盘类型徽章 + 访问码标记 */}
@@ -158,32 +149,21 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
               )}
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {visibleActions.map((action) => (
+            {showDetailEntry ? (
+              <div className="flex items-center justify-end">
                 <button
-                  key={action.key}
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    onActionClick(action, item);
+                    onOpenDetail(item);
                   }}
-                  className="inline-flex items-center gap-1 rounded-full border border-slate-200/70 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-blue-300 hover:text-blue-600 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-200 dark:hover:border-cyan-300/30 dark:hover:text-cyan-200"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
                 >
-                  <IoFlashOutline className="h-3.5 w-3.5" />
-                  {action.label}
+                  详情
+                  <IoChevronForwardOutline className="h-3.5 w-3.5" />
                 </button>
-              ))}
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onOpenDetail(item);
-                }}
-                className="inline-flex items-center gap-1 rounded-full border border-slate-200/70 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-slate-300"
-              >
-                查看详情
-              </button>
-            </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </motion.div>

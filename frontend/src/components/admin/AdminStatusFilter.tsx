@@ -1,6 +1,5 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { AdminSelectField, type AdminSelectFieldOption } from './AdminSelectField';
 
 export interface StatusFilterOption {
   value: string;
@@ -11,29 +10,30 @@ interface AdminStatusFilterProps {
   options: readonly StatusFilterOption[];
   value: string;
   onChange: (value: string) => void;
+  ariaLabel?: string;
 }
 
 /**
- * 统一状态筛选按钮 — 提取自 Channel/Plugin 视图的重复 pattern
+ * 统一状态筛选下拉框。
  */
-export function AdminStatusFilter({ options, value, onChange }: AdminStatusFilterProps) {
+export function AdminStatusFilter({
+  options,
+  value,
+  onChange,
+  ariaLabel = '状态筛选',
+}: AdminStatusFilterProps) {
+  const selectOptions: AdminSelectFieldOption[] = options.map((option) => ({
+    value: option.value,
+    label: option.label,
+  }));
+
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {options.map((option) => (
-        <Button
-          key={option.value}
-          type="button"
-          size="sm"
-          variant={value === option.value ? 'default' : 'outline'}
-          onClick={() => onChange(option.value)}
-          className={cn(
-            'rounded-full',
-            value === option.value && 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white',
-          )}
-        >
-          {option.label}
-        </Button>
-      ))}
-    </div>
+    <AdminSelectField
+      value={value}
+      options={selectOptions}
+      onChange={onChange}
+      ariaLabel={ariaLabel}
+      placeholder="请选择状态"
+    />
   );
 }

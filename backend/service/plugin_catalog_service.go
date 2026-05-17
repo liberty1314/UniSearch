@@ -185,6 +185,7 @@ func (s *PluginCatalogService) buildLocalCatalogItems() []model.PluginCatalogIte
 		}
 		manifest := buildCatalogCustomManifest(cp)
 		item := buildInstalledCatalogItem(cp.Name, "custom", cp.Priority, cp.URL, cp.Description, manifest, enabled, healthMap[cp.Name])
+		item.Tags = append([]string(nil), cp.Tags...)
 		items = append(items, item)
 	}
 
@@ -468,6 +469,7 @@ func (s *PluginCatalogService) InstallCatalogItem(req model.PluginCatalogInstall
 			Version:      target.Version,
 			Category:     target.Category,
 			Capabilities: append([]string(nil), target.Manifest.Capabilities...),
+			Tags:         append([]string(nil), target.Tags...),
 		}); err != nil {
 			return model.PluginCatalogItem{}, fmt.Errorf("导入插件失败: %w", err)
 		}
@@ -488,6 +490,7 @@ func (s *PluginCatalogService) InstallCatalogItem(req model.PluginCatalogInstall
 		Version:      target.Version,
 		Category:     target.Category,
 		Capabilities: append([]string(nil), target.Manifest.Capabilities...),
+		Tags:         append([]string(nil), target.Tags...),
 	})
 	installed := buildInstalledCatalogItem(target.Name, "custom", resolveCatalogInstallPriority(*target), target.Install.URL, target.Description, installedManifest, true, model.PluginHealthSnapshot{})
 	installed.IsRemote = true

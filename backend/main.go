@@ -255,6 +255,7 @@ func startServer() {
 
 	// 初始化 TGChannel 服务（Telegram 频道管理服务）
 	tgChannelService := service.NewTGChannelService(database.GetDB())
+	adminTagService := service.NewAdminTagService(database.GetDB())
 	// 迁移环境变量中的频道到数据库
 	if err := tgChannelService.MigrateFromEnv(); err != nil {
 		log.Printf("⚠️  TG 频道迁移失败: %v", err)
@@ -291,6 +292,7 @@ func startServer() {
 		pluginHealthService,
 		pluginStateService,
 		tgChannelHealthService,
+		adminTagService,
 	)
 
 	// 获取端口配置

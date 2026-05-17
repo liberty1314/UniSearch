@@ -779,6 +779,7 @@ describe('PluginManageDialog', () => {
             version: '0.0.0',
             category: 'search',
             capabilities: ['resource.search'],
+            tags: [],
           }),
         })
       );
@@ -848,6 +849,7 @@ describe('PluginManageDialog', () => {
             version: '1.4.0',
             category: 'media',
             capabilities: ['resource.search', 'resource.search.handoff'],
+            tags: [],
           }),
         })
       );

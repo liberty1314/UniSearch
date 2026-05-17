@@ -23,6 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { AdminWorkspaceFooter } from './AdminWorkspaceFooter';
 import { AdminWorkspaceToolbar } from './AdminWorkspaceToolbar';
+import { AdminSelectField } from './AdminSelectField';
 import {
   ADMIN_PANEL_SURFACE_CLASSES,
   ADMIN_PANEL_SURFACE_HOVER_CLASSES,
@@ -213,39 +214,36 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
             />
           </label>
 
-          <select
+          <AdminSelectField
             value={sourceFilter}
-            onChange={(event) => onSetSourceFilter(event.target.value as 'all' | 'local' | 'remote')}
-            className="rounded-2xl border border-slate-200/70 bg-white/80 px-3 py-2 text-sm text-slate-700 outline-none dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-slate-200"
-          >
-            <option value="all">全部来源</option>
-            <option value="local">本地已安装</option>
-            <option value="remote">远程市场</option>
-          </select>
+            onChange={(value) => onSetSourceFilter(value as 'all' | 'local' | 'remote')}
+            ariaLabel="插件来源筛选"
+            options={[
+              { value: 'all', label: '全部来源' },
+              { value: 'local', label: '本地已安装' },
+              { value: 'remote', label: '远程市场' },
+            ]}
+          />
 
-          <select
+          <AdminSelectField
             value={categoryFilter}
-            onChange={(event) => onSetCategoryFilter(event.target.value)}
-            className="rounded-2xl border border-slate-200/70 bg-white/80 px-3 py-2 text-sm text-slate-700 outline-none dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-slate-200"
-          >
-            {availableCategories.map((item) => (
-              <option key={item} value={item}>
-                {item === 'all' ? '全部分类' : item}
-              </option>
-            ))}
-          </select>
+            onChange={onSetCategoryFilter}
+            ariaLabel="插件分类筛选"
+            options={availableCategories.map((item) => ({
+              value: item,
+              label: item === 'all' ? '全部分类' : item,
+            }))}
+          />
 
-          <select
+          <AdminSelectField
             value={capabilityFilter}
-            onChange={(event) => onSetCapabilityFilter(event.target.value)}
-            className="rounded-2xl border border-slate-200/70 bg-white/80 px-3 py-2 text-sm text-slate-700 outline-none dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-slate-200"
-          >
-            {availableCapabilities.map((item) => (
-              <option key={item} value={item}>
-                {item === 'all' ? '全部能力' : item}
-              </option>
-            ))}
-          </select>
+            onChange={onSetCapabilityFilter}
+            ariaLabel="插件能力筛选"
+            options={availableCapabilities.map((item) => ({
+              value: item,
+              label: item === 'all' ? '全部能力' : item,
+            }))}
+          />
 
           <div className="flex items-center gap-2">
             <button

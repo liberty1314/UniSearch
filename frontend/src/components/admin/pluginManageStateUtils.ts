@@ -1,5 +1,6 @@
 import type { PluginInfo } from '@/types/api';
-import type { EditPluginForm } from './pluginManageDialogShared';
+import { parseCapabilitiesInput, type EditPluginForm } from './pluginManageDialogShared';
+import { normalizeSingleTagSelection } from './adminTagUtils';
 
 type PluginNameSet = Set<string>;
 
@@ -101,6 +102,10 @@ export const updateEditedPlugin = (
             priority: editForm.priority,
             description: editForm.description,
             url: editForm.url,
+            version: editForm.version,
+            category: editForm.category,
+          capabilities: parseCapabilitiesInput(editForm.capabilitiesText),
+            tags: normalizeSingleTagSelection(editForm.tags),
           }
       : plugin
   );

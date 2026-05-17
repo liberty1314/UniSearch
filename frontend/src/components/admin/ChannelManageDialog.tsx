@@ -91,8 +91,18 @@ export function ChannelManageSurface({
         open={controller.addDialogOpen}
         isAdding={controller.isAdding}
         newChannelName={controller.newChannelName}
+        newChannelTags={controller.newChannelTags}
+        tagOptions={controller.tagOptions}
+        isTagOptionsLoading={controller.isTagOptionsLoading}
+        isCreatingTag={controller.isCreatingTag}
+        updatingTagId={controller.updatingTagId}
+        deletingTagId={controller.deletingTagId}
         onOpenChange={controller.setAddDialogOpen}
         onChannelNameChange={controller.setNewChannelName}
+        onChannelTagsChange={controller.setNewChannelTags}
+        onCreateTag={controller.handleCreateTag}
+        onUpdateTag={controller.handleUpdateTag}
+        onDeleteTag={controller.handleDeleteTag}
         onSubmit={() => void controller.handleAddChannel()}
       />
 

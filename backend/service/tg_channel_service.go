@@ -10,6 +10,7 @@ import (
 	"time"
 	"unisearch/config"
 	"unisearch/model"
+	"unisearch/util"
 
 	"gorm.io/gorm"
 )
@@ -77,7 +78,7 @@ func (s *TGChannelService) GetEnabledChannelModels() ([]model.TGChannel, error) 
 }
 
 // AddChannel 添加新频道
-func (s *TGChannelService) AddChannel(name string) (*model.TGChannel, error) {
+func (s *TGChannelService) AddChannel(name string, tags []string) (*model.TGChannel, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, fmt.Errorf("频道名称不能为空")
@@ -101,6 +102,7 @@ func (s *TGChannelService) AddChannel(name string) (*model.TGChannel, error) {
 		Name:      name,
 		IsEnabled: true,
 		SortOrder: maxOrder + 1,
+		Tags:      util.NormalizeTags(tags),
 	}
 
 	if err := s.db.Create(channel).Error; err != nil {
@@ -114,7 +116,7 @@ func (s *TGChannelService) AddChannel(name string) (*model.TGChannel, error) {
 }
 
 // UpdateChannel 更新频道信息
-func (s *TGChannelService) UpdateChannel(id uint, name *string, isEnabled *bool, sortOrder *int) (*model.TGChannel, error) {
+func (s *TGChannelService) UpdateChannel(id uint, name *string, isEnabled *bool, sortOrder *int, tags *[]string) (*model.TGChannel, error) {
 	var channel model.TGChannel
 	if err := s.db.First(&channel, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -143,6 +145,10 @@ func (s *TGChannelService) UpdateChannel(id uint, name *string, isEnabled *bool,
 
 	if sortOrder != nil {
 		channel.SortOrder = *sortOrder
+	}
+
+	if tags != nil {
+		channel.Tags = util.NormalizeTags(*tags)
 	}
 
 	if err := s.db.Save(&channel).Error; err != nil {

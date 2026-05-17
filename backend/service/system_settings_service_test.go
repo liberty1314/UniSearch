@@ -36,6 +36,10 @@ func TestSystemSettingsServiceGetSettingsCreatesDefaults(t *testing.T) {
 		t.Fatalf("expected auth defaults enabled, got %+v", settings)
 	}
 
+	if settings.EnableResourceDetailPage {
+		t.Fatalf("expected resource detail page to be disabled by default, got %+v", settings)
+	}
+
 	if settings.PublicSiteURL != "" {
 		t.Fatalf("expected empty public_site_url default, got %q", settings.PublicSiteURL)
 	}
@@ -64,8 +68,10 @@ func TestSystemSettingsServiceUpdateSettingsPreservesExistingFields(t *testing.T
 	}
 
 	disableSignup := false
+	disableResourceDetail := false
 	updated, err := service.UpdateSettings(SystemSettingsUpdateInput{
-		EnableUserSignup: &disableSignup,
+		EnableUserSignup:         &disableSignup,
+		EnableResourceDetailPage: &disableResourceDetail,
 	})
 	if err != nil {
 		t.Fatalf("partial UpdateSettings returned error: %v", err)
@@ -77,6 +83,10 @@ func TestSystemSettingsServiceUpdateSettingsPreservesExistingFields(t *testing.T
 
 	if updated.PublicSiteURL != initialURL {
 		t.Fatalf("expected public_site_url to be preserved, got %q", updated.PublicSiteURL)
+	}
+
+	if updated.EnableResourceDetailPage {
+		t.Fatalf("expected resource detail page to be disabled, got %+v", updated)
 	}
 
 	if updated.DefaultCopyFormatTemplate != initialTemplate {

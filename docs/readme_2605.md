@@ -239,3 +239,91 @@
   - `frontend/src/components/admin/PluginManagementView.tsx`
   - `frontend/src/hooks/useAdminPageController.ts`
   - `frontend/src/hooks/usePluginManageController.ts`
+
+## [2026-05-17 19:43:27] refactor(frontend): 优化资源排序与后台组件细节
+- **Body**: 为资源排序增加关键词匹配层级，并收敛后台卡片、筛选器和插件控制中的细节依赖，提升列表命中和组件一致性。
+- **Files**:
+  - `frontend/src/components/CloudTypeFilter.tsx`
+  - `frontend/src/components/admin/AdminContentCard.tsx`
+  - `frontend/src/components/admin/AdminStatusFilter.tsx`
+  - `frontend/src/components/admin/AdminUsersView.tsx`
+  - `frontend/src/components/admin/AnnouncementManagement.tsx`
+  - `frontend/src/components/admin/ChannelManagementView.tsx`
+  - `frontend/src/components/admin/PluginManagementView.tsx`
+  - `frontend/src/hooks/useAdminPageController.ts`
+  - `frontend/src/hooks/usePluginManageController.ts`
+  - `frontend/src/utils/searchResultSorter.ts`
+  - `frontend/src/utils/__tests__/searchResultSorter.test.ts`
+
+## [2026-05-17 19:49:24] feat(resource): 引入资源详情页与标签管理
+- **Body**: 新增资源详情页、后台标签词库与相关接口，并同步优化资源排序、系统设置和管理页联动逻辑。
+- **Files**:
+  - `Dockerfile`
+  - `backend/api/account_auth_flow_test.go`
+  - `backend/api/admin_handler.go`
+  - `backend/api/admin_tag_handler.go`
+  - `backend/api/admin_tag_handler_test.go`
+  - `backend/api/custom_plugins.json`
+  - `backend/api/plugin_center_handler.go`
+  - `backend/api/plugin_manifest_response_test.go`
+  - `backend/api/router.go`
+  - `backend/api/system_settings_handler.go`
+  - `backend/api/system_settings_handler_test.go`
+  - `backend/api/tg_channel_handler.go`
+  - `backend/config/custom_plugins.go`
+  - `backend/database/migration.go`
+  - `backend/main.go`
+  - `backend/model/admin_tag.go`
+  - `backend/model/system_settings.go`
+  - `backend/model/tg_channel.go`
+  - `backend/service/admin_tag_service.go`
+  - `backend/service/admin_tag_service_test.go`
+  - `backend/service/plugin_catalog_service.go`
+  - `backend/service/search_response_builder.go`
+  - `backend/service/search_response_builder_test.go`
+  - `backend/service/system_settings_service.go`
+  - `backend/service/system_settings_service_test.go`
+  - `backend/service/tg_channel_service.go`
+  - `backend/util/tag_util.go`
+  - `frontend/src/components/PasswordModal.tsx`
+  - `frontend/src/components/SearchResults.tsx`
+  - `frontend/src/components/admin/AdminSelectField.tsx`
+  - `frontend/src/components/admin/AdminStatusFilter.tsx`
+  - `frontend/src/components/admin/AdminTagMultiSelect.tsx`
+  - `frontend/src/components/admin/AdminWorkspacePageFrame.tsx`
+  - `frontend/src/components/admin/ApplePagination.tsx`
+  - `frontend/src/components/admin/ChannelAddDialog.tsx`
+  - `frontend/src/components/admin/ChannelManageDialog.tsx`
+  - `frontend/src/components/admin/ChannelManagementView.tsx`
+  - `frontend/src/components/admin/PluginAddDialog.tsx`
+  - `frontend/src/components/admin/PluginManageDialog.tsx`
+  - `frontend/src/components/admin/PluginManageWorkspace.tsx`
+  - `frontend/src/components/admin/PluginManagementView.tsx`
+  - `frontend/src/components/admin/Sidebar.tsx`
+  - `frontend/src/components/admin/SystemSettingsView.tsx`
+  - `frontend/src/components/admin/TableFilterDropdown.tsx`
+  - `frontend/src/components/admin/adminDropdown.ts`
+  - `frontend/src/components/admin/adminTagUtils.ts`
+  - `frontend/src/components/admin/pluginManageDialogShared.ts`
+  - `frontend/src/components/admin/pluginManageStateUtils.ts`
+  - `frontend/src/components/home/SearchResultGridCard.tsx`
+  - `frontend/src/components/home/SearchResultListItem.tsx`
+  - `frontend/src/components/ui/AppleInput.tsx`
+  - `frontend/src/components/ui/dialog-shell.ts`
+  - `frontend/src/components/ui/select.tsx`
+  - `frontend/src/config/constants.ts`
+  - `frontend/src/hooks/useChannelManageController.ts`
+  - `frontend/src/hooks/usePluginManageController.ts`
+  - `frontend/src/hooks/usePluginManageDialogState.ts`
+  - `frontend/src/hooks/useSystemSettingsController.ts`
+  - `frontend/src/pages/ResourceDetailPage.tsx`
+  - `frontend/src/pages/__tests__/AdminNavigation.test.tsx`
+  - `frontend/src/pages/__tests__/ResourceDetailPage.test.tsx`
+  - `frontend/src/routes/AppRoutes.tsx`
+  - `frontend/src/routes/__tests__/AppRoutes.test.tsx`
+  - `frontend/src/services/systemSettingsService.ts`
+  - `frontend/src/test/setup.ts`
+  - `frontend/src/types/api.ts`
+  - `frontend/src/utils/__tests__/searchResultSorter.test.ts`
+  - `frontend/src/utils/resourceDisplay.ts`
+  - `frontend/src/utils/searchResultSorter.ts`

@@ -38,6 +38,10 @@ vi.mock('@/pages/Home', () => ({
   default: () => <div>Home Page</div>,
 }));
 
+vi.mock('@/pages/ResourceDetailPage', () => ({
+  default: () => <div>Resource Detail Page</div>,
+}));
+
 vi.mock('@/pages/LoginPage', () => ({
   default: () => <div>Login Page</div>,
 }));
@@ -82,6 +86,14 @@ describe('AppRoutes', () => {
     renderRoutesAt('/account');
 
     expect(await screen.findByText('Account Page')).toBeInTheDocument();
+    expect(screen.getByTestId('site-footer')).toBeInTheDocument();
+    expect(screen.queryByTestId('cinematic-footer')).not.toBeInTheDocument();
+  });
+
+  it('renders the resource detail page at /resource/:resourceId', async () => {
+    renderRoutesAt('/resource/resource-1');
+
+    expect(await screen.findByText('Resource Detail Page')).toBeInTheDocument();
     expect(screen.getByTestId('site-footer')).toBeInTheDocument();
     expect(screen.queryByTestId('cinematic-footer')).not.toBeInTheDocument();
   });

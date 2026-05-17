@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { getErrorDataError, getErrorMessage } from '@/lib/error';
 import { resolvePublicSiteUrl } from '@/lib/publicSiteConfig';
 
-export type SavingState = 'auth' | 'login' | 'signup' | 'display' | null;
+export type SavingState = 'auth' | 'login' | 'signup' | 'resource_detail' | 'display' | null;
 
 export const useSystemSettingsController = () => {
   const { token } = useAuthStore();
@@ -14,6 +14,7 @@ export const useSystemSettingsController = () => {
   const [enableUserAuth, setEnableUserAuth] = useState<boolean>(true);
   const [enableUserLogin, setEnableUserLogin] = useState<boolean>(true);
   const [enableUserSignup, setEnableUserSignup] = useState<boolean>(true);
+  const [enableResourceDetailPage, setEnableResourceDetailPage] = useState<boolean>(false);
   const [publicSiteUrl, setPublicSiteUrl] = useState<string>(resolvePublicSiteUrl());
   
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -24,6 +25,7 @@ export const useSystemSettingsController = () => {
     enableUserAuth: true,
     enableUserLogin: true,
     enableUserSignup: true,
+    enableResourceDetailPage: false,
     publicSiteUrl: resolvePublicSiteUrl(),
   });
 
@@ -36,12 +38,14 @@ export const useSystemSettingsController = () => {
       setEnableUserAuth(settings.enable_user_auth);
       setEnableUserLogin(settings.enable_user_login);
       setEnableUserSignup(settings.enable_user_signup);
+      setEnableResourceDetailPage(settings.enable_resource_detail_page);
       setPublicSiteUrl(resolvePublicSiteUrl(settings));
       
       setOriginalValues({
         enableUserAuth: settings.enable_user_auth,
         enableUserLogin: settings.enable_user_login,
         enableUserSignup: settings.enable_user_signup,
+        enableResourceDetailPage: settings.enable_resource_detail_page,
         publicSiteUrl: resolvePublicSiteUrl(settings),
       });
     } catch (error) {
@@ -125,6 +129,27 @@ export const useSystemSettingsController = () => {
     }
   };
 
+  const handleToggleResourceDetailPage = async (checked: boolean) => {
+    if (!token) return;
+
+    setEnableResourceDetailPage(checked);
+    setIsSaving('resource_detail');
+
+    try {
+      await SystemSettingsService.updateSettings(token, {
+        enable_resource_detail_page: checked,
+      });
+      setOriginalValues(prev => ({ ...prev, enableResourceDetailPage: checked }));
+      toast.success(checked ? '已启用资源详情页展示' : '已禁用资源详情页展示');
+    } catch (error) {
+      console.error('保存系统设置失败:', error);
+      setEnableResourceDetailPage(originalValues.enableResourceDetailPage);
+      toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
+    } finally {
+      setIsSaving(null);
+    }
+  };
+
   const handleSaveDisplayConfig = async () => {
     if (!token) return;
 
@@ -154,6 +179,7 @@ export const useSystemSettingsController = () => {
       enableUserAuth,
       enableUserLogin,
       enableUserSignup,
+      enableResourceDetailPage,
       publicSiteUrl,
       isLoading,
       isSaving,
@@ -163,6 +189,7 @@ export const useSystemSettingsController = () => {
       handleToggleAuth,
       handleToggleLogin,
       handleToggleSignup,
+      handleToggleResourceDetailPage,
       handleSaveDisplayConfig,
     }
   };

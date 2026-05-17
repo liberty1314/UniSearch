@@ -15,6 +15,7 @@ export interface SystemSettingsResponse {
     enable_user_auth: boolean;      // 总开关：是否启用用户认证功能
     enable_user_login: boolean;     // 是否启用用户登录功能
     enable_user_signup: boolean;    // 是否启用用户注册功能
+    enable_resource_detail_page: boolean; // 是否启用资源详情页展示
     public_site_url: string;        // 公开站点 URL（为空时由前端环境变量兜底）
     default_copy_format_template: string; // API Key 复制默认模板
 }
@@ -73,6 +74,7 @@ export class SystemSettingsService {
             enable_user_auth?: boolean;
             enable_user_login?: boolean;
             enable_user_signup?: boolean;
+            enable_resource_detail_page?: boolean;
             public_site_url?: string;
             default_copy_format_template?: string;
         }

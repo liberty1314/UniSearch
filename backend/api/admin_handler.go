@@ -12,6 +12,7 @@ import (
 	"unisearch/model"
 	"unisearch/plugin"
 	"unisearch/service"
+	"unisearch/util"
 )
 
 // AdminLoginRequest 管理员登录请求
@@ -243,6 +244,7 @@ type PluginInfoResponse struct {
 	Resource        model.ResourceDescriptor  `json:"resource"`
 	UI              model.PluginUIMetadata    `json:"ui"`
 	ManifestStatus  string                    `json:"manifest_status"`
+	Tags            []string                  `json:"tags,omitempty"`
 }
 
 // SystemStatsResponse 系统统计响应
@@ -356,6 +358,7 @@ func GetSystemInfoHandler(searchService *service.SearchService, userService *ser
 				description,
 				"",
 				manifest,
+				nil,
 			))
 		}
 
@@ -381,6 +384,7 @@ func GetSystemInfoHandler(searchService *service.SearchService, userService *ser
 				cp.Description,
 				cp.URL,
 				manifest,
+				cp.Tags,
 			))
 		}
 
@@ -439,7 +443,7 @@ func GetSystemInfoHandler(searchService *service.SearchService, userService *ser
 	}
 }
 
-func buildPluginInfoResponse(name string, priority int, status string, pluginType string, isEnabled bool, description string, url string, manifest model.PluginManifest) PluginInfoResponse {
+func buildPluginInfoResponse(name string, priority int, status string, pluginType string, isEnabled bool, description string, url string, manifest model.PluginManifest, tags []string) PluginInfoResponse {
 	if strings.TrimSpace(description) == "" {
 		description = manifest.Description
 	}
@@ -462,6 +466,7 @@ func buildPluginInfoResponse(name string, priority int, status string, pluginTyp
 		Resource:        manifest.Resource,
 		UI:              manifest.UI,
 		ManifestStatus:  manifest.ManifestStatus,
+		Tags:            append([]string(nil), tags...),
 	}
 }
 
@@ -934,6 +939,7 @@ type CreatePluginRequest struct {
 	Version      string   `json:"version"`
 	Category     string   `json:"category"`
 	Capabilities []string `json:"capabilities"`
+	Tags         []string `json:"tags"`
 }
 
 // CreatePluginHandler 创建插件
@@ -959,6 +965,7 @@ func CreatePluginHandler(pluginHealthService *service.PluginHealthService, plugi
 			Version:      req.Version,
 			Category:     req.Category,
 			Capabilities: req.Capabilities,
+			Tags:         util.NormalizeTags(req.Tags),
 		})
 
 		if err != nil {
@@ -997,12 +1004,20 @@ func CreatePluginHandler(pluginHealthService *service.PluginHealthService, plugi
 			Version:      req.Version,
 			Category:     req.Category,
 			Capabilities: req.Capabilities,
+			Tags:         util.NormalizeTags(req.Tags),
 		}
 		manifest := buildCustomPluginManifest(createdPlugin)
+
+		if adminTagService != nil {
+			if err := adminTagService.EnsureTags(model.AdminTagScopePlugin, createdPlugin.Tags); err != nil {
+				log.Printf("⚠️  同步插件标签词库失败(%s): %v", req.Name, err)
+			}
+		}
+
 		c.JSON(200, gin.H{
 			"success": true,
 			"message": "插件添加成功",
-			"plugin":  buildPluginInfoResponse(req.Name, req.Priority, "custom", "custom", true, req.Description, req.URL, manifest),
+			"plugin":  buildPluginInfoResponse(req.Name, req.Priority, "custom", "custom", true, req.Description, req.URL, manifest, createdPlugin.Tags),
 		})
 	}
 }
@@ -1075,6 +1090,7 @@ type UpdatePluginRequest struct {
 	Version      string   `json:"version"`
 	Category     string   `json:"category"`
 	Capabilities []string `json:"capabilities"`
+	Tags         []string `json:"tags"`
 }
 
 // UpdatePluginHandler 更新插件
@@ -1124,6 +1140,7 @@ func UpdatePluginHandler(pluginHealthService *service.PluginHealthService, plugi
 		if req.Capabilities != nil {
 			updatedPlugin.Capabilities = req.Capabilities
 		}
+		updatedPlugin.Tags = util.NormalizeTags(req.Tags)
 
 		// 更新自定义插件配置
 		err := customPlugins.UpdatePlugin(pluginName, updatedPlugin)
@@ -1156,10 +1173,17 @@ func UpdatePluginHandler(pluginHealthService *service.PluginHealthService, plugi
 		}
 
 		manifest := buildCustomPluginManifest(updatedPlugin)
+
+		if adminTagService != nil {
+			if err := adminTagService.EnsureTags(model.AdminTagScopePlugin, updatedPlugin.Tags); err != nil {
+				log.Printf("⚠️  同步插件标签词库失败(%s): %v", pluginName, err)
+			}
+		}
+
 		c.JSON(200, gin.H{
 			"success": true,
 			"message": "插件更新成功",
-			"plugin":  buildPluginInfoResponse(pluginName, updatedPlugin.Priority, "custom", "custom", updatedPlugin.Enabled, updatedPlugin.Description, updatedPlugin.URL, manifest),
+			"plugin":  buildPluginInfoResponse(pluginName, updatedPlugin.Priority, "custom", "custom", updatedPlugin.Enabled, updatedPlugin.Description, updatedPlugin.URL, manifest, updatedPlugin.Tags),
 		})
 	}
 }

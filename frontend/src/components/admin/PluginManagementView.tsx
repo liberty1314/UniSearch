@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   Activity,
   ArrowUpRight,
@@ -19,6 +19,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ApplePagination } from './ApplePagination';
+import { AdminTagMultiSelect } from './AdminTagMultiSelect';
 import { PluginAddDialog } from './PluginAddDialog';
 import {
   AdminContentCard,
@@ -33,6 +34,7 @@ import {
   AdminWorkspaceHero,
   AdminWorkspacePageFrame,
 } from './AdminWorkspacePageFrame';
+import { AdminSelectField } from './AdminSelectField';
 import {
   pluginStatusBadgeClass,
   pluginStatusText,
@@ -74,6 +76,30 @@ export const PluginManagementView: React.FC = () => {
   const activePlugin = controller.activeEditingPlugin || controller.activeDetailPlugin;
   const drawerOpen = Boolean(activePlugin);
   const isEditing = Boolean(controller.activeEditingPlugin);
+
+  useEffect(() => {
+    if (controller.activeEditingPlugin) {
+      return;
+    }
+    if (controller.pagedItems.length === 0) {
+      if (controller.detailPluginName !== null) {
+        controller.setDetailPluginName(null);
+      }
+      return;
+    }
+
+    const hasActiveOnCurrentPage = controller.pagedItems.some(
+      (plugin) => plugin.name === controller.detailPluginName
+    );
+    if (!hasActiveOnCurrentPage) {
+      controller.setDetailPluginName(controller.pagedItems[0].name);
+    }
+  }, [
+    controller.activeEditingPlugin,
+    controller.detailPluginName,
+    controller.pagedItems,
+    controller.setDetailPluginName,
+  ]);
 
   const closeDrawer = () => {
     controller.setDetailPluginName(null);
@@ -194,59 +220,70 @@ export const PluginManagementView: React.FC = () => {
         )}
         filters={(
           <AdminFilterSurface>
-            <div className="flex flex-col gap-4">
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,0.92fr),minmax(0,0.92fr),minmax(0,0.92fr),minmax(0,0.92fr),minmax(0,0.92fr),minmax(0,1.35fr)]">
               <AdminStatusFilter
                 options={PLUGIN_STATUS_OPTIONS}
                 value={controller.statusFilter}
                 onChange={(v) => controller.setStatusFilter(v as typeof controller.statusFilter)}
+                ariaLabel="插件状态筛选"
               />
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr),repeat(3,minmax(0,0.8fr)),auto]">
-                <AdminSearchInput
-                  value={controller.searchKeyword}
-                  onChange={controller.setSearchKeyword}
-                  placeholder="搜索名称、描述、能力或标签"
-                />
-                <select
-                  value={controller.sourceFilter}
-                  onChange={(event) => controller.setSourceFilter(event.target.value as 'all' | 'local' | 'remote')}
-                  className="rounded-[1.1rem] border border-slate-200/70 bg-white/70 px-3 py-2 text-sm dark:border-white/10 dark:bg-slate-900/40"
-                >
-                  <option value="all">全部来源</option>
-                  <option value="local">本地已安装</option>
-                  <option value="remote">远程市场</option>
-                </select>
-                <select
-                  value={controller.categoryFilter}
-                  onChange={(event) => controller.setCategoryFilter(event.target.value)}
-                  className="rounded-[1.1rem] border border-slate-200/70 bg-white/70 px-3 py-2 text-sm dark:border-white/10 dark:bg-slate-900/40"
-                >
-                  {controller.availableCategories.map((item) => (
-                    <option key={item} value={item}>
-                      {item === 'all' ? '全部分类' : item}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={controller.capabilityFilter}
-                  onChange={(event) => controller.setCapabilityFilter(event.target.value)}
-                  className="rounded-[1.1rem] border border-slate-200/70 bg-white/70 px-3 py-2 text-sm dark:border-white/10 dark:bg-slate-900/40"
-                >
-                  {controller.availableCapabilities.map((item) => (
-                    <option key={item} value={item}>
-                      {item === 'all' ? '全部能力' : item}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={controller.handleToggleSelectFiltered}
-                  disabled={controller.filteredItems.length === 0 || controller.isOperationBusy}
-                  className="rounded-full"
-                >
-                  {controller.isAllFilteredSelected ? '清空筛选选择' : '全选当前筛选'}
-                </Button>
-              </div>
+              <AdminSelectField
+                value={controller.sourceFilter}
+                onChange={(value) => controller.setSourceFilter(value as 'all' | 'local' | 'remote')}
+                ariaLabel="插件来源筛选"
+                options={[
+                  { value: 'all', label: '全部来源' },
+                  { value: 'local', label: '本地已安装' },
+                  { value: 'remote', label: '远程市场' },
+                ]}
+              />
+              <AdminSelectField
+                value={controller.categoryFilter}
+                onChange={controller.setCategoryFilter}
+                ariaLabel="插件分类筛选"
+                options={controller.availableCategories.map((item) => ({
+                  value: item,
+                  label: item === 'all' ? '全部分类' : item,
+                }))}
+              />
+              <AdminSelectField
+                value={controller.capabilityFilter}
+                onChange={controller.setCapabilityFilter}
+                ariaLabel="插件能力筛选"
+                options={controller.availableCapabilities.map((item) => ({
+                  value: item,
+                  label: item === 'all' ? '全部能力' : item,
+                }))}
+              />
+              <AdminTagMultiSelect
+                scope="plugin"
+                value={controller.selectedTagFilters}
+                options={controller.tagOptions}
+                loading={controller.isTagOptionsLoading}
+                creating={controller.isCreatingTag}
+                updatingTagId={controller.updatingTagId}
+                deletingTagId={controller.deletingTagId}
+                onChange={controller.setSelectedTagFilters}
+                onCreateTag={controller.handleCreateTag}
+                onUpdateTag={controller.handleUpdateTag}
+                onDeleteTag={controller.handleDeleteTag}
+                allowCreate
+                allowManageOptions
+                showSelectedSummary={false}
+                autoSelectCreatedTag={false}
+                maxSelectedVisible={2}
+                searchPlaceholder="搜索插件标签筛选"
+                emptyMessage="暂无插件标签词库"
+                placeholder="全部标签"
+                triggerAriaLabel="插件标签筛选"
+                triggerTestId="plugin-tag-filter-trigger"
+                panelTestId="plugin-tag-filter-panel"
+              />
+              <AdminSearchInput
+                value={controller.searchKeyword}
+                onChange={controller.setSearchKeyword}
+                placeholder="搜索名称、描述、能力或标签"
+              />
             </div>
           </AdminFilterSurface>
         )}
@@ -257,6 +294,16 @@ export const PluginManagementView: React.FC = () => {
             onClear={controller.clearSelectedPlugins}
             actions={(
               <>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => controller.handleToggleSelectFiltered()}
+                  disabled={controller.filteredItems.length === 0 || controller.isOperationBusy}
+                  className="rounded-full"
+                >
+                  {controller.isAllFilteredSelected ? '清空筛选选择' : '全选当前筛选'}
+                </Button>
                 <Button type="button" size="sm" variant="outline" onClick={() => void controller.handleBatchTogglePlugins(true)} className="rounded-full">
                   批量启用
                 </Button>
@@ -338,7 +385,7 @@ export const PluginManagementView: React.FC = () => {
                             {(plugin.capabilities || []).slice(0, 3).map((capability) => (
                               <Badge key={capability} variant="outline">{capability}</Badge>
                             ))}
-                            {(plugin.tags || []).slice(0, 2).map((tag) => (
+                            {(plugin.tags || []).slice(0, 1).map((tag) => (
                               <Badge key={tag} variant="outline">{tag}</Badge>
                             ))}
                           </div>
@@ -483,6 +530,27 @@ export const PluginManagementView: React.FC = () => {
                       onChange={(event) => controller.setEditForm((prev) => ({ ...prev, capabilitiesText: event.target.value }))}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="plugin-tags">标签</Label>
+                    <div id="plugin-tags">
+                      <AdminTagMultiSelect
+                        scope="plugin"
+                        value={controller.editForm.tags}
+                        options={controller.tagOptions}
+                        loading={controller.isTagOptionsLoading}
+                        creating={controller.isCreatingTag}
+                        updatingTagId={controller.updatingTagId}
+                        deletingTagId={controller.deletingTagId}
+                        onChange={(nextTags) => controller.setEditForm((prev) => ({ ...prev, tags: nextTags }))}
+                        onCreateTag={controller.handleCreateTag}
+                        onUpdateTag={controller.handleUpdateTag}
+                        onDeleteTag={controller.handleDeleteTag}
+                        allowManageOptions
+                        searchPlaceholder="搜索或新增插件标签"
+                        placeholder="选择一个插件标签，或搜索后新增"
+                      />
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4 text-sm">
@@ -509,7 +577,7 @@ export const PluginManagementView: React.FC = () => {
                       {(activePlugin.capabilities || []).map((capability) => (
                         <Badge key={capability} variant="outline">{capability}</Badge>
                       ))}
-                      {(activePlugin.tags || []).map((tag) => (
+                      {(activePlugin.tags || []).slice(0, 1).map((tag) => (
                         <Badge key={tag} variant="secondary">{tag}</Badge>
                       ))}
                     </div>
@@ -535,6 +603,11 @@ export const PluginManagementView: React.FC = () => {
         isAdding={controller.isAdding}
         isTestingUrl={controller.isTestingUrl}
         addForm={controller.addForm}
+        tagOptions={controller.tagOptions}
+        isTagOptionsLoading={controller.isTagOptionsLoading}
+        isCreatingTag={controller.isCreatingTag}
+        updatingTagId={controller.updatingTagId}
+        deletingTagId={controller.deletingTagId}
         urlTestResult={controller.urlTestResult}
         urlTestMessage={controller.urlTestMessage}
         onOpenChange={controller.setAddDialogOpen}
@@ -548,6 +621,9 @@ export const PluginManagementView: React.FC = () => {
             return next;
           });
         }}
+        onCreateTag={controller.handleCreateTag}
+        onUpdateTag={controller.handleUpdateTag}
+        onDeleteTag={controller.handleDeleteTag}
         onAddFormKeyDown={controller.handleAddFormKeyDown}
         onReset={controller.resetAddDialogState}
         onTestURL={() => void controller.handleTestAddPluginURL()}

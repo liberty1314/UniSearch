@@ -11,6 +11,7 @@ export type AddPluginForm = {
   version: string;
   category: string;
   capabilitiesText: string;
+  tags: string[];
 };
 
 export type EditPluginForm = {
@@ -20,6 +21,7 @@ export type EditPluginForm = {
   version: string;
   category: string;
   capabilitiesText: string;
+  tags: string[];
 };
 
 export const PAGE_SIZE = 10;
@@ -52,6 +54,7 @@ export const createEmptyAddPluginForm = (): AddPluginForm => ({
   version: '0.0.0',
   category: 'search',
   capabilitiesText: 'resource.search',
+  tags: [],
 });
 
 export const parseCapabilitiesInput = (value: string): string[] =>

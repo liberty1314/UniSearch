@@ -17,6 +17,7 @@ type CustomPlugin struct {
 	Version      string   `json:"version,omitempty"`
 	Category     string   `json:"category,omitempty"`
 	Capabilities []string `json:"capabilities,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
 }
 
 // CustomPluginsConfig 自定义插件配置管理
@@ -136,6 +137,17 @@ func (c *CustomPluginsConfig) GetPlugins() []CustomPlugin {
 	result := make([]CustomPlugin, len(c.Plugins))
 	copy(result, c.Plugins)
 	return result
+}
+
+// SetPlugins 直接替换全部自定义插件配置，用于词库同步场景。
+func (c *CustomPluginsConfig) SetPlugins(plugins []CustomPlugin) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	next := make([]CustomPlugin, len(plugins))
+	copy(next, plugins)
+	c.Plugins = next
+	return c.saveWithoutLock()
 }
 
 // GetEnabledPlugins 获取启用的插件

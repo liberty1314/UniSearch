@@ -57,6 +57,29 @@ describe("sortResources", () => {
     expect(result[2].resource.id).toBe("magnet");
   });
 
+  it("prioritizes exact phrase matches before fuzzy matches, then sorts exact matches by time", () => {
+    const result = sortResources(
+      [
+        makeResource("fuzzy-newer", "2026-05-17T00:00:00.000Z", CloudType.QUARK, {
+          title: "速度：激情特别篇",
+        }),
+        makeResource("exact-older", "2026-05-10T00:00:00.000Z", CloudType.QUARK, {
+          title: "速度与激情8",
+        }),
+        makeResource("exact-newer", "2026-05-16T00:00:00.000Z", CloudType.BAIDU, {
+          title: "速度与激情10",
+        }),
+      ],
+      "速度与激情",
+    );
+
+    expect(result.map((item) => item.resource.id)).toEqual([
+      "exact-newer",
+      "exact-older",
+      "fuzzy-newer",
+    ]);
+  });
+
   it("keeps resources without links and marks their cloud type as target type", () => {
     const result = sortResources([
       makeResource("detail-only", null, "", {

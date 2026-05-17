@@ -13,6 +13,7 @@ func AutoMigrate() error {
 
 	err := DB.AutoMigrate(
 		&model.User{},
+		&model.AdminTag{},              // 创建 admin_tags 表（后台标签词库）
 		&model.SystemSettings{},        // 创建 system_settings 表
 		&model.RefreshToken{},          // 创建 refresh_tokens 表（记住密码功能）
 		&model.Secret{},                // 创建 secrets 表（密钥管理）
@@ -31,6 +32,7 @@ func AutoMigrate() error {
 
 	log.Println("✓ 数据库迁移完成")
 	log.Println("  - users 表已创建/更新")
+	log.Println("  - admin_tags 表已创建/更新")
 	log.Println("  - system_settings 表已创建/更新")
 	log.Println("  - refresh_tokens 表已创建/更新")
 	log.Println("  - secrets 表已创建/更新")

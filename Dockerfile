@@ -43,6 +43,7 @@ RUN mkdir -p /app/backend /app/cache /var/log/supervisor
 # 从构建阶段复制产物
 COPY --from=backend-builder /app/backend/unisearch /app/backend/unisearch
 COPY --from=backend-builder /app/backend/custom_plugins.json /app/backend/custom_plugins.json
+COPY --from=backend-builder /app/backend/plugin_market.default.json /app/backend/plugin_market.default.json
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
 
 # 复制配置文件

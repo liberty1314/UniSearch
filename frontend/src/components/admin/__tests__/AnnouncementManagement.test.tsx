@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnnouncementManagement } from '../AnnouncementManagement';
@@ -84,7 +84,9 @@ describe('AnnouncementManagement', () => {
     expect(screen.queryByText('公告 11')).not.toBeInTheDocument();
 
     const pageSizeSelect = screen.getByRole('combobox', { name: '每页条数' });
-    await userEvent.selectOptions(pageSizeSelect, '20');
+    await userEvent.click(pageSizeSelect);
+    const listbox = await screen.findByRole('listbox');
+    await userEvent.click(within(listbox).getByRole('option', { name: '20 条' }));
 
     expect(await screen.findByText('公告 11')).toBeInTheDocument();
   });

@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type {
+  AdminTagListResponse,
+  AdminTagOption,
+  AdminTagScope,
   AdminDialogMode,
   BatchPluginOperationResponse,
+  CreateAdminTagRequest,
+  CreateAdminTagResponse,
+  DeleteAdminTagResponse,
   CreatePluginResponse,
   CreatePluginRequest,
   PluginCatalogInstallRequest,
@@ -11,6 +17,8 @@ import type {
   PluginInfo,
   TestURLRequest,
   TestURLResponse,
+  UpdateAdminTagRequest,
+  UpdateAdminTagResponse,
   UpdatePluginRequest,
   UpdatePluginResponse,
 } from '@/types/api';
@@ -23,6 +31,14 @@ import {
   updateEditedPlugin,
   updatePluginEnabledState,
 } from '@/components/admin/pluginManageStateUtils';
+import {
+  matchesAnyTagFilter,
+  normalizeSingleTagSelection,
+  removeTagName,
+  removeTagOption,
+  replaceTagName,
+  replaceTagOption,
+} from '@/components/admin/adminTagUtils';
 import {
   isPluginMatchesStatusFilter,
   type UnifiedStatusFilter,
@@ -90,6 +106,12 @@ export type UsePluginManageControllerResult = {
   capabilityFilter: string;
   availableCategories: string[];
   availableCapabilities: string[];
+  tagOptions: AdminTagOption[];
+  isTagOptionsLoading: boolean;
+  isCreatingTag: boolean;
+  updatingTagId: number | null;
+  deletingTagId: number | null;
+  selectedTagFilters: string[];
   selectedPluginNames: Set<string>;
   selectedCount: number;
   selectedPluginPreviewText: string;
@@ -107,6 +129,7 @@ export type UsePluginManageControllerResult = {
   setSourceFilter: (value: 'all' | 'local' | 'remote') => void;
   setCategoryFilter: (value: string) => void;
   setCapabilityFilter: (value: string) => void;
+  setSelectedTagFilters: (value: string[]) => void;
   setAddDialogOpen: (open: boolean) => void;
   setAddForm: React.Dispatch<React.SetStateAction<AddPluginForm>>;
   setUrlTestResult: (status: URLTestStatus) => void;
@@ -134,7 +157,12 @@ export type UsePluginManageControllerResult = {
   handleBatchDeletePlugins: () => Promise<void>;
   handleSaveEdit: () => Promise<void>;
   handleInstallPlugin: (plugin: PluginInfo) => Promise<void>;
+  handleCreateTag: (name: string) => Promise<AdminTagOption | null>;
+  handleUpdateTag: (id: number, name: string) => Promise<AdminTagOption | null>;
+  handleDeleteTag: (id: number) => Promise<boolean>;
 };
+
+const PLUGIN_TAG_SCOPE: AdminTagScope = 'plugin';
 
 export function usePluginManageController({
   isOpen,
@@ -156,6 +184,12 @@ export function usePluginManageController({
   const [sourceFilter, setSourceFilter] = useState<'all' | 'local' | 'remote'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [capabilityFilter, setCapabilityFilter] = useState('all');
+  const [tagOptions, setTagOptions] = useState<AdminTagOption[]>([]);
+  const [isTagOptionsLoading, setIsTagOptionsLoading] = useState(false);
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
+  const [updatingTagId, setUpdatingTagId] = useState<number | null>(null);
+  const [deletingTagId, setDeletingTagId] = useState<number | null>(null);
+  const [selectedTagFilters, setSelectedTagFiltersState] = useState<string[]>([]);
   const [catalogVersion, setCatalogVersion] = useState('local');
   const [pageSize, setPageSize] = useState(10);
   const {
@@ -195,6 +229,27 @@ export function usePluginManageController({
     void fetchCatalog('all');
   }, [fetchCatalog, isOpen]);
 
+  const fetchTagOptions = useCallback(async () => {
+    setIsTagOptionsLoading(true);
+    try {
+      const response = await requestAuthedJson<AdminTagListResponse>(
+        `/api/admin/tags?scope=${PLUGIN_TAG_SCOPE}`,
+        token,
+        '获取插件标签词库失败'
+      );
+      setTagOptions(response.items || []);
+    } catch (error) {
+      toast.error(getRequestErrorMessage(error, '获取插件标签词库出错'));
+    } finally {
+      setIsTagOptionsLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    void fetchTagOptions();
+  }, [fetchTagOptions, isOpen]);
+
   useEffect(() => {
     if (isOpen) return;
     setHasPendingChanges(false);
@@ -204,6 +259,8 @@ export function usePluginManageController({
     setSourceFilter('all');
     setCategoryFilter('all');
     setCapabilityFilter('all');
+    setTagOptions([]);
+    setSelectedTagFiltersState([]);
     setCatalogVersion('local');
   }, [clearTestingStatus, isOpen]);
 
@@ -244,8 +301,11 @@ export function usePluginManageController({
     if (capabilityFilter !== 'all' && !(plugin.capabilities || []).includes(capabilityFilter)) {
       return false;
     }
+    if (!matchesAnyTagFilter(plugin.tags, selectedTagFilters)) {
+      return false;
+    }
     return true;
-  }), [capabilityFilter, categoryFilter, localPlugins, sourceFilter]);
+  }), [capabilityFilter, categoryFilter, localPlugins, selectedTagFilters, sourceFilter]);
 
   const getPluginKey = useCallback((plugin: PluginInfo) => plugin.name, []);
   const matchesPluginStatus = useCallback(
@@ -346,6 +406,7 @@ export function usePluginManageController({
         version,
         category,
         capabilities,
+        tags: normalizeSingleTagSelection(dialogState.addForm.tags),
       };
 
       const response = await requestAuthedJson<CreatePluginResponse>('/api/admin/plugins', token, '添加插件失败', {
@@ -365,6 +426,7 @@ export function usePluginManageController({
         version,
         category,
         capabilities: capabilities.length ? capabilities : ['resource.search'],
+        tags: normalizeSingleTagSelection(dialogState.addForm.tags),
         manifest_status: 'generated',
       };
       setLocalPlugins((prev) =>
@@ -661,6 +723,7 @@ export function usePluginManageController({
         version: dialogState.editForm.version.trim() || '0.0.0',
         category: dialogState.editForm.category.trim() || 'search',
         capabilities: parseCapabilitiesInput(dialogState.editForm.capabilitiesText),
+        tags: normalizeSingleTagSelection(dialogState.editForm.tags),
       };
 
       const response = await requestAuthedJson<UpdatePluginResponse>(
@@ -717,6 +780,118 @@ export function usePluginManageController({
     }
   }, [fetchCatalog, onSuccess, token]);
 
+  const handleCreateTag = useCallback(async (name: string) => {
+    setIsCreatingTag(true);
+    try {
+      const payload: CreateAdminTagRequest = {
+        scope: PLUGIN_TAG_SCOPE,
+        name,
+      };
+      const response = await requestAuthedJson<CreateAdminTagResponse>(
+        '/api/admin/tags',
+        token,
+        '创建插件标签失败',
+        {
+          method: 'POST',
+          body: payload,
+        }
+      );
+      setTagOptions((prev) => [...prev, response.item].sort((left, right) => left.name.localeCompare(right.name, 'zh-CN', { sensitivity: 'base' })));
+      toast.success(`标签 ${response.item.name} 已创建`);
+      return response.item;
+    } catch (error) {
+      toast.error(getRequestErrorMessage(error, '创建插件标签出错'));
+      return null;
+    } finally {
+      setIsCreatingTag(false);
+    }
+  }, [token]);
+
+  const handleUpdateTag = useCallback(async (id: number, name: string) => {
+    setUpdatingTagId(id);
+    try {
+      const payload: UpdateAdminTagRequest = { name };
+      const response = await requestAuthedJson<UpdateAdminTagResponse>(
+        `/api/admin/tags/${id}`,
+        token,
+        '更新插件标签失败',
+        {
+          method: 'PUT',
+          body: payload,
+        }
+      );
+      const currentOption = tagOptions.find((option) => option.id === id);
+      const previousName = currentOption?.name || '';
+
+      setTagOptions((prev) => replaceTagOption(prev, response.item));
+      if (previousName) {
+        setSelectedTagFiltersState((prev) => normalizeSingleTagSelection(replaceTagName(prev, previousName, response.item.name)));
+        dialogState.setAddForm((prev) => ({
+          ...prev,
+          tags: normalizeSingleTagSelection(replaceTagName(prev.tags, previousName, response.item.name)),
+        }));
+        dialogState.setEditForm((prev) => ({
+          ...prev,
+          tags: normalizeSingleTagSelection(replaceTagName(prev.tags, previousName, response.item.name)),
+        }));
+        setLocalPlugins((prev) => prev.map((plugin) => ({
+          ...plugin,
+          tags: replaceTagName(plugin.tags || [], previousName, response.item.name),
+        })));
+      }
+      toast.success('插件标签已更新');
+      return response.item;
+    } catch (error) {
+      toast.error(getRequestErrorMessage(error, '更新插件标签出错'));
+      return null;
+    } finally {
+      setUpdatingTagId(null);
+    }
+  }, [dialogState, tagOptions, token]);
+
+  const handleDeleteTag = useCallback(async (id: number) => {
+    setDeletingTagId(id);
+    try {
+      const currentOption = tagOptions.find((option) => option.id === id);
+      await requestAuthedJson<DeleteAdminTagResponse>(
+        `/api/admin/tags/${id}`,
+        token,
+        '删除插件标签失败',
+        {
+          method: 'DELETE',
+        }
+      );
+      setTagOptions((prev) => removeTagOption(prev, id));
+      if (currentOption) {
+        setSelectedTagFiltersState((prev) => normalizeSingleTagSelection(removeTagName(prev, currentOption.name)));
+        dialogState.setAddForm((prev) => ({
+          ...prev,
+          tags: normalizeSingleTagSelection(removeTagName(prev.tags, currentOption.name)),
+        }));
+        dialogState.setEditForm((prev) => ({
+          ...prev,
+          tags: normalizeSingleTagSelection(removeTagName(prev.tags, currentOption.name)),
+        }));
+        setLocalPlugins((prev) => prev.map((plugin) => ({
+          ...plugin,
+          tags: removeTagName(plugin.tags || [], currentOption.name),
+        })));
+      }
+      toast.success('插件标签已删除');
+      return true;
+    } catch (error) {
+      toast.error(getRequestErrorMessage(error, '删除插件标签出错'));
+      return false;
+    } finally {
+      setDeletingTagId(null);
+    }
+  }, [dialogState, tagOptions, token]);
+
+  const setSelectedTagFilters = useCallback((value: string[]) => {
+    setSelectedTagFiltersState(value);
+    setCurrentPage(1);
+  }, [setCurrentPage]);
+
   return {
     isReadOnly,
     localPlugins,
@@ -747,6 +922,12 @@ export function usePluginManageController({
     capabilityFilter,
     availableCategories,
     availableCapabilities,
+    tagOptions,
+    isTagOptionsLoading,
+    isCreatingTag,
+    updatingTagId,
+    deletingTagId,
+    selectedTagFilters,
     selectedPluginNames,
     selectedCount,
     selectedPluginPreviewText,
@@ -764,6 +945,7 @@ export function usePluginManageController({
     setSourceFilter,
     setCategoryFilter,
     setCapabilityFilter,
+    setSelectedTagFilters,
     setAddDialogOpen: dialogState.setAddDialogOpen,
     setAddForm: dialogState.setAddForm,
     setUrlTestResult: dialogState.setUrlTestResult,
@@ -791,5 +973,8 @@ export function usePluginManageController({
     handleBatchDeletePlugins,
     handleSaveEdit,
     handleInstallPlugin,
+    handleCreateTag,
+    handleUpdateTag,
+    handleDeleteTag,
   };
 }

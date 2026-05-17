@@ -23,6 +23,14 @@ beforeAll(() => {
 
   vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
 
+  class MockResizeObserver {
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+  }
+
+  vi.stubGlobal('ResizeObserver', MockResizeObserver);
+
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     configurable: true,
     writable: true,
@@ -36,6 +44,19 @@ beforeAll(() => {
       fillStyle: '',
     })),
   });
+
+  if (!HTMLElement.prototype.scrollIntoView) {
+    HTMLElement.prototype.scrollIntoView = vi.fn();
+  }
+  if (!HTMLElement.prototype.hasPointerCapture) {
+    HTMLElement.prototype.hasPointerCapture = vi.fn(() => false);
+  }
+  if (!HTMLElement.prototype.setPointerCapture) {
+    HTMLElement.prototype.setPointerCapture = vi.fn();
+  }
+  if (!HTMLElement.prototype.releasePointerCapture) {
+    HTMLElement.prototype.releasePointerCapture = vi.fn();
+  }
 });
 
 afterEach(() => {

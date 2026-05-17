@@ -59,6 +59,7 @@ func TestSearchResponseBuilderBuildsResourceObjectsAndFacets(t *testing.T) {
 		{
 			UniqueID: "builderpriority-1",
 			Title:    "普通条目",
+			Content:  "完全无关的内容",
 			Links:    []model.Link{{URL: "https://pan.quark.cn/s/high"}},
 		},
 		{
@@ -73,7 +74,8 @@ func TestSearchResponseBuilderBuildsResourceObjectsAndFacets(t *testing.T) {
 		},
 		{
 			Channel:  "share",
-			Title:    "TG 新结果",
+			Title:    "#电影",
+			Content:  "仙逆剧场版\n链接：https://pan.quark.cn/s/tg",
 			Datetime: now.Add(-2 * time.Hour),
 			Links:    []model.Link{{URL: "https://pan.quark.cn/s/tg"}},
 		},
@@ -82,22 +84,32 @@ func TestSearchResponseBuilderBuildsResourceObjectsAndFacets(t *testing.T) {
 		ResultType: "results",
 	})
 
-	if response.Total != 3 {
-		t.Fatalf("expected 3 resources, got %d", response.Total)
+	if response.Total != 2 {
+		t.Fatalf("expected 2 resources, got %d", response.Total)
 	}
-	if len(response.Resources) != 3 {
-		t.Fatalf("expected 3 resource payload items, got %d", len(response.Resources))
-	}
-	if response.Resources[0].ID != "builderpriority-1" {
-		t.Fatalf("expected priority plugin resource to rank first, got %q", response.Resources[0].ID)
+	if len(response.Resources) != 2 {
+		t.Fatalf("expected 2 resource payload items, got %d", len(response.Resources))
 	}
 	for _, resource := range response.Resources {
-		if resource.ID == "ordinary-1" {
-			t.Fatal("expected low-signal resource to be filtered from display list")
+		if resource.ID == "ordinary-1" || resource.ID == "builderpriority-1" {
+			t.Fatal("expected unrelated resources to be filtered from display list")
 		}
 	}
-	if response.Facets.CloudTypes["quark"] != 3 {
-		t.Fatalf("expected quark facet count 3, got %#v", response.Facets.CloudTypes)
+	var tgResource *model.ResourceObject
+	for i := range response.Resources {
+		if response.Resources[i].Source.Type == "tg" {
+			tgResource = &response.Resources[i]
+			break
+		}
+	}
+	if tgResource == nil {
+		t.Fatal("expected one tg resource in response")
+	}
+	if tgResource.Title != "仙逆剧场版" {
+		t.Fatalf("expected tg resource to fallback to content title, got %q", tgResource.Title)
+	}
+	if response.Facets.CloudTypes["quark"] != 2 {
+		t.Fatalf("expected quark facet count 2, got %#v", response.Facets.CloudTypes)
 	}
 	if response.Facets.SourceTypes["plugin"] == 0 || response.Facets.SourceTypes["tg"] == 0 {
 		t.Fatalf("expected plugin and tg source facets, got %#v", response.Facets.SourceTypes)
@@ -122,7 +134,7 @@ func TestSearchResponseBuilderHonorsCloudTypesAndSkipFilterForResources(t *testi
 		{
 			UniqueID: "builderskip-1",
 			Title:    "不包含关键词",
-			Content:  "无关标题\n链接：https://pan.quark.cn/s/keep",
+			Content:  "仙逆合集\n链接：https://pan.quark.cn/s/keep",
 			Links: []model.Link{
 				{URL: "https://pan.quark.cn/s/keep"},
 				{URL: "https://pan.baidu.com/s/filtered"},
@@ -263,6 +275,106 @@ func TestSearchResponseBuilderKeepsResourceWithoutLinks(t *testing.T) {
 	}
 	if len(response.Resources[0].Actions) != 1 || response.Resources[0].Actions[0].Type != "open_detail" {
 		t.Fatalf("expected generated detail action, got %#v", response.Resources[0].Actions)
+	}
+}
+
+func TestSearchResponseBuilderPrioritizesExactPhraseThenTime(t *testing.T) {
+	builder := newSearchResponseBuilder()
+	response := builder.Build([]model.SearchResult{
+		{
+			UniqueID: "fuzzy-newer",
+			Title:    "速度：激情特别篇",
+			Datetime: time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC),
+			Links:    []model.Link{{URL: "https://pan.quark.cn/s/fuzzy-newer"}},
+		},
+		{
+			UniqueID: "exact-older",
+			Title:    "速度与激情8",
+			Datetime: time.Date(2026, 5, 10, 12, 0, 0, 0, time.UTC),
+			Links:    []model.Link{{URL: "https://pan.quark.cn/s/exact-older"}},
+		},
+		{
+			UniqueID: "exact-newer",
+			Title:    "速度与激情10",
+			Datetime: time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC),
+			Links:    []model.Link{{URL: "https://pan.quark.cn/s/exact-newer"}},
+		},
+	}, NormalizedSearchRequest{
+		Keyword: "速度与激情",
+	})
+
+	if len(response.Resources) != 3 {
+		t.Fatalf("expected 3 resources, got %d", len(response.Resources))
+	}
+
+	if response.Resources[0].ID != "exact-newer" {
+		t.Fatalf("expected newer exact match first, got %q", response.Resources[0].ID)
+	}
+	if response.Resources[1].ID != "exact-older" {
+		t.Fatalf("expected older exact match second, got %q", response.Resources[1].ID)
+	}
+	if response.Resources[2].ID != "fuzzy-newer" {
+		t.Fatalf("expected fuzzy match after exact matches, got %q", response.Resources[2].ID)
+	}
+}
+
+func TestSearchResponseBuilderFiltersContentOnlyNoise(t *testing.T) {
+	builder := newSearchResponseBuilder()
+	response := builder.Build([]model.SearchResult{
+		{
+			UniqueID: "noise-1",
+			Title:    "IMG【女神炫技】浪味小仙女",
+			Content:  "速度与激情特别行动(2019)\n这是正文里的无关引用",
+			Links: []model.Link{
+				{Type: "magnet", URL: "magnet:?xt=urn:btih:noise"},
+			},
+		},
+		{
+			UniqueID: "match-1",
+			Title:    "速度与激情10（2023）",
+			Links: []model.Link{
+				{Type: "quark", URL: "https://pan.quark.cn/s/match"},
+			},
+		},
+	}, NormalizedSearchRequest{
+		Keyword: "速度与激情",
+	})
+
+	if len(response.Resources) != 1 {
+		t.Fatalf("expected only one high precision resource, got %#v", response.Resources)
+	}
+	if response.Resources[0].ID != "match-1" {
+		t.Fatalf("expected unrelated content-only noise to be filtered, got %q", response.Resources[0].ID)
+	}
+}
+
+func TestSearchResponseBuilderKeepsOnlyMatchedLinkTitlesInMixedResult(t *testing.T) {
+	builder := newSearchResponseBuilder()
+	response := builder.Build([]model.SearchResult{
+		{
+			UniqueID: "mixed-links-1",
+			Title:    "#电影",
+			Content: "速度与激情10\n链接：https://pan.quark.cn/s/fast\n\n女神炫技写真\n链接：https://pan.quark.cn/s/noise",
+			Links: []model.Link{
+				{Type: "quark", URL: "https://pan.quark.cn/s/fast"},
+				{Type: "quark", URL: "https://pan.quark.cn/s/noise"},
+			},
+		},
+	}, NormalizedSearchRequest{
+		Keyword: "速度与激情",
+	})
+
+	if len(response.Resources) != 1 {
+		t.Fatalf("expected one resource, got %#v", response.Resources)
+	}
+	if len(response.Resources[0].Links) != 1 {
+		t.Fatalf("expected only the matched link to remain, got %#v", response.Resources[0].Links)
+	}
+	if response.Resources[0].Links[0].URL != "https://pan.quark.cn/s/fast" {
+		t.Fatalf("expected matched link to remain, got %#v", response.Resources[0].Links)
+	}
+	if response.Resources[0].Title != "速度与激情10" {
+		t.Fatalf("expected matched title fallback, got %q", response.Resources[0].Title)
 	}
 }
 

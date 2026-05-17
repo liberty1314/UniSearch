@@ -1,7 +1,7 @@
 import type { ResourceObject } from "@/types/api";
 import { getCloudTypePriority, type ResultItem } from "./cloudTypeUtils";
 
-type SortableResultItem = ResultItem & { priority: number };
+type SortableResultItem = ResultItem & { priority: number; matchRank: number };
 
 function resolvePrimaryLink(resource: ResourceObject) {
   if (!resource.links || resource.links.length === 0) {
@@ -33,8 +33,64 @@ function resolvePublishedAt(resource: ResourceObject, fallbackLinkType: string) 
   return 0;
 }
 
+function splitKeywordTerms(lowerKeyword: string): string[] {
+  const normalized = lowerKeyword
+    .replace(/[与和及、，,；;|/\\]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return normalized ? normalized.split(" ") : [];
+}
+
+function collectSearchableFields(resource: ResourceObject): string[] {
+  const fields = [
+    resource.title,
+    resource.description || "",
+    resource.detail.content || "",
+    resource.detail.url || "",
+    ...resource.links.flatMap((link) => [link.title || "", link.work_title || ""]),
+  ];
+
+  return fields
+    .map((value) => value.trim().toLowerCase())
+    .filter((value) => value.length > 0);
+}
+
+function resolveResourceMatchRank(resource: ResourceObject, keyword: string): number {
+  const lowerKeyword = keyword.trim().toLowerCase();
+  if (!lowerKeyword) {
+    return 3;
+  }
+
+  const title = resource.title.trim().toLowerCase();
+  if (title && title.includes(lowerKeyword)) {
+    return 0;
+  }
+
+  const fields = collectSearchableFields(resource);
+  if (fields.some((field) => field.includes(lowerKeyword))) {
+    return 1;
+  }
+
+  const terms = splitKeywordTerms(lowerKeyword);
+  if (terms.length <= 1) {
+    return 4;
+  }
+
+  if (title && terms.every((term) => title.includes(term))) {
+    return 2;
+  }
+
+  const combined = fields.join(" ");
+  if (terms.every((term) => combined.includes(term))) {
+    return 3;
+  }
+
+  return 4;
+}
+
 export const sortResources = (
   resources: ResourceObject[] | undefined | null,
+  keyword = "",
 ): ResultItem[] => {
   if (!resources || resources.length === 0) {
     return [];
@@ -51,10 +107,14 @@ export const sortResources = (
       cloudType,
       datetime: resolvePublishedAt(resource, cloudType),
       priority: getCloudTypePriority(cloudType),
+      matchRank: resolveResourceMatchRank(resource, keyword),
     };
   });
 
   return items.sort((a, b) => {
+    if (a.matchRank !== b.matchRank) {
+      return a.matchRank - b.matchRank;
+    }
     const timeDiff = b.datetime - a.datetime;
     if (Math.abs(timeDiff) > 1000) {
       return timeDiff;

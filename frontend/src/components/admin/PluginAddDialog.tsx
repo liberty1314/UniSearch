@@ -3,6 +3,7 @@ import { CheckCircle2, Loader2, Plus, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import type { AdminTagOption } from '@/types/api';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { AdminTagMultiSelect } from './AdminTagMultiSelect';
 import type {
   AddPluginForm,
   URLTestStatus,
@@ -21,10 +23,18 @@ interface PluginAddDialogProps {
   isAdding: boolean;
   isTestingUrl: boolean;
   addForm: AddPluginForm;
+  tagOptions: AdminTagOption[];
+  isTagOptionsLoading: boolean;
+  isCreatingTag: boolean;
+  updatingTagId: number | null;
+  deletingTagId: number | null;
   urlTestResult: URLTestStatus;
   urlTestMessage: string;
   onOpenChange: (open: boolean) => void;
   onAddFormChange: (updater: (prev: AddPluginForm) => AddPluginForm) => void;
+  onCreateTag: (name: string) => Promise<AdminTagOption | null>;
+  onUpdateTag: (id: number, name: string) => Promise<AdminTagOption | null>;
+  onDeleteTag: (id: number) => Promise<boolean>;
   onAddFormKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
   onReset: () => void;
   onTestURL: () => void;
@@ -36,10 +46,18 @@ export function PluginAddDialog({
   isAdding,
   isTestingUrl,
   addForm,
+  tagOptions,
+  isTagOptionsLoading,
+  isCreatingTag,
+  updatingTagId,
+  deletingTagId,
   urlTestResult,
   urlTestMessage,
   onOpenChange,
   onAddFormChange,
+  onCreateTag,
+  onUpdateTag,
+  onDeleteTag,
   onAddFormKeyDown,
   onReset,
   onTestURL,
@@ -65,8 +83,9 @@ export function PluginAddDialog({
         <div className="space-y-3">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <Label>插件名称 *</Label>
+              <Label htmlFor="add-plugin-name">插件名称 *</Label>
               <Input
+                id="add-plugin-name"
                 value={addForm.name}
                 onChange={(event) =>
                   onAddFormChange((prev) => ({ ...prev, name: event.target.value }))
@@ -76,8 +95,9 @@ export function PluginAddDialog({
               />
             </div>
             <div>
-              <Label>优先级</Label>
+              <Label htmlFor="add-plugin-priority">优先级</Label>
               <Input
+                id="add-plugin-priority"
                 type="number"
                 value={addForm.priority}
                 onChange={(event) =>
@@ -92,9 +112,10 @@ export function PluginAddDialog({
           </div>
 
           <div>
-            <Label>URL *</Label>
+            <Label htmlFor="add-plugin-url">URL *</Label>
             <div className="flex items-center gap-2">
               <Input
+                id="add-plugin-url"
                 value={addForm.url}
                 onChange={(event) =>
                   onAddFormChange((prev) => ({ ...prev, url: event.target.value }))
@@ -131,8 +152,9 @@ export function PluginAddDialog({
           </div>
 
           <div>
-            <Label>描述</Label>
+            <Label htmlFor="add-plugin-description">描述</Label>
             <Input
+              id="add-plugin-description"
               value={addForm.description}
               onChange={(event) =>
                 onAddFormChange((prev) => ({ ...prev, description: event.target.value }))
@@ -144,8 +166,9 @@ export function PluginAddDialog({
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <Label>版本</Label>
+              <Label htmlFor="add-plugin-version">版本</Label>
               <Input
+                id="add-plugin-version"
                 value={addForm.version}
                 onChange={(event) =>
                   onAddFormChange((prev) => ({ ...prev, version: event.target.value }))
@@ -155,8 +178,9 @@ export function PluginAddDialog({
               />
             </div>
             <div>
-              <Label>分类</Label>
+              <Label htmlFor="add-plugin-category">分类</Label>
               <Input
+                id="add-plugin-category"
                 value={addForm.category}
                 onChange={(event) =>
                   onAddFormChange((prev) => ({ ...prev, category: event.target.value }))
@@ -168,8 +192,9 @@ export function PluginAddDialog({
           </div>
 
           <div>
-            <Label>能力</Label>
+            <Label htmlFor="add-plugin-capabilities">能力</Label>
             <Input
+              id="add-plugin-capabilities"
               value={addForm.capabilitiesText}
               onChange={(event) =>
                 onAddFormChange((prev) => ({ ...prev, capabilitiesText: event.target.value }))
@@ -179,6 +204,31 @@ export function PluginAddDialog({
             />
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               多个能力可用逗号或空格分隔；留空时后端会按搜索插件补齐默认能力。
+            </p>
+          </div>
+
+          <div>
+              <Label htmlFor="add-plugin-tags">标签</Label>
+              <div id="add-plugin-tags">
+                <AdminTagMultiSelect
+                  scope="plugin"
+                value={addForm.tags}
+                options={tagOptions}
+                loading={isTagOptionsLoading}
+                creating={isCreatingTag}
+                updatingTagId={updatingTagId}
+                deletingTagId={deletingTagId}
+                onChange={(nextTags) => onAddFormChange((prev) => ({ ...prev, tags: nextTags }))}
+                onCreateTag={onCreateTag}
+                onUpdateTag={onUpdateTag}
+                onDeleteTag={onDeleteTag}
+                allowManageOptions
+                placeholder="选择一个插件标签，或搜索后新增"
+                searchPlaceholder="搜索或新增插件标签"
+              />
+            </div>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              插件标签词库独立维护，不与频道标签互通。
             </p>
           </div>
         </div>

@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type {
+  AdminTagListResponse,
+  AdminTagOption,
+  AdminTagScope,
   AdminDialogMode,
   BatchChannelOperationResponse,
+  CreateAdminTagRequest,
+  CreateAdminTagResponse,
+  DeleteAdminTagResponse,
   ListTGChannelsResponse,
   TGChannel,
+  UpdateAdminTagRequest,
+  UpdateAdminTagResponse,
 } from '@/types/api';
 import { compareChannels } from '@/components/admin/adminListSort';
 import {
@@ -33,6 +41,16 @@ import {
 } from '@/components/admin/previewFilters';
 import { useAdminWorkspaceState } from '@/components/admin/useAdminWorkspaceState';
 import { useWorkspaceTestStatus } from './useWorkspaceTestStatus';
+import {
+  matchesAnyTagFilter,
+  normalizeSingleTagSelection,
+  removeTagName,
+  removeTagOption,
+  replaceTagName,
+  replaceTagOption,
+} from '@/components/admin/adminTagUtils';
+
+const CHANNEL_TAG_SCOPE: AdminTagScope = 'channel';
 
 type UseChannelManageControllerOptions = {
   isOpen: boolean;
@@ -54,6 +72,7 @@ export type UseChannelManageControllerResult = {
   isBatchDeleting: boolean;
   addDialogOpen: boolean;
   newChannelName: string;
+  newChannelTags: string[];
   detailChannelId: number | null;
   deleteConfirm: { open: boolean; channel: TGChannel | null };
   batchDeleteConfirmOpen: boolean;
@@ -61,6 +80,12 @@ export type UseChannelManageControllerResult = {
   statusFilter: UnifiedStatusFilter;
   currentPage: number;
   pageSize: number;
+  tagOptions: AdminTagOption[];
+  isTagOptionsLoading: boolean;
+  isCreatingTag: boolean;
+  updatingTagId: number | null;
+  deletingTagId: number | null;
+  selectedTagFilters: string[];
   filteredItems: TGChannel[];
   pagedItems: TGChannel[];
   totalPages: number;
@@ -75,9 +100,11 @@ export type UseChannelManageControllerResult = {
   setPageSize: (value: number) => void;
   setSearchKeyword: (value: string) => void;
   setStatusFilter: (value: UnifiedStatusFilter) => void;
+  setSelectedTagFilters: (value: string[]) => void;
   setCurrentPage: (page: number) => void;
   setAddDialogOpen: (open: boolean) => void;
   setNewChannelName: (value: string) => void;
+  setNewChannelTags: (value: string[]) => void;
   setDetailChannelId: (id: number | null) => void;
   setDeleteConfirm: React.Dispatch<React.SetStateAction<{ open: boolean; channel: TGChannel | null }>>;
   setBatchDeleteConfirmOpen: (open: boolean) => void;
@@ -91,6 +118,13 @@ export type UseChannelManageControllerResult = {
   handleBatchDeleteChannels: () => Promise<void>;
   handleTestChannel: (channelName: string) => Promise<void>;
   handleBatchTest: () => Promise<void>;
+  channelTagsInput: string[];
+  setChannelTagsInput: (value: string[]) => void;
+  isSavingTags: boolean;
+  handleSaveChannelTags: () => Promise<void>;
+  handleCreateTag: (name: string) => Promise<AdminTagOption | null>;
+  handleUpdateTag: (id: number, name: string) => Promise<AdminTagOption | null>;
+  handleDeleteTag: (id: number) => Promise<boolean>;
 };
 
 export function useChannelManageController({
@@ -111,7 +145,16 @@ export function useChannelManageController({
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
+  const [newChannelTags, setNewChannelTags] = useState<string[]>([]);
   const [detailChannelId, setDetailChannelId] = useState<number | null>(null);
+  const [channelTagsInput, setChannelTagsInput] = useState<string[]>([]);
+  const [isSavingTags, setIsSavingTags] = useState(false);
+  const [tagOptions, setTagOptions] = useState<AdminTagOption[]>([]);
+  const [isTagOptionsLoading, setIsTagOptionsLoading] = useState(false);
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
+  const [updatingTagId, setUpdatingTagId] = useState<number | null>(null);
+  const [deletingTagId, setDeletingTagId] = useState<number | null>(null);
+  const [selectedTagFilters, setSelectedTagFiltersState] = useState<string[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; channel: TGChannel | null }>({
     open: false,
     channel: null,
@@ -150,13 +193,38 @@ export function useChannelManageController({
     void fetchChannels();
   }, [fetchChannels, isOpen]);
 
+  const fetchTagOptions = useCallback(async () => {
+    setIsTagOptionsLoading(true);
+    try {
+      const response = await requestAuthedJson<AdminTagListResponse>(
+        `/api/admin/tags?scope=${CHANNEL_TAG_SCOPE}`,
+        token,
+        '获取频道标签词库失败'
+      );
+      setTagOptions(response.items || []);
+    } catch (error) {
+      toast.error(getRequestErrorMessage(error, '获取频道标签词库出错'));
+    } finally {
+      setIsTagOptionsLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    void fetchTagOptions();
+  }, [fetchTagOptions, isOpen]);
+
   useEffect(() => {
     if (isOpen) return;
     clearTestingStatus();
     setDeletingIds(new Set());
     setAddDialogOpen(false);
     setNewChannelName('');
+    setNewChannelTags([]);
     setDetailChannelId(null);
+    setChannelTagsInput([]);
+    setTagOptions([]);
+    setSelectedTagFiltersState([]);
     setDeleteConfirm({ open: false, channel: null });
     setBatchDeleteConfirmOpen(false);
     setHasPendingChanges(false);
@@ -167,6 +235,11 @@ export function useChannelManageController({
     (channel: TGChannel, filter: UnifiedStatusFilter) =>
       isChannelMatchesStatusFilter(channel, filter),
     []
+  );
+
+  const visibleChannels = useMemo(
+    () => channels.filter((channel) => matchesAnyTagFilter(channel.tags, selectedTagFilters)),
+    [channels, selectedTagFilters]
   );
 
   const {
@@ -187,7 +260,7 @@ export function useChannelManageController({
     orderedItems,
   } = useAdminWorkspaceState<TGChannel, number>({
     isOpen,
-    items: channels,
+    items: visibleChannels,
     getKey: getChannelKey,
     compareItems: compareChannels,
     matchesKeyword: (channel, keyword) => {
@@ -196,6 +269,7 @@ export function useChannelManageController({
         channel.name,
         channel.last_error || '',
         channel.health_status || '',
+        ...(channel.tags || []),
       ].some((value) => value.toLowerCase().includes(keyword));
     },
     matchesStatus: matchesChannelStatus,
@@ -216,6 +290,10 @@ export function useChannelManageController({
     () => channels.find((channel) => channel.id === detailChannelId) || null,
     [channels, detailChannelId]
   );
+
+  useEffect(() => {
+    setChannelTagsInput(normalizeSingleTagSelection(activeDetailChannel?.tags || []));
+  }, [activeDetailChannel]);
 
   const isOperationBusy = isBatchTesting || isBatchUpdating || isBatchDeleting || isAdding;
 
@@ -251,11 +329,12 @@ export function useChannelManageController({
     try {
       await requestAuthed('/api/admin/channels', token, '添加频道失败', {
         method: 'POST',
-        body: { name },
+        body: { name, tags: normalizeSingleTagSelection(newChannelTags) },
       });
 
       toast.success(`频道 ${name} 添加成功`);
       setNewChannelName('');
+      setNewChannelTags([]);
       setAddDialogOpen(false);
       await fetchChannels();
       setHasPendingChanges(true);
@@ -265,7 +344,7 @@ export function useChannelManageController({
     } finally {
       setIsAdding(false);
     }
-  }, [fetchChannels, newChannelName, onSuccess, token]);
+  }, [fetchChannels, newChannelName, newChannelTags, onSuccess, token]);
 
   const handleToggleEnabled = useCallback(async (channel: TGChannel) => {
     if (isOperationBusy) return;
@@ -465,6 +544,140 @@ export function useChannelManageController({
     resetAllLater(10000);
   }, [channels, fetchChannels, markBatchTesting, markResult, onSuccess, resetAllLater, token]);
 
+  const handleSaveChannelTags = useCallback(async () => {
+    if (!activeDetailChannel) {
+      return;
+    }
+
+    setIsSavingTags(true);
+    try {
+      const nextTags = normalizeSingleTagSelection(channelTagsInput);
+      await requestAuthed(
+        `/api/admin/channels/${activeDetailChannel.id}`,
+        token,
+        '更新频道标签失败',
+        {
+          method: 'PUT',
+          body: { tags: nextTags },
+        }
+      );
+
+      setChannels((prev) =>
+        prev.map((channel) => (
+          channel.id === activeDetailChannel.id
+            ? { ...channel, tags: nextTags }
+            : channel
+        ))
+      );
+      setHasPendingChanges(true);
+      toast.success(`频道 ${activeDetailChannel.name} 标签已更新`);
+    } catch (error) {
+      toast.error(getRequestErrorMessage(error, '更新频道标签出错'));
+    } finally {
+      setIsSavingTags(false);
+    }
+  }, [activeDetailChannel, channelTagsInput, token]);
+
+  const handleCreateTag = useCallback(async (name: string) => {
+    setIsCreatingTag(true);
+    try {
+      const payload: CreateAdminTagRequest = {
+        scope: CHANNEL_TAG_SCOPE,
+        name,
+      };
+      const response = await requestAuthedJson<CreateAdminTagResponse>(
+        '/api/admin/tags',
+        token,
+        '创建频道标签失败',
+        {
+          method: 'POST',
+          body: payload,
+        }
+      );
+      setTagOptions((prev) => [...prev, response.item].sort((left, right) => left.name.localeCompare(right.name, 'zh-CN', { sensitivity: 'base' })));
+      toast.success(`标签 ${response.item.name} 已创建`);
+      return response.item;
+    } catch (error) {
+      toast.error(getRequestErrorMessage(error, '创建频道标签出错'));
+      return null;
+    } finally {
+      setIsCreatingTag(false);
+    }
+  }, [token]);
+
+  const handleUpdateTag = useCallback(async (id: number, name: string) => {
+    setUpdatingTagId(id);
+    try {
+      const payload: UpdateAdminTagRequest = { name };
+      const response = await requestAuthedJson<UpdateAdminTagResponse>(
+        `/api/admin/tags/${id}`,
+        token,
+        '更新频道标签失败',
+        {
+          method: 'PUT',
+          body: payload,
+        }
+      );
+      const currentOption = tagOptions.find((option) => option.id === id);
+      const previousName = currentOption?.name || '';
+
+      setTagOptions((prev) => replaceTagOption(prev, response.item).sort((left, right) => left.name.localeCompare(right.name, 'zh-CN', { sensitivity: 'base' })));
+      if (previousName) {
+        setSelectedTagFiltersState((prev) => normalizeSingleTagSelection(replaceTagName(prev, previousName, response.item.name)));
+        setNewChannelTags((prev) => normalizeSingleTagSelection(replaceTagName(prev, previousName, response.item.name)));
+        setChannelTagsInput((prev) => normalizeSingleTagSelection(replaceTagName(prev, previousName, response.item.name)));
+        setChannels((prev) => prev.map((channel) => ({
+          ...channel,
+          tags: replaceTagName(channel.tags || [], previousName, response.item.name),
+        })));
+      }
+      toast.success('频道标签已更新');
+      return response.item;
+    } catch (error) {
+      toast.error(getRequestErrorMessage(error, '更新频道标签出错'));
+      return null;
+    } finally {
+      setUpdatingTagId(null);
+    }
+  }, [tagOptions, token]);
+
+  const handleDeleteTag = useCallback(async (id: number) => {
+    setDeletingTagId(id);
+    try {
+      const currentOption = tagOptions.find((option) => option.id === id);
+      await requestAuthedJson<DeleteAdminTagResponse>(
+        `/api/admin/tags/${id}`,
+        token,
+        '删除频道标签失败',
+        {
+          method: 'DELETE',
+        }
+      );
+      setTagOptions((prev) => removeTagOption(prev, id));
+      if (currentOption) {
+        setSelectedTagFiltersState((prev) => normalizeSingleTagSelection(removeTagName(prev, currentOption.name)));
+        setNewChannelTags((prev) => normalizeSingleTagSelection(removeTagName(prev, currentOption.name)));
+        setChannelTagsInput((prev) => normalizeSingleTagSelection(removeTagName(prev, currentOption.name)));
+        setChannels((prev) => prev.map((channel) => ({
+          ...channel,
+          tags: removeTagName(channel.tags || [], currentOption.name),
+        })));
+      }
+      toast.success('频道标签已删除');
+      return true;
+    } catch (error) {
+      toast.error(getRequestErrorMessage(error, '删除频道标签出错'));
+      return false;
+    } finally {
+      setDeletingTagId(null);
+    }
+  }, [tagOptions, token]);
+
+  const setSelectedTagFilters = useCallback((value: string[]) => {
+    setSelectedTagFiltersState(value);
+    setCurrentPage(1);
+  }, [setCurrentPage]);
+
   return {
     isReadOnly,
     channels,
@@ -477,12 +690,19 @@ export function useChannelManageController({
     isBatchDeleting,
     addDialogOpen,
     newChannelName,
+    newChannelTags,
     detailChannelId,
     deleteConfirm,
     batchDeleteConfirmOpen,
     searchKeyword,
     statusFilter,
     currentPage,
+    tagOptions,
+    isTagOptionsLoading,
+    isCreatingTag,
+    updatingTagId,
+    deletingTagId,
+    selectedTagFilters,
     filteredItems,
     pagedItems,
     totalPages,
@@ -498,9 +718,11 @@ export function useChannelManageController({
     setPageSize,
     setSearchKeyword,
     setStatusFilter,
+    setSelectedTagFilters,
     setCurrentPage,
     setAddDialogOpen,
     setNewChannelName,
+    setNewChannelTags,
     setDetailChannelId,
     setDeleteConfirm,
     setBatchDeleteConfirmOpen,
@@ -514,5 +736,12 @@ export function useChannelManageController({
     handleBatchDeleteChannels,
     handleTestChannel,
     handleBatchTest,
+    channelTagsInput,
+    setChannelTagsInput,
+    isSavingTags,
+    handleSaveChannelTags,
+    handleCreateTag,
+    handleUpdateTag,
+    handleDeleteTag,
   };
 }

@@ -47,6 +47,7 @@ func TestBuildPluginInfoResponseIncludesManifestContract(t *testing.T) {
 		Version:      "1.1.0",
 		Category:     "search",
 		Capabilities: []string{"resource.search", "resource.search.handoff"},
+		Tags:         []string{"电影", "夸克"},
 	}
 	manifest := buildCustomPluginManifest(customPlugin)
 	response := buildPluginInfoResponse(
@@ -58,6 +59,7 @@ func TestBuildPluginInfoResponseIncludesManifestContract(t *testing.T) {
 		customPlugin.Description,
 		customPlugin.URL,
 		manifest,
+		customPlugin.Tags,
 	)
 
 	if response.ID != "search.custom-video" {
@@ -71,5 +73,8 @@ func TestBuildPluginInfoResponseIncludesManifestContract(t *testing.T) {
 	}
 	if response.Resource.SourceGroup != "search" {
 		t.Fatalf("expected resource descriptor in response, got %#v", response.Resource)
+	}
+	if len(response.Tags) != 2 {
+		t.Fatalf("expected tags in response, got %#v", response.Tags)
 	}
 }

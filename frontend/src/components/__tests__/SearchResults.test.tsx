@@ -1,42 +1,52 @@
-import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
-import SearchResults from '@/components/SearchResults';
+import React from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+  useParams,
+} from "react-router-dom";
+import SearchResults from "@/components/SearchResults";
 
 let searchStoreState = {
   searchResults: {
     total: 1,
     resources: [
       {
-        id: 'resource-1',
-        title: '你的名字 4K',
-        description: '新海诚动画电影资源',
-        source: { type: 'plugin', id: 'pansearch', name: 'PanSearch' },
-        media_type: 'movie',
-        target_type: 'share',
+        id: "resource-1",
+        title: "你的名字 4K",
+        description: "新海诚动画电影资源",
+        source: { type: "plugin", id: "pansearch", name: "PanSearch" },
+        media_type: "movie",
+        target_type: "share",
         links: [
           {
-            type: 'quark',
-            url: 'https://example.com/resource',
-            password: '',
-            title: '你的名字 4K',
-            datetime: '2026-03-15T00:00:00Z',
+            type: "quark",
+            url: "https://example.com/resource",
+            password: "",
+            title: "你的名字 4K",
+            datetime: "2026-03-15T00:00:00Z",
           },
         ],
         capabilities: { searchable: true, downloadable: true },
         actions: [
           {
-            key: 'link.quark.open',
-            label: '打开夸克',
-            type: 'open_link',
-            payload: { url: 'https://example.com/resource', link_type: 'quark' },
+            key: "link.quark.open",
+            label: "打开夸克",
+            type: "open_link",
+            payload: {
+              url: "https://example.com/resource",
+              link_type: "quark",
+            },
           },
         ],
-        detail: { content: '详情内容', url: 'https://example.com/detail' },
-        tags: ['动画'],
+        detail: { content: "详情内容", url: "https://example.com/detail" },
+        tags: ["动画"],
         images: [],
-        meta: { score: 9 },
-        published_at: '2026-03-15T00:00:00Z',
+        meta: { size: "2.15 GiB", score: 9 },
+        published_at: "2026-03-15T00:00:00Z",
       },
     ],
     facets: {
@@ -50,35 +60,65 @@ let searchStoreState = {
   },
   isLoading: false,
   isRefreshing: false,
-  error: '',
+  error: "",
   hasMore: false,
   loadMore: vi.fn(),
-  searchParams: { keyword: '你的名字' },
+  searchParams: { keyword: "你的名字" },
   performSearch: vi.fn(),
   displayedCount: 48,
 };
+let enableResourceDetailPage = true;
 
-vi.mock('@/stores/searchStore', () => ({
+vi.mock("@/stores/searchStore", () => ({
   useSearchStore: () => searchStoreState,
 }));
 
-vi.mock('@/hooks/useDebouncedValue', () => ({
+vi.mock("@/services/systemSettingsService", () => ({
+  SystemSettingsService: {
+    getSettingsCached: vi.fn(async () => ({
+      enable_user_auth: true,
+      enable_user_login: true,
+      enable_user_signup: true,
+      enable_resource_detail_page: enableResourceDetailPage,
+      public_site_url: "",
+      default_copy_format_template: "",
+    })),
+  },
+}));
+
+vi.mock("@/hooks/useDebouncedValue", () => ({
   useDebouncedValue: <T,>(value: T) => value,
 }));
 
-vi.mock('@/components/PasswordModal', () => ({
+vi.mock("@/components/PasswordModal", () => ({
   __esModule: true,
-  default: () => null,
+  default: ({
+    isOpen,
+    password,
+    url,
+    cloudType,
+  }: {
+    isOpen: boolean;
+    password: string;
+    url: string;
+    cloudType: string;
+  }) =>
+    isOpen ? (
+      <div data-testid="password-modal">{`${password}|${url}|${cloudType}`}</div>
+    ) : null,
 }));
 
-vi.mock('@/components/LoadingState', () => ({
+vi.mock("@/components/LoadingState", () => ({
   __esModule: true,
   default: () => <div>loading-state</div>,
 }));
 
-vi.mock('framer-motion', () => ({
+vi.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement> & {
+    div: ({
+      children,
+      ...props
+    }: React.HTMLAttributes<HTMLDivElement> & {
       variants?: unknown;
       initial?: unknown;
       animate?: unknown;
@@ -86,6 +126,7 @@ vi.mock('framer-motion', () => ({
       layoutId?: unknown;
       whileHover?: unknown;
       whileInView?: unknown;
+      transition?: unknown;
     }) => {
       const domProps = { ...props };
       delete domProps.variants;
@@ -95,48 +136,77 @@ vi.mock('framer-motion', () => ({
       delete domProps.layoutId;
       delete domProps.whileHover;
       delete domProps.whileInView;
+      delete domProps.transition;
       return <div {...domProps}>{children}</div>;
     },
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-describe('SearchResults', () => {
+const DetailRouteProbe = () => {
+  const location = useLocation();
+  const params = useParams();
+
+  return (
+    <div>
+      <div data-testid="resource-id">{params.resourceId}</div>
+      <div data-testid="detail-state">{JSON.stringify(location.state ?? null)}</div>
+    </div>
+  );
+};
+
+const renderSearchResults = () =>
+  render(
+    <MemoryRouter initialEntries={["/"]}>
+      <Routes>
+        <Route path="/" element={<SearchResults />} />
+        <Route path="/resource/:resourceId" element={<DetailRouteProbe />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+
+describe("SearchResults", () => {
   beforeEach(() => {
     searchStoreState = {
       searchResults: {
         total: 1,
         resources: [
           {
-            id: 'resource-1',
-            title: '你的名字 4K',
-            description: '新海诚动画电影资源',
-            source: { type: 'plugin', id: 'pansearch', name: 'PanSearch' },
-            media_type: 'movie',
-            target_type: 'share',
+            id: "resource-1",
+            title: "你的名字 4K",
+            description: "新海诚动画电影资源",
+            source: { type: "plugin", id: "pansearch", name: "PanSearch" },
+            media_type: "movie",
+            target_type: "share",
             links: [
               {
-                type: 'quark',
-                url: 'https://example.com/resource',
-                password: '',
-                title: '你的名字 4K',
-                datetime: '2026-03-15T00:00:00Z',
+                type: "quark",
+                url: "https://example.com/resource",
+                password: "",
+                title: "你的名字 4K",
+                datetime: "2026-03-15T00:00:00Z",
               },
             ],
             capabilities: { searchable: true, downloadable: true },
             actions: [
               {
-                key: 'link.quark.open',
-                label: '打开夸克',
-                type: 'open_link',
-                payload: { url: 'https://example.com/resource', link_type: 'quark' },
+                key: "link.quark.open",
+                label: "打开夸克",
+                type: "open_link",
+                payload: {
+                  url: "https://example.com/resource",
+                  link_type: "quark",
+                },
               },
             ],
-            detail: { content: '详情内容', url: 'https://example.com/detail' },
-            tags: ['动画'],
+            detail: {
+              content: "详情内容",
+              url: "https://example.com/detail",
+            },
+            tags: ["动画"],
             images: [],
-            meta: { score: 9 },
-            published_at: '2026-03-15T00:00:00Z',
+            meta: { size: "2.15 GiB", score: 9 },
+            published_at: "2026-03-15T00:00:00Z",
           },
         ],
         facets: {
@@ -150,13 +220,14 @@ describe('SearchResults', () => {
       },
       isLoading: false,
       isRefreshing: false,
-      error: '',
+      error: "",
       hasMore: false,
       loadMore: vi.fn(),
-      searchParams: { keyword: '你的名字' },
+      searchParams: { keyword: "你的名字" },
       performSearch: vi.fn(),
       displayedCount: 48,
     };
+    enableResourceDetailPage = true;
 
     class MockIntersectionObserver {
       observe = vi.fn();
@@ -164,77 +235,120 @@ describe('SearchResults', () => {
       disconnect = vi.fn();
     }
 
-    vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
+    vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
+    vi.restoreAllMocks();
   });
 
-  it('adds a light results panel around semi-solid glass cards', () => {
-    render(<SearchResults />);
+  it("renders lightweight cards without redundant metadata", async () => {
+    renderSearchResults();
 
-    const stage = screen.getByTestId('search-results-stage');
-    const gridCard = screen.getByTestId('search-result-grid-card');
-    const toolbar = screen.getByTestId('search-results-toolbar');
+    expect(await screen.findByTestId("search-result-grid-card")).toHaveTextContent("你的名字 4K");
+    expect(screen.getByTestId("search-result-grid-card")).toHaveTextContent("夸克网盘");
+    expect(screen.getByTestId("search-result-grid-card")).toHaveTextContent("2.15 GiB");
+    expect(screen.getByText("详情")).toBeInTheDocument();
 
-    expect(stage).toHaveClass('relative');
-    expect(stage.querySelector('.bg-cyan-200\\/20')).toBeNull();
-
-    expect(gridCard).toHaveClass('bg-white/60');
-    expect(gridCard).toHaveClass('border-white/60');
-    expect(gridCard).toHaveClass('backdrop-blur-xl');
-    expect(gridCard).toHaveClass('dark:bg-slate-950/40');
-    expect(gridCard).toHaveClass('dark:border-white/[0.06]');
-    expect(gridCard).not.toHaveClass('bg-white/70');
-    expect(gridCard).not.toHaveClass('border-white/50');
-
-    expect(toolbar).toHaveClass('bg-white/60');
-    expect(toolbar).toHaveClass('border-white/60');
-    expect(toolbar).toHaveClass('backdrop-blur-xl');
-    expect(toolbar).toHaveClass('dark:bg-slate-950/40');
-    expect(toolbar).toHaveClass('dark:border-white/[0.06]');
-    expect(toolbar).toHaveClass('flex');
-    expect(toolbar).toHaveClass('items-center');
-    expect(toolbar).toHaveClass('justify-between');
+    expect(screen.queryByText("PanSearch")).not.toBeInTheDocument();
+    expect(screen.queryByText("movie")).not.toBeInTheDocument();
+    expect(screen.queryByText("share")).not.toBeInTheDocument();
+    expect(screen.queryByText("新海诚动画电影资源")).not.toBeInTheDocument();
+    expect(screen.queryByText("打开夸克")).not.toBeInTheDocument();
+    expect(screen.queryByText("资源详情")).not.toBeInTheDocument();
   });
 
-  it('renders resource source metadata and opens resource details', () => {
-    render(<SearchResults />);
+  it("opens the primary resource directly when clicking the card", async () => {
+    const openSpy = vi.spyOn(window, "open").mockReturnValue({
+      opener: null,
+    } as Window);
 
-    expect(screen.getByText('PanSearch')).toBeInTheDocument();
-    expect(screen.getByText('movie')).toBeInTheDocument();
+    renderSearchResults();
+    await screen.findByTestId("search-result-grid-card-wrapper");
+    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
 
-    fireEvent.click(screen.getByTestId('search-result-grid-card-wrapper'));
-
-    expect(screen.getByText('资源详情')).toBeInTheDocument();
-    expect(screen.getByText('详情内容')).toBeInTheDocument();
-    expect(screen.getByText('https://example.com/resource')).toBeInTheDocument();
+    expect(openSpy).toHaveBeenCalledWith("https://example.com/resource", "_blank");
   });
 
-  it('shows a refresh hint without clearing previous results during in-place refresh', () => {
+  it("opens the password modal when the primary resource requires a password", async () => {
+    searchStoreState.searchResults.resources[0].links[0].password = "1234";
+
+    renderSearchResults();
+    await screen.findByTestId("search-result-grid-card-wrapper");
+    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
+
+    expect(screen.getByTestId("password-modal")).toHaveTextContent(
+      "1234|https://example.com/resource|quark",
+    );
+  });
+
+  it("opens the resource access modal instead of direct jump for magnet resources", async () => {
+    searchStoreState.searchResults.resources[0].links[0] = {
+      type: "magnet",
+      url: "magnet:?xt=urn:btih:testhash",
+      password: "",
+      title: "你的名字 磁力",
+      datetime: "2026-03-15T00:00:00Z",
+    };
+
+    const openSpy = vi.spyOn(window, "open").mockReturnValue({
+      opener: null,
+    } as Window);
+
+    renderSearchResults();
+    await screen.findByTestId("search-result-grid-card-wrapper");
+    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
+
+    expect(screen.getByTestId("password-modal")).toHaveTextContent(
+      "|magnet:?xt=urn:btih:testhash|magnet",
+    );
+    expect(openSpy).not.toHaveBeenCalled();
+  });
+
+  it("navigates to the dedicated resource detail page from the secondary detail entry", async () => {
+    renderSearchResults();
+    await screen.findByRole("button", { name: /详情/i });
+    fireEvent.click(screen.getByRole("button", { name: /详情/i }));
+
+    expect(screen.getByTestId("resource-id")).toHaveTextContent("resource-1");
+    expect(screen.getByTestId("detail-state")).toHaveTextContent("resource-1");
+    expect(screen.getByTestId("detail-state")).toHaveTextContent("你的名字");
+  });
+
+  it("hides the detail entry when the system setting is disabled", async () => {
+    enableResourceDetailPage = false;
+
+    renderSearchResults();
+
+    await screen.findByTestId("search-result-grid-card");
+    expect(screen.queryByRole("button", { name: /详情/i })).not.toBeInTheDocument();
+  });
+
+  it("shows a refresh hint without clearing previous results during in-place refresh", async () => {
     searchStoreState = {
       ...searchStoreState,
       isRefreshing: true,
     };
 
-    render(<SearchResults />);
+    renderSearchResults();
 
-    expect(screen.getByText('刷新中')).toBeInTheDocument();
-    expect(screen.getByTestId('search-result-grid-card')).toBeInTheDocument();
+    expect(await screen.findByText("刷新中")).toBeInTheDocument();
+    expect(screen.getByTestId("search-result-grid-card")).toBeInTheDocument();
   });
 
-  it('switches from mobile list to desktop grid when the viewport crosses the breakpoint', () => {
-    Object.defineProperty(window, 'innerWidth', {
+  it("switches from mobile list to desktop grid when the viewport crosses the breakpoint", async () => {
+    Object.defineProperty(window, "innerWidth", {
       configurable: true,
       writable: true,
       value: 520,
     });
 
-    render(<SearchResults />);
+    renderSearchResults();
+    await screen.findByTestId("search-results-stage");
 
-    const stage = screen.getByTestId('search-results-stage');
-    expect(stage.className).toContain('flex flex-col');
+    const stage = screen.getByTestId("search-results-stage");
+    expect(stage.className).toContain("flex flex-col");
 
     window.innerWidth = 1280;
-    fireEvent(window, new Event('resize'));
+    fireEvent(window, new Event("resize"));
 
-    expect(stage.className).toContain('grid grid-cols-1');
+    expect(stage.className).toContain("grid grid-cols-1");
   });
 });

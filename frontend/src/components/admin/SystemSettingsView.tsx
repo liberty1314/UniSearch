@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Settings, RefreshCw, Shield, LogIn, UserPlus, Globe, Save } from 'lucide-react';
+import { Settings, RefreshCw, Shield, LogIn, UserPlus, Globe, Save, FileSearch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppleSwitch } from '@/components/ui/apple-switch';
 import { useSystemSettingsController } from '@/hooks/useSystemSettingsController';
@@ -16,6 +16,7 @@ export const SystemSettingsView: React.FC = () => {
         enableUserAuth,
         enableUserLogin,
         enableUserSignup,
+        enableResourceDetailPage,
         publicSiteUrl,
         isLoading,
         isSaving,
@@ -110,6 +111,33 @@ export const SystemSettingsView: React.FC = () => {
                             </motion.div>
                         )}
                     </AnimatePresence>
+                </div>
+            </div>
+
+            <div className="space-y-3">
+                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider px-4">搜索展示</h2>
+                <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-[1.5rem] overflow-hidden shadow-sm">
+                    <div className="flex items-center justify-between p-5 sm:px-6 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                        <div className="flex items-start gap-4">
+                            <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-xl">
+                                <FileSearch className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <Label
+                                    className="text-base font-semibold text-slate-900 dark:text-white cursor-pointer"
+                                    onClick={() => actions.handleToggleResourceDetailPage(!enableResourceDetailPage)}
+                                >
+                                    显示资源详情页
+                                </Label>
+                                <p className="text-sm text-slate-500 mt-1">控制搜索结果中的“详情”入口以及独立资源详情页是否对前台展示</p>
+                            </div>
+                        </div>
+                        <AppleSwitch
+                            checked={enableResourceDetailPage}
+                            onCheckedChange={actions.handleToggleResourceDetailPage}
+                            disabled={isSaving === 'resource_detail'}
+                        />
+                    </div>
                 </div>
             </div>
 

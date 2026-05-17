@@ -12,6 +12,7 @@ export interface AppleInputProps extends InputHTMLAttributes<HTMLInputElement> {
   startAdornment?: ReactNode;
   endAdornment?: ReactNode;
   tone?: 'blue' | 'emerald' | 'rose';
+  reserveMessageSpace?: boolean;
 }
 
 export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
@@ -26,6 +27,7 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
       startAdornment,
       endAdornment,
       tone = 'blue',
+      reserveMessageSpace = true,
       id,
       ...props
     },
@@ -104,39 +106,41 @@ export const AppleInput = forwardRef<HTMLInputElement, AppleInputProps>(
         </div>
 
         {/* 底部信息区 (使用绝对定位防止撑开布局) */}
-        <div className="relative h-6 mt-1">
-          <AnimatePresence mode="wait">
-            {error ? (
-              <motion.div
-                key="error"
-                id={errorId}
-                role="alert"
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="absolute inset-x-0 top-0 flex items-center gap-1.5 text-xs text-red-500 dark:text-red-400"
-              >
-                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="truncate">{error}</span>
-              </motion.div>
-            ) : helperText ? (
-              <motion.div
-                key="helper"
-                id={helperId}
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="absolute inset-x-0 top-0"
-              >
-                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {helperText}
-                </p>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        </div>
+        {reserveMessageSpace || error || helperText ? (
+          <div className="relative h-6 mt-1">
+            <AnimatePresence mode="wait">
+              {error ? (
+                <motion.div
+                  key="error"
+                  id={errorId}
+                  role="alert"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="absolute inset-x-0 top-0 flex items-center gap-1.5 text-xs text-red-500 dark:text-red-400"
+                >
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">{error}</span>
+                </motion.div>
+              ) : helperText ? (
+                <motion.div
+                  key="helper"
+                  id={helperId}
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="absolute inset-x-0 top-0"
+                >
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    {helperText}
+                  </p>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </div>
+        ) : null}
       </div>
     );
   }

@@ -13,6 +13,7 @@ import { AppleButton } from '@/components/ui/AppleButton';
 import { AppleInput } from '@/components/ui/AppleInput';
 import { cn } from '@/lib/utils';
 import { getCloudTypeInfo } from '@/utils/cloudTypeUtils';
+import { isMagnetUrl, normalizeExternalUrl } from '@/utils/resourceDisplay';
 
 interface PasswordModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
   cloudType
 }) => {
   const cloudInfo = getCloudTypeInfo(cloudType);
+  const magnetMode = cloudType === 'magnet' || isMagnetUrl(url);
 
   const handleCopyPassword = () => {
     navigator.clipboard.writeText(password);
@@ -38,19 +40,15 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
 
   const handleCopyUrl = () => {
     navigator.clipboard.writeText(url);
-    toast.success('链接已复制');
+    toast.success(magnetMode ? '磁力链接已复制' : '链接已复制');
   };
 
   const handleOpenUrl = () => {
     try {
-      let finalUrl = url.trim();
-      // 确保链接包含 http/https 协议前缀
-      if (finalUrl && !finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
-        finalUrl = 'https://' + finalUrl;
-      }
+      const finalUrl = normalizeExternalUrl(url);
 
       if (!finalUrl) {
-        toast.error('链接地址为空');
+        toast.error(magnetMode ? '磁力链接为空' : '链接地址为空');
         return;
       }
 
@@ -68,6 +66,11 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
     }
   };
 
+  const dialogTitle = magnetMode ? '磁力链接' : '访问码提示';
+  const dialogDescription = magnetMode ? '该资源为磁力链接，可直接复制或打开。' : '该资源需要访问码才能访问';
+  const primaryFieldLabel = magnetMode ? '磁力链接' : '链接地址';
+  const primaryButtonText = magnetMode ? '打开磁力' : '打开链接';
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md sm:max-w-[460px] max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -81,7 +84,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
           </div>
           <div className="space-y-1.5">
             <DialogTitle className="flex items-center justify-center gap-2 text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
-              访问码提示
+              {dialogTitle}
               <span className={cn(
                 "rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-sm border",
                 cloudInfo.bg,
@@ -92,34 +95,35 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
               </span>
             </DialogTitle>
             <DialogDescription className="text-sm">
-              该资源需要访问码才能访问
+              {dialogDescription}
             </DialogDescription>
           </div>
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
+          {!magnetMode ? (
+            <div className="space-y-1">
+              <AppleInput
+                label="访问码"
+                value={password}
+                readOnly
+                className="font-mono tracking-wider font-medium text-slate-900 dark:text-white bg-transparent shadow-none border-slate-200 dark:border-slate-700 focus:bg-transparent"
+                endAdornment={
+                  <button
+                    onClick={handleCopyPassword}
+                    className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 focus:outline-none"
+                    title="复制访问码"
+                  >
+                    <Copy className="h-[18px] w-[18px]" />
+                  </button>
+                }
+              />
+            </div>
+          ) : null}
 
           <div className="space-y-1">
             <AppleInput
-              label="访问码"
-              value={password}
-              readOnly
-              className="font-mono tracking-wider font-medium text-slate-900 dark:text-white bg-transparent shadow-none border-slate-200 dark:border-slate-700 focus:bg-transparent"
-              endAdornment={
-                <button
-                  onClick={handleCopyPassword}
-                  className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 focus:outline-none"
-                  title="复制访问码"
-                >
-                  <Copy className="h-[18px] w-[18px]" />
-                </button>
-              }
-            />
-          </div>
-
-          <div className="space-y-1">
-            <AppleInput
-              label="链接地址"
+              label={primaryFieldLabel}
               value={url}
               readOnly
               className="text-sm text-slate-600 dark:text-slate-300 truncate pr-12 bg-transparent shadow-none border-slate-200 dark:border-slate-700 focus:bg-transparent"
@@ -127,7 +131,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
                 <button
                   onClick={handleCopyUrl}
                   className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 focus:outline-none"
-                  title="复制链接"
+                  title={magnetMode ? '复制磁力链接' : '复制链接'}
                 >
                   <Copy className="h-[18px] w-[18px]" />
                 </button>
@@ -142,7 +146,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
               onClick={handleOpenUrl}
             >
               <IoOpenOutline className="h-[18px] w-[18px]" />
-              打开链接
+              {primaryButtonText}
             </AppleButton>
           </div>
         </div>

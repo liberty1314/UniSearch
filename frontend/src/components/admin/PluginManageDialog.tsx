@@ -16,6 +16,7 @@ import {
 import type { AdminDialogMode, PluginInfo } from '@/types/api';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PluginAddDialog } from './PluginAddDialog';
+import { AdminTagMultiSelect } from './AdminTagMultiSelect';
 import {
   PluginManageWorkspace,
   type PluginManageWorkspaceViewModel,
@@ -112,6 +113,11 @@ export function PluginManageSurface({
         isAdding={controller.isAdding}
         isTestingUrl={controller.isTestingUrl}
         addForm={controller.addForm}
+        tagOptions={controller.tagOptions}
+        isTagOptionsLoading={controller.isTagOptionsLoading}
+        isCreatingTag={controller.isCreatingTag}
+        updatingTagId={controller.updatingTagId}
+        deletingTagId={controller.deletingTagId}
         urlTestResult={controller.urlTestResult}
         urlTestMessage={controller.urlTestMessage}
         onOpenChange={controller.setAddDialogOpen}
@@ -125,6 +131,9 @@ export function PluginManageSurface({
             return next;
           });
         }}
+        onCreateTag={controller.handleCreateTag}
+        onUpdateTag={controller.handleUpdateTag}
+        onDeleteTag={controller.handleDeleteTag}
         onAddFormKeyDown={controller.handleAddFormKeyDown}
         onReset={controller.resetAddDialogState}
         onTestURL={() => void controller.handleTestAddPluginURL()}
@@ -418,6 +427,31 @@ export function PluginManageSurface({
                       }))
                     }
                     placeholder="resource.search, resource.search.handoff"
+                  />
+                </div>
+
+                <div>
+                  <Label>标签</Label>
+                  <AdminTagMultiSelect
+                    scope="plugin"
+                    value={controller.editForm.tags}
+                    options={controller.tagOptions}
+                    loading={controller.isTagOptionsLoading}
+                    creating={controller.isCreatingTag}
+                    updatingTagId={controller.updatingTagId}
+                    deletingTagId={controller.deletingTagId}
+                    onChange={(nextTags) =>
+                      controller.setEditForm((prev) => ({
+                        ...prev,
+                        tags: nextTags,
+                      }))
+                    }
+                    onCreateTag={controller.handleCreateTag}
+                    onUpdateTag={controller.handleUpdateTag}
+                    onDeleteTag={controller.handleDeleteTag}
+                    allowManageOptions
+                    searchPlaceholder="搜索或新增插件标签"
+                    placeholder="选择一个插件标签，或搜索后新增"
                   />
                 </div>
               </div>

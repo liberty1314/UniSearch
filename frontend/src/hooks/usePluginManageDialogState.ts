@@ -7,6 +7,7 @@ import {
   type EditPluginForm,
   type URLTestStatus,
 } from '@/components/admin/pluginManageDialogShared';
+import { normalizeSingleTagSelection } from '@/components/admin/adminTagUtils';
 
 type DeleteConfirmState = { open: boolean; pluginName: string | null };
 
@@ -55,6 +56,7 @@ export function usePluginManageDialogState(
     version: '0.0.0',
     category: 'search',
     capabilitiesText: 'resource.search',
+    tags: [],
   });
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>({
     open: false,
@@ -107,6 +109,7 @@ export function usePluginManageDialogState(
       version: plugin.version || '0.0.0',
       category: plugin.category || 'search',
       capabilitiesText: formatCapabilitiesInput(plugin.capabilities),
+      tags: normalizeSingleTagSelection(plugin.tags || []),
     });
   }, []);
 

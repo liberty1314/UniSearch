@@ -215,6 +215,17 @@ export interface ResourceObject {
   published_at?: string;
 }
 
+export interface ResourceDetailRouteState {
+  resource?: ResourceObject;
+  from?: {
+    pathname: string;
+    search?: string;
+    hash?: string;
+    label?: string;
+    keyword?: string;
+  };
+}
+
 /**
  * 合并后的链接
  */
@@ -708,6 +719,7 @@ export interface CreatePluginRequest {
   version?: string;
   category?: string;
   capabilities?: string[];
+  tags?: string[];
 }
 
 export interface CreatePluginResponse {
@@ -723,12 +735,48 @@ export interface UpdatePluginRequest {
   version?: string;
   category?: string;
   capabilities?: string[];
+  tags?: string[];
 }
 
 export interface UpdatePluginResponse {
   success: boolean;
   message: string;
   plugin?: PluginInfo;
+}
+
+export type AdminTagScope = 'plugin' | 'channel';
+
+export interface AdminTagOption {
+  id: number;
+  name: string;
+  scope: AdminTagScope;
+}
+
+export interface AdminTagListResponse {
+  items: AdminTagOption[];
+}
+
+export interface CreateAdminTagRequest {
+  scope: AdminTagScope;
+  name: string;
+}
+
+export interface CreateAdminTagResponse {
+  success: boolean;
+  item: AdminTagOption;
+}
+
+export interface UpdateAdminTagRequest {
+  name: string;
+}
+
+export interface UpdateAdminTagResponse {
+  success: boolean;
+  item: AdminTagOption;
+}
+
+export interface DeleteAdminTagResponse {
+  success: boolean;
 }
 
 export interface PluginCatalogResponse {
@@ -841,6 +889,7 @@ export interface TGChannel {
   name: string;
   is_enabled: boolean;
   sort_order: number;
+  tags?: string[];
   created_at: string;
   updated_at: string;
   health_status?: 'healthy' | 'error' | 'untested';

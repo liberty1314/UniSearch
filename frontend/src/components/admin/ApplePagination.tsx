@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ADMIN_GENTLE_SPRING } from '@/components/admin/adminDesign';
+import { AdminSelectField } from './AdminSelectField';
 
 interface ApplePaginationProps {
   currentPage: number;
@@ -95,19 +96,21 @@ export const ApplePagination: React.FC<ApplePaginationProps> = ({
         {onPageSizeChange && (
           <div className="flex items-center gap-2">
             <span className="text-sm text-slate-600 dark:text-slate-400">每页</span>
-            <select
-              aria-label="每页条数"
-              value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              disabled={isLoading}
-            className="h-8 rounded-xl border-[0.5px] border-slate-200/50 bg-white/60 px-2 text-sm text-slate-900 shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-900/40 dark:text-white"
-            >
-              {pageSizeOptions.map((size) => (
-                <option key={size} value={size}>
-                  {size} 条
-                </option>
-              ))}
-            </select>
+            <div className="min-w-[120px]">
+              <AdminSelectField
+                ariaLabel="每页条数"
+                value={String(pageSize)}
+                onChange={(value) => onPageSizeChange(Number(value))}
+                disabled={isLoading}
+                placeholder="选择页数"
+                options={pageSizeOptions.map((size) => ({
+                  value: String(size),
+                  label: `${size} 条`,
+                }))}
+                triggerClassName="h-8 min-h-8 rounded-xl border-[0.5px] border-slate-200/50 bg-white/60 px-2 text-sm text-slate-900 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/40 dark:text-white"
+                itemClassName="py-1.5"
+              />
+            </div>
           </div>
         )}
       </div>

@@ -6,6 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import { motion } from "framer-motion";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useSearchStore } from "@/stores/searchStore";
 import { cn } from "@/lib/utils";
 import PasswordModal from "./PasswordModal";
@@ -17,15 +18,14 @@ import { SearchResultListItem } from "@/components/home/SearchResultListItem";
 import { SearchResultsToolbar } from "@/components/home/SearchResultsToolbar";
 import { SearchResultsEmptyState } from "@/components/home/SearchResultsEmptyState";
 import { sortResources } from "@/utils/searchResultSorter";
-import type { ResourceAction, ResourceObject } from "@/types/api";
 import type { ResultItem } from "@/utils/cloudTypeUtils";
+import { SystemSettingsService } from "@/services/systemSettingsService";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  buildResourceDetailRouteState,
+  isMagnetTarget,
+  normalizeExternalUrl,
+  resolveResourceOpenTarget,
+} from "@/utils/resourceDisplay";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,6 +49,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     performSearch,
     displayedCount,
   } = useSearchStore();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const debouncedIsLoading = useDebouncedValue(isLoading, 200);
   const hasManualViewPreferenceRef = useRef(false);
@@ -74,7 +76,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     url: "",
     cloudType: "",
   });
-  const [detailResource, setDetailResource] = useState<ResourceObject | null>(null);
+  const [enableResourceDetailPage, setEnableResourceDetailPage] = useState(true);
 
   // ── 无限滚动观察器 ─────────────────────────────────────────────────────────
 
@@ -112,11 +114,33 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     };
   }, [hasMore, isLoading, loadMore]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    void SystemSettingsService.getSettingsCached()
+      .then((settings) => {
+        if (!isMounted) {
+          return;
+        }
+        setEnableResourceDetailPage(settings.enable_resource_detail_page);
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+        setEnableResourceDetailPage(true);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // ── 结果展平 + 排序（全量，由 searchResultSorter 纯函数处理）──────────────
 
   const allSortedResults = useMemo(
-    () => sortResources(searchResults?.resources),
-    [searchResults],
+    () => sortResources(searchResults?.resources, searchParams.keyword),
+    [searchParams.keyword, searchResults],
   );
 
   // ── 当前页切片 ─────────────────────────────────────────────────────────────
@@ -129,41 +153,35 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   // ── 回调（useCallback 保持引用稳定，配合卡片的 React.memo）───────────────
 
   const openExternalResource = useCallback((url: string) => {
-    if (!url) return;
-    window.open(url, "_blank");
+    const targetUrl = normalizeExternalUrl(url);
+    if (!targetUrl) {
+      return;
+    }
+
+    const openedWindow = window.open(targetUrl, "_blank");
+    if (openedWindow) {
+      openedWindow.opener = null;
+    }
   }, []);
 
-  const handleActionClick = useCallback(
-    (action: ResourceAction, item: ResultItem) => {
-      const payload = action.payload || {};
-      const actionUrl =
-        (typeof payload.url === "string" && payload.url) ||
-        item.primaryLink?.url ||
-        item.resource.detail.url ||
-        "";
-      const actionPassword =
-        (typeof payload.password === "string" && payload.password) ||
-        item.primaryLink?.password ||
-        "";
-      const cloudTypeName =
-        (typeof payload.link_type === "string" && payload.link_type) || item.cloudType;
-
-      if (action.type === "open_detail") {
-        setDetailResource(item.resource);
+  const handleOpenResource = useCallback(
+    (item: ResultItem) => {
+      const openTarget = resolveResourceOpenTarget(item);
+      if (!openTarget) {
         return;
       }
 
-      if (actionPassword) {
+      if (openTarget.password || isMagnetTarget(openTarget)) {
         setPasswordModal({
           isOpen: true,
-          password: actionPassword,
-          url: actionUrl,
-          cloudType: cloudTypeName,
+          password: openTarget.password,
+          url: openTarget.url,
+          cloudType: openTarget.cloudType,
         });
         return;
       }
 
-      openExternalResource(actionUrl);
+      openExternalResource(openTarget.url);
     },
     [openExternalResource],
   );
@@ -173,8 +191,16 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   }, []);
 
   const handleOpenDetail = useCallback((item: ResultItem) => {
-    setDetailResource(item.resource);
-  }, []);
+    navigate(`/resource/${encodeURIComponent(item.resource.id)}`, {
+      state: buildResourceDetailRouteState(item.resource, {
+        pathname: location.pathname,
+        search: location.search,
+        hash: location.hash,
+        label: "搜索结果",
+        keyword: searchParams.keyword,
+      }),
+    });
+  }, [location.hash, location.pathname, location.search, navigate, searchParams.keyword]);
 
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     hasManualViewPreferenceRef.current = true;
@@ -247,16 +273,20 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
               key={item.resource.id}
               item={item}
               index={index}
-              onOpenDetail={handleOpenDetail}
-              onActionClick={handleActionClick}
+              canOpenResource={Boolean(resolveResourceOpenTarget(item))}
+              showDetailEntry={enableResourceDetailPage}
+              onOpenResource={handleOpenResource}
+              onOpenDetail={enableResourceDetailPage ? handleOpenDetail : () => undefined}
             />
           ) : (
             <SearchResultListItem
               key={item.resource.id}
               item={item}
               index={index}
-              onOpenDetail={handleOpenDetail}
-              onActionClick={handleActionClick}
+              canOpenResource={Boolean(resolveResourceOpenTarget(item))}
+              onOpenResource={handleOpenResource}
+              onOpenDetail={enableResourceDetailPage ? handleOpenDetail : () => undefined}
+              showDetailEntry={enableResourceDetailPage}
             />
           ),
         )}
@@ -303,109 +333,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         url={passwordModal.url}
         cloudType={passwordModal.cloudType}
       />
-
-      <Dialog open={Boolean(detailResource)} onOpenChange={(open) => !open && setDetailResource(null)}>
-        <DialogContent className="max-w-3xl">
-          {detailResource ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>资源详情</DialogTitle>
-                <DialogDescription>
-                  {detailResource.source.name || detailResource.source.id || detailResource.source.type}
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-5 text-sm">
-                <div className="space-y-2">
-                  <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-                    {detailResource.title}
-                  </h3>
-                  {detailResource.description ? (
-                    <p className="text-slate-600 dark:text-slate-300">
-                      {detailResource.description}
-                    </p>
-                  ) : null}
-                  <div className="flex flex-wrap gap-2">
-                    {detailResource.media_type ? (
-                      <span className="rounded-full border border-cyan-200/60 bg-cyan-50 px-2.5 py-1 text-xs text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-500/10 dark:text-cyan-200">
-                        {detailResource.media_type}
-                      </span>
-                    ) : null}
-                    {detailResource.target_type ? (
-                      <span className="rounded-full border border-amber-200/60 bg-amber-50 px-2.5 py-1 text-xs text-amber-700 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200">
-                        {detailResource.target_type}
-                      </span>
-                    ) : null}
-                    {(detailResource.tags || []).map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full border border-slate-200/70 bg-slate-50 px-2.5 py-1 text-xs text-slate-600 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-300"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {detailResource.detail.content ? (
-                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 text-slate-700 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-slate-200">
-                    {detailResource.detail.content}
-                  </div>
-                ) : null}
-
-                <div className="space-y-3">
-                  <h4 className="font-medium text-slate-900 dark:text-slate-100">资源链接</h4>
-                  <div className="space-y-2">
-                    {detailResource.links.map((link) => (
-                      <div
-                        key={`${link.type}-${link.url}`}
-                        className="rounded-xl border border-slate-200/70 bg-white/70 p-3 dark:border-white/[0.08] dark:bg-white/[0.03]"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <div className="font-medium text-slate-900 dark:text-slate-100">
-                              {link.title || link.work_title || detailResource.title}
-                            </div>
-                            <div className="break-all text-xs text-slate-500 dark:text-slate-400">
-                              {link.url}
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleActionClick(
-                                {
-                                  key: `detail.${link.type}.open`,
-                                  label: "打开",
-                                  type: "open_link",
-                                  payload: {
-                                    url: link.url,
-                                    password: link.password,
-                                    link_type: link.type,
-                                  },
-                                },
-                                {
-                                  resource: detailResource,
-                                  primaryLink: link,
-                                  cloudType: link.type,
-                                  datetime: 0,
-                                },
-                              )
-                            }
-                            className="rounded-full border border-slate-200/70 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-blue-300 hover:text-blue-600 dark:border-white/[0.08] dark:text-slate-200"
-                          >
-                            打开
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

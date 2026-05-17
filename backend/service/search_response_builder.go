@@ -64,6 +64,7 @@ func (searchResponseBuilder) Build(results []model.SearchResult, request Normali
 	sortResultsByTimeAndKeywords(orderedResults)
 
 	resources := buildResourceObjects(orderedResults, request.Keyword, request.CloudTypes)
+	sortResourceObjects(resources, request.Keyword)
 
 	return model.SearchResponse{
 		Total:     len(resources),
@@ -78,23 +79,25 @@ func buildResourceObjects(results []model.SearchResult, keyword string, cloudTyp
 	allowedCloudTypes := buildAllowedCloudTypes(cloudTypes)
 
 	for _, result := range results {
-		if !shouldDisplayResourceResult(result, lowerKeyword) {
-			continue
-		}
-
 		linkTitleMap := extractLinkTitlePairs(result.Content)
 		if len(linkTitleMap) == 0 && len(result.Links) > 0 && !strings.Contains(result.Content, "\n") {
 			backfillLinkTitlesFromInlineContent(linkTitleMap, result)
 		}
+		if !shouldDisplayResourceResult(result, lowerKeyword, linkTitleMap) {
+			continue
+		}
 
-		resourceLinks := buildResourceLinks(result, linkTitleMap, allowedCloudTypes)
+		resourceLinks := buildResourceLinks(result, linkTitleMap, lowerKeyword, allowedCloudTypes)
+		if len(resourceLinks) == 0 && strings.TrimSpace(result.DetailURL) == "" {
+			continue
+		}
 		if len(allowedCloudTypes) > 0 && len(resourceLinks) == 0 {
 			continue
 		}
 
 		resource := model.ResourceObject{
 			ID:           resolveResourceID(result),
-			Title:        resolveResourceTitle(result),
+			Title:        resolveResourceTitle(result, linkTitleMap, lowerKeyword),
 			Description:  buildResourceDescription(result),
 			Source:       buildResourceSource(result),
 			MediaType:    strings.TrimSpace(result.MediaType),
@@ -119,23 +122,26 @@ func buildResourceObjects(results []model.SearchResult, keyword string, cloudTyp
 	return resources
 }
 
-func shouldDisplayResourceResult(result model.SearchResult, lowerKeyword string) bool {
-	if len(result.Links) == 0 && strings.TrimSpace(result.DetailURL) != "" {
+func shouldDisplayResourceResult(result model.SearchResult, lowerKeyword string, linkTitleMap map[string]string) bool {
+	if len(result.Links) == 0 && strings.TrimSpace(result.DetailURL) == "" {
+		return false
+	}
+	if lowerKeyword == "" {
 		return true
 	}
-	if lowerKeyword != "" && strings.Contains(strings.ToLower(result.Title), lowerKeyword) {
-		return true
-	}
-	if shouldSkipKeywordFilter(result) {
-		return true
-	}
-	source := getResultSource(result)
-	pluginLevel := getPluginLevelBySource(source)
-	return !result.Datetime.IsZero() || getKeywordPriority(result.Title) > 0 || pluginLevel <= 2
+	return resourceMatchesKeyword(result, lowerKeyword, linkTitleMap)
 }
 
-func buildResourceLinks(result model.SearchResult, linkTitleMap map[string]string, allowedCloudTypes map[string]bool) []model.ResourceLink {
-	resourceLinks := make([]model.ResourceLink, 0, len(result.Links))
+func buildResourceLinks(result model.SearchResult, linkTitleMap map[string]string, lowerKeyword string, allowedCloudTypes map[string]bool) []model.ResourceLink {
+	type candidateLink struct {
+		link          model.Link
+		title         string
+		hasOwnTitle   bool
+		keywordMatched bool
+	}
+
+	candidates := make([]candidateLink, 0, len(result.Links))
+	matchedSpecificTitleCount := 0
 
 	for _, link := range result.Links {
 		linkType := normalizeLinkType(link.Type, link.URL)
@@ -144,21 +150,47 @@ func buildResourceLinks(result model.SearchResult, linkTitleMap map[string]strin
 		}
 
 		title := strings.TrimSpace(link.WorkTitle)
+		hasOwnTitle := title != ""
 		if title == "" {
 			title = resolveMergedLinkTitle(result, link.URL, linkTitleMap)
 		}
+		if !hasOwnTitle && resolveSpecificLinkTitle(link.URL, linkTitleMap) != "" {
+			hasOwnTitle = true
+		}
+		matched := lowerKeyword == "" || isHighPrecisionTitleMatch(title, lowerKeyword)
+		if lowerKeyword != "" && hasOwnTitle && matched {
+			matchedSpecificTitleCount++
+		}
 
-		datetime := link.Datetime
+		candidates = append(candidates, candidateLink{
+			link:           link,
+			title:          title,
+			hasOwnTitle:    hasOwnTitle,
+			keywordMatched: matched,
+		})
+	}
+
+	resourceLinks := make([]model.ResourceLink, 0, len(candidates))
+	for _, candidate := range candidates {
+		if matchedSpecificTitleCount > 0 && candidate.hasOwnTitle && !candidate.keywordMatched {
+			continue
+		}
+		if matchedSpecificTitleCount > 0 && !candidate.hasOwnTitle {
+			continue
+		}
+		linkType := normalizeLinkType(candidate.link.Type, candidate.link.URL)
+
+		datetime := candidate.link.Datetime
 		if datetime.IsZero() {
 			datetime = result.Datetime
 		}
 
 		resourceLinks = append(resourceLinks, model.ResourceLink{
 			Type:      linkType,
-			URL:       link.URL,
-			Password:  link.Password,
-			Title:     title,
-			WorkTitle: link.WorkTitle,
+			URL:       candidate.link.URL,
+			Password:  candidate.link.Password,
+			Title:     candidate.title,
+			WorkTitle: candidate.link.WorkTitle,
 			Datetime:  datetime,
 		})
 	}
@@ -194,8 +226,15 @@ func resolveResourceID(result model.SearchResult) string {
 	return fmt.Sprintf("resource-%08x", hash.Sum32())
 }
 
-func resolveResourceTitle(result model.SearchResult) string {
+func resolveResourceTitle(result model.SearchResult, linkTitleMap map[string]string, lowerKeyword string) string {
 	title := cleanTitle(result.Title)
+	if title != "" && !isLowSignalResourceTitle(title) {
+		return title
+	}
+
+	if fallbackTitle := resolvePreferredLinkTitle(result, linkTitleMap, lowerKeyword); fallbackTitle != "" {
+		return fallbackTitle
+	}
 	if title != "" {
 		return title
 	}
@@ -207,7 +246,7 @@ func resolveResourceTitle(result model.SearchResult) string {
 
 func buildResourceDescription(result model.SearchResult) string {
 	content := cleanTitle(result.Content)
-	if content == "" || content == resolveResourceTitle(result) {
+	if content == "" {
 		return ""
 	}
 	if len([]rune(content)) <= 180 {
@@ -742,6 +781,316 @@ func cleanTitle(title string) string {
 	return strings.TrimSpace(title)
 }
 
+func resourceMatchesKeyword(result model.SearchResult, lowerKeyword string, linkTitleMap map[string]string) bool {
+	if lowerKeyword == "" {
+		return true
+	}
+
+	titleCandidates := collectTitleCandidates(result, linkTitleMap)
+	if len(titleCandidates) > 0 {
+		for _, title := range titleCandidates {
+			if isHighPrecisionTitleMatch(title, lowerKeyword) {
+				return true
+			}
+		}
+		return false
+	}
+
+	fields := collectSearchableFields(result, linkTitleMap)
+	for _, field := range fields {
+		if strings.Contains(field, lowerKeyword) {
+			return true
+		}
+	}
+
+	keywordTerms := splitKeywordTerms(lowerKeyword)
+	if len(keywordTerms) <= 1 {
+		return false
+	}
+
+	combined := strings.Join(fields, " ")
+	for _, term := range keywordTerms {
+		if !strings.Contains(combined, term) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func collectSearchableFields(result model.SearchResult, linkTitleMap map[string]string) []string {
+	fields := make([]string, 0, 4+len(result.Links)+len(linkTitleMap))
+
+	appendField := func(value string) {
+		normalized := strings.ToLower(cleanTitle(value))
+		if normalized != "" {
+			fields = append(fields, normalized)
+		}
+	}
+
+	appendField(result.Title)
+	appendField(result.Content)
+	appendField(result.DetailURL)
+
+	for _, link := range result.Links {
+		appendField(link.WorkTitle)
+	}
+	for _, title := range linkTitleMap {
+		appendField(title)
+	}
+
+	return fields
+}
+
+func collectTitleCandidates(result model.SearchResult, linkTitleMap map[string]string) []string {
+	candidates := make([]string, 0, 1+len(result.Links)+len(linkTitleMap))
+
+	if title := cleanTitle(result.Title); title != "" && !isLowSignalResourceTitle(title) {
+		candidates = append(candidates, title)
+	}
+	for _, link := range result.Links {
+		if title := cleanTitle(link.WorkTitle); title != "" {
+			candidates = append(candidates, title)
+		}
+	}
+	for _, title := range linkTitleMap {
+		if cleaned := cleanTitle(title); cleaned != "" {
+			candidates = append(candidates, cleaned)
+		}
+	}
+
+	return candidates
+}
+
+func collectResourceSearchableFields(resource model.ResourceObject) []string {
+	fields := make([]string, 0, 4+len(resource.Links))
+
+	appendField := func(value string) {
+		normalized := strings.ToLower(cleanTitle(value))
+		if normalized != "" {
+			fields = append(fields, normalized)
+		}
+	}
+
+	appendField(resource.Title)
+	appendField(resource.Description)
+	appendField(resource.Detail.Content)
+	appendField(resource.Detail.URL)
+
+	for _, link := range resource.Links {
+		appendField(link.Title)
+		appendField(link.WorkTitle)
+	}
+
+	return fields
+}
+
+func splitKeywordTerms(lowerKeyword string) []string {
+	replacer := strings.NewReplacer(
+		"与", " ",
+		"和", " ",
+		"及", " ",
+		"、", " ",
+		"，", " ",
+		",", " ",
+		"；", " ",
+		";", " ",
+		"|", " ",
+		"/", " ",
+		"\\", " ",
+	)
+	normalized := spaceRegex.ReplaceAllString(replacer.Replace(lowerKeyword), " ")
+	parts := strings.Fields(normalized)
+	terms := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		terms = append(terms, part)
+	}
+	return terms
+}
+
+func normalizeMatchText(value string) string {
+	lower := strings.ToLower(cleanTitle(value))
+	replacer := strings.NewReplacer(
+		"《", "",
+		"》", "",
+		"【", "",
+		"】", "",
+		"[", "",
+		"]", "",
+		"（", "",
+		"）", "",
+		"(", "",
+		")", "",
+		"：", "",
+		":", "",
+		"·", "",
+		"-", "",
+		"_", "",
+		" ", "",
+	)
+	return replacer.Replace(lower)
+}
+
+func isHighPrecisionTitleMatch(title string, lowerKeyword string) bool {
+	title = strings.TrimSpace(title)
+	if title == "" || lowerKeyword == "" {
+		return false
+	}
+
+	normalizedTitle := normalizeMatchText(title)
+	normalizedKeyword := normalizeMatchText(lowerKeyword)
+	if normalizedKeyword != "" && strings.Contains(normalizedTitle, normalizedKeyword) {
+		return true
+	}
+
+	keywordTerms := splitKeywordTerms(lowerKeyword)
+	if len(keywordTerms) == 0 {
+		return false
+	}
+	for _, term := range keywordTerms {
+		if !strings.Contains(strings.ToLower(title), term) {
+			return false
+		}
+	}
+	return true
+}
+
+func resolvePreferredLinkTitle(result model.SearchResult, linkTitleMap map[string]string, lowerKeyword string) string {
+	candidates := make([]string, 0, len(result.Links)+len(linkTitleMap))
+	for _, link := range result.Links {
+		if title := cleanTitle(link.WorkTitle); title != "" {
+			candidates = append(candidates, title)
+		}
+	}
+	for _, title := range linkTitleMap {
+		if cleaned := cleanTitle(title); cleaned != "" {
+			candidates = append(candidates, cleaned)
+		}
+	}
+
+	lowerTerms := splitKeywordTerms(lowerKeyword)
+	for _, candidate := range candidates {
+		candidateLower := strings.ToLower(candidate)
+		if lowerKeyword != "" && strings.Contains(candidateLower, lowerKeyword) {
+			return candidate
+		}
+		if len(lowerTerms) > 1 {
+			allMatched := true
+			for _, term := range lowerTerms {
+				if !strings.Contains(candidateLower, term) {
+					allMatched = false
+					break
+				}
+			}
+			if allMatched {
+				return candidate
+			}
+		}
+	}
+
+	if len(candidates) > 0 {
+		return candidates[0]
+	}
+	return ""
+}
+
+func resolveResourceMatchRank(resource model.ResourceObject, lowerKeyword string) int {
+	if lowerKeyword == "" {
+		return 3
+	}
+
+	title := strings.ToLower(cleanTitle(resource.Title))
+	if title != "" && strings.Contains(title, lowerKeyword) {
+		return 0
+	}
+
+	fields := collectResourceSearchableFields(resource)
+	for _, field := range fields {
+		if strings.Contains(field, lowerKeyword) {
+			return 1
+		}
+	}
+
+	keywordTerms := splitKeywordTerms(lowerKeyword)
+	if len(keywordTerms) <= 1 {
+		return 4
+	}
+
+	if title != "" {
+		allMatchedInTitle := true
+		for _, term := range keywordTerms {
+			if !strings.Contains(title, term) {
+				allMatchedInTitle = false
+				break
+			}
+		}
+		if allMatchedInTitle {
+			return 2
+		}
+	}
+
+	combined := strings.Join(fields, " ")
+	for _, term := range keywordTerms {
+		if !strings.Contains(combined, term) {
+			return 4
+		}
+	}
+
+	return 3
+}
+
+func resolveResourcePublishedAt(resource model.ResourceObject) time.Time {
+	if !resource.PublishedAt.IsZero() {
+		return resource.PublishedAt
+	}
+	for _, link := range resource.Links {
+		if !link.Datetime.IsZero() {
+			return link.Datetime
+		}
+	}
+	return time.Time{}
+}
+
+func sortResourceObjects(resources []model.ResourceObject, keyword string) {
+	lowerKeyword := strings.ToLower(strings.TrimSpace(keyword))
+	sort.SliceStable(resources, func(i, j int) bool {
+		leftRank := resolveResourceMatchRank(resources[i], lowerKeyword)
+		rightRank := resolveResourceMatchRank(resources[j], lowerKeyword)
+		if leftRank != rightRank {
+			return leftRank < rightRank
+		}
+
+		leftTime := resolveResourcePublishedAt(resources[i])
+		rightTime := resolveResourcePublishedAt(resources[j])
+		if !leftTime.Equal(rightTime) {
+			return leftTime.After(rightTime)
+		}
+
+		return strings.Compare(resources[i].ID, resources[j].ID) < 0
+	})
+}
+
+func isLowSignalResourceTitle(title string) bool {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return true
+	}
+	if strings.HasPrefix(title, "#") {
+		return true
+	}
+
+	switch title {
+	case "电影", "电视剧", "动漫", "综艺", "资源", "网盘":
+		return true
+	default:
+		return false
+	}
+}
+
 func mergeResultsByType(results []model.SearchResult, keyword string, cloudTypes []string) model.MergedLinks {
 	_, mergedLinks := buildResponseArtifacts(results, keyword, cloudTypes)
 	return mergedLinks
@@ -890,15 +1239,22 @@ func shouldSkipKeywordFilter(result model.SearchResult) bool {
 }
 
 func resolveMergedLinkTitle(result model.SearchResult, linkURL string, linkTitleMap map[string]string) string {
+	if specificTitle := resolveSpecificLinkTitle(linkURL, linkTitleMap); specificTitle != "" {
+		return specificTitle
+	}
+	return result.Title
+}
+
+func resolveSpecificLinkTitle(linkURL string, linkTitleMap map[string]string) string {
 	if specificTitle, found := linkTitleMap[linkURL]; found && specificTitle != "" {
 		return specificTitle
 	}
 	for mappedLink, mappedTitle := range linkTitleMap {
-		if strings.HasPrefix(mappedLink, linkURL) {
+		if strings.HasPrefix(mappedLink, linkURL) && mappedTitle != "" {
 			return mappedTitle
 		}
 	}
-	return result.Title
+	return ""
 }
 
 func backfillLinkTitlesFromInlineContent(linkTitleMap map[string]string, result model.SearchResult) {

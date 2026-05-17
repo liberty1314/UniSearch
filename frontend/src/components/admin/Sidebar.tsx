@@ -30,8 +30,8 @@ const navItems: NavItem[] = [
     { id: 'channel_management', label: 'Telegram 频道', icon: <Radio className="h-4 w-4" /> },
     { id: 'plugin_management', label: '插件中心', icon: <Layers className="h-4 w-4" /> },
     { id: 'user_management', label: '用户管理', icon: <Users className="h-4 w-4" /> },
-    { id: 'system_settings', label: '系统设置', icon: <Settings className="h-4 w-4" /> },
     { id: 'announcement_management', label: '公告管理', icon: <Megaphone className="h-4 w-4" /> },
+    { id: 'system_settings', label: '系统设置', icon: <Settings className="h-4 w-4" /> },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {

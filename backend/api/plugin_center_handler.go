@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -64,6 +65,12 @@ func PluginCenterInstallHandler(searchService *service.SearchService, pluginHeal
 				"code":  "PLUGIN_CENTER_INSTALL_FAILED",
 			})
 			return
+		}
+
+		if adminTagService != nil {
+			if err := adminTagService.EnsureTags(model.AdminTagScopePlugin, item.Tags); err != nil {
+				log.Printf("⚠️  同步导入插件标签词库失败(%s): %v", item.Name, err)
+			}
 		}
 
 		searchService.InvalidatePluginSelectorCache()

@@ -71,6 +71,6 @@ describe('EditUserDialog', () => {
 
     const listbox = await screen.findByRole('listbox');
     expect(within(listbox).getByRole('option', { name: '管理员' })).toBeInTheDocument();
-    expect(listbox.className).toContain('z-[72]');
+    expect(listbox.className).toContain('z-[110]');
   });
 });

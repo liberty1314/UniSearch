@@ -8,6 +8,13 @@ import {
     ADMIN_GENTLE_SPRING,
     ADMIN_HOVERABLE_BUTTON_CLASSES,
 } from '@/components/admin/adminDesign';
+import {
+    ADMIN_DROPDOWN_BACKDROP_Z_INDEX,
+    ADMIN_DROPDOWN_ITEM_CLASSES,
+    ADMIN_DROPDOWN_PANEL_CLASSES,
+    computeFloatingDropdownPosition,
+    estimateDropdownContentWidth,
+} from './adminDropdown';
 
 export interface FilterOption {
     label: string;
@@ -37,17 +44,42 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const buttonRef = useRef<HTMLButtonElement>(null);
-    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 176, maxHeight: 360 });
 
     // 计算下拉框位置
     useEffect(() => {
-        if (isOpen && buttonRef.current) {
-            const rect = buttonRef.current.getBoundingClientRect();
-            setDropdownPosition({
-                top: rect.bottom + window.scrollY + 8, // 8px 间距
-                left: rect.right + window.scrollX - 140, // 140px 是下拉框宽度，右对齐
-            });
+        if (!isOpen || !buttonRef.current) {
+            return;
         }
+
+        const updatePosition = () => {
+            if (!buttonRef.current) {
+                return;
+            }
+            const rect = buttonRef.current.getBoundingClientRect();
+            const estimatedWidth = estimateDropdownContentWidth(
+                [
+                    ...options.map((option) => option.label),
+                    multiSelect ? '清除筛选' : '',
+                ].filter(Boolean),
+                {
+                    minWidth: Math.max(176, rect.width),
+                    maxWidth: Math.max(rect.width, Math.min(420, window.innerWidth - 24)),
+                    extraWidth: 64,
+                }
+            );
+            const next = computeFloatingDropdownPosition(rect, estimatedWidth, 360);
+            setDropdownPosition(next);
+        };
+
+        updatePosition();
+        window.addEventListener('resize', updatePosition);
+        window.addEventListener('scroll', updatePosition, true);
+
+        return () => {
+            window.removeEventListener('resize', updatePosition);
+            window.removeEventListener('scroll', updatePosition, true);
+        };
     }, [isOpen]);
 
     const handleToggle = (value: string) => {
@@ -103,7 +135,7 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
                     <>
                         {/* 背景遮罩 */}
                         <div
-                            className="fixed inset-0 z-[9998]"
+                            className={`fixed inset-0 ${ADMIN_DROPDOWN_BACKDROP_Z_INDEX} bg-transparent`}
                             onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -117,11 +149,13 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -8, scale: 0.96 }}
                             transition={ADMIN_GENTLE_SPRING}
-                            style={toStyleVars({
-                                '--dropdown-top': `${dropdownPosition.top}px`,
-                                '--dropdown-left': `${dropdownPosition.left}px`,
-                            })}
-                            className="fixed z-[9999] table-filter-dropdown w-[150px] overflow-hidden rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/70 shadow-[0_18px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70"
+                            style={{
+                                top: dropdownPosition.top,
+                                left: dropdownPosition.left,
+                                width: dropdownPosition.width,
+                                maxHeight: dropdownPosition.maxHeight,
+                            }}
+                            className={`${ADMIN_DROPDOWN_PANEL_CLASSES} fixed z-[110] overflow-hidden`}
                         >
                             <div className="p-2 space-y-0.5">
                                 {options.map((option, index) => {
@@ -138,11 +172,11 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
                                                 handleToggle(option.value);
                                             }}
                                             className={`
-                                                w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm
-                                                transition-all duration-150
+                                                ${ADMIN_DROPDOWN_ITEM_CLASSES}
+                                                w-full flex items-center justify-between rounded-[0.95rem] px-3 py-2 text-sm transition-all duration-150
                                                 ${isSelected
-                                                    ? 'bg-cyan-50/80 text-cyan-700 dark:bg-cyan-950/30 dark:text-cyan-300'
-                                                    : 'text-slate-700 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-white/5'
+                                                    ? 'bg-slate-100/80 text-slate-900 dark:bg-white/10 dark:text-white'
+                                                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-white/5'
                                                 }
                                             `}
                                         >

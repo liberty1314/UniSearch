@@ -12,6 +12,7 @@ type SystemSettingsUpdateInput struct {
 	EnableUserAuth            *bool
 	EnableUserLogin           *bool
 	EnableUserSignup          *bool
+	EnableResourceDetailPage  *bool
 	PublicSiteURL             *string
 	DefaultCopyFormatTemplate *string
 }
@@ -40,6 +41,7 @@ func (s *SystemSettingsService) GetSettings() (*model.SystemSettings, error) {
 				EnableUserLogin:           true,  // 默认启用用户登录
 				EnableUserSignup:          true,  // 默认启用用户注册
 				AnnouncementEnabled:       false, // 默认禁用公告功能（需求 13.5）
+				EnableResourceDetailPage:  false, // 默认关闭资源详情页
 				PublicSiteURL:             "",
 				DefaultCopyFormatTemplate: "",
 			}
@@ -72,6 +74,9 @@ func (s *SystemSettingsService) UpdateSettings(input SystemSettingsUpdateInput) 
 	}
 	if input.EnableUserSignup != nil {
 		settings.EnableUserSignup = *input.EnableUserSignup
+	}
+	if input.EnableResourceDetailPage != nil {
+		settings.EnableResourceDetailPage = *input.EnableResourceDetailPage
 	}
 	if input.PublicSiteURL != nil {
 		settings.PublicSiteURL = strings.TrimSpace(*input.PublicSiteURL)
