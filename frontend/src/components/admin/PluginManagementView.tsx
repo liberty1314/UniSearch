@@ -73,32 +73,38 @@ export const PluginManagementView: React.FC = () => {
     };
   }, [controller.localPlugins]);
 
+  const {
+    activeEditingPlugin,
+    detailPluginName,
+    pagedItems,
+    setDetailPluginName,
+  } = controller;
   const activePlugin = controller.activeEditingPlugin || controller.activeDetailPlugin;
   const drawerOpen = Boolean(activePlugin);
   const isEditing = Boolean(controller.activeEditingPlugin);
 
   useEffect(() => {
-    if (controller.activeEditingPlugin) {
+    if (activeEditingPlugin) {
       return;
     }
-    if (controller.pagedItems.length === 0) {
-      if (controller.detailPluginName !== null) {
-        controller.setDetailPluginName(null);
+    if (pagedItems.length === 0) {
+      if (detailPluginName !== null) {
+        setDetailPluginName(null);
       }
       return;
     }
 
-    const hasActiveOnCurrentPage = controller.pagedItems.some(
-      (plugin) => plugin.name === controller.detailPluginName
+    const hasActiveOnCurrentPage = pagedItems.some(
+      (plugin) => plugin.name === detailPluginName
     );
     if (!hasActiveOnCurrentPage) {
-      controller.setDetailPluginName(controller.pagedItems[0].name);
+      setDetailPluginName(pagedItems[0].name);
     }
   }, [
-    controller.activeEditingPlugin,
-    controller.detailPluginName,
-    controller.pagedItems,
-    controller.setDetailPluginName,
+    activeEditingPlugin,
+    detailPluginName,
+    pagedItems,
+    setDetailPluginName,
   ]);
 
   const closeDrawer = () => {

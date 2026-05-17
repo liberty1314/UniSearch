@@ -238,6 +238,15 @@
   - `frontend/src/components/admin/ChannelManagementView.tsx`
   - `frontend/src/components/admin/PluginManagementView.tsx`
   - `frontend/src/hooks/useAdminPageController.ts`
+
+## [2026-05-17 19:58:36] fix(frontend): 修复前端 Hooks 依赖告警并清理未使用导入
+- **Body**: 补齐后台管理多选、频道、插件与筛选下拉组件的 Hooks 依赖，移除资源详情页和后台视图中的未使用导入，消除 ESLint 报错。
+- **Files**:
+  - `frontend/src/components/admin/AdminTagMultiSelect.tsx`
+  - `frontend/src/components/admin/ChannelManagementView.tsx`
+  - `frontend/src/components/admin/PluginManagementView.tsx`
+  - `frontend/src/components/admin/TableFilterDropdown.tsx`
+  - `frontend/src/pages/ResourceDetailPage.tsx`
   - `frontend/src/hooks/usePluginManageController.ts`
 
 ## [2026-05-17 19:43:27] refactor(frontend): 优化资源排序与后台组件细节

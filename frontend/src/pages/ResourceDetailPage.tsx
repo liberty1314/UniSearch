@@ -19,7 +19,6 @@ import { SystemSettingsService } from "@/services/systemSettingsService";
 import type {
   ResourceAction,
   ResourceDetailRouteState,
-  ResourceObject,
 } from "@/types/api";
 import {
   isMagnetTarget,

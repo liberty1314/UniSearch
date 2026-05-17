@@ -80,7 +80,7 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
             window.removeEventListener('resize', updatePosition);
             window.removeEventListener('scroll', updatePosition, true);
         };
-    }, [isOpen]);
+    }, [isOpen, multiSelect, options]);
 
     const handleToggle = (value: string) => {
         if (multiSelect) {

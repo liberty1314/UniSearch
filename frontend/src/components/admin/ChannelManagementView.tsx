@@ -17,7 +17,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Label } from '@/components/ui/label';
 import { AdminTagMultiSelect } from './AdminTagMultiSelect';
-import { Input } from '@/components/ui/input';
 import { ChannelAddDialog } from './ChannelAddDialog';
 import { ApplePagination } from './ApplePagination';
 import {
@@ -64,23 +63,28 @@ export const ChannelManagementView: React.FC = () => {
     };
   }, [controller.channels]);
 
+  const {
+    detailChannelId,
+    pagedItems,
+    setDetailChannelId,
+  } = controller;
   const activeChannel = controller.activeDetailChannel;
 
   useEffect(() => {
-    if (controller.pagedItems.length === 0) {
-      if (controller.detailChannelId !== null) {
-        controller.setDetailChannelId(null);
+    if (pagedItems.length === 0) {
+      if (detailChannelId !== null) {
+        setDetailChannelId(null);
       }
       return;
     }
 
-    const hasActiveOnCurrentPage = controller.pagedItems.some(
-      (channel) => channel.id === controller.detailChannelId
+    const hasActiveOnCurrentPage = pagedItems.some(
+      (channel) => channel.id === detailChannelId
     );
     if (!hasActiveOnCurrentPage) {
-      controller.setDetailChannelId(controller.pagedItems[0].id);
+      setDetailChannelId(pagedItems[0].id);
     }
-  }, [controller.detailChannelId, controller.pagedItems, controller.setDetailChannelId]);
+  }, [detailChannelId, pagedItems, setDetailChannelId]);
 
   const selectionBar = controller.selectedCount > 0 ? (
     <AdminSelectionBar

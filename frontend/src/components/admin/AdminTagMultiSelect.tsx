@@ -159,7 +159,6 @@ export const AdminTagMultiSelect: React.FC<AdminTagMultiSelectProps> = ({
     editingTagId,
     filteredOptions.length,
     normalizedSelected.length,
-    showCreateAction,
     showSelectedSummary,
   ]);
 
@@ -194,7 +193,16 @@ export const AdminTagMultiSelect: React.FC<AdminTagMultiSelectProps> = ({
       width: next.width,
       maxHeight: next.maxHeight,
     });
-  }, [estimatedPanelHeight]);
+  }, [
+    emptyMessage,
+    estimatedPanelHeight,
+    filteredOptions,
+    normalizedKeyword,
+    normalizedSelected,
+    placeholder,
+    scope,
+    searchPlaceholder,
+  ]);
 
   useEffect(() => {
     if (!open) {
