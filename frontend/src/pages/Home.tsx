@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Layers, Sparkles, Activity } from "lucide-react";
 import SearchBox from "@/components/SearchBox";
 import CloudTypeFilter from "@/components/CloudTypeFilter";
+import SearchAdvancedFilterPanel from "@/components/SearchAdvancedFilterPanel";
 import SearchResults from "@/components/SearchResults";
 import GradientText from "@/components/GradientText";
 import { useSearchStore } from "@/stores/searchStore";
@@ -17,6 +18,7 @@ import PlatformMarquee from "@/components/home/PlatformMarquee";
 import TrendingCategories from "@/components/home/TrendingCategories";
 import HomeSectionHeader from "@/components/home/HomeSectionHeader";
 import FeatureCard from "@/components/home/FeatureCard";
+import { SearchService } from "@/services/searchService";
 
 const featureCards = [
   {
@@ -50,12 +52,13 @@ const featureCards = [
 ] as const;
 
 const Home: React.FC = () => {
-  const { searchParams, searchResults, performSearch } = useSearchStore();
+  const { searchParams, searchResults, performSearch, setSearchParams } = useSearchStore();
   useSearchAccessStatus();
   const { isAuthenticated } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
   const handledResumeSearchRef = useRef<string | null>(null);
+  const handledUrlSearchRef = useRef<string | null>(null);
 
   useEffect(() => {
     const state = location.state as {
@@ -76,18 +79,75 @@ const Home: React.FC = () => {
     }
 
     handledResumeSearchRef.current = resumeKey;
-    void performSearch(
-      { keyword },
-      { preserveResults: Boolean(searchResults) },
+    navigate(
+      SearchService.buildSearchUrl({
+        ...searchParams,
+        keyword,
+      }),
+      { replace: true, state: undefined },
     );
-    navigate("/", { replace: true });
   }, [
     isAuthenticated,
     location.pathname,
     location.state,
     navigate,
+    searchParams,
+  ]);
+
+  useEffect(() => {
+    const state = location.state as { skipSearchSync?: boolean } | null;
+    const parsedParams = SearchService.parseSearchUrl(location.search);
+    const keyword = parsedParams.keyword?.trim();
+
+    if (!keyword) {
+      handledUrlSearchRef.current = null;
+      return;
+    }
+
+    const nextParams = {
+      keyword,
+      source: parsedParams.source || "all",
+      resultType: parsedParams.resultType || "merge",
+      cloudTypes: parsedParams.cloudTypes || [],
+      channels: parsedParams.channels || [],
+      plugins: parsedParams.plugins || [],
+      concurrency: searchParams.concurrency || 5,
+      refresh: false,
+      ext: searchParams.ext || {},
+      filter: parsedParams.filter,
+    };
+
+    const snapshot = JSON.stringify(nextParams);
+    setSearchParams(nextParams);
+
+    if (state?.skipSearchSync) {
+      handledUrlSearchRef.current = snapshot;
+      if (location.state) {
+        navigate(`${location.pathname}${location.search}${location.hash}`, {
+          replace: true,
+          state: undefined,
+        });
+      }
+      return;
+    }
+
+    if (handledUrlSearchRef.current === snapshot) {
+      return;
+    }
+
+    handledUrlSearchRef.current = snapshot;
+    void performSearch(nextParams, { preserveResults: Boolean(searchResults) });
+  }, [
+    location.hash,
+    location.pathname,
+    location.search,
+    location.state,
+    navigate,
     performSearch,
+    searchParams.concurrency,
+    searchParams.ext,
     searchResults,
+    setSearchParams,
   ]);
 
   const hasSearched =
@@ -178,18 +238,29 @@ const Home: React.FC = () => {
 
         {/* 网盘类型筛选器 - 只在搜索后显示 */}
         {hasSearched && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="max-w-4xl w-full relative"
-          >
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-10 -inset-y-2 hidden rounded-[2rem] blur-3xl dark:block dark:bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.10),transparent_68%)]"
-            />
-            <CloudTypeFilter />
-          </motion.div>
+          <>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="max-w-4xl w-full relative"
+            >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-10 -inset-y-2 hidden rounded-[2rem] blur-3xl dark:block dark:bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.10),transparent_68%)]"
+              />
+              <CloudTypeFilter />
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.05 }}
+              className="max-w-4xl w-full"
+            >
+              <SearchAdvancedFilterPanel />
+            </motion.div>
+          </>
         )}
       </div>
 

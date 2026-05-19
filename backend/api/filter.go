@@ -15,30 +15,10 @@ func applyResultFilter(response model.SearchResponse, filter *model.FilterConfig
 
 	includeKeywords := normalizeFilterValues(filter.Include)
 	excludeKeywords := normalizeFilterValues(filter.Exclude)
-	sourceTypes := normalizeFilterSet(filter.SourceTypes)
-	mediaTypes := normalizeFilterSet(filter.MediaTypes)
-	targetTypes := normalizeFilterSet(filter.TargetTypes)
-	capabilities := normalizeFilterSet(filter.Capabilities)
-	actionTypes := normalizeFilterSet(filter.ActionTypes)
 
 	filtered := make([]model.ResourceObject, 0, len(response.Resources))
 	for _, resource := range response.Resources {
 		if !matchFilter(buildResourceFilterText(resource), includeKeywords, excludeKeywords) {
-			continue
-		}
-		if !matchResourceDimension(sourceTypes, resource.Source.Type, resource.Source.ID, resource.Source.Name) {
-			continue
-		}
-		if !matchResourceDimension(mediaTypes, resource.MediaType) {
-			continue
-		}
-		if !matchResourceDimension(targetTypes, resource.TargetType) {
-			continue
-		}
-		if !matchResourceCapabilities(resource.Capabilities, capabilities) {
-			continue
-		}
-		if !matchResourceActions(resource.Actions, actionTypes) {
 			continue
 		}
 		filtered = append(filtered, resource)
@@ -52,12 +32,7 @@ func applyResultFilter(response model.SearchResponse, filter *model.FilterConfig
 
 func isResourceFilterEmpty(filter *model.FilterConfig) bool {
 	return len(filter.Include) == 0 &&
-		len(filter.Exclude) == 0 &&
-		len(filter.SourceTypes) == 0 &&
-		len(filter.MediaTypes) == 0 &&
-		len(filter.TargetTypes) == 0 &&
-		len(filter.Capabilities) == 0 &&
-		len(filter.ActionTypes) == 0
+		len(filter.Exclude) == 0
 }
 
 func normalizeFilterValues(values []string) []string {
@@ -67,14 +42,6 @@ func normalizeFilterValues(values []string) []string {
 		if trimmed != "" {
 			normalized = append(normalized, trimmed)
 		}
-	}
-	return normalized
-}
-
-func normalizeFilterSet(values []string) map[string]bool {
-	normalized := make(map[string]bool, len(values))
-	for _, value := range normalizeFilterValues(values) {
-		normalized[value] = true
 	}
 	return normalized
 }
@@ -97,51 +64,6 @@ func buildResourceFilterText(resource model.ResourceObject) string {
 		parts = append(parts, link.Type, link.URL, link.Title, link.WorkTitle)
 	}
 	return strings.Join(parts, " ")
-}
-
-func matchResourceDimension(allowed map[string]bool, values ...string) bool {
-	if len(allowed) == 0 {
-		return true
-	}
-	for _, value := range values {
-		if allowed[strings.ToLower(strings.TrimSpace(value))] {
-			return true
-		}
-	}
-	return false
-}
-
-func matchResourceCapabilities(capabilities model.ResourceCapabilities, allowed map[string]bool) bool {
-	if len(allowed) == 0 {
-		return true
-	}
-
-	active := map[string]bool{
-		"searchable":          capabilities.Searchable,
-		"official_searchable": capabilities.OfficialSearchable,
-		"share_searchable":    capabilities.ShareSearchable,
-		"downloadable":        capabilities.Downloadable,
-		"strmable":            capabilities.Strmable,
-	}
-	for capability := range allowed {
-		if active[capability] {
-			return true
-		}
-	}
-	return false
-}
-
-func matchResourceActions(actions []model.ResourceAction, allowed map[string]bool) bool {
-	if len(allowed) == 0 {
-		return true
-	}
-	for _, action := range actions {
-		if allowed[strings.ToLower(strings.TrimSpace(action.Type))] ||
-			allowed[strings.ToLower(strings.TrimSpace(action.Key))] {
-			return true
-		}
-	}
-	return false
 }
 
 // matchFilter 检查文本是否匹配关键词过滤条件。

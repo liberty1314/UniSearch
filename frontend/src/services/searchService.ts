@@ -5,7 +5,9 @@ import type {
   SearchResponse,
   HealthResponse,
   CloudTypeValue,
+  FilterConfig,
 } from '@/types/api';
+import { normalizeFilterConfig } from '@/utils/searchFilters';
 
 /**
  * 搜索服务类
@@ -17,6 +19,8 @@ export class SearchService {
    * @returns 搜索结果
    */
   static async search(params: SearchParams): Promise<SearchResponse> {
+    const normalizedFilter = normalizeFilterConfig(params.filter);
+
     // 转换前端参数为后端API格式
     const requestData: SearchRequest = {
       kw: params.keyword,
@@ -28,6 +32,7 @@ export class SearchService {
       conc: params.concurrency,
       refresh: params.refresh || false,
       ext: params.ext || {},
+      filter: normalizedFilter,
     };
 
     // 移除空值参数
@@ -129,6 +134,7 @@ export class SearchService {
    */
   static buildSearchUrl(params: SearchParams): string {
     const searchParams = new URLSearchParams();
+    const normalizedFilter = normalizeFilterConfig(params.filter);
 
     if (params.keyword) {
       searchParams.set('q', params.keyword);
@@ -153,6 +159,18 @@ export class SearchService {
     if (params.plugins && params.plugins.length > 0) {
       searchParams.set('plugins', params.plugins.join(','));
     }
+
+    const filterFieldMap: Array<[keyof FilterConfig, string]> = [
+      ['include', 'include'],
+      ['exclude', 'exclude'],
+    ];
+
+    filterFieldMap.forEach(([field, queryKey]) => {
+      const values = normalizedFilter?.[field];
+      if (values && values.length > 0) {
+        searchParams.set(queryKey, values.join(','));
+      }
+    });
 
     const queryString = searchParams.toString();
     return queryString ? `/?${queryString}` : '/';
@@ -198,6 +216,29 @@ export class SearchService {
     const plugins = searchParams.get('plugins');
     if (plugins) {
       params.plugins = plugins.split(',').filter(Boolean);
+    }
+
+    const filterFieldMap: Array<[keyof FilterConfig, string]> = [
+      ['include', 'include'],
+      ['exclude', 'exclude'],
+    ];
+
+    const filter: FilterConfig = {};
+    filterFieldMap.forEach(([field, queryKey]) => {
+      const rawValue = searchParams.get(queryKey);
+      if (!rawValue) {
+        return;
+      }
+
+      const values = rawValue.split(',').map((value) => value.trim()).filter(Boolean);
+      if (values.length > 0) {
+        filter[field] = values;
+      }
+    });
+
+    const normalizedFilter = normalizeFilterConfig(filter);
+    if (normalizedFilter) {
+      params.filter = normalizedFilter;
     }
 
     return params;

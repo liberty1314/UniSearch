@@ -2,13 +2,8 @@ package model
 
 // FilterConfig 过滤配置
 type FilterConfig struct {
-	Include      []string `json:"include,omitempty"`      // 包含关键词列表（OR关系）
-	Exclude      []string `json:"exclude,omitempty"`      // 排除关键词列表（任一命中则排除）
-	SourceTypes  []string `json:"source_types,omitempty"` // 来源类型筛选，例如 tg/plugin/search
-	MediaTypes   []string `json:"media_types,omitempty"`  // 媒体类型筛选，例如 movie/tv/book
-	TargetTypes  []string `json:"target_types,omitempty"` // 目标类型筛选，例如 share/detail/magnet
-	Capabilities []string `json:"capabilities,omitempty"` // 能力筛选，例如 downloadable
-	ActionTypes  []string `json:"action_types,omitempty"` // 动作类型筛选，例如 open_link
+	Include []string `json:"include,omitempty"` // 包含关键词列表（OR关系）
+	Exclude []string `json:"exclude,omitempty"` // 排除关键词列表（任一命中则排除）
 }
 
 // SearchRequest 搜索请求参数

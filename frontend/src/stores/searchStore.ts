@@ -3,6 +3,7 @@ import { devtools } from "zustand/middleware";
 import type { SearchParams, SearchResponse } from "@/types/api";
 import { SearchService } from "@/services/searchService";
 import { getErrorCode, getErrorMessage } from "@/lib/error";
+import { cloneFilterConfig } from "@/utils/searchFilters";
 
 /**
  * 搜索历史最大保存条数（同时作为 UI 展示上限）
@@ -77,6 +78,7 @@ const normalizeSearchParams = (params: SearchParams): SearchParams => ({
   cloudTypes: [...(params.cloudTypes || [])],
   channels: [...(params.channels || [])],
   plugins: [...(params.plugins || [])],
+  filter: cloneFilterConfig(params.filter),
 });
 
 const areSearchParamsEqual = (

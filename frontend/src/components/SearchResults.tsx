@@ -26,6 +26,13 @@ import {
   normalizeExternalUrl,
   resolveResourceOpenTarget,
 } from "@/utils/resourceDisplay";
+import {
+  buildActiveFilterChips,
+  filterResourceObjects,
+  isFilterConfigEmpty,
+  removeActiveFilterChip,
+} from "@/utils/searchFilters";
+import { SearchService } from "@/services/searchService";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,9 +55,30 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     searchParams,
     performSearch,
     displayedCount,
+    setSearchParams,
   } = useSearchStore();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const syncSearchUrl = useCallback(
+    (nextFilter?: typeof searchParams.filter) => {
+      const nextUrl = SearchService.buildSearchUrl({
+        ...searchParams,
+        filter: nextFilter,
+      });
+      const currentUrl = `${location.pathname}${location.search}`;
+
+      if (nextUrl === currentUrl) {
+        return;
+      }
+
+      navigate(nextUrl, {
+        replace: true,
+        state: { skipSearchSync: true },
+      });
+    },
+    [location.pathname, location.search, navigate, searchParams],
+  );
 
   const debouncedIsLoading = useDebouncedValue(isLoading, 200);
   const hasManualViewPreferenceRef = useRef(false);
@@ -138,10 +166,26 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
 
   // ── 结果展平 + 排序（全量，由 searchResultSorter 纯函数处理）──────────────
 
-  const allSortedResults = useMemo(
+  const rawSortedResults = useMemo(
     () => sortResources(searchResults?.resources, searchParams.keyword),
-    [searchParams.keyword, searchResults],
+    [searchParams.keyword, searchResults?.resources],
   );
+
+  const filteredResources = useMemo(
+    () => filterResourceObjects(searchResults?.resources, searchParams.filter),
+    [searchParams.filter, searchResults?.resources],
+  );
+
+  const allSortedResults = useMemo(
+    () => sortResources(filteredResources, searchParams.keyword),
+    [filteredResources, searchParams.keyword],
+  );
+
+  const activeFilterChips = useMemo(
+    () => buildActiveFilterChips(searchParams.filter),
+    [searchParams.filter],
+  );
+  const hasAdvancedFilters = activeFilterChips.length > 0;
 
   // ── 当前页切片 ─────────────────────────────────────────────────────────────
 
@@ -207,6 +251,22 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     setViewMode(mode);
   }, []);
 
+  const handleClearAdvancedFilters = useCallback(() => {
+    setSearchParams({ filter: undefined });
+    syncSearchUrl(undefined);
+  }, [setSearchParams, syncSearchUrl]);
+
+  const handleRemoveFilterChip = useCallback((chipId: string) => {
+    const chip = activeFilterChips.find((item) => item.id === chipId);
+    if (!chip) {
+      return;
+    }
+
+    const nextFilter = removeActiveFilterChip(searchParams.filter, chip);
+    setSearchParams({ filter: nextFilter });
+    syncSearchUrl(nextFilter);
+  }, [activeFilterChips, searchParams.filter, setSearchParams, syncSearchUrl]);
+
   // ─────────────────────────────────────────────────────────────────────────
   // 渲染：空状态（error / 无结果 / 无关键词）
   // ─────────────────────────────────────────────────────────────────────────
@@ -221,7 +281,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     );
   }
 
-  if (!isLoading && allSortedResults.length === 0 && searchParams.keyword) {
+  if (!isLoading && rawSortedResults.length === 0 && searchParams.keyword) {
     return (
       <SearchResultsEmptyState
         variant="no-results"
@@ -230,6 +290,20 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         onSuggestSearch={(kw) =>
           performSearch({ ...searchParams, keyword: kw })
         }
+      />
+    );
+  }
+
+  if (
+    !isLoading &&
+    rawSortedResults.length > 0 &&
+    allSortedResults.length === 0 &&
+    !isFilterConfigEmpty(searchParams.filter)
+  ) {
+    return (
+      <SearchResultsEmptyState
+        variant="filtered-results"
+        onClearFilters={handleClearAdvancedFilters}
       />
     );
   }
@@ -252,6 +326,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
           isRefreshing={isRefreshing}
+          activeFilterChips={activeFilterChips}
+          onRemoveFilterChip={handleRemoveFilterChip}
+          onClearFilters={hasAdvancedFilters ? handleClearAdvancedFilters : undefined}
         />
       )}
 

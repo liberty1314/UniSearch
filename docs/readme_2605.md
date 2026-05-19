@@ -336,3 +336,41 @@
   - `frontend/src/utils/__tests__/searchResultSorter.test.ts`
   - `frontend/src/utils/resourceDisplay.ts`
   - `frontend/src/utils/searchResultSorter.ts`
+
+## [2026-05-19 16:10:37] feat(frontend): 增加高级筛选并收敛资源详情与结果卡片交互
+- **Body**: 新增搜索高级筛选与 URL 同步链路，精简前后端过滤字段并补齐相关测试。
+- **Body**: 同步收敛资源详情页、搜索结果页与访问码弹窗的打开交互，调整搜索结果卡片底部标签布局与标题清洗逻辑。
+- **Files**:
+  - `backend/api/filter.go`
+  - `backend/api/filter_test.go`
+  - `backend/model/request.go`
+  - `frontend/src/components/CloudTypeFilter.tsx`
+  - `frontend/src/components/PasswordModal.tsx`
+  - `frontend/src/components/SearchAdvancedFilterPanel.tsx`
+  - `frontend/src/components/SearchBox.tsx`
+  - `frontend/src/components/SearchResults.tsx`
+  - `frontend/src/components/__tests__/CloudTypeFilter.test.tsx`
+  - `frontend/src/components/__tests__/PasswordModal.test.tsx`
+  - `frontend/src/components/__tests__/SearchBox.test.tsx`
+  - `frontend/src/components/__tests__/SearchResults.test.tsx`
+  - `frontend/src/components/home/SearchResultGridCard.tsx`
+  - `frontend/src/components/home/SearchResultListItem.tsx`
+  - `frontend/src/components/home/SearchResultsEmptyState.tsx`
+  - `frontend/src/components/home/SearchResultsToolbar.tsx`
+  - `frontend/src/components/resource-detail/ResourceDetailActionPanel.tsx`
+  - `frontend/src/components/resource-detail/ResourceDetailEmptyState.tsx`
+  - `frontend/src/components/resource-detail/ResourceDetailGallery.tsx`
+  - `frontend/src/components/resource-detail/ResourceDetailHero.tsx`
+  - `frontend/src/components/resource-detail/ResourceDetailLinksSection.tsx`
+  - `frontend/src/components/resource-detail/ResourceDetailMetaSection.tsx`
+  - `frontend/src/index.css`
+  - `frontend/src/pages/Home.tsx`
+  - `frontend/src/pages/ResourceDetailPage.tsx`
+  - `frontend/src/pages/__tests__/ResourceDetailPage.test.tsx`
+  - `frontend/src/services/__tests__/searchService.test.ts`
+  - `frontend/src/services/searchService.ts`
+  - `frontend/src/stores/searchStore.ts`
+  - `frontend/src/types/api.ts`
+  - `frontend/src/utils/__tests__/resourceDisplay.test.ts`
+  - `frontend/src/utils/resourceDisplay.ts`
+  - `frontend/src/utils/searchFilters.ts`

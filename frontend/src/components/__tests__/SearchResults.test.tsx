@@ -9,8 +9,22 @@ import {
   useParams,
 } from "react-router-dom";
 import SearchResults from "@/components/SearchResults";
+import type { SearchParams, SearchResponse } from "@/types/api";
 
-let searchStoreState = {
+type SearchStoreState = {
+  searchResults: SearchResponse | null;
+  isLoading: boolean;
+  isRefreshing: boolean;
+  error: string;
+  hasMore: boolean;
+  loadMore: ReturnType<typeof vi.fn>;
+  searchParams: SearchParams;
+  performSearch: ReturnType<typeof vi.fn>;
+  setSearchParams: ReturnType<typeof vi.fn>;
+  displayedCount: number;
+};
+
+let searchStoreState: SearchStoreState = {
   searchResults: {
     total: 1,
     resources: [
@@ -65,6 +79,7 @@ let searchStoreState = {
   loadMore: vi.fn(),
   searchParams: { keyword: "你的名字" },
   performSearch: vi.fn(),
+  setSearchParams: vi.fn(),
   displayedCount: 48,
 };
 let enableResourceDetailPage = true;
@@ -225,6 +240,7 @@ describe("SearchResults", () => {
       loadMore: vi.fn(),
       searchParams: { keyword: "你的名字" },
       performSearch: vi.fn(),
+      setSearchParams: vi.fn(),
       displayedCount: 48,
     };
     enableResourceDetailPage = true;
@@ -237,6 +253,11 @@ describe("SearchResults", () => {
 
     vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
     vi.restoreAllMocks();
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 1280,
+    });
   });
 
   it("renders lightweight cards without redundant metadata", async () => {
@@ -253,6 +274,52 @@ describe("SearchResults", () => {
     expect(screen.queryByText("新海诚动画电影资源")).not.toBeInTheDocument();
     expect(screen.queryByText("打开夸克")).not.toBeInTheDocument();
     expect(screen.queryByText("资源详情")).not.toBeInTheDocument();
+  });
+
+  it("keeps cloud type, password badge and detail entry on a single footer row", async () => {
+    searchStoreState.searchResults.resources[0].links[0].password = "1234";
+
+    renderSearchResults();
+
+    const footerRow = await screen.findByTestId("search-result-grid-card-footer");
+    const footerLeft = screen.getByTestId("search-result-grid-card-footer-left");
+    const detailEntry = screen.getByTestId("search-result-grid-card-detail-entry");
+
+    expect(footerRow.className).toContain("justify-between");
+    expect(footerRow.className).toContain("items-center");
+    expect(footerLeft).toHaveTextContent("夸克网盘");
+    expect(footerLeft).toHaveTextContent("有码");
+    expect(detailEntry).toHaveTextContent("详情");
+  });
+
+  it("cleans polluted titles in desktop grid cards", async () => {
+    searchStoreState.searchResults.resources[0].title =
+      "#电影名称：【电影】速度与激情特别行动 4K 描述：洛杉矶街头赛车 链接：https://example.com/detail";
+
+    renderSearchResults();
+
+    expect(await screen.findByText("【电影】速度与激情特别行动 4K")).toBeInTheDocument();
+    expect(screen.queryByText(/描述：/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("search-result-grid-card-wrapper")).toHaveAttribute(
+      "aria-label",
+      expect.stringContaining("【电影】速度与激情特别行动 4K"),
+    );
+  });
+
+  it("cleans polluted titles in mobile list cards", async () => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 520,
+    });
+    searchStoreState.searchResults.resources[0].title =
+      "#电影名称：【电影】速度与激情特别行动 4K 描述：洛杉矶街头赛车 链接：https://example.com/detail";
+
+    renderSearchResults();
+
+    expect(await screen.findByText("【电影】速度与激情特别行动 4K")).toBeInTheDocument();
+    expect(screen.queryByText(/描述：/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /【电影】速度与激情特别行动 4K/ })).toBeInTheDocument();
   });
 
   it("opens the primary resource directly when clicking the card", async () => {
@@ -319,6 +386,119 @@ describe("SearchResults", () => {
 
     await screen.findByTestId("search-result-grid-card");
     expect(screen.queryByRole("button", { name: /详情/i })).not.toBeInTheDocument();
+  });
+
+  it("applies advanced filters on the client side and exposes filter summary actions", async () => {
+    searchStoreState.searchResults = {
+      total: 2,
+      resources: [
+        searchStoreState.searchResults.resources[0],
+        {
+          id: "resource-2",
+          title: "你的名字 原画设定集",
+          description: "电子书资源",
+          source: { type: "tg", id: "book_channel", name: "BookChannel" },
+          media_type: "book",
+          target_type: "detail",
+          links: [
+            {
+              type: "baidu",
+              url: "https://example.com/book",
+              password: "",
+              title: "设定集 PDF",
+              datetime: "2026-03-16T00:00:00Z",
+            },
+          ],
+          capabilities: { searchable: true },
+          actions: [],
+          detail: { content: "设定集详情", url: "https://example.com/book-detail" },
+          tags: ["电子书"],
+          images: [],
+          meta: { size: "800 MiB" },
+          published_at: "2026-03-16T00:00:00Z",
+        },
+      ],
+      facets: {
+        cloud_types: { quark: 1, baidu: 1 },
+        source_types: { plugin: 1, tg: 1 },
+        media_types: { movie: 1, book: 1 },
+        target_types: { share: 1, detail: 1 },
+        capabilities: { downloadable: 1, searchable: 2 },
+        action_types: { open_link: 1 },
+      },
+    };
+    searchStoreState.searchParams = {
+      keyword: "你的名字",
+      filter: {
+        include: ["4K"],
+        exclude: ["设定集"],
+      },
+    };
+
+    renderSearchResults();
+
+    expect(await screen.findByTestId("search-result-grid-card")).toHaveTextContent("你的名字 4K");
+    expect(screen.queryByText("你的名字 原画设定集")).not.toBeInTheDocument();
+    expect(screen.getByText("包含：4K")).toBeInTheDocument();
+    expect(screen.getByText("排除：设定集")).toBeInTheDocument();
+    expect(screen.queryByText("媒体：movie")).not.toBeInTheDocument();
+    expect(screen.queryByText("能力：downloadable")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "清空高级筛选" }));
+
+    expect(searchStoreState.setSearchParams).toHaveBeenCalledWith({ filter: undefined });
+  });
+
+  it("shows a dedicated empty state when results are narrowed to zero by advanced filters", async () => {
+    searchStoreState.searchResults = {
+      total: 2,
+      resources: [
+        searchStoreState.searchResults.resources[0],
+        {
+          id: "resource-2",
+          title: "你的名字 原画设定集",
+          description: "电子书资源",
+          source: { type: "tg", id: "book_channel", name: "BookChannel" },
+          media_type: "book",
+          target_type: "detail",
+          links: [
+            {
+              type: "baidu",
+              url: "https://example.com/book",
+              password: "",
+              title: "设定集 PDF",
+              datetime: "2026-03-16T00:00:00Z",
+            },
+          ],
+          capabilities: { searchable: true },
+          actions: [],
+          detail: { content: "设定集详情", url: "https://example.com/book-detail" },
+          tags: ["电子书"],
+          images: [],
+          meta: { size: "800 MiB" },
+          published_at: "2026-03-16T00:00:00Z",
+        },
+      ],
+      facets: {
+        cloud_types: { quark: 1, baidu: 1 },
+        source_types: { plugin: 1, tg: 1 },
+        media_types: { movie: 1, book: 1 },
+        target_types: { share: 1, detail: 1 },
+        capabilities: { downloadable: 1, searchable: 2 },
+        action_types: { open_link: 1 },
+      },
+    };
+    searchStoreState.searchParams = {
+      keyword: "你的名字",
+      filter: {
+        include: ["不存在的关键词"],
+      },
+    };
+
+    renderSearchResults();
+
+    expect(await screen.findByText("筛选后暂无结果")).toBeInTheDocument();
+    expect(screen.getByText("可以调整包含关键词或排除关键词，或者清空高级筛选后重新查看全部结果。")).toBeInTheDocument();
   });
 
   it("shows a refresh hint without clearing previous results during in-place refresh", async () => {

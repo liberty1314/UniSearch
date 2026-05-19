@@ -5,9 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import CloudTypeFilter from "@/components/CloudTypeFilter";
 import { CloudType } from "@/types/api";
 
-const { setSearchParamsMock, performSearchMock } = vi.hoisted(() => ({
+const { setSearchParamsMock, performSearchMock, navigateMock } = vi.hoisted(() => ({
   setSearchParamsMock: vi.fn(),
   performSearchMock: vi.fn(),
+  navigateMock: vi.fn(),
 }));
 
 const CLICK_DELAY_MS = 220;
@@ -29,6 +30,22 @@ let searchParamsState = {
   keyword: "流浪地球",
   cloudTypes: ALL_CLOUD_TYPES,
 };
+
+vi.mock("react-router-dom", async () => {
+  const actual =
+    await vi.importActual<typeof import("react-router-dom")>(
+      "react-router-dom",
+    );
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+    useLocation: () => ({
+      pathname: "/",
+      search: "?q=%E6%B5%81%E6%B5%AA%E5%9C%B0%E7%90%83",
+      hash: "",
+    }),
+  };
+});
 
 vi.mock("@/components/magicui/cool-mode", () => ({
   CoolMode: ({
@@ -106,6 +123,7 @@ describe("CloudTypeFilter", () => {
     };
     setSearchParamsMock.mockReset();
     performSearchMock.mockReset();
+    navigateMock.mockReset();
     setSearchParamsMock.mockImplementation((params) => {
       searchParamsState = {
         ...searchParamsState,

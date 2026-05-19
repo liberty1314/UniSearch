@@ -9,8 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { AppleButton } from '@/components/ui/AppleButton';
 import { AppleInput } from '@/components/ui/AppleInput';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getCloudTypeInfo } from '@/utils/cloudTypeUtils';
 import { isMagnetUrl, normalizeExternalUrl } from '@/utils/resourceDisplay';
@@ -32,6 +32,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
 }) => {
   const cloudInfo = getCloudTypeInfo(cloudType);
   const magnetMode = cloudType === 'magnet' || isMagnetUrl(url);
+  const finalUrl = normalizeExternalUrl(url);
 
   const handleCopyPassword = () => {
     navigator.clipboard.writeText(password);
@@ -43,27 +44,8 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
     toast.success(magnetMode ? '磁力链接已复制' : '链接已复制');
   };
 
-  const handleOpenUrl = () => {
-    try {
-      const finalUrl = normalizeExternalUrl(url);
-
-      if (!finalUrl) {
-        toast.error(magnetMode ? '磁力链接为空' : '链接地址为空');
-        return;
-      }
-
-      const openedWindow = window.open(finalUrl, '_blank');
-      if (openedWindow) {
-        openedWindow.opener = null;
-      } else {
-        toast.error('浏览器阻止了跳转，请手动复制链接');
-      }
-    } catch (e) {
-      console.error('无法打开链接:', e);
-      toast.error('打开链接失败，请手动复制链接');
-    } finally {
-      onClose();
-    }
+  const handleInvalidOpen = () => {
+    toast.error(magnetMode ? '磁力链接为空' : '链接地址为空');
   };
 
   const dialogTitle = magnetMode ? '磁力链接' : '访问码提示';
@@ -140,14 +122,31 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
           </div>
 
           <div className="pt-2">
-            <AppleButton
-              variant="primary"
-              fullWidth
-              onClick={handleOpenUrl}
-            >
-              <IoOpenOutline className="h-[18px] w-[18px]" />
-              {primaryButtonText}
-            </AppleButton>
+            {finalUrl ? (
+              <Button asChild variant="primary" size="md" fullWidth className="rounded-xl">
+                <a
+                  href={finalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={onClose}
+                >
+                  <IoOpenOutline className="h-[18px] w-[18px]" />
+                  {primaryButtonText}
+                </a>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                fullWidth
+                className="rounded-xl"
+                onClick={handleInvalidOpen}
+              >
+                <IoOpenOutline className="h-[18px] w-[18px]" />
+                {primaryButtonText}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

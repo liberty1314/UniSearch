@@ -11,7 +11,10 @@ import {
   formatResultTime,
   type ResultItem,
 } from "@/utils/cloudTypeUtils";
-import { resolveResourceDisplaySize } from "@/utils/resourceDisplay";
+import {
+  resolveResourceDisplaySize,
+  resolveResourceDisplayTitle,
+} from "@/utils/resourceDisplay";
 
 interface SearchResultListItemProps {
   item: ResultItem;
@@ -35,6 +38,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
     const cloudInfo = getCloudTypeInfo(cloudType);
     const hasPassword = Boolean(primaryLink?.password?.trim());
     const sizeLabel = resolveResourceDisplaySize(item);
+    const displayTitle = resolveResourceDisplayTitle(resource);
 
     const handleClick = (e: React.MouseEvent) => {
       if (!canOpenResource) {
@@ -59,7 +63,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
       <motion.div
         role={canOpenResource ? "button" : undefined}
         tabIndex={canOpenResource ? 0 : undefined}
-        aria-label={`${cloudInfo.name}资源：${resource.title || "未命名资源"}${hasPassword ? "（需要访问码）" : ""}`}
+        aria-label={`${cloudInfo.name}资源：${displayTitle || "未命名资源"}${hasPassword ? "（需要访问码）" : ""}`}
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{
@@ -95,7 +99,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
           {/* 中间：标题 + 元数据 */}
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg line-clamp-1 mb-1 group-hover:text-apple-blue transition-colors">
-              {resource.title || "未命名资源"}
+              {displayTitle || "未命名资源"}
             </h3>
             <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-slate-400 flex-wrap">
               <span

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, memo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { IoCheckmarkCircle, IoEllipseOutline } from "react-icons/io5";
+import { useLocation, useNavigate } from "react-router-dom";
 import { type CloudTypeValue } from "@/types/api";
 import { useSearchStore } from "@/stores/searchStore";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,7 @@ import {
   type PlatformTheme,
 } from "@/components/home/platformThemes";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { SearchService } from "@/services/searchService";
 
 // --- Sub-components ---
 
@@ -90,6 +92,8 @@ CloudTypeTag.displayName = "CloudTypeTag";
  */
 const CloudTypeFilter: React.FC = () => {
   const { searchParams, setSearchParams, performSearch } = useSearchStore();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const cloudTypeConfigs = platformThemes;
   const allTypes = platformThemeTypes;
@@ -105,6 +109,23 @@ const CloudTypeFilter: React.FC = () => {
   const hasInitializedCloudTypesRef = useRef(false);
   const shouldSkipNextSearchRef = useRef(true);
   const lastTriggeredSearchSnapshotRef = useRef<string | null>(null);
+
+  const syncSearchUrl = useCallback((nextTypes: CloudTypeValue[]) => {
+    const nextUrl = SearchService.buildSearchUrl({
+      ...searchParams,
+      cloudTypes: nextTypes,
+    });
+    const currentUrl = `${location.pathname}${location.search}`;
+
+    if (nextUrl === currentUrl) {
+      return;
+    }
+
+    navigate(nextUrl, {
+      replace: true,
+      state: { skipSearchSync: true },
+    });
+  }, [location.pathname, location.search, navigate, searchParams]);
 
   useEffect(() => {
     if (hasInitializedCloudTypesRef.current) {
@@ -155,12 +176,13 @@ const CloudTypeFilter: React.FC = () => {
     }
 
     lastTriggeredSearchSnapshotRef.current = selectionSnapshot;
+    syncSearchUrl(debouncedSelectedTypes);
 
     void performSearch(
       { cloudTypes: debouncedSelectedTypes },
       { preserveResults: true },
     );
-  }, [debouncedSelectedTypes, performSearch, searchParams.keyword]);
+  }, [debouncedSelectedTypes, performSearch, searchParams.keyword, syncSearchUrl]);
 
   const isAllSelected = selectedTypes.length === cloudTypeConfigs.length;
 

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { MAX_SEARCH_HISTORY } from "@/stores/searchStore";
 import { IoCloseOutline, IoTimeOutline } from "react-icons/io5";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useSearchStore, useSearchHistory } from "@/stores/searchStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -13,6 +13,7 @@ import {
   Button as StatefulButton,
   StatefulButtonHandle,
 } from "@/components/ui/stateful-button";
+import { SearchService } from "@/services/searchService";
 
 interface SearchBoxProps {
   className?: string;
@@ -52,6 +53,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   const { token, isAuthenticated, isAdmin, logout } = useAuthStore();
   const { status: searchAccessStatus } = useSearchAccessStatus();
   const navigate = useNavigate();
+  const location = useLocation();
   const searchHistory = useSearchHistory();
   const visibleSearchHistory = searchHistory.slice(
     0,
@@ -122,10 +124,22 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   };
 
   const executeSearch = async (keyword: string) => {
+    const nextParams = {
+      ...searchParams,
+      keyword,
+    };
+    const nextUrl = SearchService.buildSearchUrl(nextParams);
+    const currentUrl = `${location.pathname}${location.search}`;
+
     setSearchParams({ keyword });
 
     try {
-      await buttonRef.current?.run(() => performSearch({ keyword }));
+      await buttonRef.current?.run(() => performSearch(nextParams));
+      if (currentUrl !== nextUrl) {
+        navigate(nextUrl, {
+          state: { skipSearchSync: true },
+        });
+      }
       onSearch?.(keyword);
       setShowHistory(false);
     } catch (error) {
@@ -186,6 +200,9 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   const handleClear = () => {
     setInputValue("");
     setSearchParams({ keyword: "" });
+    if (location.pathname === "/" && location.search) {
+      navigate("/", { replace: true, state: { skipSearchSync: true } });
+    }
     inputRef.current?.focus();
     // 如果按钮处于“搜索中”动画状态，立即复位
     buttonRef.current?.reset?.();

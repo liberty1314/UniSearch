@@ -18,6 +18,67 @@ export interface ResourceSourcePresentation {
   secondaryLabel: string | null;
 }
 
+const RESOURCE_TITLE_NOISE_PREFIXES = [
+  "电影名称",
+  "资源名称",
+  "片名",
+  "剧名",
+  "名称",
+  "标题",
+];
+
+const RESOURCE_TITLE_BREAK_LABELS = [
+  "描述",
+  "简介",
+  "链接",
+  "提取码",
+  "密码",
+  "标签",
+  "大小",
+  "访问码",
+];
+
+const stripResourceTitleNoisePrefix = (value: string): string => {
+  let result = value.trim();
+
+  while (result) {
+    const next = result.replace(
+      new RegExp(
+        `^(?:[#＃]\\s*)?(?:${RESOURCE_TITLE_NOISE_PREFIXES.join("|")})\\s*[:：]\\s*`,
+        "u",
+      ),
+      "",
+    );
+
+    if (next === result) {
+      return result;
+    }
+
+    result = next.trim();
+  }
+
+  return result;
+};
+
+const cropResourceTitleByBreakLabels = (value: string): string => {
+  let earliestIndex = -1;
+
+  for (const label of RESOURCE_TITLE_BREAK_LABELS) {
+    for (const separator of [":", "："]) {
+      const index = value.indexOf(`${label}${separator}`);
+      if (index >= 0 && (earliestIndex === -1 || index < earliestIndex)) {
+        earliestIndex = index;
+      }
+    }
+  }
+
+  if (earliestIndex < 0) {
+    return value.trim();
+  }
+
+  return value.slice(0, earliestIndex).trim();
+};
+
 export const isMagnetUrl = (value?: string | null): boolean =>
   typeof value === "string" && value.trim().toLowerCase().startsWith("magnet:");
 
@@ -49,6 +110,21 @@ const toNonEmptyString = (value: unknown): string | null => {
 
 export const resolveResourceSourceLabel = (resource: ResourceObject): string =>
   resolveResourceSourcePresentation(resource).primaryLabel;
+
+export const resolveResourceDisplayTitle = (resource: ResourceObject): string => {
+  const originalTitle = resource.title.trim();
+  if (!originalTitle) {
+    return "未命名资源";
+  }
+
+  const cleanedTitle = cropResourceTitleByBreakLabels(
+    stripResourceTitleNoisePrefix(originalTitle),
+  )
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return cleanedTitle || originalTitle;
+};
 
 export const resolveResourceSourcePresentation = (
   resource: ResourceObject,

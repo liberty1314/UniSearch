@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type EmptyStateVariant = "error" | "no-results" | "no-keyword";
+export type EmptyStateVariant = "error" | "no-results" | "no-keyword" | "filtered-results";
 
 interface SearchResultsEmptyStateProps {
   variant: EmptyStateVariant;
@@ -18,6 +18,8 @@ interface SearchResultsEmptyStateProps {
   onRetry?: () => void;
   /** 仅 variant="no-results" 时使用，点击推荐词回调 */
   onSuggestSearch?: (keyword: string) => void;
+  /** 仅 variant="filtered-results" 时使用，清空筛选回调 */
+  onClearFilters?: () => void;
 }
 
 // ─── 推荐搜索词 ───────────────────────────────────────────────────────────────
@@ -142,6 +144,42 @@ const NoKeywordState: React.FC<{ className?: string }> = ({ className }) => (
   </motion.div>
 );
 
+const FilteredResultsState: React.FC<{ onClearFilters?: () => void }> = ({
+  onClearFilters,
+}) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.96 }}
+    animate={{ opacity: 1, scale: 1 }}
+    className="text-center py-20"
+  >
+    <div className="relative mx-auto max-w-2xl overflow-hidden rounded-[2.5rem] border border-white/60 bg-white/60 px-8 py-12 shadow-[0_24px_60px_rgba(15,23,42,0.06)] backdrop-blur-3xl dark:border-white/[0.06] dark:bg-slate-950/40 dark:shadow-[0_24px_60px_rgba(0,0,0,0.4)]">
+      <div className="relative mb-8">
+        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-500/10 to-cyan-500/10 blur-xl" />
+        <div className="relative mx-auto flex h-28 w-28 items-center justify-center rounded-full border border-slate-200/70 bg-white/60 text-slate-500 shadow-inner backdrop-blur-md dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-slate-300">
+          <IoSearchOutline className="h-14 w-14" />
+        </div>
+      </div>
+
+      <h3 className="text-[22px] font-bold tracking-tight text-gray-900 dark:text-slate-100">
+        筛选后暂无结果
+      </h3>
+      <p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-gray-500 dark:text-slate-400">
+        可以调整包含关键词或排除关键词，或者清空高级筛选后重新查看全部结果。
+      </p>
+
+      {onClearFilters ? (
+        <button
+          type="button"
+          onClick={onClearFilters}
+          className="mt-8 rounded-xl bg-slate-900 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-300 active:scale-95 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-gray-100"
+        >
+          清空高级筛选
+        </button>
+      ) : null}
+    </div>
+  </motion.div>
+);
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 /**
@@ -157,6 +195,7 @@ export const SearchResultsEmptyState: React.FC<SearchResultsEmptyStateProps> = (
   className,
   onRetry,
   onSuggestSearch,
+  onClearFilters,
 }) => {
   if (variant === "error") {
     return <ErrorState error={error ?? "搜索出现错误，请稍后再试"} onRetry={onRetry} />;
@@ -170,6 +209,10 @@ export const SearchResultsEmptyState: React.FC<SearchResultsEmptyStateProps> = (
         onSuggestSearch={onSuggestSearch}
       />
     );
+  }
+
+  if (variant === "filtered-results") {
+    return <FilteredResultsState onClearFilters={onClearFilters} />;
   }
 
   return <NoKeywordState className={className} />;

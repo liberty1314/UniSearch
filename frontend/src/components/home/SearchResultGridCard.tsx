@@ -7,7 +7,10 @@ import {
   formatResultTime,
   type ResultItem,
 } from "@/utils/cloudTypeUtils";
-import { resolveResourceDisplaySize } from "@/utils/resourceDisplay";
+import {
+  resolveResourceDisplaySize,
+  resolveResourceDisplayTitle,
+} from "@/utils/resourceDisplay";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -38,6 +41,7 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
     const cloudInfo = getCloudTypeInfo(cloudType);
     const hasPassword = Boolean(primaryLink?.password?.trim());
     const sizeLabel = resolveResourceDisplaySize(item);
+    const displayTitle = resolveResourceDisplayTitle(resource);
 
     const handleClick = (e: React.MouseEvent) => {
       if (!canOpenResource) {
@@ -58,7 +62,7 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
       }
     };
 
-    const ariaLabel = `${cloudInfo.name}资源：${resource.title || "未命名资源"}${
+    const ariaLabel = `${cloudInfo.name}资源：${displayTitle || "未命名资源"}${
       hasPassword ? "（需要访问码）" : ""
     }`;
 
@@ -107,7 +111,7 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
           {/* 标题 */}
           <div className="flex-1 mb-4 min-h-[3.5rem]">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg line-clamp-2 leading-snug group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-purple-600 dark:group-hover:from-blue-400 dark:group-hover:to-purple-400 transition-all duration-300">
-              {resource.title || "未命名资源"}
+              {displayTitle || "未命名资源"}
             </h3>
           </div>
 
@@ -124,12 +128,18 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
             ) : null}
           </div>
 
-          {/* 底部：网盘类型徽章 + 访问码标记 */}
-          <div className="mt-auto pt-3 border-t border-slate-200/50 dark:border-white/[0.04] space-y-3">
-            <div className="flex items-center justify-between">
+          {/* 底部：左侧网盘类型 + 访问码，右侧详情 */}
+          <div
+            data-testid="search-result-grid-card-footer"
+            className="mt-auto pt-3 border-t border-slate-200/50 dark:border-white/[0.04] flex items-center justify-between gap-3"
+          >
+            <div
+              data-testid="search-result-grid-card-footer-left"
+              className="flex min-w-0 items-center gap-2"
+            >
               <div
                 className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+                  "flex shrink-0 items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
                   cloudInfo.bg,
                   cloudInfo.text,
                   cloudInfo.border,
@@ -140,7 +150,7 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
 
               {hasPassword && (
                 <div
-                  className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-emerald-400/[0.08] text-green-600 dark:text-emerald-200 text-xs font-medium rounded-full border border-green-200/50 dark:border-emerald-300/16"
+                  className="flex shrink-0 items-center gap-1 px-2 py-1 bg-green-50 dark:bg-emerald-400/[0.08] text-green-600 dark:text-emerald-200 text-xs font-medium rounded-full border border-green-200/50 dark:border-emerald-300/16"
                   title="需要访问码"
                 >
                   <IoKeyOutline className="w-3 h-3" />
@@ -150,7 +160,10 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
             </div>
 
             {showDetailEntry ? (
-              <div className="flex items-center justify-end">
+              <div
+                data-testid="search-result-grid-card-detail-entry"
+                className="flex shrink-0 items-center justify-end"
+              >
                 <button
                   type="button"
                   onClick={(event) => {

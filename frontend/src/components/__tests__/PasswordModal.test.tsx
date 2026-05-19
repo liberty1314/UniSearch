@@ -13,7 +13,6 @@ describe('PasswordModal', () => {
     });
 
     const onClose = vi.fn();
-    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
 
     render(
       <PasswordModal
@@ -30,14 +29,13 @@ describe('PasswordModal', () => {
     fireEvent.click(screen.getByRole('button', { name: '复制访问码' }));
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('1234');
 
-    const openedWindow = { opener: null };
-    openSpy.mockReturnValue(openedWindow as Window);
+    const openLink = screen.getByRole('link', { name: '打开链接' });
+    expect(openLink).toHaveAttribute('href', 'https://example.com/file');
+    expect(openLink).toHaveAttribute('target', '_blank');
+    expect(openLink).toHaveAttribute('rel', 'noopener noreferrer');
 
-    fireEvent.click(screen.getByRole('button', { name: '打开链接' }));
-    expect(openSpy).toHaveBeenCalledWith('https://example.com/file', '_blank');
+    fireEvent.click(openLink);
     expect(onClose).toHaveBeenCalled();
-
-    openSpy.mockRestore();
   });
 
   it('renders magnet mode without password field and supports copy/open', async () => {
@@ -48,7 +46,6 @@ describe('PasswordModal', () => {
     });
 
     const onClose = vi.fn();
-    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
 
     render(
       <PasswordModal
@@ -67,13 +64,12 @@ describe('PasswordModal', () => {
     fireEvent.click(screen.getByRole('button', { name: '复制磁力链接' }));
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('magnet:?xt=urn:btih:testhash');
 
-    const openedWindow = { opener: null };
-    openSpy.mockReturnValue(openedWindow as Window);
+    const openMagnetLink = screen.getByRole('link', { name: '打开磁力' });
+    expect(openMagnetLink).toHaveAttribute('href', 'magnet:?xt=urn:btih:testhash');
+    expect(openMagnetLink).toHaveAttribute('target', '_blank');
+    expect(openMagnetLink).toHaveAttribute('rel', 'noopener noreferrer');
 
-    fireEvent.click(screen.getByRole('button', { name: '打开磁力' }));
-    expect(openSpy).toHaveBeenCalledWith('magnet:?xt=urn:btih:testhash', '_blank');
+    fireEvent.click(openMagnetLink);
     expect(onClose).toHaveBeenCalled();
-
-    openSpy.mockRestore();
   });
 });

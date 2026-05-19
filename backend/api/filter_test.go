@@ -11,7 +11,7 @@ func TestApplyResultFilterFiltersResourceObjectsAndRebuildsFacets(t *testing.T) 
 		Total: 3,
 		Resources: []model.ResourceObject{
 			{
-				ID:         "keep-source",
+				ID:         "keep-match",
 				Title:      "仙逆合集",
 				Source:     model.ResourceSource{Type: "plugin", Name: "插件源"},
 				MediaType:  "tv",
@@ -24,8 +24,8 @@ func TestApplyResultFilterFiltersResourceObjectsAndRebuildsFacets(t *testing.T) 
 				Actions: []model.ResourceAction{{Key: "link.quark.open", Type: "open_link"}},
 			},
 			{
-				ID:         "drop-media",
-				Title:      "仙逆小说",
+				ID:         "drop-exclude",
+				Title:      "仙逆 枪版",
 				Source:     model.ResourceSource{Type: "plugin", Name: "插件源"},
 				MediaType:  "book",
 				TargetType: "share",
@@ -45,24 +45,20 @@ func TestApplyResultFilterFiltersResourceObjectsAndRebuildsFacets(t *testing.T) 
 	}
 
 	filtered := applyResultFilter(response, &model.FilterConfig{
-		Include:      []string{"仙逆"},
-		SourceTypes:  []string{"plugin"},
-		MediaTypes:   []string{"tv"},
-		TargetTypes:  []string{"share"},
-		Capabilities: []string{"downloadable"},
-		ActionTypes:  []string{"open_link"},
+		Include: []string{"仙逆"},
+		Exclude: []string{"枪版"},
 	}, "merge")
 
 	if filtered.Total != 1 {
 		t.Fatalf("expected one filtered resource, got %d", filtered.Total)
 	}
-	if len(filtered.Resources) != 1 || filtered.Resources[0].ID != "keep-source" {
-		t.Fatalf("expected keep-source only, got %#v", filtered.Resources)
+	if len(filtered.Resources) != 1 || filtered.Resources[0].ID != "keep-match" {
+		t.Fatalf("expected keep-match only, got %#v", filtered.Resources)
 	}
 	if filtered.Facets.CloudTypes["quark"] != 1 {
 		t.Fatalf("expected rebuilt quark facet, got %#v", filtered.Facets)
 	}
-	if _, exists := filtered.Facets.MediaTypes["book"]; exists {
-		t.Fatalf("expected dropped media facet to be removed, got %#v", filtered.Facets.MediaTypes)
+	if _, exists := filtered.Facets.CloudTypes["baidu"]; exists {
+		t.Fatalf("expected excluded link facet to be removed, got %#v", filtered.Facets.CloudTypes)
 	}
 }
