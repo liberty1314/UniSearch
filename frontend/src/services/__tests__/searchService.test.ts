@@ -79,6 +79,7 @@ describe('SearchService', () => {
       },
     });
 
+    expect(url.startsWith('/search?')).toBe(true);
     expect(url).toContain('q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97');
     expect(url).toContain('include=4K%2C%E5%89%A7%E5%9C%BA%E7%89%88');
     expect(url).toContain('exclude=%E6%9E%AA%E7%89%88');
@@ -99,6 +100,22 @@ describe('SearchService', () => {
         exclude: ['枪版'],
       },
     });
+  });
+
+  it('builds the empty search URL on the standalone search page path', () => {
+    expect(
+      SearchService.buildSearchUrl({
+        keyword: '',
+        source: 'all',
+        resultType: 'merge',
+        cloudTypes: [],
+        channels: [],
+        plugins: [],
+        concurrency: 5,
+        refresh: false,
+        ext: {},
+      })
+    ).toBe('/search');
   });
 
   it('ignores legacy advanced filter query fields when parsing URLs', () => {

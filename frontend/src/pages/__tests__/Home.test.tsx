@@ -6,6 +6,52 @@ import { HelmetProvider } from 'react-helmet-async';
 import Home from '@/pages/Home';
 import type { SearchAccessStatus } from '@/stores/searchAccessStore';
 
+vi.mock('framer-motion', () => {
+  const serializeMotionProp = (value: unknown) => {
+    if (typeof value === 'undefined') {
+      return undefined;
+    }
+    return JSON.stringify(value);
+  };
+
+  const motion = new Proxy({}, {
+    get: (_, tagName: string) => {
+      const MotionComponent = ({
+        children,
+        initial,
+        animate,
+        transition,
+        whileInView,
+        viewport,
+        ...restProps
+      }: React.HTMLAttributes<HTMLElement> & {
+        initial?: unknown;
+        animate?: unknown;
+        transition?: unknown;
+        whileInView?: unknown;
+        viewport?: unknown;
+      }) => {
+        void animate;
+        void transition;
+        void whileInView;
+        void viewport;
+
+        return React.createElement(tagName, {
+          ...restProps,
+          'data-motion-initial': serializeMotionProp(initial),
+        }, children);
+      };
+
+      return MotionComponent;
+    },
+  });
+
+  return {
+    motion,
+    AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  };
+});
+
 let searchAccessStatus: SearchAccessStatus = 'authenticated';
 let searchKeyword = '';
 let searchResults: Array<{ id: string }> = [];
@@ -109,10 +155,10 @@ vi.mock('@/stores/searchAccessStore', () => ({
 }));
 
 describe('Home', () => {
-  const renderHome = () =>
+  const renderHome = (routeState?: unknown) =>
     render(
       <HelmetProvider>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={[{ pathname: '/', state: routeState }]}>
           <Home />
         </MemoryRouter>
       </HelmetProvider>
@@ -122,6 +168,7 @@ describe('Home', () => {
     searchAccessStatus = 'authenticated';
     searchKeyword = '';
     searchResults = [];
+    sessionStorage.clear();
   });
 
   it('renders the public homepage shell for guests without showing legacy API key prompts', () => {
@@ -214,16 +261,69 @@ describe('Home', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('keeps the shared grid-backed shell in the searched state', () => {
+  it('keeps the homepage shell focused on landing content even when search state exists', () => {
     searchAccessStatus = 'authenticated';
     searchKeyword = '电影';
     searchResults = [{ id: '1' }];
 
     renderHome();
 
-    expect(screen.getByText('search-results')).toBeInTheDocument();
+    expect(screen.queryByText('search-results')).not.toBeInTheDocument();
     expect(screen.getByTestId('animated-grid')).toBeInTheDocument();
     expect(screen.getByTestId('public-page-glow')).toBeInTheDocument();
-    expect(screen.queryByText('为什么选择 UniSearch？')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: '为什么选择 UniSearch？' })).toBeInTheDocument();
+  });
+
+  it('plays the homepage entrance animation on the first visit of a browser session', () => {
+    renderHome();
+
+    expect(
+      screen
+        .getByRole('heading', { level: 2, name: '智能网盘资源搜索引擎' })
+        .getAttribute('data-motion-initial')
+    ).toBe(JSON.stringify({ opacity: 0, y: 18 }));
+
+    expect(
+      screen
+        .getByText('多平台搜索')
+        .closest('[data-motion-initial]')
+        ?.getAttribute('data-motion-initial')
+    ).toBe(JSON.stringify({ opacity: 0, y: 30 }));
+  });
+
+  it('skips the homepage entrance animation after the session has already visited home once', () => {
+    sessionStorage.setItem('unisearch_home_entrance_seen', '1');
+
+    renderHome();
+
+    expect(
+      screen
+        .getByRole('heading', { level: 2, name: '智能网盘资源搜索引擎' })
+        .getAttribute('data-motion-initial')
+    ).toBe('false');
+
+    expect(
+      screen
+        .getByText('多平台搜索')
+        .closest('[data-motion-initial]')
+        ?.getAttribute('data-motion-initial')
+    ).toBe('false');
+  });
+
+  it('allows the homepage entrance animation to play again after a page refresh lifecycle', () => {
+    const firstRender = renderHome();
+
+    expect(sessionStorage.getItem('unisearch_home_entrance_seen')).toBe('1');
+
+    window.dispatchEvent(new Event('beforeunload'));
+    firstRender.unmount();
+
+    const secondRender = renderHome();
+
+    expect(
+      secondRender
+        .getByRole('heading', { level: 2, name: '智能网盘资源搜索引擎' })
+        .getAttribute('data-motion-initial')
+    ).toBe(JSON.stringify({ opacity: 0, y: 18 }));
   });
 });

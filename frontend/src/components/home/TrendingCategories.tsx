@@ -69,11 +69,17 @@ const categories: Category[] = [
   }
 ];
 
-export const TrendingCategories = () => {
+interface TrendingCategoriesProps {
+  shouldPlayEntrance?: boolean;
+}
+
+export const TrendingCategories = ({
+  shouldPlayEntrance = true,
+}: TrendingCategoriesProps) => {
   return (
     <div className="w-full mt-28">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={shouldPlayEntrance ? { opacity: 0, y: 20 } : false}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-100px' }}
         transition={{ duration: 0.6 }}
@@ -94,7 +100,9 @@ export const TrendingCategories = () => {
           return (
             <motion.div
               key={category.id}
-              initial={{ opacity: 0, y: 40, filter: "blur(12px)", scale: 0.96 }}
+              initial={shouldPlayEntrance
+                ? { opacity: 0, y: 40, filter: "blur(12px)", scale: 0.96 }
+                : false}
               whileInView={{ opacity: 1, y: 0, filter: "blur(0px)", scale: 1 }}
               viewport={{ once: true, margin: "-50px" }}
               transition={{ delay: index * 0.12, duration: 0.7, type: "spring", bounce: 0.3 }}

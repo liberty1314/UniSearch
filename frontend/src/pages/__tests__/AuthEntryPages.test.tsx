@@ -238,7 +238,7 @@ describe('Auth entry pages', () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
-  it('resumes the pending homepage search after user login succeeds', async () => {
+  it('resumes the pending standalone search after user login succeeds', async () => {
     userLoginMock.mockResolvedValue({
       access_token: 'token',
       refresh_token: 'refresh',
@@ -254,8 +254,8 @@ describe('Auth entry pages', () => {
             pathname: '/login',
             state: {
               from: {
-                pathname: '/',
-                search: '',
+                pathname: '/search',
+                search: '?q=%E4%B8%89%E4%BD%93',
               },
               pendingSearch: {
                 keyword: '三体',
@@ -278,7 +278,7 @@ describe('Auth entry pages', () => {
       expect(userLoginMock).toHaveBeenCalledWith('neo', 'matrix', false);
     });
 
-    expect(navigateMock).toHaveBeenCalledWith('/', {
+    expect(navigateMock).toHaveBeenCalledWith('/search?q=%E4%B8%89%E4%BD%93', {
       replace: true,
       state: {
         resumeSearch: {

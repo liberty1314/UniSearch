@@ -197,14 +197,28 @@ export const useSearchStore = create<SearchState>()(
        * 清空搜索结果
        */
       clearResults: () => {
-        set((state) => ({
-          searchResults: null,
-          error: null,
-          isRefreshing: false,
-          displayedCount: state.pageSize,
-          hasMore: false,
-          searchParams: { ...state.searchParams, keyword: "" },
-        }));
+        set((state) => {
+          const keyword = state.searchParams.keyword?.trim() || "";
+          const isAlreadyCleared =
+            !state.searchResults &&
+            !state.error &&
+            !state.isRefreshing &&
+            keyword.length === 0;
+
+          // 空状态下直接复用旧引用，避免结果页无关键词时触发无意义的重复渲染。
+          if (isAlreadyCleared) {
+            return state;
+          }
+
+          return {
+            searchResults: null,
+            error: null,
+            isRefreshing: false,
+            displayedCount: state.pageSize,
+            hasMore: false,
+            searchParams: { ...state.searchParams, keyword: "" },
+          };
+        });
       },
 
       /**

@@ -172,9 +172,9 @@ const DetailRouteProbe = () => {
 
 const renderSearchResults = () =>
   render(
-    <MemoryRouter initialEntries={["/"]}>
+    <MemoryRouter initialEntries={["/search?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97"]}>
       <Routes>
-        <Route path="/" element={<SearchResults />} />
+        <Route path="/search" element={<SearchResults />} />
         <Route path="/resource/:resourceId" element={<DetailRouteProbe />} />
       </Routes>
     </MemoryRouter>,
@@ -377,6 +377,10 @@ describe("SearchResults", () => {
     expect(screen.getByTestId("resource-id")).toHaveTextContent("resource-1");
     expect(screen.getByTestId("detail-state")).toHaveTextContent("resource-1");
     expect(screen.getByTestId("detail-state")).toHaveTextContent("你的名字");
+    expect(screen.getByTestId("detail-state")).toHaveTextContent('"/search"');
+    expect(screen.getByTestId("detail-state")).toHaveTextContent(
+      '"?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97"',
+    );
   });
 
   it("hides the detail entry when the system setting is disabled", async () => {

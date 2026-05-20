@@ -30,6 +30,15 @@ const getCurrentRouteSnapshot = () => ({
   hash: window.location.hash || "",
 });
 
+const buildRouteSnapshotFromUrl = (url: string) => {
+  const parsedUrl = new URL(url, window.location.origin);
+  return {
+    pathname: parsedUrl.pathname || "/",
+    search: parsedUrl.search || "",
+    hash: parsedUrl.hash || "",
+  };
+};
+
 export const SearchBox: React.FC<SearchBoxProps> = ({
   className,
   placeholder = "搜索网盘资源...",
@@ -133,6 +142,15 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
 
     setSearchParams({ keyword });
 
+    if (location.pathname !== "/search") {
+      if (currentUrl !== nextUrl) {
+        navigate(nextUrl);
+      }
+      onSearch?.(keyword);
+      setShowHistory(false);
+      return;
+    }
+
     try {
       await buttonRef.current?.run(() => performSearch(nextParams));
       if (currentUrl !== nextUrl) {
@@ -153,10 +171,14 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     if (!keyword) return;
 
     if (!isAuthenticated || searchAccessStatus === "anonymous") {
+      const nextUrl = SearchService.buildSearchUrl({
+        ...searchParams,
+        keyword,
+      });
       toast.warning("搜索前请先登录", { duration: 3000 });
       navigate("/login", {
         state: {
-          from: getCurrentRouteSnapshot(),
+          from: buildRouteSnapshotFromUrl(nextUrl),
           pendingSearch: {
             keyword,
           },
@@ -202,6 +224,9 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     setSearchParams({ keyword: "" });
     if (location.pathname === "/" && location.search) {
       navigate("/", { replace: true, state: { skipSearchSync: true } });
+    }
+    if (location.pathname === "/search" && location.search) {
+      navigate("/search", { replace: true, state: { skipSearchSync: true } });
     }
     inputRef.current?.focus();
     // 如果按钮处于“搜索中”动画状态，立即复位

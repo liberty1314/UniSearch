@@ -10,6 +10,7 @@ export interface FeatureCardProps {
   iconGlow: string;
   accentText: string;
   index: number;
+  shouldPlayEntrance?: boolean;
 }
 
 const FeatureCard: React.FC<FeatureCardProps> = ({
@@ -20,10 +21,11 @@ const FeatureCard: React.FC<FeatureCardProps> = ({
   iconGlow,
   accentText,
   index,
+  shouldPlayEntrance = true,
 }) => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30 }}
+      initial={shouldPlayEntrance ? { opacity: 0, y: 30 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 1 + index * 0.1, duration: 0.5 }}
       className="group relative cursor-pointer h-full"

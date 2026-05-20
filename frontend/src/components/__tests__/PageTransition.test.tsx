@@ -41,4 +41,17 @@ describe('PageTransition', () => {
     expect(screen.getByText('Login content')).toBeInTheDocument();
     expect(screen.getByTestId('animate-presence')).toBeInTheDocument();
   });
+
+  it('bypasses AnimatePresence for home and search route transitions', () => {
+    render(
+      <MemoryRouter initialEntries={['/search']}>
+        <PageTransition>
+          <div>Search content</div>
+        </PageTransition>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Search content')).toBeInTheDocument();
+    expect(screen.queryByTestId('animate-presence')).not.toBeInTheDocument();
+  });
 });

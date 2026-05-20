@@ -374,3 +374,28 @@
   - `frontend/src/utils/__tests__/resourceDisplay.test.ts`
   - `frontend/src/utils/resourceDisplay.ts`
   - `frontend/src/utils/searchFilters.ts`
+
+## [2026-05-20 15:06:18] feat(frontend): 拆分独立搜索结果页并优化首页搜索跳转
+- **Body**: 新增 `/search` 独立结果页，拆分首页搜索输入与结果加载职责，统一搜索参数同步、登录回跳和结果页返回链路。
+- **Body**: 同时优化首页入场动画复用、主页与搜索页切换过渡，以及搜索状态清空逻辑，并补齐路由、组件、服务与 Store 测试覆盖。
+- **Files**:
+  - `frontend/src/components/PageTransition.tsx`
+  - `frontend/src/components/SearchBox.tsx`
+  - `frontend/src/components/__tests__/PageTransition.test.tsx`
+  - `frontend/src/components/__tests__/SearchBox.test.tsx`
+  - `frontend/src/components/__tests__/SearchResults.test.tsx`
+  - `frontend/src/components/home/FeatureCard.tsx`
+  - `frontend/src/components/home/TrendingCategories.tsx`
+  - `frontend/src/config/constants.ts`
+  - `frontend/src/pages/Home.tsx`
+  - `frontend/src/pages/SearchPage.tsx`
+  - `frontend/src/pages/__tests__/AuthEntryPages.test.tsx`
+  - `frontend/src/pages/__tests__/Home.test.tsx`
+  - `frontend/src/pages/__tests__/ResourceDetailPage.test.tsx`
+  - `frontend/src/pages/__tests__/SearchPage.test.tsx`
+  - `frontend/src/routes/AppRoutes.tsx`
+  - `frontend/src/routes/__tests__/AppRoutes.test.tsx`
+  - `frontend/src/services/__tests__/searchService.test.ts`
+  - `frontend/src/services/searchService.ts`
+  - `frontend/src/stores/__tests__/searchStore.test.ts`
+  - `frontend/src/stores/searchStore.ts`

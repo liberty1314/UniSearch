@@ -32,6 +32,11 @@ let authState = {
 
 let searchAccessStatus: "anonymous" | "authenticated" = "authenticated";
 let searchHistoryState: string[] = [];
+let currentLocation = {
+  pathname: "/",
+  search: "",
+  hash: "",
+};
 
 vi.mock("react-router-dom", async () => {
   const actual =
@@ -41,11 +46,7 @@ vi.mock("react-router-dom", async () => {
   return {
     ...actual,
     useNavigate: () => navigateMock,
-    useLocation: () => ({
-      pathname: "/",
-      search: "",
-      hash: "",
-    }),
+    useLocation: () => currentLocation,
   };
 });
 
@@ -126,6 +127,11 @@ describe("SearchBox", () => {
     };
     searchAccessStatus = "authenticated";
     searchHistoryState = [];
+    currentLocation = {
+      pathname: "/",
+      search: "",
+      hash: "",
+    };
   });
 
   it("shows up to eight recent searches when the input is focused", async () => {
@@ -221,9 +227,8 @@ describe("SearchBox", () => {
     expect(historyItem).toHaveClass("dark:bg-white/[0.03]");
   });
 
-  it("searches and collapses the history panel after selecting a history item", async () => {
+  it("navigates to the standalone results page after selecting a history item on the homepage", async () => {
     searchHistoryState = ["仙逆", "凡人修仙传"];
-    performSearchMock.mockResolvedValue(undefined);
 
     render(<SearchBox />);
 
@@ -235,7 +240,8 @@ describe("SearchBox", () => {
     await waitFor(() => {
       expect(setSearchParamsMock).toHaveBeenCalledWith({ keyword: "仙逆" });
     });
-    expect(performSearchMock).toHaveBeenCalledWith({ keyword: "仙逆" });
+    expect(performSearchMock).not.toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith("/search?q=%E4%BB%99%E9%80%86");
     await waitFor(() => {
       expect(screen.queryByText("最近搜索")).not.toBeInTheDocument();
     });
@@ -298,6 +304,44 @@ describe("SearchBox", () => {
     });
   });
 
+  it("navigates to /search first instead of requesting in place when searching from the homepage", async () => {
+    render(<SearchBox />);
+
+    await userEvent.type(
+      screen.getByPlaceholderText("搜索网盘资源..."),
+      "电影",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "搜索" }));
+
+    expect(setSearchParamsMock).toHaveBeenCalledWith({ keyword: "电影" });
+    expect(performSearchMock).not.toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith("/search?q=%E7%94%B5%E5%BD%B1");
+  });
+
+  it("keeps instant searching behavior when already on the standalone results page", async () => {
+    currentLocation = {
+      pathname: "/search",
+      search: "?q=%E6%97%A7%E5%85%B3%E9%94%AE%E8%AF%8D",
+      hash: "",
+    };
+    performSearchMock.mockResolvedValue(undefined);
+
+    render(<SearchBox />);
+
+    await userEvent.type(
+      screen.getByPlaceholderText("搜索网盘资源..."),
+      "凡人修仙传",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "搜索" }));
+
+    await waitFor(() => {
+      expect(performSearchMock).toHaveBeenCalledWith({ keyword: "凡人修仙传" });
+    });
+    expect(navigateMock).toHaveBeenCalledWith("/search?q=%E5%87%A1%E4%BA%BA%E4%BF%AE%E4%BB%99%E4%BC%A0", {
+      state: { skipSearchSync: true },
+    });
+  });
+
   it("redirects anonymous users to /login before starting a search", async () => {
     authState = {
       token: null,
@@ -326,7 +370,8 @@ describe("SearchBox", () => {
             keyword: "仙逆",
           },
           from: expect.objectContaining({
-            pathname: "/",
+            pathname: "/search",
+            search: "?q=%E4%BB%99%E9%80%86",
           }),
         }),
       }),
@@ -334,6 +379,11 @@ describe("SearchBox", () => {
   });
 
   it("logs out expired JWT sessions and sends them back to /login", async () => {
+    currentLocation = {
+      pathname: "/search",
+      search: "",
+      hash: "",
+    };
     searchAccessStatus = "authenticated";
     performSearchMock.mockRejectedValue({
       code: 401,

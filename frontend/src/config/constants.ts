@@ -12,6 +12,7 @@ export const TOAST_CONFIG = {
 // 路由已知模式列表
 export const KNOWN_ROUTE_PATTERNS = [
   '/',
+  '/search',
   '/resource/:resourceId',
   '/login',
   '/register',

@@ -173,7 +173,7 @@ export class SearchService {
     });
 
     const queryString = searchParams.toString();
-    return queryString ? `/?${queryString}` : '/';
+    return queryString ? `/search?${queryString}` : '/search';
   }
 
   /**

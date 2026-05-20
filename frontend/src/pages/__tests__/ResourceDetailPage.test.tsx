@@ -112,6 +112,7 @@ const renderDetailPage = (initialEntry: string | { pathname: string; state?: unk
       <MemoryRouter initialEntries={[initialEntry]}>
         <Routes>
           <Route path="/" element={<LocationProbe />} />
+          <Route path="/search" element={<LocationProbe />} />
           <Route path="/resource/:resourceId" element={<ResourceDetailPage />} />
         </Routes>
       </MemoryRouter>
@@ -394,7 +395,7 @@ describe("ResourceDetailPage", () => {
       state: {
         resource: resourceFixture,
         from: {
-          pathname: "/",
+          pathname: "/search",
           search: "?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97&types=quark&mediaTypes=movie",
           label: "搜索结果",
           keyword: "你的名字",
@@ -406,7 +407,7 @@ describe("ResourceDetailPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "返回搜索结果" }));
 
     expect(screen.getByTestId("location-probe")).toHaveTextContent(
-      "/?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97&types=quark&mediaTypes=movie",
+      "/search?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97&types=quark&mediaTypes=movie",
     );
   });
 

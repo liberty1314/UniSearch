@@ -17,6 +17,9 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
     const previousPath = previousPathRef.current;
     const isCurrentAdminRoute = location.pathname.startsWith('/admin');
     const isPreviousAdminRoute = previousPath.startsWith('/admin');
+    const isHomeSearchTransition =
+        (previousPath === '/' || previousPath === '/search') &&
+        (location.pathname === '/' || location.pathname === '/search');
 
     const isAuthToAuthTransition =
         previousPath !== location.pathname &&
@@ -27,7 +30,7 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
         previousPathRef.current = location.pathname;
     }, [location.pathname]);
 
-    if (isCurrentAdminRoute || isPreviousAdminRoute) {
+    if (isCurrentAdminRoute || isPreviousAdminRoute || isHomeSearchTransition) {
         return <>{children}</>;
     }
 
