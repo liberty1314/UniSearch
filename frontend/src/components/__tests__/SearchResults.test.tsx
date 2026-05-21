@@ -370,6 +370,12 @@ describe("SearchResults", () => {
   });
 
   it("navigates to the dedicated resource detail page from the secondary detail entry", async () => {
+    Object.defineProperty(window, "scrollY", {
+      configurable: true,
+      writable: true,
+      value: 640,
+    });
+
     renderSearchResults();
     await screen.findByRole("button", { name: /详情/i });
     fireEvent.click(screen.getByRole("button", { name: /详情/i }));
@@ -380,6 +386,10 @@ describe("SearchResults", () => {
     expect(screen.getByTestId("detail-state")).toHaveTextContent('"/search"');
     expect(screen.getByTestId("detail-state")).toHaveTextContent(
       '"?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97"',
+    );
+    expect(screen.getByTestId("detail-state")).toHaveTextContent('"scrollY":640');
+    expect(screen.getByTestId("detail-state")).toHaveTextContent(
+      '"routeTransition":"forward"',
     );
   });
 
@@ -445,6 +455,13 @@ describe("SearchResults", () => {
     expect(screen.queryByText("你的名字 原画设定集")).not.toBeInTheDocument();
     expect(screen.getByText("包含：4K")).toBeInTheDocument();
     expect(screen.getByText("排除：设定集")).toBeInTheDocument();
+    const toolbarMeta = screen.getByTestId("search-results-toolbar-meta");
+    const toolbarFilters = screen.getByTestId("search-results-toolbar-filters");
+    expect(toolbarMeta).toContainElement(screen.getByText("个结果"));
+    expect(toolbarMeta).toContainElement(toolbarFilters);
+    expect(toolbarMeta.className).toContain("flex-wrap");
+    expect(toolbarMeta.className).toContain("sm:flex-nowrap");
+    expect(toolbarFilters.className).toContain("sm:flex-nowrap");
     expect(screen.queryByText("媒体：movie")).not.toBeInTheDocument();
     expect(screen.queryByText("能力：downloadable")).not.toBeInTheDocument();
 

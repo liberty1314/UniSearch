@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Bell } from 'lucide-react';
 import type { Announcement } from '@/types/api';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -39,14 +41,21 @@ interface AnnouncementDialogProps {
 export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
   open,
   onOpenChange,
-  announcement,
-  onDismiss,
+	announcement,
+	onDismiss,
 }) => {
+  const [neverShow, setNeverShow] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setNeverShow(false);
+    }
+  }, [announcement.id, open]);
 
   const handleOpenChange = (nextOpen: boolean) => {
     onOpenChange(nextOpen);
     if (!nextOpen) {
-      onDismiss(announcement.id, true);
+      onDismiss(announcement.id, neverShow);
     }
   };
 
@@ -82,6 +91,21 @@ export const AnnouncementDialog: React.FC<AnnouncementDialogProps> = ({
                 {announcement.content}
               </ReactMarkdown>
             </div>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200/70 bg-slate-50/80 px-4 py-3 dark:border-white/10 dark:bg-white/5">
+            <Checkbox
+              id={`announcement-never-show-${announcement.id}`}
+              checked={neverShow}
+              onCheckedChange={(checked) => setNeverShow(checked === true)}
+              aria-label="不再提示此公告"
+            />
+            <Label
+              htmlFor={`announcement-never-show-${announcement.id}`}
+              className="cursor-pointer text-sm text-slate-600 dark:text-slate-300"
+            >
+              不再提示此公告
+            </Label>
           </div>
 
           <button

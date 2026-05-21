@@ -4,6 +4,7 @@ import type {
   CreateAnnouncementRequest,
   UpdateAnnouncementRequest,
   ListAnnouncementsResponse,
+  ListAnnouncementsFilters,
   SetAnnouncementStatusRequest,
   AnnouncementFeatureEnabledResponse,
   SetAnnouncementFeatureEnabledRequest,
@@ -32,7 +33,8 @@ export class AnnouncementService {
     page: number = 1,
     pageSize: number = 20,
     sortBy?: string,
-    sortOrder?: 'asc' | 'desc'
+    sortOrder?: 'asc' | 'desc',
+    filters?: ListAnnouncementsFilters
   ): Promise<ListAnnouncementsResponse> {
     const params: Record<string, unknown> = {
       page,
@@ -45,6 +47,18 @@ export class AnnouncementService {
 
     if (sortOrder) {
       params.sort_order = sortOrder;
+    }
+    if (filters?.keyword) {
+      params.keyword = filters.keyword;
+    }
+    if (filters?.priority) {
+      params.priority = filters.priority;
+    }
+    if (typeof filters?.is_enabled === 'boolean') {
+      params.is_enabled = filters.is_enabled;
+    }
+    if (filters?.lifecycle_status) {
+      params.lifecycle_status = filters.lifecycle_status;
     }
 
     const response = await apiClient.get<ListAnnouncementsResponse>('/announcements', { params });
@@ -89,13 +103,13 @@ export class AnnouncementService {
   /**
    * 创建公告（管理员）
    * 
-   * @param data - 创建公告请求数据
+   * @param data - 创建公告请求数据（内容字段使用 Markdown）
    * @returns 创建的公告信息
    * 
    * @example
    * const announcement = await AnnouncementService.createAnnouncement({
    *   title: '系统维护通知',
-   *   content: '<p>系统将于今晚进行维护...</p>',
+   *   content: '## 系统维护通知\n\n系统将于今晚进行维护...',
    *   priority: 'high',
    *   start_time: '2024-01-20T00:00:00Z',
    *   end_time: '2024-01-21T00:00:00Z',
@@ -111,13 +125,13 @@ export class AnnouncementService {
    * 更新公告（管理员）
    * 
    * @param id - 公告 ID
-   * @param data - 更新公告请求数据
+   * @param data - 更新公告请求数据（内容字段使用 Markdown）
    * @returns 更新后的公告信息
    * 
    * @example
    * const announcement = await AnnouncementService.updateAnnouncement(1, {
    *   title: '系统维护通知(更新)',
-   *   content: '<p>维护时间调整...</p>',
+   *   content: '维护时间调整到今晚 23:00',
    *   priority: 'medium',
    *   start_time: '2024-01-20T02:00:00Z',
    *   end_time: '2024-01-21T02:00:00Z',

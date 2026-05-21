@@ -56,9 +56,12 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
           data-testid="search-results-toolbar"
           className="rounded-[20px] border border-white/60 bg-white/60 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.03)] backdrop-blur-xl dark:border-white/[0.06] dark:bg-slate-950/40 dark:shadow-[0_8px_24px_rgba(0,0,0,0.3)] mb-2"
         >
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex min-w-0 flex-col gap-3">
-              <div className="text-[14px] font-medium text-slate-600 dark:text-slate-400 flex items-center gap-2 flex-wrap">
+          <div className="flex items-center justify-between gap-4">
+            <div
+              data-testid="search-results-toolbar-meta"
+              className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2 sm:flex-nowrap"
+            >
+              <div className="flex shrink-0 flex-wrap items-center gap-2 text-[14px] font-medium text-slate-600 dark:text-slate-400">
                 <span className="flex items-center justify-center min-w-6 h-6 px-1.5 rounded-full bg-blue-50/80 text-blue-600 text-xs font-bold border border-blue-200/50 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-300 shadow-sm">
                   {totalCount}
                 </span>
@@ -76,7 +79,10 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
               </div>
 
               {activeFilterChips.length > 0 ? (
-                <div className="flex flex-wrap items-center gap-2">
+                <div
+                  data-testid="search-results-toolbar-filters"
+                  className="flex min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap"
+                >
                   {activeFilterChips.map((chip) => (
                     <button
                       key={chip.id}

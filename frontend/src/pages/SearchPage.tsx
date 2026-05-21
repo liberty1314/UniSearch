@@ -130,7 +130,12 @@ const SearchPage: React.FC = () => {
     clearResults();
     navigate("/", {
       replace: true,
-      state: { skipHomeEntrance: true },
+      state: {
+        skipHomeEntrance: true,
+        routeTransition: "backward",
+        transitionSource: "search-back-home",
+        resetScroll: true,
+      },
     });
   };
 

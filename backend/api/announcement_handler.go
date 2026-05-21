@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -41,10 +42,14 @@ type SetAnnouncementStatusRequest struct {
 
 // ListAnnouncementsRequest 公告列表查询请求
 type ListAnnouncementsRequest struct {
-	Page      int    `form:"page" binding:"omitempty,min=1"`
-	PageSize  int    `form:"page_size" binding:"omitempty,min=1,max=100"`
-	SortBy    string `form:"sort_by" binding:"omitempty,oneof=created_at priority start_time"`
-	SortOrder string `form:"sort_order" binding:"omitempty,oneof=asc desc"`
+	Page            int    `form:"page" binding:"omitempty,min=1"`
+	PageSize        int    `form:"page_size" binding:"omitempty,min=1,max=100"`
+	SortBy          string `form:"sort_by" binding:"omitempty,oneof=created_at priority start_time"`
+	SortOrder       string `form:"sort_order" binding:"omitempty,oneof=asc desc"`
+	Keyword         string `form:"keyword" binding:"omitempty,max=200"`
+	Priority        string `form:"priority" binding:"omitempty,oneof=high medium low"`
+	IsEnabled       *bool  `form:"is_enabled"`
+	LifecycleStatus string `form:"lifecycle_status" binding:"omitempty,oneof=scheduled active expired"`
 }
 
 // AnnouncementInfo 公告信息
@@ -165,8 +170,8 @@ func CreateAnnouncementHandler(announcementService *service.AnnouncementService)
 		if err != nil {
 			log.Printf("❌ 创建公告失败: %v", err)
 			// 根据错误类型返回不同的状态码（需求 10.6, 12.1）
-			switch err.Error() {
-			case "标题不能为空", "内容不能为空":
+			switch {
+			case errors.Is(err, service.ErrAnnouncementTitleRequired), errors.Is(err, service.ErrAnnouncementContentRequired):
 				c.JSON(http.StatusBadRequest, gin.H{
 					"code":    400,
 					"message": "数据验证失败",
@@ -174,7 +179,7 @@ func CreateAnnouncementHandler(announcementService *service.AnnouncementService)
 						"error": err.Error(),
 					},
 				})
-			case "失效时间必须晚于生效时间":
+			case errors.Is(err, service.ErrAnnouncementInvalidTimeRange):
 				c.JSON(http.StatusBadRequest, gin.H{
 					"code":    400,
 					"message": "数据验证失败",
@@ -183,7 +188,7 @@ func CreateAnnouncementHandler(announcementService *service.AnnouncementService)
 						"field": "end_time",
 					},
 				})
-			case "优先级必须是 high、medium 或 low":
+			case errors.Is(err, service.ErrAnnouncementInvalidPriority):
 				c.JSON(http.StatusBadRequest, gin.H{
 					"code":    400,
 					"message": "数据验证失败",
@@ -270,13 +275,13 @@ func UpdateAnnouncementHandler(announcementService *service.AnnouncementService)
 		if err != nil {
 			log.Printf("❌ 更新公告失败: %v", err)
 			// 根据错误类型返回不同的状态码（需求 10.6, 12.1）
-			switch err.Error() {
-			case "公告不存在":
+			switch {
+			case errors.Is(err, service.ErrAnnouncementNotFound):
 				c.JSON(http.StatusNotFound, gin.H{
 					"code":    404,
 					"message": "公告不存在",
 				})
-			case "标题不能为空", "内容不能为空":
+			case errors.Is(err, service.ErrAnnouncementTitleRequired), errors.Is(err, service.ErrAnnouncementContentRequired):
 				c.JSON(http.StatusBadRequest, gin.H{
 					"code":    400,
 					"message": "数据验证失败",
@@ -284,7 +289,7 @@ func UpdateAnnouncementHandler(announcementService *service.AnnouncementService)
 						"error": err.Error(),
 					},
 				})
-			case "失效时间必须晚于生效时间":
+			case errors.Is(err, service.ErrAnnouncementInvalidTimeRange):
 				c.JSON(http.StatusBadRequest, gin.H{
 					"code":    400,
 					"message": "数据验证失败",
@@ -293,7 +298,7 @@ func UpdateAnnouncementHandler(announcementService *service.AnnouncementService)
 						"field": "end_time",
 					},
 				})
-			case "优先级必须是 high、medium 或 low":
+			case errors.Is(err, service.ErrAnnouncementInvalidPriority):
 				c.JSON(http.StatusBadRequest, gin.H{
 					"code":    400,
 					"message": "数据验证失败",
@@ -340,7 +345,7 @@ func DeleteAnnouncementHandler(announcementService *service.AnnouncementService)
 		if err != nil {
 			log.Printf("❌ 删除公告失败: %v", err)
 			// 根据错误类型返回不同的状态码（需求 10.6, 12.1）
-			if err.Error() == "公告不存在" {
+			if errors.Is(err, service.ErrAnnouncementNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{
 					"code":    404,
 					"message": "公告不存在",
@@ -382,7 +387,7 @@ func GetAnnouncementHandler(announcementService *service.AnnouncementService) gi
 		if err != nil {
 			log.Printf("❌ 查询公告失败: %v", err)
 			// 根据错误类型返回不同的状态码（需求 10.6, 12.1）
-			if err.Error() == "公告不存在" {
+			if errors.Is(err, service.ErrAnnouncementNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{
 					"code":    404,
 					"message": "公告不存在",
@@ -434,19 +439,36 @@ func ListAnnouncementsHandler(announcementService *service.AnnouncementService) 
 
 		// 调用服务层查询公告列表
 		params := service.ListAnnouncementsParams{
-			Page:      req.Page,
-			PageSize:  req.PageSize,
-			SortBy:    req.SortBy,
-			SortOrder: req.SortOrder,
+			Page:            req.Page,
+			PageSize:        req.PageSize,
+			SortBy:          req.SortBy,
+			SortOrder:       req.SortOrder,
+			Keyword:         req.Keyword,
+			Priority:        req.Priority,
+			IsEnabled:       req.IsEnabled,
+			LifecycleStatus: req.LifecycleStatus,
 		}
 
 		result, err := announcementService.ListAnnouncements(params)
 		if err != nil {
 			log.Printf("❌ 查询公告列表失败: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"code":    500,
-				"message": "服务器内部错误",
-			})
+			if errors.Is(err, service.ErrAnnouncementInvalidSortField) ||
+				errors.Is(err, service.ErrAnnouncementInvalidSortOrder) ||
+				errors.Is(err, service.ErrAnnouncementInvalidPriority) ||
+				errors.Is(err, service.ErrAnnouncementInvalidLifecycleStatus) {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"code":    400,
+					"message": "请求参数错误",
+					"data": gin.H{
+						"error": err.Error(),
+					},
+				})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"code":    500,
+					"message": "服务器内部错误",
+				})
+			}
 			return
 		}
 
@@ -492,12 +514,14 @@ func SetAnnouncementStatusHandler(announcementService *service.AnnouncementServi
 			return
 		}
 
+		username := getCurrentUsername(c)
+
 		// 调用服务层设置公告状态
-		err = announcementService.SetAnnouncementStatus(uint(id), req.IsEnabled)
+		err = announcementService.SetAnnouncementStatusWithOperator(uint(id), req.IsEnabled, username)
 		if err != nil {
 			log.Printf("❌ 设置公告状态失败: %v", err)
 			// 根据错误类型返回不同的状态码（需求 10.6, 12.1）
-			if err.Error() == "公告不存在" {
+			if errors.Is(err, service.ErrAnnouncementNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{
 					"code":    404,
 					"message": "公告不存在",

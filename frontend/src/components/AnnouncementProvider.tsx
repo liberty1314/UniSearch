@@ -41,7 +41,8 @@ export const AnnouncementProvider: React.FC = () => {
     loadFeatureStatus,
     getUnreadAnnouncements,
     markAsRead,
-    isLoading,
+    isFeatureLoading,
+    isAnnouncementsLoading,
     featureEnabled,
   } = useAnnouncementStore();
 
@@ -60,11 +61,7 @@ export const AnnouncementProvider: React.FC = () => {
    */
   useEffect(() => {
     if (isAuthenticated) {
-      // 先加载功能开关状态
-      loadFeatureStatus().then(() => {
-        // 然后加载有效公告（后端会再次检查功能开关）
-        loadActiveAnnouncements();
-      });
+      void Promise.allSettled([loadFeatureStatus(), loadActiveAnnouncements()]);
     }
   }, [isAuthenticated, loadActiveAnnouncements, loadFeatureStatus]);
 
@@ -84,7 +81,14 @@ export const AnnouncementProvider: React.FC = () => {
       return;
     }
     
-    if (isAuthenticated && featureEnabled && !isLoading && isHomePage && !currentAnnouncement) {
+    if (
+      isAuthenticated &&
+      featureEnabled &&
+      !isFeatureLoading &&
+      !isAnnouncementsLoading &&
+      isHomePage &&
+      !currentAnnouncement
+    ) {
       const unreadAnnouncements = getUnreadAnnouncements();
       // 过滤掉本次会话中已关闭的公告
       const availableAnnouncements = unreadAnnouncements.filter(
@@ -102,7 +106,7 @@ export const AnnouncementProvider: React.FC = () => {
       setIsOpen(false);
       setCurrentAnnouncement(null);
     }
-  }, [isAuthenticated, featureEnabled, isLoading, location.pathname, currentAnnouncement, getUnreadAnnouncements, isDismissing, dismissedIds]);
+  }, [isAuthenticated, featureEnabled, isFeatureLoading, isAnnouncementsLoading, location.pathname, currentAnnouncement, getUnreadAnnouncements, isDismissing, dismissedIds]);
 
   /**
    * 处理公告关闭

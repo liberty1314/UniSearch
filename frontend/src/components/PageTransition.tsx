@@ -1,7 +1,7 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
-import { isAuthRoute } from '@/components/auth/authRouteMotion';
+import { resolveRouteTransition } from '@/routes/routeTransition';
 
 interface PageTransitionProps {
     children: React.ReactNode;
@@ -13,39 +13,53 @@ interface PageTransitionProps {
  */
 const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
     const location = useLocation();
+    const shouldReduceMotion = useReducedMotion();
     const previousPathRef = React.useRef(location.pathname);
     const previousPath = previousPathRef.current;
-    const isCurrentAdminRoute = location.pathname.startsWith('/admin');
-    const isPreviousAdminRoute = previousPath.startsWith('/admin');
-    const isHomeSearchTransition =
-        (previousPath === '/' || previousPath === '/search') &&
-        (location.pathname === '/' || location.pathname === '/search');
-
-    const isAuthToAuthTransition =
-        previousPath !== location.pathname &&
-        isAuthRoute(previousPath) &&
-        isAuthRoute(location.pathname);
+    const transitionMeta = resolveRouteTransition({
+        from: previousPath,
+        to: location.pathname,
+        state: location.state,
+    });
 
     React.useEffect(() => {
         previousPathRef.current = location.pathname;
     }, [location.pathname]);
 
-    if (isCurrentAdminRoute || isPreviousAdminRoute || isHomeSearchTransition) {
+    if (transitionMeta.shouldBypass) {
         return <>{children}</>;
     }
 
     const pageVariants = {
-        initial: isAuthToAuthTransition
-            ? { opacity: 0.98 }
-            : { opacity: 0 },
-        animate: { opacity: 1 },
-        exit: isAuthToAuthTransition
-            ? { opacity: 0.98 }
-            : { opacity: 0 },
+        initial: shouldReduceMotion
+            ? { opacity: 0 }
+            : transitionMeta.animation === 'shared-axis'
+              ? {
+                    opacity: 0,
+                    x: transitionMeta.direction * 18,
+                    scale: 0.992,
+                    filter: 'blur(4px)',
+                }
+              : { opacity: 0.98 },
+        animate: shouldReduceMotion
+            ? { opacity: 1 }
+            : transitionMeta.animation === 'shared-axis'
+              ? { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' }
+              : { opacity: 1 },
+        exit: shouldReduceMotion
+            ? { opacity: 0 }
+            : transitionMeta.animation === 'shared-axis'
+              ? {
+                    opacity: 0,
+                    x: transitionMeta.direction * -14,
+                    scale: 0.996,
+                    filter: 'blur(3px)',
+                }
+              : { opacity: 0.98 },
     };
 
     return (
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" initial={false}>
             <motion.div
                 key={location.pathname}
                 className="w-full"
@@ -54,8 +68,15 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
                 animate="animate"
                 exit="exit"
                 transition={{
-                    duration: isAuthToAuthTransition ? 0.08 : 0.5,
-                    ease: isAuthToAuthTransition ? 'linear' : [0.22, 1, 0.36, 1], // Custom cubic-bezier for "premium" feel
+                    duration: shouldReduceMotion
+                        ? 0.12
+                        : transitionMeta.animation === 'shared-axis'
+                          ? 0.28
+                          : 0.12,
+                    ease:
+                        transitionMeta.animation === 'shared-axis'
+                            ? [0.22, 1, 0.36, 1]
+                            : 'linear',
                 }}
             >
                 {children}

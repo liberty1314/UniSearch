@@ -242,6 +242,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         hash: location.hash,
         label: "搜索结果",
         keyword: searchParams.keyword,
+        routeTransition: "forward",
+        transitionSource: "search-results-detail",
+        scrollY: window.scrollY,
       }),
     });
   }, [location.hash, location.pathname, location.search, navigate, searchParams.keyword]);

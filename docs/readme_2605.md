@@ -399,3 +399,52 @@
   - `frontend/src/services/searchService.ts`
   - `frontend/src/stores/__tests__/searchStore.test.ts`
   - `frontend/src/stores/searchStore.ts`
+
+## [2026-05-21 10:20:42] feat(announcement): 完善公告筛选并统一路由过渡
+- **Body**: 增加公告列表关键词与生命周期筛选，统一错误分支处理和状态记录，补强公告内容 Markdown 化后的后端与前端适配。
+- **Body**: 同时收敛首页、搜索页和公告相关的路由过渡、滚动恢复与测试覆盖，补齐公告管理与公告面板的状态联动。
+- **Files**:
+  - `backend/api/announcement_handler.go`
+  - `backend/api/announcement_handler_test.go`
+  - `backend/model/announcement.go`
+  - `backend/service/announcement_service.go`
+  - `backend/service/announcement_service_test.go`
+  - `frontend/src/components/AnnouncementDialog.tsx`
+  - `frontend/src/components/AnnouncementPanel.tsx`
+  - `frontend/src/components/AnnouncementProvider.tsx`
+  - `frontend/src/components/PageTransition.tsx`
+  - `frontend/src/components/SearchBox.tsx`
+  - `frontend/src/components/SearchResults.tsx`
+  - `frontend/src/components/__tests__/AnnouncementDialog.test.tsx`
+  - `frontend/src/components/__tests__/AnnouncementPanel.test.tsx`
+  - `frontend/src/components/__tests__/AnnouncementProvider.test.tsx`
+  - `frontend/src/components/__tests__/PageTransition.test.tsx`
+  - `frontend/src/components/__tests__/SearchBox.test.tsx`
+  - `frontend/src/components/__tests__/SearchResults.test.tsx`
+  - `frontend/src/components/admin/AnnouncementManagement.tsx`
+  - `frontend/src/components/admin/__tests__/AnnouncementManagement.test.tsx`
+  - `frontend/src/components/home/PlatformMarquee.tsx`
+  - `frontend/src/components/home/SearchResultsToolbar.tsx`
+  - `frontend/src/components/home/TrendingCategories.tsx`
+  - `frontend/src/components/home/__tests__/PlatformMarquee.test.tsx`
+  - `frontend/src/components/home/__tests__/TrendingCategories.test.tsx`
+  - `frontend/src/hooks/__tests__/useAnnouncementManagement.test.tsx`
+  - `frontend/src/hooks/useAnnouncementManagement.ts`
+  - `frontend/src/lib/announcement.ts`
+  - `frontend/src/pages/Home.tsx`
+  - `frontend/src/pages/ResourceDetailPage.tsx`
+  - `frontend/src/pages/SearchPage.tsx`
+  - `frontend/src/pages/__tests__/Home.test.tsx`
+  - `frontend/src/pages/__tests__/ResourceDetailPage.test.tsx`
+  - `frontend/src/pages/__tests__/SearchPage.test.tsx`
+  - `frontend/src/routes/AppRoutes.tsx`
+  - `frontend/src/routes/ScrollToTop.tsx`
+  - `frontend/src/routes/__tests__/AppRoutes.test.tsx`
+  - `frontend/src/routes/__tests__/ScrollToTop.test.tsx`
+  - `frontend/src/routes/__tests__/routeTransition.test.ts`
+  - `frontend/src/routes/routeTransition.ts`
+  - `frontend/src/services/announcementService.ts`
+  - `frontend/src/stores/__tests__/announcementStore.test.ts`
+  - `frontend/src/stores/announcementStore.ts`
+  - `frontend/src/types/api.ts`
+  - `frontend/src/utils/resourceDisplay.ts`

@@ -100,7 +100,7 @@ vi.mock('@/components/home/TrendingCategories', () => ({
   __esModule: true,
   default: () => (
     <section>
-      <h2>探索热门分类</h2>
+      <h2>热门分类</h2>
       <div>trending-categories</div>
     </section>
   ),
@@ -185,8 +185,8 @@ describe('Home', () => {
 
     renderHome();
 
-    const trendingHeading = screen.getByRole('heading', { level: 2, name: '探索热门分类' });
-    const capabilityHeading = screen.getByRole('heading', { level: 2, name: '支持识别 / 聚合以下链接类型' });
+    const trendingHeading = screen.getByRole('heading', { level: 2, name: '热门分类' });
+    const capabilityHeading = screen.getByRole('heading', { level: 2, name: '支持识别与聚合这些链接类型' });
 
     expect(trendingHeading.compareDocumentPosition(capabilityHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(trendingHeading).toBeInTheDocument();
@@ -236,13 +236,13 @@ describe('Home', () => {
     renderHome();
 
     const heroTitle = screen.getByTestId('gradient-text');
-    const heroSubtitle = screen.getByRole('heading', { level: 2, name: '智能网盘资源搜索引擎' });
-    const sectionTitle = screen.getByRole('heading', { level: 2, name: '为什么选择 UniSearch？' });
+    const heroSubtitle = screen.getByRole('heading', { level: 2, name: '一个入口，聚合搜索主流网盘资源' });
+    const sectionTitle = screen.getByRole('heading', { level: 2, name: '帮你更快找到资源' });
     const animatedGrid = screen.getByTestId('animated-grid');
 
     expect(heroTitle).toHaveAttribute('data-colors', '#3b82f6,#0ea5e9,#06b6d4');
-    expect(heroSubtitle.className).toContain('via-cyan-600');
-    expect(heroSubtitle.className).not.toContain('indigo');
+    expect(heroSubtitle.className).toContain('text-slate-900');
+    expect(heroSubtitle.className).not.toContain('text-transparent');
     expect(sectionTitle.className).toContain('text-blue-950');
     expect(animatedGrid.className).toContain('text-blue-600');
     expect(animatedGrid.className).not.toContain('nebula');
@@ -271,7 +271,30 @@ describe('Home', () => {
     expect(screen.queryByText('search-results')).not.toBeInTheDocument();
     expect(screen.getByTestId('animated-grid')).toBeInTheDocument();
     expect(screen.getByTestId('public-page-glow')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: '为什么选择 UniSearch？' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: '帮你更快找到资源' })).toBeInTheDocument();
+  });
+
+  it('renders the redesigned hero trust strip and concise homepage value proposition', () => {
+    renderHome();
+
+    expect(screen.getByRole('heading', { level: 2, name: '一个入口，聚合搜索主流网盘资源' })).toBeInTheDocument();
+    expect(screen.getByText('快速定位影视、课程、软件与资料资源，减少平台切换成本')).toBeInTheDocument();
+    expect(screen.getByTestId('home-trust-strip')).toBeInTheDocument();
+    expect(screen.getByText('支持 5+ 平台')).toBeInTheDocument();
+    expect(screen.getByText('聚合识别主流链接类型')).toBeInTheDocument();
+    expect(screen.getByText('持续更新资源索引')).toBeInTheDocument();
+  });
+
+  it('renders the new trust-building usage section after platform coverage', () => {
+    renderHome();
+
+    const capabilityHeading = screen.getByRole('heading', { level: 2, name: '支持识别与聚合这些链接类型' });
+    const usageHeading = screen.getByRole('heading', { level: 2, name: '如何更快找到想要的资源' });
+
+    expect(capabilityHeading.compareDocumentPosition(usageHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.getByText('输入明确关键词')).toBeInTheDocument();
+    expect(screen.getByText('优先使用分类入口')).toBeInTheDocument();
+    expect(screen.getByText('进入详情页判断资源')).toBeInTheDocument();
   });
 
   it('plays the homepage entrance animation on the first visit of a browser session', () => {
@@ -279,7 +302,7 @@ describe('Home', () => {
 
     expect(
       screen
-        .getByRole('heading', { level: 2, name: '智能网盘资源搜索引擎' })
+        .getByRole('heading', { level: 2, name: '一个入口，聚合搜索主流网盘资源' })
         .getAttribute('data-motion-initial')
     ).toBe(JSON.stringify({ opacity: 0, y: 18 }));
 
@@ -298,7 +321,7 @@ describe('Home', () => {
 
     expect(
       screen
-        .getByRole('heading', { level: 2, name: '智能网盘资源搜索引擎' })
+        .getByRole('heading', { level: 2, name: '一个入口，聚合搜索主流网盘资源' })
         .getAttribute('data-motion-initial')
     ).toBe('false');
 
@@ -322,7 +345,7 @@ describe('Home', () => {
 
     expect(
       secondRender
-        .getByRole('heading', { level: 2, name: '智能网盘资源搜索引擎' })
+        .getByRole('heading', { level: 2, name: '一个入口，聚合搜索主流网盘资源' })
         .getAttribute('data-motion-initial')
     ).toBe(JSON.stringify({ opacity: 0, y: 18 }));
   });

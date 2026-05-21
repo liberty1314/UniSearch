@@ -5,8 +5,6 @@ import { useLocation } from "react-router-dom";
 import SearchBox from "@/components/SearchBox";
 import GradientText from "@/components/GradientText";
 import { useSearchAccessStatus } from "@/stores/searchAccessStore";
-
-import { NumberTicker } from "@/components/ui/number-ticker";
 import PublicPageShell from "@/components/PublicPageShell";
 import SEO from "@/components/SEO";
 import PlatformMarquee from "@/components/home/PlatformMarquee";
@@ -15,6 +13,27 @@ import HomeSectionHeader from "@/components/home/HomeSectionHeader";
 import FeatureCard from "@/components/home/FeatureCard";
 
 const HOME_ENTRANCE_SESSION_KEY = "unisearch_home_entrance_seen";
+
+const trustSignals = [
+  "支持 5+ 平台",
+  "聚合识别主流链接类型",
+  "持续更新资源索引",
+] as const;
+
+const usageSteps = [
+  {
+    title: "输入明确关键词",
+    description: "优先输入资源名、课程名、软件名或主演名，减少无效搜索结果。",
+  },
+  {
+    title: "优先使用分类入口",
+    description: "不确定怎么搜时，先从热门分类和示例关键词快速进入结果页。",
+  },
+  {
+    title: "进入详情页判断资源",
+    description: "在详情页集中查看链接类型、提取信息与资源说明，再决定打开目标。",
+  },
+] as const;
 
 const featureCards = [
   {
@@ -128,6 +147,7 @@ const Home: React.FC = () => {
           initial={shouldPlayHomeEntrance ? { opacity: 0, scale: 0.985 } : false}
           animate={{ opacity: 1, scale: 1 }}
           transition={heroChildTransition}
+          className="mx-auto max-w-4xl"
         >
           <GradientText
             colors={["#3b82f6", "#0ea5e9", "#06b6d4"]}
@@ -140,65 +160,53 @@ const Home: React.FC = () => {
             initial={shouldPlayHomeEntrance ? { opacity: 0, y: 18 } : false}
             animate={{ opacity: 1, y: 0 }}
             transition={heroCopyTransition}
-            className="mb-4 bg-gradient-to-r from-blue-950 via-cyan-600 to-sky-500 bg-clip-text text-2xl font-semibold tracking-tight text-transparent dark:from-blue-100 dark:via-cyan-300 dark:to-sky-200 sm:text-3xl"
+            className="mb-4 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-50 sm:text-3xl md:text-4xl"
           >
-            智能网盘资源搜索引擎
+            一个入口，聚合搜索主流网盘资源
           </motion.h2>
 
           <motion.p
             initial={shouldPlayHomeEntrance ? { opacity: 0 } : false}
             animate={{ opacity: 1 }}
             transition={heroDescriptionTransition}
-            className="text-base sm:text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed"
+            className="mx-auto max-w-2xl text-base leading-relaxed text-slate-500 dark:text-slate-400 sm:text-lg"
           >
-            快速找到您需要的文件，聚合多种主流网盘链接类型
+            快速定位影视、课程、软件与资料资源，减少平台切换成本
           </motion.p>
         </motion.div>
 
-        {/* 统计数字标签 - Glassmorphism 增强风格 */}
         <motion.div
           initial={shouldPlayHomeEntrance ? { opacity: 0, y: 16 } : false}
           animate={{ opacity: 1, y: 0 }}
           transition={statsTransition}
-          className="flex items-center justify-center gap-4 sm:gap-6 mt-10 mb-[-0.5rem] flex-wrap relative z-20"
+          data-testid="home-trust-strip"
+          className="relative z-20 mx-auto mt-10 flex max-w-3xl flex-wrap items-center justify-center gap-3 text-sm text-slate-500 dark:text-slate-400"
         >
-          {[
-            { value: 5, suffix: "+", label: "支持平台" },
-            { value: 100, suffix: "w+", label: "资源索引" },
-            { value: 99, suffix: "%", label: "搜索准确率" },
-          ].map(({ value, suffix, label }) => (
+          {trustSignals.map((signal) => (
             <div
-              key={label}
-              className="group glass-panel relative flex min-w-[124px] flex-col items-center gap-1.5 px-6 py-3 hover:-translate-y-1.5 hover:shadow-glass-strong dark:hover:shadow-glass-dark transition-all duration-300"
+              key={signal}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/65 px-4 py-2 shadow-[0_10px_30px_rgba(15,23,42,0.05)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/45"
             >
-              <p className="text-3xl font-extrabold text-slate-800 dark:text-white tabular-nums tracking-tight">
-                <NumberTicker value={value} delay={0.9} />
-                <span>{suffix}</span>
-              </p>
-              <p className="text-[13px] text-slate-500 dark:text-slate-400 font-medium tracking-wide">
-                {label}
-              </p>
+              <span className="h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_0_4px_rgba(34,211,238,0.14)]" />
+              <span className="font-medium">{signal}</span>
             </div>
           ))}
         </motion.div>
       </motion.div>
 
-      {/* 搜索区域 - 增强设计与间距紧凑化 */}
-      <div className="w-full flex flex-col items-center mb-20 space-y-8 relative z-30">
+      <div className="relative z-30 mb-20 flex w-full flex-col items-center space-y-8">
         <motion.div
           initial={shouldPlayHomeEntrance ? { opacity: 0, y: 22 } : false}
           animate={{ opacity: 1, y: 0 }}
           transition={searchTransition}
-          className="relative max-w-4xl w-full z-20"
+          className="relative z-20 w-full max-w-4xl"
         >
           <SearchBox className="w-full" />
         </motion.div>
       </div>
 
-      {/* 主要内容区域 */}
       <div className="max-w-6xl mx-auto">
         <div className="space-y-24 pb-28">
-          {/* 功能特色 - 增强视觉设计 */}
           <div>
             <motion.div
               initial={shouldPlayHomeEntrance ? { opacity: 0, y: 20 } : false}
@@ -208,8 +216,8 @@ const Home: React.FC = () => {
             >
               <HomeSectionHeader
                 eyebrow="核心能力"
-                title="为什么选择 UniSearch？"
-                description="专业的网盘资源搜索平台，为您提供高效便捷的搜索体验"
+                title="帮你更快找到资源"
+                description="把关键词、分类入口与平台覆盖说明放在同一条检索链路里，减少判断成本。"
               />
             </motion.div>
 
@@ -224,11 +232,37 @@ const Home: React.FC = () => {
               ))}
             </div>
 
-            {/* 热门分类滚动轨道 */}
             <TrendingCategories shouldPlayEntrance={shouldPlayHomeEntrance} />
 
-            {/* 支持识别/聚合能力收束条 */}
             <PlatformMarquee />
+
+            <div className="mt-24">
+              <HomeSectionHeader
+                eyebrow="使用建议"
+                title="如何更快找到想要的资源"
+                description="先从明确关键词或分类入口进入，再通过详情页快速判断资源是否值得打开。"
+                className="mb-10"
+              />
+
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                {usageSteps.map((step, index) => (
+                  <div
+                    key={step.title}
+                    className="glass-panel relative overflow-hidden p-6 text-left"
+                  >
+                    <div className="mb-5 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(14,165,233,0.22)]">
+                      {index + 1}
+                    </div>
+                    <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+                      {step.title}
+                    </h3>
+                    <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300/85">
+                      {step.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>

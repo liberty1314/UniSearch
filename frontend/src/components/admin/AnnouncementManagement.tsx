@@ -1,10 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ApplePagination } from '@/components/admin/ApplePagination';
@@ -23,6 +25,12 @@ import { AppleSwitch } from '@/components/ui/apple-switch';
 import { useAnnouncementManagement } from '@/hooks/useAnnouncementManagement';
 import type { AnnouncementPriority } from '@/types/api';
 import { cn } from '@/lib/utils';
+import {
+  getAnnouncementLifecycleColor,
+  getAnnouncementLifecycleLabel,
+  getAnnouncementLifecycleStatus,
+  getAnnouncementPreviewText,
+} from '@/lib/announcement';
 import {
   ADMIN_HOVERABLE_BUTTON_CLASSES,
 } from '@/components/admin/adminDesign';
@@ -60,17 +68,17 @@ export const AnnouncementManagement: React.FC = () => {
   const { state, actions } = useAnnouncementManagement();
 
   const {
-    featureEnabled, isLoading, isSaving,
+    featureEnabled, isFeatureLoading, isListLoading, isSaving,
     announcements, totalAnnouncements, totalPages, currentPage, pageSize,
-    isFormOpen, formMode, formData,
+    filters, isFormOpen, formMode, formData, fieldErrors,
     deleteDialogOpen, deletingAnnouncement,
   } = state;
 
   const {
-    setFormData, setIsFormOpen, setDeleteDialogOpen,
+    updateFormField, setIsFormOpen, setDeleteDialogOpen,
     handleToggleFeature, handleCreate, handleEdit, handleSubmit,
     handleDeleteClick, handleDeleteConfirm, handleToggleStatus,
-    handlePageSizeChange, setCurrentPage,
+    handlePageSizeChange, setCurrentPage, updateFilters, resetFilters,
   } = actions;
 
   return (
@@ -105,7 +113,7 @@ export const AnnouncementManagement: React.FC = () => {
           </p>
         </div>
 
-        {isLoading ? (
+        {isFeatureLoading ? (
           <div className="text-center py-12">
             <motion.div
               animate={{ rotate: 360 }}
@@ -167,7 +175,88 @@ export const AnnouncementManagement: React.FC = () => {
           </Button>
         </div>
 
-        {announcements.length === 0 ? (
+        <div className="mb-5 grid gap-3 rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-slate-50/60 p-4 dark:border-white/10 dark:bg-slate-900/30 md:grid-cols-4">
+          <Input
+            value={filters.keyword}
+            onChange={(event) => updateFilters({ keyword: event.target.value })}
+            placeholder="按标题搜索公告"
+            className="bg-white/80 dark:bg-slate-950/40"
+          />
+          <div className="space-y-2">
+            <Label htmlFor="announcement-priority-filter">优先级</Label>
+            <Select
+              value={filters.priority}
+              onValueChange={(value: AnnouncementPriority | 'all') => updateFilters({ priority: value })}
+            >
+              <SelectTrigger id="announcement-priority-filter" aria-label="优先级筛选">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部优先级</SelectItem>
+                <SelectItem value="high">高优先级</SelectItem>
+                <SelectItem value="medium">中优先级</SelectItem>
+                <SelectItem value="low">低优先级</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="announcement-enabled-filter">启用状态</Label>
+            <Select
+              value={filters.enabledStatus}
+              onValueChange={(value: 'all' | 'enabled' | 'disabled') => updateFilters({ enabledStatus: value })}
+            >
+              <SelectTrigger id="announcement-enabled-filter" aria-label="启用状态">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部状态</SelectItem>
+                <SelectItem value="enabled">仅已启用</SelectItem>
+                <SelectItem value="disabled">仅已禁用</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="announcement-lifecycle-filter">生命周期状态</Label>
+            <Select
+              value={filters.lifecycleStatus}
+              onValueChange={(value: 'all' | 'scheduled' | 'active' | 'expired') =>
+                updateFilters({ lifecycleStatus: value })
+              }
+            >
+              <SelectTrigger id="announcement-lifecycle-filter" aria-label="生命周期状态">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部生命周期</SelectItem>
+                <SelectItem value="active">进行中</SelectItem>
+                <SelectItem value="scheduled">未生效</SelectItem>
+                <SelectItem value="expired">已过期</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-4 flex justify-end">
+            <Button
+              variant="outline"
+              onClick={resetFilters}
+              className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
+            >
+              重置筛选
+            </Button>
+          </div>
+        </div>
+
+        {isListLoading ? (
+          <div className="text-center py-12">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              className="inline-block"
+            >
+              <RefreshCw className="w-8 h-8 text-blue-600 dark:text-cyan-300" />
+            </motion.div>
+            <p className="mt-4 text-slate-500 dark:text-slate-400">公告列表加载中...</p>
+          </div>
+        ) : announcements.length === 0 ? (
           <div className="text-center py-12">
             <Megaphone className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
             <p className="text-slate-500 dark:text-slate-400">暂无公告</p>
@@ -207,13 +296,13 @@ export const AnnouncementManagement: React.FC = () => {
                           已禁用
                         </span>
                       )}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getAnnouncementLifecycleColor(getAnnouncementLifecycleStatus(announcement))}`}>
+                        {getAnnouncementLifecycleLabel(getAnnouncementLifecycleStatus(announcement))}
+                      </span>
                     </div>
-                    <div
-                      className="text-sm text-slate-600 dark:text-slate-400 mb-2 line-clamp-2"
-                      dangerouslySetInnerHTML={{
-                        __html: announcement.content.replace(/<[^>]*>/g, '').slice(0, 100) + '...',
-                      }}
-                    />
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-2 line-clamp-2">
+                      {getAnnouncementPreviewText(announcement.content, 100)}
+                    </p>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-4 text-xs text-slate-500 dark:text-slate-400">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
@@ -267,7 +356,7 @@ export const AnnouncementManagement: React.FC = () => {
                 pageSize={pageSize}
                 onPageChange={setCurrentPage}
                 onPageSizeChange={handlePageSizeChange}
-                isLoading={isLoading}
+                isLoading={isListLoading}
               />
             )}
           </div>
@@ -281,6 +370,9 @@ export const AnnouncementManagement: React.FC = () => {
             <DialogTitle>
               {formMode === 'create' ? '创建公告' : '编辑公告'}
             </DialogTitle>
+            <DialogDescription>
+              配置公告标题、Markdown 内容、生效时间和启用状态，保存后会按生命周期规则向用户展示。
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -291,10 +383,13 @@ export const AnnouncementManagement: React.FC = () => {
               <Input
                 id="title"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) => updateFormField('title', e.target.value)}
                 placeholder="请输入公告标题（最多200字符）"
                 maxLength={200}
               />
+              {fieldErrors.title && (
+                <p className="text-xs text-red-500">{fieldErrors.title}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -304,11 +399,14 @@ export const AnnouncementManagement: React.FC = () => {
               <Textarea
                 id="content"
                 value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                onChange={(e) => updateFormField('content', e.target.value)}
                 placeholder="请输入公告内容（支持Markdown语法）"
                 rows={8}
                 className="font-mono text-sm"
               />
+              {fieldErrors.content && (
+                <p className="text-xs text-red-500">{fieldErrors.content}</p>
+              )}
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 提示：可以使用Markdown语法格式化内容，如 **加粗**、*斜体*、# 标题 等
               </p>
@@ -318,9 +416,7 @@ export const AnnouncementManagement: React.FC = () => {
               <Label htmlFor="priority">优先级</Label>
               <Select
                 value={formData.priority}
-                onValueChange={(value: AnnouncementPriority) =>
-                  setFormData({ ...formData, priority: value })
-                }
+                onValueChange={(value: AnnouncementPriority) => updateFormField('priority', value)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -331,6 +427,9 @@ export const AnnouncementManagement: React.FC = () => {
                   <SelectItem value="low">低优先级</SelectItem>
                 </SelectContent>
               </Select>
+              {fieldErrors.priority && (
+                <p className="text-xs text-red-500">{fieldErrors.priority}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -341,8 +440,11 @@ export const AnnouncementManagement: React.FC = () => {
                 id="start_time"
                 type="datetime-local"
                 value={formData.start_time}
-                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                onChange={(e) => updateFormField('start_time', e.target.value)}
               />
+              {fieldErrors.start_time && (
+                <p className="text-xs text-red-500">{fieldErrors.start_time}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -351,8 +453,11 @@ export const AnnouncementManagement: React.FC = () => {
                 id="end_time"
                 type="datetime-local"
                 value={formData.end_time}
-                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                onChange={(e) => updateFormField('end_time', e.target.value)}
               />
+              {fieldErrors.end_time && (
+                <p className="text-xs text-red-500">{fieldErrors.end_time}</p>
+              )}
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 留空表示永久有效
               </p>
@@ -361,9 +466,24 @@ export const AnnouncementManagement: React.FC = () => {
             <div className="flex items-center space-x-2">
               <AppleSwitch
                 checked={formData.is_enabled}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_enabled: checked })}
+                onCheckedChange={(checked) => updateFormField('is_enabled', checked)}
               />
               <Label>启用公告</Label>
+            </div>
+
+            <div className="space-y-2 rounded-[1.25rem] border-[0.5px] border-slate-200/60 bg-slate-50/70 p-4 dark:border-white/10 dark:bg-slate-900/30">
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                实时预览
+              </Label>
+              <div className="prose prose-sm max-w-none rounded-xl bg-white/80 p-4 text-slate-700 shadow-sm dark:prose-invert dark:bg-slate-950/40 dark:text-slate-200">
+                {formData.content.trim() ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {formData.content}
+                  </ReactMarkdown>
+                ) : (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">输入 Markdown 内容后会在这里显示预览</p>
+                )}
+              </div>
             </div>
           </div>
 

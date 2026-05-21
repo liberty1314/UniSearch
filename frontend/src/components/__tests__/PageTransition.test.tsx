@@ -10,6 +10,7 @@ const animatePresenceMock = vi.fn(({ children }: { children: React.ReactNode }) 
 
 vi.mock('framer-motion', () => ({
   AnimatePresence: (props: { children: React.ReactNode }) => animatePresenceMock(props),
+  useReducedMotion: () => false,
   motion: {
     div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
   },
@@ -42,7 +43,7 @@ describe('PageTransition', () => {
     expect(screen.getByTestId('animate-presence')).toBeInTheDocument();
   });
 
-  it('bypasses AnimatePresence for home and search route transitions', () => {
+  it('keeps AnimatePresence enabled for home and search routes', () => {
     render(
       <MemoryRouter initialEntries={['/search']}>
         <PageTransition>
@@ -52,6 +53,6 @@ describe('PageTransition', () => {
     );
 
     expect(screen.getByText('Search content')).toBeInTheDocument();
-    expect(screen.queryByTestId('animate-presence')).not.toBeInTheDocument();
+    expect(screen.getByTestId('animate-presence')).toBeInTheDocument();
   });
 });

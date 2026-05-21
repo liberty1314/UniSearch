@@ -22,8 +22,11 @@ interface AnnouncementState {
   // 已读状态（本地存储）
   readStatus: AnnouncementReadStatus;
 
-  // 加载状态
-  isLoading: boolean;
+  // 功能开关加载状态
+  isFeatureLoading: boolean;
+
+  // 公告列表加载状态
+  isAnnouncementsLoading: boolean;
 
   // 错误信息
   error: string | null;
@@ -80,7 +83,8 @@ export const useAnnouncementStore = create<AnnouncementState>()(
       announcements: [],
       activeAnnouncements: [],
       readStatus: loadReadStatusFromStorage(),
-      isLoading: false,
+      isFeatureLoading: false,
+      isAnnouncementsLoading: false,
       error: null,
       featureEnabled: false,
 
@@ -91,19 +95,19 @@ export const useAnnouncementStore = create<AnnouncementState>()(
        * 如果功能未启用，后端返回空数组。
        */
       loadActiveAnnouncements: async () => {
-        set({ isLoading: true, error: null });
+        set({ isAnnouncementsLoading: true, error: null });
 
         try {
           const announcements = await AnnouncementService.getActiveAnnouncements();
           set({
             activeAnnouncements: announcements,
-            isLoading: false,
+            isAnnouncementsLoading: false,
           });
         } catch (error) {
           console.error('加载有效公告失败:', error);
           set({
             error: getErrorMessage(error, '加载公告失败'),
-            isLoading: false,
+            isAnnouncementsLoading: false,
             activeAnnouncements: [], // 失败时设置为空数组，不阻塞用户操作
           });
         }
@@ -156,13 +160,14 @@ export const useAnnouncementStore = create<AnnouncementState>()(
        * 从后端获取公告功能是否启用。
        */
       loadFeatureStatus: async () => {
+        set({ isFeatureLoading: true });
         try {
           const enabled = await AnnouncementService.getAnnouncementFeatureEnabled();
-          set({ featureEnabled: enabled });
+          set({ featureEnabled: enabled, isFeatureLoading: false });
         } catch (error) {
           console.error('加载公告功能状态失败:', error);
           // 失败时默认为禁用
-          set({ featureEnabled: false });
+          set({ featureEnabled: false, isFeatureLoading: false });
         }
       },
 
@@ -180,7 +185,8 @@ export const useAnnouncementStore = create<AnnouncementState>()(
         set({
           announcements: [],
           activeAnnouncements: [],
-          isLoading: false,
+          isFeatureLoading: false,
+          isAnnouncementsLoading: false,
           error: null,
         });
       },
@@ -195,10 +201,14 @@ export const useAnnouncementStore = create<AnnouncementState>()(
 export const useActiveAnnouncements = () =>
   useAnnouncementStore((state) => state.activeAnnouncements);
 export const useAnnouncementLoading = () =>
-  useAnnouncementStore((state) => state.isLoading);
+  useAnnouncementStore((state) => state.isFeatureLoading || state.isAnnouncementsLoading);
 export const useAnnouncementError = () =>
   useAnnouncementStore((state) => state.error);
 export const useAnnouncementFeatureEnabled = () =>
   useAnnouncementStore((state) => state.featureEnabled);
+export const useAnnouncementFeatureLoading = () =>
+  useAnnouncementStore((state) => state.isFeatureLoading);
+export const useAnnouncementListLoading = () =>
+  useAnnouncementStore((state) => state.isAnnouncementsLoading);
 export const useUnreadAnnouncements = () =>
   useAnnouncementStore((state) => state.getUnreadAnnouncements());

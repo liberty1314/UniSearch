@@ -234,19 +234,20 @@ const ResourceDetailPage: React.FC = () => {
   );
 
   const handleBack = useCallback(() => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
     if (routeState?.from?.pathname) {
       navigate(
         `${routeState.from.pathname}${routeState.from.search || ""}${routeState.from.hash || ""}`,
         {
           replace: true,
-          state: routeState.from.keyword
-            ? { resumeSearch: { keyword: routeState.from.keyword } }
-            : undefined,
+          state: {
+            ...(routeState.from.keyword
+              ? { resumeSearch: { keyword: routeState.from.keyword } }
+              : {}),
+            routeTransition: "backward",
+            transitionSource: "resource-detail-back",
+            restoreScroll: typeof routeState.scrollY === "number",
+            scrollY: routeState.scrollY,
+          },
         },
       );
       return;

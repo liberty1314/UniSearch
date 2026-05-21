@@ -134,6 +134,14 @@ describe("SearchBox", () => {
     };
   });
 
+  const expectHomeToSearchNavigationState = () => ({
+    state: expect.objectContaining({
+      routeTransition: "forward",
+      transitionSource: "home-search-box",
+      resetScroll: true,
+    }),
+  });
+
   it("shows up to eight recent searches when the input is focused", async () => {
     searchHistoryState = [
       "海贼王",
@@ -227,6 +235,22 @@ describe("SearchBox", () => {
     expect(historyItem).toHaveClass("dark:bg-white/[0.03]");
   });
 
+  it("anchors the history popover to the search surface instead of the homepage helper chips", async () => {
+    searchHistoryState = ["海贼王"];
+
+    const { container } = render(<SearchBox />);
+
+    await userEvent.click(screen.getByPlaceholderText("搜索网盘资源..."));
+
+    const searchShell = screen.getByTestId("search-box-surface");
+    const historyPopover = screen.getByTestId("search-history-surface");
+    const helperChipRow = screen.getByText("示例搜索").parentElement;
+
+    expect(searchShell.parentElement).toContainElement(historyPopover);
+    expect(helperChipRow).not.toContainElement(historyPopover);
+    expect(container.firstChild).not.toBe(historyPopover.parentElement);
+  });
+
   it("navigates to the standalone results page after selecting a history item on the homepage", async () => {
     searchHistoryState = ["仙逆", "凡人修仙传"];
 
@@ -241,7 +265,10 @@ describe("SearchBox", () => {
       expect(setSearchParamsMock).toHaveBeenCalledWith({ keyword: "仙逆" });
     });
     expect(performSearchMock).not.toHaveBeenCalled();
-    expect(navigateMock).toHaveBeenCalledWith("/search?q=%E4%BB%99%E9%80%86");
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/search?q=%E4%BB%99%E9%80%86",
+      expectHomeToSearchNavigationState(),
+    );
     await waitFor(() => {
       expect(screen.queryByText("最近搜索")).not.toBeInTheDocument();
     });
@@ -315,7 +342,37 @@ describe("SearchBox", () => {
 
     expect(setSearchParamsMock).toHaveBeenCalledWith({ keyword: "电影" });
     expect(performSearchMock).not.toHaveBeenCalled();
-    expect(navigateMock).toHaveBeenCalledWith("/search?q=%E7%94%B5%E5%BD%B1");
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/search?q=%E7%94%B5%E5%BD%B1",
+      expectHomeToSearchNavigationState(),
+    );
+  });
+
+  it("renders quick keyword chips on the homepage and reuses the existing search flow", async () => {
+    render(<SearchBox />);
+
+    expect(screen.getByText("示例搜索")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "快速搜索 流浪地球" }));
+
+    expect(setSearchParamsMock).toHaveBeenCalledWith({ keyword: "流浪地球" });
+    expect(performSearchMock).not.toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/search?q=%E6%B5%81%E6%B5%AA%E5%9C%B0%E7%90%83",
+      expectHomeToSearchNavigationState(),
+    );
+  });
+
+  it("hides homepage quick keyword chips on the standalone search page", () => {
+    currentLocation = {
+      pathname: "/search",
+      search: "",
+      hash: "",
+    };
+
+    render(<SearchBox />);
+
+    expect(screen.queryByText("示例搜索")).not.toBeInTheDocument();
   });
 
   it("keeps instant searching behavior when already on the standalone results page", async () => {

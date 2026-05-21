@@ -14,7 +14,7 @@ vi.mock('framer-motion', () => ({
 }));
 
 describe('AnnouncementDialog', () => {
-  it('renders in the shared dialog shell and preserves dismiss behavior', () => {
+  it('默认关闭时不会永久标记为不再提示', () => {
     const onOpenChange = vi.fn();
     const onDismiss = vi.fn();
 
@@ -43,6 +43,38 @@ describe('AnnouncementDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '我知道了' }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    expect(onDismiss).toHaveBeenCalledWith(7, true);
+    expect(onDismiss).toHaveBeenCalledWith(7, false);
+  });
+
+  it('勾选不再提示后关闭会传递永久忽略标记', () => {
+    const onOpenChange = vi.fn();
+    const onDismiss = vi.fn();
+
+    render(
+      <AnnouncementDialog
+        open
+        onOpenChange={onOpenChange}
+        announcement={{
+          id: 9,
+          title: '版本更新通知',
+          content: '## 新版本说明',
+          priority: 'medium',
+          start_time: '2026-04-04T00:00:00Z',
+          end_time: null,
+          is_enabled: true,
+          created_at: '2026-04-04T00:00:00Z',
+          updated_at: '2026-04-04T00:00:00Z',
+          created_by: 'system',
+          updated_by: null,
+        }}
+        onDismiss={onDismiss}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('checkbox', { name: '不再提示此公告' }));
+    fireEvent.click(screen.getByRole('button', { name: '我知道了' }));
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onDismiss).toHaveBeenCalledWith(9, true);
   });
 });

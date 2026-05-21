@@ -9,6 +9,30 @@ import (
 	"gorm.io/gorm"
 )
 
+var (
+	// ErrAnnouncementTitleRequired 表示公告标题缺失
+	ErrAnnouncementTitleRequired = errors.New("标题不能为空")
+	// ErrAnnouncementContentRequired 表示公告内容缺失
+	ErrAnnouncementContentRequired = errors.New("内容不能为空")
+	// ErrAnnouncementInvalidTimeRange 表示失效时间非法
+	ErrAnnouncementInvalidTimeRange = errors.New("失效时间必须晚于生效时间")
+	// ErrAnnouncementInvalidPriority 表示优先级值非法
+	ErrAnnouncementInvalidPriority = errors.New("优先级必须是 high、medium 或 low")
+	// ErrAnnouncementNotFound 表示公告不存在
+	ErrAnnouncementNotFound = errors.New("公告不存在")
+	// ErrAnnouncementInvalidSortField 表示排序字段非法
+	ErrAnnouncementInvalidSortField = errors.New("无效的排序字段")
+	// ErrAnnouncementInvalidSortOrder 表示排序方向非法
+	ErrAnnouncementInvalidSortOrder = errors.New("排序方向必须是 asc 或 desc")
+	// ErrAnnouncementInvalidLifecycleStatus 表示公告生命周期筛选值非法
+	ErrAnnouncementInvalidLifecycleStatus = errors.New("生命周期状态必须是 scheduled、active 或 expired")
+)
+
+const (
+	announcementPriorityDescOrderClause = "CASE priority WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END DESC, created_at DESC"
+	announcementPriorityAscOrderClause  = "CASE priority WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END ASC, created_at ASC"
+)
+
 // AnnouncementService 公告服务
 type AnnouncementService struct {
 	db *gorm.DB
@@ -23,27 +47,12 @@ func NewAnnouncementService(db *gorm.DB) *AnnouncementService {
 // 参数:
 //   - announcement: 公告数据（包含标题、内容、优先级、时间等）
 //   - createdBy: 创建者用户名
+//
 // 返回: 创建的公告对象和错误信息
 // 需求: 1.1, 1.2, 1.3, 1.4, 1.5
 func (s *AnnouncementService) CreateAnnouncement(announcement *model.Announcement, createdBy string) (*model.Announcement, error) {
-	// 验证必填字段 - 标题不为空（需求 1.2）
-	if announcement.Title == "" {
-		return nil, errors.New("标题不能为空")
-	}
-
-	// 验证必填字段 - 内容不为空（需求 1.2）
-	if announcement.Content == "" {
-		return nil, errors.New("内容不能为空")
-	}
-
-	// 验证时间逻辑 - 失效时间晚于生效时间（需求 1.3）
-	if announcement.EndTime != nil && !announcement.EndTime.After(announcement.StartTime) {
-		return nil, errors.New("失效时间必须晚于生效时间")
-	}
-
-	// 验证优先级值
-	if announcement.Priority != "high" && announcement.Priority != "medium" && announcement.Priority != "low" {
-		return nil, errors.New("优先级必须是 high、medium 或 low")
+	if err := validateAnnouncement(announcement); err != nil {
+		return nil, err
 	}
 
 	// 自动记录创建时间和创建者信息（需求 1.5）
@@ -64,34 +73,19 @@ func (s *AnnouncementService) CreateAnnouncement(announcement *model.Announcemen
 //   - id: 公告ID
 //   - announcement: 更新的公告数据（包含标题、内容、优先级、时间等）
 //   - updatedBy: 修改者用户名
+//
 // 返回: 更新后的公告对象和错误信息
 // 需求: 2.1, 2.2, 2.3, 2.4
 func (s *AnnouncementService) UpdateAnnouncement(id uint, announcement *model.Announcement, updatedBy string) (*model.Announcement, error) {
-	// 验证必填字段 - 标题不为空（需求 2.1）
-	if announcement.Title == "" {
-		return nil, errors.New("标题不能为空")
-	}
-
-	// 验证必填字段 - 内容不为空（需求 2.1）
-	if announcement.Content == "" {
-		return nil, errors.New("内容不能为空")
-	}
-
-	// 验证时间逻辑 - 失效时间晚于生效时间（需求 2.1）
-	if announcement.EndTime != nil && !announcement.EndTime.After(announcement.StartTime) {
-		return nil, errors.New("失效时间必须晚于生效时间")
-	}
-
-	// 验证优先级值（需求 2.1）
-	if announcement.Priority != "high" && announcement.Priority != "medium" && announcement.Priority != "low" {
-		return nil, errors.New("优先级必须是 high、medium 或 low")
+	if err := validateAnnouncement(announcement); err != nil {
+		return nil, err
 	}
 
 	// 查询现有公告，确保存在（需求 2.4）
 	var existingAnnouncement model.Announcement
 	if err := s.db.First(&existingAnnouncement, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("公告不存在")
+			return nil, ErrAnnouncementNotFound
 		}
 		return nil, fmt.Errorf("查询公告失败: %w", err)
 	}
@@ -114,9 +108,11 @@ func (s *AnnouncementService) UpdateAnnouncement(id uint, announcement *model.An
 
 	return announcement, nil
 }
+
 // DeleteAnnouncement 删除公告（软删除）
 // 参数:
 //   - id: 公告ID
+//
 // 返回: 错误信息
 // 需求: 3.4, 11.3
 func (s *AnnouncementService) DeleteAnnouncement(id uint) error {
@@ -124,7 +120,7 @@ func (s *AnnouncementService) DeleteAnnouncement(id uint) error {
 	var announcement model.Announcement
 	if err := s.db.First(&announcement, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("公告不存在")
+			return ErrAnnouncementNotFound
 		}
 		return fmt.Errorf("查询公告失败: %w", err)
 	}
@@ -142,14 +138,20 @@ func (s *AnnouncementService) DeleteAnnouncement(id uint) error {
 // 参数:
 //   - id: 公告ID
 //   - isEnabled: 是否启用
+//
 // 返回: 错误信息
 // 需求: 3.1, 3.2
 func (s *AnnouncementService) SetAnnouncementStatus(id uint, isEnabled bool) error {
+	return s.SetAnnouncementStatusWithOperator(id, isEnabled, "")
+}
+
+// SetAnnouncementStatusWithOperator 设置公告状态（启用/禁用）并记录操作人
+func (s *AnnouncementService) SetAnnouncementStatusWithOperator(id uint, isEnabled bool, updatedBy string) error {
 	// 查询公告是否存在
 	var announcement model.Announcement
 	if err := s.db.First(&announcement, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("公告不存在")
+			return ErrAnnouncementNotFound
 		}
 		return fmt.Errorf("查询公告失败: %w", err)
 	}
@@ -157,6 +159,7 @@ func (s *AnnouncementService) SetAnnouncementStatus(id uint, isEnabled bool) err
 	// 更新启用状态（需求 3.1）
 	announcement.IsEnabled = isEnabled
 	announcement.UpdatedAt = time.Now()
+	announcement.UpdatedBy = updatedBy
 
 	// 保存更新
 	if err := s.db.Save(&announcement).Error; err != nil {
@@ -169,13 +172,14 @@ func (s *AnnouncementService) SetAnnouncementStatus(id uint, isEnabled bool) err
 // GetAnnouncement 获取单个公告
 // 参数:
 //   - id: 公告ID
+//
 // 返回: 公告对象和错误信息
 // 需求: 4.2
 func (s *AnnouncementService) GetAnnouncement(id uint) (*model.Announcement, error) {
 	var announcement model.Announcement
 	if err := s.db.First(&announcement, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("公告不存在")
+			return nil, ErrAnnouncementNotFound
 		}
 		return nil, fmt.Errorf("查询公告失败: %w", err)
 	}
@@ -185,10 +189,14 @@ func (s *AnnouncementService) GetAnnouncement(id uint) (*model.Announcement, err
 
 // ListAnnouncementsParams 公告列表查询参数
 type ListAnnouncementsParams struct {
-	Page      int    // 页码（从1开始）
-	PageSize  int    // 每页数量
-	SortBy    string // 排序字段（created_at, priority, start_time）
-	SortOrder string // 排序方向（asc, desc）
+	Page            int    // 页码（从1开始）
+	PageSize        int    // 每页数量
+	SortBy          string // 排序字段（created_at, priority, start_time）
+	SortOrder       string // 排序方向（asc, desc）
+	Keyword         string // 标题关键字
+	Priority        string // 优先级筛选
+	IsEnabled       *bool  // 启用状态筛选
+	LifecycleStatus string // 生命周期筛选（scheduled/active/expired）
 }
 
 // ListAnnouncementsResult 公告列表查询结果
@@ -203,6 +211,7 @@ type ListAnnouncementsResult struct {
 // ListAnnouncements 获取公告列表（支持分页和排序）
 // 参数:
 //   - params: 查询参数（页码、每页数量、排序字段、排序方向）
+//
 // 返回: 公告列表结果和错误信息
 // 需求: 4.2, 4.3
 func (s *AnnouncementService) ListAnnouncements(params ListAnnouncementsParams) (*ListAnnouncementsResult, error) {
@@ -227,17 +236,29 @@ func (s *AnnouncementService) ListAnnouncements(params ListAnnouncementsParams) 
 		"start_time": true,
 	}
 	if !validSortFields[params.SortBy] {
-		return nil, errors.New("无效的排序字段")
+		return nil, ErrAnnouncementInvalidSortField
 	}
 
 	// 验证排序方向
 	if params.SortOrder != "asc" && params.SortOrder != "desc" {
-		return nil, errors.New("排序方向必须是 asc 或 desc")
+		return nil, ErrAnnouncementInvalidSortOrder
 	}
+	if params.Priority != "" && params.Priority != "high" && params.Priority != "medium" && params.Priority != "low" {
+		return nil, ErrAnnouncementInvalidPriority
+	}
+	if params.LifecycleStatus != "" &&
+		params.LifecycleStatus != "scheduled" &&
+		params.LifecycleStatus != "active" &&
+		params.LifecycleStatus != "expired" {
+		return nil, ErrAnnouncementInvalidLifecycleStatus
+	}
+
+	query := s.db.Model(&model.Announcement{})
+	query = applyAnnouncementListFilters(query, params)
 
 	// 查询总数
 	var total int64
-	if err := s.db.Model(&model.Announcement{}).Count(&total).Error; err != nil {
+	if err := query.Count(&total).Error; err != nil {
 		return nil, fmt.Errorf("查询公告总数失败: %w", err)
 	}
 
@@ -250,9 +271,9 @@ func (s *AnnouncementService) ListAnnouncements(params ListAnnouncementsParams) 
 	// 查询公告列表（需求 4.2, 4.3）
 	var announcements []model.Announcement
 	offset := (params.Page - 1) * params.PageSize
-	orderClause := fmt.Sprintf("%s %s", params.SortBy, params.SortOrder)
+	orderClause := buildAnnouncementOrderClause(params.SortBy, params.SortOrder)
 
-	if err := s.db.Order(orderClause).Limit(params.PageSize).Offset(offset).Find(&announcements).Error; err != nil {
+	if err := query.Order(orderClause).Limit(params.PageSize).Offset(offset).Find(&announcements).Error; err != nil {
 		return nil, fmt.Errorf("查询公告列表失败: %w", err)
 	}
 
@@ -268,6 +289,7 @@ func (s *AnnouncementService) ListAnnouncements(params ListAnnouncementsParams) 
 // GetActiveAnnouncements 获取当前有效的公告
 // 参数:
 //   - systemSettingsService: 系统设置服务（用于检查功能开关）
+//
 // 返回: 有效公告列表和错误信息
 // 需求: 5.1, 5.2, 5.3, 13.2
 func (s *AnnouncementService) GetActiveAnnouncements(systemSettingsService *SystemSettingsService) ([]model.Announcement, error) {
@@ -289,63 +311,64 @@ func (s *AnnouncementService) GetActiveAnnouncements(systemSettingsService *Syst
 
 	err = s.db.Where("is_enabled = ?", true).
 		Where("start_time <= ?", now).
-		Where("end_time IS NULL OR end_time > ?", now).
+		Where("end_time IS NULL OR end_time >= ?", now).
+		Order(announcementPriorityDescOrderClause).
 		Find(&announcements).Error
 
 	if err != nil {
 		return nil, fmt.Errorf("查询有效公告失败: %w", err)
 	}
 
-	// 按优先级和创建时间排序（需求 5.3）
-	// 优先级排序：high > medium > low
-	// 相同优先级按创建时间倒序
-	sortedAnnouncements := sortAnnouncementsByPriority(announcements)
-
-	return sortedAnnouncements, nil
+	return announcements, nil
 }
 
-// sortAnnouncementsByPriority 按优先级和创建时间排序公告
-// 优先级：high > medium > low
-// 相同优先级按创建时间倒序
-func sortAnnouncementsByPriority(announcements []model.Announcement) []model.Announcement {
-	// 定义优先级权重
-	priorityWeight := map[string]int{
-		"high":   3,
-		"medium": 2,
-		"low":    1,
+func validateAnnouncement(announcement *model.Announcement) error {
+	if announcement.Title == "" {
+		return ErrAnnouncementTitleRequired
+	}
+	if announcement.Content == "" {
+		return ErrAnnouncementContentRequired
+	}
+	if announcement.EndTime != nil && !announcement.EndTime.After(announcement.StartTime) {
+		return ErrAnnouncementInvalidTimeRange
+	}
+	if announcement.Priority != "high" && announcement.Priority != "medium" && announcement.Priority != "low" {
+		return ErrAnnouncementInvalidPriority
+	}
+	return nil
+}
+
+func buildAnnouncementOrderClause(sortBy string, sortOrder string) string {
+	if sortBy == "priority" {
+		if sortOrder == "asc" {
+			return announcementPriorityAscOrderClause
+		}
+		return announcementPriorityDescOrderClause
 	}
 
-	// 使用冒泡排序（简单实现）
-	n := len(announcements)
-	for i := 0; i < n-1; i++ {
-		for j := 0; j < n-i-1; j++ {
-			a := announcements[j]
-			b := announcements[j+1]
+	return fmt.Sprintf("%s %s", sortBy, sortOrder)
+}
 
-			// 比较优先级
-			weightA := priorityWeight[a.Priority]
-			weightB := priorityWeight[b.Priority]
-
-			shouldSwap := false
-			if weightA < weightB {
-				// b 的优先级更高
-				shouldSwap = true
-			} else if weightA == weightB {
-				// 优先级相同，比较创建时间（倒序）
-				if a.CreatedAt.Before(b.CreatedAt) {
-					shouldSwap = true
-				}
-			}
-
-			if shouldSwap {
-				announcements[j], announcements[j+1] = announcements[j+1], announcements[j]
-			}
+func applyAnnouncementListFilters(query *gorm.DB, params ListAnnouncementsParams) *gorm.DB {
+	if params.Keyword != "" {
+		query = query.Where("title LIKE ?", fmt.Sprintf("%%%s%%", params.Keyword))
+	}
+	if params.Priority != "" {
+		query = query.Where("priority = ?", params.Priority)
+	}
+	if params.IsEnabled != nil {
+		query = query.Where("is_enabled = ?", *params.IsEnabled)
+	}
+	if params.LifecycleStatus != "" {
+		now := time.Now()
+		switch params.LifecycleStatus {
+		case "scheduled":
+			query = query.Where("start_time > ?", now)
+		case "active":
+			query = query.Where("start_time <= ?", now).Where("end_time IS NULL OR end_time >= ?", now)
+		case "expired":
+			query = query.Where("end_time IS NOT NULL AND end_time < ?", now)
 		}
 	}
-
-	return announcements
+	return query
 }
-
-
-
-

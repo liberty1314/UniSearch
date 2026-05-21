@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import AppRoutes from '@/routes/AppRoutes';
+import AppRoutes, { shouldUseLazyRouteFallback } from '@/routes/AppRoutes';
 
 vi.mock('@/components/Navbar', () => ({
   default: () => <div data-testid="navbar" />,
@@ -78,6 +78,13 @@ const renderRoutesAt = (path: string) =>
   );
 
 describe('AppRoutes', () => {
+  it('keeps home and search routes out of the suspense fallback path', () => {
+    expect(shouldUseLazyRouteFallback('/')).toBe(false);
+    expect(shouldUseLazyRouteFallback('/search')).toBe(false);
+    expect(shouldUseLazyRouteFallback('/resource/resource-1')).toBe(true);
+    expect(shouldUseLazyRouteFallback('/login')).toBe(true);
+  });
+
   it('renders the cinematic footer only on the home page', async () => {
     renderRoutesAt('/');
 

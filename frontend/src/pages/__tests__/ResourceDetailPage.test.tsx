@@ -121,7 +121,15 @@ const renderDetailPage = (initialEntry: string | { pathname: string; state?: unk
 
 const LocationProbe = () => {
   const location = useLocation();
-  return <div data-testid="location-probe">{`${location.pathname}${location.search}`}</div>;
+  return (
+    <div data-testid="location-probe">
+      {JSON.stringify({
+        pathname: location.pathname,
+        search: location.search,
+        state: location.state ?? null,
+      })}
+    </div>
+  );
 };
 
 describe("ResourceDetailPage", () => {
@@ -231,6 +239,33 @@ describe("ResourceDetailPage", () => {
 
     expect(await screen.findByTestId("resource-detail-disabled-state")).toBeInTheDocument();
     expect(screen.getByText("资源详情页未开启")).toBeInTheDocument();
+  });
+
+  it("returns to the previous search route with backward transition state", async () => {
+    renderDetailPage({
+      pathname: "/resource/resource-1",
+      state: {
+        resource: resourceFixture,
+        from: {
+          pathname: "/search",
+          search: "?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97",
+          keyword: "你的名字",
+        },
+        scrollY: 640,
+      },
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "返回搜索结果" }));
+
+    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
+    expect(screen.getByTestId("location-probe")).toHaveTextContent(
+      '"search":"?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97"',
+    );
+    expect(screen.getByTestId("location-probe")).toHaveTextContent(
+      '"routeTransition":"backward"',
+    );
+    expect(screen.getByTestId("location-probe")).toHaveTextContent('"restoreScroll":true');
+    expect(screen.getByTestId("location-probe")).toHaveTextContent('"scrollY":640');
   });
 
   it("copies the primary link and link passwords from the detail page", async () => {
@@ -406,8 +441,9 @@ describe("ResourceDetailPage", () => {
     await screen.findByRole("button", { name: "返回搜索结果" });
     fireEvent.click(screen.getByRole("button", { name: "返回搜索结果" }));
 
+    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
     expect(screen.getByTestId("location-probe")).toHaveTextContent(
-      "/search?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97&types=quark&mediaTypes=movie",
+      '"search":"?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97&types=quark&mediaTypes=movie"',
     );
   });
 

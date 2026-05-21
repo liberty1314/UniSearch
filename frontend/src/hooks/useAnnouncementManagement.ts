@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { AnnouncementService } from '@/services/announcementService';
-import type { Announcement, AnnouncementPriority, CreateAnnouncementRequest, UpdateAnnouncementRequest } from '@/types/api';
+import type {
+  Announcement,
+  AnnouncementPriority,
+  AnnouncementLifecycleStatus,
+  CreateAnnouncementRequest,
+  UpdateAnnouncementRequest,
+} from '@/types/api';
 import { getErrorMessage } from '@/lib/error';
 
 export interface AnnouncementFormData {
@@ -13,15 +19,33 @@ export interface AnnouncementFormData {
   is_enabled: boolean;
 }
 
+export interface AnnouncementListFilters {
+  keyword: string;
+  priority: AnnouncementPriority | 'all';
+  enabledStatus: 'all' | 'enabled' | 'disabled';
+  lifecycleStatus: AnnouncementLifecycleStatus | 'all';
+}
+
+type AnnouncementFieldErrorKey = keyof AnnouncementFormData;
+
+const DEFAULT_FILTERS: AnnouncementListFilters = {
+  keyword: '',
+  priority: 'all',
+  enabledStatus: 'all',
+  lifecycleStatus: 'all',
+};
+
 export function useAnnouncementManagement() {
   const [featureEnabled, setFeatureEnabled] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isFeatureLoading, setIsFeatureLoading] = useState<boolean>(true);
+  const [isListLoading, setIsListLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [totalAnnouncements, setTotalAnnouncements] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
+  const [filters, setFilters] = useState<AnnouncementListFilters>(DEFAULT_FILTERS);
 
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
@@ -38,9 +62,10 @@ export function useAnnouncementManagement() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [deletingAnnouncement, setDeletingAnnouncement] = useState<Announcement | null>(null);
   const [originalFeatureEnabled, setOriginalFeatureEnabled] = useState<boolean>(false);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<AnnouncementFieldErrorKey, string>>>({});
 
   const loadFeatureStatus = useCallback(async () => {
-    setIsLoading(true);
+    setIsFeatureLoading(true);
     try {
       const enabled = await AnnouncementService.getAnnouncementFeatureEnabled();
       setFeatureEnabled(enabled);
@@ -49,17 +74,26 @@ export function useAnnouncementManagement() {
       console.error('加载公告功能状态失败:', error);
       toast.error('加载功能状态失败：' + getErrorMessage(error));
     } finally {
-      setIsLoading(false);
+      setIsFeatureLoading(false);
     }
   }, []);
 
   const loadAnnouncements = useCallback(async () => {
+    setIsListLoading(true);
     try {
       const response = await AnnouncementService.listAnnouncements(
         currentPage,
         pageSize,
         'created_at',
-        'desc'
+        'desc',
+        {
+          keyword: filters.keyword.trim() || undefined,
+          priority: filters.priority === 'all' ? undefined : filters.priority,
+          is_enabled: filters.enabledStatus === 'all'
+            ? undefined
+            : filters.enabledStatus === 'enabled',
+          lifecycle_status: filters.lifecycleStatus === 'all' ? undefined : filters.lifecycleStatus,
+        }
       );
       setAnnouncements(response.announcements);
       setTotalAnnouncements(response.total);
@@ -67,8 +101,10 @@ export function useAnnouncementManagement() {
     } catch (error) {
       console.error('加载公告列表失败:', error);
       toast.error('加载公告列表失败：' + getErrorMessage(error));
+    } finally {
+      setIsListLoading(false);
     }
-  }, [currentPage, pageSize]);
+  }, [currentPage, filters.enabledStatus, filters.keyword, filters.lifecycleStatus, filters.priority, pageSize]);
 
   const handleToggleFeature = async (checked: boolean) => {
     setFeatureEnabled(checked);
@@ -88,6 +124,7 @@ export function useAnnouncementManagement() {
 
   const handleCreate = () => {
     setFormMode('create');
+    setFieldErrors({});
     setFormData({
       title: '',
       content: '',
@@ -102,6 +139,7 @@ export function useAnnouncementManagement() {
   const handleEdit = (announcement: Announcement) => {
     setFormMode('edit');
     setEditingAnnouncement(announcement);
+    setFieldErrors({});
     setFormData({
       title: announcement.title,
       content: announcement.content,
@@ -114,23 +152,27 @@ export function useAnnouncementManagement() {
   };
 
   const handleSubmit = async () => {
+    const nextFieldErrors: Partial<Record<AnnouncementFieldErrorKey, string>> = {};
     if (!formData.title.trim()) {
-      toast.error('请输入公告标题');
-      return;
+      nextFieldErrors.title = '请输入公告标题';
     }
     if (!formData.content.trim()) {
-      toast.error('请输入公告内容');
-      return;
+      nextFieldErrors.content = '请输入公告内容';
     }
     if (!formData.start_time) {
-      toast.error('请选择生效时间');
-      return;
+      nextFieldErrors.start_time = '请选择生效时间';
     }
     if (formData.end_time && new Date(formData.end_time) <= new Date(formData.start_time)) {
-      toast.error('失效时间必须晚于生效时间');
+      nextFieldErrors.end_time = '失效时间必须晚于生效时间';
+    }
+
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors);
+      toast.error(Object.values(nextFieldErrors)[0] || '表单校验失败');
       return;
     }
 
+    setFieldErrors({});
     setIsSaving(true);
     try {
       const requestData: CreateAnnouncementRequest | UpdateAnnouncementRequest = {
@@ -151,9 +193,16 @@ export function useAnnouncementManagement() {
       }
 
       setIsFormOpen(false);
-      loadAnnouncements();
+      void loadAnnouncements();
     } catch (error) {
       console.error('保存公告失败:', error);
+      const field = getAnnouncementFieldErrorKey(error);
+      if (field) {
+        setFieldErrors((current) => ({
+          ...current,
+          [field]: getErrorMessage(error, '保存失败'),
+        }));
+      }
       toast.error('保存失败：' + getErrorMessage(error));
     } finally {
       setIsSaving(false);
@@ -172,7 +221,7 @@ export function useAnnouncementManagement() {
       toast.success('删除公告成功');
       setDeleteDialogOpen(false);
       setDeletingAnnouncement(null);
-      loadAnnouncements();
+      void loadAnnouncements();
     } catch (error) {
       console.error('删除公告失败:', error);
       toast.error('删除失败：' + getErrorMessage(error));
@@ -183,7 +232,7 @@ export function useAnnouncementManagement() {
     try {
       await AnnouncementService.setAnnouncementStatus(announcement.id, !announcement.is_enabled);
       toast.success(announcement.is_enabled ? '已禁用公告' : '已启用公告');
-      loadAnnouncements();
+      void loadAnnouncements();
     } catch (error) {
       console.error('切换公告状态失败:', error);
       toast.error('操作失败：' + getErrorMessage(error));
@@ -195,30 +244,59 @@ export function useAnnouncementManagement() {
     setCurrentPage(1);
   };
 
+  const updateFilters = (nextFilters: Partial<AnnouncementListFilters>) => {
+    setFilters((current) => ({ ...current, ...nextFilters }));
+    setCurrentPage(1);
+  };
+
+  const resetFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+    setCurrentPage(1);
+  };
+
+  const updateFormField = <K extends keyof AnnouncementFormData>(field: K, value: AnnouncementFormData[K]) => {
+    setFormData((current) => ({ ...current, [field]: value }));
+    setFieldErrors((current) => {
+      if (!current[field]) {
+        return current;
+      }
+      return {
+        ...current,
+        [field]: undefined,
+      };
+    });
+  };
+
   useEffect(() => {
-    loadFeatureStatus();
-    loadAnnouncements();
-  }, [currentPage, loadFeatureStatus, loadAnnouncements]);
+    void loadFeatureStatus();
+  }, [loadFeatureStatus]);
+
+  useEffect(() => {
+    void loadAnnouncements();
+  }, [loadAnnouncements]);
 
   return {
     state: {
       featureEnabled,
-      isLoading,
+      isFeatureLoading,
+      isListLoading,
       isSaving,
       announcements,
       totalAnnouncements,
       totalPages,
       currentPage,
       pageSize,
+      filters,
       isFormOpen,
       formMode,
       editingAnnouncement,
       formData,
+      fieldErrors,
       deleteDialogOpen,
       deletingAnnouncement,
     },
     actions: {
-      setFormData,
+      updateFormField,
       setIsFormOpen,
       setDeleteDialogOpen,
       handleToggleFeature,
@@ -230,6 +308,30 @@ export function useAnnouncementManagement() {
       handleToggleStatus,
       handlePageSizeChange,
       setCurrentPage,
+      updateFilters,
+      resetFilters,
     },
   };
+}
+
+function getAnnouncementFieldErrorKey(error: unknown): AnnouncementFieldErrorKey | null {
+  if (!error || typeof error !== 'object') {
+    return null;
+  }
+  const errorObject = error as {
+    data?: { data?: { field?: unknown } };
+    response?: { data?: { data?: { field?: unknown } } };
+  };
+  const field = errorObject.data?.data?.field ?? errorObject.response?.data?.data?.field;
+  if (
+    field === 'title' ||
+    field === 'content' ||
+    field === 'priority' ||
+    field === 'start_time' ||
+    field === 'end_time' ||
+    field === 'is_enabled'
+  ) {
+    return field;
+  }
+  return null;
 }

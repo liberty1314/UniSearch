@@ -16,8 +16,8 @@ import {
   ProtectedRoute,
 } from './RouteGuards';
 
-const Home = lazy(() => import('@/pages/Home'));
-const SearchPage = lazy(() => import('@/pages/SearchPage'));
+import Home from '@/pages/Home';
+import SearchPage from '@/pages/SearchPage';
 const ResourceDetailPage = lazy(() => import('@/pages/ResourceDetailPage'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/pages/RegisterPage'));
@@ -39,6 +39,12 @@ const RouteFallback: React.FC = () => (
 const renderLazyRoute = (element: React.ReactNode) => (
   <Suspense fallback={<RouteFallback />}>{element}</Suspense>
 );
+
+export const shouldUseLazyRouteFallback = (path: string) =>
+  path !== '/' && path !== '/search';
+
+const renderRouteElement = (path: string, element: React.ReactNode) =>
+  shouldUseLazyRouteFallback(path) ? renderLazyRoute(element) : element;
 
 const AppRoutes: React.FC = () => {
   const { pathname } = useLocation();
@@ -71,19 +77,19 @@ const AppRoutes: React.FC = () => {
           <Routes>
             <Route
               path="/"
-              element={renderLazyRoute(<Home />)}
+              element={renderRouteElement('/', <Home />)}
             />
             <Route
               path="/search"
-              element={renderLazyRoute(<SearchPage />)}
+              element={renderRouteElement('/search', <SearchPage />)}
             />
             <Route
               path="/resource/:resourceId"
-              element={renderLazyRoute(<ResourceDetailPage />)}
+              element={renderRouteElement('/resource/:resourceId', <ResourceDetailPage />)}
             />
             <Route
               path="/login"
-              element={renderLazyRoute(
+              element={renderRouteElement('/login',
                 <GuestRoute>
                   <LoginPage />
                 </GuestRoute>
@@ -91,7 +97,7 @@ const AppRoutes: React.FC = () => {
             />
             <Route
               path="/register"
-              element={renderLazyRoute(
+              element={renderRouteElement('/register',
                 <GuestRoute>
                   <RegisterPage />
                 </GuestRoute>
@@ -99,17 +105,17 @@ const AppRoutes: React.FC = () => {
             />
             <Route
               path="/account"
-              element={renderLazyRoute(
+              element={renderRouteElement('/account',
                 <ProtectedRoute>
                   <AccountPage />
                 </ProtectedRoute>
               )}
             />
-            <Route path="/disclaimer" element={renderLazyRoute(<DisclaimerPage />)} />
+            <Route path="/disclaimer" element={renderRouteElement('/disclaimer', <DisclaimerPage />)} />
             <Route path="/auth" element={<Navigate to="/login" replace />} />
             <Route
               path="/admin/login"
-              element={renderLazyRoute(
+              element={renderRouteElement('/admin/login',
                 <AdminGuestRoute>
                   <AdminLogin />
                 </AdminGuestRoute>
@@ -117,7 +123,7 @@ const AppRoutes: React.FC = () => {
             />
             <Route
               path="/admin"
-              element={renderLazyRoute(
+              element={renderRouteElement('/admin',
                 <AdminRoute>
                   <Admin />
                 </AdminRoute>

@@ -278,8 +278,21 @@ export const resolveResourceDisplaySize = (
 
 export const buildResourceDetailRouteState = (
   resource: ResourceObject,
-  options: NonNullable<ResourceDetailRouteState["from"]>,
+  options: NonNullable<ResourceDetailRouteState["from"]> & {
+    routeTransition?: ResourceDetailRouteState["routeTransition"];
+    transitionSource?: string;
+    scrollY?: number;
+  },
 ): ResourceDetailRouteState => ({
   resource,
-  from: options,
+  from: {
+    pathname: options.pathname,
+    search: options.search,
+    hash: options.hash,
+    label: options.label,
+    keyword: options.keyword,
+  },
+  routeTransition: options.routeTransition,
+  transitionSource: options.transitionSource,
+  scrollY: options.scrollY,
 });

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useAnnouncementStore } from "@/stores/announcementStore";
 import { AnnouncementDialog } from "./AnnouncementDialog";
 import type { Announcement } from "@/types/api";
+import { getAnnouncementPreviewText } from "@/lib/announcement";
 
 /**
  * 公告面板组件属性
@@ -21,20 +22,6 @@ interface AnnouncementPanelProps {
  *
  * 显示所有公告列表（已读和未读），点击可查看详情
  */
-/**
- * 安全地将 HTML 内容转换为纯文本
- * 使用 DOMParser 替代正则，能正确处理嵌套标签、HTML 实体及畸形 HTML
- */
-const getPlainText = (html: string): string => {
-  try {
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    return doc.body.textContent ?? "";
-  } catch {
-    // 降级 fallback：正则简单剥离
-    return html.replace(/<[^>]*>/g, "");
-  }
-};
-
 export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
   open,
   onOpenChange,
@@ -44,7 +31,7 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
     loadActiveAnnouncements,
     isRead,
     markAsRead,
-    isLoading,
+    isAnnouncementsLoading,
   } = useAnnouncementStore();
 
   // 分离已读和未读公告
@@ -147,7 +134,7 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
                 : "text-gray-400 dark:text-slate-500",
             )}
           >
-            {getPlainText(announcement.content).substring(0, 80)}...
+            {getAnnouncementPreviewText(announcement.content, 80)}
           </p>
           <div className="mt-2 text-[11px] text-gray-400 dark:text-slate-500">
             {new Date(announcement.created_at).toLocaleDateString()}
@@ -239,7 +226,7 @@ export const AnnouncementPanel: React.FC<AnnouncementPanelProps> = ({
 
               {/* 公告列表 */}
               <div className="flex-1 overflow-y-auto p-4 min-h-0">
-                {isLoading ? (
+                {isAnnouncementsLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
                   </div>

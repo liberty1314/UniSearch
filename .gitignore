@@ -357,6 +357,7 @@ logs/
 .codex/*
 .superpowers/
 docs/superpowers/
+.codegraph/
 
 # 测试文件
 testsprite_tests/

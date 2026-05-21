@@ -219,6 +219,10 @@ export interface ResourceDetailRouteState {
     label?: string;
     keyword?: string;
   };
+  routeTransition?: 'forward' | 'backward';
+  transitionSource?: string;
+  restoreScroll?: boolean;
+  scrollY?: number;
 }
 
 /**
@@ -1104,6 +1108,7 @@ export interface ErrorResponse {
  * 公告优先级
  */
 export type AnnouncementPriority = 'high' | 'medium' | 'low';
+export type AnnouncementLifecycleStatus = 'scheduled' | 'active' | 'expired';
 
 /**
  * 公告信息
@@ -1112,7 +1117,7 @@ export type AnnouncementPriority = 'high' | 'medium' | 'low';
  * 
  * @property {number} id - 公告 ID
  * @property {string} title - 公告标题（最大 200 字符）
- * @property {string} content - 公告内容（HTML 格式）
+ * @property {string} content - 公告内容（Markdown 格式）
  * @property {AnnouncementPriority} priority - 优先级（high/medium/low）
  * @property {string} start_time - 生效时间（ISO 8601 格式）
  * @property {string | null} end_time - 失效时间（ISO 8601 格式，null 表示永久有效）
@@ -1142,7 +1147,7 @@ export interface Announcement {
  * 此类型定义了创建公告接口的请求参数。
  * 
  * @property {string} title - 公告标题（必填，最大 200 字符）
- * @property {string} content - 公告内容（必填，HTML 格式）
+ * @property {string} content - 公告内容（必填，Markdown 格式）
  * @property {AnnouncementPriority} priority - 优先级（必填，high/medium/low）
  * @property {string} start_time - 生效时间（必填，ISO 8601 格式）
  * @property {string} [end_time] - 失效时间（可选，ISO 8601 格式）
@@ -1165,7 +1170,7 @@ export interface CreateAnnouncementRequest {
  * 此类型定义了更新公告接口的请求参数。
  * 
  * @property {string} title - 公告标题（必填，最大 200 字符）
- * @property {string} content - 公告内容（必填，HTML 格式）
+ * @property {string} content - 公告内容（必填，Markdown 格式）
  * @property {AnnouncementPriority} priority - 优先级（必填，high/medium/low）
  * @property {string} start_time - 生效时间（必填，ISO 8601 格式）
  * @property {string} [end_time] - 失效时间（可选，ISO 8601 格式）
@@ -1203,6 +1208,13 @@ export interface ListAnnouncementsResponse {
   page: number;
   page_size: number;
   total_pages: number;
+}
+
+export interface ListAnnouncementsFilters {
+  keyword?: string;
+  priority?: AnnouncementPriority;
+  is_enabled?: boolean;
+  lifecycle_status?: AnnouncementLifecycleStatus;
 }
 
 /**

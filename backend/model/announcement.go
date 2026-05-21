@@ -10,7 +10,7 @@ import (
 type Announcement struct {
 	ID        uint       `gorm:"primaryKey" json:"id"`                                 // 公告ID（主键，自增）
 	Title     string     `gorm:"not null;size:200" json:"title"`                       // 公告标题（非空，最大200字符）
-	Content   string     `gorm:"not null;type:text" json:"content"`                    // 公告内容（HTML格式，非空）
+	Content   string     `gorm:"not null;type:text" json:"content"`                    // 公告内容（Markdown 格式，非空）
 	Priority  string     `gorm:"not null;size:10;default:'medium'" json:"priority"`    // 优先级（high/medium/low，默认medium）
 	StartTime time.Time  `gorm:"not null;index:idx_start_time" json:"start_time"`      // 生效时间（非空，索引）
 	EndTime   *time.Time `gorm:"index:idx_end_time" json:"end_time"`                   // 失效时间（可为空，NULL表示永久有效，索引）

@@ -173,5 +173,8 @@ describe("SearchPage", () => {
     expect(screen.getByTestId("location-probe")).toHaveTextContent(
       '"skipHomeEntrance":true',
     );
+    expect(screen.getByTestId("location-probe")).toHaveTextContent(
+      '"routeTransition":"backward"',
+    );
   });
 });
