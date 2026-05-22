@@ -20,6 +20,7 @@ export type RouteDirection = -1 | 0 | 1;
 export interface RouteTransitionState extends Partial<AuthTransitionState> {
   routeTransition?: 'forward' | 'backward';
   restoreScroll?: boolean;
+  preserveScroll?: boolean;
   scrollY?: number;
   transitionSource?: string;
 }
@@ -109,6 +110,9 @@ export function resolveRouteTransition({
 }: ResolveRouteTransitionInput): RouteTransitionResult {
   const toFamily = getRouteFamily(to);
   const fromFamily = from ? getRouteFamily(from) : null;
+  const shouldBypassHomeSearchToggle =
+    (fromFamily === 'home' && toFamily === 'search') ||
+    (fromFamily === 'search' && toFamily === 'home');
 
   if (toFamily === 'admin' || fromFamily === 'admin' || toFamily === 'fallback') {
     return {
@@ -117,6 +121,17 @@ export function resolveRouteTransition({
       animation: 'none',
       shouldBypass: true,
       scrollMode: 'top',
+    };
+  }
+
+  if (shouldBypassHomeSearchToggle) {
+    return {
+      family: 'search-flow',
+      direction: resolveSearchFlowDirection(fromFamily, toFamily, state),
+      animation: 'none',
+      shouldBypass: true,
+      scrollMode:
+        state?.restoreScroll && typeof state.scrollY === 'number' ? 'restore' : 'top',
     };
   }
 

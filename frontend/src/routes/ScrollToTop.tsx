@@ -1,13 +1,18 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
 const ScrollToTop: React.FC = () => {
-  const { pathname, state } = useLocation();
+  const { pathname, search, state } = useLocation();
+  const lastRouteKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
+
+    const currentRouteKey = `${pathname}${search}`;
+    const previousRouteKey = lastRouteKeyRef.current;
+    lastRouteKeyRef.current = currentRouteKey;
 
     if (
       state &&
@@ -21,8 +26,21 @@ const ScrollToTop: React.FC = () => {
       return;
     }
 
+    if (
+      state &&
+      typeof state === 'object' &&
+      'preserveScroll' in state &&
+      state.preserveScroll
+    ) {
+      return;
+    }
+
+    if (previousRouteKey === currentRouteKey) {
+      return;
+    }
+
     window.scrollTo(0, 0);
-  }, [pathname, state]);
+  }, [pathname, search, state]);
 
   return null;
 };

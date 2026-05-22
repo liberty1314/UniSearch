@@ -62,3 +62,66 @@ func TestApplyResultFilterFiltersResourceObjectsAndRebuildsFacets(t *testing.T) 
 		t.Fatalf("expected excluded link facet to be removed, got %#v", filtered.Facets.CloudTypes)
 	}
 }
+
+func TestApplyResultFilterSupportsStructuredFacetFilters(t *testing.T) {
+	response := model.SearchResponse{
+		Total: 3,
+		Resources: []model.ResourceObject{
+			{
+				ID:         "keep-structured",
+				Title:      "你的名字 4K",
+				Source:     model.ResourceSource{Type: "plugin", Name: "插件源"},
+				MediaType:  "movie",
+				TargetType: "share",
+				Links:      []model.ResourceLink{{Type: "quark", URL: "https://pan.quark.cn/s/1"}},
+				Capabilities: model.ResourceCapabilities{
+					Downloadable: true,
+				},
+				Actions: []model.ResourceAction{{Key: "link.quark.open", Type: "open_link"}},
+			},
+			{
+				ID:         "drop-media",
+				Title:      "你的名字 原画设定集",
+				Source:     model.ResourceSource{Type: "tg", Name: "频道源"},
+				MediaType:  "book",
+				TargetType: "detail",
+				Links:      []model.ResourceLink{{Type: "baidu", URL: "https://pan.baidu.com/s/2"}},
+				Capabilities: model.ResourceCapabilities{
+					Searchable: true,
+				},
+				Actions: []model.ResourceAction{{Key: "detail.open", Type: "open_detail"}},
+			},
+			{
+				ID:         "drop-capability",
+				Title:      "你的名字 预告片",
+				Source:     model.ResourceSource{Type: "plugin", Name: "插件源"},
+				MediaType:  "movie",
+				TargetType: "share",
+				Links:      []model.ResourceLink{{Type: "quark", URL: "https://pan.quark.cn/s/3"}},
+				Capabilities: model.ResourceCapabilities{
+					Searchable: true,
+				},
+				Actions: []model.ResourceAction{{Key: "link.quark.open", Type: "open_link"}},
+			},
+		},
+	}
+
+	filtered := applyResultFilter(response, &model.FilterConfig{
+		MediaTypes:   []string{"movie"},
+		TargetTypes:  []string{"share"},
+		Capabilities: []string{"downloadable"},
+	}, "merge")
+
+	if filtered.Total != 1 {
+		t.Fatalf("expected one structured-match resource, got %d", filtered.Total)
+	}
+	if len(filtered.Resources) != 1 || filtered.Resources[0].ID != "keep-structured" {
+		t.Fatalf("expected keep-structured only, got %#v", filtered.Resources)
+	}
+	if filtered.Facets.MediaTypes["movie"] != 1 {
+		t.Fatalf("expected rebuilt media facet, got %#v", filtered.Facets.MediaTypes)
+	}
+	if _, exists := filtered.Facets.MediaTypes["book"]; exists {
+		t.Fatalf("expected unmatched media facet to be removed, got %#v", filtered.Facets.MediaTypes)
+	}
+}

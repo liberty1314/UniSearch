@@ -163,6 +163,7 @@ export class SearchService {
     const filterFieldMap: Array<[keyof FilterConfig, string]> = [
       ['include', 'include'],
       ['exclude', 'exclude'],
+      ['mediaTypes', 'mediaTypes'],
     ];
 
     filterFieldMap.forEach(([field, queryKey]) => {
@@ -221,6 +222,7 @@ export class SearchService {
     const filterFieldMap: Array<[keyof FilterConfig, string]> = [
       ['include', 'include'],
       ['exclude', 'exclude'],
+      ['mediaTypes', 'mediaTypes'],
     ];
 
     const filter: FilterConfig = {};

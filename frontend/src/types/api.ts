@@ -70,6 +70,7 @@ export type CloudTypeValue =
 export interface FilterConfig {
   include?: string[]; // 包含关键词列表（OR关系）
   exclude?: string[]; // 排除关键词列表（AND关系）
+  mediaTypes?: string[]; // 媒体类型（OR关系）
 }
 
 /**

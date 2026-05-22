@@ -3,7 +3,7 @@ import { devtools } from "zustand/middleware";
 import type { SearchParams, SearchResponse } from "@/types/api";
 import { SearchService } from "@/services/searchService";
 import { getErrorCode, getErrorMessage } from "@/lib/error";
-import { cloneFilterConfig } from "@/utils/searchFilters";
+import { normalizeFilterConfig, normalizeFilterValues } from "@/utils/searchFilters";
 
 /**
  * 搜索历史最大保存条数（同时作为 UI 展示上限）
@@ -73,12 +73,27 @@ const defaultSearchParams: SearchParams = {
   ext: {},
 };
 
+const sortStringValues = <T extends string>(values?: T[]) =>
+  [...(values || [])].sort((left, right) => left.localeCompare(right, "zh-CN"));
+
 const normalizeSearchParams = (params: SearchParams): SearchParams => ({
   ...params,
-  cloudTypes: [...(params.cloudTypes || [])],
-  channels: [...(params.channels || [])],
-  plugins: [...(params.plugins || [])],
-  filter: cloneFilterConfig(params.filter),
+  cloudTypes: sortStringValues(params.cloudTypes),
+  channels: sortStringValues(params.channels),
+  plugins: sortStringValues(params.plugins),
+  filter: (() => {
+    const normalizedFilter = normalizeFilterConfig(params.filter);
+    if (!normalizedFilter) {
+      return undefined;
+    }
+
+    return Object.fromEntries(
+      Object.entries(normalizedFilter).map(([field, values]) => [
+        field,
+        sortStringValues(normalizeFilterValues(values)),
+      ]),
+    ) as SearchParams["filter"];
+  })(),
 });
 
 const areSearchParamsEqual = (

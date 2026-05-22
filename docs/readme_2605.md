@@ -448,3 +448,32 @@
   - `frontend/src/stores/announcementStore.ts`
   - `frontend/src/types/api.ts`
   - `frontend/src/utils/resourceDisplay.ts`
+
+## [2026-05-22 09:49:29] feat(frontend): 合并搜索筛选面板并补充结构化过滤
+- **Body**: 为搜索结果增加媒体类型等结构化过滤能力，统一前后端筛选参数、URL 同步和结果过滤逻辑。
+- **Body**: 同时合并独立结果页的筛选面板，优化同页筛选切换时的滚动与路由过渡体验，并补齐组件、服务与后端测试覆盖。
+- **Files**:
+  - `backend/api/filter.go`
+  - `backend/api/filter_test.go`
+  - `backend/model/request.go`
+  - `frontend/src/components/CloudTypeFilter.tsx`
+  - `frontend/src/components/SearchAdvancedFilterPanel.tsx`
+  - `frontend/src/components/SearchResults.tsx`
+  - `frontend/src/components/SearchUnifiedFilterCard.tsx`
+  - `frontend/src/components/__tests__/CloudTypeFilter.test.tsx`
+  - `frontend/src/components/__tests__/SearchAdvancedFilterPanel.test.tsx`
+  - `frontend/src/components/__tests__/SearchResults.test.tsx`
+  - `frontend/src/components/__tests__/SearchUnifiedFilterCard.test.tsx`
+  - `frontend/src/components/home/SearchResultsEmptyState.tsx`
+  - `frontend/src/components/home/SearchResultsToolbar.tsx`
+  - `frontend/src/pages/SearchPage.tsx`
+  - `frontend/src/pages/__tests__/SearchPage.test.tsx`
+  - `frontend/src/routes/ScrollToTop.tsx`
+  - `frontend/src/routes/__tests__/ScrollToTop.test.tsx`
+  - `frontend/src/routes/__tests__/routeTransition.test.ts`
+  - `frontend/src/routes/routeTransition.ts`
+  - `frontend/src/services/__tests__/searchService.test.ts`
+  - `frontend/src/services/searchService.ts`
+  - `frontend/src/stores/searchStore.ts`
+  - `frontend/src/types/api.ts`
+  - `frontend/src/utils/searchFilters.ts`

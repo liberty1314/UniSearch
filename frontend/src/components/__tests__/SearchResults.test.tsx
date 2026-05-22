@@ -402,7 +402,7 @@ describe("SearchResults", () => {
     expect(screen.queryByRole("button", { name: /详情/i })).not.toBeInTheDocument();
   });
 
-  it("applies advanced filters on the client side and exposes filter summary actions", async () => {
+  it("shows service-side filter summary chips and re-runs search when clearing filters", async () => {
     searchStoreState.searchResults = {
       total: 2,
       resources: [
@@ -451,8 +451,8 @@ describe("SearchResults", () => {
 
     renderSearchResults();
 
-    expect(await screen.findByTestId("search-result-grid-card")).toHaveTextContent("你的名字 4K");
-    expect(screen.queryByText("你的名字 原画设定集")).not.toBeInTheDocument();
+    expect(await screen.findAllByTestId("search-result-grid-card")).toHaveLength(2);
+    expect(screen.getByText("你的名字 原画设定集")).toBeInTheDocument();
     expect(screen.getByText("包含：4K")).toBeInTheDocument();
     expect(screen.getByText("排除：设定集")).toBeInTheDocument();
     const toolbarMeta = screen.getByTestId("search-results-toolbar-meta");
@@ -465,48 +465,29 @@ describe("SearchResults", () => {
     expect(screen.queryByText("媒体：movie")).not.toBeInTheDocument();
     expect(screen.queryByText("能力：downloadable")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "清空高级筛选" }));
+    fireEvent.click(screen.getByRole("button", { name: "清空筛选条件" }));
 
-    expect(searchStoreState.setSearchParams).toHaveBeenCalledWith({ filter: undefined });
+    expect(searchStoreState.setSearchParams).toHaveBeenCalledWith({
+      cloudTypes: [],
+      filter: undefined,
+    });
+    expect(searchStoreState.performSearch).toHaveBeenCalledWith(
+      { cloudTypes: [], filter: undefined },
+      { preserveResults: true },
+    );
   });
 
-  it("shows a dedicated empty state when results are narrowed to zero by advanced filters", async () => {
+  it("shows a dedicated empty state when the server returns zero results under active filters", async () => {
     searchStoreState.searchResults = {
-      total: 2,
-      resources: [
-        searchStoreState.searchResults.resources[0],
-        {
-          id: "resource-2",
-          title: "你的名字 原画设定集",
-          description: "电子书资源",
-          source: { type: "tg", id: "book_channel", name: "BookChannel" },
-          media_type: "book",
-          target_type: "detail",
-          links: [
-            {
-              type: "baidu",
-              url: "https://example.com/book",
-              password: "",
-              title: "设定集 PDF",
-              datetime: "2026-03-16T00:00:00Z",
-            },
-          ],
-          capabilities: { searchable: true },
-          actions: [],
-          detail: { content: "设定集详情", url: "https://example.com/book-detail" },
-          tags: ["电子书"],
-          images: [],
-          meta: { size: "800 MiB" },
-          published_at: "2026-03-16T00:00:00Z",
-        },
-      ],
+      total: 0,
+      resources: [],
       facets: {
-        cloud_types: { quark: 1, baidu: 1 },
-        source_types: { plugin: 1, tg: 1 },
-        media_types: { movie: 1, book: 1 },
-        target_types: { share: 1, detail: 1 },
-        capabilities: { downloadable: 1, searchable: 2 },
-        action_types: { open_link: 1 },
+        cloud_types: {},
+        source_types: {},
+        media_types: {},
+        target_types: {},
+        capabilities: {},
+        action_types: {},
       },
     };
     searchStoreState.searchParams = {
@@ -519,7 +500,7 @@ describe("SearchResults", () => {
     renderSearchResults();
 
     expect(await screen.findByText("筛选后暂无结果")).toBeInTheDocument();
-    expect(screen.getByText("可以调整包含关键词或排除关键词，或者清空高级筛选后重新查看全部结果。")).toBeInTheDocument();
+    expect(screen.getByText("可以调整网盘、包含关键词或排除关键词，或者清空筛选条件后重新查看全部结果。")).toBeInTheDocument();
   });
 
   it("shows a refresh hint without clearing previous results during in-place refresh", async () => {

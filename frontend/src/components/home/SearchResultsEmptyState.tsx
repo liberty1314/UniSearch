@@ -164,7 +164,7 @@ const FilteredResultsState: React.FC<{ onClearFilters?: () => void }> = ({
         筛选后暂无结果
       </h3>
       <p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-gray-500 dark:text-slate-400">
-        可以调整包含关键词或排除关键词，或者清空高级筛选后重新查看全部结果。
+        可以调整网盘、包含关键词或排除关键词，或者清空筛选条件后重新查看全部结果。
       </p>
 
       {onClearFilters ? (
@@ -173,7 +173,7 @@ const FilteredResultsState: React.FC<{ onClearFilters?: () => void }> = ({
           onClick={onClearFilters}
           className="mt-8 rounded-xl bg-slate-900 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-300 active:scale-95 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-gray-100"
         >
-          清空高级筛选
+          清空筛选条件
         </button>
       ) : null}
     </div>

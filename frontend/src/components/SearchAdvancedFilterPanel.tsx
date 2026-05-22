@@ -8,12 +8,13 @@ import { useSearchStore } from "@/stores/searchStore";
 import { SearchService } from "@/services/searchService";
 import {
   cloneFilterConfig,
+  buildFacetFilterOptions,
   isFilterConfigEmpty,
   normalizeFilterConfig,
 } from "@/utils/searchFilters";
 import type { FilterConfig } from "@/types/api";
 
-type FilterArrayField = "include" | "exclude";
+type FilterArrayField = keyof FilterConfig;
 
 const splitKeywordInput = (value: string): string[] =>
   value
@@ -22,7 +23,7 @@ const splitKeywordInput = (value: string): string[] =>
     .filter(Boolean);
 
 const SearchAdvancedFilterPanel: React.FC = () => {
-  const { searchParams, searchResults, setSearchParams } = useSearchStore();
+  const { searchParams, searchResults, performSearch, setSearchParams } = useSearchStore();
   const [expanded, setExpanded] = useState(false);
   const [includeDraft, setIncludeDraft] = useState("");
   const [excludeDraft, setExcludeDraft] = useState("");
@@ -55,7 +56,7 @@ const SearchAdvancedFilterPanel: React.FC = () => {
 
     navigate(nextUrl, {
       replace: true,
-      state: { skipSearchSync: true },
+      state: { skipSearchSync: true, preserveScroll: true },
     });
   };
 
@@ -63,6 +64,7 @@ const SearchAdvancedFilterPanel: React.FC = () => {
     const normalized = normalizeFilterConfig(nextFilter);
     setSearchParams({ filter: normalized });
     syncSearchUrl(normalized);
+    void performSearch({ filter: normalized }, { preserveResults: true });
   };
 
   const addKeywordTags = (field: FilterArrayField) => {
@@ -98,7 +100,38 @@ const SearchAdvancedFilterPanel: React.FC = () => {
     applyFilter(nextFilter);
   };
 
-  if (!searchParams.keyword?.trim() || !searchResults) {
+  const facetGroups = useMemo(
+    () => [
+      {
+        title: "媒体类型",
+        field: "mediaTypes" as const,
+        options: buildFacetFilterOptions(searchResults?.facets?.media_types),
+      },
+    ].filter((group) => group.options.length > 0),
+    [searchResults?.facets],
+  );
+
+  const toggleFacetValue = (field: "mediaTypes", value: string) => {
+    const nextFilter = cloneFilterConfig(searchParams.filter) || {};
+    const currentValues = new Set(nextFilter[field] || []);
+
+    if (currentValues.has(value)) {
+      currentValues.delete(value);
+    } else {
+      currentValues.add(value);
+    }
+
+    const nextValues = Array.from(currentValues);
+    if (nextValues.length > 0) {
+      nextFilter[field] = nextValues;
+    } else {
+      delete nextFilter[field];
+    }
+
+    applyFilter(nextFilter);
+  };
+
+  if (!searchParams.keyword?.trim()) {
     return null;
   }
 
@@ -206,6 +239,44 @@ const SearchAdvancedFilterPanel: React.FC = () => {
               </section>
             ))}
           </div>
+
+          {facetGroups.length > 0 ? (
+            <div className="grid gap-4 lg:grid-cols-1">
+              {facetGroups.map((group) => (
+                <section
+                  key={group.field}
+                  className="rounded-[1.5rem] border border-slate-200/70 bg-slate-50/70 p-4 dark:border-white/10 dark:bg-white/[0.03]"
+                >
+                  <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    {group.title}
+                  </h4>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {group.options.map((option) => {
+                      const isActive = (activeFilter?.[group.field] || []).includes(option.value);
+                      return (
+                        <button
+                          key={`${group.field}-${option.value}`}
+                          type="button"
+                          onClick={() => toggleFacetValue(group.field, option.value)}
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition",
+                            isActive
+                              ? "border-cyan-300/40 bg-cyan-500/10 text-cyan-800 hover:bg-cyan-500/15 dark:border-cyan-300/20 dark:bg-cyan-400/10 dark:text-cyan-100"
+                              : "border-slate-200/80 bg-white/80 text-slate-600 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300 dark:hover:text-white",
+                          )}
+                        >
+                          <span>{option.label}</span>
+                          <span className="rounded-full bg-black/5 px-1.5 py-0.5 text-[10px] dark:bg-white/10">
+                            {option.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : null}
 
           {!isFilterConfigEmpty(activeFilter) ? (
             <div className="flex justify-end">

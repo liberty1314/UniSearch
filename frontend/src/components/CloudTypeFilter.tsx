@@ -97,9 +97,12 @@ const CloudTypeFilter: React.FC = () => {
 
   const cloudTypeConfigs = platformThemes;
   const allTypes = platformThemeTypes;
+  const buildRequestedCloudTypes = useCallback((types: CloudTypeValue[]) => (
+    types.length === allTypes.length ? [] : types
+  ), [allTypes]);
   const getValidTypes = useCallback((types?: CloudTypeValue[]) => {
     const validTypes = (types || []).filter((type) => allTypes.includes(type));
-    return validTypes.length > 0 ? validTypes : allTypes;
+    return validTypes.length === allTypes.length ? [] : validTypes;
   }, [allTypes]);
 
   const [selectedTypes, setSelectedTypes] = useState<CloudTypeValue[]>(() =>
@@ -123,7 +126,7 @@ const CloudTypeFilter: React.FC = () => {
 
     navigate(nextUrl, {
       replace: true,
-      state: { skipSearchSync: true },
+      state: { skipSearchSync: true, preserveScroll: true },
     });
   }, [location.pathname, location.search, navigate, searchParams]);
 
@@ -134,16 +137,11 @@ const CloudTypeFilter: React.FC = () => {
 
     const validTypes = getValidTypes(searchParams.cloudTypes);
     if (JSON.stringify(selectedTypes) !== JSON.stringify(validTypes)) {
-      shouldSkipNextSearchRef.current = true;
       setSelectedTypes(validTypes);
     }
 
-    if ((searchParams.cloudTypes || []).length !== validTypes.length) {
-      setSearchParams({ cloudTypes: validTypes });
-    }
-
     hasInitializedCloudTypesRef.current = true;
-  }, [allTypes, getValidTypes, searchParams.cloudTypes, selectedTypes, setSearchParams]);
+  }, [getValidTypes, searchParams.cloudTypes, selectedTypes]);
 
   useEffect(() => {
     if (!hasInitializedCloudTypesRef.current) {
@@ -170,24 +168,27 @@ const CloudTypeFilter: React.FC = () => {
       return;
     }
 
-    const selectionSnapshot = JSON.stringify(debouncedSelectedTypes);
+    const requestedTypes = buildRequestedCloudTypes(debouncedSelectedTypes);
+    const selectionSnapshot = JSON.stringify(requestedTypes);
     if (lastTriggeredSearchSnapshotRef.current === selectionSnapshot) {
       return;
     }
 
     lastTriggeredSearchSnapshotRef.current = selectionSnapshot;
-    syncSearchUrl(debouncedSelectedTypes);
+    syncSearchUrl(requestedTypes);
 
     void performSearch(
-      { cloudTypes: debouncedSelectedTypes },
+      { cloudTypes: requestedTypes },
       { preserveResults: true },
     );
-  }, [debouncedSelectedTypes, performSearch, searchParams.keyword, syncSearchUrl]);
+  }, [buildRequestedCloudTypes, debouncedSelectedTypes, performSearch, searchParams.keyword, syncSearchUrl]);
 
-  const isAllSelected = selectedTypes.length === cloudTypeConfigs.length;
+  const effectiveSelectedTypes =
+    selectedTypes.length === 0 ? allTypes : selectedTypes;
+  const isAllSelected = selectedTypes.length === 0;
 
   const handleTypeToggle = (type: CloudTypeValue) => {
-    const currentTypes = selectedTypes;
+    const currentTypes = effectiveSelectedTypes;
     let newTypes: CloudTypeValue[];
 
     if (currentTypes.includes(type)) {
@@ -199,8 +200,9 @@ const CloudTypeFilter: React.FC = () => {
       newTypes = [...currentTypes, type];
     }
 
-    setSelectedTypes(newTypes);
-    setSearchParams({ cloudTypes: newTypes });
+    const requestedTypes = buildRequestedCloudTypes(newTypes);
+    setSelectedTypes(requestedTypes);
+    setSearchParams({ cloudTypes: requestedTypes });
   };
 
   const handleSelectOnly = (type: CloudTypeValue) => {
@@ -218,11 +220,11 @@ const CloudTypeFilter: React.FC = () => {
     }
 
     setSelectedTypes(allTypes);
-    setSearchParams({ cloudTypes: allTypes });
+    setSearchParams({ cloudTypes: [] });
   };
 
   const isTypeSelected = (type: CloudTypeValue) =>
-    selectedTypes.includes(type);
+    effectiveSelectedTypes.includes(type);
 
   return (
     <motion.div
@@ -256,12 +258,12 @@ const CloudTypeFilter: React.FC = () => {
               </div>
               <div className="min-w-[150px]">
                 <h3 className="text-xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100">
-                  来源筛选
+                  网盘筛选
                 </h3>
                 <p className="text-[14px] text-slate-500 dark:text-slate-400 mt-0.5 truncate font-medium">
                   {isAllSelected
                     ? "已聚合全网顶级资源平台"
-                    : `已精准定位 ${selectedTypes.length} 个优质来源`}
+                    : `已精准定位 ${selectedTypes.length} 个优质网盘`}
                 </p>
                 <p className="mt-1 text-[12px] text-slate-400 dark:text-slate-500 font-medium">
                   单击多选，双击仅看此源

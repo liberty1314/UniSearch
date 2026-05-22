@@ -1,5 +1,6 @@
+import React, { useEffect } from 'react';
 import { render } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import ScrollToTop from '@/routes/ScrollToTop';
 
@@ -34,5 +35,51 @@ describe('ScrollToTop', () => {
     );
 
     expect(scrollToSpy).toHaveBeenCalledWith(0, 640);
+  });
+
+  it('keeps the current scroll position for same-page filter url updates', () => {
+    const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+
+    const TriggerFilterNavigation = () => {
+      const navigate = useNavigate();
+
+      useEffect(() => {
+        navigate('/search?q=test&types=quark', {
+          replace: true,
+          state: {
+            skipSearchSync: true,
+            preserveScroll: true,
+          },
+        });
+      }, [navigate]);
+
+      return <div>search</div>;
+    };
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: '/search',
+            search: '?q=test',
+          },
+        ]}
+      >
+        <Routes>
+          <Route
+            path="/search"
+            element={
+              <>
+                <ScrollToTop />
+                <TriggerFilterNavigation />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(scrollToSpy).toHaveBeenCalledTimes(1);
+    expect(scrollToSpy).toHaveBeenCalledWith(0, 0);
   });
 });

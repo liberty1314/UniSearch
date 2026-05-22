@@ -136,7 +136,7 @@ describe("CloudTypeFilter", () => {
     const { container } = render(<CloudTypeFilter />);
 
     expect(
-      screen.getByRole("heading", { name: "来源筛选" }),
+      screen.getByRole("heading", { name: "网盘筛选" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
@@ -258,5 +258,31 @@ describe("CloudTypeFilter", () => {
 
     expect(setSearchParamsMock).not.toHaveBeenCalled();
     expect(performSearchMock).not.toHaveBeenCalled();
+  });
+
+  it("submits an unrestricted cloud type filter when selecting all sources again", async () => {
+    performSearchMock.mockResolvedValue(undefined);
+    searchParamsState = {
+      keyword: "流浪地球",
+      cloudTypes: [CloudType.BAIDU, CloudType.QUARK],
+    };
+
+    const user = userEvent.setup();
+    render(<CloudTypeFilter />);
+
+    await user.click(screen.getByRole("button", { name: "全选所有网盘类型" }));
+
+    await waitFor(() => {
+      expect(setSearchParamsMock).toHaveBeenCalledWith({
+        cloudTypes: [],
+      });
+    });
+
+    await waitFor(() => {
+      expect(performSearchMock).toHaveBeenLastCalledWith(
+        { cloudTypes: [] },
+        { preserveResults: true },
+      );
+    });
   });
 });

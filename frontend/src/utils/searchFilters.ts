@@ -1,7 +1,4 @@
-import type {
-  FilterConfig,
-  ResourceObject,
-} from "@/types/api";
+import type { FilterConfig } from "@/types/api";
 
 export interface ActiveFilterChip {
   id: string;
@@ -13,21 +10,27 @@ export interface ActiveFilterChip {
 const FILTER_LABELS: Record<keyof FilterConfig, string> = {
   include: "包含",
   exclude: "排除",
+  mediaTypes: "媒体",
 };
 
 const FILTER_FIELDS: Array<keyof FilterConfig> = [
   "include",
   "exclude",
+  "mediaTypes",
 ];
 
-const normalizeFilterValues = (values?: string[]): string[] => {
+export const normalizeFilterValues = (values?: string[]): string[] => {
   if (!values?.length) {
     return [];
   }
 
-  return values
-    .map((value) => value.trim())
-    .filter(Boolean);
+  return Array.from(
+    new Set(
+      values
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  );
 };
 
 export const normalizeFilterConfig = (
@@ -65,73 +68,6 @@ export const cloneFilterConfig = (
     }
     return acc;
   }, {});
-};
-
-const buildResourceFilterText = (resource: ResourceObject): string => {
-  const parts = [
-    resource.id,
-    resource.title,
-    resource.description,
-    resource.source.type,
-    resource.source.id,
-    resource.source.name,
-    resource.media_type,
-    resource.target_type,
-    resource.detail.url,
-    resource.detail.content,
-    ...(resource.tags || []),
-  ];
-
-  resource.links.forEach((link) => {
-    parts.push(link.type, link.url, link.title, link.work_title);
-  });
-
-  return parts
-    .map((value) => (value || "").toLowerCase())
-    .join(" ");
-};
-
-const matchesTextFilter = (
-  resource: ResourceObject,
-  includeKeywords: string[],
-  excludeKeywords: string[],
-): boolean => {
-  const filterText = buildResourceFilterText(resource);
-
-  for (const keyword of excludeKeywords) {
-    if (filterText.includes(keyword.toLowerCase())) {
-      return false;
-    }
-  }
-
-  if (includeKeywords.length === 0) {
-    return true;
-  }
-
-  return includeKeywords.some((keyword) =>
-    filterText.includes(keyword.toLowerCase()),
-  );
-};
-
-export const filterResourceObjects = (
-  resources: ResourceObject[] | undefined,
-  filter?: FilterConfig,
-): ResourceObject[] => {
-  const normalized = normalizeFilterConfig(filter);
-  const items = resources || [];
-  if (!normalized) {
-    return items;
-  }
-
-  const includeKeywords = normalizeFilterValues(normalized.include);
-  const excludeKeywords = normalizeFilterValues(normalized.exclude);
-
-  return items.filter((resource) => {
-    if (!matchesTextFilter(resource, includeKeywords, excludeKeywords)) {
-      return false;
-    }
-    return true;
-  });
 };
 
 export const buildActiveFilterChips = (
@@ -173,3 +109,49 @@ export const removeActiveFilterChip = (
 
   return normalizeFilterConfig(normalized);
 };
+
+export interface FacetFilterOption {
+  value: string;
+  label: string;
+  count: number;
+}
+
+const DEFAULT_FACET_LABELS: Record<string, string> = {
+  share: "直达链接",
+  detail: "详情页",
+  downloadable: "可下载",
+  searchable: "可搜索",
+  official_searchable: "官方搜索",
+  share_searchable: "分享检索",
+  strmable: "可串流",
+  movie: "电影",
+  tv: "剧集",
+  anime: "动漫",
+  book: "图书",
+  music: "音乐",
+  variety: "综艺",
+  document: "文档",
+};
+
+const toTitleCaseLabel = (value: string) =>
+  value
+    .split(/[_-]/)
+    .filter(Boolean)
+    .map((segment) => segment.slice(0, 1).toUpperCase() + segment.slice(1))
+    .join(" ");
+
+export const buildFacetFilterOptions = (
+  facets: Record<string, number> | undefined,
+  customLabels?: Record<string, string>,
+): FacetFilterOption[] =>
+  Object.entries(facets || {})
+    .filter(([, count]) => count > 0)
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], "zh-CN"))
+    .map(([value, count]) => ({
+      value,
+      label:
+        customLabels?.[value] ||
+        DEFAULT_FACET_LABELS[value] ||
+        toTitleCaseLabel(value),
+      count,
+    }));

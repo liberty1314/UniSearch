@@ -2,8 +2,11 @@ package model
 
 // FilterConfig 过滤配置
 type FilterConfig struct {
-	Include []string `json:"include,omitempty"` // 包含关键词列表（OR关系）
-	Exclude []string `json:"exclude,omitempty"` // 排除关键词列表（任一命中则排除）
+	Include      []string `json:"include,omitempty"`       // 包含关键词列表（OR关系）
+	Exclude      []string `json:"exclude,omitempty"`       // 排除关键词列表（任一命中则排除）
+	MediaTypes   []string `json:"media_types,omitempty"`   // 媒体类型（OR关系）
+	TargetTypes  []string `json:"target_types,omitempty"`  // 目标类型（OR关系）
+	Capabilities []string `json:"capabilities,omitempty"`  // 能力标签（OR关系）
 }
 
 // SearchRequest 搜索请求参数

@@ -1,11 +1,9 @@
 import React, { useEffect, useMemo, useRef } from "react";
-import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import SearchBox from "@/components/SearchBox";
-import CloudTypeFilter from "@/components/CloudTypeFilter";
-import SearchAdvancedFilterPanel from "@/components/SearchAdvancedFilterPanel";
 import SearchResults from "@/components/SearchResults";
+import SearchUnifiedFilterCard from "@/components/SearchUnifiedFilterCard";
 import PublicPageShell from "@/components/PublicPageShell";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
@@ -147,16 +145,11 @@ const SearchPage: React.FC = () => {
             ? `${searchParams.keyword} 的搜索结果 | UniSearch`
             : "搜索结果 | UniSearch"
         }
-        description="在 UniSearch 中查看聚合搜索结果，并按来源与关键词进一步筛选。"
+        description="在 UniSearch 中查看聚合搜索结果，并按网盘与关键词进一步筛选。"
       />
 
       <div className="mx-auto max-w-6xl space-y-8">
-        <motion.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: "easeOut" }}
-          className="flex flex-col gap-4"
-        >
+        <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between gap-4">
             <Button
               type="button"
@@ -175,32 +168,22 @@ const SearchPage: React.FC = () => {
               {hasKeyword ? `“${searchParams.keyword}” 的搜索结果` : "开始新的搜索"}
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-              进入独立结果页后开始加载内容，您也可以继续调整关键词、来源和高级筛选条件。
+              进入独立结果页后开始加载内容，您也可以继续调整关键词、网盘和高级筛选条件。
             </p>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05, duration: 0.45, ease: "easeOut" }}
-          className="space-y-6"
-        >
+        <div className="space-y-6">
           <SearchBox className="w-full max-w-4xl" />
 
           {hasKeyword ? (
-            <>
-              <div className="max-w-5xl">
-                <CloudTypeFilter />
-              </div>
-              <div className="max-w-5xl">
-                <SearchAdvancedFilterPanel />
-              </div>
-            </>
+            <div className="max-w-5xl">
+              <SearchUnifiedFilterCard />
+            </div>
           ) : null}
 
           <SearchResults />
-        </motion.div>
+        </div>
       </div>
     </PublicPageShell>
   );

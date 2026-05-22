@@ -9,8 +9,6 @@ type ViewMode = "grid" | "list";
 interface SearchResultsToolbarProps {
   /** 全量结果总数 */
   totalCount: number;
-  /** 当前已显示的结果数 */
-  displayedCount: number;
   /** 当前视图模式 */
   viewMode: ViewMode;
   /** 视图模式切换回调 */
@@ -21,7 +19,7 @@ interface SearchResultsToolbarProps {
   activeFilterChips?: Array<{ id: string; label: string }>;
   /** 删除单个筛选条件 */
   onRemoveFilterChip?: (chipId: string) => void;
-  /** 清空全部高级筛选 */
+  /** 清空全部筛选条件 */
   onClearFilters?: () => void;
 }
 
@@ -30,14 +28,13 @@ interface SearchResultsToolbarProps {
 /**
  * 搜索结果工具栏
  *
- * 显示结果总数（及已显示数量）和网格 / 列表视图切换按钮。
+ * 显示结果总数和网格 / 列表视图切换按钮。
  * 从 SearchResults 中拆分出来，职责单一、易于独立测试。
  */
 export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
   React.memo(
     ({
       totalCount,
-      displayedCount,
       viewMode,
       onViewModeChange,
       isRefreshing = false,
@@ -66,11 +63,6 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
                   {totalCount}
                 </span>
                 <span>个结果</span>
-                {displayedCount < totalCount && (
-                  <span className="text-slate-400 dark:text-slate-500 text-[13px] ml-1">
-                    (已显示 {displayedCount})
-                  </span>
-                )}
                 {isRefreshing && (
                   <span className="text-[13px] text-cyan-600 dark:text-cyan-400">
                     刷新中
@@ -99,7 +91,7 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
                       onClick={onClearFilters}
                       className="text-xs font-medium text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                     >
-                      清空高级筛选
+                      清空筛选条件
                     </button>
                   ) : null}
                 </div>

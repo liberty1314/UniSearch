@@ -14,7 +14,7 @@ describe('routeTransition', () => {
     expect(getRouteFamily('/admin')).toBe('admin');
   });
 
-  it('resolves home to search as a forward primary transition', () => {
+  it('bypasses route animation between home and search', () => {
     expect(
       resolveRouteTransition({
         from: '/',
@@ -23,8 +23,23 @@ describe('routeTransition', () => {
     ).toMatchObject({
       family: 'search-flow',
       direction: 1,
-      animation: 'shared-axis',
-      shouldBypass: false,
+      animation: 'none',
+      shouldBypass: true,
+      scrollMode: 'top',
+    });
+  });
+
+  it('bypasses route animation when returning from search to home', () => {
+    expect(
+      resolveRouteTransition({
+        from: '/search',
+        to: '/',
+      }),
+    ).toMatchObject({
+      family: 'search-flow',
+      direction: -1,
+      animation: 'none',
+      shouldBypass: true,
       scrollMode: 'top',
     });
   });

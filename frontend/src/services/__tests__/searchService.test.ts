@@ -76,6 +76,7 @@ describe('SearchService', () => {
       filter: {
         include: ['4K', '剧场版'],
         exclude: ['枪版'],
+        mediaTypes: ['movie', 'anime'],
       },
     });
 
@@ -83,8 +84,7 @@ describe('SearchService', () => {
     expect(url).toContain('q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97');
     expect(url).toContain('include=4K%2C%E5%89%A7%E5%9C%BA%E7%89%88');
     expect(url).toContain('exclude=%E6%9E%AA%E7%89%88');
-    expect(url).not.toContain('sourceTypes=');
-    expect(url).not.toContain('mediaTypes=');
+    expect(url).toContain('mediaTypes=movie%2Canime');
     expect(url).not.toContain('targetTypes=');
     expect(url).not.toContain('capabilities=');
     expect(url).not.toContain('actionTypes=');
@@ -98,6 +98,7 @@ describe('SearchService', () => {
       filter: {
         include: ['4K', '剧场版'],
         exclude: ['枪版'],
+        mediaTypes: ['movie', 'anime'],
       },
     });
   });
@@ -121,13 +122,14 @@ describe('SearchService', () => {
   it('ignores legacy advanced filter query fields when parsing URLs', () => {
     expect(
       SearchService.parseSearchUrl(
-        '/?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97&include=4K&exclude=%E6%9E%AA%E7%89%88&mediaTypes=movie&capabilities=downloadable'
+        '/?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97&include=4K&exclude=%E6%9E%AA%E7%89%88&mediaTypes=movie&capabilities=downloadable&targetTypes=share'
       )
     ).toEqual({
       keyword: '你的名字',
       filter: {
         include: ['4K'],
         exclude: ['枪版'],
+        mediaTypes: ['movie'],
       },
     });
   });

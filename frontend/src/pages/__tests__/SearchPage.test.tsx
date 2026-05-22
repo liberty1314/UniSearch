@@ -37,14 +37,9 @@ vi.mock("@/components/SearchBox", () => ({
   default: () => <div>search-box</div>,
 }));
 
-vi.mock("@/components/CloudTypeFilter", () => ({
+vi.mock("@/components/SearchUnifiedFilterCard", () => ({
   __esModule: true,
-  default: () => <div>cloud-filter</div>,
-}));
-
-vi.mock("@/components/SearchAdvancedFilterPanel", () => ({
-  __esModule: true,
-  default: () => <div>advanced-filter</div>,
+  default: () => <div>unified-filter-card</div>,
 }));
 
 vi.mock("@/components/SearchResults", () => ({
@@ -123,7 +118,11 @@ describe("SearchPage", () => {
   });
 
   it("syncs URL params into the search store and triggers a search on the standalone page", async () => {
+    searchStoreState.searchParams.keyword = "电影";
+
     renderSearchPage("/search?q=%E7%94%B5%E5%BD%B1&types=quark");
+
+    expect(screen.getByText("unified-filter-card")).toBeInTheDocument();
 
     await waitFor(() => {
       expect(setSearchParamsMock).toHaveBeenCalledWith(

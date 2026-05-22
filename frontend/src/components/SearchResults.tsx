@@ -28,8 +28,6 @@ import {
 } from "@/utils/resourceDisplay";
 import {
   buildActiveFilterChips,
-  filterResourceObjects,
-  isFilterConfigEmpty,
   removeActiveFilterChip,
 } from "@/utils/searchFilters";
 import { SearchService } from "@/services/searchService";
@@ -61,10 +59,10 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   const location = useLocation();
 
   const syncSearchUrl = useCallback(
-    (nextFilter?: typeof searchParams.filter) => {
+    (nextParams: Partial<typeof searchParams>) => {
       const nextUrl = SearchService.buildSearchUrl({
         ...searchParams,
-        filter: nextFilter,
+        ...nextParams,
       });
       const currentUrl = `${location.pathname}${location.search}`;
 
@@ -74,7 +72,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
 
       navigate(nextUrl, {
         replace: true,
-        state: { skipSearchSync: true },
+        state: { skipSearchSync: true, preserveScroll: true },
       });
     },
     [location.pathname, location.search, navigate, searchParams],
@@ -166,19 +164,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
 
   // ── 结果展平 + 排序（全量，由 searchResultSorter 纯函数处理）──────────────
 
-  const rawSortedResults = useMemo(
+  const allSortedResults = useMemo(
     () => sortResources(searchResults?.resources, searchParams.keyword),
     [searchParams.keyword, searchResults?.resources],
-  );
-
-  const filteredResources = useMemo(
-    () => filterResourceObjects(searchResults?.resources, searchParams.filter),
-    [searchParams.filter, searchResults?.resources],
-  );
-
-  const allSortedResults = useMemo(
-    () => sortResources(filteredResources, searchParams.keyword),
-    [filteredResources, searchParams.keyword],
   );
 
   const activeFilterChips = useMemo(
@@ -186,6 +174,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     [searchParams.filter],
   );
   const hasAdvancedFilters = activeFilterChips.length > 0;
+  const hasSourceFilters = Boolean(searchParams.cloudTypes?.length);
+  const hasAnyActiveFilters = hasAdvancedFilters || hasSourceFilters;
 
   // ── 当前页切片 ─────────────────────────────────────────────────────────────
 
@@ -254,10 +244,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     setViewMode(mode);
   }, []);
 
-  const handleClearAdvancedFilters = useCallback(() => {
-    setSearchParams({ filter: undefined });
-    syncSearchUrl(undefined);
-  }, [setSearchParams, syncSearchUrl]);
+  const handleClearAllFilters = useCallback(() => {
+    setSearchParams({ cloudTypes: [], filter: undefined });
+    syncSearchUrl({ cloudTypes: [], filter: undefined });
+    void performSearch(
+      { cloudTypes: [], filter: undefined },
+      { preserveResults: true },
+    );
+  }, [performSearch, setSearchParams, syncSearchUrl]);
 
   const handleRemoveFilterChip = useCallback((chipId: string) => {
     const chip = activeFilterChips.find((item) => item.id === chipId);
@@ -267,8 +261,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
 
     const nextFilter = removeActiveFilterChip(searchParams.filter, chip);
     setSearchParams({ filter: nextFilter });
-    syncSearchUrl(nextFilter);
-  }, [activeFilterChips, searchParams.filter, setSearchParams, syncSearchUrl]);
+    syncSearchUrl({ filter: nextFilter });
+    void performSearch({ filter: nextFilter }, { preserveResults: true });
+  }, [activeFilterChips, performSearch, searchParams.filter, setSearchParams, syncSearchUrl]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // 渲染：空状态（error / 无结果 / 无关键词）
@@ -284,7 +279,16 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     );
   }
 
-  if (!isLoading && rawSortedResults.length === 0 && searchParams.keyword) {
+  if (!isLoading && allSortedResults.length === 0 && searchParams.keyword) {
+    if (hasAnyActiveFilters) {
+      return (
+        <SearchResultsEmptyState
+          variant="filtered-results"
+          onClearFilters={handleClearAllFilters}
+        />
+      );
+    }
+
     return (
       <SearchResultsEmptyState
         variant="no-results"
@@ -293,20 +297,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         onSuggestSearch={(kw) =>
           performSearch({ ...searchParams, keyword: kw })
         }
-      />
-    );
-  }
-
-  if (
-    !isLoading &&
-    rawSortedResults.length > 0 &&
-    allSortedResults.length === 0 &&
-    !isFilterConfigEmpty(searchParams.filter)
-  ) {
-    return (
-      <SearchResultsEmptyState
-        variant="filtered-results"
-        onClearFilters={handleClearAdvancedFilters}
       />
     );
   }
@@ -325,13 +315,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       {allSortedResults.length > 0 && (
         <SearchResultsToolbar
           totalCount={allSortedResults.length}
-          displayedCount={displayedResults.length}
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
           isRefreshing={isRefreshing}
           activeFilterChips={activeFilterChips}
           onRemoveFilterChip={handleRemoveFilterChip}
-          onClearFilters={hasAdvancedFilters ? handleClearAdvancedFilters : undefined}
+          onClearFilters={hasAnyActiveFilters ? handleClearAllFilters : undefined}
         />
       )}
 
