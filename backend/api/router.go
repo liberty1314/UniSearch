@@ -11,7 +11,7 @@ import (
 
 // SetupRouter 设置路由
 // 验证需求：4.1, 5.1, 6.1, 7.1, 8.1, 10.1, 10.3
-func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService, systemSettingsService *service.SystemSettingsService, announcementService *service.AnnouncementService, tgChannelService *service.TGChannelService, pluginHealthService *service.PluginHealthService, pluginStateService *service.PluginStateService, tgChannelHealthService *service.TGChannelHealthService, adminTagService *service.AdminTagService) *gin.Engine {
+func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService, systemSettingsService *service.SystemSettingsService, announcementService *service.AnnouncementService, tgChannelService *service.TGChannelService, pluginHealthService *service.PluginHealthService, pluginStateService *service.PluginStateService, tgChannelHealthService *service.TGChannelHealthService, adminTagService *service.AdminTagService, hotRankingService *service.HotRankingService) *gin.Engine {
 	// 设置搜索服务
 	SetSearchService(searchService)
 	SetAuthService(authService)
@@ -71,6 +71,7 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 		// ========== 系统设置接口（公开接口）==========
 		// 获取系统设置（用于登录页面判断是否显示用户登录选项）
 		api.GET("/system-settings", GetSystemSettingsHandler)
+		api.GET("/hot", GetHotRankingHandler(hotRankingService))
 
 		// 获取公告功能启用状态（公开接口，用于前端判断是否显示公告）
 		// 需求: 13.1

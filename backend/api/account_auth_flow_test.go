@@ -103,6 +103,7 @@ func newAccountFlowRouter(t *testing.T, db *gorm.DB) *gin.Engine {
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 }
 

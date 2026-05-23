@@ -114,12 +114,20 @@ func (rc *RedisCache) Close() error {
 // 返回:
 //   - error: 如果序列化失败或 Redis 操作失败，返回错误
 func (rc *RedisCache) Set(ctx context.Context, key string, value interface{}) error {
+	return rc.SetWithTTL(ctx, key, value, rc.ttl)
+}
+
+// SetWithTTL 设置带自定义 TTL 的缓存内容。
+func (rc *RedisCache) SetWithTTL(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
 	// 验证参数
 	if key == "" {
 		return fmt.Errorf("缓存键不能为空")
 	}
 	if value == nil {
 		return fmt.Errorf("缓存值不能为 nil")
+	}
+	if ttl <= 0 {
+		ttl = rc.ttl
 	}
 
 	// 添加超时控制（5 秒）
@@ -134,7 +142,7 @@ func (rc *RedisCache) Set(ctx context.Context, key string, value interface{}) er
 	}
 
 	// 写入 Redis，设置 TTL
-	err = rc.client.Set(ctx, key, data, rc.ttl).Err()
+	err = rc.client.Set(ctx, key, data, ttl).Err()
 	if err != nil {
 		// 检查是否是超时错误
 		if ctx.Err() == context.DeadlineExceeded {
@@ -145,7 +153,7 @@ func (rc *RedisCache) Set(ctx context.Context, key string, value interface{}) er
 		return fmt.Errorf("Redis 写入失败: %w", err)
 	}
 
-	log.Printf("调试: 缓存写入成功 - 键: %s, TTL: %v", key, rc.ttl)
+	log.Printf("调试: 缓存写入成功 - 键: %s, TTL: %v", key, ttl)
 	return nil
 }
 

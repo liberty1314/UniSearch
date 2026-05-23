@@ -124,8 +124,14 @@ const SearchPage: React.FC = () => {
     [searchParams.keyword],
   );
 
-  const handleBackHome = () => {
+  const handleBack = () => {
     clearResults();
+
+    if (location.key !== "default") {
+      navigate(-1);
+      return;
+    }
+
     navigate("/", {
       replace: true,
       state: {
@@ -155,11 +161,11 @@ const SearchPage: React.FC = () => {
               type="button"
               variant="outline"
               size="md"
-              onClick={handleBackHome}
+              onClick={handleBack}
               className="rounded-full"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              返回首页
+              返回
             </Button>
           </div>
 

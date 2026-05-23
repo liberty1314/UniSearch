@@ -12,6 +12,13 @@
 - 来源筛选：按云盘类型过滤搜索结果
 - Redis 缓存加速，重复搜索即时返回
 
+### 热门内容页
+
+- 新增 `/hot` 页面，基于 TMDB 数据展示电影、电视剧、动漫三类热门内容
+- 支持每日、每周、每月、每年四种维度切换
+- 支持从热门内容卡片一键跳转到站内搜索结果页
+- 每日、每周使用 TMDB 趋势口径；每月、每年使用 TMDB 热门口径
+
 ### 插件管理
 
 - 插件热管理：在线启用/停用/添加/测试插件
@@ -92,9 +99,21 @@ REFRESH_TOKEN_ENCRYPT_KEY=你的32字节加密密钥
 # Redis 配置（可选，不配置时系统自动降级运行）
 REDIS_HOST=localhost
 REDIS_PORT=6379
+
+# TMDB 热门内容页（启用 /hot 必填，推荐二选一）
+
+# 推荐：使用 Read Access Token
+TMDB_READ_ACCESS_TOKEN=你的_tmdb_read_access_token
+TMDB_API_KEY=
+
+# 兼容：如果你只有 v3 API Key，也可以反过来这样配置
+# TMDB_READ_ACCESS_TOKEN=
+# TMDB_API_KEY=你的_tmdb_api_key
 ```
 
 > 密钥生成方式：`openssl rand -base64 32`
+
+> 正常配置建议使用 `TMDB_READ_ACCESS_TOKEN`。`TMDB_API_KEY` 仅作为兼容回退方案使用，二者最好只配置一个。
 
 #### 3. 构建镜像
 

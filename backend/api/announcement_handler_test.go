@@ -35,20 +35,21 @@ func newAnnouncementHandlerTestServices(t *testing.T) (*service.AnnouncementServ
 func seedAnnouncementHandlerData(t *testing.T, announcementService *service.AnnouncementService) {
 	t.Helper()
 
+	now := time.Now()
 	records := []model.Announcement{
 		{
 			Title:     "进行中公告",
 			Content:   "内容1",
 			Priority:  "high",
-			StartTime: time.Date(2026, 5, 20, 0, 0, 0, 0, time.UTC),
-			EndTime:   func() *time.Time { value := time.Date(2026, 5, 22, 0, 0, 0, 0, time.UTC); return &value }(),
+			StartTime: now.Add(-48 * time.Hour),
+			EndTime:   func() *time.Time { value := now.Add(24 * time.Hour); return &value }(),
 			IsEnabled: true,
 		},
 		{
 			Title:     "未生效公告",
 			Content:   "内容2",
 			Priority:  "medium",
-			StartTime: time.Date(2026, 5, 22, 0, 0, 0, 0, time.UTC),
+			StartTime: now.Add(24 * time.Hour),
 			EndTime:   nil,
 			IsEnabled: true,
 		},
@@ -56,8 +57,8 @@ func seedAnnouncementHandlerData(t *testing.T, announcementService *service.Anno
 			Title:     "已过期公告",
 			Content:   "内容3",
 			Priority:  "low",
-			StartTime: time.Date(2026, 5, 18, 0, 0, 0, 0, time.UTC),
-			EndTime:   func() *time.Time { value := time.Date(2026, 5, 20, 0, 0, 0, 0, time.UTC); return &value }(),
+			StartTime: now.Add(-120 * time.Hour),
+			EndTime:   func() *time.Time { value := now.Add(-24 * time.Hour); return &value }(),
 			IsEnabled: true,
 		},
 	}

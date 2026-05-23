@@ -82,12 +82,30 @@ const LocationProbe = () => {
   );
 };
 
-const renderSearchPage = (initialEntry: string) =>
+const renderSearchPage = (
+  initialEntry: string,
+  options?: {
+    initialEntries?: Array<{ pathname: string; search?: string; state?: unknown }>;
+    initialIndex?: number;
+  },
+) =>
   render(
     <HelmetProvider>
-      <MemoryRouter initialEntries={[{ pathname: initialEntry.split("?")[0], search: initialEntry.includes("?") ? `?${initialEntry.split("?")[1]}` : "", state: locationState }]}>
+      <MemoryRouter
+        initialEntries={
+          options?.initialEntries ?? [
+            {
+              pathname: initialEntry.split("?")[0],
+              search: initialEntry.includes("?") ? `?${initialEntry.split("?")[1]}` : "",
+              state: locationState,
+            },
+          ]
+        }
+        initialIndex={options?.initialIndex}
+      >
         <Routes>
           <Route path="/" element={<LocationProbe />} />
+          <Route path="/hot" element={<LocationProbe />} />
           <Route path="/search" element={<SearchPage />} />
         </Routes>
       </MemoryRouter>
@@ -162,10 +180,10 @@ describe("SearchPage", () => {
     expect(screen.getByText("search-results")).toBeInTheDocument();
   });
 
-  it("returns to the homepage from the standalone search page", async () => {
+  it("returns to the homepage when the standalone search page has no previous history", async () => {
     renderSearchPage("/search?q=%E7%94%B5%E5%BD%B1");
 
-    fireEvent.click(await screen.findByRole("button", { name: "返回首页" }));
+    fireEvent.click(await screen.findByRole("button", { name: "返回" }));
 
     expect(clearResultsMock).toHaveBeenCalled();
     expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/"');
@@ -175,5 +193,20 @@ describe("SearchPage", () => {
     expect(screen.getByTestId("location-probe")).toHaveTextContent(
       '"routeTransition":"backward"',
     );
+  });
+
+  it("returns to the previous page when entering search from the hot ranking page", async () => {
+    renderSearchPage("/search?q=%E7%94%B5%E5%BD%B1", {
+      initialEntries: [
+        { pathname: "/hot" },
+        { pathname: "/search", search: "?q=%E7%94%B5%E5%BD%B1" },
+      ],
+      initialIndex: 1,
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "返回" }));
+
+    expect(clearResultsMock).toHaveBeenCalled();
+    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/hot"');
   });
 });

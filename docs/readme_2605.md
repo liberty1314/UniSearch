@@ -477,3 +477,62 @@
   - `frontend/src/stores/searchStore.ts`
   - `frontend/src/types/api.ts`
   - `frontend/src/utils/searchFilters.ts`
+
+## [2026-05-23 23:50:01] feat(hot-ranking): 新增 TMDB 热门内容页与榜单服务
+- **Body**: 新增 `/hot` 热门内容页及其前后端链路，接入 TMDB 榜单查询、Redis 缓存与定时预热能力，并补充对应环境变量配置。
+- **Body**: 同时补齐热门内容展示组件、站内搜索跳转联动、导航入口与文档说明，完善前后端单元测试与页面测试覆盖。
+- **Files**:
+  - `.env.example`
+  - `README.md`
+  - `backend/.env.example`
+  - `backend/api/account_auth_flow_test.go`
+  - `backend/api/announcement_handler_test.go`
+  - `backend/api/hot_ranking_handler.go`
+  - `backend/api/hot_ranking_handler_test.go`
+  - `backend/api/router.go`
+  - `backend/config/config.go`
+  - `backend/main.go`
+  - `backend/model/hot_ranking.go`
+  - `backend/model/hot_ranking_test.go`
+  - `backend/service/hot_ranking_cache.go`
+  - `backend/service/hot_ranking_cache_test.go`
+  - `backend/service/hot_ranking_mapper.go`
+  - `backend/service/hot_ranking_mapper_test.go`
+  - `backend/service/hot_ranking_preloader.go`
+  - `backend/service/hot_ranking_preloader_test.go`
+  - `backend/service/hot_ranking_service.go`
+  - `backend/service/hot_ranking_service_test.go`
+  - `backend/service/tmdb_service.go`
+  - `backend/service/tmdb_service_test.go`
+  - `backend/util/cache/redis_cache.go`
+  - `frontend/src/components/Navbar.tsx`
+  - `frontend/src/components/__tests__/Navbar.test.tsx`
+  - `frontend/src/components/home/TrendingCategories.tsx`
+  - `frontend/src/components/home/__tests__/TrendingCategories.test.tsx`
+  - `frontend/src/components/trending/HotCategoryTabs.tsx`
+  - `frontend/src/components/trending/HotHero.tsx`
+  - `frontend/src/components/trending/HotHeroCarousel.tsx`
+  - `frontend/src/components/trending/HotHighlightGrid.tsx`
+  - `frontend/src/components/trending/HotMediaCard.tsx`
+  - `frontend/src/components/trending/HotMediaGrid.tsx`
+  - `frontend/src/components/trending/HotPageEmptyState.tsx`
+  - `frontend/src/components/trending/HotPageErrorState.tsx`
+  - `frontend/src/components/trending/HotPageSkeleton.tsx`
+  - `frontend/src/components/trending/HotPeriodTabs.tsx`
+  - `frontend/src/components/trending/HotToolbar.tsx`
+  - `frontend/src/components/trending/__tests__/HotHighlightGrid.test.tsx`
+  - `frontend/src/components/trending/__tests__/HotMediaCard.test.tsx`
+  - `frontend/src/components/trending/__tests__/hotRankingPresentation.test.ts`
+  - `frontend/src/components/trending/hotRankingPresentation.ts`
+  - `frontend/src/config/constants.ts`
+  - `frontend/src/pages/HotPage.tsx`
+  - `frontend/src/pages/SearchPage.tsx`
+  - `frontend/src/pages/__tests__/Home.test.tsx`
+  - `frontend/src/pages/__tests__/HotPage.test.tsx`
+  - `frontend/src/pages/__tests__/SearchPage.test.tsx`
+  - `frontend/src/routes/AppRoutes.tsx`
+  - `frontend/src/routes/__tests__/AppRoutes.test.tsx`
+  - `frontend/src/services/__tests__/hotRankingService.test.ts`
+  - `frontend/src/services/hotRankingService.ts`
+  - `frontend/src/test/setup.ts`
+  - `frontend/src/types/hotRanking.ts`

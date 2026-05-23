@@ -48,7 +48,10 @@ describe('TrendingCategories', () => {
     );
 
     expect(screen.getByRole('heading', { level: 2, name: '热门分类' })).toBeInTheDocument();
-    expect(screen.getByText('不知道搜什么时，先从常见资源方向快速开始。')).toBeInTheDocument();
+    expect(screen.getByText('不知道搜什么时，先从常见资源方向或热门榜单快速开始。')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '进入热门榜单页' })).toHaveAttribute('href', '/hot');
+    expect(screen.getByText('先看热度，再搜资源')).toBeInTheDocument();
+    expect(screen.getByText('进入榜单页')).toBeInTheDocument();
 
     const cards = screen.getAllByTestId('trending-category-card');
     expect(cards).toHaveLength(4);
@@ -65,7 +68,7 @@ describe('TrendingCategories', () => {
     expect(screen.getAllByTestId('trending-category-chip').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: '快捷搜索 4K' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '快捷搜索 AI' })).toBeInTheDocument();
-    expect(container.querySelectorAll('svg')).toHaveLength(4);
+    expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(6);
     expect(screen.queryByText('热门搜索')).not.toBeInTheDocument();
     expect(screen.queryByText('热门标签')).not.toBeInTheDocument();
   });

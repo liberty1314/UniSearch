@@ -18,6 +18,7 @@ import {
 
 import Home from '@/pages/Home';
 import SearchPage from '@/pages/SearchPage';
+import HotPage from '@/pages/HotPage';
 const ResourceDetailPage = lazy(() => import('@/pages/ResourceDetailPage'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/pages/RegisterPage'));
@@ -41,7 +42,7 @@ const renderLazyRoute = (element: React.ReactNode) => (
 );
 
 export const shouldUseLazyRouteFallback = (path: string) =>
-  path !== '/' && path !== '/search';
+  path !== '/' && path !== '/search' && path !== '/hot';
 
 const renderRouteElement = (path: string, element: React.ReactNode) =>
   shouldUseLazyRouteFallback(path) ? renderLazyRoute(element) : element;
@@ -82,6 +83,10 @@ const AppRoutes: React.FC = () => {
             <Route
               path="/search"
               element={renderRouteElement('/search', <SearchPage />)}
+            />
+            <Route
+              path="/hot"
+              element={renderRouteElement('/hot', <HotPage />)}
             />
             <Route
               path="/resource/:resourceId"

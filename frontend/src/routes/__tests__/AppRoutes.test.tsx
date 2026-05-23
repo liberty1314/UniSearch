@@ -42,6 +42,10 @@ vi.mock('@/pages/SearchPage', () => ({
   default: () => <div>Search Page</div>,
 }));
 
+vi.mock('@/pages/HotPage', () => ({
+  default: () => <div>Hot Page</div>,
+}));
+
 vi.mock('@/pages/ResourceDetailPage', () => ({
   default: () => <div>Resource Detail Page</div>,
 }));
@@ -81,6 +85,7 @@ describe('AppRoutes', () => {
   it('keeps home and search routes out of the suspense fallback path', () => {
     expect(shouldUseLazyRouteFallback('/')).toBe(false);
     expect(shouldUseLazyRouteFallback('/search')).toBe(false);
+    expect(shouldUseLazyRouteFallback('/hot')).toBe(false);
     expect(shouldUseLazyRouteFallback('/resource/resource-1')).toBe(true);
     expect(shouldUseLazyRouteFallback('/login')).toBe(true);
   });
@@ -108,6 +113,14 @@ describe('AppRoutes', () => {
     expect(screen.getByTestId('navbar')).toBeInTheDocument();
     expect(screen.getByTestId('site-footer')).toBeInTheDocument();
     expect(screen.queryByTestId('cinematic-footer')).not.toBeInTheDocument();
+  });
+
+  it('renders the hot page at /hot', async () => {
+    renderRoutesAt('/hot');
+
+    expect(await screen.findByText('Hot Page')).toBeInTheDocument();
+    expect(screen.getByTestId('navbar')).toBeInTheDocument();
+    expect(screen.getByTestId('site-footer')).toBeInTheDocument();
   });
 
   it('renders the resource detail page at /resource/:resourceId', async () => {

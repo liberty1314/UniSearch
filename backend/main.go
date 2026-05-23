@@ -278,6 +278,7 @@ func startServer() {
 
 	// 初始化搜索服务（注入 Redis 缓存 + 插件启停状态服务）
 	searchService := service.NewSearchService(pluginManager, globalRedisCache, pluginStateService)
+	hotRankingService := service.NewHotRankingServiceWithRedis(globalRedisCache)
 
 	// 设置路由
 	router := api.SetupRouter(
@@ -293,6 +294,7 @@ func startServer() {
 		pluginStateService,
 		tgChannelHealthService,
 		adminTagService,
+		hotRankingService,
 	)
 
 	// 获取端口配置
@@ -313,6 +315,11 @@ func startServer() {
 	// 创建通道来接收操作系统信号
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	serverLifecycleCtx, stopServerLifecycle := context.WithCancel(context.Background())
+	defer stopServerLifecycle()
+
+	startHotRankingPreloader(serverLifecycleCtx, hotRankingService)
 
 	// 在单独的goroutine中启动服务器
 	go func() {
@@ -342,6 +349,7 @@ func startServer() {
 	// 等待中断信号
 	<-quit
 	fmt.Println("正在关闭服务器...")
+	stopServerLifecycle()
 
 	// 设置关闭超时时间
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -368,6 +376,43 @@ func startServer() {
 	}
 
 	fmt.Println("🎉 服务器已安全关闭")
+}
+
+func startHotRankingPreloader(ctx context.Context, hotRankingService *service.HotRankingService) {
+	if hotRankingService == nil {
+		log.Println("热门榜单预热器未启动：热门榜单服务不可用")
+		return
+	}
+	if !config.AppConfig.HotRankingPreloadEnabled {
+		log.Println("热门榜单预热器已禁用")
+		return
+	}
+	if globalRedisCache == nil {
+		log.Println("热门榜单预热器未启动：Redis 不可用，无法进行榜单预热缓存")
+		return
+	}
+
+	preloader := service.NewHotRankingPreloader(hotRankingService, service.HotRankingPreloaderConfig{
+		Enabled:     config.AppConfig.HotRankingPreloadEnabled,
+		DailyTime:   config.AppConfig.HotRankingPreloadTime,
+		Timeout:     config.AppConfig.HotRankingPreloadTimeout,
+		Concurrency: config.AppConfig.HotRankingPreloadConcurrency,
+	})
+
+	go func() {
+		result := preloader.WarmAll(ctx)
+		log.Printf("热门榜单启动预热完成，总任务=%d，成功=%d，失败=%d", result.Total, result.Success, result.Failed)
+		for _, item := range result.Errors {
+			log.Printf("热门榜单启动预热失败: period=%s category=%s err=%v", item.Period, item.Category, item.Err)
+		}
+	}()
+
+	preloader.Start(ctx)
+	log.Printf("热门榜单预热器已启动：每日刷新时间=%s，并发=%d，超时=%v",
+		config.AppConfig.HotRankingPreloadTime,
+		config.AppConfig.HotRankingPreloadConcurrency,
+		config.AppConfig.HotRankingPreloadTimeout,
+	)
 }
 
 // printServiceInfo 打印服务信息

@@ -77,4 +77,14 @@ describe('Navbar', () => {
 
     expect(screen.getByRole('link', { name: '后台管理' })).toHaveAttribute('href', '/admin?view=system_info');
   });
+
+  it('renders the hot ranking entry in the navbar', () => {
+    render(
+      <MemoryRouter>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('link', { name: '热门榜单' })).toHaveAttribute('href', '/hot');
+  });
 });

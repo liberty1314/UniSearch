@@ -101,6 +101,7 @@ vi.mock('@/components/home/TrendingCategories', () => ({
   default: () => (
     <section>
       <h2>热门分类</h2>
+      <a href="/hot">进入热门榜单页</a>
       <div>trending-categories</div>
     </section>
   ),
@@ -194,6 +195,12 @@ describe('Home', () => {
     expect(screen.queryByRole('heading', { level: 2, name: '全网海量资源・一站聚合搜索' })).not.toBeInTheDocument();
     expect(screen.getAllByText('阿里云盘').length).toBeGreaterThan(0);
     expect(screen.getAllByText('百度网盘').length).toBeGreaterThan(0);
+  });
+
+  it('keeps a direct homepage entry to the hot rankings page', () => {
+    renderHome();
+
+    expect(screen.getByRole('link', { name: '进入热门榜单页' })).toHaveAttribute('href', '/hot');
   });
 
   it('renders elevated feature cards with dedicated depth layers', () => {

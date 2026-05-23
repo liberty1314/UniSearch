@@ -85,6 +85,22 @@ type Config struct {
 	PluginStateCacheTTL   time.Duration // 插件状态缓存 TTL
 	CacheWriteQueueSize   int           // 搜索缓存异步写队列长度
 	CacheWriteWorkers     int           // 搜索缓存异步写 worker 数
+	// TMDB 热门榜单配置
+	TMDBReadAccessToken          string
+	TMDBAPIKey                   string
+	TMDBBaseURL                  string
+	TMDBDefaultLanguage          string
+	TMDBDefaultRegion            string
+	TMDBImageBaseURL             string
+	TMDBRequestTimeout           time.Duration
+	HotRankingPreloadEnabled     bool
+	HotRankingPreloadTime        string
+	HotRankingPreloadTimeout     time.Duration
+	HotRankingPreloadConcurrency int
+	HotRankingCacheTTLDay        time.Duration
+	HotRankingCacheTTLWeek       time.Duration
+	HotRankingCacheTTLMonth      time.Duration
+	HotRankingCacheTTLYear       time.Duration
 	// 认证相关配置
 	AuthEnabled     bool              // 是否启用认证
 	AuthUsers       map[string]string // 用户名:密码映射
@@ -188,6 +204,22 @@ func Init() {
 		PluginStateCacheTTL:   getPluginStateCacheTTL(),
 		CacheWriteQueueSize:   getCacheWriteQueueSize(),
 		CacheWriteWorkers:     getCacheWriteWorkers(),
+		// TMDB 热门榜单配置
+		TMDBReadAccessToken:          getTMDBReadAccessToken(),
+		TMDBAPIKey:                   getTMDBAPIKey(),
+		TMDBBaseURL:                  getTMDBBaseURL(),
+		TMDBDefaultLanguage:          getTMDBDefaultLanguage(),
+		TMDBDefaultRegion:            getTMDBDefaultRegion(),
+		TMDBImageBaseURL:             getTMDBImageBaseURL(),
+		TMDBRequestTimeout:           getTMDBRequestTimeout(),
+		HotRankingPreloadEnabled:     getHotRankingPreloadEnabled(),
+		HotRankingPreloadTime:        getHotRankingPreloadTime(),
+		HotRankingPreloadTimeout:     getHotRankingPreloadTimeout(),
+		HotRankingPreloadConcurrency: getHotRankingPreloadConcurrency(),
+		HotRankingCacheTTLDay:        getHotRankingCacheTTL("HOT_RANKING_CACHE_TTL_DAY", 30*time.Minute),
+		HotRankingCacheTTLWeek:       getHotRankingCacheTTL("HOT_RANKING_CACHE_TTL_WEEK", 2*time.Hour),
+		HotRankingCacheTTLMonth:      getHotRankingCacheTTL("HOT_RANKING_CACHE_TTL_MONTH", 6*time.Hour),
+		HotRankingCacheTTLYear:       getHotRankingCacheTTL("HOT_RANKING_CACHE_TTL_YEAR", 12*time.Hour),
 		// 认证相关配置
 		AuthEnabled:     getAuthEnabled(),
 		AuthUsers:       getAuthUsers(),
@@ -695,6 +727,122 @@ func getCacheWriteWorkers() int {
 		return 4
 	}
 	return workers
+}
+
+func getTMDBReadAccessToken() string {
+	return strings.TrimSpace(os.Getenv("TMDB_READ_ACCESS_TOKEN"))
+}
+
+func getTMDBAPIKey() string {
+	return strings.TrimSpace(os.Getenv("TMDB_API_KEY"))
+}
+
+func getTMDBBaseURL() string {
+	value := strings.TrimSpace(os.Getenv("TMDB_BASE_URL"))
+	if value == "" {
+		return "https://api.themoviedb.org/3"
+	}
+	return value
+}
+
+func getTMDBDefaultLanguage() string {
+	value := strings.TrimSpace(os.Getenv("TMDB_DEFAULT_LANGUAGE"))
+	if value == "" {
+		return "zh-CN"
+	}
+	return value
+}
+
+func getTMDBDefaultRegion() string {
+	value := strings.TrimSpace(os.Getenv("TMDB_DEFAULT_REGION"))
+	if value == "" {
+		return "CN"
+	}
+	return value
+}
+
+func getTMDBImageBaseURL() string {
+	value := strings.TrimSpace(os.Getenv("TMDB_IMAGE_BASE_URL"))
+	if value == "" {
+		return "https://image.tmdb.org/t/p/w500"
+	}
+	return value
+}
+
+func getTMDBRequestTimeout() time.Duration {
+	value := strings.TrimSpace(os.Getenv("TMDB_REQUEST_TIMEOUT"))
+	if value == "" {
+		return 8 * time.Second
+	}
+
+	timeout, err := time.ParseDuration(value)
+	if err != nil || timeout <= 0 {
+		return 8 * time.Second
+	}
+	return timeout
+}
+
+func getHotRankingPreloadEnabled() bool {
+	value := strings.TrimSpace(os.Getenv("HOT_RANKING_PRELOAD_ENABLED"))
+	if value == "" {
+		return true
+	}
+
+	enabled, err := strconv.ParseBool(value)
+	if err != nil {
+		return true
+	}
+	return enabled
+}
+
+func getHotRankingPreloadTime() string {
+	value := strings.TrimSpace(os.Getenv("HOT_RANKING_PRELOAD_TIME"))
+	if value == "" {
+		return "10:00"
+	}
+	if _, err := time.Parse("15:04", value); err != nil {
+		return "10:00"
+	}
+	return value
+}
+
+func getHotRankingPreloadTimeout() time.Duration {
+	value := strings.TrimSpace(os.Getenv("HOT_RANKING_PRELOAD_TIMEOUT"))
+	if value == "" {
+		return 30 * time.Second
+	}
+
+	timeout, err := time.ParseDuration(value)
+	if err != nil || timeout <= 0 {
+		return 30 * time.Second
+	}
+	return timeout
+}
+
+func getHotRankingPreloadConcurrency() int {
+	value := strings.TrimSpace(os.Getenv("HOT_RANKING_PRELOAD_CONCURRENCY"))
+	if value == "" {
+		return 2
+	}
+
+	concurrency, err := strconv.Atoi(value)
+	if err != nil || concurrency <= 0 {
+		return 2
+	}
+	return concurrency
+}
+
+func getHotRankingCacheTTL(envKey string, fallback time.Duration) time.Duration {
+	value := strings.TrimSpace(os.Getenv(envKey))
+	if value == "" {
+		return fallback
+	}
+
+	ttl, err := time.ParseDuration(value)
+	if err != nil || ttl <= 0 {
+		return fallback
+	}
+	return ttl
 }
 
 // 从环境变量获取异步插件日志开关，如果未设置则使用默认值

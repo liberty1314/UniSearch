@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, ArrowRight, User, LogOut, LayoutDashboard } from 'lucide-react';
+import { Menu, ArrowRight, User, LogOut, LayoutDashboard, Flame } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { MobileMenu } from '@/components/MobileMenu';
@@ -83,7 +83,11 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
   };
 
   const navItems: Array<{ path: string; label: string; icon: React.ComponentType<{ className?: string }> }> = [
-    // Add nav items if needed
+    {
+      path: '/hot',
+      label: '热门榜单',
+      icon: Flame,
+    },
   ];
   return (
     <>
@@ -137,6 +141,27 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
 
             {/* Desktop Menu Items */}
             <div className="hidden md:flex items-center gap-3">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={cn(
+                      'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200',
+                      isActive
+                        ? 'border-cyan-200/70 bg-cyan-50 text-cyan-700 shadow-[0_10px_24px_rgba(34,211,238,0.14)] dark:border-cyan-300/20 dark:bg-cyan-500/10 dark:text-cyan-200'
+                        : `border-transparent bg-gray-100/55 text-gray-700 hover:bg-gray-200/60 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10 ${BLUE_CYAN_HOVER_TEXT}`,
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+
               {isAuthenticated ? (
                 <div className="relative" ref={userMenuRef}>
                   <button
