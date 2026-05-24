@@ -42,13 +42,14 @@ func (s *HotRankingService) GetHotRankings(ctx context.Context, query model.HotR
 	}
 
 	var cached model.HotRankingResponse
-	if s.cache != nil && shouldUseHotRankingCache(query) {
-		hit, err := s.cache.Load(ctx, query, &cached)
+	cacheQuery, shouldUseCache := resolveHotRankingCacheQuery(query)
+	if s.cache != nil && shouldUseCache {
+		hit, err := s.cache.Load(ctx, cacheQuery, &cached)
 		if err != nil {
 			return model.HotRankingResponse{}, err
 		}
 		if hit {
-			return cached, nil
+			return adaptHotRankingResponsePageSize(cached, query.PageSize), nil
 		}
 	}
 
@@ -57,8 +58,12 @@ func (s *HotRankingService) GetHotRankings(ctx context.Context, query model.HotR
 		return model.HotRankingResponse{}, normalizeTMDBServiceError(err)
 	}
 
-	if s.cache != nil && shouldUseHotRankingCache(query) {
-		if err := s.cache.Store(ctx, query, response); err != nil {
+	if s.cache != nil && shouldUseCache {
+		cacheValue := response
+		if cacheQuery.PageSize != response.PageSize {
+			cacheValue = adaptHotRankingResponsePageSize(response, cacheQuery.PageSize)
+		}
+		if err := s.cache.Store(ctx, cacheQuery, cacheValue); err != nil {
 			return model.HotRankingResponse{}, err
 		}
 	}
@@ -528,8 +533,45 @@ func validateHotRankingQuery(query model.HotRankingQuery) error {
 	return model.ValidateHotRankingQuery(query)
 }
 
-func shouldUseHotRankingCache(query model.HotRankingQuery) bool {
-	return query.Page == 1 && query.PageSize == 100
+func resolveHotRankingCacheQuery(query model.HotRankingQuery) (model.HotRankingQuery, bool) {
+	if query.Page != 1 {
+		return query, false
+	}
+
+	cacheQuery := query
+	if cacheQuery.PageSize <= 0 {
+		cacheQuery.PageSize = 100
+	}
+	if cacheQuery.PageSize < 100 {
+		cacheQuery.PageSize = 100
+	}
+
+	return cacheQuery, cacheQuery.PageSize == 100
+}
+
+func adaptHotRankingResponsePageSize(response model.HotRankingResponse, pageSize int) model.HotRankingResponse {
+	if pageSize <= 0 || response.PageSize == pageSize {
+		return response
+	}
+
+	adapted := response
+	adapted.PageSize = pageSize
+	adapted.HasMore = false
+	if adapted.NextPage > 0 {
+		adapted.NextPage = adapted.Page + 1
+	}
+
+	adapted.Sections = make([]model.HotRankingSection, 0, len(response.Sections))
+	for _, section := range response.Sections {
+		nextSection := section
+		nextSection.Items = limitHotRankingItems(section.Items, pageSize)
+		if len(nextSection.Items) > 0 {
+			adapted.HasMore = true
+		}
+		adapted.Sections = append(adapted.Sections, nextSection)
+	}
+
+	return adapted
 }
 
 func resolveDefaultModeByPeriod(period model.HotRankingPeriod) model.HotRankingMode {

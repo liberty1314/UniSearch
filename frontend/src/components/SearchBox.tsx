@@ -13,7 +13,10 @@ import {
   Button as StatefulButton,
   StatefulButtonHandle,
 } from "@/components/ui/stateful-button";
+import SkeletonLoader from "@/components/SkeletonLoader";
 import { SearchService } from "@/services/searchService";
+import { hotRankingService } from "@/services/hotRankingService";
+import type { HotRankingItem } from "@/types/hotRanking";
 
 interface SearchBoxProps {
   className?: string;
@@ -23,7 +26,21 @@ interface SearchBoxProps {
 }
 
 const MAX_VISIBLE_HISTORY_ITEMS = MAX_SEARCH_HISTORY;
-const HOME_QUICK_KEYWORDS = ["流浪地球", "考研英语", "Photoshop", "周杰伦"] as const;
+const HOME_QUICK_KEYWORD_LIMIT = 4;
+const HOME_HOT_KEYWORDS_CACHE_TTL = 5 * 60 * 1000;
+
+type HomeHotKeywordsCache = {
+  keywords: string[];
+  expiresAt: number;
+};
+
+let homeHotKeywordsCache: HomeHotKeywordsCache | null = null;
+let homeHotKeywordsRequest: Promise<string[]> | null = null;
+
+export const __resetHomeHotKeywordsCacheForTests = () => {
+  homeHotKeywordsCache = null;
+  homeHotKeywordsRequest = null;
+};
 
 const getCurrentRouteSnapshot = () => ({
   pathname: window.location.pathname || "/",
@@ -46,6 +63,56 @@ const buildHomeSearchTransitionState = () => ({
   resetScroll: true,
 });
 
+const pickHomeHotKeywords = (items: HotRankingItem[] = []) =>
+  items
+    .map((item) => item.title?.trim())
+    .filter((title): title is string => Boolean(title))
+    .filter((title, index, titles) => titles.indexOf(title) === index)
+    .slice(0, HOME_QUICK_KEYWORD_LIMIT);
+
+const extractHomeHotKeywords = async (): Promise<string[]> => {
+  const response = await hotRankingService.getHotRankings({
+    mode: "trend",
+    period: "day",
+    category: "all",
+    page_size: 20,
+  });
+
+  return pickHomeHotKeywords(
+    (response.sections ?? []).flatMap((section) => {
+      const candidates: HotRankingItem[] = [];
+      if (section.spotlight) {
+        candidates.push(section.spotlight);
+      }
+      candidates.push(...section.items);
+      return candidates;
+    }),
+  );
+};
+
+const loadHomeHotKeywords = async (): Promise<string[]> => {
+  const now = Date.now();
+  if (homeHotKeywordsCache && homeHotKeywordsCache.expiresAt > now) {
+    return homeHotKeywordsCache.keywords;
+  }
+
+  if (!homeHotKeywordsRequest) {
+    homeHotKeywordsRequest = extractHomeHotKeywords()
+      .then((keywords) => {
+        homeHotKeywordsCache = {
+          keywords,
+          expiresAt: Date.now() + HOME_HOT_KEYWORDS_CACHE_TTL,
+        };
+        return keywords;
+      })
+      .finally(() => {
+        homeHotKeywordsRequest = null;
+      });
+  }
+
+  return homeHotKeywordsRequest;
+};
+
 export const SearchBox: React.FC<SearchBoxProps> = ({
   className,
   placeholder = "搜索网盘资源...",
@@ -57,6 +124,10 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [homeQuickKeywords, setHomeQuickKeywords] = useState<string[]>([]);
+  const [isHomeQuickKeywordsLoading, setIsHomeQuickKeywordsLoading] = useState(
+    false,
+  );
 
   const {
     searchParams,
@@ -106,6 +177,54 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
       inputRef.current.focus();
     }
   }, [autoFocus]);
+
+  useEffect(() => {
+    if (!isHomePage) {
+      return;
+    }
+
+    let isMounted = true;
+    const now = Date.now();
+    const cachedKeywords =
+      homeHotKeywordsCache && homeHotKeywordsCache.expiresAt > now
+        ? homeHotKeywordsCache.keywords
+        : null;
+
+    if (cachedKeywords) {
+      setHomeQuickKeywords(cachedKeywords);
+      setIsHomeQuickKeywordsLoading(false);
+    } else {
+      setIsHomeQuickKeywordsLoading(true);
+    }
+
+    const hydrateHomeQuickKeywords = async () => {
+      try {
+        const keywords = await loadHomeHotKeywords();
+        if (!isMounted) {
+          return;
+        }
+        setHomeQuickKeywords(keywords);
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+        setHomeQuickKeywords([]);
+      } finally {
+        if (!isMounted) {
+          return;
+        }
+        setIsHomeQuickKeywordsLoading(false);
+      }
+    };
+
+    if (!cachedKeywords) {
+      void hydrateHomeQuickKeywords();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isHomePage]);
 
   useEffect(() => {
     if (!showHistory) {
@@ -427,21 +546,44 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
       {isHomePage ? (
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3 px-2">
           <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">
-            示例搜索
+            热门榜单
           </span>
-          {HOME_QUICK_KEYWORDS.map((keyword) => (
-            <button
-              key={keyword}
-              type="button"
-              onClick={() => {
-                void handleQuickKeywordSearch(keyword);
-              }}
-              className="inline-flex items-center rounded-full border border-slate-200/70 bg-white/70 px-3.5 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-cyan-400/40 dark:hover:text-cyan-200"
-              aria-label={`快速搜索 ${keyword}`}
+          {isHomeQuickKeywordsLoading ? (
+            <div
+              className="flex flex-wrap items-center justify-center gap-2.5"
+              data-testid="home-hot-keywords-skeleton"
+              aria-label="热门榜单加载中"
             >
-              {keyword}
-            </button>
-          ))}
+              {Array.from({ length: HOME_QUICK_KEYWORD_LIMIT }, (_, index) => (
+                <SkeletonLoader
+                  key={`home-hot-keyword-skeleton-${index}`}
+                  variant="text"
+                  className={cn(
+                    "h-8 rounded-full",
+                    index === 0 && "w-20",
+                    index === 1 && "w-24",
+                    index === 2 && "w-28",
+                    index === 3 && "w-22",
+                  )}
+                />
+              ))}
+            </div>
+          ) : null}
+          {!isHomeQuickKeywordsLoading
+            ? homeQuickKeywords.map((keyword) => (
+                <button
+                  key={keyword}
+                  type="button"
+                  onClick={() => {
+                    void handleQuickKeywordSearch(keyword);
+                  }}
+                  className="inline-flex items-center rounded-full border border-slate-200/70 bg-white/70 px-3.5 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-cyan-400/40 dark:hover:text-cyan-200"
+                  aria-label={`快速搜索 ${keyword}`}
+                >
+                  {keyword}
+                </button>
+              ))
+            : null}
         </div>
       ) : null}
     </div>

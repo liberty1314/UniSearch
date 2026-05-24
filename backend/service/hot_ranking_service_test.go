@@ -60,13 +60,15 @@ type fakeHotRankingCache struct {
 	loadValue     model.HotRankingResponse
 	loadErr       error
 	loadCalls     int
+	loadQuery     model.HotRankingQuery
 	storeCalls    int
 	storeErr      error
 	storeQuery    model.HotRankingQuery
 }
 
-func (f *fakeHotRankingCache) Load(_ context.Context, _ model.HotRankingQuery, target *model.HotRankingResponse) (bool, error) {
+func (f *fakeHotRankingCache) Load(_ context.Context, query model.HotRankingQuery, target *model.HotRankingResponse) (bool, error) {
 	f.loadCalls++
+	f.loadQuery = query
 	if f.loadResult {
 		*target = f.loadValue
 	}
@@ -292,6 +294,101 @@ func TestHotRankingServiceReturnsCachedValueWithoutCallingTMDB(t *testing.T) {
 
 	if response.UpdatedAt != now {
 		t.Fatalf("expected cached updated time, got %v", response.UpdatedAt)
+	}
+}
+
+func TestHotRankingServiceUsesFullCacheForHomepageSizedRequests(t *testing.T) {
+	now := time.Date(2026, 5, 24, 8, 0, 0, 0, time.UTC)
+	cache := &fakeHotRankingCache{
+		loadResult: true,
+		loadValue: model.HotRankingResponse{
+			Mode:      model.HotRankingModeTrend,
+			Period:    model.HotRankingPeriodDay,
+			Page:      1,
+			PageSize:  100,
+			UpdatedAt: now,
+			Source:    "tmdb",
+			Sections: []model.HotRankingSection{
+				{
+					Category: model.HotRankingCategoryMovie,
+					Title:    "热门电影",
+					Items: []model.HotRankingItem{
+						{Title: "木乃伊"},
+						{Title: "疯狂计划"},
+						{Title: "女士优先"},
+						{Title: "超级马力欧银河大电影"},
+						{Title: "多余条目"},
+					},
+				},
+			},
+		},
+	}
+	service := NewHotRankingService(&fakeTMDBService{}, cache)
+
+	response, err := service.GetHotRankings(context.Background(), model.HotRankingQuery{
+		Mode:     model.HotRankingModeTrend,
+		Period:   model.HotRankingPeriodDay,
+		Category: model.HotRankingCategoryAll,
+		Page:     1,
+		PageSize: 20,
+	})
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+
+	if cache.loadQuery.PageSize != 100 {
+		t.Fatalf("expected cache lookup with full page size 100, got %d", cache.loadQuery.PageSize)
+	}
+
+	if response.PageSize != 20 {
+		t.Fatalf("expected adapted response page size 20, got %d", response.PageSize)
+	}
+
+	if len(response.Sections) != 1 || len(response.Sections[0].Items) != 5 {
+		t.Fatalf("expected cached items to be preserved when under request size, got %+v", response.Sections)
+	}
+}
+
+func TestHotRankingServiceStoresHomepageSizedRequestsIntoFullCacheSlot(t *testing.T) {
+	tmdb := &fakeTMDBService{
+		movieGenres: map[int]string{28: "动作"},
+		tvGenres:    map[int]string{18: "剧情", 16: "动画"},
+		trendingMovies: []TMDBMovieResult{
+			{ID: 1, Title: "木乃伊", PosterPath: "/a.jpg", BackdropPath: "/ab.jpg", ReleaseDate: "2026-05-20"},
+		},
+		trendingTV: []TMDBTVResult{
+			{ID: 2, Name: "女士优先", PosterPath: "/b.jpg", BackdropPath: "/bb.jpg", FirstAirDate: "2026-05-21", GenreIDs: []int{18}, OriginCountry: []string{"US"}},
+			{ID: 3, Name: "星空冒险团", PosterPath: "/c.jpg", BackdropPath: "/cb.jpg", FirstAirDate: "2026-05-22", GenreIDs: []int{16}, OriginCountry: []string{"JP"}},
+		},
+	}
+	cache := &fakeHotRankingCache{}
+	service := NewHotRankingService(tmdb, cache)
+
+	response, err := service.GetHotRankings(context.Background(), model.HotRankingQuery{
+		Mode:     model.HotRankingModeTrend,
+		Period:   model.HotRankingPeriodDay,
+		Category: model.HotRankingCategoryAll,
+		Page:     1,
+		PageSize: 20,
+	})
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+
+	if cache.storeCalls != 1 {
+		t.Fatalf("expected one cache store call, got %d", cache.storeCalls)
+	}
+
+	if cache.storeQuery.PageSize != 100 {
+		t.Fatalf("expected full cache slot page size 100, got %d", cache.storeQuery.PageSize)
+	}
+
+	if cache.loadValue.PageSize != 100 {
+		t.Fatalf("expected stored cache value page size 100, got %d", cache.loadValue.PageSize)
+	}
+
+	if response.PageSize != 20 {
+		t.Fatalf("expected caller response page size 20, got %d", response.PageSize)
 	}
 }
 

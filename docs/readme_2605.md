@@ -579,3 +579,20 @@
   - `frontend/src/services/__tests__/hotRankingService.test.ts`
   - `frontend/src/services/hotRankingService.ts`
   - `frontend/src/types/hotRanking.ts`
+
+## [2026-05-24 17:30:34] feat(hot-ranking): 优化热门页刷新体验与首页热词联动
+- **Body**: 优化热门榜缓存复用与局部刷新体验，补充热门页刷新遮罩、轮播切换和骨架屏动效，减少筛选切换时的整页闪烁。
+- **Body**: 同时让首页搜索框联动热门榜热词并增加加载占位，调整按钮与骨架屏组件实现，补齐相关页面与组件测试覆盖。
+- **Files**:
+  - `backend/service/hot_ranking_service.go`
+  - `backend/service/hot_ranking_service_test.go`
+  - `frontend/src/components/SearchBox.tsx`
+  - `frontend/src/components/SkeletonLoader.tsx`
+  - `frontend/src/components/__tests__/SearchBox.test.tsx`
+  - `frontend/src/components/__tests__/SkeletonLoader.test.tsx`
+  - `frontend/src/components/trending/HotHeroCarousel.tsx`
+  - `frontend/src/components/trending/HotPageSkeleton.tsx`
+  - `frontend/src/components/ui/stateful-button.tsx`
+  - `frontend/src/index.css`
+  - `frontend/src/pages/HotPage.tsx`
+  - `frontend/src/pages/__tests__/HotPage.test.tsx`

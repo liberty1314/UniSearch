@@ -133,8 +133,6 @@ export const Button = React.forwardRef<StatefulButtonHandle, ButtonProps>(
 
     return (
       <motion.button
-        layout
-        layoutId="button"
         ref={scope}
         className={cn(
           "flex min-w-[120px] cursor-pointer items-center justify-center gap-2 rounded-full bg-apple-blue px-4 py-2 font-medium text-white transition duration-200 hover:bg-apple-blue/90",
@@ -143,10 +141,10 @@ export const Button = React.forwardRef<StatefulButtonHandle, ButtonProps>(
         {...buttonProps}
         onClick={handleClick}
       >
-        <motion.div layout className="flex items-center gap-2">
+        <motion.div className="flex items-center gap-2">
           <Loader />
           <CheckIcon />
-          <motion.span layout>{children}</motion.span>
+          <motion.span>{children}</motion.span>
         </motion.div>
       </motion.button>
     );

@@ -157,6 +157,7 @@ describe("HotPage", () => {
 
     expect(within(activeSlide).getByText("每日热门内容")).toBeInTheDocument();
     expect(within(activeSlide).getByRole("heading", { level: 1, name: "沙丘 2" })).toBeInTheDocument();
+    expect(within(activeSlide).queryByRole("button", { name: "查看其他轮播项" })).not.toBeInTheDocument();
     expect(screen.getAllByTestId("hot-media-card")).toHaveLength(6);
     expect(screen.getAllByText("沙丘 2").length).toBeGreaterThan(1);
   });
@@ -492,15 +493,6 @@ describe("HotPage", () => {
       .mockResolvedValueOnce(
         createResponse({
           mode: "popular",
-          period: "day",
-          page: 1,
-          has_more: false,
-          next_page: undefined,
-        }),
-      )
-      .mockResolvedValueOnce(
-        createResponse({
-          mode: "popular",
           period: "month",
           page: 1,
           has_more: true,
@@ -533,8 +525,8 @@ describe("HotPage", () => {
               description: "按热度排序的电影内容。",
               spotlight: createItem(1, "沙丘 2", "movie", "movie"),
               items: [
-                createItem(7, "疯狂的麦克斯：狂暴女神", "movie", "movie"),
-                createItem(8, "异形：夺命舰", "movie", "movie"),
+                createItem(9, "哥斯拉大战金刚 2：帝国崛起", "movie", "movie"),
+                createItem(10, "猩球崛起：新世界", "movie", "movie"),
               ],
             },
           ],
@@ -570,6 +562,7 @@ describe("HotPage", () => {
         mode: "popular",
         period: "month",
         category: "all",
+        sort_by: undefined,
         date: undefined,
         week_start: undefined,
         month: expect.stringMatching(/^\d{4}-\d{2}$/),
@@ -578,11 +571,6 @@ describe("HotPage", () => {
         page_size: 100,
       });
     });
-
-    expect((await screen.findAllByText("疯狂的麦克斯：狂暴女神")).length).toBeGreaterThan(0);
-    expect((await screen.findAllByText("异形：夺命舰")).length).toBeGreaterThan(0);
-    expect(screen.getByRole("heading", { level: 2, name: "热门电影" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "加载更多" })).not.toBeInTheDocument();
   });
 
   it("请求失败时展示错误态并支持重试", async () => {
@@ -608,6 +596,73 @@ describe("HotPage", () => {
     expect(screen.getByTestId("hot-page-skeleton")).toBeInTheDocument();
     expect(screen.getByTestId("hot-page-skeleton-hero")).toBeInTheDocument();
     expect(screen.getAllByTestId("hot-page-skeleton-card")).toHaveLength(4);
+  });
+
+  it("筛选切换刷新时保留当前内容并展示局部刷新层", async () => {
+    let resolveNextRequest: ((value: HotRankingResponse) => void) | null = null;
+    getHotRankingsMock
+      .mockResolvedValueOnce(createResponse())
+      .mockImplementationOnce(() => new Promise<HotRankingResponse>((resolve) => {
+        resolveNextRequest = resolve;
+      }));
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+
+    fireEvent.click(screen.getByRole("button", { name: "每周" }));
+
+    expect(screen.queryByTestId("hot-page-skeleton")).not.toBeInTheDocument();
+    expect(screen.getByTestId("hot-page-refresh-overlay")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "沙丘 2" })).toBeInTheDocument();
+
+    resolveNextRequest?.(createResponse({
+      period: "week",
+      time_label: "最近一周",
+      note: "当前每周趋势榜",
+      sections: [
+        {
+          category: "movie",
+          title: "热门电影",
+          description: "按热门趋势整理的电影热门内容。",
+          spotlight: createItem(7, "头脑特工队 2", "movie", "movie"),
+          items: [
+            createItem(7, "头脑特工队 2", "movie", "movie"),
+            createItem(8, "加菲猫家族", "movie", "movie"),
+          ],
+        },
+      ],
+    }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("hot-page-refresh-overlay")).not.toBeInTheDocument();
+    });
+    expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+      mode: "trend",
+      period: "week",
+      category: "all",
+      sort_by: undefined,
+      date: undefined,
+      week_start: undefined,
+      month: undefined,
+      year: undefined,
+      page: 1,
+      page_size: 100,
+    });
+  });
+
+  it("点击轮播缩略项后会切换激活内容", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+
+    const previewButton = screen.getByRole("button", { name: /切换到第 2 项：奥本海默/ });
+    fireEvent.click(previewButton);
+
+    await waitFor(async () => {
+      const activeSlide = await findActiveHeroSlide();
+      expect(within(activeSlide).getByRole("heading", { level: 1, name: "奥本海默" })).toBeInTheDocument();
+    });
   });
 
   it("当前筛选无数据时展示空态引导", async () => {

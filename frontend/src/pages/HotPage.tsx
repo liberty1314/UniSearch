@@ -64,6 +64,7 @@ const HotPage: React.FC = () => {
   const [yearFilter, setYearFilter] = React.useState(getCurrentYear);
   const [data, setData] = React.useState<HotRankingResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState("");
 
@@ -85,12 +86,19 @@ const HotPage: React.FC = () => {
     page_size: 100,
   }), [dateFilter, monthFilter, sortBy, weekStartFilter, yearFilter]);
 
+  const dataRef = React.useRef<HotRankingResponse | null>(null);
+  React.useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
   const loadRankings = React.useCallback(async (
     nextMode: HotRankingMode,
     nextPeriod: HotRankingPeriod,
     nextCategory: HotRankingCategory,
   ) => {
-    setLoading(true);
+    const shouldShowSkeleton = !dataRef.current;
+    setLoading(shouldShowSkeleton);
+    setRefreshing(!shouldShowSkeleton);
     setErrorMessage("");
 
     try {
@@ -107,9 +115,12 @@ const HotPage: React.FC = () => {
           ? (error as { message: string }).message
           : "请稍后重试";
       setErrorMessage(message);
-      setData(null);
+      if (shouldShowSkeleton) {
+        setData(null);
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [buildQuery]);
 
@@ -261,6 +272,7 @@ const HotPage: React.FC = () => {
   }, [primarySection, secondarySections]);
   const hasHeroItems = heroItems.length > 0;
   const hasListItems = renderSections.some((section) => section.items.length > 0);
+  const showRefreshOverlay = refreshing && !loading && !errorMessage && (hasHeroItems || hasListItems);
 
   return (
     <PublicPageShell contentClassName="container mx-auto px-4 py-8 pt-24 pb-16">
@@ -311,7 +323,17 @@ const HotPage: React.FC = () => {
         ) : null}
 
         {!loading && !errorMessage && hasListItems ? (
-          <div className="space-y-8">
+          <div className="relative space-y-8">
+            {showRefreshOverlay ? (
+              <div
+                className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-[2rem]"
+                data-testid="hot-page-refresh-overlay"
+                aria-hidden="true"
+              >
+                <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] dark:bg-slate-950/26" />
+                <div className="absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/65 to-transparent opacity-80 animate-[hotPageRefreshShimmer_1.2s_ease-in-out_infinite] dark:via-cyan-100/18" />
+              </div>
+            ) : null}
             {renderSections
               .filter((section) => section.items.length > 0)
               .map((section, index) => (

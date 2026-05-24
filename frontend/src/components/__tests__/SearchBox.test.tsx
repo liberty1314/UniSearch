@@ -2,7 +2,20 @@ import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { SearchBox } from "@/components/SearchBox";
+import {
+  __resetHomeHotKeywordsCacheForTests,
+  SearchBox,
+} from "@/components/SearchBox";
+
+const baseHotRankingResponse = {
+  mode: "trend" as const,
+  period: "day" as const,
+  page: 1,
+  page_size: 20,
+  has_more: false,
+  updated_at: "2026-05-24T10:00:00Z",
+  source: "tmdb" as const,
+};
 
 const {
   performSearchMock,
@@ -14,6 +27,7 @@ const {
   errorToastMock,
   logoutMock,
   resetButtonMock,
+  getHotRankingsMock,
 } = vi.hoisted(() => ({
   performSearchMock: vi.fn(),
   setSearchParamsMock: vi.fn(),
@@ -24,6 +38,7 @@ const {
   errorToastMock: vi.fn(),
   logoutMock: vi.fn(),
   resetButtonMock: vi.fn(),
+  getHotRankingsMock: vi.fn(),
 }));
 
 let authState = {
@@ -90,6 +105,12 @@ vi.mock("sonner", () => ({
   },
 }));
 
+vi.mock("@/services/hotRankingService", () => ({
+  hotRankingService: {
+    getHotRankings: getHotRankingsMock,
+  },
+}));
+
 vi.mock("@/components/ui/stateful-button", async () => {
   const React = await vi.importActual<typeof import("react")>("react");
 
@@ -118,6 +139,7 @@ vi.mock("@/components/ui/stateful-button", async () => {
 
 describe("SearchBox", () => {
   beforeEach(() => {
+    __resetHomeHotKeywordsCacheForTests();
     performSearchMock.mockReset();
     setSearchParamsMock.mockReset();
     clearHistoryMock.mockReset();
@@ -127,6 +149,11 @@ describe("SearchBox", () => {
     errorToastMock.mockReset();
     logoutMock.mockReset();
     resetButtonMock.mockReset();
+    getHotRankingsMock.mockReset();
+    getHotRankingsMock.mockResolvedValue({
+      ...baseHotRankingResponse,
+      sections: [],
+    });
 
     authState = {
       token: "jwt-token",
@@ -257,7 +284,7 @@ describe("SearchBox", () => {
 
     const searchShell = screen.getByTestId("search-box-surface");
     const historyPopover = screen.getByTestId("search-history-surface");
-    const helperChipRow = screen.getByText("示例搜索").parentElement;
+    const helperChipRow = screen.getByText("热门榜单").parentElement;
 
     expect(searchShell.parentElement).toContainElement(historyPopover);
     expect(helperChipRow).not.toContainElement(historyPopover);
@@ -362,18 +389,189 @@ describe("SearchBox", () => {
   });
 
   it("renders quick keyword chips on the homepage and reuses the existing search flow", async () => {
+    getHotRankingsMock.mockResolvedValue({
+      ...baseHotRankingResponse,
+      sections: [
+        {
+          category: "movie",
+          title: "热门电影",
+          description: "desc",
+          spotlight: {
+            id: 1,
+            tmdb_id: 1,
+            media_type: "movie",
+            ranking_category: "movie",
+            title: "木乃伊",
+            original_title: "木乃伊",
+            overview: "",
+            poster_url: "",
+            backdrop_url: "",
+            vote_average: 0,
+            vote_count: 0,
+            popularity: 0,
+            release_date: "",
+            genre_names: [],
+            tmdb_url: "",
+          },
+          items: [
+            {
+              id: 2,
+              tmdb_id: 2,
+              media_type: "movie",
+              ranking_category: "movie",
+              title: "疯狂计划",
+              original_title: "疯狂计划",
+              overview: "",
+              poster_url: "",
+              backdrop_url: "",
+              vote_average: 0,
+              vote_count: 0,
+              popularity: 0,
+              release_date: "",
+              genre_names: [],
+              tmdb_url: "",
+            },
+          ],
+        },
+        {
+          category: "tv",
+          title: "热门电视剧",
+          description: "desc",
+          spotlight: {
+            id: 3,
+            tmdb_id: 3,
+            media_type: "tv",
+            ranking_category: "tv",
+            title: "女士优先",
+            original_title: "女士优先",
+            overview: "",
+            poster_url: "",
+            backdrop_url: "",
+            vote_average: 0,
+            vote_count: 0,
+            popularity: 0,
+            release_date: "",
+            genre_names: [],
+            tmdb_url: "",
+          },
+          items: [],
+        },
+        {
+          category: "anime",
+          title: "热门动漫",
+          description: "desc",
+          spotlight: {
+            id: 4,
+            tmdb_id: 4,
+            media_type: "movie",
+            ranking_category: "anime",
+            title: "超级马力欧银河大电影",
+            original_title: "超级马力欧银河大电影",
+            overview: "",
+            poster_url: "",
+            backdrop_url: "",
+            vote_average: 0,
+            vote_count: 0,
+            popularity: 0,
+            release_date: "",
+            genre_names: [],
+            tmdb_url: "",
+          },
+          items: [],
+        },
+      ],
+    });
+
     render(<SearchBox />);
 
-    expect(screen.getByText("示例搜索")).toBeInTheDocument();
+    expect(screen.getByText("热门榜单")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "快速搜索 木乃伊" })).toBeInTheDocument();
+    });
 
-    await userEvent.click(screen.getByRole("button", { name: "快速搜索 流浪地球" }));
+    await userEvent.click(screen.getByRole("button", { name: "快速搜索 木乃伊" }));
 
-    expect(setSearchParamsMock).toHaveBeenCalledWith({ keyword: "流浪地球" });
+    expect(setSearchParamsMock).toHaveBeenCalledWith({ keyword: "木乃伊" });
     expect(performSearchMock).not.toHaveBeenCalled();
     expect(navigateMock).toHaveBeenCalledWith(
-      "/search?q=%E6%B5%81%E6%B5%AA%E5%9C%B0%E7%90%83",
+      "/search?q=%E6%9C%A8%E4%B9%83%E4%BC%8A",
       expectHomeToSearchNavigationState(),
     );
+  });
+
+  it("shows a skeleton while homepage hot keywords are loading", () => {
+    getHotRankingsMock.mockImplementation(
+      () =>
+        new Promise(() => {
+          // 保持挂起，验证骨架屏状态
+        }),
+    );
+
+    render(<SearchBox />);
+
+    expect(screen.getByTestId("home-hot-keywords-skeleton")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /快速搜索/ })).not.toBeInTheDocument();
+  });
+
+  it("reuses in-memory hot keyword cache when the homepage remounts shortly after", async () => {
+    getHotRankingsMock.mockResolvedValue({
+      ...baseHotRankingResponse,
+      sections: [
+        {
+          category: "movie",
+          title: "热门电影",
+          description: "desc",
+          spotlight: {
+            id: 1,
+            tmdb_id: 1,
+            media_type: "movie",
+            ranking_category: "movie",
+            title: "木乃伊",
+            original_title: "木乃伊",
+            overview: "",
+            poster_url: "",
+            backdrop_url: "",
+            vote_average: 0,
+            vote_count: 0,
+            popularity: 0,
+            release_date: "",
+            genre_names: [],
+            tmdb_url: "",
+          },
+          items: [],
+        },
+      ],
+    });
+
+    const firstRender = render(<SearchBox />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "快速搜索 木乃伊" })).toBeInTheDocument();
+    });
+    expect(getHotRankingsMock).toHaveBeenCalledTimes(1);
+
+    firstRender.unmount();
+
+    render(<SearchBox />);
+
+    expect(screen.getByRole("button", { name: "快速搜索 木乃伊" })).toBeInTheDocument();
+    expect(screen.queryByTestId("home-hot-keywords-skeleton")).not.toBeInTheDocument();
+    expect(getHotRankingsMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders no fallback keyword chips when the hot ranking request fails", async () => {
+    getHotRankingsMock.mockRejectedValue(new Error("boom"));
+
+    render(<SearchBox />);
+
+    expect(screen.getByTestId("home-hot-keywords-skeleton")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("home-hot-keywords-skeleton")).not.toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole("button", { name: /快速搜索/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("流浪地球")).not.toBeInTheDocument();
   });
 
   it("hides homepage quick keyword chips on the standalone search page", () => {
@@ -386,7 +584,7 @@ describe("SearchBox", () => {
 
     render(<SearchBox />);
 
-    expect(screen.queryByText("示例搜索")).not.toBeInTheDocument();
+    expect(screen.queryByText("热门榜单")).not.toBeInTheDocument();
   });
 
   it("clears the homepage input and resets button animation when returning from the search page", async () => {
