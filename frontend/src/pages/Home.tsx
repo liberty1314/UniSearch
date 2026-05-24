@@ -72,6 +72,11 @@ const Home: React.FC = () => {
   const skipHomeEntrance = Boolean(
     (location.state as { skipHomeEntrance?: boolean } | null)?.skipHomeEntrance,
   );
+  const shouldResetHomeSearchBox = Boolean(
+    (
+      location.state as { resetHomeSearchBox?: boolean } | null
+    )?.resetHomeSearchBox,
+  );
   const [hasSeenHomeEntrance] = React.useState(() => {
     if (typeof window === "undefined") {
       return false;
@@ -196,7 +201,11 @@ const Home: React.FC = () => {
 
       <div className="relative z-30 mb-20 flex w-full flex-col items-center space-y-8">
         <motion.div
-          initial={shouldPlayHomeEntrance ? { opacity: 0, y: 22 } : false}
+          initial={
+            shouldPlayHomeEntrance && !shouldResetHomeSearchBox
+              ? { opacity: 0, y: 22 }
+              : false
+          }
           animate={{ opacity: 1, y: 0 }}
           transition={searchTransition}
           className="relative z-20 w-full max-w-4xl"

@@ -11,8 +11,9 @@ import (
 )
 
 type HotRankingCache interface {
-	Load(ctx context.Context, period model.HotRankingPeriod, category model.HotRankingCategory, target *model.HotRankingResponse) (bool, error)
-	Store(ctx context.Context, period model.HotRankingPeriod, category model.HotRankingCategory, value model.HotRankingResponse) error
+	Load(ctx context.Context, query model.HotRankingQuery, target *model.HotRankingResponse) (bool, error)
+	Store(ctx context.Context, query model.HotRankingQuery, value model.HotRankingResponse) error
+	ClearByPrefix(ctx context.Context, prefix string) error
 }
 
 type hotRankingCache struct {
@@ -23,12 +24,12 @@ func newHotRankingCache(redisCache *cache.RedisCache) HotRankingCache {
 	return &hotRankingCache{cache: redisCache}
 }
 
-func (c *hotRankingCache) Load(ctx context.Context, period model.HotRankingPeriod, category model.HotRankingCategory, target *model.HotRankingResponse) (bool, error) {
+func (c *hotRankingCache) Load(ctx context.Context, query model.HotRankingQuery, target *model.HotRankingResponse) (bool, error) {
 	if c == nil || c.cache == nil {
 		return false, nil
 	}
 
-	err := c.cache.Get(ctx, buildHotRankingCacheKey(period, category), target)
+	err := c.cache.Get(ctx, buildHotRankingCacheKey(query), target)
 	switch err {
 	case nil:
 		return true, nil
@@ -39,15 +40,23 @@ func (c *hotRankingCache) Load(ctx context.Context, period model.HotRankingPerio
 	}
 }
 
-func (c *hotRankingCache) Store(ctx context.Context, period model.HotRankingPeriod, category model.HotRankingCategory, value model.HotRankingResponse) error {
+func (c *hotRankingCache) Store(ctx context.Context, query model.HotRankingQuery, value model.HotRankingResponse) error {
 	if c == nil || c.cache == nil {
 		return nil
 	}
 
-	return c.cache.SetWithTTL(ctx, buildHotRankingCacheKey(period, category), value, resolveHotRankingCacheTTL(period))
+	return c.cache.SetWithTTL(ctx, buildHotRankingCacheKey(query), value, resolveHotRankingCacheTTL(query.Period))
 }
 
-func buildHotRankingCacheKey(period model.HotRankingPeriod, category model.HotRankingCategory) string {
+func (c *hotRankingCache) ClearByPrefix(ctx context.Context, prefix string) error {
+	if c == nil || c.cache == nil {
+		return nil
+	}
+
+	return c.cache.DeleteByPattern(ctx, prefix+"*")
+}
+
+func buildHotRankingCacheKey(query model.HotRankingQuery) string {
 	language := "zh-CN"
 	region := "CN"
 	if config.AppConfig != nil {
@@ -58,7 +67,30 @@ func buildHotRankingCacheKey(period model.HotRankingPeriod, category model.HotRa
 			region = config.AppConfig.TMDBDefaultRegion
 		}
 	}
-	return fmt.Sprintf("hot-ranking:%s:%s:%s:%s", period, category, language, region)
+	return fmt.Sprintf("hot-ranking:v2:%s:%s:%s:%s:%s:%s", query.Mode, query.Period, query.Category, resolveHotRankingTimeKey(query), language, region)
+}
+
+func resolveHotRankingTimeKey(query model.HotRankingQuery) string {
+	switch query.Period {
+	case model.HotRankingPeriodDay:
+		if query.Date != "" {
+			return query.Date
+		}
+	case model.HotRankingPeriodWeek:
+		if query.WeekStart != "" {
+			return query.WeekStart
+		}
+	case model.HotRankingPeriodMonth:
+		if query.Month != "" {
+			return query.Month
+		}
+	case model.HotRankingPeriodYear:
+		if query.Year != "" {
+			return query.Year
+		}
+	}
+
+	return "default"
 }
 
 func resolveHotRankingCacheTTL(period model.HotRankingPeriod) time.Duration {

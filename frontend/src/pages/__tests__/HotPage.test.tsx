@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { HelmetProvider } from "react-helmet-async";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import HotPage from "@/pages/HotPage";
+import type { HotRankingResponse } from "@/types/hotRanking";
 
 const { getHotRankingsMock, buildSearchUrlMock } = vi.hoisted(() => ({
   getHotRankingsMock: vi.fn(),
@@ -34,72 +35,74 @@ const LocationProbe = () => {
   );
 };
 
-const response = {
-  period: "day" as const,
-  updated_at: "2026-05-23T12:00:00Z",
-  source: "tmdb" as const,
-  note: "每日、每周使用 TMDB 趋势口径。",
+const createItem = (
+  id: number,
+  title: string,
+  category: "movie" | "tv" | "anime",
+  mediaType: "movie" | "tv",
+) => ({
+  id,
+  tmdb_id: id,
+  media_type: mediaType,
+  ranking_category: category,
+  title,
+  original_title: `${title} Original`,
+  overview: `${title} 的剧情简介`,
+  poster_url: `https://image.tmdb.org/t/p/w500/poster-${id}.jpg`,
+  backdrop_url: `https://image.tmdb.org/t/p/w500/backdrop-${id}.jpg`,
+  vote_average: 8.5,
+  vote_count: 1000,
+  popularity: 900 - id,
+  release_date: "2026-05-24",
+  genre_names: category === "anime" ? ["动画"] : ["剧情"],
+  tmdb_url: `https://www.themoviedb.org/${mediaType}/${id}`,
+});
+
+const createResponse = (overrides?: Partial<HotRankingResponse>): HotRankingResponse => ({
+  mode: "trend",
+  period: "day",
+  time_key: "current",
+  time_label: "当前周期",
+  page: 1,
+  page_size: 100,
+  has_more: false,
+  updated_at: "2026-05-24T10:00:00Z",
+  source: "tmdb",
+  note: "当前趋势榜单",
   sections: [
     {
-      category: "movie" as const,
+      category: "movie",
       title: "热门电影",
-      description: "基于 TMDB 数据整理的电影热门内容。",
-      spotlight: {
-        id: 1,
-        tmdb_id: 1,
-        media_type: "movie" as const,
-        ranking_category: "movie" as const,
-        title: "沙丘 2",
-        original_title: "Dune: Part Two",
-        overview: "test overview",
-        poster_url: "https://image.tmdb.org/t/p/w500/poster.jpg",
-        backdrop_url: "https://image.tmdb.org/t/p/w500/backdrop.jpg",
-        vote_average: 8.8,
-        vote_count: 1000,
-        popularity: 999,
-        release_date: "2024-03-01",
-        genre_names: ["科幻", "冒险"],
-        tmdb_url: "https://www.themoviedb.org/movie/1",
-      },
+      description: "按热门趋势整理的电影热门内容。",
+      spotlight: createItem(1, "沙丘 2", "movie", "movie"),
       items: [
-        {
-          id: 1,
-          tmdb_id: 1,
-          media_type: "movie" as const,
-          ranking_category: "movie" as const,
-          title: "沙丘 2",
-          original_title: "Dune: Part Two",
-          overview: "test overview",
-          poster_url: "https://image.tmdb.org/t/p/w500/poster.jpg",
-          backdrop_url: "https://image.tmdb.org/t/p/w500/backdrop.jpg",
-          vote_average: 8.8,
-          vote_count: 1000,
-          popularity: 999,
-          release_date: "2024-03-01",
-          genre_names: ["科幻", "冒险"],
-          tmdb_url: "https://www.themoviedb.org/movie/1",
-        },
-        {
-          id: 2,
-          tmdb_id: 2,
-          media_type: "movie" as const,
-          ranking_category: "movie" as const,
-          title: "奥本海默",
-          original_title: "Oppenheimer",
-          overview: "another overview",
-          poster_url: "https://image.tmdb.org/t/p/w500/poster-2.jpg",
-          backdrop_url: "https://image.tmdb.org/t/p/w500/backdrop-2.jpg",
-          vote_average: 8.4,
-          vote_count: 800,
-          popularity: 800,
-          release_date: "2023-08-30",
-          genre_names: ["剧情"],
-          tmdb_url: "https://www.themoviedb.org/movie/2",
-        },
+        createItem(1, "沙丘 2", "movie", "movie"),
+        createItem(2, "奥本海默", "movie", "movie"),
+      ],
+    },
+    {
+      category: "tv",
+      title: "热门电视剧",
+      description: "按热门趋势整理的电视剧热门内容。",
+      spotlight: createItem(3, "最后生还者", "tv", "tv"),
+      items: [
+        createItem(3, "最后生还者", "tv", "tv"),
+        createItem(4, "人生切割术", "tv", "tv"),
+      ],
+    },
+    {
+      category: "anime",
+      title: "热门动漫",
+      description: "按热门趋势整理的动漫热门内容。",
+      spotlight: createItem(5, "葬送的芙莉莲", "anime", "tv"),
+      items: [
+        createItem(5, "葬送的芙莉莲", "anime", "tv"),
+        createItem(6, "药屋少女的呢喃", "anime", "tv"),
       ],
     },
   ],
-};
+  ...overrides,
+});
 
 const renderHotPage = () =>
   render(
@@ -117,9 +120,7 @@ const renderHotPage = () =>
 const findActiveHeroSlide = async () => {
   const hero = await screen.findByTestId("hot-page-hero");
   const activeSlide = hero.querySelector<HTMLElement>('[data-active="true"]');
-
   expect(activeSlide).not.toBeNull();
-
   return activeSlide as HTMLElement;
 };
 
@@ -132,15 +133,23 @@ describe("HotPage", () => {
     );
   });
 
-  it("requests default day movie rankings on mount", async () => {
-    getHotRankingsMock.mockResolvedValue(response);
+  it("默认请求每日趋势总榜并渲染轮播与列表", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
 
     await waitFor(() => {
       expect(getHotRankingsMock).toHaveBeenCalledWith({
+        mode: "trend",
         period: "day",
-        category: "movie",
+        category: "all",
+        sort_by: undefined,
+        date: undefined,
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 100,
       });
     });
 
@@ -148,84 +157,442 @@ describe("HotPage", () => {
 
     expect(within(activeSlide).getByText("每日热门内容")).toBeInTheDocument();
     expect(within(activeSlide).getByRole("heading", { level: 1, name: "沙丘 2" })).toBeInTheDocument();
+    expect(screen.getAllByTestId("hot-media-card")).toHaveLength(6);
+    expect(screen.getAllByText("沙丘 2").length).toBeGreaterThan(1);
   });
 
-  it("renders carousel hero and the deduplicated list content", async () => {
-    getHotRankingsMock.mockResolvedValue(response);
+  it("切换到每周动漫趋势榜时会重新请求", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
-
-    expect(await screen.findByTestId("hot-page-hero")).toBeInTheDocument();
-    expect(screen.queryByTestId("hot-page-highlight")).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 2, name: "热门电影" })).toBeInTheDocument();
-    expect(screen.getAllByText("奥本海默").length).toBeGreaterThan(0);
-    expect(screen.getAllByTestId("hot-media-card")).toHaveLength(1);
-    expect(screen.queryByText("基于 TMDB 数据整理的电影热门内容。")).not.toBeInTheDocument();
-  });
-
-  it("renders hero category information from ranking response", async () => {
-    getHotRankingsMock.mockResolvedValue(response);
-
-    renderHotPage();
-
-    const activeSlide = await findActiveHeroSlide();
-
-    expect(within(activeSlide).getByText("分类")).toBeInTheDocument();
-    expect(within(activeSlide).getByText("热度")).toBeInTheDocument();
-    expect(within(activeSlide).getByText("评分")).toBeInTheDocument();
-    expect(within(activeSlide).getByRole("heading", { level: 1, name: "沙丘 2" })).toBeInTheDocument();
-    expect(screen.getAllByText("电影").length).toBeGreaterThan(0);
-    expect(screen.queryByText("当前分类")).not.toBeInTheDocument();
-    expect(screen.queryByText("数据来源")).not.toBeInTheDocument();
-    expect(screen.queryByText("已更新")).not.toBeInTheDocument();
-  });
-
-  it("requests data again when switching period and category", async () => {
-    getHotRankingsMock.mockResolvedValue(response);
-
-    renderHotPage();
-
     await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
 
     fireEvent.click(screen.getByRole("button", { name: "每周" }));
     fireEvent.click(screen.getByRole("button", { name: "动漫" }));
 
-    expect(screen.getByRole("button", { name: "每周" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "动漫" })).toHaveAttribute("aria-pressed", "true");
-
     await waitFor(() => {
       expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "trend",
         period: "week",
         category: "anime",
+        sort_by: undefined,
+        date: undefined,
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 100,
       });
     });
   });
 
-  it("navigates to the search page when clicking the search action", async () => {
-    getHotRankingsMock.mockResolvedValue(response);
+  it("趋势榜下会隐藏每月每年和时间筛选卡片", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+
+    expect(screen.queryByRole("button", { name: "每月" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "每年" })).not.toBeInTheDocument();
+    expect(screen.queryByText("时间筛选")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("打开排序菜单")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "每日" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "每周" })).toBeInTheDocument();
+  });
+
+  it("控制台标签按钮保持单行稳定布局", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+
+    const modeTabs = screen.getByTestId("hot-mode-tabs");
+    const periodTabs = screen.getByTestId("hot-period-tabs");
+    const categoryTabs = screen.getByTestId("hot-category-tabs");
+
+    expect(modeTabs.className).toContain("overflow-x-auto");
+    expect(periodTabs.className).toContain("overflow-x-auto");
+    expect(categoryTabs.className).toContain("overflow-x-auto");
+
+    expect(screen.getByRole("button", { name: "电视剧" }).className).toContain("whitespace-nowrap");
+
+    fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "每月" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "每年" })).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("hot-period-tabs").className).toContain("overflow-x-auto");
+  });
+
+  it("控制台会展示当前模式周期和分类摘要", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+    const toolbarSummary = screen.getByTestId("hot-toolbar-summary");
+
+    expect(within(toolbarSummary).getByText("当前模式")).toBeInTheDocument();
+    expect(within(toolbarSummary).getByText("当前分类")).toBeInTheDocument();
+    expect(toolbarSummary).toHaveTextContent("趋势榜");
+    expect(toolbarSummary).toHaveTextContent("全部内容");
+
+    fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
+    fireEvent.click(screen.getByRole("button", { name: "每月" }));
+    fireEvent.click(screen.getByRole("button", { name: "电影" }));
+
+    await waitFor(() => {
+      expect(toolbarSummary).toHaveTextContent(/每月 · \d{4}-\d{2}/);
+      expect(toolbarSummary).toHaveTextContent("电影");
+    });
+  });
+
+  it("热门榜单单分类支持按时间和评分排序", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+
+    fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
+    expect(screen.queryByLabelText("打开排序菜单")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "电影" }));
+    fireEvent.click(await screen.findByLabelText("打开排序菜单"));
+
+    fireEvent.click(await screen.findByRole("menuitemradio", { name: "按时间" }));
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "day",
+        category: "movie",
+        sort_by: "primary_release_date.desc",
+        date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
+
+    fireEvent.click(screen.getByLabelText("打开排序菜单"));
+    fireEvent.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "day",
+        category: "movie",
+        sort_by: "vote_average.desc",
+        date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
+  });
+
+  it("点击重置筛选会恢复默认状态并重新请求默认榜单", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+
+    fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
+    fireEvent.click(screen.getByRole("button", { name: "电影" }));
+    fireEvent.click(await screen.findByLabelText("打开排序菜单"));
+    fireEvent.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
+    fireEvent.change(screen.getByLabelText("指定日期"), { target: { value: "2026-03-23" } });
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "day",
+        category: "movie",
+        sort_by: "vote_average.desc",
+        date: "2026-03-23",
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "重置筛选" }));
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "trend",
+        period: "day",
+        category: "all",
+        sort_by: undefined,
+        date: undefined,
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
+
+    expect(screen.getByRole("button", { name: "趋势榜" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "全部" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("切换到热门月榜后会带上月份参数请求", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+
+    fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
+    fireEvent.click(screen.getByRole("button", { name: "每月" }));
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "month",
+        category: "all",
+        sort_by: undefined,
+        date: undefined,
+        week_start: undefined,
+        month: expect.stringMatching(/^\d{4}-\d{2}$/),
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
+
+    const monthInput = screen.getByLabelText("指定月份");
+    fireEvent.change(monthInput, { target: { value: "2026-04" } });
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "month",
+        category: "all",
+        sort_by: undefined,
+        date: undefined,
+        week_start: undefined,
+        month: "2026-04",
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
+  });
+
+  it("切换到热门年榜后会带上年份参数请求", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+
+    fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
+    fireEvent.click(screen.getByRole("button", { name: "每年" }));
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "year",
+        category: "all",
+        sort_by: undefined,
+        date: undefined,
+        week_start: undefined,
+        month: undefined,
+        year: expect.stringMatching(/^\d{4}$/),
+        page: 1,
+        page_size: 100,
+      });
+    });
+
+    const yearInput = screen.getByLabelText("指定年份");
+    fireEvent.change(yearInput, { target: { value: "2025" } });
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "year",
+        category: "all",
+        sort_by: undefined,
+        date: undefined,
+        week_start: undefined,
+        month: undefined,
+        year: "2025",
+        page: 1,
+        page_size: 100,
+      });
+    });
+  });
+
+  it("切换到热门日榜后修改日期会重新请求", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+
+    fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "day",
+        category: "all",
+        sort_by: undefined,
+        date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
+
+    const dateInput = screen.getByLabelText("指定日期");
+    fireEvent.change(dateInput, { target: { value: "2026-05-01" } });
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "day",
+        category: "all",
+        sort_by: undefined,
+        date: "2026-05-01",
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
+  });
+
+  it("点击轮播搜索按钮会跳转到搜索页", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
 
     const activeSlide = await findActiveHeroSlide();
-    fireEvent.click(within(activeSlide).getByRole("button", { name: "搜索" }));
+    fireEvent.click(within(activeSlide).getByRole("button", { name: "立即搜索榜首内容" }));
 
-    expect(await screen.findByTestId("location-probe")).toHaveTextContent(
-      '"pathname":"/search"',
-    );
+    expect(await screen.findByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
     expect(screen.getByTestId("location-probe")).toHaveTextContent(
       '"search":"?q=%E6%B2%99%E4%B8%98%202"',
     );
   });
 
-  it("renders error state and supports retry", async () => {
+  it("加载更多会追加下一页内容", async () => {
+    getHotRankingsMock
+      .mockResolvedValueOnce(createResponse())
+      .mockResolvedValueOnce(
+        createResponse({
+          mode: "popular",
+          period: "day",
+          page: 1,
+          has_more: false,
+          next_page: undefined,
+        }),
+      )
+      .mockResolvedValueOnce(
+        createResponse({
+          mode: "popular",
+          period: "month",
+          page: 1,
+          has_more: true,
+          next_page: 2,
+          sections: [
+            {
+              category: "movie",
+              title: "热门电影",
+              description: "按热度排序的电影内容。",
+              spotlight: createItem(1, "沙丘 2", "movie", "movie"),
+              items: [
+                createItem(7, "疯狂的麦克斯：狂暴女神", "movie", "movie"),
+                createItem(8, "异形：夺命舰", "movie", "movie"),
+              ],
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        createResponse({
+          mode: "popular",
+          period: "month",
+          page: 2,
+          has_more: false,
+          next_page: undefined,
+          sections: [
+            {
+              category: "movie",
+              title: "热门电影",
+              description: "按热度排序的电影内容。",
+              spotlight: createItem(1, "沙丘 2", "movie", "movie"),
+              items: [
+                createItem(7, "疯狂的麦克斯：狂暴女神", "movie", "movie"),
+                createItem(8, "异形：夺命舰", "movie", "movie"),
+              ],
+            },
+          ],
+        }),
+      );
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+
+    fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
+    fireEvent.click(screen.getByRole("button", { name: "每月" }));
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "month",
+        category: "all",
+        sort_by: undefined,
+        date: undefined,
+        week_start: undefined,
+        month: expect.stringMatching(/^\d{4}-\d{2}$/),
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
+
+    const loadMoreButton = await screen.findByRole("button", { name: "加载更多" });
+    fireEvent.click(loadMoreButton);
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "month",
+        category: "all",
+        date: undefined,
+        week_start: undefined,
+        month: expect.stringMatching(/^\d{4}-\d{2}$/),
+        year: undefined,
+        page: 2,
+        page_size: 100,
+      });
+    });
+
+    expect((await screen.findAllByText("疯狂的麦克斯：狂暴女神")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("异形：夺命舰")).length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { level: 2, name: "热门电影" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "加载更多" })).not.toBeInTheDocument();
+  });
+
+  it("请求失败时展示错误态并支持重试", async () => {
     getHotRankingsMock
       .mockRejectedValueOnce({ message: "获取热门榜单失败" })
-      .mockResolvedValueOnce(response);
+      .mockResolvedValueOnce(createResponse());
 
     renderHotPage();
 
     expect(await screen.findByText("获取热门内容失败")).toBeInTheDocument();
-
     fireEvent.click(screen.getByRole("button", { name: "重新加载" }));
 
     await waitFor(() => {
@@ -233,7 +600,7 @@ describe("HotPage", () => {
     });
   });
 
-  it("在加载中展示贴近真实结构的骨架屏", () => {
+  it("加载中展示骨架屏", () => {
     getHotRankingsMock.mockReturnValue(new Promise(() => {}));
 
     renderHotPage();
@@ -243,22 +610,25 @@ describe("HotPage", () => {
     expect(screen.getAllByTestId("hot-page-skeleton-card")).toHaveLength(4);
   });
 
-  it("在当前筛选暂无数据时展示切换引导", async () => {
-    getHotRankingsMock.mockResolvedValue({
-      ...response,
-      sections: [
-        {
-          ...response.sections[0],
-          spotlight: undefined,
-          items: [],
-        },
-      ],
-    });
+  it("当前筛选无数据时展示空态引导", async () => {
+    getHotRankingsMock.mockResolvedValue(
+      createResponse({
+        sections: [
+          {
+            category: "movie",
+            title: "热门电影",
+            description: "暂无数据",
+            spotlight: undefined,
+            items: [],
+          },
+        ],
+      }),
+    );
 
     renderHotPage();
 
     expect(await screen.findByText("当前筛选暂无上榜内容")).toBeInTheDocument();
     expect(screen.getByText(/切换时间维度或内容分类/)).toBeInTheDocument();
-    expect(screen.getByText(/当前分类：电影/)).toBeInTheDocument();
+    expect(screen.getByText(/当前分类：全部热门/)).toBeInTheDocument();
   });
 });

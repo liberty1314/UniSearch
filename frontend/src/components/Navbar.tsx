@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, ArrowRight, User, LogOut, LayoutDashboard, Flame } from 'lucide-react';
+import { Menu, ArrowRight, User, LogOut, LayoutDashboard, Flame, House, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { MobileMenu } from '@/components/MobileMenu';
@@ -84,6 +84,16 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
 
   const navItems: Array<{ path: string; label: string; icon: React.ComponentType<{ className?: string }> }> = [
     {
+      path: '/',
+      label: '首页',
+      icon: House,
+    },
+    {
+      path: '/search',
+      label: '搜索',
+      icon: Search,
+    },
+    {
       path: '/hot',
       label: '热门榜单',
       icon: Flame,
@@ -103,11 +113,11 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
           className
         )}
       >
-        <div className="container mx-auto px-4 h-full flex items-center justify-between">
+        <div className="container mx-auto grid h-full grid-cols-[auto_1fr_auto] items-center gap-4 px-4">
           {/* Logo Area */}
           <Link
             to="/"
-            className="flex items-center gap-3 group relative overflow-hidden rounded-xl px-2 py-1 transition-all duration-300 hover:bg-white/10"
+            className="flex items-center gap-3 group relative overflow-hidden rounded-2xl px-3 py-2 transition-all duration-300 hover:bg-white/10"
           >
             <div className="relative w-10 h-10 flex items-center justify-center">
               <img
@@ -121,13 +131,44 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
             </span>
           </Link>
 
+          {/* Desktop Primary Navigation */}
+          <div className="hidden md:flex items-center justify-center">
+            <nav
+              aria-label="主导航"
+              className="flex items-center gap-1 rounded-full border border-white/60 bg-white/55 px-2 py-1.5 shadow-[0_12px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/25"
+            >
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isSearchRoute = item.path === '/search' && location.pathname.startsWith('/search');
+                const isActive = item.path === '/' ? location.pathname === '/' : isSearchRoute || location.pathname === item.path;
+
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={cn(
+                      'flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200',
+                      isActive
+                        ? 'bg-cyan-50 text-cyan-700 shadow-[0_10px_24px_rgba(34,211,238,0.14)] dark:bg-cyan-500/10 dark:text-cyan-200'
+                        : `text-gray-700 hover:bg-gray-100/80 dark:text-gray-200 dark:hover:bg-white/10 ${BLUE_CYAN_HOVER_TEXT}`,
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+
           {/* Right Actions */}
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center justify-end gap-2 md:gap-3">
             {/* Announcements */}
             {isAuthenticated && (
               <button
                 onClick={() => setIsAnnouncementPanelOpen(true)}
-                className="relative p-2 rounded-xl text-gray-600 dark:text-slate-300 hover:bg-gray-100/50 dark:hover:bg-white/10 transition-all duration-300"
+                className="relative rounded-xl p-2 text-gray-600 transition-all duration-300 hover:bg-gray-100/50 dark:text-slate-300 dark:hover:bg-white/10"
+                aria-label="通知中心"
               >
                 <IoNotificationsOutline className="w-5 h-5" />
                 {unreadAnnouncements.length > 0 && (
@@ -137,40 +178,18 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
             )}
 
             {/* Theme Toggle */}
-            <AnimatedThemeToggler className="relative p-2 rounded-xl text-gray-600 dark:text-slate-300 hover:bg-gray-100/50 dark:hover:bg-white/10 transition-all duration-300" />
+            <AnimatedThemeToggler className="relative rounded-xl p-2 text-gray-600 transition-all duration-300 hover:bg-gray-100/50 dark:text-slate-300 dark:hover:bg-white/10" />
 
-            {/* Desktop Menu Items */}
-            <div className="hidden md:flex items-center gap-3">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={cn(
-                      'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200',
-                      isActive
-                        ? 'border-cyan-200/70 bg-cyan-50 text-cyan-700 shadow-[0_10px_24px_rgba(34,211,238,0.14)] dark:border-cyan-300/20 dark:bg-cyan-500/10 dark:text-cyan-200'
-                        : `border-transparent bg-gray-100/55 text-gray-700 hover:bg-gray-200/60 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10 ${BLUE_CYAN_HOVER_TEXT}`,
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-
+            <div className="hidden md:flex items-center">
               {isAuthenticated ? (
                 <div className="relative" ref={userMenuRef}>
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-200 outline-none focus:outline-none",
+                      "flex items-center gap-2 rounded-2xl border px-3 py-1.5 transition-all duration-200 outline-none focus:outline-none",
                       isUserMenuOpen
-                        ? "bg-white/20 border-transparent text-blue-600 dark:text-cyan-300"
-                        : "border-transparent hover:bg-white/10 hover:border-white/20 text-gray-700 dark:text-gray-200"
+                        ? "border-cyan-200/60 bg-white/70 text-blue-600 dark:border-cyan-300/20 dark:bg-white/10 dark:text-cyan-300"
+                        : "border-transparent bg-white/35 text-gray-700 hover:bg-white/60 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
                     )}
                   >
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-white font-bold text-sm shadow-sm">
@@ -241,7 +260,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                 >
                   <Link
                     to="/login"
-                    className={`group flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-700 dark:text-gray-200 ${BLUE_CYAN_HOVER_TEXT} bg-gray-100/50 dark:bg-white/5 hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all duration-300 backdrop-blur-sm`}
+                    className={`group flex items-center gap-2 rounded-full bg-gray-100/50 px-4 py-2 text-sm font-medium text-gray-700 transition-all duration-300 backdrop-blur-sm hover:bg-gray-200/50 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10 ${BLUE_CYAN_HOVER_TEXT}`}
                   >
                     <span>登录</span>
                     <ArrowRight className="w-4 h-4 ml-0.5 group-hover:translate-x-0.5 transition-transform duration-300" />

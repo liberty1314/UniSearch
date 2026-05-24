@@ -76,6 +76,11 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     MAX_VISIBLE_HISTORY_ITEMS,
   );
   const isHomePage = location.pathname === "/";
+  const shouldResetFromHomeBack = Boolean(
+    (
+      location.state as { resetHomeSearchBox?: boolean } | null
+    )?.resetHomeSearchBox,
+  );
 
   const [inputValue, setInputValue] = useState(searchParams.keyword || "");
 
@@ -83,6 +88,17 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   useEffect(() => {
     setInputValue(searchParams.keyword || "");
   }, [searchParams.keyword]);
+
+  useEffect(() => {
+    if (!isHomePage || !shouldResetFromHomeBack) {
+      return;
+    }
+
+    setInputValue("");
+    setSearchParams({ keyword: "" });
+    setShowHistory(false);
+    buttonRef.current?.reset?.();
+  }, [isHomePage, setSearchParams, shouldResetFromHomeBack]);
 
   // 自动聚焦
   useEffect(() => {

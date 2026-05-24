@@ -44,11 +44,12 @@ type TMDBTVResult struct {
 }
 
 type TMDBDiscoverMovieParams struct {
-	SortBy            string
+	SortBy             string
 	PrimaryReleaseGTE string
 	PrimaryReleaseLTE string
 	PrimaryReleaseYear int
-	VoteCountGTE      int
+	VoteCountGTE       int
+	Page               int
 }
 
 type TMDBDiscoverTVParams struct {
@@ -58,6 +59,7 @@ type TMDBDiscoverTVParams struct {
 	FirstAirDateYear int
 	VoteCountGTE     int
 	WithGenres       []int
+	Page             int
 }
 
 type TMDBService interface {
@@ -137,6 +139,9 @@ func (s *tmdbService) DiscoverMovies(ctx context.Context, params TMDBDiscoverMov
 	if params.VoteCountGTE > 0 {
 		query.Set("vote_count.gte", fmt.Sprintf("%d", params.VoteCountGTE))
 	}
+	if params.Page > 0 {
+		query.Set("page", fmt.Sprintf("%d", params.Page))
+	}
 
 	var response tmdbListResponse[TMDBMovieResult]
 	if err := s.get(ctx, "/discover/movie", query, &response); err != nil {
@@ -161,6 +166,9 @@ func (s *tmdbService) DiscoverTV(ctx context.Context, params TMDBDiscoverTVParam
 	}
 	if params.VoteCountGTE > 0 {
 		query.Set("vote_count.gte", fmt.Sprintf("%d", params.VoteCountGTE))
+	}
+	if params.Page > 0 {
+		query.Set("page", fmt.Sprintf("%d", params.Page))
 	}
 	if len(params.WithGenres) > 0 {
 		raw := make([]string, 0, len(params.WithGenres))

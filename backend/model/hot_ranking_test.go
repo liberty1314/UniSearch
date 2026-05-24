@@ -12,12 +12,77 @@ func TestNormalizeHotRankingPeriodFallsBackToDay(t *testing.T) {
 	}
 }
 
-func TestNormalizeHotRankingCategoryFallsBackToMovie(t *testing.T) {
+func TestNormalizeHotRankingModeFallsBackToTrend(t *testing.T) {
+	if got := NormalizeHotRankingMode("popular"); got != HotRankingModePopular {
+		t.Fatalf("expected popular, got %q", got)
+	}
+
+	if got := NormalizeHotRankingMode("invalid"); got != HotRankingModeTrend {
+		t.Fatalf("expected fallback trend, got %q", got)
+	}
+}
+
+func TestNormalizeHotRankingCategoryFallsBackToAll(t *testing.T) {
 	if got := NormalizeHotRankingCategory("anime"); got != HotRankingCategoryAnime {
 		t.Fatalf("expected anime, got %q", got)
 	}
 
-	if got := NormalizeHotRankingCategory("invalid"); got != HotRankingCategoryMovie {
-		t.Fatalf("expected fallback movie, got %q", got)
+	if got := NormalizeHotRankingCategory("invalid"); got != HotRankingCategoryAll {
+		t.Fatalf("expected fallback all, got %q", got)
+	}
+}
+
+func TestNormalizeHotRankingPageFallsBackToOne(t *testing.T) {
+	if got := NormalizeHotRankingPage("3"); got != 3 {
+		t.Fatalf("expected 3, got %d", got)
+	}
+
+	if got := NormalizeHotRankingPage("invalid"); got != 1 {
+		t.Fatalf("expected fallback 1, got %d", got)
+	}
+}
+
+func TestNormalizeHotRankingPageSizeCapsAtHundred(t *testing.T) {
+	if got := NormalizeHotRankingPageSize("20"); got != 20 {
+		t.Fatalf("expected 20, got %d", got)
+	}
+
+	if got := NormalizeHotRankingPageSize("300"); got != 100 {
+		t.Fatalf("expected capped 100, got %d", got)
+	}
+}
+
+func TestValidateHotRankingQueryRejectsTrendMonth(t *testing.T) {
+	err := ValidateHotRankingQuery(HotRankingQuery{
+		Mode:   HotRankingModeTrend,
+		Period: HotRankingPeriodMonth,
+	})
+
+	if err == nil {
+		t.Fatal("expected validation error, got nil")
+	}
+}
+
+func TestValidateHotRankingQueryRejectsTrendHistoryFilter(t *testing.T) {
+	err := ValidateHotRankingQuery(HotRankingQuery{
+		Mode:   HotRankingModeTrend,
+		Period: HotRankingPeriodDay,
+		Date:   "2026-05-24",
+	})
+
+	if err == nil {
+		t.Fatal("expected validation error, got nil")
+	}
+}
+
+func TestValidateHotRankingQueryRejectsInvalidPopularMonth(t *testing.T) {
+	err := ValidateHotRankingQuery(HotRankingQuery{
+		Mode:   HotRankingModePopular,
+		Period: HotRankingPeriodMonth,
+		Month:  "2026-13",
+	})
+
+	if err == nil {
+		t.Fatal("expected validation error, got nil")
 	}
 }

@@ -1,16 +1,19 @@
 import React from "react";
 import { Search, Star } from "lucide-react";
 import type { HotRankingItem } from "@/types/hotRanking";
+import type { HotRankingCategory } from "@/types/hotRanking";
+import { getHotCategoryLabel } from "@/components/trending/hotRankingPresentation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 interface HotMediaCardProps {
   item: HotRankingItem;
   rank: number;
+  category: HotRankingCategory;
   onSearch: (item: HotRankingItem) => void;
 }
 
-const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, onSearch }) => {
+const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSearch }) => {
   return (
     <Card className="group p-4 md:p-5" data-testid="hot-media-card">
       <div className="flex flex-col gap-4 sm:flex-row">
@@ -34,9 +37,14 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, onSearch }) => 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                排名 #{rank}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                  排名 #{rank}
+                </p>
+                <span className="rounded-full border border-slate-200/70 bg-white/75 px-2.5 py-0.5 text-[11px] font-medium text-slate-500 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300">
+                  {getHotCategoryLabel(category)}
+                </span>
+              </div>
               <h3 className="truncate text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50">
                 {item.title}
               </h3>

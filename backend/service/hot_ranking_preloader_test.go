@@ -33,9 +33,27 @@ func (f *fakeHotRankingRefreshService) RefreshHotRankings(_ context.Context, per
 	}, nil
 }
 
+type fakeHotRankingCacheForPreloader struct {
+	clearCalls []string
+}
+
+func (f *fakeHotRankingCacheForPreloader) Load(_ context.Context, _ model.HotRankingQuery, _ *model.HotRankingResponse) (bool, error) {
+	return false, nil
+}
+
+func (f *fakeHotRankingCacheForPreloader) Store(_ context.Context, _ model.HotRankingQuery, _ model.HotRankingResponse) error {
+	return nil
+}
+
+func (f *fakeHotRankingCacheForPreloader) ClearByPrefix(_ context.Context, prefix string) error {
+	f.clearCalls = append(f.clearCalls, prefix)
+	return nil
+}
+
 func TestHotRankingPreloaderWarmAllRefreshesAllCombinations(t *testing.T) {
 	refreshService := &fakeHotRankingRefreshService{}
-	preloader := NewHotRankingPreloader(refreshService, HotRankingPreloaderConfig{
+	cache := &fakeHotRankingCacheForPreloader{}
+	preloader := NewHotRankingPreloaderWithCache(refreshService, cache, HotRankingPreloaderConfig{
 		Enabled:     true,
 		DailyTime:   "10:00",
 		Timeout:     2 * time.Second,
@@ -45,16 +63,23 @@ func TestHotRankingPreloaderWarmAllRefreshesAllCombinations(t *testing.T) {
 
 	result := preloader.WarmAll(context.Background())
 
-	if result.Total != 12 {
-		t.Fatalf("expected 12 tasks, got %d", result.Total)
+	if result.Total != 24 {
+		t.Fatalf("expected 24 tasks, got %d", result.Total)
 	}
 
-	if result.Success != 12 || result.Failed != 0 {
+	if result.Success != 24 || result.Failed != 0 {
 		t.Fatalf("expected all warm tasks success, got success=%d failed=%d", result.Success, result.Failed)
 	}
 
-	if len(refreshService.calls) != 12 {
-		t.Fatalf("expected 12 refresh calls, got %d", len(refreshService.calls))
+	if len(refreshService.calls) != 24 {
+		t.Fatalf("expected 24 refresh calls, got %d", len(refreshService.calls))
+	}
+
+	if !containsRefreshCall(refreshService.calls, "day:all") {
+		t.Fatalf("expected aggregated all category to be preloaded, got calls=%v", refreshService.calls)
+	}
+	if len(cache.clearCalls) == 0 {
+		t.Fatalf("expected cache clear before preload refresh")
 	}
 }
 
@@ -74,21 +99,30 @@ func TestHotRankingPreloaderWarmAllContinuesWhenSingleRefreshFails(t *testing.T)
 
 	result := preloader.WarmAll(context.Background())
 
-	if result.Total != 12 {
-		t.Fatalf("expected 12 tasks, got %d", result.Total)
+	if result.Total != 24 {
+		t.Fatalf("expected 24 tasks, got %d", result.Total)
 	}
 
-	if result.Success != 11 || result.Failed != 1 {
-		t.Fatalf("expected one failure, got success=%d failed=%d", result.Success, result.Failed)
+	if result.Success != 22 || result.Failed != 2 {
+		t.Fatalf("expected two failures for duplicated day/movie refresh, got success=%d failed=%d", result.Success, result.Failed)
 	}
 
-	if len(result.Errors) != 1 {
-		t.Fatalf("expected one error detail, got %d", len(result.Errors))
+	if len(result.Errors) != 2 {
+		t.Fatalf("expected two error details, got %d", len(result.Errors))
 	}
 
-	if len(refreshService.calls) != 12 {
+	if len(refreshService.calls) != 24 {
 		t.Fatalf("expected warm all to continue after failure, got %d calls", len(refreshService.calls))
 	}
+}
+
+func containsRefreshCall(calls []string, target string) bool {
+	for _, call := range calls {
+		if call == target {
+			return true
+		}
+	}
+	return false
 }
 
 func TestHotRankingPreloaderNextRunUsesNextLocalSchedule(t *testing.T) {

@@ -186,12 +186,16 @@ describe("SearchPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "返回" }));
 
     expect(clearResultsMock).toHaveBeenCalled();
+    expect(setSearchParamsMock).toHaveBeenCalledWith({ keyword: "" });
     expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/"');
     expect(screen.getByTestId("location-probe")).toHaveTextContent(
       '"skipHomeEntrance":true',
     );
     expect(screen.getByTestId("location-probe")).toHaveTextContent(
       '"routeTransition":"backward"',
+    );
+    expect(screen.getByTestId("location-probe")).toHaveTextContent(
+      '"resetHomeSearchBox":true',
     );
   });
 
@@ -207,6 +211,7 @@ describe("SearchPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "返回" }));
 
     expect(clearResultsMock).toHaveBeenCalled();
+    expect(setSearchParamsMock).toHaveBeenCalledWith({ keyword: "" });
     expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/hot"');
   });
 });

@@ -8,7 +8,7 @@ import (
 	"unisearch/model"
 )
 
-func TestHotRankingCacheKeyIncludesPeriodCategoryLanguageAndRegion(t *testing.T) {
+func TestHotRankingCacheKeyIncludesModePeriodCategoryTimeLanguageAndRegion(t *testing.T) {
 	oldConfig := config.AppConfig
 	defer func() {
 		config.AppConfig = oldConfig
@@ -19,8 +19,15 @@ func TestHotRankingCacheKeyIncludesPeriodCategoryLanguageAndRegion(t *testing.T)
 		TMDBDefaultRegion:   "CN",
 	}
 
-	key := buildHotRankingCacheKey(model.HotRankingPeriodWeek, model.HotRankingCategoryAnime)
-	expected := "hot-ranking:week:anime:zh-CN:CN"
+	key := buildHotRankingCacheKey(model.HotRankingQuery{
+		Mode:      model.HotRankingModePopular,
+		Period:    model.HotRankingPeriodWeek,
+		Category:  model.HotRankingCategoryAnime,
+		WeekStart: "2026-05-18",
+		Page:      1,
+		PageSize:  100,
+	})
+	expected := "hot-ranking:v2:popular:week:anime:2026-05-18:zh-CN:CN"
 	if key != expected {
 		t.Fatalf("expected %q, got %q", expected, key)
 	}

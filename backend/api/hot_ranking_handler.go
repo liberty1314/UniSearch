@@ -10,7 +10,7 @@ import (
 )
 
 type HotRankingQueryService interface {
-	GetHotRankings(ctx context.Context, period model.HotRankingPeriod, category model.HotRankingCategory) (model.HotRankingResponse, error)
+	GetHotRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error)
 }
 
 func GetHotRankingHandler(hotRankingService HotRankingQueryService) gin.HandlerFunc {
@@ -20,10 +20,25 @@ func GetHotRankingHandler(hotRankingService HotRankingQueryService) gin.HandlerF
 			return
 		}
 
-		period := model.NormalizeHotRankingPeriod(c.Query("period"))
-		category := model.NormalizeHotRankingCategory(c.Query("category"))
+		query := model.HotRankingQuery{
+			Mode:      model.NormalizeHotRankingMode(c.Query("mode")),
+			Period:    model.NormalizeHotRankingPeriod(c.Query("period")),
+			Category:  model.NormalizeHotRankingCategory(c.Query("category")),
+			SortBy:    model.NormalizeHotRankingSortBy(c.Query("sort_by")),
+			Date:      c.Query("date"),
+			WeekStart: c.Query("week_start"),
+			Month:     c.Query("month"),
+			Year:      c.Query("year"),
+			Page:      model.NormalizeHotRankingPage(c.Query("page")),
+			PageSize:  model.NormalizeHotRankingPageSize(c.Query("page_size")),
+		}
 
-		response, err := hotRankingService.GetHotRankings(c.Request.Context(), period, category)
+		if err := model.ValidateHotRankingQuery(query); err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResponse(400, "无效的热门榜单参数: "+err.Error()))
+			return
+		}
+
+		response, err := hotRankingService.GetHotRankings(c.Request.Context(), query)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, model.NewErrorResponse(500, "获取热门榜单失败: "+err.Error()))
 			return

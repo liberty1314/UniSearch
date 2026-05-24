@@ -13,6 +13,7 @@ const {
   warningToastMock,
   errorToastMock,
   logoutMock,
+  resetButtonMock,
 } = vi.hoisted(() => ({
   performSearchMock: vi.fn(),
   setSearchParamsMock: vi.fn(),
@@ -22,6 +23,7 @@ const {
   warningToastMock: vi.fn(),
   errorToastMock: vi.fn(),
   logoutMock: vi.fn(),
+  resetButtonMock: vi.fn(),
 }));
 
 let authState = {
@@ -36,6 +38,12 @@ let currentLocation = {
   pathname: "/",
   search: "",
   hash: "",
+  state: undefined as unknown,
+};
+
+let searchStoreState = {
+  searchParams: { keyword: "" },
+  isLoading: false,
 };
 
 vi.mock("react-router-dom", async () => {
@@ -53,12 +61,11 @@ vi.mock("react-router-dom", async () => {
 vi.mock("@/stores/searchStore", () => ({
   MAX_SEARCH_HISTORY: 8,
   useSearchStore: () => ({
-    searchParams: { keyword: "" },
+    ...searchStoreState,
     setSearchParams: setSearchParamsMock,
     performSearch: performSearchMock,
     clearHistory: clearHistoryMock,
     removeFromHistory: removeFromHistoryMock,
-    isLoading: false,
   }),
   useSearchHistory: () => searchHistoryState,
 }));
@@ -92,7 +99,7 @@ vi.mock("@/components/ui/stateful-button", async () => {
   >(({ children, onClick, ...props }, ref) => {
     React.useImperativeHandle(ref, () => ({
       run: (fn) => fn(),
-      reset: vi.fn(),
+      reset: resetButtonMock,
     }));
 
     return (
@@ -119,6 +126,7 @@ describe("SearchBox", () => {
     warningToastMock.mockReset();
     errorToastMock.mockReset();
     logoutMock.mockReset();
+    resetButtonMock.mockReset();
 
     authState = {
       token: "jwt-token",
@@ -131,6 +139,11 @@ describe("SearchBox", () => {
       pathname: "/",
       search: "",
       hash: "",
+      state: undefined,
+    };
+    searchStoreState = {
+      searchParams: { keyword: "" },
+      isLoading: false,
     };
   });
 
@@ -368,6 +381,7 @@ describe("SearchBox", () => {
       pathname: "/search",
       search: "",
       hash: "",
+      state: undefined,
     };
 
     render(<SearchBox />);
@@ -375,11 +389,33 @@ describe("SearchBox", () => {
     expect(screen.queryByText("示例搜索")).not.toBeInTheDocument();
   });
 
+  it("clears the homepage input and resets button animation when returning from the search page", async () => {
+    currentLocation = {
+      pathname: "/",
+      search: "",
+      hash: "",
+      state: { resetHomeSearchBox: true },
+    };
+    searchStoreState = {
+      searchParams: { keyword: "旧关键词" },
+      isLoading: false,
+    };
+
+    render(<SearchBox />);
+
+    await waitFor(() => {
+      expect(setSearchParamsMock).toHaveBeenCalledWith({ keyword: "" });
+    });
+    expect(screen.getByPlaceholderText("搜索网盘资源...")).toHaveValue("");
+    expect(resetButtonMock).toHaveBeenCalled();
+  });
+
   it("keeps instant searching behavior when already on the standalone results page", async () => {
     currentLocation = {
       pathname: "/search",
       search: "?q=%E6%97%A7%E5%85%B3%E9%94%AE%E8%AF%8D",
       hash: "",
+      state: undefined,
     };
     performSearchMock.mockResolvedValue(undefined);
 
@@ -440,6 +476,7 @@ describe("SearchBox", () => {
       pathname: "/search",
       search: "",
       hash: "",
+      state: undefined,
     };
     searchAccessStatus = "authenticated";
     performSearchMock.mockRejectedValue({

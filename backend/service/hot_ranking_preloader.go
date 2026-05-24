@@ -37,10 +37,16 @@ type HotRankingPreloadResult struct {
 
 type HotRankingPreloader struct {
 	refreshService HotRankingRefreshService
+	cache          HotRankingCache
 	config         HotRankingPreloaderConfig
 }
 
-var hotRankingPreloadPeriods = []model.HotRankingPeriod{
+var hotRankingTrendPreloadPeriods = []model.HotRankingPeriod{
+	model.HotRankingPeriodDay,
+	model.HotRankingPeriodWeek,
+}
+
+var hotRankingPopularPreloadPeriods = []model.HotRankingPeriod{
 	model.HotRankingPeriodDay,
 	model.HotRankingPeriodWeek,
 	model.HotRankingPeriodMonth,
@@ -48,6 +54,7 @@ var hotRankingPreloadPeriods = []model.HotRankingPeriod{
 }
 
 var hotRankingPreloadCategories = []model.HotRankingCategory{
+	model.HotRankingCategoryAll,
 	model.HotRankingCategoryMovie,
 	model.HotRankingCategoryTV,
 	model.HotRankingCategoryAnime,
@@ -60,9 +67,17 @@ func NewHotRankingPreloader(refreshService HotRankingRefreshService, cfg HotRank
 	}
 }
 
+func NewHotRankingPreloaderWithCache(refreshService HotRankingRefreshService, rankingCache HotRankingCache, cfg HotRankingPreloaderConfig) *HotRankingPreloader {
+	return &HotRankingPreloader{
+		refreshService: refreshService,
+		cache:          rankingCache,
+		config:         normalizeHotRankingPreloaderConfig(cfg),
+	}
+}
+
 func (p *HotRankingPreloader) WarmAll(ctx context.Context) HotRankingPreloadResult {
 	result := HotRankingPreloadResult{
-		Total: len(hotRankingPreloadPeriods) * len(hotRankingPreloadCategories),
+		Total: (len(hotRankingTrendPreloadPeriods) + len(hotRankingPopularPreloadPeriods)) * len(hotRankingPreloadCategories),
 	}
 	if p == nil || !p.config.Enabled || p.refreshService == nil {
 		return result
@@ -105,6 +120,9 @@ func (p *HotRankingPreloader) WarmAll(ctx context.Context) HotRankingPreloadResu
 					taskCtx, cancel = context.WithTimeout(ctx, p.config.Timeout)
 				}
 
+				if p.cache != nil {
+					_ = p.cache.ClearByPrefix(taskCtx, "hot-ranking:v2")
+				}
 				_, err := p.refreshService.RefreshHotRankings(taskCtx, item.period, item.category)
 				cancel()
 				resultCh <- HotRankingPreloadError{
@@ -116,7 +134,21 @@ func (p *HotRankingPreloader) WarmAll(ctx context.Context) HotRankingPreloadResu
 		}()
 	}
 
-	for _, period := range hotRankingPreloadPeriods {
+	for _, period := range hotRankingTrendPreloadPeriods {
+		for _, category := range hotRankingPreloadCategories {
+			select {
+			case <-ctx.Done():
+				close(taskCh)
+				workers.Wait()
+				close(resultCh)
+				collector.Wait()
+				return result
+			case taskCh <- task{period: period, category: category}:
+			}
+		}
+	}
+
+	for _, period := range hotRankingPopularPreloadPeriods {
 		for _, category := range hotRankingPreloadCategories {
 			select {
 			case <-ctx.Done():

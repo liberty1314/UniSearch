@@ -4,7 +4,8 @@ import {
   buildHeroItems,
   buildHotPageMeta,
   buildRankedItems,
-  filterDuplicateSpotlight,
+  resolvePrimarySection,
+  resolveSecondarySections,
 } from "@/components/trending/hotRankingPresentation";
 
 const spotlight: HotRankingItem = {
@@ -14,7 +15,7 @@ const spotlight: HotRankingItem = {
   ranking_category: "movie",
   title: "沙丘 2",
   original_title: "Dune: Part Two",
-  overview: "test overview",
+  overview: "保罗踏上新的征程，在预言、家族与沙丘权力之间做出抉择。",
   poster_url: "https://image.tmdb.org/t/p/w500/poster.jpg",
   backdrop_url: "https://image.tmdb.org/t/p/w500/backdrop.jpg",
   vote_average: 8.8,
@@ -35,25 +36,75 @@ const nextItem: HotRankingItem = {
 };
 
 const response: HotRankingResponse = {
+  mode: "trend",
   period: "day",
+  page: 1,
+  page_size: 100,
+  has_more: false,
   updated_at: "2026-05-23T12:00:00Z",
   source: "tmdb",
-  note: "每日、每周使用 TMDB 趋势口径。",
+  note: "每日、每周按热门趋势整理。",
   sections: [],
 };
 
+const aggregatedResponse: HotRankingResponse = {
+  mode: "trend",
+  period: "week",
+  page: 1,
+  page_size: 100,
+  has_more: false,
+  updated_at: "2026-05-24T02:00:00Z",
+  source: "tmdb",
+  note: "每日、每周按热门趋势整理。",
+  sections: [
+    {
+      category: "movie",
+      title: "热门电影",
+      description: "movie",
+      spotlight,
+      items: [spotlight, nextItem],
+    },
+    {
+      category: "tv",
+      title: "热门电视剧",
+      description: "tv",
+      spotlight: {
+        ...spotlight,
+        id: 3,
+        tmdb_id: 3,
+        media_type: "tv",
+        ranking_category: "tv",
+        title: "最后生还者",
+        original_title: "The Last of Us",
+        tmdb_url: "https://www.themoviedb.org/tv/3",
+      },
+      items: [],
+    },
+    {
+      category: "anime",
+      title: "热门动漫",
+      description: "anime",
+      spotlight: {
+        ...spotlight,
+        id: 4,
+        tmdb_id: 4,
+        media_type: "tv",
+        ranking_category: "anime",
+        title: "葬送的芙莉莲",
+        original_title: "葬送のフリーレン",
+        tmdb_url: "https://www.themoviedb.org/tv/4",
+      },
+      items: [],
+    },
+  ],
+};
+
 describe("hotRankingPresentation", () => {
-  it("会过滤与榜首相同的第一条列表项", () => {
-    const items = [spotlight, nextItem];
-
-    expect(filterDuplicateSpotlight(spotlight, items)).toEqual([nextItem]);
-  });
-
   it("会为列表项补充连续名次", () => {
-    const rankedItems = buildRankedItems([nextItem], 2);
+    const rankedItems = buildRankedItems([nextItem], 1);
 
     expect(rankedItems).toHaveLength(1);
-    expect(rankedItems[0].rank).toBe(2);
+    expect(rankedItems[0].rank).toBe(1);
     expect(rankedItems[0].item.title).toBe("奥本海默");
   });
 
@@ -61,7 +112,7 @@ describe("hotRankingPresentation", () => {
     const heroItems = buildHeroItems({
       category: "movie",
       title: "热门电影",
-      description: "test",
+      description: "按热门趋势整理的电影热门内容。",
       spotlight,
       items: [spotlight, nextItem],
     });
@@ -74,6 +125,22 @@ describe("hotRankingPresentation", () => {
   it("会生成头部展示元信息", () => {
     expect(buildHotPageMeta(response, "movie")).toMatchObject({
       categoryLabel: "电影",
+    });
+  });
+
+  it("会在聚合模式下选出主分区与次级分区", () => {
+    expect(resolvePrimarySection(aggregatedResponse.sections)?.category).toBe("movie");
+    expect(resolveSecondarySections(aggregatedResponse.sections)).toHaveLength(2);
+    expect(resolveSecondarySections(aggregatedResponse.sections)[0].category).toBe("tv");
+  });
+
+  it("会生成聚合页的头部展示元信息", () => {
+    expect(buildHotPageMeta(aggregatedResponse, "all")).toMatchObject({
+      categoryLabel: "全部热门",
+      periodLabel: "周榜",
+      note: "每日、每周按热门趋势整理。",
+      sectionCount: 3,
+      sourceLabel: "热门趋势",
     });
   });
 });

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"unisearch/model"
@@ -30,17 +31,19 @@ func NewHotRankingServiceWithRedis(redisCache *cache.RedisCache) *HotRankingServ
 	return NewHotRankingService(NewTMDBService(), newHotRankingCache(redisCache))
 }
 
-func (s *HotRankingService) GetHotRankings(ctx context.Context, period model.HotRankingPeriod, category model.HotRankingCategory) (model.HotRankingResponse, error) {
+func (s *HotRankingService) GetHotRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
 	if s == nil || s.tmdbService == nil {
 		return model.HotRankingResponse{}, errors.New("热门榜单服务未初始化")
 	}
 
-	period = model.NormalizeHotRankingPeriod(string(period))
-	category = model.NormalizeHotRankingCategory(string(category))
+	query = normalizeHotRankingQuery(query)
+	if err := validateHotRankingQuery(query); err != nil {
+		return model.HotRankingResponse{}, err
+	}
 
 	var cached model.HotRankingResponse
-	if s.cache != nil {
-		hit, err := s.cache.Load(ctx, period, category, &cached)
+	if s.cache != nil && shouldUseHotRankingCache(query) {
+		hit, err := s.cache.Load(ctx, query, &cached)
 		if err != nil {
 			return model.HotRankingResponse{}, err
 		}
@@ -49,13 +52,13 @@ func (s *HotRankingService) GetHotRankings(ctx context.Context, period model.Hot
 		}
 	}
 
-	response, err := s.fetchHotRankings(ctx, period, category)
+	response, err := s.fetchHotRankings(ctx, query)
 	if err != nil {
 		return model.HotRankingResponse{}, normalizeTMDBServiceError(err)
 	}
 
-	if s.cache != nil {
-		if err := s.cache.Store(ctx, period, category, response); err != nil {
+	if s.cache != nil && shouldUseHotRankingCache(query) {
+		if err := s.cache.Store(ctx, query, response); err != nil {
 			return model.HotRankingResponse{}, err
 		}
 	}
@@ -68,16 +71,19 @@ func (s *HotRankingService) RefreshHotRankings(ctx context.Context, period model
 		return model.HotRankingResponse{}, errors.New("热门榜单服务未初始化")
 	}
 
-	period = model.NormalizeHotRankingPeriod(string(period))
-	category = model.NormalizeHotRankingCategory(string(category))
+	query := normalizeHotRankingQuery(model.HotRankingQuery{
+		Mode:     resolveDefaultModeByPeriod(period),
+		Period:   period,
+		Category: category,
+	})
 
-	response, err := s.fetchHotRankings(ctx, period, category)
+	response, err := s.fetchHotRankings(ctx, query)
 	if err != nil {
 		return model.HotRankingResponse{}, normalizeTMDBServiceError(err)
 	}
 
 	if s.cache != nil {
-		if err := s.cache.Store(ctx, period, category, response); err != nil {
+		if err := s.cache.Store(ctx, query, response); err != nil {
 			return model.HotRankingResponse{}, err
 		}
 	}
@@ -85,30 +91,106 @@ func (s *HotRankingService) RefreshHotRankings(ctx context.Context, period model
 	return response, nil
 }
 
-func (s *HotRankingService) fetchHotRankings(ctx context.Context, period model.HotRankingPeriod, category model.HotRankingCategory) (model.HotRankingResponse, error) {
-	switch category {
+func (s *HotRankingService) fetchHotRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
+	if query.Mode == model.HotRankingModeTrend {
+		return s.fetchTrendRankings(ctx, query)
+	}
+	return s.fetchPopularRankings(ctx, query)
+}
+
+func (s *HotRankingService) fetchTrendRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
+	switch query.Category {
+	case model.HotRankingCategoryAll:
+		return s.fetchAggregateTrendRankings(ctx, query)
 	case model.HotRankingCategoryTV:
-		return s.fetchTVRankings(ctx, period)
+		return s.fetchTrendTVRankings(ctx, query)
 	case model.HotRankingCategoryAnime:
-		return s.fetchAnimeRankings(ctx, period)
+		return s.fetchTrendAnimeRankings(ctx, query)
 	default:
-		return s.fetchMovieRankings(ctx, period)
+		return s.fetchTrendMovieRankings(ctx, query)
 	}
 }
 
-func (s *HotRankingService) fetchMovieRankings(ctx context.Context, period model.HotRankingPeriod) (model.HotRankingResponse, error) {
+func (s *HotRankingService) fetchPopularRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
+	switch query.Category {
+	case model.HotRankingCategoryAll:
+		return s.fetchAggregatePopularRankings(ctx, query)
+	case model.HotRankingCategoryTV:
+		return s.fetchPopularTVRankings(ctx, query)
+	case model.HotRankingCategoryAnime:
+		return s.fetchPopularAnimeRankings(ctx, query)
+	default:
+		return s.fetchPopularMovieRankings(ctx, query)
+	}
+}
+
+func (s *HotRankingService) fetchAggregateTrendRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
+	movie, err := s.fetchTrendMovieRankings(ctx, query)
+	if err != nil {
+		return model.HotRankingResponse{}, err
+	}
+
+	tv, err := s.fetchTrendTVRankings(ctx, query)
+	if err != nil {
+		return model.HotRankingResponse{}, err
+	}
+
+	anime, err := s.fetchTrendAnimeRankings(ctx, query)
+	if err != nil {
+		return model.HotRankingResponse{}, err
+	}
+
+	sections := make([]model.HotRankingSection, 0, 3)
+	if len(movie.Sections) > 0 {
+		sections = append(sections, movie.Sections[0])
+	}
+	if len(tv.Sections) > 0 {
+		sections = append(sections, tv.Sections[0])
+	}
+	if len(anime.Sections) > 0 {
+		sections = append(sections, anime.Sections[0])
+	}
+
+	return buildAggregateHotRankingResponse(query, sections), nil
+}
+
+func (s *HotRankingService) fetchAggregatePopularRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
+	movie, err := s.fetchPopularMovieRankings(ctx, query)
+	if err != nil {
+		return model.HotRankingResponse{}, err
+	}
+
+	tv, err := s.fetchPopularTVRankings(ctx, query)
+	if err != nil {
+		return model.HotRankingResponse{}, err
+	}
+
+	anime, err := s.fetchPopularAnimeRankings(ctx, query)
+	if err != nil {
+		return model.HotRankingResponse{}, err
+	}
+
+	sections := make([]model.HotRankingSection, 0, 3)
+	if len(movie.Sections) > 0 {
+		sections = append(sections, movie.Sections[0])
+	}
+	if len(tv.Sections) > 0 {
+		sections = append(sections, tv.Sections[0])
+	}
+	if len(anime.Sections) > 0 {
+		sections = append(sections, anime.Sections[0])
+	}
+
+	return buildAggregateHotRankingResponse(query, sections), nil
+}
+
+func (s *HotRankingService) fetchTrendMovieRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
 	genres, err := s.tmdbService.GetMovieGenres(ctx)
 	if err != nil {
 		return model.HotRankingResponse{}, err
 	}
 
-	var rawItems []TMDBMovieResult
-	switch period {
-	case model.HotRankingPeriodDay, model.HotRankingPeriodWeek:
-		rawItems, err = s.tmdbService.GetTrendingMovies(ctx, string(period))
-	default:
-		rawItems, err = s.tmdbService.DiscoverMovies(ctx, buildMovieDiscoverParams(period))
-	}
+	rawItems, err := s.tmdbService.GetTrendingMovies(ctx, string(query.Period))
 	if err != nil {
 		return model.HotRankingResponse{}, err
 	}
@@ -118,22 +200,16 @@ func (s *HotRankingService) fetchMovieRankings(ctx context.Context, period model
 		items = append(items, mapMovieResultToHotRankingItem(item, model.HotRankingCategoryMovie, genres))
 	}
 
-	return buildHotRankingResponse(period, model.HotRankingCategoryMovie, items), nil
+	return buildHotRankingResponse(query, model.HotRankingCategoryMovie, items), nil
 }
 
-func (s *HotRankingService) fetchTVRankings(ctx context.Context, period model.HotRankingPeriod) (model.HotRankingResponse, error) {
+func (s *HotRankingService) fetchTrendTVRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
 	genres, err := s.tmdbService.GetTVGenres(ctx)
 	if err != nil {
 		return model.HotRankingResponse{}, err
 	}
 
-	var rawItems []TMDBTVResult
-	switch period {
-	case model.HotRankingPeriodDay, model.HotRankingPeriodWeek:
-		rawItems, err = s.tmdbService.GetTrendingTV(ctx, string(period))
-	default:
-		rawItems, err = s.tmdbService.DiscoverTV(ctx, buildTVDiscoverParams(period, nil))
-	}
+	rawItems, err := s.tmdbService.GetTrendingTV(ctx, string(query.Period))
 	if err != nil {
 		return model.HotRankingResponse{}, err
 	}
@@ -143,22 +219,16 @@ func (s *HotRankingService) fetchTVRankings(ctx context.Context, period model.Ho
 		items = append(items, mapTVResultToHotRankingItem(item, model.HotRankingCategoryTV, genres))
 	}
 
-	return buildHotRankingResponse(period, model.HotRankingCategoryTV, items), nil
+	return buildHotRankingResponse(query, model.HotRankingCategoryTV, items), nil
 }
 
-func (s *HotRankingService) fetchAnimeRankings(ctx context.Context, period model.HotRankingPeriod) (model.HotRankingResponse, error) {
+func (s *HotRankingService) fetchTrendAnimeRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
 	genres, err := s.tmdbService.GetTVGenres(ctx)
 	if err != nil {
 		return model.HotRankingResponse{}, err
 	}
 
-	var rawItems []TMDBTVResult
-	switch period {
-	case model.HotRankingPeriodDay, model.HotRankingPeriodWeek:
-		rawItems, err = s.tmdbService.GetTrendingTV(ctx, string(period))
-	default:
-		rawItems, err = s.tmdbService.DiscoverTV(ctx, buildTVDiscoverParams(period, []int{16}))
-	}
+	rawItems, err := s.tmdbService.GetTrendingTV(ctx, string(query.Period))
 	if err != nil {
 		return model.HotRankingResponse{}, err
 	}
@@ -171,47 +241,168 @@ func (s *HotRankingService) fetchAnimeRankings(ctx context.Context, period model
 		items = append(items, mapTVResultToHotRankingItem(item, model.HotRankingCategoryAnime, genres))
 	}
 
-	return buildHotRankingResponse(period, model.HotRankingCategoryAnime, items), nil
+	return buildHotRankingResponse(query, model.HotRankingCategoryAnime, items), nil
 }
 
-func buildMovieDiscoverParams(period model.HotRankingPeriod) TMDBDiscoverMovieParams {
-	params := TMDBDiscoverMovieParams{
-		SortBy:       "popularity.desc",
-		VoteCountGTE: 50,
+func (s *HotRankingService) fetchPopularMovieRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
+	genres, err := s.tmdbService.GetMovieGenres(ctx)
+	if err != nil {
+		return model.HotRankingResponse{}, err
 	}
 
-	now := time.Now().UTC()
-	switch period {
+	rawItems, err := s.fetchDiscoverMoviePages(ctx, buildMovieDiscoverParams(query))
+	if err != nil {
+		return model.HotRankingResponse{}, err
+	}
+
+	items := make([]model.HotRankingItem, 0, len(rawItems))
+	for _, item := range rawItems {
+		items = append(items, mapMovieResultToHotRankingItem(item, model.HotRankingCategoryMovie, genres))
+	}
+
+	return buildHotRankingResponse(query, model.HotRankingCategoryMovie, items), nil
+}
+
+func (s *HotRankingService) fetchPopularTVRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
+	genres, err := s.tmdbService.GetTVGenres(ctx)
+	if err != nil {
+		return model.HotRankingResponse{}, err
+	}
+
+	rawItems, err := s.fetchDiscoverTVPages(ctx, buildTVDiscoverParams(query, nil))
+	if err != nil {
+		return model.HotRankingResponse{}, err
+	}
+
+	items := make([]model.HotRankingItem, 0, len(rawItems))
+	for _, item := range rawItems {
+		items = append(items, mapTVResultToHotRankingItem(item, model.HotRankingCategoryTV, genres))
+	}
+
+	return buildHotRankingResponse(query, model.HotRankingCategoryTV, items), nil
+}
+
+func (s *HotRankingService) fetchPopularAnimeRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
+	genres, err := s.tmdbService.GetTVGenres(ctx)
+	if err != nil {
+		return model.HotRankingResponse{}, err
+	}
+
+	rawItems, err := s.fetchDiscoverTVPages(ctx, buildTVDiscoverParams(query, []int{16}))
+	if err != nil {
+		return model.HotRankingResponse{}, err
+	}
+
+	items := make([]model.HotRankingItem, 0, len(rawItems))
+	for _, item := range rawItems {
+		if !isAnimeTV(item) {
+			continue
+		}
+		items = append(items, mapTVResultToHotRankingItem(item, model.HotRankingCategoryAnime, genres))
+	}
+
+	return buildHotRankingResponse(query, model.HotRankingCategoryAnime, items), nil
+}
+
+func (s *HotRankingService) fetchDiscoverMoviePages(ctx context.Context, params TMDBDiscoverMovieParams) ([]TMDBMovieResult, error) {
+	pageCount := pageCountForSize(params.Page, 100)
+	items := make([]TMDBMovieResult, 0, 100)
+	basePage := resolveBasePage(params.Page, 100)
+
+	for offset := 0; offset < pageCount; offset++ {
+		pageParams := params
+		pageParams.Page = basePage + offset
+		pageItems, err := s.tmdbService.DiscoverMovies(ctx, pageParams)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, pageItems...)
+		if len(pageItems) == 0 {
+			break
+		}
+	}
+
+	return items, nil
+}
+
+func (s *HotRankingService) fetchDiscoverTVPages(ctx context.Context, params TMDBDiscoverTVParams) ([]TMDBTVResult, error) {
+	pageCount := pageCountForSize(params.Page, 100)
+	items := make([]TMDBTVResult, 0, 100)
+	basePage := resolveBasePage(params.Page, 100)
+
+	for offset := 0; offset < pageCount; offset++ {
+		pageParams := params
+		pageParams.Page = basePage + offset
+		pageItems, err := s.tmdbService.DiscoverTV(ctx, pageParams)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, pageItems...)
+		if len(pageItems) == 0 {
+			break
+		}
+	}
+
+	return items, nil
+}
+
+func buildMovieDiscoverParams(query model.HotRankingQuery) TMDBDiscoverMovieParams {
+	params := TMDBDiscoverMovieParams{
+		SortBy:       resolveDiscoverSortBy(query),
+		VoteCountGTE: 50,
+		Page:         resolveBasePage(query.Page, query.PageSize),
+	}
+
+	switch query.Period {
+	case model.HotRankingPeriodDay:
+		params.PrimaryReleaseLTE = query.Date
+	case model.HotRankingPeriodWeek:
+		start, end := resolveWeekRange(query.WeekStart)
+		params.PrimaryReleaseGTE = start
+		params.PrimaryReleaseLTE = end
+	case model.HotRankingPeriodMonth:
+		start, end := resolveMonthRange(query.Month)
+		params.PrimaryReleaseGTE = start
+		params.PrimaryReleaseLTE = end
 	case model.HotRankingPeriodYear:
-		params.PrimaryReleaseYear = now.Year()
-	default:
-		start := now.AddDate(0, 0, -30)
-		params.PrimaryReleaseGTE = start.Format("2006-01-02")
-		params.PrimaryReleaseLTE = now.Format("2006-01-02")
+		params.PrimaryReleaseYear = resolveYear(query.Year)
 	}
 	return params
 }
 
-func buildTVDiscoverParams(period model.HotRankingPeriod, genres []int) TMDBDiscoverTVParams {
+func buildTVDiscoverParams(query model.HotRankingQuery, genres []int) TMDBDiscoverTVParams {
 	params := TMDBDiscoverTVParams{
-		SortBy:       "popularity.desc",
+		SortBy:       resolveDiscoverSortBy(query),
 		VoteCountGTE: 50,
 		WithGenres:   genres,
+		Page:         resolveBasePage(query.Page, query.PageSize),
 	}
 
-	now := time.Now().UTC()
-	switch period {
+	switch query.Period {
+	case model.HotRankingPeriodDay:
+		params.FirstAirDateLTE = query.Date
+	case model.HotRankingPeriodWeek:
+		start, end := resolveWeekRange(query.WeekStart)
+		params.FirstAirDateGTE = start
+		params.FirstAirDateLTE = end
+	case model.HotRankingPeriodMonth:
+		start, end := resolveMonthRange(query.Month)
+		params.FirstAirDateGTE = start
+		params.FirstAirDateLTE = end
 	case model.HotRankingPeriodYear:
-		params.FirstAirDateYear = now.Year()
-	default:
-		start := now.AddDate(0, 0, -30)
-		params.FirstAirDateGTE = start.Format("2006-01-02")
-		params.FirstAirDateLTE = now.Format("2006-01-02")
+		params.FirstAirDateYear = resolveYear(query.Year)
 	}
 	return params
 }
 
-func buildHotRankingResponse(period model.HotRankingPeriod, category model.HotRankingCategory, items []model.HotRankingItem) model.HotRankingResponse {
+func resolveDiscoverSortBy(query model.HotRankingQuery) string {
+	if query.SortBy == "" {
+		return string(model.HotRankingSortByPopularity)
+	}
+	return string(query.SortBy)
+}
+
+func buildHotRankingResponse(query model.HotRankingQuery, category model.HotRankingCategory, items []model.HotRankingItem) model.HotRankingResponse {
 	sectionTitle := map[model.HotRankingCategory]string{
 		model.HotRankingCategoryMovie: "热门电影",
 		model.HotRankingCategoryTV:    "热门电视剧",
@@ -231,14 +422,21 @@ func buildHotRankingResponse(period model.HotRankingPeriod, category model.HotRa
 	}
 
 	note := "数据来自 TMDB 热门榜。"
-	if period == model.HotRankingPeriodDay || period == model.HotRankingPeriodWeek {
-		note = "每日、每周使用 TMDB 趋势口径。"
+	if query.Mode == model.HotRankingModeTrend {
+		note = "当前展示每日或每周趋势榜单。"
 	} else {
-		note = "每月、每年使用 TMDB 热门口径（discover + popularity）。"
+		note = "当前展示按热度排序的热门榜单。"
 	}
 
 	return model.HotRankingResponse{
-		Period:    period,
+		Mode:      query.Mode,
+		Period:    query.Period,
+		TimeKey:   resolveTimeKey(query),
+		TimeLabel: resolveTimeLabel(query),
+		Page:      query.Page,
+		PageSize:  query.PageSize,
+		HasMore:   len(items) >= query.PageSize,
+		NextPage:  query.Page + 1,
 		UpdatedAt: time.Now().UTC(),
 		Source:    "tmdb",
 		Note:      note,
@@ -248,9 +446,33 @@ func buildHotRankingResponse(period model.HotRankingPeriod, category model.HotRa
 				Title:       sectionTitle,
 				Description: description,
 				Spotlight:   spotlight,
-				Items:       limitHotRankingItems(items, 12),
+				Items:       limitHotRankingItems(items, query.PageSize),
 			},
 		},
+	}
+}
+
+func buildAggregateHotRankingResponse(query model.HotRankingQuery, sections []model.HotRankingSection) model.HotRankingResponse {
+	note := "数据来自 TMDB 热门榜。"
+	if query.Mode == model.HotRankingModeTrend {
+		note = "当前展示每日或每周趋势榜单。"
+	} else {
+		note = "当前展示按热度排序的热门榜单。"
+	}
+
+	return model.HotRankingResponse{
+		Mode:      query.Mode,
+		Period:    query.Period,
+		TimeKey:   resolveTimeKey(query),
+		TimeLabel: resolveTimeLabel(query),
+		Page:      query.Page,
+		PageSize:  query.PageSize,
+		HasMore:   hasMoreInSections(sections, query.PageSize),
+		NextPage:  query.Page + 1,
+		UpdatedAt: time.Now().UTC(),
+		Source:    "tmdb",
+		Note:      note,
+		Sections:  sections,
 	}
 }
 
@@ -259,6 +481,151 @@ func limitHotRankingItems(items []model.HotRankingItem, limit int) []model.HotRa
 		return items
 	}
 	return items[:limit]
+}
+
+func normalizeHotRankingQuery(query model.HotRankingQuery) model.HotRankingQuery {
+	query.Mode = model.NormalizeHotRankingMode(string(query.Mode))
+	query.Period = model.NormalizeHotRankingPeriod(string(query.Period))
+	query.Category = model.NormalizeHotRankingCategory(string(query.Category))
+	query.SortBy = model.NormalizeHotRankingSortBy(string(query.SortBy))
+	if query.Page <= 0 {
+		query.Page = 1
+	}
+	if query.PageSize <= 0 {
+		query.PageSize = 100
+	}
+	if query.PageSize > 100 {
+		query.PageSize = 100
+	}
+
+	now := time.Now().UTC()
+	if query.Mode == model.HotRankingModePopular {
+		switch query.Period {
+		case model.HotRankingPeriodDay:
+			if strings.TrimSpace(query.Date) == "" {
+				query.Date = now.Format("2006-01-02")
+			}
+		case model.HotRankingPeriodWeek:
+			if strings.TrimSpace(query.WeekStart) == "" {
+				offset := (int(now.Weekday()) + 6) % 7
+				query.WeekStart = now.AddDate(0, 0, -offset).Format("2006-01-02")
+			}
+		case model.HotRankingPeriodMonth:
+			if strings.TrimSpace(query.Month) == "" {
+				query.Month = now.Format("2006-01")
+			}
+		case model.HotRankingPeriodYear:
+			if strings.TrimSpace(query.Year) == "" {
+				query.Year = fmt.Sprintf("%d", now.Year())
+			}
+		}
+	}
+
+	return query
+}
+
+func validateHotRankingQuery(query model.HotRankingQuery) error {
+	return model.ValidateHotRankingQuery(query)
+}
+
+func shouldUseHotRankingCache(query model.HotRankingQuery) bool {
+	return query.Page == 1 && query.PageSize == 100
+}
+
+func resolveDefaultModeByPeriod(period model.HotRankingPeriod) model.HotRankingMode {
+	if period == model.HotRankingPeriodMonth || period == model.HotRankingPeriodYear {
+		return model.HotRankingModePopular
+	}
+	return model.HotRankingModeTrend
+}
+
+func resolveBasePage(page int, pageSize int) int {
+	if page <= 1 {
+		return 1
+	}
+	return ((page - 1) * pageSize / 20) + 1
+}
+
+func pageCountForSize(page int, pageSize int) int {
+	count := pageSize / 20
+	if pageSize%20 != 0 {
+		count++
+	}
+	if count <= 0 {
+		return 1
+	}
+	return count
+}
+
+func resolveWeekRange(weekStart string) (string, string) {
+	start, err := time.Parse("2006-01-02", weekStart)
+	if err != nil {
+		now := time.Now().UTC()
+		offset := (int(now.Weekday()) + 6) % 7
+		start = now.AddDate(0, 0, -offset)
+	}
+	end := start.AddDate(0, 0, 6)
+	return start.Format("2006-01-02"), end.Format("2006-01-02")
+}
+
+func resolveMonthRange(monthValue string) (string, string) {
+	parsed, err := time.Parse("2006-01", monthValue)
+	if err != nil {
+		parsed = time.Now().UTC()
+	}
+	start := time.Date(parsed.Year(), parsed.Month(), 1, 0, 0, 0, 0, time.UTC)
+	end := start.AddDate(0, 1, -1)
+	return start.Format("2006-01-02"), end.Format("2006-01-02")
+}
+
+func resolveYear(yearValue string) int {
+	if yearValue == "" {
+		return time.Now().UTC().Year()
+	}
+	parsed, err := time.Parse("2006", yearValue)
+	if err != nil {
+		return time.Now().UTC().Year()
+	}
+	return parsed.Year()
+}
+
+func resolveTimeKey(query model.HotRankingQuery) string {
+	switch query.Period {
+	case model.HotRankingPeriodDay:
+		return query.Date
+	case model.HotRankingPeriodWeek:
+		return query.WeekStart
+	case model.HotRankingPeriodMonth:
+		return query.Month
+	case model.HotRankingPeriodYear:
+		return query.Year
+	default:
+		return ""
+	}
+}
+
+func resolveTimeLabel(query model.HotRankingQuery) string {
+	switch query.Period {
+	case model.HotRankingPeriodDay:
+		return query.Date
+	case model.HotRankingPeriodWeek:
+		return fmt.Sprintf("%s 所在周", query.WeekStart)
+	case model.HotRankingPeriodMonth:
+		return query.Month
+	case model.HotRankingPeriodYear:
+		return query.Year
+	default:
+		return ""
+	}
+}
+
+func hasMoreInSections(sections []model.HotRankingSection, pageSize int) bool {
+	for _, section := range sections {
+		if len(section.Items) >= pageSize {
+			return true
+		}
+	}
+	return false
 }
 
 func normalizeTMDBServiceError(err error) error {

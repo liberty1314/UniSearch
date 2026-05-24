@@ -28,6 +28,7 @@ type redisClient interface {
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
 	Get(ctx context.Context, key string) *redis.StringCmd
 	Del(ctx context.Context, keys ...string) *redis.IntCmd
+	Keys(ctx context.Context, pattern string) *redis.StringSliceCmd
 	Exists(ctx context.Context, keys ...string) *redis.IntCmd
 	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
 	Close() error
@@ -242,6 +243,29 @@ func (rc *RedisCache) Delete(ctx context.Context, key string) error {
 	}
 
 	log.Printf("调试: 缓存删除成功 - 键: %s", key)
+	return nil
+}
+
+func (rc *RedisCache) DeleteByPattern(ctx context.Context, pattern string) error {
+	if pattern == "" {
+		return fmt.Errorf("缓存模式不能为空")
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	keys, err := rc.client.Keys(ctx, pattern).Result()
+	if err != nil {
+		return fmt.Errorf("Redis 查询键失败: %w", err)
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+
+	if err := rc.client.Del(ctx, keys...).Err(); err != nil {
+		return fmt.Errorf("Redis 批量删除失败: %w", err)
+	}
+
 	return nil
 }
 

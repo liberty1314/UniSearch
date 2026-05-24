@@ -1,5 +1,7 @@
+export type HotRankingMode = "trend" | "popular";
 export type HotRankingPeriod = "day" | "week" | "month" | "year";
-export type HotRankingCategory = "movie" | "tv" | "anime";
+export type HotRankingCategory = "all" | "movie" | "tv" | "anime";
+export type HotRankingSortBy = "popularity.desc" | "primary_release_date.desc" | "vote_average.desc";
 
 export interface HotRankingItem {
   id: number;
@@ -30,7 +32,14 @@ export interface HotRankingSection {
 }
 
 export interface HotRankingResponse {
+  mode: HotRankingMode;
   period: HotRankingPeriod;
+  time_key?: string;
+  time_label?: string;
+  page: number;
+  page_size: number;
+  has_more: boolean;
+  next_page?: number;
   updated_at: string;
   source: "tmdb";
   note?: string;
@@ -38,6 +47,14 @@ export interface HotRankingResponse {
 }
 
 export interface HotRankingQuery {
+  mode?: HotRankingMode;
   period?: HotRankingPeriod;
   category?: HotRankingCategory;
+  sort_by?: HotRankingSortBy;
+  date?: string;
+  week_start?: string;
+  month?: string;
+  year?: string;
+  page?: number;
+  page_size?: number;
 }

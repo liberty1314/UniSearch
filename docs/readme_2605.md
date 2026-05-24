@@ -536,3 +536,46 @@
   - `frontend/src/services/hotRankingService.ts`
   - `frontend/src/test/setup.ts`
   - `frontend/src/types/hotRanking.ts`
+
+## [2026-05-24 14:06:09] feat(hot-ranking): 扩展热门榜筛选模式与分页能力
+- **Body**: 为热门榜单增加趋势榜与热门榜双模式、时间筛选、排序、分页和全分类聚合能力，统一后端查询参数解析、校验、缓存与 TMDB 拉取逻辑。
+- **Body**: 同时优化热门页工具栏、分区摘要、卡片展示与搜索返回行为，补齐热门页页面测试、服务测试与后端接口测试覆盖。
+- **Files**:
+  - `backend/api/hot_ranking_handler.go`
+  - `backend/api/hot_ranking_handler_test.go`
+  - `backend/model/hot_ranking.go`
+  - `backend/model/hot_ranking_test.go`
+  - `backend/service/hot_ranking_cache.go`
+  - `backend/service/hot_ranking_cache_test.go`
+  - `backend/service/hot_ranking_preloader.go`
+  - `backend/service/hot_ranking_preloader_test.go`
+  - `backend/service/hot_ranking_service.go`
+  - `backend/service/hot_ranking_service_test.go`
+  - `backend/service/tmdb_service.go`
+  - `backend/util/cache/redis_cache.go`
+  - `frontend/src/components/Navbar.tsx`
+  - `frontend/src/components/SearchBox.tsx`
+  - `frontend/src/components/__tests__/SearchBox.test.tsx`
+  - `frontend/src/components/trending/HotCategoryTabs.tsx`
+  - `frontend/src/components/trending/HotHero.tsx`
+  - `frontend/src/components/trending/HotHeroCarousel.tsx`
+  - `frontend/src/components/trending/HotMediaCard.tsx`
+  - `frontend/src/components/trending/HotMediaGrid.tsx`
+  - `frontend/src/components/trending/HotModeTabs.tsx`
+  - `frontend/src/components/trending/HotPageEmptyState.tsx`
+  - `frontend/src/components/trending/HotPageErrorState.tsx`
+  - `frontend/src/components/trending/HotPeriodTabs.tsx`
+  - `frontend/src/components/trending/HotSectionSummary.tsx`
+  - `frontend/src/components/trending/HotToolbar.tsx`
+  - `frontend/src/components/trending/__tests__/HotMediaCard.test.tsx`
+  - `frontend/src/components/trending/__tests__/hotRankingPresentation.test.ts`
+  - `frontend/src/components/trending/hotRankingPresentation.ts`
+  - `frontend/src/components/trending/hotToolbarTabStyles.ts`
+  - `frontend/src/pages/Home.tsx`
+  - `frontend/src/pages/HotPage.tsx`
+  - `frontend/src/pages/SearchPage.tsx`
+  - `frontend/src/pages/__tests__/HotPage.test.tsx`
+  - `frontend/src/pages/__tests__/SearchPage.test.tsx`
+  - `frontend/src/services/__tests__/hotRankingService.test.ts`
+  - `frontend/src/services/hotRankingService.ts`
+  - `frontend/src/types/hotRanking.ts`

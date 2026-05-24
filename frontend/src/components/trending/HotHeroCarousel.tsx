@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Flame, Search, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getHotCategoryLabel } from "@/components/trending/hotRankingPresentation";
 import type { HotRankingItem, HotRankingPeriod } from "@/types/hotRanking";
 import type { HotPageMeta } from "@/components/trending/hotRankingPresentation";
 
@@ -73,6 +74,10 @@ const HotHeroCarousel: React.FC<HotHeroCarouselProps> = ({
     ? (displayIndex - 1 + items.length) % items.length
     : 0;
   const activeItem = items[activeIndex];
+  const activeCategoryLabel =
+    meta.sectionCount > 1
+      ? getHotCategoryLabel(activeItem?.ranking_category ?? "movie")
+      : meta.categoryLabel;
   if (!activeItem) {
     return null;
   }
@@ -189,7 +194,7 @@ const HotHeroCarousel: React.FC<HotHeroCarouselProps> = ({
                     <div className="flex flex-wrap items-center gap-2.5">
                       <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] backdrop-blur-md">
                         <Flame className="h-3.5 w-3.5 text-cyan-300" />
-                        TMDB 热门榜单
+                        热门榜单
                       </span>
                       <span className="inline-flex items-center rounded-full bg-white/12 px-3 py-1.5 text-xs font-semibold backdrop-blur-md">
                         {periodLabelMap[period]}
@@ -209,46 +214,62 @@ const HotHeroCarousel: React.FC<HotHeroCarouselProps> = ({
                       {item.overview || "暂无简介"}
                     </p>
 
-                    <div className="mt-10 flex flex-col gap-3 lg:mt-auto lg:w-full lg:pt-16">
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-                      <div className="flex flex-wrap gap-3 lg:flex-1">
-                        <div className="inline-flex min-w-[8.5rem] items-center gap-2 rounded-2xl border border-white/12 bg-white/10 px-4 py-3 backdrop-blur-md">
-                          <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
-                            分类
-                          </span>
-                          <span className="text-sm font-semibold text-white">
-                            {meta.categoryLabel}
-                          </span>
-                        </div>
-                        <div className="inline-flex min-w-[8.5rem] items-center gap-2 rounded-2xl border border-white/12 bg-white/10 px-4 py-3 backdrop-blur-md">
-                          <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
-                            热度
-                          </span>
-                          <span className="text-sm font-semibold text-white">
-                            {item.popularity.toFixed(0)}
-                          </span>
-                        </div>
-                        <div className="inline-flex min-w-[8.5rem] items-center gap-2 rounded-2xl border border-white/12 bg-white/10 px-4 py-3 backdrop-blur-md">
-                          <Star className="h-4 w-4 text-amber-300" />
-                          <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
-                            评分
-                          </span>
-                          <span className="text-sm font-semibold text-white">
-                            {item.vote_average.toFixed(1)}
-                          </span>
-                        </div>
+                    <div className="mt-10 flex flex-col gap-5 lg:mt-auto lg:max-w-2xl lg:pt-16">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Button
+                          type="button"
+                          size="md"
+                          onClick={() => onSearch(item)}
+                          tabIndex={isActiveSlide ? 0 : -1}
+                          className="rounded-full bg-white px-5 text-slate-900 shadow-[0_14px_36px_rgba(255,255,255,0.14)] hover:bg-white/92 hover:text-slate-950"
+                        >
+                          <Search className="mr-2 h-4 w-4" />
+                          立即搜索榜首内容
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="md"
+                          onClick={goNext}
+                          disabled={!hasMultipleItems}
+                          tabIndex={isActiveSlide ? 0 : -1}
+                          className="rounded-full border border-white/14 bg-white/6 px-5 text-white backdrop-blur-md hover:bg-white/12 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                          查看其他轮播项
+                        </Button>
                       </div>
 
-                      <Button
-                        type="button"
-                        size="md"
-                        onClick={() => onSearch(item)}
-                        tabIndex={isActiveSlide ? 0 : -1}
-                        className="self-start rounded-full border border-white/12 bg-white/10 px-5 text-white backdrop-blur-md hover:bg-white/18 hover:text-white lg:ml-auto lg:self-auto lg:shrink-0"
-                      >
-                        <Search className="mr-2 h-4 w-4" />
-                        搜索
-                      </Button>
+                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                        <div className="rounded-[1.4rem] border border-white/12 bg-white/7 px-4 py-4 backdrop-blur-md">
+                          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] text-white/58">
+                            <span className="h-2.5 w-2.5 rounded-full bg-cyan-300" />
+                            当前分类
+                          </div>
+                          <p className="mt-3 text-2xl font-bold tracking-tight text-white">
+                            {activeCategoryLabel}
+                          </p>
+                        </div>
+
+                        <div className="rounded-[1.4rem] border border-white/12 bg-white/7 px-4 py-4 backdrop-blur-md">
+                          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] text-white/58">
+                            <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
+                            榜首热度
+                          </div>
+                          <p className="mt-3 text-2xl font-bold tracking-tight text-white">
+                            {item.popularity.toFixed(0)}
+                          </p>
+                        </div>
+
+                        <div className="rounded-[1.4rem] border border-white/12 bg-white/7 px-4 py-4 backdrop-blur-md sm:col-span-2 xl:col-span-1">
+                          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] text-white/58">
+                            <Star className="h-3.5 w-3.5 text-orange-300" />
+                            评分
+                          </div>
+                          <p className="mt-3 text-2xl font-bold tracking-tight text-white">
+                            {item.vote_average.toFixed(1)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>

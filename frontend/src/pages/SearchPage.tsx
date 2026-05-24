@@ -126,6 +126,7 @@ const SearchPage: React.FC = () => {
 
   const handleBack = () => {
     clearResults();
+    setSearchParams({ keyword: "" });
 
     if (location.key !== "default") {
       navigate(-1);
@@ -136,6 +137,7 @@ const SearchPage: React.FC = () => {
       replace: true,
       state: {
         skipHomeEntrance: true,
+        resetHomeSearchBox: true,
         routeTransition: "backward",
         transitionSource: "search-back-home",
         resetScroll: true,

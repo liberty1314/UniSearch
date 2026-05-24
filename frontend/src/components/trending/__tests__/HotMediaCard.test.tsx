@@ -24,9 +24,10 @@ const item: HotRankingItem = {
 
 describe("HotMediaCard", () => {
   it("展示名次编号并保留搜索按钮", () => {
-    render(<HotMediaCard item={item} rank={2} onSearch={vi.fn()} />);
+    render(<HotMediaCard item={item} rank={1} category="movie" onSearch={vi.fn()} />);
 
-    expect(screen.getByText("#2")).toBeInTheDocument();
+    expect(screen.getByText("#1")).toBeInTheDocument();
+    expect(screen.getByText("电影")).toBeInTheDocument();
     expect(screen.getByText("热度 800")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "搜索" })).toBeInTheDocument();
   });

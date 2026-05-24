@@ -1,6 +1,10 @@
 import React from "react";
 import type { HotRankingPeriod } from "@/types/hotRanking";
-import { cn } from "@/lib/utils";
+import {
+  buildHotToolbarTabClassName,
+  hotToolbarHintClassName,
+  hotToolbarRailClassName,
+} from "@/components/trending/hotToolbarTabStyles";
 
 const options: Array<{ value: HotRankingPeriod; label: string }> = [
   { value: "day", label: "每日" },
@@ -12,27 +16,35 @@ const options: Array<{ value: HotRankingPeriod; label: string }> = [
 interface HotPeriodTabsProps {
   value: HotRankingPeriod;
   onChange: (value: HotRankingPeriod) => void;
+  options?: HotRankingPeriod[];
 }
 
-const HotPeriodTabs: React.FC<HotPeriodTabsProps> = ({ value, onChange }) => {
+const HotPeriodTabs: React.FC<HotPeriodTabsProps> = ({ value, onChange, options: enabledOptions }) => {
+  const renderOptions = enabledOptions
+    ? options.filter((option) => enabledOptions.includes(option.value))
+    : options;
+
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          onClick={() => onChange(option.value)}
-          aria-pressed={value === option.value}
-          className={cn(
-            "rounded-2xl border border-transparent px-4 py-2.5 text-sm font-medium transition-all duration-200",
-            value === option.value
-              ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_12px_30px_rgba(14,165,233,0.3)]"
-              : "bg-white/72 text-slate-600 hover:border-cyan-200 hover:bg-white hover:text-slate-900 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-cyan-400/35 dark:hover:bg-slate-900/70 dark:hover:text-white",
-          )}
-        >
-          {option.label}
-        </button>
-      ))}
+    <div>
+      <div className={hotToolbarRailClassName} data-testid="hot-period-tabs">
+        {renderOptions.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            aria-pressed={value === option.value}
+            className={buildHotToolbarTabClassName(
+              value === option.value,
+              "bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_12px_30px_rgba(14,165,233,0.3)]",
+            )}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      <p className={hotToolbarHintClassName}>
+        当前按“{renderOptions.find((option) => option.value === value)?.label ?? "每日"}”维度查看。
+      </p>
     </div>
   );
 };
