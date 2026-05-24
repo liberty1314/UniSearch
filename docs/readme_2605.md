@@ -596,3 +596,32 @@
   - `frontend/src/index.css`
   - `frontend/src/pages/HotPage.tsx`
   - `frontend/src/pages/__tests__/HotPage.test.tsx`
+
+## [2026-05-24 22:49:08] feat(frontend): 优化热门榜排序交互与结果页信息层级
+- **Body**: 调整热门榜排序规则与缓存键策略，支持趋势榜自定义排序及聚合分类排序透传，统一热门榜说明文案与测试预期。
+- **Body**: 同时优化搜索结果筛选摘要、资源详情首屏决策信息、首页搜索区展示和路由加载态文案，补齐对应组件与页面测试覆盖。
+- **Files**:
+  - `backend/api/hot_ranking_handler_test.go`
+  - `backend/model/hot_ranking.go`
+  - `backend/model/hot_ranking_test.go`
+  - `backend/service/hot_ranking_cache.go`
+  - `backend/service/hot_ranking_cache_test.go`
+  - `backend/service/hot_ranking_service.go`
+  - `backend/service/hot_ranking_service_test.go`
+  - `frontend/src/components/Navbar.tsx`
+  - `frontend/src/components/SearchResults.tsx`
+  - `frontend/src/components/SearchUnifiedFilterCard.tsx`
+  - `frontend/src/components/__tests__/SearchResults.test.tsx`
+  - `frontend/src/components/__tests__/SearchUnifiedFilterCard.test.tsx`
+  - `frontend/src/components/home/SearchResultsToolbar.tsx`
+  - `frontend/src/components/resource-detail/ResourceDetailHero.tsx`
+  - `frontend/src/components/trending/HotHeroCarousel.tsx`
+  - `frontend/src/components/trending/HotToolbar.tsx`
+  - `frontend/src/pages/Home.tsx`
+  - `frontend/src/pages/HotPage.tsx`
+  - `frontend/src/pages/ResourceDetailPage.tsx`
+  - `frontend/src/pages/SearchPage.tsx`
+  - `frontend/src/pages/__tests__/Home.test.tsx`
+  - `frontend/src/pages/__tests__/HotPage.test.tsx`
+  - `frontend/src/pages/__tests__/ResourceDetailPage.test.tsx`
+  - `frontend/src/routes/AppRoutes.tsx`

@@ -314,6 +314,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       {/* 工具栏 */}
       {allSortedResults.length > 0 && (
         <SearchResultsToolbar
+          keyword={searchParams.keyword}
           totalCount={allSortedResults.length}
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}

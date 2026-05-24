@@ -124,6 +124,15 @@ const findActiveHeroSlide = async () => {
   return activeSlide as HTMLElement;
 };
 
+const findHeroSlideByLabel = async (label: string) => {
+  const hero = await screen.findByTestId("hot-page-hero");
+  await waitFor(() => {
+    const nextSlide = hero.querySelector<HTMLElement>(`[aria-label="${label}"]`);
+    expect(nextSlide).not.toBeNull();
+  });
+  return hero.querySelector<HTMLElement>(`[aria-label="${label}"]`) as HTMLElement;
+};
+
 describe("HotPage", () => {
   beforeEach(() => {
     getHotRankingsMock.mockReset();
@@ -143,7 +152,7 @@ describe("HotPage", () => {
         mode: "trend",
         period: "day",
         category: "all",
-        sort_by: undefined,
+        sort_by: "popularity.desc",
         date: undefined,
         week_start: undefined,
         month: undefined,
@@ -176,7 +185,49 @@ describe("HotPage", () => {
         mode: "trend",
         period: "week",
         category: "anime",
-        sort_by: undefined,
+        sort_by: "popularity.desc",
+        date: undefined,
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
+  });
+
+  it("趋势榜在切换排序后仍然允许切换分类", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+
+    fireEvent.click(screen.getByLabelText("打开排序菜单"));
+    fireEvent.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "trend",
+        period: "day",
+        category: "all",
+        sort_by: "vote_average.desc",
+        date: undefined,
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "电影" }));
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "trend",
+        period: "day",
+        category: "movie",
+        sort_by: "vote_average.desc",
         date: undefined,
         week_start: undefined,
         month: undefined,
@@ -196,7 +247,7 @@ describe("HotPage", () => {
     expect(screen.queryByRole("button", { name: "每月" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "每年" })).not.toBeInTheDocument();
     expect(screen.queryByText("时间筛选")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("打开排序菜单")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("打开排序菜单")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "每日" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "每周" })).toBeInTheDocument();
   });
@@ -247,19 +298,127 @@ describe("HotPage", () => {
       expect(toolbarSummary).toHaveTextContent(/每月 · \d{4}-\d{2}/);
       expect(toolbarSummary).toHaveTextContent("电影");
     });
+
+    fireEvent.click(screen.getByLabelText("打开排序菜单"));
+    fireEvent.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
+
+    await waitFor(() => {
+      expect(toolbarSummary).toHaveTextContent("当前排序：按评分");
+    });
   });
 
-  it("热门榜单单分类支持按时间和评分排序", async () => {
+  it("热门榜下会把时间筛选收敛到附属区并给出说明文案", async () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
     await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
 
     fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
-    expect(screen.queryByLabelText("打开排序菜单")).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText("附加时间条件")).toBeInTheDocument();
+    });
+
+    const timeFilterPanel = screen.getByTestId("hot-toolbar-time-panel");
+    expect(timeFilterPanel).toHaveTextContent("附加时间条件");
+    expect(timeFilterPanel).toHaveTextContent("先确定模式、周期和分类，再按需要缩小时间范围。");
+  });
+
+  it("热门榜单单分类支持按时间和评分排序", async () => {
+    getHotRankingsMock
+      .mockResolvedValueOnce(createResponse())
+      .mockResolvedValueOnce(
+        createResponse({
+          mode: "popular",
+          period: "day",
+          sections: [
+            {
+              category: "movie",
+              title: "热门电影",
+              description: "按热度排序的电影内容。",
+              spotlight: createItem(11, "热度优先电影", "movie", "movie"),
+              items: [
+                createItem(11, "热度优先电影", "movie", "movie"),
+                createItem(12, "第二热门电影", "movie", "movie"),
+              ],
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        createResponse({
+          mode: "popular",
+          period: "day",
+          sections: [
+            {
+              category: "movie",
+              title: "热门电影",
+              description: "按时间排序的电影内容。",
+              spotlight: createItem(13, "最新上映电影", "movie", "movie"),
+              items: [
+                createItem(13, "最新上映电影", "movie", "movie"),
+                createItem(14, "院线新片", "movie", "movie"),
+              ],
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        createResponse({
+          mode: "popular",
+          period: "day",
+          sections: [
+            {
+              category: "movie",
+              title: "热门电影",
+              description: "按评分排序的电影内容。",
+              spotlight: createItem(15, "高分电影", "movie", "movie"),
+              items: [
+                createItem(15, "高分电影", "movie", "movie"),
+                createItem(16, "口碑佳作", "movie", "movie"),
+              ],
+            },
+          ],
+        }),
+      );
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+
+    fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "day",
+        category: "all",
+        sort_by: "popularity.desc",
+        date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "电影" }));
-    fireEvent.click(await screen.findByLabelText("打开排序菜单"));
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "day",
+        category: "movie",
+        sort_by: "popularity.desc",
+        date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
+
+    fireEvent.click(screen.getByLabelText("打开排序菜单"));
 
     fireEvent.click(await screen.findByRole("menuitemradio", { name: "按时间" }));
 
@@ -286,6 +445,66 @@ describe("HotPage", () => {
         mode: "popular",
         period: "day",
         category: "movie",
+        sort_by: "vote_average.desc",
+        date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
+  });
+
+  it("趋势榜和聚合分类也支持排序切换", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+
+    fireEvent.click(screen.getByLabelText("打开排序菜单"));
+    fireEvent.click(await screen.findByRole("menuitemradio", { name: "按时间" }));
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "trend",
+        period: "day",
+        category: "all",
+        sort_by: "primary_release_date.desc",
+        date: undefined,
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "day",
+        category: "all",
+        sort_by: "primary_release_date.desc",
+        date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
+
+    fireEvent.click(screen.getByLabelText("打开排序菜单"));
+    fireEvent.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "day",
+        category: "all",
         sort_by: "vote_average.desc",
         date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
         week_start: undefined,
@@ -331,7 +550,7 @@ describe("HotPage", () => {
         mode: "trend",
         period: "day",
         category: "all",
-        sort_by: undefined,
+        sort_by: "popularity.desc",
         date: undefined,
         week_start: undefined,
         month: undefined,
@@ -359,7 +578,7 @@ describe("HotPage", () => {
         mode: "popular",
         period: "month",
         category: "all",
-        sort_by: undefined,
+        sort_by: "popularity.desc",
         date: undefined,
         week_start: undefined,
         month: expect.stringMatching(/^\d{4}-\d{2}$/),
@@ -377,7 +596,7 @@ describe("HotPage", () => {
         mode: "popular",
         period: "month",
         category: "all",
-        sort_by: undefined,
+        sort_by: "popularity.desc",
         date: undefined,
         week_start: undefined,
         month: "2026-04",
@@ -402,7 +621,7 @@ describe("HotPage", () => {
         mode: "popular",
         period: "year",
         category: "all",
-        sort_by: undefined,
+        sort_by: "popularity.desc",
         date: undefined,
         week_start: undefined,
         month: undefined,
@@ -420,7 +639,7 @@ describe("HotPage", () => {
         mode: "popular",
         period: "year",
         category: "all",
-        sort_by: undefined,
+        sort_by: "popularity.desc",
         date: undefined,
         week_start: undefined,
         month: undefined,
@@ -444,7 +663,7 @@ describe("HotPage", () => {
         mode: "popular",
         period: "day",
         category: "all",
-        sort_by: undefined,
+        sort_by: "popularity.desc",
         date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
         week_start: undefined,
         month: undefined,
@@ -462,7 +681,7 @@ describe("HotPage", () => {
         mode: "popular",
         period: "day",
         category: "all",
-        sort_by: undefined,
+        sort_by: "popularity.desc",
         date: "2026-05-01",
         week_start: undefined,
         month: undefined,
@@ -489,7 +708,26 @@ describe("HotPage", () => {
 
   it("加载更多会追加下一页内容", async () => {
     getHotRankingsMock
-      .mockResolvedValueOnce(createResponse())
+      .mockResolvedValueOnce(
+        createResponse({
+          mode: "popular",
+          period: "month",
+          has_more: true,
+          next_page: 2,
+          sections: [
+            {
+              category: "movie",
+              title: "热门电影",
+              description: "按热度排序的电影内容。",
+              spotlight: createItem(7, "疯狂的麦克斯：狂暴女神", "movie", "movie"),
+              items: [
+                createItem(7, "疯狂的麦克斯：狂暴女神", "movie", "movie"),
+                createItem(8, "异形：夺命舰", "movie", "movie"),
+              ],
+            },
+          ],
+        }),
+      )
       .mockResolvedValueOnce(
         createResponse({
           mode: "popular",
@@ -534,8 +772,6 @@ describe("HotPage", () => {
       );
 
     renderHotPage();
-    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
-
     fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
     fireEvent.click(screen.getByRole("button", { name: "每月" }));
 
@@ -544,7 +780,7 @@ describe("HotPage", () => {
         mode: "popular",
         period: "month",
         category: "all",
-        sort_by: undefined,
+        sort_by: "popularity.desc",
         date: undefined,
         week_start: undefined,
         month: expect.stringMatching(/^\d{4}-\d{2}$/),
@@ -554,22 +790,17 @@ describe("HotPage", () => {
       });
     });
 
-    const loadMoreButton = await screen.findByRole("button", { name: "加载更多" });
-    fireEvent.click(loadMoreButton);
-
-    await waitFor(() => {
-      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
-        mode: "popular",
-        period: "month",
-        category: "all",
-        sort_by: undefined,
-        date: undefined,
-        week_start: undefined,
-        month: expect.stringMatching(/^\d{4}-\d{2}$/),
-        year: undefined,
-        page: 2,
-        page_size: 100,
-      });
+    expect(getHotRankingsMock).toHaveBeenNthCalledWith(3, {
+      mode: "popular",
+      period: "month",
+      category: "all",
+      sort_by: "popularity.desc",
+      date: undefined,
+      week_start: undefined,
+      month: expect.stringMatching(/^\d{4}-\d{2}$/),
+      year: undefined,
+      page: 1,
+      page_size: 100,
     });
   });
 
@@ -640,7 +871,7 @@ describe("HotPage", () => {
       mode: "trend",
       period: "week",
       category: "all",
-      sort_by: undefined,
+      sort_by: "popularity.desc",
       date: undefined,
       week_start: undefined,
       month: undefined,
@@ -651,7 +882,22 @@ describe("HotPage", () => {
   });
 
   it("点击轮播缩略项后会切换激活内容", async () => {
-    getHotRankingsMock.mockResolvedValue(createResponse());
+    getHotRankingsMock.mockResolvedValue(
+      createResponse({
+        sections: [
+          {
+            category: "movie",
+            title: "热门电影",
+            description: "按热门趋势整理的电影热门内容。",
+            spotlight: createItem(1, "沙丘 2", "movie", "movie"),
+            items: [
+              createItem(1, "沙丘 2", "movie", "movie"),
+              createItem(2, "奥本海默", "movie", "movie"),
+            ],
+          },
+        ],
+      }),
+    );
 
     renderHotPage();
     await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
@@ -660,7 +906,7 @@ describe("HotPage", () => {
     fireEvent.click(previewButton);
 
     await waitFor(async () => {
-      const activeSlide = await findActiveHeroSlide();
+      const activeSlide = await findHeroSlideByLabel("2 / 2");
       expect(within(activeSlide).getByRole("heading", { level: 1, name: "奥本海默" })).toBeInTheDocument();
     });
   });

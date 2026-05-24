@@ -453,6 +453,8 @@ describe("SearchResults", () => {
 
     expect(await screen.findAllByTestId("search-result-grid-card")).toHaveLength(2);
     expect(screen.getByText("你的名字 原画设定集")).toBeInTheDocument();
+    expect(screen.getByText("搜索词")).toBeInTheDocument();
+    expect(screen.getByText("你的名字")).toBeInTheDocument();
     expect(screen.getByText("包含：4K")).toBeInTheDocument();
     expect(screen.getByText("排除：设定集")).toBeInTheDocument();
     const toolbarMeta = screen.getByTestId("search-results-toolbar-meta");
@@ -462,6 +464,7 @@ describe("SearchResults", () => {
     expect(toolbarMeta.className).toContain("flex-wrap");
     expect(toolbarMeta.className).toContain("sm:flex-nowrap");
     expect(toolbarFilters.className).toContain("sm:flex-nowrap");
+    expect(screen.getByTestId("search-results-toolbar").className).toContain("sticky");
     expect(screen.queryByText("媒体：movie")).not.toBeInTheDocument();
     expect(screen.queryByText("能力：downloadable")).not.toBeInTheDocument();
 

@@ -1,10 +1,12 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import Home from '@/pages/Home';
 import type { SearchAccessStatus } from '@/stores/searchAccessStore';
+
+const navigateMock = vi.fn();
 
 vi.mock('framer-motion', () => {
   const serializeMotionProp = (value: unknown) => {
@@ -107,6 +109,15 @@ vi.mock('@/components/home/TrendingCategories', () => ({
   ),
 }));
 
+vi.mock('react-router-dom', async () => {
+  const actual =
+    await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
+
 vi.mock('@/components/ui/animated-grid-pattern', () => ({
   AnimatedGridPattern: ({ className }: { className?: string }) => (
     <div data-testid="animated-grid" className={className} />
@@ -169,6 +180,7 @@ describe('Home', () => {
     searchAccessStatus = 'authenticated';
     searchKeyword = '';
     searchResults = [];
+    navigateMock.mockReset();
     sessionStorage.clear();
   });
 
@@ -290,6 +302,14 @@ describe('Home', () => {
     expect(screen.getByText('支持 5+ 平台')).toBeInTheDocument();
     expect(screen.getByText('聚合识别主流链接类型')).toBeInTheDocument();
     expect(screen.getByText('持续更新资源索引')).toBeInTheDocument();
+  });
+
+  it('keeps the hero area focused on the search box without quick-start keyword chips', () => {
+    renderHome();
+
+    expect(screen.queryByText('立即开始')).not.toBeInTheDocument();
+    expect(screen.queryByText('试试这些高频搜索词')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '沙丘 2' })).not.toBeInTheDocument();
   });
 
   it('renders the new trust-building usage section after platform coverage', () => {

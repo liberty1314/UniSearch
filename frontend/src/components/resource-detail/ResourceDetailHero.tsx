@@ -9,6 +9,9 @@ interface ResourceDetailHeroProps {
   displayTitle: string;
   sizeLabel: string | null;
   primaryCloudType: string;
+  accessLabel: string;
+  linkCountLabel: string;
+  publishedAtLabel: string;
 }
 
 const ResourceDetailHero: React.FC<ResourceDetailHeroProps> = ({
@@ -16,6 +19,9 @@ const ResourceDetailHero: React.FC<ResourceDetailHeroProps> = ({
   displayTitle,
   sizeLabel,
   primaryCloudType,
+  accessLabel,
+  linkCountLabel,
+  publishedAtLabel,
 }) => {
   const posterImage = resource.images?.[0];
   const primaryCloud = getCloudTypeInfo(primaryCloudType);
@@ -89,6 +95,44 @@ const ResourceDetailHero: React.FC<ResourceDetailHeroProps> = ({
               </div>
             ) : null}
           </div>
+
+          <div
+            data-testid="resource-detail-hero-decision-card"
+            className="rounded-[1.8rem] border border-white/10 bg-white/10 px-4 py-4 shadow-[0_20px_40px_rgba(2,6,23,0.18)] backdrop-blur-xl xl:max-w-[36rem]"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-cyan-100">
+                打开前速览
+              </span>
+              <span className="text-xs text-slate-300">
+                先看是否值得打开，再决定是否跳转外部资源。
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {[
+                { label: "链接数量", value: linkCountLabel },
+                { label: "访问方式", value: accessLabel },
+                { label: "资源体积", value: sizeLabel || "未提供" },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-[1.3rem] border border-white/10 bg-slate-950/20 px-4 py-3"
+                >
+                  <div className="text-[11px] font-semibold tracking-[0.14em] text-slate-300">
+                    {item.label}
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-white">
+                    {item.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 text-xs leading-6 text-slate-300">
+              发布时间：{publishedAtLabel}
+            </div>
+          </div>
         </div>
 
         <div className="xl:flex xl:items-start xl:justify-end xl:pt-1">
@@ -111,7 +155,10 @@ const ResourceDetailHero: React.FC<ResourceDetailHeroProps> = ({
                   <div className="flex aspect-[4/5] items-center justify-center rounded-[2rem] bg-slate-900/60 p-1 text-slate-300 sm:aspect-[5/6] xl:aspect-[4/5] 2xl:aspect-[5/6]">
                     <div className="flex flex-col items-center gap-3">
                       <ImageIcon className="h-8 w-8" />
-                      <span className="text-sm">暂无图片</span>
+                      <span className="text-sm font-medium">暂无预览图</span>
+                      <span className="max-w-[16rem] text-center text-xs leading-5 text-slate-400">
+                        可先查看摘要、链接数量与资源体积，再决定是否打开。
+                      </span>
                     </div>
                   </div>
                 )}

@@ -62,6 +62,11 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
     tv: "电视剧",
     anime: "动漫",
   };
+  const sortLabelMap: Record<HotRankingSortBy, string> = {
+    "popularity.desc": "按热度",
+    "primary_release_date.desc": "按时间",
+    "vote_average.desc": "按评分",
+  };
   const availablePeriods = mode === "trend"
     ? (["day", "week"] as HotRankingPeriod[])
     : (["day", "week", "month", "year"] as HotRankingPeriod[]);
@@ -207,6 +212,11 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
               <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {categoryLabelMap[category]}
               </p>
+              {sortBy ? (
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  当前排序：{sortLabelMap[sortBy]}
+                </p>
+              ) : null}
             </div>
           </div>
         </div>
@@ -240,9 +250,15 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
           </div>
 
           {mode === "popular" ? (
-            <div className="glass-toolbar rounded-[1.35rem] p-3 xl:col-span-3">
+            <div
+              data-testid="hot-toolbar-time-panel"
+              className="glass-toolbar rounded-[1.35rem] p-3 xl:col-span-3"
+            >
               <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                时间筛选
+                附加时间条件
+              </p>
+              <p className="mt-2 px-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                先确定模式、周期和分类，再按需要缩小时间范围。
               </p>
               <div className="mt-3">
                 {renderTimeField()}

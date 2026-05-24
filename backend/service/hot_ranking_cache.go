@@ -59,6 +59,7 @@ func (c *hotRankingCache) ClearByPrefix(ctx context.Context, prefix string) erro
 func buildHotRankingCacheKey(query model.HotRankingQuery) string {
 	language := "zh-CN"
 	region := "CN"
+	sortBy := "default"
 	if config.AppConfig != nil {
 		if config.AppConfig.TMDBDefaultLanguage != "" {
 			language = config.AppConfig.TMDBDefaultLanguage
@@ -67,7 +68,19 @@ func buildHotRankingCacheKey(query model.HotRankingQuery) string {
 			region = config.AppConfig.TMDBDefaultRegion
 		}
 	}
-	return fmt.Sprintf("hot-ranking:v2:%s:%s:%s:%s:%s:%s", query.Mode, query.Period, query.Category, resolveHotRankingTimeKey(query), language, region)
+	if query.SortBy != "" {
+		sortBy = string(query.SortBy)
+	}
+	return fmt.Sprintf(
+		"hot-ranking:v2:%s:%s:%s:%s:%s:%s:%s",
+		query.Mode,
+		query.Period,
+		query.Category,
+		sortBy,
+		resolveHotRankingTimeKey(query),
+		language,
+		region,
+	)
 }
 
 func resolveHotRankingTimeKey(query model.HotRankingQuery) string {

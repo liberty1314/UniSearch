@@ -30,6 +30,7 @@ const DEFAULT_MODE: HotRankingMode = "trend";
 const DEFAULT_PERIOD: HotRankingPeriod = "day";
 const DEFAULT_CATEGORY: HotRankingCategory = "all";
 const DEFAULT_SORT_BY: HotRankingSortBy = "popularity.desc";
+const DEFAULT_POPULAR_PERIOD: HotRankingPeriod = "day";
 
 const getToday = () => new Date().toISOString().slice(0, 10);
 const getCurrentMonth = () => getToday().slice(0, 7);
@@ -41,7 +42,7 @@ const getCurrentWeekStart = () => {
   return current.toISOString().slice(0, 10);
 };
 
-const createDefaultHotToolbarState = () => ({
+const createDefaultHotToolbarState = (): HotToolbarState => ({
   mode: DEFAULT_MODE,
   period: DEFAULT_PERIOD,
   category: DEFAULT_CATEGORY,
@@ -52,61 +53,152 @@ const createDefaultHotToolbarState = () => ({
   year: getCurrentYear(),
 });
 
+interface HotToolbarState {
+  mode: HotRankingMode;
+  period: HotRankingPeriod;
+  category: HotRankingCategory;
+  sortBy: HotRankingSortBy;
+  date: string;
+  weekStart: string;
+  month: string;
+  year: string;
+}
+type HotToolbarAction =
+  | { type: "setMode"; value: HotRankingMode }
+  | { type: "setPeriod"; value: HotRankingPeriod }
+  | { type: "setCategory"; value: HotRankingCategory }
+  | { type: "setSortBy"; value: HotRankingSortBy }
+  | { type: "setDate"; value: string }
+  | { type: "setWeekStart"; value: string }
+  | { type: "setMonth"; value: string }
+  | { type: "setYear"; value: string }
+  | { type: "reset" };
+
+const normalizeToolbarState = (state: HotToolbarState): HotToolbarState => {
+  if (state.mode === "trend") {
+    return {
+      ...state,
+      period: state.period === "month" || state.period === "year" ? DEFAULT_PERIOD : state.period,
+    };
+  }
+
+  return state;
+};
+
+const hotToolbarReducer = (state: HotToolbarState, action: HotToolbarAction): HotToolbarState => {
+  switch (action.type) {
+    case "setMode":
+      return normalizeToolbarState({
+        ...state,
+        mode: action.value,
+      });
+    case "setPeriod":
+      return normalizeToolbarState({
+        ...state,
+        period: action.value,
+      });
+    case "setCategory":
+      return normalizeToolbarState({
+        ...state,
+        category: action.value,
+        sortBy: action.value === "all" ? DEFAULT_SORT_BY : state.sortBy,
+      });
+    case "setSortBy":
+      return normalizeToolbarState({
+        ...state,
+        sortBy: action.value,
+      });
+    case "setDate":
+      return normalizeToolbarState({
+        ...state,
+        date: action.value,
+      });
+    case "setWeekStart":
+      return normalizeToolbarState({
+        ...state,
+        weekStart: action.value,
+      });
+    case "setMonth":
+      return normalizeToolbarState({
+        ...state,
+        month: action.value,
+      });
+    case "setYear":
+      return normalizeToolbarState({
+        ...state,
+        year: action.value,
+      });
+    case "reset":
+      return normalizeToolbarState(createDefaultHotToolbarState());
+    default:
+      return state;
+  }
+};
+
 const HotPage: React.FC = () => {
   const navigate = useNavigate();
-  const [mode, setMode] = React.useState<HotRankingMode>(DEFAULT_MODE);
-  const [period, setPeriod] = React.useState<HotRankingPeriod>(DEFAULT_PERIOD);
-  const [category, setCategory] = React.useState<HotRankingCategory>(DEFAULT_CATEGORY);
-  const [sortBy, setSortBy] = React.useState<HotRankingSortBy>(DEFAULT_SORT_BY);
-  const [dateFilter, setDateFilter] = React.useState(getToday);
-  const [weekStartFilter, setWeekStartFilter] = React.useState(getCurrentWeekStart);
-  const [monthFilter, setMonthFilter] = React.useState(getCurrentMonth);
-  const [yearFilter, setYearFilter] = React.useState(getCurrentYear);
+  const [toolbarState, dispatchToolbar] = React.useReducer(
+    hotToolbarReducer,
+    undefined,
+    () => normalizeToolbarState(createDefaultHotToolbarState()),
+  );
   const [data, setData] = React.useState<HotRankingResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState("");
+  const {
+    mode,
+    period,
+    category,
+    sortBy,
+    date: dateFilter,
+    weekStart: weekStartFilter,
+    month: monthFilter,
+    year: yearFilter,
+  } = toolbarState;
 
-  const buildQuery = React.useCallback((
-    nextMode: HotRankingMode,
-    nextPeriod: HotRankingPeriod,
-    nextCategory: HotRankingCategory,
-    page = 1,
-  ) => ({
-    mode: nextMode,
-    period: nextPeriod,
-    category: nextCategory,
-    sort_by: nextMode === "popular" && nextCategory !== "all" ? sortBy : undefined,
-    date: nextMode === "popular" && nextPeriod === "day" ? dateFilter : undefined,
-    week_start: nextMode === "popular" && nextPeriod === "week" ? weekStartFilter : undefined,
-    month: nextMode === "popular" && nextPeriod === "month" ? monthFilter : undefined,
-    year: nextMode === "popular" && nextPeriod === "year" ? yearFilter : undefined,
+  const buildQuery = React.useCallback((state: HotToolbarState, page = 1) => ({
+    mode: state.mode,
+    period: state.period,
+    category: state.category,
+    sort_by: state.sortBy,
+    date: state.mode === "popular" && state.period === "day" ? state.date : undefined,
+    week_start: state.mode === "popular" && state.period === "week" ? state.weekStart : undefined,
+    month: state.mode === "popular" && state.period === "month" ? state.month : undefined,
+    year: state.mode === "popular" && state.period === "year" ? state.year : undefined,
     page,
     page_size: 100,
-  }), [dateFilter, monthFilter, sortBy, weekStartFilter, yearFilter]);
+  }), []);
 
   const dataRef = React.useRef<HotRankingResponse | null>(null);
+  const latestRequestIdRef = React.useRef(0);
   React.useEffect(() => {
     dataRef.current = data;
   }, [data]);
 
   const loadRankings = React.useCallback(async (
-    nextMode: HotRankingMode,
-    nextPeriod: HotRankingPeriod,
-    nextCategory: HotRankingCategory,
+    state: HotToolbarState,
   ) => {
     const shouldShowSkeleton = !dataRef.current;
+    const requestId = latestRequestIdRef.current + 1;
+    latestRequestIdRef.current = requestId;
     setLoading(shouldShowSkeleton);
     setRefreshing(!shouldShowSkeleton);
     setErrorMessage("");
 
     try {
       const response = await hotRankingService.getHotRankings(
-        buildQuery(nextMode, nextPeriod, nextCategory, 1),
+        buildQuery(state, 1),
       );
+      if (latestRequestIdRef.current !== requestId) {
+        return;
+      }
       setData(response);
     } catch (error) {
+      if (latestRequestIdRef.current !== requestId) {
+        return;
+      }
       const message =
         typeof error === "object" &&
         error !== null &&
@@ -125,8 +217,8 @@ const HotPage: React.FC = () => {
   }, [buildQuery]);
 
   React.useEffect(() => {
-    void loadRankings(mode, period, category);
-  }, [category, dateFilter, loadRankings, mode, monthFilter, period, weekStartFilter, yearFilter]);
+    void loadRankings(toolbarState);
+  }, [loadRankings, toolbarState]);
 
   const appendSections = React.useCallback((current: HotRankingResponse | null, incoming: HotRankingResponse) => {
     if (!current) {
@@ -169,50 +261,36 @@ const HotPage: React.FC = () => {
 
   const handlePeriodChange = (value: HotRankingPeriod) => {
     startTransition(() => {
-      setPeriod(value);
+      dispatchToolbar({ type: "setPeriod", value });
     });
   };
 
   const handleModeChange = (value: HotRankingMode) => {
     startTransition(() => {
-      setMode(value);
-      if (value === "trend" && (period === "month" || period === "year")) {
-        setPeriod("day");
-      }
+      dispatchToolbar({ type: "setMode", value });
     });
   };
 
   const handleCategoryChange = (value: HotRankingCategory) => {
     startTransition(() => {
-      setCategory(value);
-      if (value === "all") {
-        setSortBy(DEFAULT_SORT_BY);
-      }
+      dispatchToolbar({ type: "setCategory", value });
     });
   };
 
   const handleSortByChange = (value: HotRankingSortBy) => {
     startTransition(() => {
-      setSortBy(value);
+      dispatchToolbar({ type: "setSortBy", value });
     });
   };
 
   const handleResetFilters = () => {
-    const defaults = createDefaultHotToolbarState();
     startTransition(() => {
-      setMode(defaults.mode);
-      setPeriod(defaults.period);
-      setCategory(defaults.category);
-      setSortBy(defaults.sortBy);
-      setDateFilter(defaults.date);
-      setWeekStartFilter(defaults.weekStart);
-      setMonthFilter(defaults.month);
-      setYearFilter(defaults.year);
+      dispatchToolbar({ type: "reset" });
     });
   };
 
   const handleRetry = () => {
-    void loadRankings(mode, period, category);
+    void loadRankings(toolbarState);
   };
 
   const handleLoadMore = async () => {
@@ -223,7 +301,7 @@ const HotPage: React.FC = () => {
     setLoadingMore(true);
     try {
       const nextResponse = await hotRankingService.getHotRankings(
-        buildQuery(mode, period, category, data.next_page),
+        buildQuery(toolbarState, data.next_page),
       );
       setData((current) => appendSections(current, nextResponse));
     } catch (error) {
@@ -306,10 +384,10 @@ const HotPage: React.FC = () => {
           onCategoryChange={handleCategoryChange}
           onSortByChange={handleSortByChange}
           onResetFilters={handleResetFilters}
-          onDateChange={setDateFilter}
-          onWeekStartChange={setWeekStartFilter}
-          onMonthChange={setMonthFilter}
-          onYearChange={setYearFilter}
+          onDateChange={(value) => startTransition(() => dispatchToolbar({ type: "setDate", value }))}
+          onWeekStartChange={(value) => startTransition(() => dispatchToolbar({ type: "setWeekStart", value }))}
+          onMonthChange={(value) => startTransition(() => dispatchToolbar({ type: "setMonth", value }))}
+          onYearChange={(value) => startTransition(() => dispatchToolbar({ type: "setYear", value }))}
         />
 
         {loading ? <HotPageSkeleton /> : null}
@@ -322,7 +400,7 @@ const HotPage: React.FC = () => {
           />
         ) : null}
 
-        {!loading && !errorMessage && hasListItems ? (
+        {!loading && !errorMessage && (hasListItems || data?.has_more) ? (
           <div className="relative space-y-8">
             {showRefreshOverlay ? (
               <div
@@ -342,7 +420,7 @@ const HotPage: React.FC = () => {
                     section={section}
                     variant={index === 0 ? "primary" : "secondary"}
                     onSearch={handleSearch}
-                    showSortControl={mode === "popular" && category !== "all" && index === 0}
+                    showSortControl={index === 0}
                     sortBy={sortBy}
                     onSortByChange={handleSortByChange}
                   />

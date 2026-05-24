@@ -164,20 +164,13 @@ func NormalizeHotRankingCategory(raw string) HotRankingCategory {
 
 func ValidateHotRankingQuery(query HotRankingQuery) error {
 	if query.Mode == HotRankingModeTrend {
-		if query.SortBy != "" && query.SortBy != HotRankingSortByPopularity {
-			return fmt.Errorf("趋势榜不支持自定义排序")
-		}
 		if query.Period != HotRankingPeriodDay && query.Period != HotRankingPeriodWeek {
 			return fmt.Errorf("趋势榜仅支持日榜和周榜")
 		}
-		if strings.TrimSpace(query.Date) != "" || strings.TrimSpace(query.WeekStart) != "" || strings.TrimSpace(query.Month) != "" || strings.TrimSpace(query.Year) != "" {
+		if query.SortBy == HotRankingSortByPopularity && (strings.TrimSpace(query.Date) != "" || strings.TrimSpace(query.WeekStart) != "" || strings.TrimSpace(query.Month) != "" || strings.TrimSpace(query.Year) != "") {
 			return fmt.Errorf("趋势榜不支持历史时间筛选")
 		}
 		return nil
-	}
-
-	if query.Category == HotRankingCategoryAll && query.SortBy != "" && query.SortBy != HotRankingSortByPopularity {
-		return fmt.Errorf("聚合分类不支持自定义排序")
 	}
 
 	switch query.Period {

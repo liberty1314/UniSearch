@@ -362,6 +362,9 @@ const ResourceDetailPage: React.FC = () => {
             displayTitle={displayTitle}
             sizeLabel={primaryOpenTarget?.sizeLabel || null}
             primaryCloudType={primaryCloudType}
+            accessLabel={primaryOpenTarget?.target ? "可直接打开" : "仅可查看详情"}
+            linkCountLabel={`${resource.links.length}`}
+            publishedAtLabel={formatDetailTime(resource.published_at)}
           />
 
           <div

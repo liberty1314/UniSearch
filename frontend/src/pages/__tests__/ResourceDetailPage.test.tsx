@@ -317,6 +317,41 @@ describe("ResourceDetailPage", () => {
     expect(screen.queryByRole("heading", { level: 2, name: "全部链接" })).not.toBeInTheDocument();
   });
 
+  it("prioritizes decision-making metadata inside the hero section", async () => {
+    renderDetailPage({
+      pathname: "/resource/resource-1",
+      state: {
+        resource: resourceFixture,
+        from: { pathname: "/", label: "搜索结果", keyword: "你的名字" },
+      },
+    });
+
+    const heroDecisionCard = await screen.findByTestId("resource-detail-hero-decision-card");
+    expect(heroDecisionCard).toHaveTextContent("打开前速览");
+    expect(heroDecisionCard).toHaveTextContent("链接数量");
+    expect(heroDecisionCard).toHaveTextContent("3");
+    expect(heroDecisionCard).toHaveTextContent("访问方式");
+    expect(heroDecisionCard).toHaveTextContent("可直接打开");
+    expect(heroDecisionCard).toHaveTextContent("资源体积");
+    expect(heroDecisionCard).toHaveTextContent("2.15 GiB");
+  });
+
+  it("shows a stronger empty-image fallback inside the hero visual card", async () => {
+    renderDetailPage({
+      pathname: "/resource/resource-1",
+      state: {
+        resource: {
+          ...resourceFixture,
+          images: [],
+        },
+        from: { pathname: "/", label: "搜索结果", keyword: "你的名字" },
+      },
+    });
+
+    expect(await screen.findByText("暂无预览图")).toBeInTheDocument();
+    expect(screen.getByText("可先查看摘要、链接数量与资源体积，再决定是否打开。")).toBeInTheDocument();
+  });
+
   it("uses a poster-friendly image container in the hero section", async () => {
     renderDetailPage({
       pathname: "/resource/resource-1",

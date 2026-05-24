@@ -167,7 +167,10 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
             {isAuthenticated && (
               <button
                 onClick={() => setIsAnnouncementPanelOpen(true)}
-                className="relative rounded-xl p-2 text-gray-600 transition-all duration-300 hover:bg-gray-100/50 dark:text-slate-300 dark:hover:bg-white/10"
+                className={cn(
+                  "relative rounded-xl p-2 text-gray-600 transition-all duration-300 hover:bg-gray-100/50 dark:text-slate-300 dark:hover:bg-white/10",
+                  unreadAnnouncements.length === 0 && "opacity-75"
+                )}
                 aria-label="通知中心"
               >
                 <IoNotificationsOutline className="w-5 h-5" />
@@ -260,7 +263,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                 >
                   <Link
                     to="/login"
-                    className={`group flex items-center gap-2 rounded-full bg-gray-100/50 px-4 py-2 text-sm font-medium text-gray-700 transition-all duration-300 backdrop-blur-sm hover:bg-gray-200/50 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10 ${BLUE_CYAN_HOVER_TEXT}`}
+                    className={`group flex items-center gap-2 rounded-full border border-slate-200/60 bg-white/70 px-4 py-2 text-sm font-medium text-gray-700 transition-all duration-300 backdrop-blur-sm hover:border-cyan-300 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10 ${BLUE_CYAN_HOVER_TEXT}`}
                   >
                     <span>登录</span>
                     <ArrowRight className="w-4 h-4 ml-0.5 group-hover:translate-x-0.5 transition-transform duration-300" />

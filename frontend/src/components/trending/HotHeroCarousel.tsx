@@ -101,18 +101,18 @@ const HotHeroCarousel: React.FC<HotHeroCarouselProps> = ({
       aria-roledescription="carousel"
       aria-label={`${titleMap[period]}轮播`}
     >
-      <div className="glass-card-premium relative min-h-[520px] overflow-hidden rounded-[2rem] bg-slate-950 p-0 shadow-[0_24px_60px_rgba(15,23,42,0.18)]">
+      <div className="glass-card-premium relative h-[520px] overflow-hidden rounded-[2rem] bg-slate-950 p-0 shadow-[0_24px_60px_rgba(15,23,42,0.18)] md:h-[560px]">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={`${activeItem.id}-${period}-${activeIndex}`}
-            className="relative min-h-[520px] w-full bg-slate-950"
+            className="relative h-[520px] w-full bg-slate-950 md:h-[560px]"
             initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 1.015 }}
             animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
             exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.992 }}
             transition={{ duration: shouldReduceMotion ? 0.18 : 0.46, ease: [0.22, 1, 0.36, 1] }}
           >
             <div
-              className="relative min-h-[520px] w-full bg-cover bg-center"
+              className="relative h-[520px] w-full bg-cover bg-center md:h-[560px]"
               style={backdropStyle}
               role="group"
               aria-roledescription="slide"
@@ -124,8 +124,8 @@ const HotHeroCarousel: React.FC<HotHeroCarouselProps> = ({
                 <div className="absolute inset-0 bg-gradient-to-r from-slate-950/92 via-slate-950/46 to-slate-950/24" />
                 <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-slate-950/90 via-slate-950/48 to-transparent" />
 
-                <div className="relative z-10 flex min-h-[520px] flex-col justify-between p-6 pb-28 text-white md:p-8 md:pb-32 xl:pb-10">
-                  <div className="flex max-w-full flex-col lg:min-h-[400px]">
+                <div className="relative z-10 flex h-[520px] flex-col justify-between p-6 pb-28 text-white md:h-[560px] md:p-8 md:pb-32 xl:pb-10">
+                  <div className="flex min-h-0 max-w-full flex-1 flex-col lg:min-h-[400px]">
                     <motion.div
                       className="flex flex-wrap items-center gap-2.5"
                       initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
@@ -166,7 +166,7 @@ const HotHeroCarousel: React.FC<HotHeroCarouselProps> = ({
                       {activeItem.original_title}
                     </motion.p>
                     <motion.p
-                      className="mt-5 max-w-xl text-sm leading-7 text-white/80 line-clamp-3 sm:text-base"
+                      className="mt-5 max-w-xl min-h-[5.25rem] text-sm leading-7 text-white/80 line-clamp-3 sm:min-h-[6rem] sm:text-base"
                       initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
                       animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
                       transition={{ delay: 0.2, duration: 0.34 }}

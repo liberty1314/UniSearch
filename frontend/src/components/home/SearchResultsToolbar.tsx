@@ -7,6 +7,8 @@ import { IoGridOutline, IoListOutline } from "react-icons/io5";
 type ViewMode = "grid" | "list";
 
 interface SearchResultsToolbarProps {
+  /** 当前搜索词 */
+  keyword?: string;
   /** 全量结果总数 */
   totalCount: number;
   /** 当前视图模式 */
@@ -34,6 +36,7 @@ interface SearchResultsToolbarProps {
 export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
   React.memo(
     ({
+      keyword,
       totalCount,
       viewMode,
       onViewModeChange,
@@ -51,23 +54,34 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           data-testid="search-results-toolbar"
-          className="rounded-[20px] border border-white/60 bg-white/60 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.03)] backdrop-blur-xl dark:border-white/[0.06] dark:bg-slate-950/40 dark:shadow-[0_8px_24px_rgba(0,0,0,0.3)] mb-2"
+          className="sticky top-20 z-20 mb-2 rounded-[20px] border border-white/60 bg-white/75 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.03)] backdrop-blur-xl dark:border-white/[0.06] dark:bg-slate-950/65 dark:shadow-[0_8px_24px_rgba(0,0,0,0.3)]"
         >
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-start justify-between gap-4">
             <div
               data-testid="search-results-toolbar-meta"
-              className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2 sm:flex-nowrap"
+              className="flex min-w-0 flex-1 flex-wrap items-start gap-x-3 gap-y-3 sm:flex-nowrap"
             >
-              <div className="flex shrink-0 flex-wrap items-center gap-2 text-[14px] font-medium text-slate-600 dark:text-slate-400">
-                <span className="flex items-center justify-center min-w-6 h-6 px-1.5 rounded-full bg-blue-50/80 text-blue-600 text-xs font-bold border border-blue-200/50 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-300 shadow-sm">
-                  {totalCount}
-                </span>
-                <span>个结果</span>
-                {isRefreshing && (
-                  <span className="text-[13px] text-cyan-600 dark:text-cyan-400">
-                    刷新中
+              <div className="flex min-w-0 flex-col gap-2">
+                {keyword ? (
+                  <div className="flex min-w-0 flex-wrap items-center gap-2 text-[13px] text-slate-500 dark:text-slate-400">
+                    <span className="shrink-0 font-medium">搜索词</span>
+                    <span className="max-w-[16rem] truncate rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-sm font-semibold text-slate-700 dark:border-white/10 dark:bg-slate-900/50 dark:text-slate-100">
+                      {keyword}
+                    </span>
+                  </div>
+                ) : null}
+
+                <div className="flex shrink-0 flex-wrap items-center gap-2 text-[14px] font-medium text-slate-600 dark:text-slate-400">
+                  <span className="flex items-center justify-center min-w-6 h-6 px-1.5 rounded-full bg-blue-50/80 text-blue-600 text-xs font-bold border border-blue-200/50 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-300 shadow-sm">
+                    {totalCount}
                   </span>
-                )}
+                  <span>个结果</span>
+                  {isRefreshing && (
+                    <span className="text-[13px] text-cyan-600 dark:text-cyan-400">
+                      刷新中
+                    </span>
+                  )}
+                </div>
               </div>
 
               {activeFilterChips.length > 0 ? (

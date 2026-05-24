@@ -122,6 +122,10 @@ const SearchUnifiedFilterCard: React.FC = () => {
     () => buildActiveFilterChips(activeFilter),
     [activeFilter],
   );
+  const collapsedSummaryChips = useMemo(
+    () => activeFilterChips.slice(0, 4),
+    [activeFilterChips],
+  );
   const activeFilterCount = activeFilterChips.length;
   const activeConditionCount = activeFilterCount + (isAllSelected ? 0 : 1);
 
@@ -317,6 +321,26 @@ const SearchUnifiedFilterCard: React.FC = () => {
           </div>
         </div>
 
+        {!expanded && collapsedSummaryChips.length > 0 ? (
+          <div
+            data-testid="search-unified-filter-collapsed-summary"
+            className="flex flex-nowrap items-center gap-2 overflow-x-auto rounded-[1.4rem] border border-cyan-200/60 bg-cyan-50/70 px-4 py-3 text-sm text-cyan-900 dark:border-cyan-400/15 dark:bg-cyan-400/10 dark:text-cyan-50"
+          >
+            <span className="shrink-0 text-xs font-semibold tracking-[0.08em] text-cyan-700 dark:text-cyan-200">
+              已生效条件
+            </span>
+            {collapsedSummaryChips.map((chip) => (
+              <span
+                key={chip.id}
+                className="inline-flex max-w-[70vw] shrink-0 items-center rounded-full border border-cyan-300/35 bg-white/75 px-3 py-1 text-xs font-medium text-cyan-800 dark:border-cyan-300/20 dark:bg-slate-950/45 dark:text-cyan-100"
+                title={chip.label}
+              >
+                <span className="truncate whitespace-nowrap">{chip.label}</span>
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         <div className="rounded-[1.6rem] border border-slate-200/70 bg-white/50 p-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
@@ -324,7 +348,7 @@ const SearchUnifiedFilterCard: React.FC = () => {
                 网盘筛选
               </h4>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                单击多选，双击仅看此源
+                单击切换来源，双击仅保留当前网盘
               </p>
             </div>
             <button

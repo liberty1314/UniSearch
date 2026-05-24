@@ -190,6 +190,10 @@ func (s *HotRankingService) fetchAggregatePopularRankings(ctx context.Context, q
 }
 
 func (s *HotRankingService) fetchTrendMovieRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
+	if shouldUseDiscoverForTrend(query) {
+		return s.fetchPopularMovieRankings(ctx, query)
+	}
+
 	genres, err := s.tmdbService.GetMovieGenres(ctx)
 	if err != nil {
 		return model.HotRankingResponse{}, err
@@ -209,6 +213,10 @@ func (s *HotRankingService) fetchTrendMovieRankings(ctx context.Context, query m
 }
 
 func (s *HotRankingService) fetchTrendTVRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
+	if shouldUseDiscoverForTrend(query) {
+		return s.fetchPopularTVRankings(ctx, query)
+	}
+
 	genres, err := s.tmdbService.GetTVGenres(ctx)
 	if err != nil {
 		return model.HotRankingResponse{}, err
@@ -228,6 +236,10 @@ func (s *HotRankingService) fetchTrendTVRankings(ctx context.Context, query mode
 }
 
 func (s *HotRankingService) fetchTrendAnimeRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
+	if shouldUseDiscoverForTrend(query) {
+		return s.fetchPopularAnimeRankings(ctx, query)
+	}
+
 	genres, err := s.tmdbService.GetTVGenres(ctx)
 	if err != nil {
 		return model.HotRankingResponse{}, err
@@ -407,6 +419,21 @@ func resolveDiscoverSortBy(query model.HotRankingQuery) string {
 	return string(query.SortBy)
 }
 
+func shouldUseDiscoverForTrend(query model.HotRankingQuery) bool {
+	return query.Mode == model.HotRankingModeTrend && query.SortBy != model.HotRankingSortByPopularity
+}
+
+func resolveHotRankingSortLabel(sortBy model.HotRankingSortBy) string {
+	switch sortBy {
+	case model.HotRankingSortByReleaseDate:
+		return "时间"
+	case model.HotRankingSortByVoteAverage:
+		return "评分"
+	default:
+		return "热度"
+	}
+}
+
 func buildHotRankingResponse(query model.HotRankingQuery, category model.HotRankingCategory, items []model.HotRankingItem) model.HotRankingResponse {
 	sectionTitle := map[model.HotRankingCategory]string{
 		model.HotRankingCategoryMovie: "热门电影",
@@ -428,9 +455,13 @@ func buildHotRankingResponse(query model.HotRankingQuery, category model.HotRank
 
 	note := "数据来自 TMDB 热门榜。"
 	if query.Mode == model.HotRankingModeTrend {
-		note = "当前展示每日或每周趋势榜单。"
+		if shouldUseDiscoverForTrend(query) {
+			note = fmt.Sprintf("当前展示趋势时间范围内按%s排序的热门榜单。", resolveHotRankingSortLabel(query.SortBy))
+		} else {
+			note = "当前展示每日或每周趋势榜单。"
+		}
 	} else {
-		note = "当前展示按热度排序的热门榜单。"
+		note = fmt.Sprintf("当前展示按%s排序的热门榜单。", resolveHotRankingSortLabel(query.SortBy))
 	}
 
 	return model.HotRankingResponse{
@@ -460,9 +491,13 @@ func buildHotRankingResponse(query model.HotRankingQuery, category model.HotRank
 func buildAggregateHotRankingResponse(query model.HotRankingQuery, sections []model.HotRankingSection) model.HotRankingResponse {
 	note := "数据来自 TMDB 热门榜。"
 	if query.Mode == model.HotRankingModeTrend {
-		note = "当前展示每日或每周趋势榜单。"
+		if shouldUseDiscoverForTrend(query) {
+			note = fmt.Sprintf("当前展示趋势时间范围内按%s排序的热门榜单。", resolveHotRankingSortLabel(query.SortBy))
+		} else {
+			note = "当前展示每日或每周趋势榜单。"
+		}
 	} else {
-		note = "当前展示按热度排序的热门榜单。"
+		note = fmt.Sprintf("当前展示按%s排序的热门榜单。", resolveHotRankingSortLabel(query.SortBy))
 	}
 
 	return model.HotRankingResponse{
@@ -504,7 +539,7 @@ func normalizeHotRankingQuery(query model.HotRankingQuery) model.HotRankingQuery
 	}
 
 	now := time.Now().UTC()
-	if query.Mode == model.HotRankingModePopular {
+	if query.Mode == model.HotRankingModePopular || shouldUseDiscoverForTrend(query) {
 		switch query.Period {
 		case model.HotRankingPeriodDay:
 			if strings.TrimSpace(query.Date) == "" {

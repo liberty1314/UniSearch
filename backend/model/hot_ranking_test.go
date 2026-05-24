@@ -67,11 +67,25 @@ func TestValidateHotRankingQueryRejectsTrendHistoryFilter(t *testing.T) {
 	err := ValidateHotRankingQuery(HotRankingQuery{
 		Mode:   HotRankingModeTrend,
 		Period: HotRankingPeriodDay,
+		SortBy: HotRankingSortByPopularity,
 		Date:   "2026-05-24",
 	})
 
 	if err == nil {
 		t.Fatal("expected validation error, got nil")
+	}
+}
+
+func TestValidateHotRankingQueryAllowsTrendHistoryFilterWhenCustomSortEnabled(t *testing.T) {
+	err := ValidateHotRankingQuery(HotRankingQuery{
+		Mode:   HotRankingModeTrend,
+		Period: HotRankingPeriodDay,
+		SortBy: HotRankingSortByVoteAverage,
+		Date:   "2026-05-24",
+	})
+
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
 	}
 }
 
@@ -84,5 +98,30 @@ func TestValidateHotRankingQueryRejectsInvalidPopularMonth(t *testing.T) {
 
 	if err == nil {
 		t.Fatal("expected validation error, got nil")
+	}
+}
+
+func TestValidateHotRankingQueryAllowsTrendCustomSort(t *testing.T) {
+	err := ValidateHotRankingQuery(HotRankingQuery{
+		Mode:   HotRankingModeTrend,
+		Period: HotRankingPeriodDay,
+		SortBy: HotRankingSortByVoteAverage,
+	})
+
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+}
+
+func TestValidateHotRankingQueryAllowsPopularAggregateCustomSort(t *testing.T) {
+	err := ValidateHotRankingQuery(HotRankingQuery{
+		Mode:     HotRankingModePopular,
+		Period:   HotRankingPeriodDay,
+		Category: HotRankingCategoryAll,
+		SortBy:   HotRankingSortByReleaseDate,
+	})
+
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
 	}
 }

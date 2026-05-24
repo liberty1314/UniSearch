@@ -167,8 +167,9 @@ describe("SearchUnifiedFilterCard", () => {
 
     expect(screen.getByText("已启用 2 项")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "清空全部筛选" })).toBeInTheDocument();
-    expect(screen.queryByText("已生效条件")).not.toBeInTheDocument();
-    expect(screen.queryByText("包含：4K")).not.toBeInTheDocument();
+    expect(screen.getByTestId("search-unified-filter-collapsed-summary")).toBeInTheDocument();
+    expect(screen.getByText("包含：4K")).toBeInTheDocument();
+    expect(screen.getByText("排除：枪版")).toBeInTheDocument();
   });
 
   it("展开后展示关键词与媒体类型高级条件", () => {
@@ -195,6 +196,18 @@ describe("SearchUnifiedFilterCard", () => {
     expect(screen.getByTestId("include-keyword-chip-row").className).toContain("overflow-x-auto");
     expect(screen.getByRole("button", { name: "4k" }).className).toContain("shrink-0");
     expect(screen.getByRole("button", { name: "4k" }).className).toContain("max-w-[70vw]");
+  });
+
+  it("收起状态下提供网盘 chip 的交互提示", () => {
+    render(
+      <MemoryRouter>
+        <SearchUnifiedFilterCard />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByText("单击切换来源，双击仅保留当前网盘"),
+    ).toBeInTheDocument();
   });
 
   it("清空全部筛选时会一次性重置网盘和高级条件", async () => {

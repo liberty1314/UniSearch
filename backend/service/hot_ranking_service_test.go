@@ -21,8 +21,8 @@ type fakeTMDBService struct {
 	discoverMovies     []TMDBMovieResult
 	discoverTV         []TMDBTVResult
 	err                error
-	lastMovieDiscover   TMDBDiscoverMovieParams
-	lastTVDiscover      TMDBDiscoverTVParams
+	lastMovieDiscover  TMDBDiscoverMovieParams
+	lastTVDiscover     TMDBDiscoverTVParams
 }
 
 func (f *fakeTMDBService) GetTrendingMovies(_ context.Context, _ string) ([]TMDBMovieResult, error) {
@@ -56,14 +56,14 @@ func (f *fakeTMDBService) GetTVGenres(_ context.Context) (map[int]string, error)
 }
 
 type fakeHotRankingCache struct {
-	loadResult    bool
-	loadValue     model.HotRankingResponse
-	loadErr       error
-	loadCalls     int
-	loadQuery     model.HotRankingQuery
-	storeCalls    int
-	storeErr      error
-	storeQuery    model.HotRankingQuery
+	loadResult bool
+	loadValue  model.HotRankingResponse
+	loadErr    error
+	loadCalls  int
+	loadQuery  model.HotRankingQuery
+	storeCalls int
+	storeErr   error
+	storeQuery model.HotRankingQuery
 }
 
 func (f *fakeHotRankingCache) Load(_ context.Context, query model.HotRankingQuery, target *model.HotRankingResponse) (bool, error) {
@@ -255,6 +255,61 @@ func TestHotRankingServiceUsesCustomSortForPopularSingleCategory(t *testing.T) {
 
 	if tmdb.lastMovieDiscover.SortBy != string(model.HotRankingSortByVoteAverage) {
 		t.Fatalf("expected discover sort to be vote_average.desc, got %q", tmdb.lastMovieDiscover.SortBy)
+	}
+}
+
+func TestHotRankingServiceUsesDiscoverForTrendWhenCustomSortSelected(t *testing.T) {
+	tmdb := &fakeTMDBService{
+		movieGenres: map[int]string{28: "动作"},
+		discoverMovies: []TMDBMovieResult{
+			{
+				ID:            1,
+				Title:         "高分新片",
+				OriginalTitle: "Top Rated New Movie",
+				Overview:      "test",
+				PosterPath:    "/poster.jpg",
+				BackdropPath:  "/backdrop.jpg",
+				VoteAverage:   9.4,
+				VoteCount:     1200,
+				Popularity:    300,
+				ReleaseDate:   "2026-05-20",
+				GenreIDs:      []int{28},
+			},
+		},
+	}
+
+	service := NewHotRankingService(tmdb, &fakeHotRankingCache{})
+
+	response, err := service.GetHotRankings(context.Background(), model.HotRankingQuery{
+		Mode:     model.HotRankingModeTrend,
+		Period:   model.HotRankingPeriodDay,
+		Category: model.HotRankingCategoryMovie,
+		SortBy:   model.HotRankingSortByVoteAverage,
+		Page:     1,
+		PageSize: 100,
+	})
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+
+	if tmdb.trendingMovieCalls != 0 {
+		t.Fatalf("expected no trending movie calls for custom sorted trend, got %d", tmdb.trendingMovieCalls)
+	}
+
+	if tmdb.discoverMovieCalls == 0 {
+		t.Fatal("expected discover movie calls for custom sorted trend")
+	}
+
+	if tmdb.lastMovieDiscover.SortBy != string(model.HotRankingSortByVoteAverage) {
+		t.Fatalf("expected discover sort to be vote_average.desc, got %q", tmdb.lastMovieDiscover.SortBy)
+	}
+
+	if tmdb.lastMovieDiscover.PrimaryReleaseLTE != "2026-05-24" {
+		t.Fatalf("expected trend daily custom sort to use day upper bound, got %q", tmdb.lastMovieDiscover.PrimaryReleaseLTE)
+	}
+
+	if response.Note != "当前展示趋势时间范围内按评分排序的热门榜单。" {
+		t.Fatalf("expected custom trend note, got %q", response.Note)
 	}
 }
 
