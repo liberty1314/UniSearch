@@ -201,7 +201,7 @@ export const PluginManagementView: React.FC = () => {
                   className="rounded-full"
                 >
                   <Activity className="mr-1 h-4 w-4" />
-                  快速巡检
+                  快速测试
                 </Button>
                 <Button
                   type="button"

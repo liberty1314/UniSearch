@@ -64,8 +64,21 @@ func (m *DatabaseSecretManager) SetSecret(name string, value string, secretType 
 	err = m.db.Where("name = ?", name).First(&existingSecret).Error
 
 	if err == nil {
-		m.db.Model(&existingSecret).Update("is_active", false)
-	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		updates := map[string]any{
+			"type":        secretType,
+			"value":       encryptedValue,
+			"is_active":   true,
+			"description": description,
+			"updated_at":  time.Now(),
+		}
+		if updateErr := m.db.Model(&existingSecret).Updates(updates).Error; updateErr != nil {
+			return updateErr
+		}
+		m.ClearCache(name)
+		return nil
+	}
+
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
 
@@ -73,7 +86,7 @@ func (m *DatabaseSecretManager) SetSecret(name string, value string, secretType 
 		Name:        name,
 		Type:        secretType,
 		Value:       encryptedValue,
-		Version:     existingSecret.Version + 1,
+		Version:     1,
 		IsActive:    true,
 		Description: description,
 		CreatedAt:   time.Now(),

@@ -18,9 +18,7 @@ export const useSystemSettingsController = () => {
   const [enableResourceDetailPage, setEnableResourceDetailPage] = useState<boolean>(false);
   const [publicSiteUrl, setPublicSiteUrl] = useState<string>(resolvePublicSiteUrl());
   const [tmdbReadAccessToken, setTMDBReadAccessToken] = useState<string>('');
-  const [tmdbConfigured, setTMDBConfigured] = useState<boolean>(false);
-  const [tmdbUpdatedAt, setTMDBUpdatedAt] = useState<string | undefined>(undefined);
-  const [tmdbSource, setTMDBSource] = useState<TMDBConfigSource>('unconfigured');
+  const [tmdbCurrentTokenPreview, setTMDBCurrentTokenPreview] = useState<string>('');
   
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<SavingState>(null);
@@ -56,9 +54,7 @@ export const useSystemSettingsController = () => {
       });
 
       const tmdbSettings = await SystemSettingsService.getTMDBSettings(token);
-      setTMDBConfigured(tmdbSettings.configured);
-      setTMDBUpdatedAt(tmdbSettings.updated_at);
-      setTMDBSource(tmdbSettings.source);
+      setTMDBCurrentTokenPreview(tmdbSettings.read_access_token ?? '');
     } catch (error) {
       console.error('加载系统设置失败:', error);
       toast.error('加载系统设置失败：' + (getErrorDataError(error) || getErrorMessage(error)));
@@ -193,9 +189,7 @@ export const useSystemSettingsController = () => {
       const result = await SystemSettingsService.updateTMDBSettings(token, {
         tmdb_read_access_token: tmdbReadAccessToken.trim(),
       });
-      setTMDBConfigured(result.configured);
-      setTMDBUpdatedAt(result.updated_at);
-      setTMDBSource(result.source);
+      setTMDBCurrentTokenPreview(result.read_access_token ?? '');
       setTMDBReadAccessToken('');
       toast.success('TMDB 访问令牌已更新');
     } catch (error) {
@@ -214,9 +208,7 @@ export const useSystemSettingsController = () => {
       enableResourceDetailPage,
       publicSiteUrl,
       tmdbReadAccessToken,
-      tmdbConfigured,
-      tmdbUpdatedAt,
-      tmdbSource,
+      tmdbCurrentTokenPreview,
       isLoading,
       isSaving,
       isSavingTMDB,

@@ -25,6 +25,7 @@ export interface TMDBAdminSettingsResponse {
     configured: boolean;
     updated_at?: string;
     source: "secret_manager" | "env_fallback" | "unconfigured";
+    read_access_token?: string;
 }
 
 /**

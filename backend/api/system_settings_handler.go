@@ -144,9 +144,10 @@ func GetTMDBAdminSettingsHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"configured": settings.Configured,
-		"updated_at": settings.UpdatedAt,
-		"source":     settings.Source,
+		"configured":        settings.Configured,
+		"updated_at":        settings.UpdatedAt,
+		"source":            settings.Source,
+		"read_access_token": settings.ReadAccessToken,
 	})
 }
 
@@ -197,9 +198,10 @@ func UpdateTMDBAdminSettingsHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":    "TMDB 配置已更新",
-		"configured": settings.Configured,
-		"updated_at": settings.UpdatedAt,
-		"source":     settings.Source,
+		"message":           "TMDB 配置已更新",
+		"configured":        settings.Configured,
+		"updated_at":        settings.UpdatedAt,
+		"source":            settings.Source,
+		"read_access_token": settings.ReadAccessToken,
 	})
 }

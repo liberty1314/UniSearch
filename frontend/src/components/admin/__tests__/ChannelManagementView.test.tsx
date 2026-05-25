@@ -194,7 +194,44 @@ describe('ChannelManagementView', () => {
     expect(selectionBar).toHaveTextContent('已选 1 项');
     expect(within(selectionBar).getByRole('button', { name: '全选当前筛选' })).toBeInTheDocument();
     expect(within(selectionBar).getByRole('button', { name: '批量启用' })).toBeInTheDocument();
+    expect(within(selectionBar).getByRole('button', { name: '批量测试' })).toBeInTheDocument();
     expect(within(selectionBar).getByRole('button', { name: '批量删除' })).toBeInTheDocument();
+  });
+
+  it('顶部快速测试会测试全部已启用频道，批量测试只测试选中频道', async () => {
+    render(<ChannelManagementView />);
+
+    await screen.findByText('chan-01');
+
+    await userEvent.click(screen.getByRole('button', { name: '快速测试' }));
+
+    await waitFor(() => {
+      const fetchCalls = vi.mocked(fetch).mock.calls
+        .map(([url, init]) => ({ url: String(url), method: init?.method }));
+      const testUrls = fetchCalls
+        .filter((item) => item.url.includes('/test') && item.method === 'POST')
+        .map((item) => item.url);
+      expect(testUrls).toContain('/api/admin/channels/chan-01/test');
+      expect(testUrls).toContain('/api/admin/channels/chan-12/test');
+    });
+
+    vi.mocked(fetch).mockClear();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: '选择频道 chan-01' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: '选择频道 chan-02' }));
+    await userEvent.click(screen.getByRole('button', { name: '批量测试' }));
+
+    await waitFor(() => {
+      const fetchCalls = vi.mocked(fetch).mock.calls
+        .map(([url, init]) => ({ url: String(url), method: init?.method }));
+      const testUrls = fetchCalls
+        .filter((item) => item.url.includes('/test') && item.method === 'POST')
+        .map((item) => item.url);
+      expect(testUrls).toEqual([
+        '/api/admin/channels/chan-01/test',
+        '/api/admin/channels/chan-02/test',
+      ]);
+    });
   });
 
   it('支持在详情抽屉中保存频道标签', async () => {

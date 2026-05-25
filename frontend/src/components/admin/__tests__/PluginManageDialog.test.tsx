@@ -555,7 +555,7 @@ describe('PluginManageDialog', () => {
     renderDialog();
     await waitForCatalogReady();
 
-    fireEvent.click(screen.getByRole('button', { name: '批量测试' }));
+    fireEvent.click(screen.getByRole('button', { name: '快速测试' }));
 
     await waitFor(() => {
       const calls = (global.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls

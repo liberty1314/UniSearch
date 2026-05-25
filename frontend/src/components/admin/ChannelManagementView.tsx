@@ -129,6 +129,16 @@ export const ChannelManagementView: React.FC = () => {
                   {controller.loading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Zap className="mr-1 h-4 w-4" />}
                   刷新状态
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void controller.handleQuickTest()}
+                  disabled={controller.channels.filter((channel) => channel.is_enabled).length === 0}
+                  className="rounded-full"
+                >
+                  <Zap className="mr-1 h-4 w-4" />
+                  快速测试
+                </Button>
                 <Button type="button" onClick={() => controller.setAddDialogOpen(true)} className="rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-700 hover:to-cyan-600">
                   添加频道
                 </Button>

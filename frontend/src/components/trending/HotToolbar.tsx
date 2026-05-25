@@ -181,10 +181,10 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
             <button
               type="button"
               onClick={onResetFilters}
-              aria-label="重置筛选"
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-cyan-300 hover:text-slate-900 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-cyan-400/35 dark:hover:text-white"
+              className="group flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-slate-200/60 bg-slate-50/50 px-3 text-xs font-medium text-slate-500 shadow-sm backdrop-blur-sm transition-all hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700 hover:shadow dark:border-white/5 dark:bg-slate-800/40 dark:text-slate-400 dark:hover:bg-slate-800/80 dark:hover:text-slate-200"
             >
-              <RotateCcw className="h-4 w-4" />
+              <RotateCcw className="h-3.5 w-3.5 transition-transform duration-500 group-hover:-rotate-180" />
+              <span>重置条件</span>
             </button>
           </div>
           <div className="grid gap-2 sm:grid-cols-3 lg:max-w-3xl" data-testid="hot-toolbar-summary">
@@ -212,11 +212,6 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
               <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {categoryLabelMap[category]}
               </p>
-              {sortBy ? (
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  当前排序：{sortLabelMap[sortBy]}
-                </p>
-              ) : null}
             </div>
           </div>
         </div>
@@ -249,22 +244,14 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
             </div>
           </div>
 
-          {mode === "popular" ? (
-            <div
-              data-testid="hot-toolbar-time-panel"
-              className="glass-toolbar rounded-[1.35rem] p-3 xl:col-span-3"
-            >
-              <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                附加时间条件
-              </p>
-              <p className="mt-2 px-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                先确定模式、周期和分类，再按需要缩小时间范围。
-              </p>
-              <div className="mt-3">
-                {renderTimeField()}
-              </div>
+          <div
+            data-testid="hot-toolbar-time-panel"
+            className="glass-toolbar rounded-[1.35rem] p-3 xl:col-span-3"
+          >
+            <div>
+              {renderTimeField()}
             </div>
-          ) : null}
+          </div>
         </div>
       </div>
     </section>

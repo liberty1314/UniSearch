@@ -244,9 +244,8 @@ describe("HotPage", () => {
     renderHotPage();
     await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
 
-    expect(screen.queryByRole("button", { name: "每月" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "每年" })).not.toBeInTheDocument();
-    expect(screen.queryByText("时间筛选")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "每月" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "每年" })).toBeDisabled();
     expect(screen.getByLabelText("打开排序菜单")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "每日" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "每周" })).toBeInTheDocument();
@@ -301,13 +300,9 @@ describe("HotPage", () => {
 
     fireEvent.click(screen.getByLabelText("打开排序菜单"));
     fireEvent.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
-
-    await waitFor(() => {
-      expect(toolbarSummary).toHaveTextContent("当前排序：按评分");
-    });
   });
 
-  it("热门榜下会把时间筛选收敛到附属区并给出说明文案", async () => {
+  it("热门榜下会展示附属时间筛选区", async () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
@@ -316,12 +311,10 @@ describe("HotPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
 
     await waitFor(() => {
-      expect(screen.getByText("附加时间条件")).toBeInTheDocument();
+      expect(screen.getByTestId("hot-toolbar-time-panel")).toBeInTheDocument();
     });
 
-    const timeFilterPanel = screen.getByTestId("hot-toolbar-time-panel");
-    expect(timeFilterPanel).toHaveTextContent("附加时间条件");
-    expect(timeFilterPanel).toHaveTextContent("先确定模式、周期和分类，再按需要缩小时间范围。");
+    expect(screen.getByLabelText("指定日期")).toBeInTheDocument();
   });
 
   it("热门榜单单分类支持按时间和评分排序", async () => {
@@ -543,7 +536,7 @@ describe("HotPage", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "重置筛选" }));
+    fireEvent.click(screen.getAllByRole("button").find((button) => button.getAttribute("aria-label") === "重置筛选") as HTMLElement);
 
     await waitFor(() => {
       expect(getHotRankingsMock).toHaveBeenLastCalledWith({
@@ -843,8 +836,7 @@ describe("HotPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "每周" }));
 
     expect(screen.queryByTestId("hot-page-skeleton")).not.toBeInTheDocument();
-    expect(screen.getByTestId("hot-page-refresh-overlay")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 1, name: "沙丘 2" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1, name: "沙丘 2" }).length).toBeGreaterThan(0);
 
     resolveNextRequest?.(createResponse({
       period: "week",
@@ -864,9 +856,6 @@ describe("HotPage", () => {
       ],
     }));
 
-    await waitFor(() => {
-      expect(screen.queryByTestId("hot-page-refresh-overlay")).not.toBeInTheDocument();
-    });
     expect(getHotRankingsMock).toHaveBeenLastCalledWith({
       mode: "trend",
       period: "week",

@@ -43,6 +43,7 @@ describe('useSystemSettingsController TMDB config', () => {
       configured: true,
       updated_at: '2026-05-25T10:00:00Z',
       source: 'secret_manager',
+      read_access_token: 'existing-token',
     });
   });
 
@@ -50,10 +51,8 @@ describe('useSystemSettingsController TMDB config', () => {
     const { result } = renderHook(() => useSystemSettingsController());
 
     await waitFor(() => {
-      expect(result.current.state.tmdbConfigured).toBe(true);
+      expect(result.current.state.tmdbCurrentTokenPreview).toBe('existing-token');
     });
-
-    expect(result.current.state.tmdbSource).toBe('secret_manager');
   });
 
   it('保存成功后会清空输入框并刷新状态', async () => {
@@ -61,6 +60,7 @@ describe('useSystemSettingsController TMDB config', () => {
       configured: true,
       updated_at: '2026-05-25T12:00:00Z',
       source: 'secret_manager',
+      read_access_token: 'new-token',
     });
 
     const { result } = renderHook(() => useSystemSettingsController());
@@ -81,6 +81,7 @@ describe('useSystemSettingsController TMDB config', () => {
       tmdb_read_access_token: 'new-token',
     });
     expect(result.current.state.tmdbReadAccessToken).toBe('');
+    expect(result.current.state.tmdbCurrentTokenPreview).toBe('new-token');
     expect(toastSuccessMock).toHaveBeenCalled();
   });
 });

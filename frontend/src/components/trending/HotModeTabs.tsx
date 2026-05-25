@@ -2,7 +2,6 @@ import React from "react";
 import type { HotRankingMode } from "@/types/hotRanking";
 import {
   buildHotToolbarTabClassName,
-  hotToolbarHintClassName,
   hotToolbarRailClassName,
 } from "@/components/trending/hotToolbarTabStyles";
 
@@ -35,9 +34,6 @@ const HotModeTabs: React.FC<HotModeTabsProps> = ({ value, onChange }) => {
           </button>
         ))}
       </div>
-      <p className={hotToolbarHintClassName}>
-        {value === "trend" ? "适合查看平台当前热度走向。" : "适合按周期筛选稳定热门内容。"}
-      </p>
     </div>
   );
 };

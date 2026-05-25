@@ -666,3 +666,34 @@
   - `frontend/src/hooks/useSystemSettingsController.ts`
   - `frontend/src/services/__tests__/systemSettingsService.test.ts`
   - `frontend/src/services/systemSettingsService.ts`
+
+## [2026-05-25 21:27] refactor(frontend): 收敛后台交互文案并调整 TMDB 配置展示
+- **Body**: 调整后台频道、插件和热门榜工具栏的交互文案与按钮形态，统一“快速测试”“重置条件”等操作表达，并收敛搜索结果页的辅助文案展示。
+- **Body**: 同时改造 TMDB 配置读取与更新回显逻辑，使后台表单支持展示当前令牌预览，并修正数据库密钥更新行为与相关测试。
+- **Files**:
+  - `backend/api/system_settings_handler.go`
+  - `backend/api/system_settings_handler_test.go`
+  - `backend/service/secret_manager_db.go`
+  - `backend/service/system_settings_service.go`
+  - `frontend/src/components/__tests__/SearchResults.test.tsx`
+  - `frontend/src/components/admin/AdminWorkspaceToolbar.tsx`
+  - `frontend/src/components/admin/ChannelManagementView.tsx`
+  - `frontend/src/components/admin/PluginManagementView.tsx`
+  - `frontend/src/components/admin/SystemSettingsView.tsx`
+  - `frontend/src/components/admin/__tests__/ChannelManagementView.test.tsx`
+  - `frontend/src/components/admin/__tests__/PluginManageDialog.test.tsx`
+  - `frontend/src/components/admin/__tests__/PluginManagementView.test.tsx`
+  - `frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx`
+  - `frontend/src/components/home/SearchResultsToolbar.tsx`
+  - `frontend/src/components/trending/HotCategoryTabs.tsx`
+  - `frontend/src/components/trending/HotModeTabs.tsx`
+  - `frontend/src/components/trending/HotPeriodTabs.tsx`
+  - `frontend/src/components/trending/HotSectionSummary.tsx`
+  - `frontend/src/components/trending/HotToolbar.tsx`
+  - `frontend/src/components/trending/hotToolbarTabStyles.ts`
+  - `frontend/src/hooks/__tests__/useSystemSettingsController.test.tsx`
+  - `frontend/src/hooks/useChannelManageController.ts`
+  - `frontend/src/hooks/useSystemSettingsController.ts`
+  - `frontend/src/pages/SearchPage.tsx`
+  - `frontend/src/pages/__tests__/HotPage.test.tsx`
+  - `frontend/src/services/systemSettingsService.ts`

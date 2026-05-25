@@ -185,11 +185,8 @@ const SearchPage: React.FC = () => {
           <SearchBox className="w-full max-w-4xl" />
 
           {hasKeyword ? (
-            <div className="max-w-5xl space-y-4">
+            <div className="max-w-5xl">
               <SearchUnifiedFilterCard />
-              <div className="text-xs leading-5 text-slate-500 dark:text-slate-400">
-                搜索结果会保留当前位置刷新，方便连续调整筛选条件。
-              </div>
             </div>
           ) : null}
 

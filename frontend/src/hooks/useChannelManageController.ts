@@ -117,6 +117,7 @@ export type UseChannelManageControllerResult = {
   handleDeleteChannel: () => Promise<void>;
   handleBatchDeleteChannels: () => Promise<void>;
   handleTestChannel: (channelName: string) => Promise<void>;
+  handleQuickTest: () => Promise<void>;
   handleBatchTest: () => Promise<void>;
   channelTagsInput: string[];
   setChannelTagsInput: (value: string[]) => void;
@@ -499,18 +500,17 @@ export function useChannelManageController({
     resetKeyLater(channelName, 5000);
   }, [fetchChannels, markResult, markTesting, onSuccess, resetKeyLater, token]);
 
-  const handleBatchTest = useCallback(async () => {
-    const enabledChannels = channels.filter((channel) => channel.is_enabled);
-    if (enabledChannels.length === 0) {
-      toast.error('没有已启用的频道可供测试');
+  const runChannelTests = useCallback(async (targetChannels: TGChannel[], emptyMessage: string) => {
+    if (targetChannels.length === 0) {
+      toast.error(emptyMessage);
       return;
     }
 
     setIsBatchTesting(true);
-    markBatchTesting(enabledChannels.map((channel) => channel.name));
+    markBatchTesting(targetChannels.map((channel) => channel.name));
 
     const results = await Promise.allSettled(
-      enabledChannels.map(async (channel) => {
+      targetChannels.map(async (channel) => {
         try {
           const response = await fetch(`/api/admin/channels/${channel.name}/test`, {
             method: 'POST',
@@ -528,7 +528,7 @@ export function useChannelManageController({
     );
 
     const successCount = results.filter((item) => item.status === 'fulfilled' && item.value).length;
-    const failCount = enabledChannels.length - successCount;
+    const failCount = targetChannels.length - successCount;
 
     if (failCount === 0) {
       toast.success(`全部 ${successCount} 个频道可访问`);
@@ -542,7 +542,19 @@ export function useChannelManageController({
     setHasPendingChanges(true);
 
     resetAllLater(10000);
-  }, [channels, fetchChannels, markBatchTesting, markResult, onSuccess, resetAllLater, token]);
+  }, [fetchChannels, markBatchTesting, markResult, onSuccess, resetAllLater, token]);
+
+  const handleQuickTest = useCallback(async () => {
+    const enabledChannels = channels.filter((channel) => channel.is_enabled);
+    await runChannelTests(enabledChannels, '没有已启用的频道可供测试');
+  }, [channels, runChannelTests]);
+
+  const handleBatchTest = useCallback(async () => {
+    const selectedEnabledChannels = channels.filter(
+      (channel) => selectedChannelIds.has(channel.id) && channel.is_enabled
+    );
+    await runChannelTests(selectedEnabledChannels, '选中的频道中没有可测试的启用项');
+  }, [channels, runChannelTests, selectedChannelIds]);
 
   const handleSaveChannelTags = useCallback(async () => {
     if (!activeDetailChannel) {
@@ -735,6 +747,7 @@ export function useChannelManageController({
     handleDeleteChannel,
     handleBatchDeleteChannels,
     handleTestChannel,
+    handleQuickTest,
     handleBatchTest,
     channelTagsInput,
     setChannelTagsInput,

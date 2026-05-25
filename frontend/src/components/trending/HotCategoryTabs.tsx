@@ -2,7 +2,6 @@ import React from "react";
 import type { HotRankingCategory } from "@/types/hotRanking";
 import {
   buildHotToolbarTabClassName,
-  hotToolbarHintClassName,
   hotToolbarRailClassName,
 } from "@/components/trending/hotToolbarTabStyles";
 
@@ -37,9 +36,6 @@ const HotCategoryTabs: React.FC<HotCategoryTabsProps> = ({ value, onChange }) =>
           </button>
         ))}
       </div>
-      <p className={hotToolbarHintClassName}>
-        {value === "all" ? "当前会按电影、电视剧、动漫分区展示。" : "当前会聚焦单一分类的榜单内容。"}
-      </p>
     </div>
   );
 };

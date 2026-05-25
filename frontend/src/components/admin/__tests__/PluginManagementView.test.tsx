@@ -217,7 +217,7 @@ describe('PluginManagementView', () => {
     expect(selectionBar).toHaveTextContent('已选 1 项');
     expect(within(selectionBar).getByRole('button', { name: '全选当前筛选' })).toBeInTheDocument();
     expect(within(selectionBar).getByRole('button', { name: '批量启用' })).toBeInTheDocument();
-    expect(within(selectionBar).getByRole('button', { name: '批量测试' })).toBeInTheDocument();
+    expect(within(selectionBar).getByRole('button', { name: '快速测试' })).toBeInTheDocument();
   });
 
   it('插件标签选择器只展示插件词库并支持新增标签', async () => {

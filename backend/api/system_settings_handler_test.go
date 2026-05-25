@@ -187,6 +187,48 @@ func TestUpdateTMDBAdminSettingsHandlerStoresToken(t *testing.T) {
 	if response["source"] != "secret_manager" {
 		t.Fatalf("expected secret_manager source, got %v", response["source"])
 	}
+
+	if response["read_access_token"] != "test-read-token" {
+		t.Fatalf("expected read_access_token to echo stored token, got %v", response["read_access_token"])
+	}
+}
+
+func TestUpdateTMDBAdminSettingsHandlerUpdatesExistingTokenWithoutDuplicateKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+
+	firstBody := bytes.NewBufferString(`{"tmdb_read_access_token":"first-token"}`)
+	firstRecorder := httptest.NewRecorder()
+	firstContext, _ := gin.CreateTestContext(firstRecorder)
+	firstContext.Request = httptest.NewRequest(http.MethodPut, "/api/admin/system-settings/tmdb", firstBody)
+	firstContext.Request.Header.Set("Content-Type", "application/json")
+
+	UpdateTMDBAdminSettingsHandler(firstContext)
+
+	if firstRecorder.Code != http.StatusOK {
+		t.Fatalf("expected first update 200, got %d: %s", firstRecorder.Code, firstRecorder.Body.String())
+	}
+
+	secondBody := bytes.NewBufferString(`{"tmdb_read_access_token":"second-token"}`)
+	secondRecorder := httptest.NewRecorder()
+	secondContext, _ := gin.CreateTestContext(secondRecorder)
+	secondContext.Request = httptest.NewRequest(http.MethodPut, "/api/admin/system-settings/tmdb", secondBody)
+	secondContext.Request.Header.Set("Content-Type", "application/json")
+
+	UpdateTMDBAdminSettingsHandler(secondContext)
+
+	if secondRecorder.Code != http.StatusOK {
+		t.Fatalf("expected second update 200, got %d: %s", secondRecorder.Code, secondRecorder.Body.String())
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(secondRecorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response["read_access_token"] != "second-token" {
+		t.Fatalf("expected updated read_access_token, got %v", response["read_access_token"])
+	}
 }
 
 func TestUpdateTMDBAdminSettingsHandlerRejectsEmptyToken(t *testing.T) {

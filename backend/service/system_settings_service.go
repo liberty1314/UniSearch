@@ -25,9 +25,10 @@ type SystemSettingsService struct {
 }
 
 type TMDBAdminSettings struct {
-	Configured bool
-	UpdatedAt  *time.Time
-	Source     string
+	Configured      bool
+	UpdatedAt       *time.Time
+	Source          string
+	ReadAccessToken string
 }
 
 // NewSystemSettingsService 创建系统设置服务实例
@@ -145,6 +146,10 @@ func (s *SystemSettingsService) GetTMDBSettings() (*TMDBAdminSettings, error) {
 	}
 
 	if _, err := manager.GetSecret(SecretNameTMDBReadAccessKey); err == nil {
+		secretValue, getErr := manager.GetSecret(SecretNameTMDBReadAccessKey)
+		if getErr != nil {
+			return nil, getErr
+		}
 		var secret model.Secret
 		if dbManager, ok := manager.(*DatabaseSecretManager); ok {
 			queryErr := dbManager.db.Where("name = ? AND is_active = ?", SecretNameTMDBReadAccessKey, true).
@@ -156,6 +161,7 @@ func (s *SystemSettingsService) GetTMDBSettings() (*TMDBAdminSettings, error) {
 			settings.Configured = true
 			settings.Source = "secret_manager"
 			settings.UpdatedAt = &secret.UpdatedAt
+			settings.ReadAccessToken = secretValue
 			return settings, nil
 		}
 
@@ -163,6 +169,7 @@ func (s *SystemSettingsService) GetTMDBSettings() (*TMDBAdminSettings, error) {
 		settings.Configured = true
 		settings.Source = "env_fallback"
 		settings.UpdatedAt = &now
+		settings.ReadAccessToken = secretValue
 		return settings, nil
 	}
 
@@ -171,6 +178,7 @@ func (s *SystemSettingsService) GetTMDBSettings() (*TMDBAdminSettings, error) {
 		settings.Configured = true
 		settings.Source = "env_fallback"
 		settings.UpdatedAt = &now
+		settings.ReadAccessToken = strings.TrimSpace(config.AppConfig.TMDBReadAccessToken)
 	}
 
 	return settings, nil

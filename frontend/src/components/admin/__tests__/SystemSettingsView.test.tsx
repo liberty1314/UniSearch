@@ -11,9 +11,7 @@ const controllerState = {
   enableResourceDetailPage: false,
   publicSiteUrl: '',
   tmdbReadAccessToken: '',
-  tmdbConfigured: true,
-  tmdbUpdatedAt: '2026-05-25T10:00:00Z',
-  tmdbSource: 'secret_manager' as const,
+  tmdbCurrentTokenPreview: 'tmdb-token-preview',
   isLoading: false,
   isSaving: null,
   isSavingTMDB: false,
@@ -41,26 +39,34 @@ describe('SystemSettingsView TMDB section', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     controllerState.tmdbReadAccessToken = '';
-    controllerState.tmdbConfigured = true;
+    controllerState.tmdbCurrentTokenPreview = 'tmdb-token-preview';
     controllerState.isSavingTMDB = false;
   });
 
-  it('展示 TMDB 配置状态并禁止空输入保存', () => {
+  it('展示单输入框令牌配置并允许查看当前令牌', () => {
     render(<SystemSettingsView />);
 
     expect(screen.getByText('TMDB Read Access Token')).toBeInTheDocument();
-    expect(screen.getByText('当前已配置访问令牌')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '保存令牌' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '查看 TMDB 令牌' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '保存 TMDB 令牌' })).toBeDisabled();
   });
 
-  it('输入新令牌后允许保存且不回显已存明文', async () => {
+  it('支持在单输入框中查看并编辑令牌', async () => {
     const user = userEvent.setup();
     render(<SystemSettingsView />);
 
-    const input = screen.getByPlaceholderText('请输入新的 TMDB Read Access Token');
+    const input = screen.getByPlaceholderText('请输入 TMDB Read Access Token');
+    expect(input).toHaveAttribute('type', 'password');
+
+    await user.click(screen.getByRole('button', { name: '查看 TMDB 令牌' }));
+    expect(input).toHaveAttribute('type', 'text');
+    expect(screen.getByDisplayValue('tmdb-token-preview')).toBeInTheDocument();
+
+    await user.clear(input);
     await user.type(input, 'new-token');
 
     expect(actions.setTMDBReadAccessToken).toHaveBeenCalled();
-    expect(screen.queryByDisplayValue('new-token')).not.toBeInTheDocument();
+    expect(actions.setTMDBReadAccessToken).toHaveBeenLastCalledWith('new-token');
+    expect(screen.getByRole('button', { name: '保存 TMDB 令牌' })).toBeEnabled();
   });
 });

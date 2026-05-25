@@ -112,7 +112,7 @@ export function AdminWorkspaceToolbar({
             ) : (
               <PlayCircle className="mr-1 h-4 w-4" />
             )}
-            批量测试
+            快速测试
           </Button>
           <div className="ml-auto flex items-center gap-2">
             {selectedCount > 0 && (
