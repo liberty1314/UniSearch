@@ -7,7 +7,36 @@ import (
 	"testing"
 
 	"unisearch/config"
+	"unisearch/model"
 )
+
+type tmdbTestSecretManager struct {
+	token string
+	err   error
+}
+
+func (m *tmdbTestSecretManager) GetSecret(name string) (string, error) {
+	if name != SecretNameTMDBReadAccessKey {
+		return "", m.err
+	}
+	return m.token, m.err
+}
+
+func (m *tmdbTestSecretManager) SetSecret(name string, value string, secretType model.SecretType, description string) error {
+	return nil
+}
+
+func (m *tmdbTestSecretManager) RotateSecret(name string, newValue string) error {
+	return nil
+}
+
+func (m *tmdbTestSecretManager) DeleteSecret(name string) error {
+	return nil
+}
+
+func (m *tmdbTestSecretManager) ListSecrets() ([]model.Secret, error) {
+	return nil, nil
+}
 
 func TestTMDBServiceGetTrendingMoviesUsesBearerTokenAndLanguage(t *testing.T) {
 	oldConfig := config.AppConfig
@@ -159,5 +188,39 @@ func TestTMDBServiceTreatsLegacyReadAccessTokenEnvAsAPIKeyWhenFormatMatches(t *t
 
 	if apiKeyParam != "eb817574a7755281fdf7e31b208ed222" {
 		t.Fatalf("expected api_key query param, got %q", apiKeyParam)
+	}
+}
+
+func TestTMDBServicePrefersSecretManagerTokenOverEnvConfig(t *testing.T) {
+	oldConfig := config.AppConfig
+	oldManager := GetGlobalSecretManager()
+	defer func() {
+		config.AppConfig = oldConfig
+		SetGlobalSecretManager(oldManager)
+	}()
+
+	var authHeader string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"results":[{"id":1,"title":"test","original_title":"test","overview":"test","poster_path":"/poster.jpg","backdrop_path":"/backdrop.jpg","vote_average":8.4,"vote_count":1000,"popularity":999.5,"release_date":"2023-01-22","genre_ids":[28,878]}]}`))
+	}))
+	defer server.Close()
+
+	config.AppConfig = &config.Config{
+		TMDBReadAccessToken: "env-token",
+		TMDBBaseURL:         server.URL,
+		TMDBDefaultLanguage: "zh-CN",
+	}
+	SetGlobalSecretManager(&tmdbTestSecretManager{token: "secret-manager-token"})
+
+	service := NewTMDBService()
+	_, err := service.GetTrendingMovies(context.Background(), "day")
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+
+	if authHeader != "Bearer secret-manager-token" {
+		t.Fatalf("expected secret manager token, got %q", authHeader)
 	}
 }

@@ -20,9 +20,10 @@ func NewEnvironmentSecretManager() *EnvironmentSecretManager {
 	return &EnvironmentSecretManager{
 		BaseSecretManager: NewBaseSecretManager("dummy-key", 1*time.Hour), // 环境变量不需要加密
 		envMapping: map[string]string{
-			"jwt_secret":        "AUTH_JWT_SECRET",
-			"refresh_token_key": "REFRESH_TOKEN_ENCRYPT_KEY",
-			"api_key_master":    "API_KEY_MASTER_SECRET",
+			SecretNameJWTSecret:         "AUTH_JWT_SECRET",
+			SecretNameRefreshTokenKey:   "REFRESH_TOKEN_ENCRYPT_KEY",
+			"api_key_master":            "API_KEY_MASTER_SECRET",
+			SecretNameTMDBReadAccessKey: "TMDB_READ_ACCESS_TOKEN",
 		},
 	}
 }

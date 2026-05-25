@@ -147,8 +147,10 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			admin.POST("/test-url", TestURLHandler())                                                                                // 新增：测试URL连通性
 
 			// 系统设置管理
-			admin.GET("/system-settings", GetSystemSettingsHandler)    // 获取系统设置
-			admin.PUT("/system-settings", UpdateSystemSettingsHandler) // 更新系统设置
+			admin.GET("/system-settings", GetSystemSettingsHandler)          // 获取系统设置
+			admin.PUT("/system-settings", UpdateSystemSettingsHandler)       // 更新系统设置
+			admin.GET("/system-settings/tmdb", GetTMDBAdminSettingsHandler) // 获取 TMDB 管理配置
+			admin.PUT("/system-settings/tmdb", UpdateTMDBAdminSettingsHandler)
 
 			// TG 频道管理
 			channels := admin.Group("/channels")

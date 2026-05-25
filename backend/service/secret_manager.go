@@ -13,6 +13,12 @@ import (
 	"unisearch/model"
 )
 
+const (
+	SecretNameJWTSecret         = "jwt_secret"
+	SecretNameRefreshTokenKey   = "refresh_token_key"
+	SecretNameTMDBReadAccessKey = "tmdb_read_access_token"
+)
+
 // SecretBackendType 密钥后端类型
 type SecretBackendType string
 
@@ -192,7 +198,7 @@ func GetJWTSecret() (string, error) {
 	if globalSecretManager == nil {
 		return "", errors.New("密钥管理服务未初始化")
 	}
-	return globalSecretManager.GetSecret("jwt_secret")
+	return globalSecretManager.GetSecret(SecretNameJWTSecret)
 }
 
 // GetRefreshTokenKey 获取刷新令牌加密密钥（便捷方法）
@@ -200,5 +206,13 @@ func GetRefreshTokenKey() (string, error) {
 	if globalSecretManager == nil {
 		return "", errors.New("密钥管理服务未初始化")
 	}
-	return globalSecretManager.GetSecret("refresh_token_key")
+	return globalSecretManager.GetSecret(SecretNameRefreshTokenKey)
+}
+
+// GetTMDBReadAccessToken 获取 TMDB 读取访问令牌（便捷方法）
+func GetTMDBReadAccessToken() (string, error) {
+	if globalSecretManager == nil {
+		return "", errors.New("密钥管理服务未初始化")
+	}
+	return globalSecretManager.GetSecret(SecretNameTMDBReadAccessKey)
 }

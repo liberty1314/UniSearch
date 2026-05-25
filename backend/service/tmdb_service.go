@@ -221,7 +221,7 @@ func (s *tmdbService) get(ctx context.Context, path string, query url.Values, ta
 		query.Set("region", config.AppConfig.TMDBDefaultRegion)
 	}
 
-	readAccessToken := strings.TrimSpace(config.AppConfig.TMDBReadAccessToken)
+	readAccessToken := strings.TrimSpace(resolveTMDBReadAccessToken())
 	apiKey := strings.TrimSpace(config.AppConfig.TMDBAPIKey)
 	if apiKey == "" && looksLikeTMDBAPIKey(readAccessToken) {
 		apiKey = readAccessToken
@@ -273,6 +273,19 @@ func (s *tmdbService) get(ctx context.Context, path string, query url.Values, ta
 		return err
 	}
 	return nil
+}
+
+func resolveTMDBReadAccessToken() string {
+	token, err := GetTMDBReadAccessToken()
+	if err == nil {
+		return strings.TrimSpace(token)
+	}
+
+	if config.AppConfig == nil {
+		return ""
+	}
+
+	return strings.TrimSpace(config.AppConfig.TMDBReadAccessToken)
 }
 
 func looksLikeTMDBAPIKey(value string) bool {

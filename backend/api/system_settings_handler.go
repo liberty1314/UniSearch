@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 	"unisearch/service"
 
 	"github.com/gin-gonic/gin"
@@ -122,5 +123,83 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 		"enable_resource_detail_page":  settings.EnableResourceDetailPage,
 		"public_site_url":              settings.PublicSiteURL,
 		"default_copy_format_template": settings.DefaultCopyFormatTemplate,
+	})
+}
+
+// GetTMDBAdminSettingsHandler 获取 TMDB 管理配置状态
+func GetTMDBAdminSettingsHandler(c *gin.Context) {
+	if systemSettingsService == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "系统设置服务未初始化",
+		})
+		return
+	}
+
+	settings, err := systemSettingsService.GetTMDBSettings()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "获取 TMDB 配置状态失败：" + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"configured": settings.Configured,
+		"updated_at": settings.UpdatedAt,
+		"source":     settings.Source,
+	})
+}
+
+// UpdateTMDBAdminSettingsHandler 更新 TMDB 读取令牌
+func UpdateTMDBAdminSettingsHandler(c *gin.Context) {
+	if systemSettingsService == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "系统设置服务未初始化",
+		})
+		return
+	}
+
+	var req struct {
+		TMDBReadAccessToken string `json:"tmdb_read_access_token"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "请求参数错误：" + err.Error(),
+		})
+		return
+	}
+
+	if strings.TrimSpace(req.TMDBReadAccessToken) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "请求参数错误：tmdb_read_access_token 不能为空",
+		})
+		return
+	}
+
+	if err := systemSettingsService.UpdateTMDBReadAccessToken(req.TMDBReadAccessToken); err != nil {
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "后台不可写") {
+			statusCode = http.StatusBadRequest
+		}
+		c.JSON(statusCode, gin.H{
+			"error": "更新 TMDB 配置失败：" + err.Error(),
+		})
+		return
+	}
+
+	settings, err := systemSettingsService.GetTMDBSettings()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "获取 TMDB 配置状态失败：" + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "TMDB 配置已更新",
+		"configured": settings.Configured,
+		"updated_at": settings.UpdatedAt,
+		"source":     settings.Source,
 	})
 }

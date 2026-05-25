@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { apiClient } from '@/lib/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const PUBLIC_SETTINGS_CACHE_TTL_MS = 30000;
@@ -18,6 +19,12 @@ export interface SystemSettingsResponse {
     enable_resource_detail_page: boolean; // 是否启用资源详情页展示
     public_site_url: string;        // 公开站点 URL（为空时由前端环境变量兜底）
     default_copy_format_template: string; // API Key 复制默认模板
+}
+
+export interface TMDBAdminSettingsResponse {
+    configured: boolean;
+    updated_at?: string;
+    source: "secret_manager" | "env_fallback" | "unconfigured";
 }
 
 /**
@@ -94,5 +101,16 @@ export class SystemSettingsService {
             expiresAt: Date.now() + PUBLIC_SETTINGS_CACHE_TTL_MS,
         };
         return response.data;
+    }
+
+    static async getTMDBSettings(_token: string): Promise<TMDBAdminSettingsResponse> {
+        return apiClient.get<TMDBAdminSettingsResponse>('/admin/system-settings/tmdb');
+    }
+
+    static async updateTMDBSettings(
+        _token: string,
+        payload: { tmdb_read_access_token: string }
+    ): Promise<TMDBAdminSettingsResponse> {
+        return apiClient.put<TMDBAdminSettingsResponse>('/admin/system-settings/tmdb', payload);
     }
 }

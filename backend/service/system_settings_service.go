@@ -3,6 +3,8 @@ package service
 import (
 	"errors"
 	"strings"
+	"time"
+	"unisearch/config"
 	"unisearch/model"
 
 	"gorm.io/gorm"
@@ -20,6 +22,12 @@ type SystemSettingsUpdateInput struct {
 // SystemSettingsService 系统设置服务
 type SystemSettingsService struct {
 	db *gorm.DB
+}
+
+type TMDBAdminSettings struct {
+	Configured bool
+	UpdatedAt  *time.Time
+	Source     string
 }
 
 // NewSystemSettingsService 创建系统设置服务实例
@@ -122,4 +130,72 @@ func (s *SystemSettingsService) SetAnnouncementEnabled(enabled bool) error {
 	}
 
 	return nil
+}
+
+// GetTMDBSettings 获取 TMDB 后台配置状态
+func (s *SystemSettingsService) GetTMDBSettings() (*TMDBAdminSettings, error) {
+	manager := GetGlobalSecretManager()
+	if manager == nil {
+		return nil, errors.New("密钥管理服务未初始化")
+	}
+
+	settings := &TMDBAdminSettings{
+		Configured: false,
+		Source:     "unconfigured",
+	}
+
+	if _, err := manager.GetSecret(SecretNameTMDBReadAccessKey); err == nil {
+		var secret model.Secret
+		if dbManager, ok := manager.(*DatabaseSecretManager); ok {
+			queryErr := dbManager.db.Where("name = ? AND is_active = ?", SecretNameTMDBReadAccessKey, true).
+				Order("version DESC").
+				First(&secret).Error
+			if queryErr != nil {
+				return nil, queryErr
+			}
+			settings.Configured = true
+			settings.Source = "secret_manager"
+			settings.UpdatedAt = &secret.UpdatedAt
+			return settings, nil
+		}
+
+		now := time.Now()
+		settings.Configured = true
+		settings.Source = "env_fallback"
+		settings.UpdatedAt = &now
+		return settings, nil
+	}
+
+	if config.AppConfig != nil && strings.TrimSpace(config.AppConfig.TMDBReadAccessToken) != "" {
+		now := time.Now()
+		settings.Configured = true
+		settings.Source = "env_fallback"
+		settings.UpdatedAt = &now
+	}
+
+	return settings, nil
+}
+
+// UpdateTMDBReadAccessToken 更新 TMDB 访问令牌
+func (s *SystemSettingsService) UpdateTMDBReadAccessToken(token string) error {
+	manager := GetGlobalSecretManager()
+	if manager == nil {
+		return errors.New("密钥管理服务未初始化")
+	}
+
+	trimmedToken := strings.TrimSpace(token)
+	if trimmedToken == "" {
+		return errors.New("TMDB 读取令牌不能为空")
+	}
+
+	if _, ok := manager.(*EnvironmentSecretManager); ok {
+		return errors.New("当前部署为环境变量密钥后端，后台不可写，请改环境变量或切换数据库密钥后端")
+	}
+
+	return manager.SetSecret(
+		SecretNameTMDBReadAccessKey,
+		trimmedToken,
+		model.SecretTypeCustom,
+		"TMDB 读取令牌",
+	)
 }

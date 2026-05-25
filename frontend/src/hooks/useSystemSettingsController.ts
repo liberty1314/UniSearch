@@ -6,6 +6,7 @@ import { getErrorDataError, getErrorMessage } from '@/lib/error';
 import { resolvePublicSiteUrl } from '@/lib/publicSiteConfig';
 
 export type SavingState = 'auth' | 'login' | 'signup' | 'resource_detail' | 'display' | null;
+export type TMDBConfigSource = 'secret_manager' | 'env_fallback' | 'unconfigured';
 
 export const useSystemSettingsController = () => {
   const { token } = useAuthStore();
@@ -16,9 +17,14 @@ export const useSystemSettingsController = () => {
   const [enableUserSignup, setEnableUserSignup] = useState<boolean>(true);
   const [enableResourceDetailPage, setEnableResourceDetailPage] = useState<boolean>(false);
   const [publicSiteUrl, setPublicSiteUrl] = useState<string>(resolvePublicSiteUrl());
+  const [tmdbReadAccessToken, setTMDBReadAccessToken] = useState<string>('');
+  const [tmdbConfigured, setTMDBConfigured] = useState<boolean>(false);
+  const [tmdbUpdatedAt, setTMDBUpdatedAt] = useState<string | undefined>(undefined);
+  const [tmdbSource, setTMDBSource] = useState<TMDBConfigSource>('unconfigured');
   
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<SavingState>(null);
+  const [isSavingTMDB, setIsSavingTMDB] = useState<boolean>(false);
   
   // 原始值（用于错误恢复）
   const [originalValues, setOriginalValues] = useState({
@@ -48,6 +54,11 @@ export const useSystemSettingsController = () => {
         enableResourceDetailPage: settings.enable_resource_detail_page,
         publicSiteUrl: resolvePublicSiteUrl(settings),
       });
+
+      const tmdbSettings = await SystemSettingsService.getTMDBSettings(token);
+      setTMDBConfigured(tmdbSettings.configured);
+      setTMDBUpdatedAt(tmdbSettings.updated_at);
+      setTMDBSource(tmdbSettings.source);
     } catch (error) {
       console.error('加载系统设置失败:', error);
       toast.error('加载系统设置失败：' + (getErrorDataError(error) || getErrorMessage(error)));
@@ -174,6 +185,27 @@ export const useSystemSettingsController = () => {
     }
   };
 
+  const handleSaveTMDBConfig = async () => {
+    if (!token) return;
+
+    setIsSavingTMDB(true);
+    try {
+      const result = await SystemSettingsService.updateTMDBSettings(token, {
+        tmdb_read_access_token: tmdbReadAccessToken.trim(),
+      });
+      setTMDBConfigured(result.configured);
+      setTMDBUpdatedAt(result.updated_at);
+      setTMDBSource(result.source);
+      setTMDBReadAccessToken('');
+      toast.success('TMDB 访问令牌已更新');
+    } catch (error) {
+      console.error('保存 TMDB 配置失败:', error);
+      toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
+    } finally {
+      setIsSavingTMDB(false);
+    }
+  };
+
   return {
     state: {
       enableUserAuth,
@@ -181,16 +213,23 @@ export const useSystemSettingsController = () => {
       enableUserSignup,
       enableResourceDetailPage,
       publicSiteUrl,
+      tmdbReadAccessToken,
+      tmdbConfigured,
+      tmdbUpdatedAt,
+      tmdbSource,
       isLoading,
       isSaving,
+      isSavingTMDB,
     },
     actions: {
       setPublicSiteUrl,
+      setTMDBReadAccessToken,
       handleToggleAuth,
       handleToggleLogin,
       handleToggleSignup,
       handleToggleResourceDetailPage,
       handleSaveDisplayConfig,
+      handleSaveTMDBConfig,
     }
   };
 };

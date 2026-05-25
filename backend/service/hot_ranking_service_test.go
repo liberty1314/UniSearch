@@ -304,7 +304,8 @@ func TestHotRankingServiceUsesDiscoverForTrendWhenCustomSortSelected(t *testing.
 		t.Fatalf("expected discover sort to be vote_average.desc, got %q", tmdb.lastMovieDiscover.SortBy)
 	}
 
-	if tmdb.lastMovieDiscover.PrimaryReleaseLTE != "2026-05-24" {
+	expectedDayUpperBound := time.Now().UTC().Format("2006-01-02")
+	if tmdb.lastMovieDiscover.PrimaryReleaseLTE != expectedDayUpperBound {
 		t.Fatalf("expected trend daily custom sort to use day upper bound, got %q", tmdb.lastMovieDiscover.PrimaryReleaseLTE)
 	}
 

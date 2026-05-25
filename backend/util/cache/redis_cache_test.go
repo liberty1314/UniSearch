@@ -56,6 +56,23 @@ func (f *fakeRedisClient) Del(_ context.Context, keys ...string) *redis.IntCmd {
 	return redis.NewIntResult(int64(len(keys)), nil)
 }
 
+func (f *fakeRedisClient) Keys(_ context.Context, pattern string) *redis.StringSliceCmd {
+	var matched []string
+	if pattern == "*" {
+		for key := range f.values {
+			matched = append(matched, key)
+		}
+		return redis.NewStringSliceResult(matched, nil)
+	}
+
+	for key := range f.values {
+		if key == pattern {
+			matched = append(matched, key)
+		}
+	}
+	return redis.NewStringSliceResult(matched, nil)
+}
+
 func (f *fakeRedisClient) Exists(_ context.Context, keys ...string) *redis.IntCmd {
 	f.existsCalls++
 	var count int64

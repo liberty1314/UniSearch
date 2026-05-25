@@ -644,3 +644,25 @@
   - `frontend/src/components/trending/HotHeroCarousel.tsx`
   - `frontend/src/components/trending/HotPageSkeleton.tsx`
   - `frontend/src/pages/HotPage.tsx`
+
+## [2026-05-25 17:52] feat(system-settings): 增加 TMDB 管理配置入口
+- **Body**: 为后台系统设置增加 TMDB 读取令牌的查询与更新接口，并接入密钥管理器与环境变量回退逻辑。
+- **Body**: 同时补齐后台设置页、控制器和服务层的 TMDB 配置表单与测试覆盖，支持在管理端查看配置状态并保存令牌。
+- **Files**:
+  - `backend/api/router.go`
+  - `backend/api/system_settings_handler.go`
+  - `backend/api/system_settings_handler_test.go`
+  - `backend/service/hot_ranking_service_test.go`
+  - `backend/service/secret_manager.go`
+  - `backend/service/secret_manager_env.go`
+  - `backend/service/secret_manager_test.go`
+  - `backend/service/system_settings_service.go`
+  - `backend/service/tmdb_service.go`
+  - `backend/service/tmdb_service_test.go`
+  - `backend/util/cache/redis_cache_test.go`
+  - `frontend/src/components/admin/SystemSettingsView.tsx`
+  - `frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx`
+  - `frontend/src/hooks/__tests__/useSystemSettingsController.test.tsx`
+  - `frontend/src/hooks/useSystemSettingsController.ts`
+  - `frontend/src/services/__tests__/systemSettingsService.test.ts`
+  - `frontend/src/services/systemSettingsService.ts`

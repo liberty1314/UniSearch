@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"unisearch/model"
@@ -26,6 +27,11 @@ func newSystemSettingsHandlerService(t *testing.T) *service.SystemSettingsServic
 	if err := db.AutoMigrate(&model.SystemSettings{}); err != nil {
 		t.Fatalf("auto migrate system settings: %v", err)
 	}
+	if err := db.AutoMigrate(&model.Secret{}); err != nil {
+		t.Fatalf("auto migrate secrets: %v", err)
+	}
+
+	service.SetGlobalSecretManager(service.NewDatabaseSecretManager(db, "test-master-key-12345678901234567890"))
 
 	return service.NewSystemSettingsService(db)
 }
@@ -122,5 +128,103 @@ func TestUpdateSystemSettingsHandlerSupportsResourceDetailSwitch(t *testing.T) {
 
 	if response["enable_resource_detail_page"] != false {
 		t.Fatalf("expected enable_resource_detail_page to be false, got %v", response["enable_resource_detail_page"])
+	}
+}
+
+func TestGetTMDBAdminSettingsHandlerReturnsUnconfiguredByDefault(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodGet, "/api/admin/system-settings/tmdb", nil)
+
+	GetTMDBAdminSettingsHandler(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response["configured"] != false {
+		t.Fatalf("expected configured false, got %v", response["configured"])
+	}
+
+	if response["source"] != "unconfigured" {
+		t.Fatalf("expected unconfigured source, got %v", response["source"])
+	}
+}
+
+func TestUpdateTMDBAdminSettingsHandlerStoresToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+
+	body := bytes.NewBufferString(`{"tmdb_read_access_token":"test-read-token"}`)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodPut, "/api/admin/system-settings/tmdb", body)
+	context.Request.Header.Set("Content-Type", "application/json")
+
+	UpdateTMDBAdminSettingsHandler(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response["configured"] != true {
+		t.Fatalf("expected configured true, got %v", response["configured"])
+	}
+
+	if response["source"] != "secret_manager" {
+		t.Fatalf("expected secret_manager source, got %v", response["source"])
+	}
+}
+
+func TestUpdateTMDBAdminSettingsHandlerRejectsEmptyToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+
+	body := bytes.NewBufferString(`{"tmdb_read_access_token":"   "}`)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodPut, "/api/admin/system-settings/tmdb", body)
+	context.Request.Header.Set("Content-Type", "application/json")
+
+	UpdateTMDBAdminSettingsHandler(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestUpdateTMDBAdminSettingsHandlerReturnsErrorForEnvironmentSecretBackend(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+	service.SetGlobalSecretManager(service.NewEnvironmentSecretManager())
+	t.Setenv("TMDB_READ_ACCESS_TOKEN", "env-token")
+
+	body := bytes.NewBufferString(`{"tmdb_read_access_token":"new-token"}`)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodPut, "/api/admin/system-settings/tmdb", body)
+	context.Request.Header.Set("Content-Type", "application/json")
+
+	UpdateTMDBAdminSettingsHandler(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	if !strings.Contains(recorder.Body.String(), "后台不可写") {
+		t.Fatalf("expected env backend error message, got %s", recorder.Body.String())
 	}
 }

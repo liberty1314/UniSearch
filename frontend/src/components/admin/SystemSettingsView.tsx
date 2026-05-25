@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Settings, RefreshCw, Shield, LogIn, UserPlus, Globe, Save, FileSearch } from 'lucide-react';
+import { Settings, RefreshCw, Shield, LogIn, UserPlus, Globe, Save, FileSearch, KeyRound, CircleCheck, CircleOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppleSwitch } from '@/components/ui/apple-switch';
 import { useSystemSettingsController } from '@/hooks/useSystemSettingsController';
@@ -18,8 +18,13 @@ export const SystemSettingsView: React.FC = () => {
         enableUserSignup,
         enableResourceDetailPage,
         publicSiteUrl,
+        tmdbReadAccessToken,
+        tmdbConfigured,
+        tmdbUpdatedAt,
+        tmdbSource,
         isLoading,
         isSaving,
+        isSavingTMDB,
     } = state;
 
     if (isLoading) {
@@ -173,6 +178,56 @@ export const SystemSettingsView: React.FC = () => {
                                 >
                                     {isSaving === 'display' ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                                     {isSaving === 'display' ? '保存中...' : '保存更改'}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-3">
+                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider px-4">TMDB 配置</h2>
+                <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-[1.5rem] overflow-hidden shadow-sm p-5 sm:p-6 space-y-5">
+                    <div className="flex items-start gap-4">
+                        <div className="p-2 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl">
+                            <KeyRound className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 space-y-4">
+                            <div>
+                                <Label className="text-base font-semibold text-slate-900 dark:text-white">TMDB Read Access Token</Label>
+                                <p className="text-sm text-slate-500 mt-1">用于热门榜单内容抓取，仅支持维护 TMDB 读取访问令牌，不是 v3 API Key。</p>
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-slate-50/70 dark:bg-slate-900/50 px-4 py-3">
+                                <div className="flex flex-col gap-2 text-sm text-slate-600 dark:text-slate-300">
+                                    <div className="flex items-center gap-2">
+                                        {tmdbConfigured ? <CircleCheck className="h-4 w-4 text-emerald-500" /> : <CircleOff className="h-4 w-4 text-slate-400" />}
+                                        <span>{tmdbConfigured ? '当前已配置访问令牌' : '当前未配置访问令牌'}</span>
+                                    </div>
+                                    <div>配置来源：{tmdbSource === 'secret_manager' ? '密钥管理器' : tmdbSource === 'env_fallback' ? '环境变量回退' : '未配置'}</div>
+                                    <div>最近更新时间：{tmdbUpdatedAt ? new Date(tmdbUpdatedAt).toLocaleString('zh-CN') : '暂无'}</div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <Input
+                                    id="tmdb-read-access-token"
+                                    type="password"
+                                    value={tmdbReadAccessToken}
+                                    onChange={(e) => actions.setTMDBReadAccessToken(e.target.value)}
+                                    placeholder="请输入新的 TMDB Read Access Token"
+                                    disabled={isSavingTMDB}
+                                    className="flex-1 bg-white/80 dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700 h-11 text-[15px] focus-visible:ring-amber-500 rounded-xl"
+                                />
+                                <Button
+                                    onClick={actions.handleSaveTMDBConfig}
+                                    disabled={isSavingTMDB || tmdbReadAccessToken.trim() === ''}
+                                    className={cn(
+                                        'h-11 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-[0_8px_16px_rgba(245,158,11,0.18)] transition-all'
+                                    )}
+                                >
+                                    {isSavingTMDB ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                                    {isSavingTMDB ? '保存中...' : '保存令牌'}
                                 </Button>
                             </div>
                         </div>
