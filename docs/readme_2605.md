@@ -625,3 +625,10 @@
   - `frontend/src/pages/__tests__/HotPage.test.tsx`
   - `frontend/src/pages/__tests__/ResourceDetailPage.test.tsx`
   - `frontend/src/routes/AppRoutes.tsx`
+
+## [2026-05-25 10:04] refactor(frontend): 重构搜索结果骨架屏结构与样式
+- **Body**: 重构搜索结果骨架屏组件，按网格卡片和列表条目拆分结构，使占位布局更贴近真实结果视图。
+- **Body**: 同时统一骨架流光样式与动画定义，收敛到全局样式层，避免组件内重复视觉逻辑。
+- **Files**:
+  - `frontend/src/components/SkeletonLoader.tsx`
+  - `frontend/src/index.css`
