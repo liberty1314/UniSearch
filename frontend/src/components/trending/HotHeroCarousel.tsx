@@ -38,10 +38,18 @@ const HotHeroCarousel: React.FC<HotHeroCarouselProps> = ({
   const shouldReduceMotion = useReducedMotion();
   const hasMultipleItems = items.length > 1;
   const [activeIndex, setActiveIndex] = React.useState(0);
+  const firstItemId = items[0]?.id;
+
+  const goNext = React.useCallback(() => {
+    if (!hasMultipleItems) {
+      return;
+    }
+    setActiveIndex((current) => (current + 1) % items.length);
+  }, [hasMultipleItems, items.length]);
 
   React.useEffect(() => {
     setActiveIndex(0);
-  }, [items.length, items[0]?.id]);
+  }, [firstItemId, items.length]);
 
   React.useEffect(() => {
     if (!hasMultipleItems) {
@@ -53,7 +61,7 @@ const HotHeroCarousel: React.FC<HotHeroCarouselProps> = ({
     }, 5200);
 
     return () => window.clearInterval(timer);
-  }, [activeIndex, hasMultipleItems, items.length]);
+  }, [activeIndex, goNext, hasMultipleItems]);
 
   const activeItem = items[activeIndex];
   const activeCategoryLabel =
@@ -76,13 +84,6 @@ const HotHeroCarousel: React.FC<HotHeroCarouselProps> = ({
       return;
     }
     setActiveIndex((current) => (current - 1 + items.length) % items.length);
-  };
-
-  const goNext = () => {
-    if (!hasMultipleItems) {
-      return;
-    }
-    setActiveIndex((current) => (current + 1) % items.length);
   };
 
   const backdropStyle = activeItem.backdrop_url

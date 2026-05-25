@@ -703,3 +703,24 @@
 - **Body**: 当前改动只涉及调用侧，和前面已移除的“搜索词”展示保持一致。
 - **Files**:
   - `frontend/src/components/SearchResults.tsx`
+
+## [2026-05-25 22:36] refactor(frontend): 拆分路由工具并清理前端冗余逻辑
+- **Body**: 拆分路由懒加载判断工具，清理首页、热门页、搜索框和系统设置服务中的未使用逻辑与参数处理。
+- **Body**: 同时同步修正相关测试断言和测试辅助方法，保持现有交互行为不变。
+- **Files**:
+  - `frontend/src/components/SearchBox.tsx`
+  - `frontend/src/components/__tests__/SearchBox.test.tsx`
+  - `frontend/src/components/admin/__tests__/PluginManagementView.test.tsx`
+  - `frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx`
+  - `frontend/src/components/home/__tests__/PlatformMarquee.test.tsx`
+  - `frontend/src/components/searchBoxTestUtils.ts`
+  - `frontend/src/components/trending/HotHeroCarousel.tsx`
+  - `frontend/src/components/trending/HotToolbar.tsx`
+  - `frontend/src/pages/Home.tsx`
+  - `frontend/src/pages/HotPage.tsx`
+  - `frontend/src/pages/__tests__/Home.test.tsx`
+  - `frontend/src/pages/__tests__/HotPage.test.tsx`
+  - `frontend/src/routes/AppRoutes.tsx`
+  - `frontend/src/routes/__tests__/AppRoutes.test.tsx`
+  - `frontend/src/routes/appRouteUtils.ts`
+  - `frontend/src/services/systemSettingsService.ts`

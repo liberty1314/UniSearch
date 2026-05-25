@@ -104,14 +104,16 @@ export class SystemSettingsService {
         return response.data;
     }
 
-    static async getTMDBSettings(_token: string): Promise<TMDBAdminSettingsResponse> {
+    static async getTMDBSettings(unusedToken: string): Promise<TMDBAdminSettingsResponse> {
+        void unusedToken;
         return apiClient.get<TMDBAdminSettingsResponse>('/admin/system-settings/tmdb');
     }
 
     static async updateTMDBSettings(
-        _token: string,
+        unusedToken: string,
         payload: { tmdb_read_access_token: string }
     ): Promise<TMDBAdminSettingsResponse> {
+        void unusedToken;
         return apiClient.put<TMDBAdminSettingsResponse>('/admin/system-settings/tmdb', payload);
     }
 }

@@ -11,7 +11,6 @@ import PlatformMarquee from "@/components/home/PlatformMarquee";
 import TrendingCategories from "@/components/home/TrendingCategories";
 import HomeSectionHeader from "@/components/home/HomeSectionHeader";
 import FeatureCard from "@/components/home/FeatureCard";
-import { SearchService } from "@/services/searchService";
 
 const HOME_ENTRANCE_SESSION_KEY = "unisearch_home_entrance_seen";
 

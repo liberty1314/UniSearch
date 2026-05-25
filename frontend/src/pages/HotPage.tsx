@@ -31,8 +31,6 @@ const DEFAULT_MODE: HotRankingMode = "trend";
 const DEFAULT_PERIOD: HotRankingPeriod = "day";
 const DEFAULT_CATEGORY: HotRankingCategory = "all";
 const DEFAULT_SORT_BY: HotRankingSortBy = "popularity.desc";
-const DEFAULT_POPULAR_PERIOD: HotRankingPeriod = "day";
-
 const getToday = () => new Date().toISOString().slice(0, 10);
 const getCurrentMonth = () => getToday().slice(0, 7);
 const getCurrentYear = () => getToday().slice(0, 4);

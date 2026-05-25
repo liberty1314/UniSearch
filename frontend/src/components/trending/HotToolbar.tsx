@@ -34,7 +34,6 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
   mode,
   period,
   category,
-  sortBy,
   date,
   weekStart,
   month,
@@ -42,7 +41,6 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
   onModeChange,
   onPeriodChange,
   onCategoryChange,
-  onSortByChange,
   onResetFilters,
   onDateChange,
   onWeekStartChange,
@@ -61,11 +59,6 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
     movie: "电影",
     tv: "电视剧",
     anime: "动漫",
-  };
-  const sortLabelMap: Record<HotRankingSortBy, string> = {
-    "popularity.desc": "按热度",
-    "primary_release_date.desc": "按时间",
-    "vote_average.desc": "按评分",
   };
   const availablePeriods = mode === "trend"
     ? (["day", "week"] as HotRankingPeriod[])

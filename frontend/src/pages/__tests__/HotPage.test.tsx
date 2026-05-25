@@ -1,6 +1,7 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { HelmetProvider } from "react-helmet-async";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import HotPage from "@/pages/HotPage";
@@ -510,15 +511,16 @@ describe("HotPage", () => {
   });
 
   it("点击重置筛选会恢复默认状态并重新请求默认榜单", async () => {
+    const user = userEvent.setup();
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
     await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
 
-    fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
-    fireEvent.click(screen.getByRole("button", { name: "电影" }));
-    fireEvent.click(await screen.findByLabelText("打开排序菜单"));
-    fireEvent.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
+    await user.click(screen.getByRole("button", { name: "热门榜" }));
+    await user.click(screen.getByRole("button", { name: "电影" }));
+    await user.click(await screen.findByLabelText("打开排序菜单"));
+    await user.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
     fireEvent.change(screen.getByLabelText("指定日期"), { target: { value: "2026-03-23" } });
 
     await waitFor(() => {
@@ -536,7 +538,12 @@ describe("HotPage", () => {
       });
     });
 
-    fireEvent.click(screen.getAllByRole("button").find((button) => button.getAttribute("aria-label") === "重置筛选") as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "重置条件" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "趋势榜" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: "全部" })).toHaveAttribute("aria-pressed", "true");
+    });
 
     await waitFor(() => {
       expect(getHotRankingsMock).toHaveBeenLastCalledWith({
@@ -552,9 +559,6 @@ describe("HotPage", () => {
         page_size: 100,
       });
     });
-
-    expect(screen.getByRole("button", { name: "趋势榜" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "全部" }).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("切换到热门月榜后会带上月份参数请求", async () => {

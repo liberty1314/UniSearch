@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import AppRoutes, { shouldUseLazyRouteFallback } from '@/routes/AppRoutes';
+import AppRoutes from '@/routes/AppRoutes';
+import { shouldUseLazyRouteFallback } from '@/routes/appRouteUtils';
 
 vi.mock('@/components/Navbar', () => ({
   default: () => <div data-testid="navbar" />,

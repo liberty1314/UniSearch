@@ -37,10 +37,18 @@ type HomeHotKeywordsCache = {
 let homeHotKeywordsCache: HomeHotKeywordsCache | null = null;
 let homeHotKeywordsRequest: Promise<string[]> | null = null;
 
-export const __resetHomeHotKeywordsCacheForTests = () => {
+const resetHomeHotKeywordsCache = () => {
   homeHotKeywordsCache = null;
   homeHotKeywordsRequest = null;
 };
+
+if (typeof globalThis !== "undefined") {
+  (
+    globalThis as typeof globalThis & {
+      __unisearchResetHomeHotKeywordsCache?: () => void;
+    }
+  ).__unisearchResetHomeHotKeywordsCache = resetHomeHotKeywordsCache;
+}
 
 const getCurrentRouteSnapshot = () => ({
   pathname: window.location.pathname || "/",
@@ -162,7 +170,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
 
   useEffect(() => {
     if (!isHomePage || !shouldResetFromHomeBack) {
-      return;
+      return undefined;
     }
 
     setInputValue("");
@@ -210,10 +218,9 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
         }
         setHomeQuickKeywords([]);
       } finally {
-        if (!isMounted) {
-          return;
+        if (isMounted) {
+          setIsHomeQuickKeywordsLoading(false);
         }
-        setIsHomeQuickKeywordsLoading(false);
       }
     };
 
@@ -261,7 +268,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
         logout();
         toast.error("登录状态已失效，请重新登录");
         navigate("/login");
-        return;
+        return undefined;
       }
       toast.warning("搜索前请先登录", { duration: 3000 });
       navigate("/login", {
@@ -269,7 +276,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           from: getCurrentRouteSnapshot(),
         },
       });
-      return;
+      return undefined;
     }
 
     toast.error(errorMessage);
@@ -296,7 +303,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
       }
       onSearch?.(keyword);
       setShowHistory(false);
-      return;
+      return undefined;
     }
 
     try {
@@ -331,7 +338,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           },
         },
       });
-      return;
+      return undefined;
     }
 
     await executeSearch(keyword);

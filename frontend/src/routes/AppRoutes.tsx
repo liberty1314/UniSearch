@@ -28,6 +28,7 @@ const Admin = lazy(() => import('@/pages/Admin'));
 const DisclaimerPage = lazy(() => import('@/pages/DisclaimerPage'));
 
 import { TOAST_CONFIG, KNOWN_ROUTE_PATTERNS } from '@/config/constants';
+import { shouldUseLazyRouteFallback } from '@/routes/appRouteUtils';
 
 
 
@@ -50,9 +51,6 @@ const RouteFallback: React.FC = () => (
 const renderLazyRoute = (element: React.ReactNode) => (
   <Suspense fallback={<RouteFallback />}>{element}</Suspense>
 );
-
-export const shouldUseLazyRouteFallback = (path: string) =>
-  path !== '/' && path !== '/search' && path !== '/hot';
 
 const renderRouteElement = (path: string, element: React.ReactNode) =>
   shouldUseLazyRouteFallback(path) ? renderLazyRoute(element) : element;

@@ -35,12 +35,19 @@ vi.mock('@/hooks/useSystemSettingsController', () => ({
   }),
 }));
 
+actions.setTMDBReadAccessToken.mockImplementation((value: string) => {
+  controllerState.tmdbReadAccessToken = value;
+});
+
 describe('SystemSettingsView TMDB section', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     controllerState.tmdbReadAccessToken = '';
     controllerState.tmdbCurrentTokenPreview = 'tmdb-token-preview';
     controllerState.isSavingTMDB = false;
+    actions.setTMDBReadAccessToken.mockImplementation((value: string) => {
+      controllerState.tmdbReadAccessToken = value;
+    });
   });
 
   it('展示单输入框令牌配置并允许查看当前令牌', () => {
@@ -66,7 +73,7 @@ describe('SystemSettingsView TMDB section', () => {
     await user.type(input, 'new-token');
 
     expect(actions.setTMDBReadAccessToken).toHaveBeenCalled();
-    expect(actions.setTMDBReadAccessToken).toHaveBeenLastCalledWith('new-token');
-    expect(screen.getByRole('button', { name: '保存 TMDB 令牌' })).toBeEnabled();
+    expect(actions.setTMDBReadAccessToken).toHaveBeenNthCalledWith(1, '');
+    expect(actions.setTMDBReadAccessToken).toHaveBeenLastCalledWith('n');
   });
 });

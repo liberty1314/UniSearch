@@ -2,10 +2,8 @@ import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  __resetHomeHotKeywordsCacheForTests,
-  SearchBox,
-} from "@/components/SearchBox";
+import { SearchBox } from "@/components/SearchBox";
+import { resetHomeHotKeywordsCacheForTests } from "@/components/searchBoxTestUtils";
 
 const baseHotRankingResponse = {
   mode: "trend" as const,
@@ -139,7 +137,11 @@ vi.mock("@/components/ui/stateful-button", async () => {
 
 describe("SearchBox", () => {
   beforeEach(() => {
-    __resetHomeHotKeywordsCacheForTests();
+    resetHomeHotKeywordsCacheForTests(() => {
+      (globalThis as typeof globalThis & {
+        __unisearchResetHomeHotKeywordsCache?: () => void;
+      }).__unisearchResetHomeHotKeywordsCache?.();
+    });
     performSearchMock.mockReset();
     setSearchParamsMock.mockReset();
     clearHistoryMock.mockReset();
