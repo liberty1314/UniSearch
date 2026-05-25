@@ -697,3 +697,9 @@
   - `frontend/src/pages/SearchPage.tsx`
   - `frontend/src/pages/__tests__/HotPage.test.tsx`
   - `frontend/src/services/systemSettingsService.ts`
+
+## [2026-05-25 22:00] refactor(frontend): 移除结果工具栏冗余搜索词透传
+- **Body**: 移除搜索结果页向工具栏继续透传关键词的冗余参数，收敛当前结果区组件接口。
+- **Body**: 当前改动只涉及调用侧，和前面已移除的“搜索词”展示保持一致。
+- **Files**:
+  - `frontend/src/components/SearchResults.tsx`
