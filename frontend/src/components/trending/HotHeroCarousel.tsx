@@ -102,10 +102,10 @@ const HotHeroCarousel: React.FC<HotHeroCarouselProps> = ({
       aria-label={`${titleMap[period]}轮播`}
     >
       <div className="glass-card-premium relative h-[520px] overflow-hidden rounded-[2rem] bg-slate-950 p-0 shadow-[0_24px_60px_rgba(15,23,42,0.18)] md:h-[560px]">
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence initial={false}>
           <motion.div
             key={`${activeItem.id}-${period}-${activeIndex}`}
-            className="relative h-[520px] w-full bg-slate-950 md:h-[560px]"
+            className="absolute inset-0 bg-slate-950"
             initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 1.015 }}
             animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
             exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.992 }}

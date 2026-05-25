@@ -10,6 +10,102 @@ const HotSkeletonBlock: React.FC<{
   />
 );
 
+/**
+ * 内容区骨架块——使用 skeleton-shimmer 类（石板灰底色 + 流光扫描），
+ * 与 hot-page-skeleton-block（白色半透明底色、仅适用于深色 Hero 区域）不同，
+ * 此组件在亮色/暗色模式的白色卡片背景上都清晰可见。
+ */
+const ContentSkeletonBlock: React.FC<{
+  className: string;
+  delay?: string;
+}> = ({ className, delay = "0ms" }) => (
+  <div
+    className={`skeleton-shimmer ${className}`}
+    style={{ animationDelay: delay }}
+  />
+);
+
+/** 单个媒体卡片骨架（与 HotMediaCard 布局完全对齐）*/
+const HotMediaCardSkeleton: React.FC<{ index: number }> = ({ index }) => (
+  <div
+    className="skeleton-card-wrap rounded-[1.75rem] border border-slate-200/60 bg-white/80 p-4 backdrop-blur-sm md:p-5 dark:border-white/8 dark:bg-slate-900/52"
+    data-testid="hot-media-card-skeleton"
+  >
+    <div className="flex flex-col gap-4 sm:flex-row">
+      {/* 海报占位 */}
+      <ContentSkeletonBlock
+        className="h-40 w-full shrink-0 rounded-[1.4rem] sm:h-36 sm:w-28"
+        delay={`${index * 60}ms`}
+      />
+
+      <div className="min-w-0 flex-1 space-y-3">
+        {/* 排名 + 分类标签行 */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <ContentSkeletonBlock className="h-3 w-14 rounded-full" delay={`${40 + index * 60}ms`} />
+            <ContentSkeletonBlock className="h-5 w-16 rounded-full" delay={`${80 + index * 60}ms`} />
+          </div>
+          {/* 评分徽章 */}
+          <ContentSkeletonBlock className="h-6 w-14 rounded-full" delay={`${120 + index * 60}ms`} />
+        </div>
+
+        {/* 标题 */}
+        <ContentSkeletonBlock className="h-6 w-3/5 rounded-full" delay={`${160 + index * 60}ms`} />
+        {/* 原始标题 */}
+        <ContentSkeletonBlock className="h-4 w-2/5 rounded-full" delay={`${200 + index * 60}ms`} />
+
+        {/* 简介三行 */}
+        <ContentSkeletonBlock className="h-3.5 w-full rounded-full" delay={`${240 + index * 60}ms`} />
+        <ContentSkeletonBlock className="h-3.5 w-11/12 rounded-full" delay={`${280 + index * 60}ms`} />
+        <ContentSkeletonBlock className="h-3.5 w-3/4 rounded-full" delay={`${320 + index * 60}ms`} />
+
+        {/* 类型标签 */}
+        <div className="flex flex-wrap gap-2 pt-1">
+          <ContentSkeletonBlock className="h-6 w-12 rounded-full" delay={`${360 + index * 60}ms`} />
+          <ContentSkeletonBlock className="h-6 w-12 rounded-full" delay={`${400 + index * 60}ms`} />
+          <ContentSkeletonBlock className="h-6 w-12 rounded-full" delay={`${440 + index * 60}ms`} />
+        </div>
+
+        {/* 底部元信息 + 搜索按钮 */}
+        <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-3">
+            <ContentSkeletonBlock className="h-3 w-28 rounded-full" delay={`${480 + index * 60}ms`} />
+            <ContentSkeletonBlock className="h-3 w-16 rounded-full" delay={`${520 + index * 60}ms`} />
+          </div>
+          <ContentSkeletonBlock className="h-8 w-20 rounded-full" delay={`${560 + index * 60}ms`} />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+/**
+ * HotMediaGridSkeleton
+ * 精确模拟 HotMediaGrid（标题行 + 2列卡片网格）的骨架屏，
+ * 用于筛选项变更时的刷新态，避免内容闪烁。
+ */
+export const HotMediaGridSkeleton: React.FC<{
+  /** 渲染的卡片骨架数量，默认 6 */
+  count?: number;
+  /** 是否显示 section 标题行骨架，默认 true */
+  showHeader?: boolean;
+}> = ({ count = 6, showHeader = true }) => (
+  <section className="space-y-5" aria-label="热门榜单内容加载中" data-testid="hot-media-grid-skeleton">
+    {showHeader ? (
+      <div className="flex items-center justify-between gap-4">
+        <ContentSkeletonBlock className="h-7 w-32 rounded-full" />
+        <ContentSkeletonBlock className="h-10 w-10 rounded-full" delay="80ms" />
+      </div>
+    ) : null}
+
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {Array.from({ length: count }).map((_, idx) => (
+        <HotMediaCardSkeleton key={`media-skeleton-${idx}`} index={idx} />
+      ))}
+    </div>
+  </section>
+);
+
 const HotPageSkeleton: React.FC = () => {
   return (
     <section

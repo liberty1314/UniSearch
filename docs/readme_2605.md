@@ -632,3 +632,15 @@
 - **Files**:
   - `frontend/src/components/SkeletonLoader.tsx`
   - `frontend/src/index.css`
+
+## [2026-05-25 11:39] refactor(hot-ranking): 调整热门页刷新骨架并清理旧文档
+- **Body**: 将热门页筛选切换时的局部刷新遮罩改为内容区骨架屏，避免旧数据与新数据交替闪烁，并同步调整轮播过渡行为。
+- **Body**: 同时删除多份过时部署与脚本文档，收敛当前文档维护范围。
+- **Files**:
+  - `docs/SCRIPTS_GUIDE.md`
+  - `docs/api_reference.md`
+  - `docs/frontend-optimization-spec.md`
+  - `docs/zeabur-deploy.md`
+  - `frontend/src/components/trending/HotHeroCarousel.tsx`
+  - `frontend/src/components/trending/HotPageSkeleton.tsx`
+  - `frontend/src/pages/HotPage.tsx`

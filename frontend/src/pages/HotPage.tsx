@@ -7,6 +7,7 @@ import HotHeroCarousel from "@/components/trending/HotHeroCarousel";
 import HotToolbar from "@/components/trending/HotToolbar";
 import HotMediaGrid from "@/components/trending/HotMediaGrid";
 import HotPageSkeleton from "@/components/trending/HotPageSkeleton";
+import { HotMediaGridSkeleton } from "@/components/trending/HotPageSkeleton";
 import HotPageErrorState from "@/components/trending/HotPageErrorState";
 import HotPageEmptyState from "@/components/trending/HotPageEmptyState";
 import {
@@ -350,7 +351,6 @@ const HotPage: React.FC = () => {
   }, [primarySection, secondarySections]);
   const hasHeroItems = heroItems.length > 0;
   const hasListItems = renderSections.some((section) => section.items.length > 0);
-  const showRefreshOverlay = refreshing && !loading && !errorMessage && (hasHeroItems || hasListItems);
 
   return (
     <PublicPageShell contentClassName="container mx-auto px-4 py-8 pt-24 pb-16">
@@ -401,33 +401,28 @@ const HotPage: React.FC = () => {
         ) : null}
 
         {!loading && !errorMessage && (hasListItems || data?.has_more) ? (
-          <div className="relative space-y-8">
-            {showRefreshOverlay ? (
-              <div
-                className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-[2rem]"
-                data-testid="hot-page-refresh-overlay"
-                aria-hidden="true"
-              >
-                <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] dark:bg-slate-950/26" />
-                <div className="absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/65 to-transparent opacity-80 animate-[hotPageRefreshShimmer_1.2s_ease-in-out_infinite] dark:via-cyan-100/18" />
-              </div>
-            ) : null}
-            {renderSections
-              .filter((section) => section.items.length > 0)
-              .map((section, index) => (
-                <div key={section.category} data-testid="hot-page-section">
-                  <HotMediaGrid
-                    section={section}
-                    variant={index === 0 ? "primary" : "secondary"}
-                    onSearch={handleSearch}
-                    showSortControl={index === 0}
-                    sortBy={sortBy}
-                    onSortByChange={handleSortByChange}
-                  />
-                </div>
-              ))}
+          <div className="space-y-8">
+            {/* 筛选条件变更时用骨架屏替换内容，防止旧数据与新数据交替闪烁 */}
+            {refreshing ? (
+              <HotMediaGridSkeleton count={6} showHeader />
+            ) : (
+              renderSections
+                .filter((section) => section.items.length > 0)
+                .map((section, index) => (
+                  <div key={section.category} data-testid="hot-page-section">
+                    <HotMediaGrid
+                      section={section}
+                      variant={index === 0 ? "primary" : "secondary"}
+                      onSearch={handleSearch}
+                      showSortControl={index === 0}
+                      sortBy={sortBy}
+                      onSortByChange={handleSortByChange}
+                    />
+                  </div>
+                ))
+            )}
 
-            {data?.has_more ? (
+            {!refreshing && data?.has_more ? (
               <div className="flex justify-center">
                 <button
                   type="button"
