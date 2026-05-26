@@ -1,22 +1,13 @@
-import React, { useState, useRef, useEffect } from "react";
-import { MAX_SEARCH_HISTORY } from "@/stores/searchStore";
-import { IoCloseOutline, IoTimeOutline } from "react-icons/io5";
-import { useLocation, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { useSearchStore, useSearchHistory } from "@/stores/searchStore";
-import { useAuthStore } from "@/stores/authStore";
-import { useSearchAccessStatus } from "@/stores/searchAccessStore";
+import React from "react";
 import { cn } from "@/lib/utils";
-import { toStyleVars } from "@/lib/styleVars";
-import { getErrorCode, getErrorMessage } from "@/lib/error";
-import {
-  Button as StatefulButton,
-  StatefulButtonHandle,
-} from "@/components/ui/stateful-button";
 import SkeletonLoader from "@/components/SkeletonLoader";
-import { SearchService } from "@/services/searchService";
-import { hotRankingService } from "@/services/hotRankingService";
-import type { HotRankingItem } from "@/types/hotRanking";
+import SearchBoxActions from "@/components/search-box/SearchBoxActions";
+import SearchHistoryPanel from "@/components/search-box/SearchHistoryPanel";
+import SearchInput from "@/components/search-box/SearchInput";
+import {
+  HOME_QUICK_KEYWORD_LIMIT,
+  useSearchBoxController,
+} from "@/hooks/useSearchBoxController";
 
 interface SearchBoxProps {
   className?: string;
@@ -25,537 +16,82 @@ interface SearchBoxProps {
   onSearch?: (keyword: string) => void;
 }
 
-const MAX_VISIBLE_HISTORY_ITEMS = MAX_SEARCH_HISTORY;
-const HOME_QUICK_KEYWORD_LIMIT = 4;
-const HOME_HOT_KEYWORDS_CACHE_TTL = 5 * 60 * 1000;
-
-type HomeHotKeywordsCache = {
-  keywords: string[];
-  expiresAt: number;
-};
-
-let homeHotKeywordsCache: HomeHotKeywordsCache | null = null;
-let homeHotKeywordsRequest: Promise<string[]> | null = null;
-
-const resetHomeHotKeywordsCache = () => {
-  homeHotKeywordsCache = null;
-  homeHotKeywordsRequest = null;
-};
-
-if (typeof globalThis !== "undefined") {
-  (
-    globalThis as typeof globalThis & {
-      __unisearchResetHomeHotKeywordsCache?: () => void;
-    }
-  ).__unisearchResetHomeHotKeywordsCache = resetHomeHotKeywordsCache;
-}
-
-const getCurrentRouteSnapshot = () => ({
-  pathname: window.location.pathname || "/",
-  search: window.location.search || "",
-  hash: window.location.hash || "",
-});
-
-const buildRouteSnapshotFromUrl = (url: string) => {
-  const parsedUrl = new URL(url, window.location.origin);
-  return {
-    pathname: parsedUrl.pathname || "/",
-    search: parsedUrl.search || "",
-    hash: parsedUrl.hash || "",
-  };
-};
-
-const buildHomeSearchTransitionState = () => ({
-  routeTransition: "forward" as const,
-  transitionSource: "home-search-box",
-  resetScroll: true,
-});
-
-const pickHomeHotKeywords = (items: HotRankingItem[] = []) =>
-  items
-    .map((item) => item.title?.trim())
-    .filter((title): title is string => Boolean(title))
-    .filter((title, index, titles) => titles.indexOf(title) === index)
-    .slice(0, HOME_QUICK_KEYWORD_LIMIT);
-
-const extractHomeHotKeywords = async (): Promise<string[]> => {
-  const response = await hotRankingService.getHotRankings({
-    mode: "trend",
-    period: "day",
-    category: "all",
-    page_size: 20,
-  });
-
-  return pickHomeHotKeywords(
-    (response.sections ?? []).flatMap((section) => {
-      const candidates: HotRankingItem[] = [];
-      if (section.spotlight) {
-        candidates.push(section.spotlight);
-      }
-      candidates.push(...section.items);
-      return candidates;
-    }),
-  );
-};
-
-const loadHomeHotKeywords = async (): Promise<string[]> => {
-  const now = Date.now();
-  if (homeHotKeywordsCache && homeHotKeywordsCache.expiresAt > now) {
-    return homeHotKeywordsCache.keywords;
-  }
-
-  if (!homeHotKeywordsRequest) {
-    homeHotKeywordsRequest = extractHomeHotKeywords()
-      .then((keywords) => {
-        homeHotKeywordsCache = {
-          keywords,
-          expiresAt: Date.now() + HOME_HOT_KEYWORDS_CACHE_TTL,
-        };
-        return keywords;
-      })
-      .finally(() => {
-        homeHotKeywordsRequest = null;
-      });
-  }
-
-  return homeHotKeywordsRequest;
-};
-
 export const SearchBox: React.FC<SearchBoxProps> = ({
   className,
   placeholder = "搜索网盘资源...",
   autoFocus = false,
   onSearch,
 }) => {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const buttonRef = useRef<StatefulButtonHandle>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const [isFocused, setIsFocused] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [homeQuickKeywords, setHomeQuickKeywords] = useState<string[]>([]);
-  const [isHomeQuickKeywordsLoading, setIsHomeQuickKeywordsLoading] = useState(
-    false,
-  );
+  const controller = useSearchBoxController({ autoFocus, onSearch });
 
-  const {
-    searchParams,
-    setSearchParams,
-    performSearch,
-    clearHistory,
-    removeFromHistory,
-    isLoading,
-  } = useSearchStore();
-  const { token, isAuthenticated, isAdmin, logout } = useAuthStore();
-  const { status: searchAccessStatus } = useSearchAccessStatus();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const searchHistory = useSearchHistory();
-  const visibleSearchHistory = searchHistory.slice(
-    0,
-    MAX_VISIBLE_HISTORY_ITEMS,
-  );
-  const isHomePage = location.pathname === "/";
-  const shouldResetFromHomeBack = Boolean(
-    (
-      location.state as { resetHomeSearchBox?: boolean } | null
-    )?.resetHomeSearchBox,
-  );
-
-  const [inputValue, setInputValue] = useState(searchParams.keyword || "");
-
-  // 同步搜索参数变化
-  useEffect(() => {
-    setInputValue(searchParams.keyword || "");
-  }, [searchParams.keyword]);
-
-  useEffect(() => {
-    if (!isHomePage || !shouldResetFromHomeBack) {
-      return undefined;
-    }
-
-    setInputValue("");
-    setSearchParams({ keyword: "" });
-    setShowHistory(false);
-    buttonRef.current?.reset?.();
-  }, [isHomePage, setSearchParams, shouldResetFromHomeBack]);
-
-  // 自动聚焦
-  useEffect(() => {
-    if (autoFocus && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [autoFocus]);
-
-  useEffect(() => {
-    if (!isHomePage) {
-      return;
-    }
-
-    let isMounted = true;
-    const now = Date.now();
-    const cachedKeywords =
-      homeHotKeywordsCache && homeHotKeywordsCache.expiresAt > now
-        ? homeHotKeywordsCache.keywords
-        : null;
-
-    if (cachedKeywords) {
-      setHomeQuickKeywords(cachedKeywords);
-      setIsHomeQuickKeywordsLoading(false);
-    } else {
-      setIsHomeQuickKeywordsLoading(true);
-    }
-
-    const hydrateHomeQuickKeywords = async () => {
-      try {
-        const keywords = await loadHomeHotKeywords();
-        if (!isMounted) {
-          return;
-        }
-        setHomeQuickKeywords(keywords);
-      } catch {
-        if (!isMounted) {
-          return;
-        }
-        setHomeQuickKeywords([]);
-      } finally {
-        if (isMounted) {
-          setIsHomeQuickKeywordsLoading(false);
-        }
-      }
-    };
-
-    if (!cachedKeywords) {
-      void hydrateHomeQuickKeywords();
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [isHomePage]);
-
-  useEffect(() => {
-    if (!showHistory) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!wrapperRef.current?.contains(event.target as Node)) {
-        setShowHistory(false);
-      }
-    };
-
-    const handleFocusIn = (event: FocusEvent) => {
-      if (!wrapperRef.current?.contains(event.target as Node)) {
-        setShowHistory(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("focusin", handleFocusIn);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("focusin", handleFocusIn);
-    };
-  }, [showHistory]);
-
-  const handleSearchError = async (error: unknown) => {
-    const errorCode = getErrorCode(error);
-    const errorMessage = getErrorMessage(error, "搜索失败");
-
-    if (errorCode === 401) {
-      if (!isAdmin && token) {
-        logout();
-        toast.error("登录状态已失效，请重新登录");
-        navigate("/login");
-        return undefined;
-      }
-      toast.warning("搜索前请先登录", { duration: 3000 });
-      navigate("/login", {
-        state: {
-          from: getCurrentRouteSnapshot(),
-        },
-      });
-      return undefined;
-    }
-
-    toast.error(errorMessage);
-  };
-
-  const executeSearch = async (keyword: string) => {
-    const nextParams = {
-      ...searchParams,
-      keyword,
-    };
-    const nextUrl = SearchService.buildSearchUrl(nextParams);
-    const currentUrl = `${location.pathname}${location.search}`;
-
-    setSearchParams({ keyword });
-
-    if (location.pathname !== "/search") {
-      if (currentUrl !== nextUrl) {
-        navigate(
-          nextUrl,
-          location.pathname === "/"
-            ? { state: buildHomeSearchTransitionState() }
-            : undefined,
-        );
-      }
-      onSearch?.(keyword);
-      setShowHistory(false);
-      return undefined;
-    }
-
-    try {
-      await buttonRef.current?.run(() => performSearch(nextParams));
-      if (currentUrl !== nextUrl) {
-        navigate(nextUrl, {
-          state: { skipSearchSync: true },
-        });
-      }
-      onSearch?.(keyword);
-      setShowHistory(false);
-    } catch (error) {
-      await handleSearchError(error);
-    }
-  };
-
-  const submitKeyword = async (keywordInput: string) => {
-    const keyword = keywordInput.trim();
-    if (!keyword) return;
-
-    if (!isAuthenticated || searchAccessStatus === "anonymous") {
-      const nextUrl = SearchService.buildSearchUrl({
-        ...searchParams,
-        keyword,
-      });
-      toast.warning("搜索前请先登录", { duration: 3000 });
-      navigate("/login", {
-        state: {
-          from: buildRouteSnapshotFromUrl(nextUrl),
-          pendingSearch: {
-            keyword,
-          },
-        },
-      });
-      return undefined;
-    }
-
-    await executeSearch(keyword);
-  };
-
-  // 处理搜索
-  const handleSearch = async () => {
-    await submitKeyword(inputValue);
-  };
-
-  const handleQuickKeywordSearch = async (keyword: string) => {
-    setInputValue(keyword);
-    await submitKeyword(keyword);
-  };
-
-  // 处理键盘事件
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSearch();
-    } else if (e.key === "Escape") {
-      setShowHistory(false);
-      inputRef.current?.blur();
-    }
-  };
-
-  // 处理输入变化
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-  };
-
-  // 处理焦点
-  const handleFocus = () => {
-    setIsFocused(true);
-    if (visibleSearchHistory.length > 0) {
-      setShowHistory(true);
-    }
-  };
-
-  const handleBlur = () => {
-    setIsFocused(false);
-  };
-
-  // 清空输入
-  const handleClear = () => {
-    setInputValue("");
-    setSearchParams({ keyword: "" });
-    if (location.pathname === "/" && location.search) {
-      navigate("/", { replace: true, state: { skipSearchSync: true } });
-    }
-    if (location.pathname === "/search" && location.search) {
-      navigate("/search", { replace: true, state: { skipSearchSync: true } });
-    }
-    inputRef.current?.focus();
-    // 如果按钮处于“搜索中”动画状态，立即复位
-    buttonRef.current?.reset?.();
-  };
-
-  // 选择历史记录
-  const handleSelectHistory = async (keyword: string) => {
-    setInputValue(keyword);
-    await executeSearch(keyword);
-  };
-
-  // 清空历史记录
-  const handleClearHistory = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    clearHistory();
-    setShowHistory(false);
-  };
-
-  // 删除单条历史记录
-  const handleDeleteHistoryItem = (e: React.MouseEvent, keyword: string) => {
-    e.stopPropagation();
-    removeFromHistory(keyword);
+  const handleSearch = () => {
+    void controller.submitKeyword(controller.inputValue);
   };
 
   return (
     <div
-      ref={wrapperRef}
-      className={cn("w-full max-w-2xl mx-auto", className)}
+      ref={controller.wrapperRef}
+      className={cn("mx-auto w-full max-w-2xl", className)}
     >
       <div className="relative group">
         <div
           aria-hidden="true"
           className={cn(
             "pointer-events-none absolute inset-x-6 inset-y-0 rounded-[2rem] bg-slate-900/5 opacity-0 blur-[60px] transition-all duration-500 dark:bg-white/5",
-            isFocused && "opacity-100",
+            controller.isFocused && "opacity-100",
           )}
         />
         <div
           data-testid="search-box-surface"
-          className={cn(
-            "relative z-10 overflow-hidden rounded-[2rem] border-[0.5px] border-white/60 bg-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-[24px] transition-all duration-500 group-focus-within:-translate-y-1 group-focus-within:border-blue-300/60 group-focus-within:bg-white/70 group-focus-within:shadow-[0_20px_60px_rgba(0,0,0,0.08)] dark:border-white/[0.08] dark:bg-slate-950/40 dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] dark:group-focus-within:border-white/[0.15] dark:group-focus-within:bg-slate-800/40 dark:group-focus-within:shadow-[0_20px_60px_rgba(0,0,0,0.3)]",
-          )}
+          className="relative z-10 overflow-hidden rounded-[2rem] border-[0.5px] border-white/60 bg-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-[24px] transition-all duration-500 group-focus-within:-translate-y-1 group-focus-within:border-blue-300/60 group-focus-within:bg-white/70 group-focus-within:shadow-[0_20px_60px_rgba(0,0,0,0.08)] dark:border-white/[0.08] dark:bg-slate-950/40 dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] dark:group-focus-within:border-white/[0.15] dark:group-focus-within:bg-slate-800/40 dark:group-focus-within:shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
         >
-          <svg
-            className="absolute left-6 top-1/2 z-20 h-6 w-6 -translate-y-1/2 text-slate-400 transition-colors duration-300 group-focus-within:text-blue-500 dark:text-slate-500 dark:group-focus-within:text-blue-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-          <input
-            ref={inputRef}
-            type="text"
-            value={inputValue}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
+          <SearchInput
+            inputRef={controller.inputRef}
+            value={controller.inputValue}
             placeholder={placeholder}
-            className="relative z-10 w-full bg-transparent py-4 pl-14 pr-28 text-base text-gray-900 placeholder-slate-400 focus:outline-none sm:py-5 sm:pr-32 sm:text-lg dark:text-slate-100 dark:placeholder:text-slate-500/80"
+            onChange={controller.setInputValue}
+            onSubmit={handleSearch}
+            onFocus={() => {
+              controller.setIsFocused(true);
+              if (controller.visibleSearchHistory.length > 0) {
+                controller.setShowHistory(true);
+              }
+            }}
+            onBlur={() => {
+              controller.setIsFocused(false);
+            }}
+            onEscape={() => {
+              controller.setShowHistory(false);
+            }}
+            onClear={controller.clearInput}
           />
 
-          {/* 清空按钮 */}
-          {inputValue && (
-            <button
-              onClick={handleClear}
-              className="absolute right-[100px] top-1/2 z-20 -translate-y-1/2 rounded-full p-2 text-slate-400 transition-all duration-300 hover:scale-110 hover:bg-slate-100 hover:text-slate-600 active:scale-95 sm:right-[120px] dark:text-slate-500 dark:hover:bg-white/[0.08] dark:hover:text-slate-200"
-              aria-label="清空输入"
-            >
-              <IoCloseOutline className="w-5 h-5" />
-            </button>
-          )}
-
-          {/* 搜索按钮 */}
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-20 block">
-            <StatefulButton
-              ref={buttonRef}
-              onClick={handleSearch}
-              disabled={!inputValue.trim() || isLoading}
-              className="h-[44px] min-w-[96px] rounded-[1.5rem] bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 dark:from-blue-600 dark:to-cyan-600 dark:hover:from-blue-500 dark:hover:to-cyan-500 text-white font-semibold shadow-[0_8px_16px_rgba(14,165,233,0.24)] dark:shadow-[0_8px_16px_rgba(8,145,178,0.2)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(14,165,233,0.36)] dark:hover:shadow-[0_12px_24px_rgba(8,145,178,0.36)] border border-transparent outline-none focus:outline-none ring-0 active:scale-95"
-            >
-              搜索
-            </StatefulButton>
-          </div>
+          <SearchBoxActions
+            buttonRef={controller.buttonRef}
+            onSearch={handleSearch}
+            disabled={!controller.inputValue.trim() || controller.isLoading}
+          />
         </div>
 
-        {/* 搜索历史下拉菜单 */}
-        {showHistory && visibleSearchHistory.length > 0 && (
-          <div
-            data-testid="search-history-surface"
-            className="absolute left-0 right-0 top-full z-50 mt-3 animate-in overflow-hidden rounded-[2rem] border-[0.5px] border-white/60 bg-white/70 shadow-[0_24px_64px_rgba(0,0,0,0.08)] backdrop-blur-[24px] fade-in slide-in-from-top-3 duration-300 dark:border-white/[0.08] dark:bg-slate-950/50 dark:shadow-[0_24px_64px_rgba(0,0,0,0.4)]"
-          >
-            <div
-              data-testid="search-history-header"
-              className="flex items-center justify-between border-b border-slate-200/50 bg-white/40 px-6 py-4 dark:border-white/[0.04] dark:bg-white/[0.02]"
-            >
-              <div className="flex items-center gap-2 text-[13.5px] font-medium text-slate-500 dark:text-slate-400">
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900/[0.04] dark:bg-white/[0.06] text-slate-500 dark:text-slate-300">
-                  <IoTimeOutline className="h-4 w-4" />
-                </span>
-                <span>最近搜索</span>
-                <span className="text-slate-400/80 dark:text-slate-500 text-[12px] ml-1">
-                  最近 {visibleSearchHistory.length} 条
-                </span>
-              </div>
-              <button
-                onClick={handleClearHistory}
-                className="rounded-full px-3 py-1.5 text-[12.5px] font-medium text-slate-400 transition-colors duration-200 hover:bg-red-50 hover:text-red-500 dark:text-slate-500 dark:hover:bg-red-500/10 dark:hover:text-red-400"
-              >
-                清空记录
-              </button>
-            </div>
-            <div
-              data-testid="search-history-list"
-              className="max-h-[300px] overflow-y-auto px-6 py-5 dark:bg-transparent"
-            >
-              <div className="flex flex-wrap gap-2.5">
-                {visibleSearchHistory.map((keyword, index) => (
-                  <div
-                    key={keyword}
-                    className="group/history relative max-w-full"
-                    style={toStyleVars({
-                      "--history-chip-delay": `${index * 24}ms`,
-                    })}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleSelectHistory(keyword)}
-                      className="history-chip-delay inline-flex max-w-full items-center rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-2 text-left text-[14px] font-medium text-slate-700 shadow-sm backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/60 hover:shadow-[0_8px_16px_rgba(0,0,0,0.06)] dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-                      aria-label={`使用历史记录搜索 ${keyword}`}
-                    >
-                      <span className="truncate max-w-[12rem] leading-none">
-                        {keyword}
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteHistoryItem(e, keyword)}
-                      className="absolute -right-1.5 -top-1.5 inline-flex h-[22px] w-[22px] items-center justify-center rounded-full border border-slate-200/80 bg-white shadow-sm text-slate-400 opacity-0 transition-all duration-200 group-hover/history:opacity-100 hover:scale-110 hover:border-red-100 hover:bg-red-50 hover:text-red-500 dark:border-white/[0.12] dark:bg-slate-800 dark:text-slate-400 dark:shadow-[0_4px_12px_rgba(0,0,0,0.5)] dark:hover:border-red-500/30 dark:hover:bg-red-500/20 dark:hover:text-red-300"
-                      aria-label={`删除历史记录 ${keyword}`}
-                    >
-                      <IoCloseOutline className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {controller.showHistory &&
+        controller.visibleSearchHistory.length > 0 ? (
+          <SearchHistoryPanel
+            history={controller.visibleSearchHistory}
+            onSelect={(keyword) => {
+              void controller.selectHistory(keyword);
+            }}
+            onRemove={controller.removeHistoryItem}
+            onClear={controller.clearHistory}
+          />
+        ) : null}
       </div>
 
-      {isHomePage ? (
+      {controller.isHomePage ? (
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3 px-2">
           <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">
             热门榜单
           </span>
-          {isHomeQuickKeywordsLoading ? (
+          {controller.isHomeQuickKeywordsLoading ? (
             <div
               className="flex flex-wrap items-center justify-center gap-2.5"
               data-testid="home-hot-keywords-skeleton"
@@ -576,13 +112,14 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
               ))}
             </div>
           ) : null}
-          {!isHomeQuickKeywordsLoading
-            ? homeQuickKeywords.map((keyword) => (
+          {!controller.isHomeQuickKeywordsLoading
+            ? controller.homeQuickKeywords.map((keyword) => (
                 <button
                   key={keyword}
                   type="button"
                   onClick={() => {
-                    void handleQuickKeywordSearch(keyword);
+                    controller.setInputValue(keyword);
+                    void controller.submitKeyword(keyword);
                   }}
                   className="inline-flex items-center rounded-full border border-slate-200/70 bg-white/70 px-3.5 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-cyan-400/40 dark:hover:text-cyan-200"
                   aria-label={`快速搜索 ${keyword}`}
