@@ -5,7 +5,13 @@ import (
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
+	"unisearch/plugin/testutil"
 )
+
+func TestKkMaoPluginContract(t *testing.T) {
+	p := NewKkMaoPlugin()
+	testutil.AssertPluginContract(t, p)
+}
 
 func TestExtractQuarkLinks(t *testing.T) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`
