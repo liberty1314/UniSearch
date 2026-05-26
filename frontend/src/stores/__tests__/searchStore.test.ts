@@ -1,12 +1,23 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SearchResponse } from "@/types/api";
 
-const buildSearchResults = (): SearchResponse => ({
+const searchMock = vi.fn();
+
+vi.mock("@/services/searchService", () => ({
+  SearchService: {
+    search: (...args: unknown[]) => searchMock(...args),
+    validateSearchParams: () => ({ valid: true }),
+    getChannels: vi.fn(),
+    getPlugins: vi.fn(),
+  },
+}));
+
+const buildSearchResults = (title = "测试资源"): SearchResponse => ({
   total: 1,
   resources: [
     {
       id: "resource-1",
-      title: "测试资源",
+      title,
       source: {
         type: "plugin",
         name: "测试来源",
@@ -30,7 +41,10 @@ const buildSearchResults = (): SearchResponse => ({
 describe("searchStore", () => {
   beforeEach(async () => {
     localStorage.clear();
+    searchMock.mockReset();
     const { useSearchStore } = await import("@/stores/searchStore");
+    const { resetSearchRequestGuard } = await import("@/stores/searchRequestGuard");
+    resetSearchRequestGuard();
     useSearchStore.getState().reset();
   });
 
@@ -80,5 +94,31 @@ describe("searchStore", () => {
     expect(updateCount).toBe(0);
     expect(useSearchStore.getState().searchResults).toBeNull();
     expect(useSearchStore.getState().searchParams.keyword).toBe("");
+  });
+
+  it("慢搜索请求晚返回时不会覆盖快请求结果", async () => {
+    const { useSearchStore } = await import("@/stores/searchStore");
+
+    let resolveSlowSearch: (value: SearchResponse) => void = () => {};
+    const slowSearch = new Promise<SearchResponse>((resolve) => {
+      resolveSlowSearch = resolve;
+    });
+    const fastSearch = Promise.resolve(buildSearchResults("快请求结果"));
+    searchMock.mockReturnValueOnce(slowSearch).mockReturnValueOnce(fastSearch);
+
+    const slowPromise = useSearchStore
+      .getState()
+      .performSearch({ keyword: "慢请求" });
+    const fastPromise = useSearchStore
+      .getState()
+      .performSearch({ keyword: "快请求" });
+
+    await fastPromise;
+    resolveSlowSearch(buildSearchResults("慢请求结果"));
+    await slowPromise;
+
+    expect(useSearchStore.getState().searchResults?.resources[0]?.title).toBe(
+      "快请求结果",
+    );
   });
 });

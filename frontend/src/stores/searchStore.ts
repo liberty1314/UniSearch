@@ -8,6 +8,10 @@ import {
   removeStorage,
   writeJsonStorage,
 } from "@/lib/safeStorage";
+import {
+  createSearchRequestId,
+  isLatestSearchRequest,
+} from "@/stores/searchRequestGuard";
 import { normalizeFilterConfig, normalizeFilterValues } from "@/utils/searchFilters";
 
 /**
@@ -149,6 +153,7 @@ export const useSearchStore = create<SearchState>()(
        * 执行搜索
        */
       performSearch: async (params, options) => {
+        const requestId = createSearchRequestId();
         const state = get();
         const finalParams = { ...state.searchParams, ...params };
         const preserveResults = Boolean(
@@ -177,6 +182,10 @@ export const useSearchStore = create<SearchState>()(
         try {
           const results = await SearchService.search(finalParams);
 
+          if (!isLatestSearchRequest(requestId)) {
+            return;
+          }
+
           const totalCount = results.resources?.length ?? 0;
 
           set({
@@ -192,6 +201,10 @@ export const useSearchStore = create<SearchState>()(
             get().addToHistory(finalParams.keyword);
           }
         } catch (error) {
+          if (!isLatestSearchRequest(requestId)) {
+            return;
+          }
+
           // 特殊处理：将登录引导错误继续抛给调用方处理跳转
           const errorCode = getErrorCode(error);
           if (errorCode === 401 || errorCode === 403 || errorCode === 404) {
