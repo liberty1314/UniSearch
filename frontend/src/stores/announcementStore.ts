@@ -3,6 +3,7 @@ import { devtools } from 'zustand/middleware';
 import type { Announcement, AnnouncementReadStatus } from '@/types/api';
 import { AnnouncementService } from '@/services/announcementService';
 import { getErrorMessage } from '@/lib/error';
+import { readJsonStorage, writeJsonStorage } from '@/lib/safeStorage';
 
 /**
  * 本地存储键名
@@ -48,26 +49,14 @@ interface AnnouncementState {
  * 从 localStorage 加载已读状态
  */
 const loadReadStatusFromStorage = (): AnnouncementReadStatus => {
-  try {
-    const stored = localStorage.getItem(READ_STATUS_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (error) {
-    console.warn('加载公告已读状态失败，使用空状态:', error);
-  }
-  return {};
+  return readJsonStorage<AnnouncementReadStatus>(READ_STATUS_KEY, {});
 };
 
 /**
  * 保存已读状态到 localStorage
  */
 const saveReadStatusToStorage = (status: AnnouncementReadStatus): void => {
-  try {
-    localStorage.setItem(READ_STATUS_KEY, JSON.stringify(status));
-  } catch (error) {
-    console.warn('保存公告已读状态失败:', error);
-  }
+  writeJsonStorage(READ_STATUS_KEY, status);
 };
 
 /**

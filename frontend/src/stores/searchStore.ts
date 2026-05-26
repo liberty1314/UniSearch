@@ -3,6 +3,11 @@ import { devtools } from "zustand/middleware";
 import type { SearchParams, SearchResponse } from "@/types/api";
 import { SearchService } from "@/services/searchService";
 import { getErrorCode, getErrorMessage } from "@/lib/error";
+import {
+  readJsonStorage,
+  removeStorage,
+  writeJsonStorage,
+} from "@/lib/safeStorage";
 import { normalizeFilterConfig, normalizeFilterValues } from "@/utils/searchFilters";
 
 /**
@@ -121,8 +126,9 @@ export const useSearchStore = create<SearchState>()(
       isRefreshing: false,
       error: null,
       lastCompletedSearchParams: null,
-      searchHistory: JSON.parse(
-        localStorage.getItem("unisearch_search_history") || "[]",
+      searchHistory: readJsonStorage<string[]>(
+        "unisearch_search_history",
+        [],
       ),
       availableChannels: [],
       availablePlugins: [],
@@ -252,10 +258,7 @@ export const useSearchStore = create<SearchState>()(
         const newHistory = [keyword, ...history].slice(0, MAX_SEARCH_HISTORY);
 
         set({ searchHistory: newHistory });
-        localStorage.setItem(
-          "unisearch_search_history",
-          JSON.stringify(newHistory),
-        );
+        writeJsonStorage("unisearch_search_history", newHistory);
       },
 
       /**
@@ -263,7 +266,7 @@ export const useSearchStore = create<SearchState>()(
        */
       clearHistory: () => {
         set({ searchHistory: [] });
-        localStorage.removeItem("unisearch_search_history");
+        removeStorage("unisearch_search_history");
       },
 
       /**
@@ -276,12 +279,9 @@ export const useSearchStore = create<SearchState>()(
         );
         set({ searchHistory: newHistory });
         if (newHistory.length > 0) {
-          localStorage.setItem(
-            "unisearch_search_history",
-            JSON.stringify(newHistory),
-          );
+          writeJsonStorage("unisearch_search_history", newHistory);
         } else {
-          localStorage.removeItem("unisearch_search_history");
+          removeStorage("unisearch_search_history");
         }
       },
 
