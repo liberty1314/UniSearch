@@ -53,10 +53,10 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
           data-testid="search-results-toolbar"
           className="sticky top-20 z-20 mb-2 rounded-[20px] border border-white/60 bg-white/75 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.03)] backdrop-blur-xl dark:border-white/[0.06] dark:bg-slate-950/65 dark:shadow-[0_8px_24px_rgba(0,0,0,0.3)]"
         >
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex min-h-10 items-center justify-between gap-4">
             <div
               data-testid="search-results-toolbar-meta"
-              className="flex min-w-0 flex-1 flex-wrap items-start gap-x-3 gap-y-3 sm:flex-nowrap"
+              className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-3 sm:flex-nowrap"
             >
               <div className="flex min-w-0 flex-col gap-2">
                 <div className="flex shrink-0 flex-wrap items-center gap-2 text-[14px] font-medium text-slate-600 dark:text-slate-400">
@@ -103,7 +103,7 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
             {/* 视图切换按钮 */}
             <button
               onClick={handleToggle}
-              className="bg-white/50 dark:bg-black/20 p-2.5 rounded-[14px] flex items-center justify-center border border-slate-200/60 dark:border-white/[0.06] shadow-sm hover:shadow-md transition-all duration-300 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white/80 dark:hover:bg-white/[0.08] active:scale-90"
+              className="flex shrink-0 items-center justify-center rounded-[14px] border border-slate-200/60 bg-white/50 p-2.5 text-slate-600 shadow-sm transition-all duration-300 hover:bg-white/80 hover:text-blue-600 hover:shadow-md active:scale-90 dark:border-white/[0.06] dark:bg-black/20 dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-blue-400"
               title={viewMode === "grid" ? "切换为列表视图" : "切换为网格视图"}
               aria-label={viewMode === "grid" ? "切换为列表视图" : "切换为网格视图"}
             >

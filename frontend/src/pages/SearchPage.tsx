@@ -17,10 +17,11 @@ const SearchPage: React.FC = () => {
     setSearchParams,
     clearResults,
   } = useSearchStore();
-  useSearchAccessStatus();
+  const { status: searchAccessStatus } = useSearchAccessStatus();
   useSearchUrlSync();
   const location = useLocation();
   const navigate = useNavigate();
+  const showSearchAccessHint = searchAccessStatus === "anonymous";
 
   const hasKeyword = useMemo(
     () => Boolean(searchParams.keyword?.trim()),
@@ -79,13 +80,20 @@ const SearchPage: React.FC = () => {
               {hasKeyword ? `“${searchParams.keyword}” 的搜索结果` : "开始新的搜索"}
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-              进入独立结果页后开始加载内容，您也可以继续调整关键词、网盘和高级筛选条件。
+              输入关键词后进入聚合搜索；如当前未登录，系统会先引导您完成登录再继续查看结果。
             </p>
           </div>
         </div>
 
         <div className="space-y-5">
-          <SearchBox className="w-full max-w-4xl" />
+          <SearchBox
+            className="w-full max-w-4xl"
+            accessHint={
+              showSearchAccessHint
+                ? "搜索结果需要登录后查看，您可以先输入关键词，系统会保留本次搜索意图。"
+                : undefined
+            }
+          />
 
           {hasKeyword ? (
             <div className="max-w-5xl">

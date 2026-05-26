@@ -13,6 +13,7 @@ interface SearchBoxProps {
   className?: string;
   placeholder?: string;
   autoFocus?: boolean;
+  accessHint?: string;
   onSearch?: (keyword: string) => void;
 }
 
@@ -20,6 +21,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   className,
   placeholder = "搜索网盘资源...",
   autoFocus = false,
+  accessHint,
   onSearch,
 }) => {
   const controller = useSearchBoxController({ autoFocus, onSearch });
@@ -85,6 +87,12 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           />
         ) : null}
       </div>
+
+      {accessHint ? (
+        <p className="mt-3 px-2 text-center text-xs leading-5 text-slate-500 dark:text-slate-400">
+          {accessHint}
+        </p>
+      ) : null}
 
       {controller.isHomePage ? (
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3 px-2">

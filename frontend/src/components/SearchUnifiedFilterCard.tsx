@@ -6,7 +6,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { CoolMode } from "@/components/magicui/cool-mode";
+import SourceFocusMenu from "@/components/search-filters/SourceFocusMenu";
+import {
+  SOURCE_FOCUS_LONG_PRESS_MS,
+  clampMenuPosition,
+} from "@/components/search-filters/sourceFocusMenuUtils";
 import {
   platformThemes,
   platformThemeTypes,
@@ -26,10 +30,12 @@ interface SourceChipProps {
   config: PlatformTheme;
   isSelected: boolean;
   onToggle: (type: CloudTypeValue) => void;
-  onSelectOnly: (type: CloudTypeValue) => void;
+  onOpenFocusMenu: (
+    type: CloudTypeValue,
+    sourceName: string,
+    position: { x: number; y: number },
+  ) => void;
 }
-
-const CLICK_DELAY_MS = 220;
 
 const splitKeywordInput = (value: string): string[] =>
   value
@@ -38,55 +44,98 @@ const splitKeywordInput = (value: string): string[] =>
     .filter(Boolean);
 
 const SourceChip = memo(
-  ({ config, isSelected, onToggle, onSelectOnly }: SourceChipProps) => {
-    const clickTimerRef = useRef<number | null>(null);
+  ({ config, isSelected, onToggle, onOpenFocusMenu }: SourceChipProps) => {
+    const longPressTimerRef = useRef<number | null>(null);
+    const longPressTriggeredRef = useRef(false);
 
-    const clearClickTimer = () => {
-      if (clickTimerRef.current) {
-        window.clearTimeout(clickTimerRef.current);
-        clickTimerRef.current = null;
+    const clearLongPressTimer = () => {
+      if (longPressTimerRef.current) {
+        window.clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
       }
     };
 
-    useEffect(() => () => clearClickTimer(), []);
+    useEffect(() => () => clearLongPressTimer(), []);
 
-    const handleClick = () => {
-      clearClickTimer();
-      clickTimerRef.current = window.setTimeout(() => {
-        onToggle(config.type);
-        clickTimerRef.current = null;
-      }, CLICK_DELAY_MS);
+    const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.pointerType === "mouse" && event.button !== 0) {
+        return;
+      }
+
+      longPressTriggeredRef.current = false;
+      clearLongPressTimer();
+      const clientX = event.clientX;
+      const clientY = event.clientY;
+      const buttonElement = event.currentTarget;
+      const buttonRect = event.currentTarget.getBoundingClientRect();
+      longPressTimerRef.current = window.setTimeout(() => {
+        longPressTriggeredRef.current = true;
+        onOpenFocusMenu(config.type, config.name, {
+          x: clientX > 0 ? clientX : buttonRect.left + buttonRect.width / 2,
+          y: clientY > 0 ? clientY : buttonRect.bottom + 8,
+        });
+      }, SOURCE_FOCUS_LONG_PRESS_MS);
     };
 
-    const handleDoubleClick = () => {
-      clearClickTimer();
-      onSelectOnly(config.type);
+    const handlePointerEnd = () => {
+      clearLongPressTimer();
+    };
+
+    const handleClick = () => {
+      if (longPressTriggeredRef.current) {
+        longPressTriggeredRef.current = false;
+        return;
+      }
+
+      onToggle(config.type);
+    };
+
+    const handleContextMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      clearLongPressTimer();
+      const buttonRect = event.currentTarget.getBoundingClientRect();
+      onOpenFocusMenu(config.type, config.name, {
+        x: event.clientX > 0 ? event.clientX : buttonRect.left + buttonRect.width / 2,
+        y: event.clientY > 0 ? event.clientY : buttonRect.bottom + 8,
+      });
+    };
+
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+        event.preventDefault();
+        const buttonRect = event.currentTarget.getBoundingClientRect();
+        onOpenFocusMenu(config.type, config.name, {
+          x: buttonRect.left + buttonRect.width / 2,
+          y: buttonRect.bottom + 8,
+        });
+      }
     };
 
     return (
-      <CoolMode
-        options={{ particleCount: 12, speedHorz: 5, speedUp: 15 }}
-        triggerMode="mouse"
+      <motion.button
+        layout
+        type="button"
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        onPointerLeave={handlePointerEnd}
+        onKeyDown={handleKeyDown}
+        whileHover={{ scale: 1.05, y: -2 }}
+        whileTap={{ scale: 0.95 }}
+        aria-pressed={isSelected}
+        aria-label={`${config.name}${isSelected ? "（已选中，点击取消，长按打开来源操作）" : "（未选中，点击选择，长按打开来源操作）"}`}
+        className={cn(
+          "relative flex items-center rounded-[1rem] border px-5 py-2.5 text-[13.5px] font-semibold transition-colors transition-shadow duration-300 box-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2",
+          isSelected
+            ? `bg-gradient-to-br ${config.color} text-white border-transparent ${config.shadow} shadow-[0_8px_20px_rgba(14,165,233,0.2)] dark:shadow-none ring-[0.5px] ring-white/50 dark:ring-white/10`
+            : "bg-white/40 text-slate-600 border-[0.5px] border-slate-200/50 shadow-sm backdrop-blur-md hover:bg-white/60 hover:shadow-md dark:bg-slate-800/40 dark:text-slate-300 dark:border-white/10 dark:hover:bg-slate-700/40",
+        )}
       >
-        <motion.button
-          layout
-          type="button"
-          onClick={handleClick}
-          onDoubleClick={handleDoubleClick}
-          whileHover={{ scale: 1.05, y: -2 }}
-          whileTap={{ scale: 0.95 }}
-          aria-pressed={isSelected}
-          aria-label={`${config.name}${isSelected ? "（已选中，单击取消，双击仅看此源）" : "（未选中，单击选择，双击仅看此源）"}`}
-          className={cn(
-            "relative flex items-center rounded-[1rem] border px-5 py-2.5 text-[13.5px] font-semibold transition-colors transition-shadow duration-300 box-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2",
-            isSelected
-              ? `bg-gradient-to-br ${config.color} text-white border-transparent ${config.shadow} shadow-[0_8px_20px_rgba(14,165,233,0.2)] dark:shadow-none ring-[0.5px] ring-white/50 dark:ring-white/10`
-              : "bg-white/40 text-slate-600 border-[0.5px] border-slate-200/50 shadow-sm backdrop-blur-md hover:bg-white/60 hover:shadow-md dark:bg-slate-800/40 dark:text-slate-300 dark:border-white/10 dark:hover:bg-slate-700/40",
-          )}
-        >
-          <span>{config.name}</span>
-        </motion.button>
-      </CoolMode>
+        <span>{config.name}</span>
+      </motion.button>
     );
   },
 );
@@ -100,6 +149,19 @@ const SearchUnifiedFilterCard: React.FC = () => {
   const [expanded, setExpanded] = useState(false);
   const [includeDraft, setIncludeDraft] = useState("");
   const [excludeDraft, setExcludeDraft] = useState("");
+  const [sourceFocusMenu, setSourceFocusMenu] = useState<{
+    open: boolean;
+    type: CloudTypeValue | null;
+    sourceName: string;
+    x: number;
+    y: number;
+  }>({
+    open: false,
+    type: null,
+    sourceName: "",
+    x: 0,
+    y: 0,
+  });
 
   const allTypes = platformThemeTypes;
 
@@ -181,6 +243,27 @@ const SearchUnifiedFilterCard: React.FC = () => {
 
     applySearchParams({ cloudTypes: [type] });
   };
+
+  const handleOpenSourceFocusMenu = useCallback((
+    type: CloudTypeValue,
+    sourceName: string,
+    position: { x: number; y: number },
+  ) => {
+    const menuPosition = clampMenuPosition({
+      x: position.x,
+      y: position.y,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+    });
+
+    setSourceFocusMenu({
+      open: true,
+      type,
+      sourceName,
+      x: menuPosition.x,
+      y: menuPosition.y,
+    });
+  }, []);
 
   const handleSelectAll = () => {
     if (isAllSelected) {
@@ -348,7 +431,7 @@ const SearchUnifiedFilterCard: React.FC = () => {
                 网盘筛选
               </h4>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                单击切换来源，双击仅保留当前网盘
+                点击切换来源，长按可仅看单个来源
               </p>
             </div>
             <button
@@ -380,7 +463,7 @@ const SearchUnifiedFilterCard: React.FC = () => {
                   config={config}
                   isSelected={effectiveSelectedTypes.includes(config.type)}
                   onToggle={handleTypeToggle}
-                  onSelectOnly={handleSelectOnly}
+                  onOpenFocusMenu={handleOpenSourceFocusMenu}
                 />
               ))}
             </div>
@@ -391,7 +474,7 @@ const SearchUnifiedFilterCard: React.FC = () => {
                   config={config}
                   isSelected={effectiveSelectedTypes.includes(config.type)}
                   onToggle={handleTypeToggle}
-                  onSelectOnly={handleSelectOnly}
+                  onOpenFocusMenu={handleOpenSourceFocusMenu}
                 />
               ))}
             </div>
@@ -513,6 +596,31 @@ const SearchUnifiedFilterCard: React.FC = () => {
             ) : null}
           </div>
         ) : null}
+
+        <SourceFocusMenu
+          open={sourceFocusMenu.open}
+          sourceName={sourceFocusMenu.sourceName}
+          x={sourceFocusMenu.x}
+          y={sourceFocusMenu.y}
+          selected={Boolean(
+            sourceFocusMenu.type &&
+              effectiveSelectedTypes.includes(sourceFocusMenu.type),
+          )}
+          onSelectOnly={() => {
+            if (sourceFocusMenu.type) {
+              handleSelectOnly(sourceFocusMenu.type);
+            }
+          }}
+          onToggle={() => {
+            if (sourceFocusMenu.type) {
+              handleTypeToggle(sourceFocusMenu.type);
+            }
+          }}
+          onSelectAll={handleSelectAll}
+          onClose={() => {
+            setSourceFocusMenu((current) => ({ ...current, open: false }));
+          }}
+        />
       </div>
     </motion.section>
   );

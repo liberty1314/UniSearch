@@ -189,7 +189,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                     className={cn(
-                      "flex items-center gap-2 rounded-2xl border px-3 py-1.5 transition-all duration-200 outline-none focus:outline-none",
+                      "flex items-center gap-2 rounded-2xl border px-3 py-1.5 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2",
                       isUserMenuOpen
                         ? "border-cyan-200/60 bg-white/70 text-blue-600 dark:border-cyan-300/20 dark:bg-white/10 dark:text-cyan-300"
                         : "border-transparent bg-white/35 text-gray-700 hover:bg-white/60 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
@@ -275,8 +275,9 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
             {/* Mobile Menu Toggle */}
             <div className="md:hidden">
               <button
+                aria-label="打开菜单"
                 onClick={() => isAdminPage ? toggleMobileSidebar() : setIsMobileMenuOpen(true)}
-                className="p-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100/50 dark:hover:bg-white/10 rounded-xl transition-colors"
+                className="p-2 text-gray-600 transition-colors hover:bg-gray-100/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 dark:text-slate-300 dark:hover:bg-white/10 rounded-xl"
               >
                 <Menu className="w-6 h-6" />
               </button>

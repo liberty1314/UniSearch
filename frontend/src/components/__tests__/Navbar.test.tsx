@@ -87,4 +87,14 @@ describe('Navbar', () => {
 
     expect(screen.getByRole('link', { name: '热门榜单' })).toHaveAttribute('href', '/hot');
   });
+
+  it('移动菜单按钮具有明确名称', () => {
+    render(
+      <MemoryRouter>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('button', { name: '打开菜单' })).toBeInTheDocument();
+  });
 });

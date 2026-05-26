@@ -460,8 +460,10 @@ describe("SearchResults", () => {
     expect(toolbarMeta).toContainElement(screen.getByText("个结果"));
     expect(toolbarMeta).toContainElement(toolbarFilters);
     expect(toolbarMeta.className).toContain("flex-wrap");
+    expect(toolbarMeta.className).toContain("items-center");
     expect(toolbarMeta.className).toContain("sm:flex-nowrap");
     expect(toolbarFilters.className).toContain("sm:flex-nowrap");
+    expect(toolbarFilters.className).toContain("items-center");
     expect(screen.getByTestId("search-results-toolbar").className).toContain("sticky");
     expect(screen.queryByText("媒体：movie")).not.toBeInTheDocument();
     expect(screen.queryByText("能力：downloadable")).not.toBeInTheDocument();

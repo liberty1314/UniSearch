@@ -724,3 +724,32 @@
   - `frontend/src/routes/__tests__/AppRoutes.test.tsx`
   - `frontend/src/routes/appRouteUtils.ts`
   - `frontend/src/services/systemSettingsService.ts`
+
+## [2026-05-26 20:04] feat(frontend): 完善移动端筛选交互与搜索登录提示
+- **Body**: 新增来源筛选长按菜单、移动端热榜筛选展开入口和搜索登录提示，改善小屏筛选与搜索前引导体验。
+- **Body**: 同步补齐相关组件测试，并调整移动菜单、导航焦点态与动效清理逻辑。
+- **Files**:
+  - `.Codex/operations-log.md`
+  - `.Codex/verification-report.md`
+  - `.gitignore`
+  - `docs/readme_2605.md`
+  - `frontend/src/components/MobileMenu.tsx`
+  - `frontend/src/components/Navbar.tsx`
+  - `frontend/src/components/SearchBox.tsx`
+  - `frontend/src/components/SearchUnifiedFilterCard.tsx`
+  - `frontend/src/components/__tests__/Navbar.test.tsx`
+  - `frontend/src/components/__tests__/SearchBox.test.tsx`
+  - `frontend/src/components/__tests__/SearchResults.test.tsx`
+  - `frontend/src/components/__tests__/SearchUnifiedFilterCard.test.tsx`
+  - `frontend/src/components/home/SearchResultsToolbar.tsx`
+  - `frontend/src/components/magicui/cool-mode.tsx`
+  - `frontend/src/components/search-filters/SourceFocusMenu.tsx`
+  - `frontend/src/components/search-filters/__tests__/SourceFocusMenu.test.tsx`
+  - `frontend/src/components/search-filters/__tests__/sourceFocusMenu.test.ts`
+  - `frontend/src/components/search-filters/sourceFocusMenuUtils.ts`
+  - `frontend/src/components/trending/HotToolbar.tsx`
+  - `frontend/src/components/trending/__tests__/HotToolbar.test.tsx`
+  - `frontend/src/pages/Home.tsx`
+  - `frontend/src/pages/SearchPage.tsx`
+  - `frontend/src/pages/__tests__/Home.test.tsx`
+  - `frontend/src/pages/__tests__/SearchPage.test.tsx`

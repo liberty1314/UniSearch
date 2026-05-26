@@ -29,6 +29,23 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
     const navigate = useNavigate();
     const { isAuthenticated, isAdmin, username, logout } = useAuthStore();
 
+    React.useEffect(() => {
+        if (!isOpen) {
+            return undefined;
+        }
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                onClose();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen, onClose]);
+
     const handleLogout = async () => {
         const { refreshToken } = useAuthStore.getState();
         if (refreshToken) {
@@ -80,6 +97,9 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
 
                     {/* Menu Panel */}
                     <motion.div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="移动端菜单"
                         variants={menuVariants}
                         initial="closed"
                         animate="open"
@@ -90,6 +110,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                         <div className="flex items-center justify-between p-4 border-b border-white/10 dark:border-white/5">
                             <span className={`${BLUE_CYAN_TEXT_GRADIENT} font-bold text-lg`}>菜单</span>
                             <button
+                                aria-label="关闭菜单"
                                 onClick={onClose}
                                 className="p-2 -mr-2 text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
                             >

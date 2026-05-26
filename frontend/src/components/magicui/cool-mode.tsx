@@ -202,18 +202,29 @@ const applyParticleEffect = (
     }
   };
 
-  const tapHandler = (e: MouseEvent | TouchEvent) => {
-    updateMousePosition(e);
-    autoAddParticle = true;
-  };
-
   const disableAutoAddParticle = () => {
     autoAddParticle = false;
+  };
+
+  const tapHandler = (e: MouseEvent | TouchEvent) => {
+    if (e instanceof MouseEvent && e.button !== 0) {
+      disableAutoAddParticle();
+      return;
+    }
+
+    updateMousePosition(e);
+    autoAddParticle = true;
   };
 
   element.addEventListener(move, updateMousePosition, { passive: true });
   element.addEventListener(tap, tapHandler, { passive: true });
   element.addEventListener(tapEnd, disableAutoAddParticle, { passive: true });
+  document.addEventListener(tapEnd, disableAutoAddParticle, { passive: true });
+  element.addEventListener("contextmenu", disableAutoAddParticle, {
+    passive: true,
+  });
+  element.addEventListener("cool-mode:stop", disableAutoAddParticle);
+  window.addEventListener("blur", disableAutoAddParticle);
   if (isTouchInteraction) {
     element.addEventListener("touchcancel", disableAutoAddParticle, {
       passive: true,
@@ -227,6 +238,10 @@ const applyParticleEffect = (
     element.removeEventListener(move, updateMousePosition);
     element.removeEventListener(tap, tapHandler);
     element.removeEventListener(tapEnd, disableAutoAddParticle);
+    document.removeEventListener(tapEnd, disableAutoAddParticle);
+    element.removeEventListener("contextmenu", disableAutoAddParticle);
+    element.removeEventListener("cool-mode:stop", disableAutoAddParticle);
+    window.removeEventListener("blur", disableAutoAddParticle);
     if (isTouchInteraction) {
       element.removeEventListener("touchcancel", disableAutoAddParticle);
     }

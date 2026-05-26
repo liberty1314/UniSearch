@@ -198,7 +198,7 @@ describe("SearchUnifiedFilterCard", () => {
     expect(screen.getByRole("button", { name: "4k" }).className).toContain("max-w-[70vw]");
   });
 
-  it("收起状态下提供网盘 chip 的交互提示", () => {
+  it("收起状态下提供长按聚焦来源的交互提示", () => {
     render(
       <MemoryRouter>
         <SearchUnifiedFilterCard />
@@ -206,8 +206,61 @@ describe("SearchUnifiedFilterCard", () => {
     );
 
     expect(
-      screen.getByText("单击切换来源，双击仅保留当前网盘"),
+      screen.getByText("点击切换来源，长按可仅看单个来源"),
     ).toBeInTheDocument();
+  });
+
+  it("右键网盘来源时打开聚焦菜单并可仅看此源", async () => {
+    render(
+      <MemoryRouter>
+        <SearchUnifiedFilterCard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.contextMenu(screen.getByRole("button", { name: /夸克网盘/ }), {
+      clientX: 120,
+      clientY: 180,
+    });
+
+    expect(screen.getByRole("menu", { name: "夸克网盘来源操作" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "仅看此源" }));
+
+    await waitFor(() => {
+      expect(setSearchParamsMock).toHaveBeenCalledWith({
+        cloudTypes: [CloudType.QUARK],
+      });
+    });
+  });
+
+  it("右键网盘来源只打开聚焦菜单，不触发普通切换", () => {
+    render(
+      <MemoryRouter>
+        <SearchUnifiedFilterCard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.contextMenu(screen.getByRole("button", { name: /夸克网盘/ }), {
+      clientX: 120,
+      clientY: 180,
+    });
+
+    expect(screen.getByRole("menu", { name: "夸克网盘来源操作" })).toBeInTheDocument();
+    expect(setSearchParamsMock).not.toHaveBeenCalled();
+  });
+
+  it("通过键盘菜单键打开来源聚焦菜单", () => {
+    render(
+      <MemoryRouter>
+        <SearchUnifiedFilterCard />
+      </MemoryRouter>,
+    );
+
+    const quarkButton = screen.getByRole("button", { name: /夸克网盘/ });
+    quarkButton.focus();
+    fireEvent.keyDown(quarkButton, { key: "ContextMenu" });
+
+    expect(screen.getByRole("menu", { name: "夸克网盘来源操作" })).toBeInTheDocument();
   });
 
   it("清空全部筛选时会一次性重置网盘和高级条件", async () => {

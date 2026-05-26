@@ -60,7 +60,12 @@ let searchResults: Array<{ id: string }> = [];
 
 vi.mock('@/components/SearchBox', () => ({
   __esModule: true,
-  default: () => <div>search-box</div>,
+  default: ({ accessHint }: { accessHint?: string }) => (
+    <div>
+      search-box
+      {accessHint ? <p>{accessHint}</p> : null}
+    </div>
+  ),
 }));
 
 vi.mock('@/components/CloudTypeFilter', () => ({
@@ -293,15 +298,28 @@ describe('Home', () => {
     expect(screen.getByRole('heading', { level: 2, name: '帮你更快找到资源' })).toBeInTheDocument();
   });
 
-  it('renders the redesigned hero trust strip and concise homepage value proposition', () => {
+  it('匿名访问时展示首页搜索准入提示', () => {
+    searchAccessStatus = 'anonymous';
+
     renderHome();
 
+    expect(screen.getByTestId('home-hero')).toBeInTheDocument();
+    expect(screen.getByTestId('home-search-stage')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: '一个入口，聚合搜索主流网盘资源' })).toBeInTheDocument();
     expect(screen.getByText('快速定位影视、课程、软件与资料资源，减少平台切换成本')).toBeInTheDocument();
+    expect(screen.getByText('搜索结果需要登录后查看，热门榜单可直接浏览。')).toBeInTheDocument();
     expect(screen.getByTestId('home-trust-strip')).toBeInTheDocument();
     expect(screen.getByText('支持 5+ 平台')).toBeInTheDocument();
     expect(screen.getByText('聚合识别主流链接类型')).toBeInTheDocument();
     expect(screen.getByText('持续更新资源索引')).toBeInTheDocument();
+  });
+
+  it('登录后不展示首页搜索准入提示', () => {
+    searchAccessStatus = 'authenticated';
+
+    renderHome();
+
+    expect(screen.queryByText('搜索结果需要登录后查看，热门榜单可直接浏览。')).not.toBeInTheDocument();
   });
 
   it('keeps the hero area focused on the search box without quick-start keyword chips', () => {

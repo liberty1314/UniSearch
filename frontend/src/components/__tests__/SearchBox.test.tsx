@@ -277,6 +277,21 @@ describe("SearchBox", () => {
     expect(historyItem).toHaveClass("dark:bg-white/[0.03]");
   });
 
+  it("展示搜索访问提示时不影响输入和按钮状态", async () => {
+    render(
+      <SearchBox accessHint="搜索结果需要登录后查看，输入关键词后会进入登录流程。" />,
+    );
+
+    expect(
+      screen.getByText("搜索结果需要登录后查看，输入关键词后会进入登录流程。"),
+    ).toBeInTheDocument();
+
+    const input = screen.getByPlaceholderText("搜索网盘资源...");
+    await userEvent.type(input, "星际穿越");
+
+    expect(screen.getByRole("button", { name: "搜索" })).toBeEnabled();
+  });
+
   it("anchors the history popover to the search surface instead of the homepage helper chips", async () => {
     searchHistoryState = ["海贼王"];
 

@@ -355,7 +355,7 @@ logs/
 .cursor/
 .claude/
 .agent/
-.codex/*
+.Codex/*
 .superpowers/
 docs/superpowers/
 .codegraph/

@@ -3,6 +3,7 @@ import { CalendarDays, Clapperboard, RotateCcw, Sparkles } from "lucide-react";
 import HotModeTabs from "@/components/trending/HotModeTabs";
 import HotCategoryTabs from "@/components/trending/HotCategoryTabs";
 import HotPeriodTabs from "@/components/trending/HotPeriodTabs";
+import { cn } from "@/lib/utils";
 import type {
   HotRankingCategory,
   HotRankingMode,
@@ -47,6 +48,7 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
   onMonthChange,
   onYearChange,
 }) => {
+  const [mobileExpanded, setMobileExpanded] = React.useState(false);
   const modeLabel = mode === "trend" ? "趋势榜" : "热门榜";
   const periodLabelMap: Record<HotRankingPeriod, string> = {
     day: "每日",
@@ -209,7 +211,21 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-12">
+        <button
+          type="button"
+          onClick={() => setMobileExpanded((current) => !current)}
+          className="inline-flex w-full items-center justify-center rounded-full border border-slate-200/70 bg-white/75 px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-cyan-200 hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-100 sm:hidden"
+          aria-expanded={mobileExpanded}
+        >
+          {mobileExpanded ? "收起榜单调整" : "调整榜单"}
+        </button>
+
+        <div
+          className={cn(
+            "gap-4 lg:grid lg:grid-cols-2 xl:grid-cols-12",
+            mobileExpanded ? "grid" : "hidden sm:grid",
+          )}
+        >
           <div className="glass-toolbar rounded-[1.35rem] p-3 xl:col-span-3">
             <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
               榜单模式

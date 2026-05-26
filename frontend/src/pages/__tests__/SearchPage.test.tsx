@@ -16,6 +16,7 @@ const {
 }));
 
 let locationState: unknown = undefined;
+let searchAccessStatus: "anonymous" | "authenticated" = "authenticated";
 let searchStoreState = {
   searchParams: {
     keyword: "",
@@ -34,7 +35,12 @@ let searchStoreState = {
 
 vi.mock("@/components/SearchBox", () => ({
   __esModule: true,
-  default: () => <div>search-box</div>,
+  default: ({ accessHint }: { accessHint?: string }) => (
+    <div>
+      search-box
+      {accessHint ? <p>{accessHint}</p> : null}
+    </div>
+  ),
 }));
 
 vi.mock("@/components/SearchUnifiedFilterCard", () => ({
@@ -58,7 +64,7 @@ vi.mock("@/stores/searchStore", () => ({
 
 vi.mock("@/stores/searchAccessStore", () => ({
   useSearchAccessStatus: () => ({
-    status: "authenticated",
+    status: searchAccessStatus,
     initialized: true,
   }),
 }));
@@ -118,6 +124,7 @@ describe("SearchPage", () => {
     setSearchParamsMock.mockReset();
     clearResultsMock.mockReset();
     locationState = undefined;
+    searchAccessStatus = "authenticated";
     searchStoreState = {
       searchParams: {
         keyword: "",
@@ -162,7 +169,8 @@ describe("SearchPage", () => {
     );
   });
 
-  it("clears stale results when opening the standalone page without a keyword", async () => {
+  it("匿名访问搜索页时展示搜索准入提示", async () => {
+    searchAccessStatus = "anonymous";
     searchStoreState = {
       ...searchStoreState,
       searchResults: {
@@ -177,7 +185,24 @@ describe("SearchPage", () => {
     });
     expect(performSearchMock).not.toHaveBeenCalled();
     expect(screen.getByText("search-box")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "搜索结果需要登录后查看，您可以先输入关键词，系统会保留本次搜索意图。",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText("search-results")).toBeInTheDocument();
+  });
+
+  it("登录后不展示搜索页准入提示", async () => {
+    renderSearchPage("/search");
+
+    await waitFor(() => {
+      expect(clearResultsMock).toHaveBeenCalled();
+    });
+    expect(screen.queryByText(
+      "搜索结果需要登录后查看，您可以先输入关键词，系统会保留本次搜索意图。",
+    )).not.toBeInTheDocument();
+    expect(screen.getByText("search-box")).toBeInTheDocument();
   });
 
   it("returns to the homepage when the standalone search page has no previous history", async () => {

@@ -67,7 +67,8 @@ const featureCards = [
 ] as const;
 
 const Home: React.FC = () => {
-  useSearchAccessStatus();
+  const { status: searchAccessStatus } = useSearchAccessStatus();
+  const showSearchAccessHint = searchAccessStatus === "anonymous";
   const location = useLocation();
   const skipHomeEntrance = Boolean(
     (location.state as { skipHomeEntrance?: boolean } | null)?.skipHomeEntrance,
@@ -143,10 +144,11 @@ const Home: React.FC = () => {
       <SEO />
       {/* 页面头部 - 增强品牌形象 */}
       <motion.div
+        data-testid="home-hero"
         initial={shouldPlayHomeEntrance ? { opacity: 0, y: 24 } : false}
         animate={{ opacity: 1, y: 0 }}
         transition={heroTransition}
-        className="text-center mb-20 relative z-10"
+        className="relative z-10 mb-12 text-center sm:mb-16 lg:mb-20"
       >
         <motion.div
           initial={shouldPlayHomeEntrance ? { opacity: 0, scale: 0.985 } : false}
@@ -154,12 +156,12 @@ const Home: React.FC = () => {
           transition={heroChildTransition}
           className="mx-auto max-w-4xl"
         >
-          <GradientText
-            colors={["#3b82f6", "#0ea5e9", "#06b6d4"]}
-            className="mb-6 text-5xl font-extrabold tracking-tight md:text-7xl"
-          >
-            UniSearch
-          </GradientText>
+            <GradientText
+              colors={["#3b82f6", "#0ea5e9", "#06b6d4"]}
+              className="mb-5 text-4xl font-extrabold tracking-tight sm:text-5xl md:text-7xl"
+            >
+              UniSearch
+            </GradientText>
 
           <motion.h2
             initial={shouldPlayHomeEntrance ? { opacity: 0, y: 18 } : false}
@@ -185,7 +187,7 @@ const Home: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={statsTransition}
           data-testid="home-trust-strip"
-          className="relative z-20 mx-auto mt-10 flex max-w-3xl flex-wrap items-center justify-center gap-3 text-sm text-slate-500 dark:text-slate-400"
+          className="relative z-20 mx-auto mt-8 flex max-w-3xl flex-wrap items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400 sm:gap-3 sm:text-sm"
         >
           {trustSignals.map((signal) => (
             <div
@@ -199,7 +201,10 @@ const Home: React.FC = () => {
         </motion.div>
       </motion.div>
 
-      <div className="relative z-30 mb-20 flex w-full flex-col items-center space-y-8">
+      <div
+        data-testid="home-search-stage"
+        className="relative z-30 mb-14 flex w-full flex-col items-center space-y-6 sm:mb-20 sm:space-y-8"
+      >
         <motion.div
           initial={
             shouldPlayHomeEntrance && !shouldResetHomeSearchBox
@@ -210,7 +215,14 @@ const Home: React.FC = () => {
           transition={searchTransition}
           className="relative z-20 w-full max-w-4xl"
         >
-          <SearchBox className="w-full" />
+          <SearchBox
+            className="w-full"
+            accessHint={
+              showSearchAccessHint
+                ? "搜索结果需要登录后查看，热门榜单可直接浏览。"
+                : undefined
+            }
+          />
         </motion.div>
       </div>
 
