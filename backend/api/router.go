@@ -5,13 +5,25 @@ import (
 	"unisearch/api/controller"
 	"unisearch/config"
 	"unisearch/plugin"
-	"unisearch/service"
 	"unisearch/util"
 )
 
 // SetupRouter 设置路由
 // 验证需求：4.1, 5.1, 6.1, 7.1, 8.1, 10.1, 10.3
-func SetupRouter(searchService *service.SearchService, apiKeyService *service.APIKeyService, authService *service.AuthService, refreshTokenService *service.RefreshTokenService, userService *service.UserService, systemSettingsService *service.SystemSettingsService, announcementService *service.AnnouncementService, tgChannelService *service.TGChannelService, pluginHealthService *service.PluginHealthService, pluginStateService *service.PluginStateService, tgChannelHealthService *service.TGChannelHealthService, adminTagService *service.AdminTagService, hotRankingService *service.HotRankingService) *gin.Engine {
+func SetupRouter(deps RouterDeps) *gin.Engine {
+	searchService := deps.SearchService
+	authService := deps.AuthService
+	refreshTokenService := deps.RefreshTokenService
+	userService := deps.UserService
+	systemSettingsService := deps.SystemSettingsService
+	announcementService := deps.AnnouncementService
+	tgChannelService := deps.TGChannelService
+	pluginHealthService := deps.PluginHealthService
+	pluginStateService := deps.PluginStateService
+	tgChannelHealthService := deps.TGChannelHealthService
+	adminTagService := deps.AdminTagService
+	hotRankingService := deps.HotRankingService
+
 	// 设置搜索服务
 	SetSearchService(searchService)
 	SetAuthService(authService)
@@ -136,7 +148,7 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			admin.GET("/tags", ListAdminTagsHandler)                                                                                 // 标签词库列表
 			admin.POST("/tags", CreateAdminTagHandler)                                                                               // 新增标签词库条目
 			admin.PUT("/tags/:id", UpdateAdminTagHandler)                                                                            // 更新标签词库条目
-			admin.DELETE("/tags/:id", DeleteAdminTagHandler)                                                                        // 删除标签词库条目
+			admin.DELETE("/tags/:id", DeleteAdminTagHandler)                                                                         // 删除标签词库条目
 			admin.POST("/plugins/:pluginName/test", TestPluginHandler(searchService, pluginHealthService))                           // 新增：测试插件
 			admin.POST("/plugins", CreatePluginHandler(pluginHealthService, pluginStateService))                                     // 新增：创建插件
 			admin.PUT("/plugins/:pluginName", UpdatePluginHandler(pluginHealthService, pluginStateService))                          // 新增：更新插件
@@ -147,8 +159,8 @@ func SetupRouter(searchService *service.SearchService, apiKeyService *service.AP
 			admin.POST("/test-url", TestURLHandler())                                                                                // 新增：测试URL连通性
 
 			// 系统设置管理
-			admin.GET("/system-settings", GetSystemSettingsHandler)          // 获取系统设置
-			admin.PUT("/system-settings", UpdateSystemSettingsHandler)       // 更新系统设置
+			admin.GET("/system-settings", GetSystemSettingsHandler)         // 获取系统设置
+			admin.PUT("/system-settings", UpdateSystemSettingsHandler)      // 更新系统设置
 			admin.GET("/system-settings/tmdb", GetTMDBAdminSettingsHandler) // 获取 TMDB 管理配置
 			admin.PUT("/system-settings/tmdb", UpdateTMDBAdminSettingsHandler)
 

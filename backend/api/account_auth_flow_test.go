@@ -90,21 +90,12 @@ func newAccountFlowRouter(t *testing.T, db *gorm.DB) *gin.Engine {
 	userService := service.NewUserService(db)
 	systemSettingsService := service.NewSystemSettingsService(db)
 
-	return SetupRouter(
-		searchService,
-		nil,
-		authService,
-		nil,
-		userService,
-		systemSettingsService,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-	)
+	return SetupRouter(RouterDeps{
+		SearchService:         searchService,
+		AuthService:           authService,
+		UserService:           userService,
+		SystemSettingsService: systemSettingsService,
+	})
 }
 
 func createAccountFlowUser(t *testing.T, db *gorm.DB, username, password string) model.User {

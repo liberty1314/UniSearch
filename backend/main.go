@@ -281,21 +281,20 @@ func startServer() {
 	hotRankingService := service.NewHotRankingServiceWithRedis(globalRedisCache)
 
 	// 设置路由
-	router := api.SetupRouter(
-		searchService,
-		nil,
-		authService,
-		refreshTokenService,
-		userService,
-		systemSettingsService,
-		announcementService,
-		tgChannelService,
-		pluginHealthService,
-		pluginStateService,
-		tgChannelHealthService,
-		adminTagService,
-		hotRankingService,
-	)
+	router := api.SetupRouter(api.RouterDeps{
+		SearchService:          searchService,
+		AuthService:            authService,
+		RefreshTokenService:    refreshTokenService,
+		UserService:            userService,
+		SystemSettingsService:  systemSettingsService,
+		AnnouncementService:    announcementService,
+		TGChannelService:       tgChannelService,
+		PluginHealthService:    pluginHealthService,
+		PluginStateService:     pluginStateService,
+		TGChannelHealthService: tgChannelHealthService,
+		AdminTagService:        adminTagService,
+		HotRankingService:      hotRankingService,
+	})
 
 	// 获取端口配置
 	port := config.AppConfig.Port
