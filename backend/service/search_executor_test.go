@@ -59,9 +59,12 @@ func TestPluginSearchExecutorUsesPluginSearchDirectly(t *testing.T) {
 	selector := newPluginSelector(pm, nil)
 	executor := newPluginSearchExecutor(selector, newSearchCache(nil, newSearchMetricsRecorder()), newSearchMetricsRecorder())
 
-	results, err := executor.Search("仙逆", nil, true, 1, nil)
+	results, warnings, err := executor.Search("仙逆", nil, true, 1, nil)
 	if err != nil {
 		t.Fatalf("unexpected search error: %v", err)
+	}
+	if len(warnings) != 0 {
+		t.Fatalf("expected no warnings, got %#v", warnings)
 	}
 	if len(results) != 1 {
 		t.Fatalf("expected one result, got %d", len(results))

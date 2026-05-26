@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"sync/atomic"
@@ -15,6 +16,7 @@ import (
 type mockAsyncSearchPlugin struct {
 	name             string
 	delay            time.Duration
+	err              error
 	asyncSearchCalls atomic.Int32
 	searchCalls      atomic.Int32
 }
@@ -58,6 +60,9 @@ func (m *mockAsyncSearchPlugin) SetCurrentKeyword(_ string) {}
 
 func (m *mockAsyncSearchPlugin) Search(keyword string, _ map[string]interface{}) ([]model.SearchResult, error) {
 	m.searchCalls.Add(1)
+	if m.err != nil {
+		return nil, m.err
+	}
 	return []model.SearchResult{
 		{
 			UniqueID: fmt.Sprintf("%s-search-%s", m.name, keyword),
@@ -123,7 +128,7 @@ func TestSearchPlugins_LowConcurrencyDoesNotBlock(t *testing.T) {
 	start := time.Now()
 
 	go func() {
-		results, err = service.searchPlugins("仙逆", nil, true, 5, nil)
+		results, _, err = service.searchPlugins("仙逆", nil, true, 5, nil)
 		close(done)
 	}()
 
@@ -141,5 +146,37 @@ func TestSearchPlugins_LowConcurrencyDoesNotBlock(t *testing.T) {
 	}
 	if elapsed := time.Since(start); elapsed > 2*time.Second {
 		t.Fatalf("searchPlugins returned too slow: %s", elapsed)
+	}
+}
+
+func TestSearchPluginsReturnsWarningWhenSinglePluginFails(t *testing.T) {
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{
+		CacheEnabled:              false,
+		DefaultConcurrency:        2,
+		AsyncMaxBackgroundWorkers: 2,
+		PluginTimeout:             200 * time.Millisecond,
+	}
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	pm := plugin.NewPluginManager()
+	pm.RegisterPlugin(&mockAsyncSearchPlugin{name: "ok-plugin"})
+	pm.RegisterPlugin(&mockAsyncSearchPlugin{name: "failed-plugin", err: errors.New("上游失败")})
+
+	service := NewSearchService(pm, nil, nil)
+	results, warnings, err := service.searchPlugins("仙逆", nil, true, 2, nil)
+	if err != nil {
+		t.Fatalf("searchPlugins returned error: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected one successful result, got %d", len(results))
+	}
+	if len(warnings) != 1 {
+		t.Fatalf("expected one warning, got %#v", warnings)
+	}
+	if warnings[0].Source != "failed-plugin" {
+		t.Fatalf("expected failed plugin source, got %#v", warnings[0])
 	}
 }

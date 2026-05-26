@@ -77,6 +77,7 @@ func (s *SearchService) Search(keyword string, channels []string, concurrency in
 	// 并行获取TG搜索和插件搜索结果
 	var tgResults []model.SearchResult
 	var pluginResults []model.SearchResult
+	var pluginWarnings []model.SearchSourceWarning
 
 	var wg sync.WaitGroup
 	var tgErr, pluginErr error
@@ -94,7 +95,7 @@ func (s *SearchService) Search(keyword string, channels []string, concurrency in
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			pluginResults, pluginErr = s.searchPlugins(normalized.Keyword, normalized.Plugins, normalized.ForceRefresh, normalized.Concurrency, normalized.Ext)
+			pluginResults, pluginWarnings, pluginErr = s.searchPlugins(normalized.Keyword, normalized.Plugins, normalized.ForceRefresh, normalized.Concurrency, normalized.Ext)
 		}()
 	}
 
@@ -111,6 +112,7 @@ func (s *SearchService) Search(keyword string, channels []string, concurrency in
 
 	allResults := s.resultMerger.Merge(tgResults, pluginResults)
 	response := s.responseBuilder.Build(allResults, normalized)
+	response.Warnings = pluginWarnings
 	s.metrics.RecordSearch("all", normalized.Keyword, time.Since(startedAt), response.Total, nil)
 	return response, nil
 }
@@ -164,7 +166,7 @@ func (s *SearchService) searchTG(keyword string, channels []string, forceRefresh
 }
 
 // searchPlugins 搜索插件
-func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRefresh bool, concurrency int, ext map[string]interface{}) (allResults []model.SearchResult, err error) {
+func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRefresh bool, concurrency int, ext map[string]interface{}) (allResults []model.SearchResult, warnings []model.SearchSourceWarning, err error) {
 	if s.pluginExecutor == nil {
 		s.pluginExecutor = newPluginSearchExecutor(s.pluginSelector, s.searchCache, s.metrics)
 	}

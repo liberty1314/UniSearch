@@ -246,10 +246,16 @@ export type MergedLinks = Record<CloudTypeValue, MergedLink[]>;
 /**
  * 搜索响应数据
  */
+export interface SearchSourceWarning {
+  source: string;
+  message: string;
+}
+
 export interface SearchResponse {
   total: number;
   resources: ResourceObject[];
   facets: ResourceFacets;
+  warnings?: SearchSourceWarning[];
 }
 
 /**

@@ -324,6 +324,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         />
       )}
 
+      {searchResults?.warnings?.length ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          部分搜索源暂时不可用，已优先展示可用结果。
+        </div>
+      ) : null}
+
       {/* 结果列表
           每个卡片（React.memo）自管理首次挂载动画；
           loadMore 时旧卡片因 memo 不重渲染，不会重播动画。 */}

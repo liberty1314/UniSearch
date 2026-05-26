@@ -17,7 +17,7 @@ type TGSearchExecutor interface {
 }
 
 type PluginSearchExecutor interface {
-	Search(keyword string, plugins []string, forceRefresh bool, concurrency int, ext map[string]interface{}) ([]model.SearchResult, error)
+	Search(keyword string, plugins []string, forceRefresh bool, concurrency int, ext map[string]interface{}) ([]model.SearchResult, []model.SearchSourceWarning, error)
 }
 
 type tgSearchExecutor struct {
@@ -89,7 +89,13 @@ func newPluginSearchExecutor(pluginSelector PluginSelector, searchCache SearchCa
 	}
 }
 
-func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRefresh bool, concurrency int, ext map[string]interface{}) (allResults []model.SearchResult, err error) {
+type pluginTaskResult struct {
+	name    string
+	results []model.SearchResult
+	err     error
+}
+
+func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRefresh bool, concurrency int, ext map[string]interface{}) (allResults []model.SearchResult, warnings []model.SearchSourceWarning, err error) {
 	startedAt := time.Now()
 	defer func() {
 		e.metrics.RecordSearch("plugin", keyword, time.Since(startedAt), len(allResults), err)
@@ -110,7 +116,7 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 		var cachedResults []model.SearchResult
 		cacheHit, cacheErr := e.searchCache.Load("plugin", cacheKey, keyword, &cachedResults)
 		if cacheHit {
-			return cachedResults, nil
+			return cachedResults, nil, nil
 		}
 		if cacheErr != nil {
 			log.Printf("⚠️ [插件搜索] Redis 缓存读取失败，降级到直接查询 - 关键词: %s, 错误: %v", keyword, cacheErr)
@@ -118,7 +124,7 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 	}
 
 	if len(availablePlugins) == 0 {
-		return []model.SearchResult{}, nil
+		return []model.SearchResult{}, nil, nil
 	}
 
 	effectivePluginWorkers := calculatePluginWorkerCount(concurrency, len(availablePlugins))
@@ -136,14 +142,24 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 
 			results, searchErr := currentPlugin.Search(keyword, ext)
 			if searchErr != nil {
-				return nil
+				return pluginTaskResult{
+					name: currentPlugin.Name(),
+					err:  searchErr,
+				}
 			}
-			return results
+			return pluginTaskResult{
+				name:    currentPlugin.Name(),
+				results: results,
+			}
 		})
 	}
 
 	results, submittedTasks, timedOut := pool.ExecuteBatchWithTimeoutDetailed(tasks, effectivePluginWorkers, pluginTimeout)
 	if timedOut {
+		warnings = append(warnings, model.SearchSourceWarning{
+			Source:  "plugin",
+			Message: "部分搜索源响应超时，已返回其他来源结果",
+		})
 		logSearchEvent("plugin_timeout", map[string]interface{}{
 			"keyword":         keyword,
 			"submitted_tasks": submittedTasks,
@@ -158,7 +174,15 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 		if result == nil {
 			continue
 		}
-		for _, pluginResult := range result.([]model.SearchResult) {
+		taskResult := result.(pluginTaskResult)
+		if taskResult.err != nil {
+			warnings = append(warnings, model.SearchSourceWarning{
+				Source:  taskResult.name,
+				Message: "该搜索源暂时不可用，已返回其他来源结果",
+			})
+			continue
+		}
+		for _, pluginResult := range taskResult.results {
 			if len(pluginResult.Links) > 0 {
 				allResults = append(allResults, pluginResult)
 			}
@@ -166,7 +190,7 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 	}
 
 	e.searchCache.Store("plugin", cacheKey, keyword, allResults)
-	return allResults, nil
+	return allResults, warnings, nil
 }
 
 func calculatePluginWorkerCount(concurrency int, pluginCount int) int {

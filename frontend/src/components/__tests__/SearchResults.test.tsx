@@ -516,6 +516,22 @@ describe("SearchResults", () => {
     expect(screen.getByTestId("search-result-grid-card")).toBeInTheDocument();
   });
 
+  it("shows a warning when some search sources fail", async () => {
+    searchStoreState.searchResults = {
+      ...searchStoreState.searchResults,
+      warnings: [
+        {
+          source: "failed-plugin",
+          message: "该搜索源暂时不可用，已返回其他来源结果",
+        },
+      ],
+    };
+
+    renderSearchResults();
+
+    expect(await screen.findByText("部分搜索源暂时不可用，已优先展示可用结果。")).toBeInTheDocument();
+  });
+
   it("switches from mobile list to desktop grid when the viewport crosses the breakpoint", async () => {
     Object.defineProperty(window, "innerWidth", {
       configurable: true,

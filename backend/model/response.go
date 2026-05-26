@@ -88,6 +88,12 @@ type ResourceObject struct {
 	PublishedAt  time.Time              `json:"published_at,omitempty" sonic:"published_at,omitempty"`
 }
 
+// SearchSourceWarning 描述搜索源级别的非致命失败。
+type SearchSourceWarning struct {
+	Source  string `json:"source" sonic:"source"`
+	Message string `json:"message" sonic:"message"`
+}
+
 // MergedLink 合并后的网盘链接
 type MergedLink struct {
 	URL      string    `json:"url" sonic:"url"`
@@ -103,9 +109,10 @@ type MergedLinks map[string][]MergedLink
 
 // SearchResponse 搜索响应
 type SearchResponse struct {
-	Total     int              `json:"total" sonic:"total"`
-	Resources []ResourceObject `json:"resources" sonic:"resources"`
-	Facets    ResourceFacets   `json:"facets" sonic:"facets"`
+	Total     int                   `json:"total" sonic:"total"`
+	Resources []ResourceObject      `json:"resources" sonic:"resources"`
+	Facets    ResourceFacets        `json:"facets" sonic:"facets"`
+	Warnings  []SearchSourceWarning `json:"warnings,omitempty" sonic:"warnings,omitempty"`
 }
 
 // Response API通用响应
