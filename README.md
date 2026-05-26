@@ -62,6 +62,16 @@
 - Nginx 反向代理（Docker 部署）
 - Supervisor 进程管理（Docker 部署）
 
+## 本地质量检查
+
+执行以下命令完成后端测试、前端类型检查、前端 lint 与前端单元测试：
+
+```bash
+scripts/tests/local-quality.sh
+```
+
+如果运行环境禁止本地端口监听，后端中依赖 `httptest.NewServer` 的测试会失败，应切换到允许本地监听的开发环境执行，或优先改造对应测试以使用可注入 HTTP 客户端。
+
 ## 部署
 
 ### Docker 单容器部署（推荐）
