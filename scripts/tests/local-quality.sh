@@ -9,12 +9,12 @@ echo "== 后端测试 =="
 (cd "$ROOT_DIR/backend" && go test ./...)
 
 echo "== 前端类型检查 =="
-(cd "$ROOT_DIR/frontend" && pnpm run check)
+(cd "$ROOT_DIR/frontend" && ./node_modules/.bin/tsc -b --noEmit)
 
 echo "== 前端静态检查 =="
-(cd "$ROOT_DIR/frontend" && pnpm run lint)
+(cd "$ROOT_DIR/frontend" && ./node_modules/.bin/eslint .)
 
 echo "== 前端单元测试 =="
-(cd "$ROOT_DIR/frontend" && pnpm exec vitest run)
+(cd "$ROOT_DIR/frontend" && ./node_modules/.bin/vitest run)
 
 echo "== 本地质量检查完成 =="
