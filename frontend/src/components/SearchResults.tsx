@@ -12,11 +12,9 @@ import { cn } from "@/lib/utils";
 import PasswordModal from "./PasswordModal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import LoadingState from "@/components/LoadingState";
-import { SearchResultsSkeleton } from "@/components/SkeletonLoader";
-import { SearchResultGridCard } from "@/components/home/SearchResultGridCard";
-import { SearchResultListItem } from "@/components/home/SearchResultListItem";
-import { SearchResultsToolbar } from "@/components/home/SearchResultsToolbar";
-import { SearchResultsEmptyState } from "@/components/home/SearchResultsEmptyState";
+import SearchResultsHeader from "@/components/search-results/SearchResultsHeader";
+import SearchResultsList from "@/components/search-results/SearchResultsList";
+import SearchResultsState from "@/components/search-results/SearchResultsState";
 import { sortResources } from "@/utils/searchResultSorter";
 import type { ResultItem } from "@/utils/cloudTypeUtils";
 import { SystemSettingsService } from "@/services/systemSettingsService";
@@ -269,41 +267,33 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   // 渲染：空状态（error / 无结果 / 无关键词）
   // ─────────────────────────────────────────────────────────────────────────
 
-  if (error) {
-    return (
-      <SearchResultsEmptyState
-        variant="error"
-        error={error}
-        onRetry={() => performSearch(searchParams)}
-      />
-    );
-  }
+  const shouldRenderState =
+    Boolean(error) ||
+    (!isLoading && allSortedResults.length === 0) ||
+    !searchParams.keyword ||
+    (debouncedIsLoading && displayedResults.length === 0);
 
-  if (!isLoading && allSortedResults.length === 0 && searchParams.keyword) {
-    if (hasAnyActiveFilters) {
-      return (
-        <SearchResultsEmptyState
-          variant="filtered-results"
-          onClearFilters={handleClearAllFilters}
-        />
-      );
-    }
-
+  if (shouldRenderState) {
     return (
-      <SearchResultsEmptyState
-        variant="no-results"
-        keyword={searchParams.keyword}
+      <SearchResultsState
         className={className}
-        onSuggestSearch={(kw) =>
-          performSearch({ ...searchParams, keyword: kw })
-        }
+        error={error}
+        isLoading={isLoading}
+        showLoadingSkeleton={debouncedIsLoading}
+        resultCount={allSortedResults.length}
+        displayedCount={displayedResults.length}
+        viewMode={viewMode}
+        keyword={searchParams.keyword}
+        hasAnyActiveFilters={hasAnyActiveFilters}
+        searchParams={searchParams}
+        onRetry={(params) => {
+          void performSearch(params);
+        }}
+        onClearFilters={handleClearAllFilters}
+        onSuggestSearch={(kw) => {
+          void performSearch({ ...searchParams, keyword: kw });
+        }}
       />
-    );
-  }
-
-  if (!searchParams.keyword) {
-    return (
-      <SearchResultsEmptyState variant="no-keyword" className={className} />
     );
   }
 
@@ -311,61 +301,27 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
 
   return (
     <div className={cn("space-y-6", className)}>
-      {/* 工具栏 */}
-      {allSortedResults.length > 0 && (
-        <SearchResultsToolbar
-          totalCount={allSortedResults.length}
-          viewMode={viewMode}
-          onViewModeChange={handleViewModeChange}
-          isRefreshing={isRefreshing}
-          activeFilterChips={activeFilterChips}
-          onRemoveFilterChip={handleRemoveFilterChip}
-          onClearFilters={hasAnyActiveFilters ? handleClearAllFilters : undefined}
-        />
-      )}
-
-      {searchResults?.warnings?.length ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-          部分搜索源暂时不可用，已优先展示可用结果。
-        </div>
-      ) : null}
+      <SearchResultsHeader
+        totalCount={allSortedResults.length}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
+        isRefreshing={isRefreshing}
+        hasWarnings={Boolean(searchResults?.warnings?.length)}
+        activeFilterChips={activeFilterChips}
+        onRemoveFilterChip={handleRemoveFilterChip}
+        onClearFilters={hasAnyActiveFilters ? handleClearAllFilters : undefined}
+      />
 
       {/* 结果列表
           每个卡片（React.memo）自管理首次挂载动画；
           loadMore 时旧卡片因 memo 不重渲染，不会重播动画。 */}
-      <div
-        data-testid="search-results-stage"
-        className={cn(
-          "relative z-10 w-full",
-          viewMode === "grid"
-            ? "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-            : "flex flex-col gap-4",
-        )}
-      >
-        {displayedResults.map((item, index) =>
-          viewMode === "grid" ? (
-            <SearchResultGridCard
-              key={item.resource.id}
-              item={item}
-              index={index}
-              canOpenResource={Boolean(resolveResourceOpenTarget(item))}
-              showDetailEntry={enableResourceDetailPage}
-              onOpenResource={handleOpenResource}
-              onOpenDetail={enableResourceDetailPage ? handleOpenDetail : () => undefined}
-            />
-          ) : (
-            <SearchResultListItem
-              key={item.resource.id}
-              item={item}
-              index={index}
-              canOpenResource={Boolean(resolveResourceOpenTarget(item))}
-              onOpenResource={handleOpenResource}
-              onOpenDetail={enableResourceDetailPage ? handleOpenDetail : () => undefined}
-              showDetailEntry={enableResourceDetailPage}
-            />
-          ),
-        )}
-      </div>
+      <SearchResultsList
+        resources={displayedResults}
+        viewMode={viewMode}
+        enableResourceDetailPage={enableResourceDetailPage}
+        onOpenResource={handleOpenResource}
+        onOpenDetail={handleOpenDetail}
+      />
 
       {/* 无限滚动触发点 */}
       {hasMore && (
@@ -393,11 +349,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
             已加载全部 {allSortedResults.length} 条结果
           </div>
         </motion.div>
-      )}
-
-      {/* 初次加载骨架 */}
-      {debouncedIsLoading && displayedResults.length === 0 && (
-        <SearchResultsSkeleton viewMode={viewMode} />
       )}
 
       {/* 密码弹窗 */}
