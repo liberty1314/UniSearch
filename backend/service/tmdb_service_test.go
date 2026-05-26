@@ -2,13 +2,36 @@ package service
 
 import (
 	"context"
+	"io"
 	"net/http"
-	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"unisearch/config"
 	"unisearch/model"
 )
+
+type tmdbRoundTripFunc func(req *http.Request) (*http.Response, error)
+
+func (f tmdbRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func newTMDBTestService(handler func(req *http.Request) (int, string)) TMDBService {
+	return &tmdbService{
+		client: &http.Client{
+			Transport: tmdbRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+				statusCode, body := handler(req)
+				return &http.Response{
+					StatusCode: statusCode,
+					Header:     make(http.Header),
+					Body:       io.NopCloser(strings.NewReader(body)),
+					Request:    req,
+				}, nil
+			}),
+		},
+	}
+}
 
 type tmdbTestSecretManager struct {
 	token string
@@ -46,22 +69,19 @@ func TestTMDBServiceGetTrendingMoviesUsesBearerTokenAndLanguage(t *testing.T) {
 
 	var authHeader string
 	var languageParam string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader = r.Header.Get("Authorization")
-		languageParam = r.URL.Query().Get("language")
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"results":[{"id":1,"title":"流浪地球 2","original_title":"The Wandering Earth II","overview":"test","poster_path":"/poster.jpg","backdrop_path":"/backdrop.jpg","vote_average":8.4,"vote_count":1000,"popularity":999.5,"release_date":"2023-01-22","genre_ids":[28,878]}]}`))
-	}))
-	defer server.Close()
 
 	config.AppConfig = &config.Config{
 		TMDBReadAccessToken: "test-token",
-		TMDBBaseURL:         server.URL,
+		TMDBBaseURL:         "https://tmdb.test",
 		TMDBDefaultLanguage: "zh-CN",
 		TMDBImageBaseURL:    "https://image.tmdb.org/t/p/w500",
 	}
 
-	service := NewTMDBService()
+	service := newTMDBTestService(func(req *http.Request) (int, string) {
+		authHeader = req.Header.Get("Authorization")
+		languageParam = req.URL.Query().Get("language")
+		return http.StatusOK, `{"results":[{"id":1,"title":"流浪地球 2","original_title":"The Wandering Earth II","overview":"test","poster_path":"/poster.jpg","backdrop_path":"/backdrop.jpg","vote_average":8.4,"vote_count":1000,"popularity":999.5,"release_date":"2023-01-22","genre_ids":[28,878]}]}`
+	})
 	results, err := service.GetTrendingMovies(context.Background(), "day")
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
@@ -86,18 +106,15 @@ func TestTMDBServiceReturnsRateLimitError(t *testing.T) {
 		config.AppConfig = oldConfig
 	}()
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, `{"status_message":"rate limit"}`, http.StatusTooManyRequests)
-	}))
-	defer server.Close()
-
 	config.AppConfig = &config.Config{
 		TMDBReadAccessToken: "test-token",
-		TMDBBaseURL:         server.URL,
+		TMDBBaseURL:         "https://tmdb.test",
 		TMDBDefaultLanguage: "zh-CN",
 	}
 
-	service := NewTMDBService()
+	service := newTMDBTestService(func(req *http.Request) (int, string) {
+		return http.StatusTooManyRequests, `{"status_message":"rate limit"}`
+	})
 	if _, err := service.GetTrendingTV(context.Background(), "week"); err == nil {
 		t.Fatal("expected rate limit error, got nil")
 	}
@@ -112,22 +129,19 @@ func TestTMDBServiceFallsBackToAPIKeyQuery(t *testing.T) {
 	var authHeader string
 	var apiKeyParam string
 	var languageParam string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader = r.Header.Get("Authorization")
-		apiKeyParam = r.URL.Query().Get("api_key")
-		languageParam = r.URL.Query().Get("language")
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"results":[{"id":2,"title":"示例电影","original_title":"Example Movie","overview":"test","poster_path":"/poster.jpg","backdrop_path":"/backdrop.jpg","vote_average":7.1,"vote_count":220,"popularity":123.4,"release_date":"2024-02-01","genre_ids":[18]}]}`))
-	}))
-	defer server.Close()
 
 	config.AppConfig = &config.Config{
 		TMDBAPIKey:          "test-api-key",
-		TMDBBaseURL:         server.URL,
+		TMDBBaseURL:         "https://tmdb.test",
 		TMDBDefaultLanguage: "zh-CN",
 	}
 
-	service := NewTMDBService()
+	service := newTMDBTestService(func(req *http.Request) (int, string) {
+		authHeader = req.Header.Get("Authorization")
+		apiKeyParam = req.URL.Query().Get("api_key")
+		languageParam = req.URL.Query().Get("language")
+		return http.StatusOK, `{"results":[{"id":2,"title":"示例电影","original_title":"Example Movie","overview":"test","poster_path":"/poster.jpg","backdrop_path":"/backdrop.jpg","vote_average":7.1,"vote_count":220,"popularity":123.4,"release_date":"2024-02-01","genre_ids":[18]}]}`
+	})
 	results, err := service.GetTrendingMovies(context.Background(), "day")
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
@@ -158,21 +172,18 @@ func TestTMDBServiceTreatsLegacyReadAccessTokenEnvAsAPIKeyWhenFormatMatches(t *t
 
 	var authHeader string
 	var apiKeyParam string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader = r.Header.Get("Authorization")
-		apiKeyParam = r.URL.Query().Get("api_key")
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"results":[{"id":3,"title":"示例剧集","original_name":"Example Show","overview":"test","poster_path":"/poster.jpg","backdrop_path":"/backdrop.jpg","vote_average":8.1,"vote_count":520,"popularity":345.6,"first_air_date":"2024-01-01","genre_ids":[18],"origin_country":["US"]}]}`))
-	}))
-	defer server.Close()
 
 	config.AppConfig = &config.Config{
 		TMDBReadAccessToken: "eb817574a7755281fdf7e31b208ed222",
-		TMDBBaseURL:         server.URL,
+		TMDBBaseURL:         "https://tmdb.test",
 		TMDBDefaultLanguage: "zh-CN",
 	}
 
-	service := NewTMDBService()
+	service := newTMDBTestService(func(req *http.Request) (int, string) {
+		authHeader = req.Header.Get("Authorization")
+		apiKeyParam = req.URL.Query().Get("api_key")
+		return http.StatusOK, `{"results":[{"id":3,"title":"示例剧集","original_name":"Example Show","overview":"test","poster_path":"/poster.jpg","backdrop_path":"/backdrop.jpg","vote_average":8.1,"vote_count":520,"popularity":345.6,"first_air_date":"2024-01-01","genre_ids":[18],"origin_country":["US"]}]}`
+	})
 	results, err := service.GetTrendingTV(context.Background(), "day")
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
@@ -200,21 +211,18 @@ func TestTMDBServicePrefersSecretManagerTokenOverEnvConfig(t *testing.T) {
 	}()
 
 	var authHeader string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader = r.Header.Get("Authorization")
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"results":[{"id":1,"title":"test","original_title":"test","overview":"test","poster_path":"/poster.jpg","backdrop_path":"/backdrop.jpg","vote_average":8.4,"vote_count":1000,"popularity":999.5,"release_date":"2023-01-22","genre_ids":[28,878]}]}`))
-	}))
-	defer server.Close()
 
 	config.AppConfig = &config.Config{
 		TMDBReadAccessToken: "env-token",
-		TMDBBaseURL:         server.URL,
+		TMDBBaseURL:         "https://tmdb.test",
 		TMDBDefaultLanguage: "zh-CN",
 	}
 	SetGlobalSecretManager(&tmdbTestSecretManager{token: "secret-manager-token"})
 
-	service := NewTMDBService()
+	service := newTMDBTestService(func(req *http.Request) (int, string) {
+		authHeader = req.Header.Get("Authorization")
+		return http.StatusOK, `{"results":[{"id":1,"title":"test","original_title":"test","overview":"test","poster_path":"/poster.jpg","backdrop_path":"/backdrop.jpg","vote_average":8.4,"vote_count":1000,"popularity":999.5,"release_date":"2023-01-22","genre_ids":[28,878]}]}`
+	})
 	_, err := service.GetTrendingMovies(context.Background(), "day")
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
