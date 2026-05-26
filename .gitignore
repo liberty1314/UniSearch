@@ -238,6 +238,7 @@ pids
 
 # Optional cache
 .cache
+.pnpm-store/
 frontend/.vite/
 frontend/coverage/
 
