@@ -205,6 +205,14 @@ describe("SearchPage", () => {
     expect(screen.getByText("search-box")).toBeInTheDocument();
   });
 
+  it("无关键词时展示搜索工作台建议而不是单一空状态", () => {
+    renderSearchPage("/search");
+
+    expect(screen.getByTestId("search-empty-workbench")).toBeInTheDocument();
+    expect(screen.getByText("可以这样开始")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /查看热门榜单/ })).toHaveAttribute("href", "/hot");
+  });
+
   it("returns to the homepage when the standalone search page has no previous history", async () => {
     renderSearchPage("/search?q=%E7%94%B5%E5%BD%B1");
 

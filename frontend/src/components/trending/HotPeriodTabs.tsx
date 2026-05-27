@@ -1,9 +1,6 @@
 import React from "react";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import type { HotRankingPeriod } from "@/types/hotRanking";
-import {
-  buildHotToolbarTabClassName,
-  hotToolbarRailClassName,
-} from "@/components/trending/hotToolbarTabStyles";
 
 const options: Array<{ value: HotRankingPeriod; label: string }> = [
   { value: "day", label: "每日" },
@@ -18,32 +15,19 @@ interface HotPeriodTabsProps {
   options?: HotRankingPeriod[];
 }
 
-const HotPeriodTabs: React.FC<HotPeriodTabsProps> = ({ value, onChange, options: enabledOptions }) => {
-  return (
-    <div>
-      <div className={hotToolbarRailClassName} data-testid="hot-period-tabs">
-        {options.map((option) => {
-          const isDisabled = enabledOptions ? !enabledOptions.includes(option.value) : false;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              disabled={isDisabled}
-              onClick={() => !isDisabled && onChange(option.value)}
-              aria-pressed={value === option.value}
-              className={buildHotToolbarTabClassName(
-                value === option.value,
-                "bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_12px_30px_rgba(14,165,233,0.3)]",
-                isDisabled
-              )}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
+const HotPeriodTabs: React.FC<HotPeriodTabsProps> = ({ value, onChange, options: enabledOptions }) => (
+  <SegmentedControl
+    ariaLabel="时间维度"
+    value={value}
+    onChange={onChange}
+    options={options.map((option) => ({
+      ...option,
+      disabled: enabledOptions ? !enabledOptions.includes(option.value) : false,
+    }))}
+    testId="hot-period-tabs"
+    className="w-full overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    buttonClassName="min-w-12 flex-1 shrink-0 whitespace-nowrap px-3"
+  />
+);
 
 export default HotPeriodTabs;

@@ -140,10 +140,12 @@ const SearchAdvancedFilterPanel: React.FC = () => {
       data-testid="advanced-filter-panel"
       className="w-full max-w-5xl rounded-[2rem] border-[0.5px] border-white/60 bg-white/60 p-5 shadow-[0_12px_40px_rgba(15,23,42,0.04)] backdrop-blur-3xl dark:border-white/[0.06] dark:bg-slate-950/40 sm:p-6"
     >
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        fullWidth
         onClick={() => setExpanded((prev) => !prev)}
-        className="flex w-full items-center justify-between gap-4 text-left"
+        className="h-auto justify-between gap-4 rounded-[1.25rem] px-0 py-0 text-left hover:bg-transparent dark:hover:bg-transparent"
       >
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-[1rem] border border-slate-200/60 bg-white/60 text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200">
@@ -171,7 +173,7 @@ const SearchAdvancedFilterPanel: React.FC = () => {
             expanded && "rotate-180",
           )}
         />
-      </button>
+      </Button>
 
       {expanded ? (
         <div className="mt-6 space-y-6">
@@ -202,6 +204,7 @@ const SearchAdvancedFilterPanel: React.FC = () => {
                   {group.title}
                 </h4>
                 <div className="mt-3 flex flex-wrap gap-2">
+                  {/* 关键词 chip 需要稳定紧凑尺寸和删除语义，保留原生按钮。 */}
                   {(activeFilter?.[group.field] || []).map((value) => (
                     <button
                       key={`${group.field}-${value}`}
@@ -251,6 +254,7 @@ const SearchAdvancedFilterPanel: React.FC = () => {
                     {group.title}
                   </h4>
                   <div className="mt-3 flex flex-wrap gap-2">
+                    {/* 分面 chip 需要 aria 状态和计数布局稳定，保留原生按钮。 */}
                     {group.options.map((option) => {
                       const isActive = (activeFilter?.[group.field] || []).includes(option.value);
                       return (

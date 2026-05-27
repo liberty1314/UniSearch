@@ -278,25 +278,23 @@ describe("HotPage", () => {
     expect(screen.getByTestId("hot-period-tabs").className).toContain("overflow-x-auto");
   });
 
-  it("控制台会展示当前模式周期和分类摘要", async () => {
+  it("控制台移除摘要卡片并保留重置与移动调整入口", async () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
     await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
-    const toolbarSummary = screen.getByTestId("hot-toolbar-summary");
 
-    expect(within(toolbarSummary).getByText("当前模式")).toBeInTheDocument();
-    expect(within(toolbarSummary).getByText("当前分类")).toBeInTheDocument();
-    expect(toolbarSummary).toHaveTextContent("趋势榜");
-    expect(toolbarSummary).toHaveTextContent("全部内容");
+    expect(screen.queryByTestId("hot-toolbar-summary")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "重置条件" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "调整榜单" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
     fireEvent.click(screen.getByRole("button", { name: "每月" }));
     fireEvent.click(screen.getByRole("button", { name: "电影" }));
 
     await waitFor(() => {
-      expect(toolbarSummary).toHaveTextContent(/每月 · \d{4}-\d{2}/);
-      expect(toolbarSummary).toHaveTextContent("电影");
+      expect(screen.getByLabelText("指定月份")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "电影" })).toHaveAttribute("aria-pressed", "true");
     });
 
     fireEvent.click(screen.getByLabelText("打开排序菜单"));

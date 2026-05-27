@@ -60,8 +60,15 @@ let searchResults: Array<{ id: string }> = [];
 
 vi.mock('@/components/SearchBox', () => ({
   __esModule: true,
-  default: ({ accessHint }: { accessHint?: string }) => (
+  default: ({
+    accessHint,
+    placeholder = '搜索网盘资源...',
+  }: {
+    accessHint?: string;
+    placeholder?: string;
+  }) => (
     <div>
+      <input placeholder={placeholder} />
       search-box
       {accessHint ? <p>{accessHint}</p> : null}
     </div>
@@ -218,6 +225,17 @@ describe('Home', () => {
     renderHome();
 
     expect(screen.getByRole('link', { name: '进入热门榜单页' })).toHaveAttribute('href', '/hot');
+  });
+
+  it('首屏搜索工作台同时展示搜索框、准入提示和热门榜单入口', () => {
+    searchAccessStatus = 'anonymous';
+
+    renderHome();
+
+    expect(screen.getByTestId('home-search-workbench')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('搜索网盘资源...')).toBeInTheDocument();
+    expect(screen.getByText('搜索结果需要登录后查看，热门榜单可直接浏览。')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^热门榜单$/ })).toHaveAttribute('href', '/hot');
   });
 
   it('renders elevated feature cards with dedicated depth layers', () => {

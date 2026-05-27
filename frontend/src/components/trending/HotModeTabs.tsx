@@ -1,9 +1,6 @@
 import React from "react";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import type { HotRankingMode } from "@/types/hotRanking";
-import {
-  buildHotToolbarTabClassName,
-  hotToolbarRailClassName,
-} from "@/components/trending/hotToolbarTabStyles";
 
 const options: Array<{ value: HotRankingMode; label: string }> = [
   { value: "trend", label: "趋势榜" },
@@ -15,27 +12,16 @@ interface HotModeTabsProps {
   onChange: (value: HotRankingMode) => void;
 }
 
-const HotModeTabs: React.FC<HotModeTabsProps> = ({ value, onChange }) => {
-  return (
-    <div>
-      <div className={hotToolbarRailClassName} data-testid="hot-mode-tabs">
-        {options.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onChange(option.value)}
-            aria-pressed={value === option.value}
-            className={buildHotToolbarTabClassName(
-              value === option.value,
-              "bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_12px_30px_rgba(14,165,233,0.3)]",
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
+const HotModeTabs: React.FC<HotModeTabsProps> = ({ value, onChange }) => (
+  <SegmentedControl
+    ariaLabel="榜单模式"
+    value={value}
+    onChange={onChange}
+    options={options}
+    testId="hot-mode-tabs"
+    className="w-full overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    buttonClassName="flex-1 shrink-0 whitespace-nowrap"
+  />
+);
 
 export default HotModeTabs;

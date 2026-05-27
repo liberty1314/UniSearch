@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import SearchBox from "@/components/SearchBox";
 import SearchResults from "@/components/SearchResults";
 import SearchUnifiedFilterCard from "@/components/SearchUnifiedFilterCard";
+import { SearchEmptyWorkbench } from "@/components/search/SearchEmptyWorkbench";
 import PublicPageShell from "@/components/PublicPageShell";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
@@ -99,7 +100,9 @@ const SearchPage: React.FC = () => {
             <div className="max-w-5xl">
               <SearchUnifiedFilterCard />
             </div>
-          ) : null}
+          ) : (
+            <SearchEmptyWorkbench />
+          )}
 
           <SearchResults />
         </div>

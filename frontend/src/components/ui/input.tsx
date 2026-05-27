@@ -1,6 +1,6 @@
 /**
- * 兼容层：重新导出 AppleInput 作为 Input
- * 这个文件用于向后兼容，所有新代码应直接使用 AppleInput
+ * 统一输入入口：内部复用 AppleInput，业务代码优先从本文件导入 Input。
+ * 需要 label、error、helperText 等完整表单能力时，可直接使用 AppleInput。
  */
 import React, { forwardRef } from 'react';
 import { AppleInput, AppleInputProps } from './AppleInput';

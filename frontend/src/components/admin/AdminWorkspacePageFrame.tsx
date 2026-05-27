@@ -3,12 +3,13 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { ADMIN_DENSITY } from '@/components/admin/adminDensity';
 import {
   ADMIN_PANEL_SURFACE_CLASSES,
   ADMIN_PANEL_SURFACE_HOVER_CLASSES,
   ADMIN_HOVERABLE_BUTTON_CLASSES,
 } from '@/components/admin/adminDesign';
-// Re-exports for shared components used across views
+// 复用导出供后台各视图共享。
 export { AdminContentCard, AdminCardLoading, AdminCardEmpty } from './AdminContentCard';
 export { AdminStatusFilter } from './AdminStatusFilter';
 export { AdminSearchInput } from './AdminSearchInput';
@@ -33,10 +34,10 @@ export function AdminWorkspacePageFrame({
   drawer,
 }: AdminWorkspacePageProps) {
   return (
-    <div className="space-y-6">
+    <div className={ADMIN_DENSITY.pageGap}>
       {header}
       {metrics}
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className={cn('grid xl:grid-cols-[minmax(0,1fr)_380px]', ADMIN_DENSITY.contentGap)}>
         <div className="space-y-4">
           {filters}
           {selectionBar}
@@ -66,7 +67,7 @@ export function AdminWorkspaceHero({
   actions,
 }: AdminWorkspaceHeroProps) {
   return (
-    <section className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden p-6 sm:p-7')}>
+    <section className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden p-5 sm:p-6')}>
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -98,12 +99,12 @@ interface AdminMetricItemProps {
 }
 
 export function AdminMetricGrid({ children }: { children: React.ReactNode }) {
-  return <section className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">{children}</section>;
+  return <section className="grid gap-3 md:grid-cols-2 xl:gap-4 2xl:grid-cols-4">{children}</section>;
 }
 
 export function AdminMetricCard({ label, value, hint }: AdminMetricItemProps) {
   return (
-    <div className={cn(ADMIN_PANEL_SURFACE_CLASSES, 'p-5')}>
+    <div className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_DENSITY.cardPaddingMd)}>
       <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{label}</p>
       <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">{value}</p>
       {hint ? <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{hint}</p> : null}
@@ -113,7 +114,7 @@ export function AdminMetricCard({ label, value, hint }: AdminMetricItemProps) {
 
 export function AdminFilterSurface({ children }: { children: React.ReactNode }) {
   return (
-    <section className={cn(ADMIN_PANEL_SURFACE_CLASSES, 'p-4 sm:p-5')}>
+    <section className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_DENSITY.cardPaddingMd)}>
       {children}
     </section>
   );

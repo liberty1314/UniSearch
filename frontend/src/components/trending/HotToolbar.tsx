@@ -1,8 +1,10 @@
 import React from "react";
-import { CalendarDays, Clapperboard, RotateCcw, Sparkles } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import HotModeTabs from "@/components/trending/HotModeTabs";
 import HotCategoryTabs from "@/components/trending/HotCategoryTabs";
 import HotPeriodTabs from "@/components/trending/HotPeriodTabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type {
   HotRankingCategory,
@@ -49,38 +51,9 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
   onYearChange,
 }) => {
   const [mobileExpanded, setMobileExpanded] = React.useState(false);
-  const modeLabel = mode === "trend" ? "趋势榜" : "热门榜";
-  const periodLabelMap: Record<HotRankingPeriod, string> = {
-    day: "每日",
-    week: "每周",
-    month: "每月",
-    year: "每年",
-  };
-  const categoryLabelMap: Record<HotRankingCategory, string> = {
-    all: "全部内容",
-    movie: "电影",
-    tv: "电视剧",
-    anime: "动漫",
-  };
   const availablePeriods = mode === "trend"
     ? (["day", "week"] as HotRankingPeriod[])
     : (["day", "week", "month", "year"] as HotRankingPeriod[]);
-
-  const activeTimeLabel = (() => {
-    if (mode === "trend") {
-      return period === "day" ? "当前周期" : "最近一周";
-    }
-    if (period === "day") {
-      return date;
-    }
-    if (period === "week") {
-      return weekStart;
-    }
-    if (period === "month") {
-      return month;
-    }
-    return year;
-  })();
 
   const renderTimeField = () => {
     if (mode === "trend") {
@@ -97,11 +70,13 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
           <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
             指定日期
           </span>
-          <input
+          <Input
             type="date"
             value={date}
             onChange={(event) => onDateChange(event.target.value)}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-cyan-300 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-100"
+            aria-label="指定日期"
+            reserveMessageSpace={false}
+            className="h-10 rounded-[1rem] py-0 text-sm"
           />
         </label>
       );
@@ -113,11 +88,13 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
           <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
             周起始日
           </span>
-          <input
+          <Input
             type="date"
             value={weekStart}
             onChange={(event) => onWeekStartChange(event.target.value)}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-cyan-300 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-100"
+            aria-label="周起始日"
+            reserveMessageSpace={false}
+            className="h-10 rounded-[1rem] py-0 text-sm"
           />
         </label>
       );
@@ -129,11 +106,13 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
           <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
             指定月份
           </span>
-          <input
+          <Input
             type="month"
             value={month}
             onChange={(event) => onMonthChange(event.target.value)}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-cyan-300 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-100"
+            aria-label="指定月份"
+            reserveMessageSpace={false}
+            className="h-10 rounded-[1rem] py-0 text-sm"
           />
         </label>
       );
@@ -144,13 +123,15 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
         <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
           指定年份
         </span>
-        <input
+        <Input
           type="number"
           min="2000"
           max="2099"
           value={year}
           onChange={(event) => onYearChange(event.target.value)}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-cyan-300 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-100"
+          aria-label="指定年份"
+          reserveMessageSpace={false}
+          className="h-10 rounded-[1rem] py-0 text-sm"
         />
       </label>
     );
@@ -159,74 +140,52 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
   return (
     <section className="glass-card-premium p-5 md:p-6">
       <div className="space-y-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex flex-1 items-start justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
             <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-              热榜控制台
-            </p>
-            <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
-              先定口径，再看榜单
-            </h2>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-              先选择榜单模式、时间维度与内容分类，结果区会立刻按当前口径刷新。
-            </p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                热榜控制台
+              </p>
+              <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+                先定口径，再看榜单
+              </h2>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+                先选择榜单模式、时间维度与内容分类，结果区会立刻按当前口径刷新。
+              </p>
             </div>
+          </div>
 
-            <button
-              type="button"
-              onClick={onResetFilters}
-              className="group flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-slate-200/60 bg-slate-50/50 px-3 text-xs font-medium text-slate-500 shadow-sm backdrop-blur-sm transition-all hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700 hover:shadow dark:border-white/5 dark:bg-slate-800/40 dark:text-slate-400 dark:hover:bg-slate-800/80 dark:hover:text-slate-200"
-            >
-              <RotateCcw className="h-3.5 w-3.5 transition-transform duration-500 group-hover:-rotate-180" />
-              <span>重置条件</span>
-            </button>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-3 lg:max-w-3xl" data-testid="hot-toolbar-summary">
-            <div className="rounded-2xl border border-cyan-100/80 bg-white/65 px-3.5 py-3 shadow-sm dark:border-cyan-400/15 dark:bg-slate-900/40">
-              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                <Sparkles className="h-3.5 w-3.5" />
-                当前模式
-              </div>
-              <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">{modeLabel}</p>
-            </div>
-            <div className="rounded-2xl border border-cyan-100/80 bg-white/65 px-3.5 py-3 shadow-sm dark:border-cyan-400/15 dark:bg-slate-900/40">
-              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                <CalendarDays className="h-3.5 w-3.5" />
-                当前周期
-              </div>
-              <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {periodLabelMap[period]}{mode === "popular" ? ` · ${activeTimeLabel}` : ""}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-cyan-100/80 bg-white/65 px-3.5 py-3 shadow-sm dark:border-cyan-400/15 dark:bg-slate-900/40">
-              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                <Clapperboard className="h-3.5 w-3.5" />
-                当前分类
-              </div>
-              <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {categoryLabelMap[category]}
-              </p>
-            </div>
-          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onResetFilters}
+            className="group h-9 w-full rounded-full px-4 text-sm sm:w-auto sm:shrink-0"
+          >
+            <RotateCcw className="mr-1.5 h-3.5 w-3.5 transition-transform duration-500 group-hover:-rotate-180" />
+            重置条件
+          </Button>
         </div>
 
-        <button
+        <Button
           type="button"
+          variant="outline"
+          fullWidth
           onClick={() => setMobileExpanded((current) => !current)}
-          className="inline-flex w-full items-center justify-center rounded-full border border-slate-200/70 bg-white/75 px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-cyan-200 hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-100 sm:hidden"
+          className="h-10 rounded-full sm:hidden"
           aria-expanded={mobileExpanded}
         >
           {mobileExpanded ? "收起榜单调整" : "调整榜单"}
-        </button>
+        </Button>
 
         <div
+          data-testid="hot-toolbar-filter-grid"
           className={cn(
-            "gap-4 lg:grid lg:grid-cols-2 xl:grid-cols-12",
+            "gap-4 lg:grid lg:grid-cols-2 xl:grid-cols-[minmax(12rem,0.8fr)_minmax(18rem,1.2fr)_minmax(21rem,1.45fr)_minmax(15rem,1fr)]",
             mobileExpanded ? "grid" : "hidden sm:grid",
           )}
         >
-          <div className="glass-toolbar rounded-[1.35rem] p-3 xl:col-span-3">
+          <div className="glass-toolbar min-w-0 rounded-[1.35rem] p-3">
             <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
               榜单模式
             </p>
@@ -235,7 +194,7 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
             </div>
           </div>
 
-          <div className="glass-toolbar rounded-[1.35rem] p-3 xl:col-span-3">
+          <div className="glass-toolbar min-w-0 rounded-[1.35rem] p-3">
             <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
               时间维度
             </p>
@@ -244,7 +203,7 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
             </div>
           </div>
 
-          <div className="glass-toolbar rounded-[1.35rem] p-3 xl:col-span-3">
+          <div className="glass-toolbar min-w-0 rounded-[1.35rem] p-3">
             <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
               内容分类
             </p>
@@ -255,7 +214,7 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
 
           <div
             data-testid="hot-toolbar-time-panel"
-            className="glass-toolbar rounded-[1.35rem] p-3 xl:col-span-3"
+            className="glass-toolbar min-w-0 rounded-[1.35rem] p-3"
           >
             <div>
               {renderTimeField()}

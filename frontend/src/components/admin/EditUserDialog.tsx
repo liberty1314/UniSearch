@@ -11,7 +11,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { AppleInput } from '@/components/ui/AppleInput';
-import { AppleButton } from '@/components/ui/AppleButton';
+import { Button } from '@/components/ui/button';
 import {
     Select,
     SelectContent,
@@ -264,21 +264,23 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }: EditUser
                 </div>
 
                 <DialogFooter>
-                    <AppleButton
-                        variant="secondary"
+                    <Button
+                        type="button"
+                        variant="outline"
                         onClick={handleClose}
                         disabled={isLoading}
                     >
                         取消
-                    </AppleButton>
-                    <AppleButton
+                    </Button>
+                    <Button
+                        type="button"
                         variant="primary"
                         onClick={handleUpdate}
                         loading={isLoading}
                         disabled={isLoading}
                     >
                         保存修改
-                    </AppleButton>
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

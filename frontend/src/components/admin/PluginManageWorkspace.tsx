@@ -20,6 +20,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { AdminWorkspaceFooter } from './AdminWorkspaceFooter';
 import { AdminWorkspaceToolbar } from './AdminWorkspaceToolbar';
@@ -204,15 +205,15 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
         </div>
 
         <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.4fr),repeat(4,minmax(0,0.8fr))]">
-          <label className="flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-white/80 px-3 py-2 dark:border-white/[0.08] dark:bg-white/[0.03]">
-            <Search className="h-4 w-4 text-slate-400" />
-            <input
-              value={searchKeyword}
-              onChange={(event) => onSetSearchKeyword(event.target.value)}
-              placeholder="搜索名称、描述、能力、标签"
-              className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-200"
-            />
-          </label>
+          <Input
+            value={searchKeyword}
+            onChange={(event) => onSetSearchKeyword(event.target.value)}
+            placeholder="搜索名称、描述、能力、标签"
+            aria-label="搜索插件"
+            reserveMessageSpace={false}
+            className="h-10 rounded-2xl bg-white/80 py-2 text-sm dark:bg-white/[0.03]"
+            startAdornment={<Search className="h-4 w-4 text-slate-400" />}
+          />
 
           <AdminSelectField
             value={sourceFilter}
@@ -246,23 +247,25 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
           />
 
           <div className="flex items-center gap-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={onToggleSelectFiltered}
               disabled={isOperationBusy || filteredItemsCount === 0}
-              className="rounded-2xl border border-slate-200/70 bg-white/80 px-3 py-2 text-sm text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-slate-200"
+              className="h-10 rounded-2xl px-3 text-sm"
             >
               {isAllFilteredSelected ? '清空选择' : '全选当前筛选'}
-            </button>
+            </Button>
             {!isReadOnly ? (
-              <button
+              <Button
                 type="button"
+                variant="primary"
                 onClick={onOpenAddDialog}
                 disabled={isOperationBusy}
-                className="rounded-2xl bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 px-4 py-2 text-sm font-medium text-white transition hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600 disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-10 rounded-2xl px-4 text-sm"
               >
                 添加 URL 插件
-              </button>
+              </Button>
             ) : null}
           </div>
         </div>

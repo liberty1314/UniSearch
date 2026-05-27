@@ -753,3 +753,36 @@
   - `frontend/src/pages/SearchPage.tsx`
   - `frontend/src/pages/__tests__/Home.test.tsx`
   - `frontend/src/pages/__tests__/SearchPage.test.tsx`
+[2026-05-27 09:45] feat(frontend): 新增搜索工作台并统一后台紧凑交互组件
+- Body: 新增首页与搜索空状态工作台，统一趋势榜分段控件、紧凑表面和后台输入按钮样式，并补齐对应交互测试。同步收敛后台卡片与筛选面板的复用入口，减少重复视觉实现。
+- Files:
+  - frontend/src/components/SearchAdvancedFilterPanel.tsx
+  - frontend/src/components/SearchBox.tsx
+  - frontend/src/components/SearchUnifiedFilterCard.tsx
+  - frontend/src/components/admin/AdminContentCard.tsx
+  - frontend/src/components/admin/AdminSearchInput.tsx
+  - frontend/src/components/admin/AdminWorkspacePageFrame.tsx
+  - frontend/src/components/admin/CreateUserDialog.tsx
+  - frontend/src/components/admin/EditUserDialog.tsx
+  - frontend/src/components/admin/PluginManageWorkspace.tsx
+  - frontend/src/components/admin/__tests__/AdminSearchInput.test.tsx
+  - frontend/src/components/admin/__tests__/AdminWorkspacePageFrame.test.tsx
+  - frontend/src/components/admin/adminDensity.ts
+  - frontend/src/components/admin/adminDesign.ts
+  - frontend/src/components/home/HomeSearchWorkbench.tsx
+  - frontend/src/components/search/SearchEmptyWorkbench.tsx
+  - frontend/src/components/trending/HotCategoryTabs.tsx
+  - frontend/src/components/trending/HotModeTabs.tsx
+  - frontend/src/components/trending/HotPeriodTabs.tsx
+  - frontend/src/components/trending/HotToolbar.tsx
+  - frontend/src/components/trending/__tests__/HotToolbar.test.tsx
+  - frontend/src/components/ui/CompactSurface.tsx
+  - frontend/src/components/ui/SegmentedControl.tsx
+  - frontend/src/components/ui/__tests__/CompactSurface.test.tsx
+  - frontend/src/components/ui/__tests__/SegmentedControl.test.tsx
+  - frontend/src/components/ui/input.tsx
+  - frontend/src/pages/Home.tsx
+  - frontend/src/pages/SearchPage.tsx
+  - frontend/src/pages/__tests__/Home.test.tsx
+  - frontend/src/pages/__tests__/HotPage.test.tsx
+  - frontend/src/pages/__tests__/SearchPage.test.tsx

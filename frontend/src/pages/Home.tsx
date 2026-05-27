@@ -2,11 +2,11 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Layers, Sparkles, Activity } from "lucide-react";
 import { useLocation } from "react-router-dom";
-import SearchBox from "@/components/SearchBox";
 import GradientText from "@/components/GradientText";
 import { useSearchAccessStatus } from "@/stores/searchAccessStore";
 import PublicPageShell from "@/components/PublicPageShell";
 import SEO from "@/components/SEO";
+import { HomeSearchWorkbench } from "@/components/home/HomeSearchWorkbench";
 import PlatformMarquee from "@/components/home/PlatformMarquee";
 import TrendingCategories from "@/components/home/TrendingCategories";
 import HomeSectionHeader from "@/components/home/HomeSectionHeader";
@@ -148,7 +148,7 @@ const Home: React.FC = () => {
         initial={shouldPlayHomeEntrance ? { opacity: 0, y: 24 } : false}
         animate={{ opacity: 1, y: 0 }}
         transition={heroTransition}
-        className="relative z-10 mb-12 text-center sm:mb-16 lg:mb-20"
+        className="relative z-10 mb-8 text-center sm:mb-10 lg:mb-12"
       >
         <motion.div
           initial={shouldPlayHomeEntrance ? { opacity: 0, scale: 0.985 } : false}
@@ -213,10 +213,9 @@ const Home: React.FC = () => {
           }
           animate={{ opacity: 1, y: 0 }}
           transition={searchTransition}
-          className="relative z-20 w-full max-w-4xl"
+          className="relative z-20 w-full"
         >
-          <SearchBox
-            className="w-full"
+          <HomeSearchWorkbench
             accessHint={
               showSearchAccessHint
                 ? "搜索结果需要登录后查看，热门榜单可直接浏览。"
@@ -227,7 +226,7 @@ const Home: React.FC = () => {
       </div>
 
       <div className="max-w-6xl mx-auto">
-        <div className="space-y-24 pb-28">
+        <div className="space-y-20 pb-28">
           <div>
             <motion.div
               initial={shouldPlayHomeEntrance ? { opacity: 0, y: 20 } : false}

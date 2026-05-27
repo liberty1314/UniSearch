@@ -1,4 +1,7 @@
 import React from 'react';
+import { ADMIN_DENSITY } from '@/components/admin/adminDensity';
+import { ADMIN_PANEL_SURFACE_CLASSES } from '@/components/admin/adminDesign';
+import { CompactSurface } from '@/components/ui/CompactSurface';
 import { cn } from '@/lib/utils';
 
 interface AdminContentCardProps {
@@ -8,13 +11,13 @@ interface AdminContentCardProps {
 }
 
 const paddingMap = {
-  sm: 'p-4 sm:p-5',
-  md: 'p-5 sm:p-6',
-  lg: 'p-6 sm:p-7',
+  sm: ADMIN_DENSITY.cardPaddingSm,
+  md: ADMIN_DENSITY.cardPaddingMd,
+  lg: ADMIN_DENSITY.cardPaddingLg,
 };
 
 /**
- * 玻璃表面内容卡片 — 提取自 Channel/Plugin 视图的重复 inline 样式
+ * 后台内容卡片：复用紧凑表面，避免在各业务视图继续散写玻璃面板。
  */
 export function AdminContentCard({
   children,
@@ -22,21 +25,22 @@ export function AdminContentCard({
   padding = 'md',
 }: AdminContentCardProps) {
   return (
-    <section
+    <CompactSurface
+      as="section"
+      density="compact"
       className={cn(
-        'relative rounded-[1.5rem] border border-white/60 bg-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-[24px] dark:border-white/10 dark:bg-slate-900/40 dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)]',
-        'overflow-hidden',
+        ADMIN_PANEL_SURFACE_CLASSES,
         paddingMap[padding],
         className,
       )}
     >
       {children}
-    </section>
+    </CompactSurface>
   );
 }
 
 /**
- * 玻璃表面卡片 — 加载状态
+ * 后台内容卡片加载态。
  */
 export function AdminCardLoading({
   icon,
@@ -54,7 +58,7 @@ export function AdminCardLoading({
 }
 
 /**
- * 玻璃表面卡片 — 空状态
+ * 后台内容卡片空状态。
  */
 export function AdminCardEmpty({
   icon,

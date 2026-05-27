@@ -29,6 +29,13 @@ describe("HotToolbar", () => {
     expect(screen.getByRole("button", { name: "调整榜单" })).toBeInTheDocument();
   });
 
+  it("移除摘要卡片并保留重置入口", () => {
+    render(<HotToolbar {...baseProps} />);
+
+    expect(screen.queryByTestId("hot-toolbar-summary")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "重置条件" })).toBeInTheDocument();
+  });
+
   it("点击调整榜单后展示筛选控件", () => {
     render(<HotToolbar {...baseProps} />);
 
@@ -37,5 +44,28 @@ describe("HotToolbar", () => {
     expect(screen.getByText("榜单模式")).toBeInTheDocument();
     expect(screen.getByText("时间维度")).toBeInTheDocument();
     expect(screen.getByText("内容分类")).toBeInTheDocument();
+  });
+
+  it("使用统一分段控件渲染榜单模式、周期和分类", () => {
+    render(<HotToolbar {...baseProps} />);
+
+    expect(screen.getByRole("group", { name: "榜单模式" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "时间维度" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "内容分类" })).toBeInTheDocument();
+  });
+
+  it("内容分类选中态使用统一蓝青渐变", () => {
+    render(<HotToolbar {...baseProps} />);
+
+    expect(screen.getByRole("button", { name: "全部" }).className).toContain("from-blue-600");
+  });
+
+  it("控制台卡片使用非等宽列给时间和分类保留完整宽度", () => {
+    render(<HotToolbar {...baseProps} />);
+
+    const filterGrid = screen.getByTestId("hot-toolbar-filter-grid");
+
+    expect(filterGrid.className).toContain("minmax(18rem,1.2fr)");
+    expect(filterGrid.className).toContain("minmax(21rem,1.45fr)");
   });
 });

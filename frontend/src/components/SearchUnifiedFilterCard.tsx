@@ -66,7 +66,6 @@ const SourceChip = memo(
       clearLongPressTimer();
       const clientX = event.clientX;
       const clientY = event.clientY;
-      const buttonElement = event.currentTarget;
       const buttonRect = event.currentTarget.getBoundingClientRect();
       longPressTimerRef.current = window.setTimeout(() => {
         longPressTriggeredRef.current = true;
@@ -391,16 +390,17 @@ const SearchUnifiedFilterCard: React.FC = () => {
                 清空全部筛选
               </Button>
             ) : null}
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={() => setExpanded((prev) => !prev)}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/70 px-4 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-900 dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300 dark:hover:text-white"
+              className="rounded-full"
             >
               <span>{expanded ? "收起高级条件" : "展开高级条件"}</span>
               <ChevronDown
                 className={cn("h-4 w-4 transition-transform duration-300", expanded && "rotate-180")}
               />
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -434,17 +434,13 @@ const SearchUnifiedFilterCard: React.FC = () => {
                 点击切换来源，长按可仅看单个来源
               </p>
             </div>
-            <button
+            <Button
               type="button"
+              variant={isAllSelected ? "default" : "outline"}
               onClick={handleSelectAll}
               aria-pressed={isAllSelected}
               aria-label={isAllSelected ? "取消全选所有网盘类型" : "全选所有网盘类型"}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-[1rem] px-4 py-2 text-sm font-semibold transition-colors transition-shadow duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2",
-                isAllSelected
-                  ? "bg-slate-900 text-white shadow-[0_8px_20px_rgba(15,23,42,0.15)] dark:bg-white dark:text-slate-900"
-                  : "border-[0.5px] border-slate-200/50 bg-white/60 text-slate-600 hover:bg-white/80 hover:text-slate-900 dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-white",
-              )}
+              className="rounded-[1rem] px-4 py-2 text-sm font-semibold"
             >
               {isAllSelected ? (
                 <IoCheckmarkCircle className="h-5 w-5" />
@@ -452,7 +448,7 @@ const SearchUnifiedFilterCard: React.FC = () => {
                 <IoEllipseOutline className="h-5 w-5" />
               )}
               <span>{isAllSelected ? "全选状态" : "选择全部"}</span>
-            </button>
+            </Button>
           </div>
 
           <div className="flex flex-col gap-3">
@@ -517,6 +513,7 @@ const SearchUnifiedFilterCard: React.FC = () => {
                       data-testid={`${group.field}-keyword-chip-row`}
                       className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-x-auto pr-1"
                     >
+                      {/* 关键词 chip 需要稳定横向滚动和删除语义，保留原生按钮。 */}
                       {(activeFilter?.[group.field] || []).map((value) => (
                         <button
                           key={`${group.field}-${value}`}
@@ -568,6 +565,7 @@ const SearchUnifiedFilterCard: React.FC = () => {
                       {group.title}
                     </h4>
                     <div className="mt-3 flex flex-wrap gap-2">
+                      {/* 分面 chip 需要保留计数布局和快速切换状态，保留原生按钮。 */}
                       {group.options.map((option) => {
                         const isActive = (activeFilter?.[group.field] || []).includes(option.value);
                         return (

@@ -1,9 +1,6 @@
 import React from "react";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import type { HotRankingCategory } from "@/types/hotRanking";
-import {
-  buildHotToolbarTabClassName,
-  hotToolbarRailClassName,
-} from "@/components/trending/hotToolbarTabStyles";
 
 const options: Array<{ value: HotRankingCategory; label: string }> = [
   { value: "all", label: "全部" },
@@ -17,27 +14,16 @@ interface HotCategoryTabsProps {
   onChange: (value: HotRankingCategory) => void;
 }
 
-const HotCategoryTabs: React.FC<HotCategoryTabsProps> = ({ value, onChange }) => {
-  return (
-    <div>
-      <div className={hotToolbarRailClassName} data-testid="hot-category-tabs">
-        {options.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onChange(option.value)}
-            aria-pressed={value === option.value}
-            className={buildHotToolbarTabClassName(
-              value === option.value,
-              "bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)] dark:from-cyan-500 dark:to-blue-500",
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
+const HotCategoryTabs: React.FC<HotCategoryTabsProps> = ({ value, onChange }) => (
+  <SegmentedControl
+    ariaLabel="内容分类"
+    value={value}
+    onChange={onChange}
+    options={options}
+    testId="hot-category-tabs"
+    className="w-full overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    buttonClassName="min-w-14 flex-1 shrink-0 whitespace-nowrap px-3"
+  />
+);
 
 export default HotCategoryTabs;

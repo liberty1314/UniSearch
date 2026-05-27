@@ -1,10 +1,9 @@
 import {
   ACCOUNT_PANEL_BADGE_CLASSES,
   ACCOUNT_PANEL_EYEBROW_CLASSES,
-  ACCOUNT_PANEL_SURFACE_CLASSES,
-  ACCOUNT_PANEL_SURFACE_HOVER_CLASSES,
   ACCOUNT_PANEL_TITLE_CLASSES,
 } from '@/components/account/accountDesign';
+import { ADMIN_COMPACT_SURFACE_CLASSES, ADMIN_DENSITY } from '@/components/admin/adminDensity';
 
 export const ADMIN_PAGE_SHELL_CLASSES =
   'relative min-h-[calc(100vh-4rem)] overflow-hidden bg-[#f5f5f7] text-slate-900 dark:bg-[#000000] dark:text-white';
@@ -27,8 +26,10 @@ export const ADMIN_SECTION_HEADER_CLASSES =
 export const ADMIN_SECTION_ICON_CLASSES =
   'glass-toolbar flex h-16 w-16 items-center justify-center rounded-[1.5rem] text-slate-700 dark:text-slate-200';
 
-export const ADMIN_PANEL_SURFACE_CLASSES = ACCOUNT_PANEL_SURFACE_CLASSES;
-export const ADMIN_PANEL_SURFACE_HOVER_CLASSES = ACCOUNT_PANEL_SURFACE_HOVER_CLASSES;
+export const ADMIN_PANEL_SURFACE_CLASSES =
+  `${ADMIN_COMPACT_SURFACE_CLASSES} ${ADMIN_DENSITY.cardRadius} ${ADMIN_DENSITY.cardShadow}`;
+export const ADMIN_PANEL_SURFACE_HOVER_CLASSES =
+  'hover:border-cyan-200/70 hover:bg-white/78 dark:hover:border-cyan-300/18 dark:hover:bg-slate-950/56';
 export const ADMIN_PANEL_EYEBROW_CLASSES = ACCOUNT_PANEL_EYEBROW_CLASSES;
 export const ADMIN_PANEL_TITLE_CLASSES = ACCOUNT_PANEL_TITLE_CLASSES;
 export const ADMIN_PANEL_BADGE_CLASSES = ACCOUNT_PANEL_BADGE_CLASSES;
