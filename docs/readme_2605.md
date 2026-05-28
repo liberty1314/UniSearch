@@ -786,3 +786,30 @@
   - frontend/src/pages/__tests__/Home.test.tsx
   - frontend/src/pages/__tests__/HotPage.test.tsx
   - frontend/src/pages/__tests__/SearchPage.test.tsx
+## [2026-05-28 13:38] refactor(search): 抽取资源链接解析并完善本地质量检查
+- **Body**: 抽取后端插件共享链接解析器并补充插件契约测试，同时拆分前端 API 类型入口并扩展本地质量脚本覆盖后端构建与前端生产构建。
+- **Files**:
+  - `Dockerfile`
+  - `README.md`
+  - `backend/plugin/daishudj/daishudj.go`
+  - `backend/plugin/daishudj/daishudj_test.go`
+  - `backend/plugin/dyyj/dyyj_test.go`
+  - `backend/plugin/javdb/javdb_test.go`
+  - `backend/plugin/mikuclub/mikuclub.go`
+  - `backend/plugin/mikuclub/mikuclub_test.go`
+  - `backend/plugin/pansearch/pansearch_test.go`
+  - `backend/plugin/panta/panta_test.go`
+  - `backend/plugin/parser/link_parser.go`
+  - `backend/plugin/parser/link_parser_test.go`
+  - `backend/plugin/quark4k/quark4k_test.go`
+  - `backend/util/regex_util.go`
+  - `frontend/src/components/ui/server-management-table.tsx`
+  - `frontend/src/pages/__tests__/HotPage.test.tsx`
+  - `frontend/src/routes/__tests__/ScrollToTop.test.tsx`
+  - `frontend/src/test/setup.ts`
+  - `frontend/src/types/api.ts`
+  - `frontend/src/types/common.ts`
+  - `frontend/src/types/resource.ts`
+  - `frontend/src/types/search.ts`
+  - `frontend/vite.config.ts`
+  - `scripts/tests/local-quality.sh`

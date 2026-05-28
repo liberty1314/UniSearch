@@ -1,275 +1,31 @@
-// API 响应和请求类型定义
+// API 类型兼容导出入口。新代码优先从 common/search/resource 等领域类型文件导入。
 
-/**
- * 通用 API 响应结构
- * 
- * 所有后端 API 接口都遵循此统一响应格式，包含状态码、消息和数据三部分。
- * 前端响应拦截器会自动解包 `data` 字段，使 Service 层直接获得业务数据对象。
- * 
- * @template T - 响应数据的类型，默认为 unknown
- * 
- * @property {number} code - HTTP 状态码（200 表示成功，4xx 表示客户端错误，5xx 表示服务器错误）
- * @property {string} message - 响应消息，成功时为操作描述，失败时为错误描述（中文）
- * @property {T} [data] - 响应数据，包含实际的业务数据对象（可选，错误响应可能不包含此字段）
- * 
- * @example
- * // 成功响应示例
- * {
- *   code: 200,
- *   message: "注册成功",
- *   data: { user_id: 1, username: "test" }
- * }
- * 
- * @example
- * // 错误响应示例
- * {
- *   code: 400,
- *   message: "用户名已存在",
- *   data: { field: "username", constraint: "unique" }
- * }
- */
-export interface ApiResponse<T = unknown> {
-  code: number;
-  message: string;
-  data?: T;
-}
+import type { CloudTypeValue } from '@/types/search';
 
-/**
- * 网盘类型枚举
- */
-export enum CloudType {
-  BAIDU = 'baidu',
-  ALIYUN = 'aliyun',
-  QUARK = 'quark',
-  TIANYI = 'tianyi',
-  UC = 'uc',
-  MOBILE = 'mobile',
-  ONE_ONE_FIVE = '115',
-  XUNLEI = 'xunlei',
-  ONE_TWO_THREE = '123',
-  MAGNET = 'magnet',
-  LANZOU = 'lanzou',
-}
-
-export type CloudTypeValue =
-  | 'baidu'
-  | 'aliyun'
-  | 'quark'
-  | 'tianyi'
-  | 'uc'
-  | 'mobile'
-  | '115'
-  | 'xunlei'
-  | '123'
-  | 'magnet'
-  | 'lanzou';
-
-/**
- * 过滤配置
- */
-export interface FilterConfig {
-  include?: string[]; // 包含关键词列表（OR关系）
-  exclude?: string[]; // 排除关键词列表（AND关系）
-  mediaTypes?: string[]; // 媒体类型（OR关系）
-}
-
-/**
- * 搜索请求参数
- */
-export interface SearchRequest {
-  kw: string;
-  channels?: string[];
-  plugins?: string[];
-  cloud_types?: CloudTypeValue[];
-  src?: 'all' | 'tg' | 'plugin';
-  res?: 'all' | 'results' | 'merge';
-  conc?: number;
-  refresh?: boolean;
-  ext?: Record<string, unknown>;
-  filter?: FilterConfig; // 过滤配置
-}
-
-/**
- * 前端搜索参数（更友好的接口）
- */
-export interface SearchParams {
-  keyword: string;
-  channels?: string[];
-  plugins?: string[];
-  cloudTypes?: CloudTypeValue[];
-  source?: 'all' | 'tg' | 'plugin';
-  resultType?: 'all' | 'results' | 'merge';
-  concurrency?: number;
-  refresh?: boolean;
-  ext?: Record<string, unknown>;
-  filter?: FilterConfig; // 过滤配置
-}
-
-/**
- * 链接信息
- */
-export interface Link {
-  type: CloudTypeValue;
-  cloudType?: CloudTypeValue;
-  url: string;
-  password: string;
-  datetime?: string; // 链接更新时间（可选）
-  work_title?: string; // 作品标题（用于区分同一消息中多个作品的链接）
-  size?: number;
-  updateTime?: string;
-  title?: string;
-}
-
-/**
- * 搜索结果项
- */
-export interface SearchResult {
-  message_id: string;
-  unique_id: string;
-  channel: string;
-  datetime: string;
-  title: string;
-  content: string;
-  links: Link[];
-  tags?: string[];
-  images?: string[];
-  source_plugin_id?: string;
-  source_type?: string;
-  source_name?: string;
-  media_type?: string;
-  target_type?: string;
-  detail_url?: string;
-  capabilities?: ResourceCapabilities;
-  actions?: ResourceAction[];
-  meta?: Record<string, unknown>;
-}
-
-export interface ResourceCapabilities {
-  searchable?: boolean;
-  official_searchable?: boolean;
-  share_searchable?: boolean;
-  downloadable?: boolean;
-  strmable?: boolean;
-}
-
-export interface ResourceAction {
-  key: string;
-  label: string;
-  type: string;
-  style?: string;
-  target_plugin_id?: string;
-  payload?: Record<string, unknown>;
-}
-
-export interface ResourceSource {
-  type: string;
-  id?: string;
-  name?: string;
-  channel?: string;
-  plugin_id?: string;
-}
-
-export interface ResourceLink {
-  type: string;
-  url: string;
-  password?: string;
-  title?: string;
-  work_title?: string;
-  datetime?: string;
-}
-
-export interface ResourceDetail {
-  url?: string;
-  content?: string;
-  message_id?: string;
-  unique_id?: string;
-}
-
-export interface ResourceFacets {
-  cloud_types: Record<string, number>;
-  source_types: Record<string, number>;
-  media_types: Record<string, number>;
-  target_types: Record<string, number>;
-  capabilities: Record<string, number>;
-  action_types: Record<string, number>;
-}
-
-export interface ResourceObject {
-  id: string;
-  title: string;
-  description?: string;
-  source: ResourceSource;
-  media_type?: string;
-  target_type?: string;
-  links: ResourceLink[];
-  capabilities: ResourceCapabilities;
-  actions: ResourceAction[];
-  detail: ResourceDetail;
-  tags?: string[];
-  images?: string[];
-  meta?: Record<string, unknown>;
-  published_at?: string;
-}
-
-export interface ResourceDetailRouteState {
-  resource?: ResourceObject;
-  from?: {
-    pathname: string;
-    search?: string;
-    hash?: string;
-    label?: string;
-    keyword?: string;
-  };
-  routeTransition?: 'forward' | 'backward';
-  transitionSource?: string;
-  restoreScroll?: boolean;
-  scrollY?: number;
-}
-
-/**
- * 合并后的链接
- */
-export interface MergedLink {
-  url: string;
-  password: string;
-  note: string;
-  datetime: string;
-  source?: string;
-  images?: string[];
-}
-
-/**
- * 按网盘类型合并的链接
- */
-export type MergedLinks = Record<CloudTypeValue, MergedLink[]>;
-
-/**
- * 搜索响应数据
- */
-export interface SearchSourceWarning {
-  source: string;
-  message: string;
-}
-
-export interface SearchResponse {
-  total: number;
-  resources: ResourceObject[];
-  facets: ResourceFacets;
-  warnings?: SearchSourceWarning[];
-}
-
-/**
- * 健康检查响应
- */
-export interface HealthResponse {
-  status: string;
-  auth_enabled?: boolean; // 是否启用认证
-  plugins_enabled?: boolean; // 是否启用插件
-  plugin_count?: number;
-  plugins?: string[];
-  channels_count?: number;
-  channels?: string[];
-}
+export type { ApiResponse, HealthResponse } from '@/types/common';
+export { CloudType } from '@/types/search';
+export type {
+  CloudTypeValue,
+  FilterConfig,
+  Link,
+  MergedLink,
+  MergedLinks,
+  SearchParams,
+  SearchRequest,
+  SearchResponse,
+  SearchResult,
+  SearchSourceWarning,
+} from '@/types/search';
+export type {
+  ResourceAction,
+  ResourceCapabilities,
+  ResourceDetail,
+  ResourceDetailRouteState,
+  ResourceFacets,
+  ResourceLink,
+  ResourceObject,
+  ResourceSource,
+} from '@/types/resource';
 
 /**
  * 用户注册请求

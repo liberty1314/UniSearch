@@ -6,6 +6,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 // https://vite.dev/config/
 export default defineConfig(() => {
   const enableLocator = process.env.VITE_ENABLE_LOCATOR === "1";
+  const enableSourcemap = process.env.VITE_ENABLE_SOURCEMAP === "1";
   return {
     test: {
       globals: true,
@@ -15,7 +16,7 @@ export default defineConfig(() => {
       hookTimeout: 15000,
     },
     build: {
-      sourcemap: "hidden" as const,
+      sourcemap: enableSourcemap ? "hidden" as const : false,
       rollupOptions: {
         output: {
           manualChunks: {

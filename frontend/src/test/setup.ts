@@ -37,6 +37,12 @@ beforeAll(() => {
 
   vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
   vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  Object.defineProperty(window, 'scrollTo', {
+    configurable: true,
+    writable: true,
+    value: vi.fn(),
+  });
+
   class MockIntersectionObserver {
     root = null;
     rootMargin = '';

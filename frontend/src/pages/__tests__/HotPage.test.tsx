@@ -1,4 +1,5 @@
 import React from "react";
+import { act } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -299,6 +300,21 @@ describe("HotPage", () => {
 
     fireEvent.click(screen.getByLabelText("打开排序菜单"));
     fireEvent.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "popular",
+        period: "month",
+        category: "movie",
+        sort_by: "vote_average.desc",
+        date: undefined,
+        week_start: undefined,
+        month: expect.stringMatching(/^\d{4}-\d{2}$/),
+        year: undefined,
+        page: 1,
+        page_size: 100,
+      });
+    });
   });
 
   it("热门榜下会展示附属时间筛选区", async () => {
@@ -840,23 +856,25 @@ describe("HotPage", () => {
     expect(screen.queryByTestId("hot-page-skeleton")).not.toBeInTheDocument();
     expect(screen.getAllByRole("heading", { level: 1, name: "沙丘 2" }).length).toBeGreaterThan(0);
 
-    resolveNextRequest?.(createResponse({
-      period: "week",
-      time_label: "最近一周",
-      note: "当前每周趋势榜",
-      sections: [
-        {
-          category: "movie",
-          title: "热门电影",
-          description: "按热门趋势整理的电影热门内容。",
-          spotlight: createItem(7, "头脑特工队 2", "movie", "movie"),
-          items: [
-            createItem(7, "头脑特工队 2", "movie", "movie"),
-            createItem(8, "加菲猫家族", "movie", "movie"),
-          ],
-        },
-      ],
-    }));
+    await act(async () => {
+      resolveNextRequest?.(createResponse({
+        period: "week",
+        time_label: "最近一周",
+        note: "当前每周趋势榜",
+        sections: [
+          {
+            category: "movie",
+            title: "热门电影",
+            description: "按热门趋势整理的电影热门内容。",
+            spotlight: createItem(7, "头脑特工队 2", "movie", "movie"),
+            items: [
+              createItem(7, "头脑特工队 2", "movie", "movie"),
+              createItem(8, "加菲猫家族", "movie", "movie"),
+            ],
+          },
+        ],
+      }));
+    });
 
     expect(getHotRankingsMock).toHaveBeenLastCalledWith({
       mode: "trend",
@@ -870,6 +888,7 @@ describe("HotPage", () => {
       page: 1,
       page_size: 100,
     });
+    expect(await screen.findByRole("heading", { level: 1, name: "头脑特工队 2" })).toBeInTheDocument();
   });
 
   it("点击轮播缩略项后会切换激活内容", async () => {

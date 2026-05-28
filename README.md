@@ -64,10 +64,16 @@
 
 ## 本地质量检查
 
-执行以下命令完成后端测试、前端类型检查、前端 lint 与前端单元测试：
+执行以下命令完成后端测试、后端构建、前端类型检查、前端 lint、前端单元测试与前端生产构建：
 
 ```bash
 scripts/tests/local-quality.sh
+```
+
+前端生产构建默认不生成 sourcemap，减少静态产物体积。若需要为线上问题定位生成 hidden sourcemap，可执行：
+
+```bash
+cd frontend && VITE_ENABLE_SOURCEMAP=1 ./node_modules/.bin/vite build
 ```
 
 如果运行环境禁止本地端口监听，后端中依赖 `httptest.NewServer` 的测试会失败，应切换到允许本地监听的开发环境执行，或优先改造对应测试以使用可注入 HTTP 客户端。

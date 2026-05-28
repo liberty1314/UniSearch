@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -15,34 +14,11 @@ import (
 
 	"unisearch/model"
 	"unisearch/plugin"
+	linkparser "unisearch/plugin/parser"
 )
 
 var (
 	categoryIDs = []string{"9305", "942"}
-
-	linkPatterns = []struct {
-		reg *regexp.Regexp
-		typ string
-	}{
-		{regexp.MustCompile(`https?://pan\.quark\.cn/(s|g)/[0-9A-Za-z]+`), "quark"},
-		{regexp.MustCompile(`https?://(?:www\.)?(aliyundrive\.com|alipan\.com)/s/[0-9A-Za-z]+`), "aliyun"},
-		{regexp.MustCompile(`https?://pan\.baidu\.com/s/[0-9A-Za-z\-_]+`), "baidu"},
-		{regexp.MustCompile(`https?://pan\.xunlei\.com/s/[0-9A-Za-z\-_]+`), "xunlei"},
-		{regexp.MustCompile(`https?://drive\.uc\.cn/s/[0-9A-Za-z]+`), "uc"},
-		{regexp.MustCompile(`https?://(?:www\.)?mypikpak\.com/s/[0-9A-Za-z]+`), "pikpak"},
-		{regexp.MustCompile(`https?://caiyun\.139\.com/[^\s]+`), "mobile"},
-		{regexp.MustCompile(`magnet:\?xt=urn:btih:[0-9A-Za-z]+`), "magnet"},
-		{regexp.MustCompile(`https?://(?:www\.)?(123pan\.com|123pan\.cn|123684\.com|123685\.com|123912\.com|123592\.com)/s/[0-9A-Za-z]+`), "123"},
-	}
-
-	textURLRegex = regexp.MustCompile(`https?://[^\s<>"']+`)
-
-	passwordPatterns = []*regexp.Regexp{
-		regexp.MustCompile(`提取码[:：]?\s*([0-9A-Za-z]+)`),
-		regexp.MustCompile(`密码[:：]?\s*([0-9A-Za-z]+)`),
-		regexp.MustCompile(`pwd\s*[=:：]\s*([0-9A-Za-z]+)`),
-		regexp.MustCompile(`code\s*[=:：]\s*([0-9A-Za-z]+)`),
-	}
 
 	detailCache          = sync.Map{}
 	cacheTTL             = 1 * time.Hour
@@ -315,122 +291,16 @@ func (p *MikuclubPlugin) fetchDetailLinks(client *http.Client, postID int64, det
 }
 
 func extractLinksFromSelection(sel *goquery.Selection) []model.Link {
-	var (
-		results []model.Link
-		seen    = make(map[string]struct{})
-	)
-
-	sel.Find("a[href]").Each(func(_ int, node *goquery.Selection) {
-		href, ok := node.Attr("href")
-		if !ok {
-			return
-		}
-		href = strings.TrimSpace(href)
-		if href == "" {
-			return
-		}
-
-		linkType, normalized := classifyLink(href)
-		if linkType == "" {
-			return
-		}
-		if _, exists := seen[normalized]; exists {
-			return
-		}
-
-		password := extractPassword(node)
-
+	parsedLinks := linkparser.ExtractLinksFromSelection(sel)
+	results := make([]model.Link, 0, len(parsedLinks))
+	for _, link := range parsedLinks {
 		results = append(results, model.Link{
-			Type:     linkType,
-			URL:      normalized,
-			Password: password,
+			Type:     link.Type,
+			URL:      link.URL,
+			Password: link.Password,
 		})
-		seen[normalized] = struct{}{}
-	})
-
-	text := sel.Text()
-	for _, idx := range textURLRegex.FindAllStringIndex(text, -1) {
-		raw := text[idx[0]:idx[1]]
-		linkType, normalized := classifyLink(raw)
-		if linkType == "" {
-			continue
-		}
-		if _, exists := seen[normalized]; exists {
-			continue
-		}
-
-		context := substring(text, idx[0]-80, idx[1]+80)
-		password := matchPassword(context)
-
-		results = append(results, model.Link{
-			Type:     linkType,
-			URL:      normalized,
-			Password: password,
-		})
-		seen[normalized] = struct{}{}
 	}
-
 	return results
-}
-
-func classifyLink(raw string) (string, string) {
-	for _, pattern := range linkPatterns {
-		if loc := pattern.reg.FindString(raw); loc != "" {
-			return pattern.typ, loc
-		}
-	}
-	return "", ""
-}
-
-func extractPassword(node *goquery.Selection) string {
-	candidates := []string{
-		node.Text(),
-	}
-
-	if title, ok := node.Attr("title"); ok {
-		candidates = append(candidates, title)
-	}
-
-	if parent := node.Parent(); parent != nil && parent.Length() > 0 {
-		candidates = append(candidates, parent.Text())
-		if next := parent.Next(); next.Length() > 0 {
-			candidates = append(candidates, next.Text())
-		}
-	}
-
-	if sibling := node.Next(); sibling.Length() > 0 {
-		candidates = append(candidates, sibling.Text())
-	}
-
-	for _, text := range candidates {
-		if pwd := matchPassword(text); pwd != "" {
-			return pwd
-		}
-	}
-	return ""
-}
-
-func matchPassword(text string) string {
-	text = strings.TrimSpace(text)
-	if text == "" {
-		return ""
-	}
-	for _, pattern := range passwordPatterns {
-		if matches := pattern.FindStringSubmatch(text); len(matches) >= 2 {
-			return strings.TrimSpace(matches[1])
-		}
-	}
-	return ""
-}
-
-func substring(text string, start, end int) string {
-	if start < 0 {
-		start = 0
-	}
-	if end > len(text) {
-		end = len(text)
-	}
-	return text[start:end]
 }
 
 func setCommonHeaders(req *http.Request, referer string) {

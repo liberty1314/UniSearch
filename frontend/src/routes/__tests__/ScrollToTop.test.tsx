@@ -5,6 +5,10 @@ import { describe, expect, it, vi } from 'vitest';
 import ScrollToTop from '@/routes/ScrollToTop';
 
 describe('ScrollToTop', () => {
+  it('uses the shared scrollTo test mock from setup', () => {
+    expect(vi.isMockFunction(window.scrollTo)).toBe(true);
+  });
+
   it('restores the saved scroll position when route state requests it', () => {
     const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
 

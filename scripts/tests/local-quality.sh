@@ -8,6 +8,9 @@ mkdir -p "$GOCACHE"
 echo "== 后端测试 =="
 (cd "$ROOT_DIR/backend" && go test ./...)
 
+echo "== 后端构建 =="
+(cd "$ROOT_DIR/backend" && go build ./...)
+
 echo "== 前端类型检查 =="
 (cd "$ROOT_DIR/frontend" && ./node_modules/.bin/tsc -b --noEmit)
 
@@ -16,5 +19,8 @@ echo "== 前端静态检查 =="
 
 echo "== 前端单元测试 =="
 (cd "$ROOT_DIR/frontend" && ./node_modules/.bin/vitest run)
+
+echo "== 前端生产构建 =="
+(cd "$ROOT_DIR/frontend" && ./node_modules/.bin/vite build)
 
 echo "== 本地质量检查完成 =="

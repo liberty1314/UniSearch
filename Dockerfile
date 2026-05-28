@@ -19,11 +19,11 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -ldflags="-s -w -extldf
 # ============================================
 # 阶段 2: 构建前端 (Node.js + pnpm)
 # ============================================
-FROM node:18-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
-RUN npm install -g pnpm
+RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
