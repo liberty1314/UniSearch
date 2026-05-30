@@ -55,7 +55,12 @@ describe("searchStore", () => {
       ...state,
       searchResults: buildSearchResults(),
       error: "旧错误",
+      isLoading: true,
       isRefreshing: true,
+      lastCompletedSearchParams: {
+        ...state.searchParams,
+        keyword: "电影",
+      },
       searchParams: {
         ...state.searchParams,
         keyword: "电影",
@@ -75,7 +80,9 @@ describe("searchStore", () => {
     expect(updateCount).toBe(1);
     expect(nextState.searchResults).toBeNull();
     expect(nextState.error).toBeNull();
+    expect(nextState.isLoading).toBe(false);
     expect(nextState.isRefreshing).toBe(false);
+    expect(nextState.lastCompletedSearchParams).toBeNull();
     expect(nextState.searchParams.keyword).toBe("");
   });
 
@@ -120,5 +127,34 @@ describe("searchStore", () => {
     expect(useSearchStore.getState().searchResults?.resources[0]?.title).toBe(
       "快请求结果",
     );
+  });
+
+  it("清空结果会作废尚未完成的搜索请求", async () => {
+    const { useSearchStore } = await import("@/stores/searchStore");
+
+    let resolveSearch: (value: SearchResponse) => void = () => {};
+    const pendingSearch = new Promise<SearchResponse>((resolve) => {
+      resolveSearch = resolve;
+    });
+    searchMock.mockReturnValueOnce(pendingSearch);
+
+    const searchPromise = useSearchStore
+      .getState()
+      .performSearch({ keyword: "速度与激情" });
+
+    expect(useSearchStore.getState().isLoading).toBe(true);
+
+    useSearchStore.getState().clearResults();
+
+    expect(useSearchStore.getState().isLoading).toBe(false);
+    expect(useSearchStore.getState().searchResults).toBeNull();
+
+    resolveSearch(buildSearchResults("旧请求结果"));
+    await searchPromise;
+
+    const nextState = useSearchStore.getState();
+    expect(nextState.searchResults).toBeNull();
+    expect(nextState.lastCompletedSearchParams).toBeNull();
+    expect(nextState.searchParams.keyword).toBe("");
   });
 });

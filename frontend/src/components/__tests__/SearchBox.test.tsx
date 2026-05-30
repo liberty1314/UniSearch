@@ -4,6 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SearchBox } from "@/components/SearchBox";
 import { resetHomeHotKeywordsCacheForTests } from "@/components/searchBoxTestUtils";
+import type { SearchParams } from "@/types/api";
 
 const baseHotRankingResponse = {
   mode: "trend" as const,
@@ -18,6 +19,7 @@ const baseHotRankingResponse = {
 const {
   performSearchMock,
   setSearchParamsMock,
+  clearResultsMock,
   clearHistoryMock,
   removeFromHistoryMock,
   navigateMock,
@@ -29,6 +31,7 @@ const {
 } = vi.hoisted(() => ({
   performSearchMock: vi.fn(),
   setSearchParamsMock: vi.fn(),
+  clearResultsMock: vi.fn(),
   clearHistoryMock: vi.fn(),
   removeFromHistoryMock: vi.fn(),
   navigateMock: vi.fn(),
@@ -54,7 +57,10 @@ let currentLocation = {
   state: undefined as unknown,
 };
 
-let searchStoreState = {
+let searchStoreState: {
+  searchParams: Partial<SearchParams> & { keyword: string };
+  isLoading: boolean;
+} = {
   searchParams: { keyword: "" },
   isLoading: false,
 };
@@ -77,6 +83,7 @@ vi.mock("@/stores/searchStore", () => ({
     ...searchStoreState,
     setSearchParams: setSearchParamsMock,
     performSearch: performSearchMock,
+    clearResults: clearResultsMock,
     clearHistory: clearHistoryMock,
     removeFromHistory: removeFromHistoryMock,
   }),
@@ -144,6 +151,7 @@ describe("SearchBox", () => {
     });
     performSearchMock.mockReset();
     setSearchParamsMock.mockReset();
+    clearResultsMock.mockReset();
     clearHistoryMock.mockReset();
     removeFromHistoryMock.mockReset();
     navigateMock.mockReset();
@@ -625,6 +633,32 @@ describe("SearchBox", () => {
     expect(resetButtonMock).toHaveBeenCalled();
   });
 
+  it("在搜索页点击清空输入会清空结果并回到无关键词地址", async () => {
+    currentLocation = {
+      pathname: "/search",
+      search: "?q=%E9%80%9F%E5%BA%A6%E4%B8%8E%E6%BF%80%E6%83%85",
+      hash: "",
+      state: undefined,
+    };
+    searchStoreState = {
+      searchParams: { keyword: "速度与激情" },
+      isLoading: false,
+    };
+
+    render(<SearchBox />);
+
+    await userEvent.click(screen.getByRole("button", { name: "清空输入" }));
+
+    expect(clearResultsMock).toHaveBeenCalled();
+    expect(setSearchParamsMock).not.toHaveBeenCalledWith({ keyword: "" });
+    expect(navigateMock).toHaveBeenCalledWith("/search", {
+      replace: true,
+      state: { skipSearchSync: true },
+    });
+    expect(screen.getByPlaceholderText("搜索网盘资源...")).toHaveValue("");
+    expect(resetButtonMock).toHaveBeenCalled();
+  });
+
   it("keeps instant searching behavior when already on the standalone results page", async () => {
     currentLocation = {
       pathname: "/search",
@@ -643,11 +677,139 @@ describe("SearchBox", () => {
     await userEvent.click(screen.getByRole("button", { name: "搜索" }));
 
     await waitFor(() => {
-      expect(performSearchMock).toHaveBeenCalledWith({ keyword: "凡人修仙传" });
+      expect(performSearchMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          keyword: "凡人修仙传",
+          cloudTypes: [],
+          channels: [],
+          plugins: [],
+          filter: undefined,
+        }),
+      );
     });
-    expect(navigateMock).toHaveBeenCalledWith("/search?q=%E5%87%A1%E4%BA%BA%E4%BF%AE%E4%BB%99%E4%BC%A0", {
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/search?q=%E5%87%A1%E4%BA%BA%E4%BF%AE%E4%BB%99%E4%BC%A0",
+      {
+        state: { skipSearchSync: true },
+      },
+    );
+  });
+
+  it("clears previous result filters when searching a different keyword on the standalone results page", async () => {
+    currentLocation = {
+      pathname: "/search",
+      search: "?q=%E6%97%A7%E5%85%B3%E9%94%AE%E8%AF%8D&types=quark&include=%E5%AD%97%E5%B9%95",
+      hash: "",
+      state: undefined,
+    };
+    searchStoreState = {
+      searchParams: {
+        keyword: "旧关键词",
+        source: "all",
+        resultType: "merge",
+        cloudTypes: ["quark"],
+        channels: ["channel-a"],
+        plugins: ["plugin-a"],
+        concurrency: 5,
+        refresh: false,
+        ext: {},
+        filter: {
+          include: ["字幕"],
+        },
+      },
+      isLoading: false,
+    };
+    performSearchMock.mockResolvedValue(undefined);
+
+    render(<SearchBox />);
+
+    const input = screen.getByPlaceholderText("搜索网盘资源...");
+    await userEvent.clear(input);
+    await userEvent.type(input, "凡人修仙传");
+    await userEvent.click(screen.getByRole("button", { name: "搜索" }));
+
+    await waitFor(() => {
+      expect(setSearchParamsMock).toHaveBeenCalledWith({
+        keyword: "凡人修仙传",
+        cloudTypes: [],
+        channels: [],
+        plugins: [],
+        filter: undefined,
+      });
+    });
+    expect(performSearchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keyword: "凡人修仙传",
+        cloudTypes: [],
+        channels: [],
+        plugins: [],
+        filter: undefined,
+      }),
+    );
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/search?q=%E5%87%A1%E4%BA%BA%E4%BF%AE%E4%BB%99%E4%BC%A0",
+      {
+        state: { skipSearchSync: true },
+      },
+    );
+  });
+
+  it("在搜索页清空后重新搜索时会先同步目标地址再发起搜索", async () => {
+    currentLocation = {
+      pathname: "/search",
+      search: "",
+      hash: "",
       state: { skipSearchSync: true },
+    };
+    searchStoreState = {
+      searchParams: {
+        keyword: "",
+        source: "all",
+        resultType: "merge",
+        cloudTypes: [],
+        channels: [],
+        plugins: [],
+        concurrency: 5,
+        refresh: false,
+        ext: {},
+      },
+      isLoading: false,
+    };
+    const eventOrder: string[] = [];
+    navigateMock.mockImplementation(() => {
+      eventOrder.push("navigate");
     });
+    performSearchMock.mockImplementation(() => {
+      eventOrder.push("performSearch");
+      return new Promise(() => {
+        // 保持挂起，验证发起请求前已经离开无关键词 URL。
+      });
+    });
+
+    render(<SearchBox />);
+
+    const input = screen.getByPlaceholderText("搜索网盘资源...");
+    await userEvent.type(input, "速度与激情");
+    await userEvent.click(screen.getByRole("button", { name: "搜索" }));
+
+    await waitFor(() => {
+      expect(performSearchMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          keyword: "速度与激情",
+          cloudTypes: [],
+          channels: [],
+          plugins: [],
+          filter: undefined,
+        }),
+      );
+    });
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/search?q=%E9%80%9F%E5%BA%A6%E4%B8%8E%E6%BF%80%E6%83%85",
+      {
+        state: { skipSearchSync: true },
+      },
+    );
+    expect(eventOrder).toEqual(["navigate", "performSearch"]);
   });
 
   it("redirects anonymous users to /login before starting a search", async () => {

@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSearchUrlSync } from "@/hooks/useSearchUrlSync";
@@ -132,6 +132,41 @@ describe("useSearchUrlSync", () => {
         '"state":null',
       );
     });
+  });
+
+  it("同一 URL 因结果刷新重渲染时不会重复回写搜索参数", async () => {
+    let forceRerender: (() => void) | undefined;
+
+    const RerenderProbe = () => {
+      const [, setRenderTick] = React.useState(0);
+      forceRerender = () => setRenderTick((tick) => tick + 1);
+      return <HookProbe />;
+    };
+
+    render(
+      <MemoryRouter initialEntries={["/search?q=%E6%B5%8B%E8%AF%95"]}>
+        <Routes>
+          <Route path="/search" element={<RerenderProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(setSearchParamsMock).toHaveBeenCalledTimes(1);
+    });
+
+    setSearchParamsMock.mockClear();
+    performSearchMock.mockClear();
+    searchStoreState.searchResults = {
+      resources: [{ id: "resource-1" }],
+    };
+
+    await act(async () => {
+      forceRerender?.();
+    });
+
+    expect(setSearchParamsMock).not.toHaveBeenCalled();
+    expect(performSearchMock).not.toHaveBeenCalled();
   });
 
   it("/search 无 q 时调用 clearResults", async () => {

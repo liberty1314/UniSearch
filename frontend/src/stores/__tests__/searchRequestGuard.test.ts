@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   createSearchRequestId,
+  invalidateSearchRequests,
   isLatestSearchRequest,
   resetSearchRequestGuard,
 } from "@/stores/searchRequestGuard";
@@ -16,5 +17,13 @@ describe("searchRequestGuard", () => {
 
     expect(isLatestSearchRequest(first)).toBe(false);
     expect(isLatestSearchRequest(second)).toBe(true);
+  });
+
+  it("可以主动作废当前请求", () => {
+    const requestId = createSearchRequestId();
+
+    invalidateSearchRequests();
+
+    expect(isLatestSearchRequest(requestId)).toBe(false);
   });
 });

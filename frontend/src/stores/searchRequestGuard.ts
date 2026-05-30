@@ -5,6 +5,10 @@ export function createSearchRequestId(): number {
   return latestSearchRequestId;
 }
 
+export function invalidateSearchRequests(): void {
+  latestSearchRequestId += 1;
+}
+
 export function isLatestSearchRequest(requestId: number): boolean {
   return requestId === latestSearchRequestId;
 }

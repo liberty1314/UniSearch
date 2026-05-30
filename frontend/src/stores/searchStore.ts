@@ -10,6 +10,7 @@ import {
 } from "@/lib/safeStorage";
 import {
   createSearchRequestId,
+  invalidateSearchRequests,
   isLatestSearchRequest,
 } from "@/stores/searchRequestGuard";
 import { normalizeFilterConfig, normalizeFilterValues } from "@/utils/searchFilters";
@@ -231,11 +232,13 @@ export const useSearchStore = create<SearchState>()(
        * 清空搜索结果
        */
       clearResults: () => {
+        invalidateSearchRequests();
         set((state) => {
           const keyword = state.searchParams.keyword?.trim() || "";
           const isAlreadyCleared =
             !state.searchResults &&
             !state.error &&
+            !state.isLoading &&
             !state.isRefreshing &&
             keyword.length === 0;
 
@@ -247,7 +250,9 @@ export const useSearchStore = create<SearchState>()(
           return {
             searchResults: null,
             error: null,
+            isLoading: false,
             isRefreshing: false,
+            lastCompletedSearchParams: null,
             displayedCount: state.pageSize,
             hasMore: false,
             searchParams: { ...state.searchParams, keyword: "" },
@@ -341,6 +346,7 @@ export const useSearchStore = create<SearchState>()(
        * 重置状态
        */
       reset: () => {
+        invalidateSearchRequests();
         set((state) => ({
           searchParams: defaultSearchParams,
           searchResults: null,

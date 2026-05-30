@@ -59,6 +59,13 @@ const buildHomeSearchTransitionState = () => ({
   resetScroll: true,
 });
 
+const createResetSearchScope = () => ({
+  cloudTypes: [],
+  channels: [],
+  plugins: [],
+  filter: undefined,
+});
+
 const pickHomeHotKeywords = (items: HotRankingItem[] = []) =>
   items
     .map((item) => item.title?.trim())
@@ -132,6 +139,7 @@ export function useSearchBoxController({
     searchParams,
     setSearchParams,
     performSearch,
+    clearResults,
     clearHistory,
     removeFromHistory,
     isLoading,
@@ -269,20 +277,27 @@ export function useSearchBoxController({
   };
 
   const executeSearch = async (keyword: string) => {
-    const nextParams = {
-      ...searchParams,
-      keyword,
-    };
+    const isSearchPage = location.pathname === "/search";
+    const isDifferentKeyword = keyword !== (searchParams.keyword || "").trim();
+    const shouldResetSearchScope = isSearchPage && isDifferentKeyword;
+    const resetScope = shouldResetSearchScope ? createResetSearchScope() : null;
+    const nextParams = resetScope
+      ? { ...searchParams, keyword, ...resetScope }
+      : { ...searchParams, keyword };
     const nextUrl = SearchService.buildSearchUrl(nextParams);
     const currentUrl = `${location.pathname}${location.search}`;
 
-    setSearchParams({ keyword });
+    setSearchParams(
+      resetScope
+        ? { keyword, ...resetScope }
+        : { keyword },
+    );
 
-    if (location.pathname !== "/search") {
+    if (!isSearchPage) {
       if (currentUrl !== nextUrl) {
         navigate(
           nextUrl,
-          location.pathname === "/"
+          isHomePage
             ? { state: buildHomeSearchTransitionState() }
             : undefined,
         );
@@ -293,12 +308,12 @@ export function useSearchBoxController({
     }
 
     try {
-      await buttonRef.current?.run(() => performSearch(nextParams));
       if (currentUrl !== nextUrl) {
         navigate(nextUrl, {
           state: { skipSearchSync: true },
         });
       }
+      await buttonRef.current?.run(() => performSearch(nextParams));
       onSearch?.(keyword);
       setShowHistory(false);
     } catch (error) {
@@ -348,7 +363,7 @@ export function useSearchBoxController({
     submitKeyword,
     clearInput: () => {
       setInputValue("");
-      setSearchParams({ keyword: "" });
+      clearResults();
       if (location.pathname === "/" && location.search) {
         navigate("/", { replace: true, state: { skipSearchSync: true } });
       }

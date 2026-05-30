@@ -831,3 +831,16 @@
   - `frontend/src/components/SearchResults.tsx`
   - `frontend/src/components/__tests__/SearchResults.test.tsx`
   - `frontend/src/components/search-results/SearchResultsHeader.tsx`
+
+## [2026-05-30 22:50] fix(search): 修复搜索清空与地址同步状态
+- **Body**: 修复搜索页清空输入后结果和地址未同步重置的问题，避免旧请求完成后回填结果；同时在切换关键词搜索时重置筛选范围并避免同一 URL 重复触发搜索。
+- **Files**:
+  - `docs/readme_2605.md`
+  - `frontend/src/components/__tests__/SearchBox.test.tsx`
+  - `frontend/src/hooks/__tests__/useSearchUrlSync.test.tsx`
+  - `frontend/src/hooks/useSearchBoxController.ts`
+  - `frontend/src/hooks/useSearchUrlSync.ts`
+  - `frontend/src/stores/__tests__/searchRequestGuard.test.ts`
+  - `frontend/src/stores/__tests__/searchStore.test.ts`
+  - `frontend/src/stores/searchRequestGuard.ts`
+  - `frontend/src/stores/searchStore.ts`

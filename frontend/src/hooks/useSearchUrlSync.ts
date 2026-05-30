@@ -77,6 +77,12 @@ export function useSearchUrlSync(): void {
     };
 
     const snapshot = JSON.stringify(nextParams);
+    const isAlreadyHandledUrl = handledUrlSearchRef.current === snapshot;
+
+    if (!state?.skipSearchSync && isAlreadyHandledUrl) {
+      return;
+    }
+
     setSearchParams(nextParams);
 
     if (state?.skipSearchSync) {
@@ -87,10 +93,6 @@ export function useSearchUrlSync(): void {
           state: undefined,
         });
       }
-      return;
-    }
-
-    if (handledUrlSearchRef.current === snapshot) {
       return;
     }
 
