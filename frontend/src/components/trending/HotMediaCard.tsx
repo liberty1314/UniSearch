@@ -17,10 +17,10 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
   return (
     <Card className="group p-4 md:p-5" data-testid="hot-media-card">
       <div className="flex flex-col gap-4 sm:flex-row">
-        <div className="relative h-40 w-full overflow-hidden rounded-[1.4rem] bg-slate-100 sm:h-36 sm:w-28 sm:shrink-0 dark:bg-slate-800">
-          <div className="absolute left-3 top-3 z-10 inline-flex items-center rounded-full bg-slate-950/78 px-2.5 py-1 text-[11px] font-semibold tracking-[0.18em] text-white shadow-[0_10px_24px_rgba(15,23,42,0.24)]">
-            #{rank}
-          </div>
+        <div
+          className="relative h-40 w-full overflow-hidden rounded-[1.4rem] bg-slate-100 sm:h-36 sm:w-28 sm:shrink-0 dark:bg-slate-800"
+          data-testid="hot-media-poster"
+        >
           {item.poster_url ? (
             <img
               src={item.poster_url}

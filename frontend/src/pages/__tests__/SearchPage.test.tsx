@@ -31,13 +31,15 @@ let searchStoreState = {
     filter: undefined,
   },
   searchResults: null as null | { resources: Array<{ id: string }> },
+  searchHistory: [] as string[],
 };
 
 vi.mock("@/components/SearchBox", () => ({
   __esModule: true,
-  default: ({ accessHint }: { accessHint?: string }) => (
+  default: ({ accessHint, autoFocus }: { accessHint?: string; autoFocus?: boolean }) => (
     <div>
       search-box
+      {autoFocus ? <span>auto-focus-on</span> : null}
       {accessHint ? <p>{accessHint}</p> : null}
     </div>
   ),
@@ -112,7 +114,16 @@ const renderSearchPage = (
         <Routes>
           <Route path="/" element={<LocationProbe />} />
           <Route path="/hot" element={<LocationProbe />} />
-          <Route path="/search" element={<SearchPage />} />
+          <Route path="/login" element={<LocationProbe />} />
+          <Route
+            path="/search"
+            element={(
+              <>
+                <SearchPage />
+                <LocationProbe />
+              </>
+            )}
+          />
         </Routes>
       </MemoryRouter>
     </HelmetProvider>
@@ -139,6 +150,7 @@ describe("SearchPage", () => {
         filter: undefined,
       },
       searchResults: null,
+      searchHistory: [],
     };
   });
 
@@ -190,7 +202,7 @@ describe("SearchPage", () => {
         "搜索结果需要登录后查看，您可以先输入关键词，系统会保留本次搜索意图。",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText("search-results")).toBeInTheDocument();
+    expect(screen.queryByText("search-results")).not.toBeInTheDocument();
   });
 
   it("登录后不展示搜索页准入提示", async () => {
@@ -205,12 +217,57 @@ describe("SearchPage", () => {
     expect(screen.getByText("search-box")).toBeInTheDocument();
   });
 
-  it("无关键词时展示搜索工作台建议而不是单一空状态", () => {
+  it("无关键词时展示搜索启动台并隐藏结果空态", () => {
+    searchStoreState.searchHistory = ["三体", "设计素材"];
+
     renderSearchPage("/search");
 
     expect(screen.getByTestId("search-empty-workbench")).toBeInTheDocument();
-    expect(screen.getByText("可以这样开始")).toBeInTheDocument();
+    expect(screen.getByText("搜索启动台")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "继续搜索 三体" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /查看热门榜单/ })).toHaveAttribute("href", "/hot");
+    expect(screen.getByText("auto-focus-on")).toBeInTheDocument();
+    expect(screen.queryByText("search-results")).not.toBeInTheDocument();
+  });
+
+  it("点击启动台关键词会直接发起搜索并同步地址", () => {
+    renderSearchPage("/search");
+
+    fireEvent.click(screen.getByRole("button", { name: "快速搜索 4K" }));
+
+    expect(setSearchParamsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keyword: "4K",
+        cloudTypes: [],
+        channels: [],
+        plugins: [],
+        filter: undefined,
+      }),
+    );
+    expect(performSearchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keyword: "4K",
+        cloudTypes: [],
+        channels: [],
+        plugins: [],
+        filter: undefined,
+      }),
+      { preserveResults: false },
+    );
+    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
+    expect(screen.getByTestId("location-probe")).toHaveTextContent('"search":"?q=4K"');
+  });
+
+  it("匿名点击启动台关键词会进入登录并保留搜索意图", () => {
+    searchAccessStatus = "anonymous";
+
+    renderSearchPage("/search");
+
+    fireEvent.click(screen.getByRole("button", { name: "快速搜索 4K" }));
+
+    expect(performSearchMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/login"');
+    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pendingSearch":{"keyword":"4K"}');
   });
 
   it("returns to the homepage when the standalone search page has no previous history", async () => {

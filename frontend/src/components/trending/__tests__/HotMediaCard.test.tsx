@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import HotMediaCard from "@/components/trending/HotMediaCard";
 import type { HotRankingItem } from "@/types/hotRanking";
@@ -23,10 +23,11 @@ const item: HotRankingItem = {
 };
 
 describe("HotMediaCard", () => {
-  it("展示名次编号并保留搜索按钮", () => {
+  it("移除海报内排名覆盖层并保留卡片信息区排名", () => {
     render(<HotMediaCard item={item} rank={1} category="movie" onSearch={vi.fn()} />);
 
-    expect(screen.getByText("#1")).toBeInTheDocument();
+    expect(within(screen.getByTestId("hot-media-poster")).queryByText("#1")).not.toBeInTheDocument();
+    expect(screen.getByText("排名 #1")).toBeInTheDocument();
     expect(screen.getByText("电影")).toBeInTheDocument();
     expect(screen.getByText("热度 800")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "搜索" })).toBeInTheDocument();

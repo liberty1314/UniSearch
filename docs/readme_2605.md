@@ -813,3 +813,13 @@
   - `frontend/src/types/search.ts`
   - `frontend/vite.config.ts`
   - `scripts/tests/local-quality.sh`
+
+## [2026-05-30 16:50] feat(search): 新增搜索启动台快捷搜索入口
+- **Body**: 新增搜索空态启动台、最近搜索和分类关键词快捷入口，支持点击后直接发起搜索或匿名场景跳转登录保留搜索意图；同时调整热门媒体卡片排名展示并补充对应测试。
+- **Files**:
+  - `docs/readme_2605.md`
+  - `frontend/src/components/search/SearchEmptyWorkbench.tsx`
+  - `frontend/src/components/trending/HotMediaCard.tsx`
+  - `frontend/src/components/trending/__tests__/HotMediaCard.test.tsx`
+  - `frontend/src/pages/SearchPage.tsx`
+  - `frontend/src/pages/__tests__/SearchPage.test.tsx`
