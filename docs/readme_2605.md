@@ -823,3 +823,11 @@
   - `frontend/src/components/trending/__tests__/HotMediaCard.test.tsx`
   - `frontend/src/pages/SearchPage.tsx`
   - `frontend/src/pages/__tests__/SearchPage.test.tsx`
+
+## [2026-05-30 20:36] fix(search): 移除搜索源失败警告横幅
+- **Body**: 移除搜索结果头部的搜索源失败警告提示，保留可用结果展示流程，并更新测试确认失败警告文案不再出现。
+- **Files**:
+  - `docs/readme_2605.md`
+  - `frontend/src/components/SearchResults.tsx`
+  - `frontend/src/components/__tests__/SearchResults.test.tsx`
+  - `frontend/src/components/search-results/SearchResultsHeader.tsx`

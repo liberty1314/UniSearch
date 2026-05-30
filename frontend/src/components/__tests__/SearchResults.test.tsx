@@ -518,7 +518,7 @@ describe("SearchResults", () => {
     expect(screen.getByTestId("search-result-grid-card")).toBeInTheDocument();
   });
 
-  it("shows a warning when some search sources fail", async () => {
+  it("does not show source warning copy when some search sources fail", async () => {
     searchStoreState.searchResults = {
       ...searchStoreState.searchResults,
       warnings: [
@@ -531,7 +531,8 @@ describe("SearchResults", () => {
 
     renderSearchResults();
 
-    expect(await screen.findByText("部分搜索源暂时不可用，已优先展示可用结果。")).toBeInTheDocument();
+    expect(await screen.findByTestId("search-result-grid-card")).toBeInTheDocument();
+    expect(screen.queryByText("部分搜索源暂时不可用，已优先展示可用结果。")).not.toBeInTheDocument();
   });
 
   it("switches from mobile list to desktop grid when the viewport crosses the breakpoint", async () => {
