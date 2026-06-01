@@ -261,7 +261,9 @@ DB_NAME=unisearch
 AUTH_JWT_SECRET=请替换为随机密钥
 SECRET_MASTER_KEY=请替换为随机主密钥
 REFRESH_TOKEN_ENCRYPT_KEY=请替换为随机加密密钥
-CHANNELS=SharePanBaidu,tianyifc,yunpanxunlei,BaiduCloudDisk,shareAliyun,Aliyun_4K_Movies,ali_yppan,bdbdndn11,yunpanx,yp123pan,bsbdbfjfjff,txtyzy,peccxinpd,gotopan,PanjClub,baicaoZY,MCPH01,MCPH02,MCPH03,bdwpzhpd,ysxb48,jdjdn1111,yggpan,MCPH086,zaihuayun,Q66Share,ucwpzy,Quark_Movies,XiangxiuNBB,ydypzyfx,ucquark,xx123pan,yingshifenxiang123,zyfb123,tyypzhpd,tianyirigeng,cloudtianyi,hdhhd21,Lsp115,oneonefivewpfx,qixingzhenren,taoxgzy,Channel_Shares_115,tyysypzypd,vip115hot,wp123zy,yunpan139,yunpan189,yunpanuc,yydf_hzl,leoziyuan,Q_dongman,yoyokuakeduanju,TG654TG,QukanMovie,yeqingjie_GJG666,movielover8888_film3,Baidu_netdisk,D_wusun,FLMdongtianfudi,KaiPanshare,QQZYDAPP,rjyxfx,PikPak_Share_Channel,btzhi,newproductsourcing,duan_ju,QuarkFree,yunpanNB,kkdj001,xxzlzn,pxyunpanxunlei,jxwpzy,kuakedongman,xiangnikanj,solidsexydoll,guoman4K,zdqxm,kduanju,cilidianying,CBduanju,SharePanFilms,dzsgx,BooksRealm,Oscar_4Kmovies,douerpan,baidu_yppan,Q_jilupian,Netdisk_Movies,yunpanquark,ciliziyuanku
+CHANNELS=SharePanBaidu,tianyifc,yunpanxunlei,BaiduCloudDisk,shareAliyun,Aliyun_4K_Movies,ali_yppan,bdbdndn11,yunpanx,yp123pan,bsbdbfjfjff,txtyzy,peccxinpd,gotopan,PanjClub,baicaoZY,MCPH01,MCPH02,MCPH03,bdwpzhpd,ysxb48,jdjdn1111,yggpan,MCPH086,zaihuayun,Q66Share,ucwpzy,Quark_Movies,XiangxiuNBB,ydypzyfx,ucquark,xx123pan,yingshifenxiang123,zyfb123,tyypzhpd,tianyirigeng,cloudtianyi,hdhhd21,Lsp115,oneonefivewpfx,qixingzhenren,taoxgzy,Channel_Shares_115,tyysypzypd,vip115hot,wp123zy,yunpan139,yunpan189,yunpanuc,yydf_hzl,leoziyuan,Q_dongman,yoyokuakeduanju,TG654TG,QukanMovie,yeqingjie_GJG666,movielover8888_film3,Baidu_netdisk,D_wusun,FLMdongtianfudi,KaiPanshare,QQZYDAPP,rjyxfx,PikPak_Share_Channel,btzhi,newproductsourcing,duan_ju,QuarkFree,yunpanNB,kkdj001,xxzlzn,pxyunpanxunlei,jxwpzy,kuakedongman,xiangnikanj,solidsexydoll,guoman4K,zdqxm,kduanju,cilidianying,CBduanju,SharePanFilms,dzsgx,BooksRealm,Oscar_4Kmovies,douerpan,baidu_yppan,Q_jilupian,Netdisk_Movies,yunpanquark,ciliziyuanku,tgbokee,gokuapan,gimy115,WFYSFX03,tgsearchers6,sbsbsnsqq,kkxlzy,alyp_1,dianyingshare,WFYSFX02,cctv1211,liangxingzhinan,ammmziyuan,cili8888,jzmm_123pan,Q_dianying,domgmingapk,dianying4k,q_dianshiju,ucshare,godupan,peccxin,Movie888035,xlwpzy,zyywpzy,wydwpzy,gimy100,gimy115iso
+ENABLED_PLUGINS=labi,shandian,muou,wanou,hunhepan,pansearch,panta,susu,thepiratebay,xuexizhinan,ouge,erxiao,fox4k,clmao,cldi,libvio,yuhuage,u3c3,javdb,jutoushe,djgou,nyaa,xinjuc,aikanzy,quark4k,quarksoo,ash,zhizhen,duoduo,huban,jikepan,qupansou,panwiki,pan666,hdr4k,panyq
+PLUGIN_COUNT=36
 ```
 
 <details>
@@ -276,7 +278,9 @@ DB_NAME=unisearch
 AUTH_JWT_SECRET=请替换为随机密钥
 SECRET_MASTER_KEY=请替换为随机主密钥
 REFRESH_TOKEN_ENCRYPT_KEY=请替换为随机加密密钥
-CHANNELS=SharePanBaidu,tianyifc,yunpanxunlei,BaiduCloudDisk,shareAliyun,Aliyun_4K_Movies,ali_yppan,bdbdndn11,yunpanx,yp123pan,bsbdbfjfjff,txtyzy,peccxinpd,gotopan,PanjClub,baicaoZY,MCPH01,MCPH02,MCPH03,bdwpzhpd,ysxb48,jdjdn1111,yggpan,MCPH086,zaihuayun,Q66Share,ucwpzy,Quark_Movies,XiangxiuNBB,ydypzyfx,ucquark,xx123pan,yingshifenxiang123,zyfb123,tyypzhpd,tianyirigeng,cloudtianyi,hdhhd21,Lsp115,oneonefivewpfx,qixingzhenren,taoxgzy,Channel_Shares_115,tyysypzypd,vip115hot,wp123zy,yunpan139,yunpan189,yunpanuc,yydf_hzl,leoziyuan,Q_dongman,yoyokuakeduanju,TG654TG,QukanMovie,yeqingjie_GJG666,movielover8888_film3,Baidu_netdisk,D_wusun,FLMdongtianfudi,KaiPanshare,QQZYDAPP,rjyxfx,PikPak_Share_Channel,btzhi,newproductsourcing,duan_ju,QuarkFree,yunpanNB,kkdj001,xxzlzn,pxyunpanxunlei,jxwpzy,kuakedongman,xiangnikanj,solidsexydoll,guoman4K,zdqxm,kduanju,cilidianying,CBduanju,SharePanFilms,dzsgx,BooksRealm,Oscar_4Kmovies,douerpan,baidu_yppan,Q_jilupian,Netdisk_Movies,yunpanquark,ciliziyuanku
+CHANNELS=SharePanBaidu,tianyifc,yunpanxunlei,BaiduCloudDisk,shareAliyun,Aliyun_4K_Movies,ali_yppan,bdbdndn11,yunpanx,yp123pan,bsbdbfjfjff,txtyzy,peccxinpd,gotopan,PanjClub,baicaoZY,MCPH01,MCPH02,MCPH03,bdwpzhpd,ysxb48,jdjdn1111,yggpan,MCPH086,zaihuayun,Q66Share,ucwpzy,Quark_Movies,XiangxiuNBB,ydypzyfx,ucquark,xx123pan,yingshifenxiang123,zyfb123,tyypzhpd,tianyirigeng,cloudtianyi,hdhhd21,Lsp115,oneonefivewpfx,qixingzhenren,taoxgzy,Channel_Shares_115,tyysypzypd,vip115hot,wp123zy,yunpan139,yunpan189,yunpanuc,yydf_hzl,leoziyuan,Q_dongman,yoyokuakeduanju,TG654TG,QukanMovie,yeqingjie_GJG666,movielover8888_film3,Baidu_netdisk,D_wusun,FLMdongtianfudi,KaiPanshare,QQZYDAPP,rjyxfx,PikPak_Share_Channel,btzhi,newproductsourcing,duan_ju,QuarkFree,yunpanNB,kkdj001,xxzlzn,pxyunpanxunlei,jxwpzy,kuakedongman,xiangnikanj,solidsexydoll,guoman4K,zdqxm,kduanju,cilidianying,CBduanju,SharePanFilms,dzsgx,BooksRealm,Oscar_4Kmovies,douerpan,baidu_yppan,Q_jilupian,Netdisk_Movies,yunpanquark,ciliziyuanku,tgbokee,gokuapan,gimy115,WFYSFX03,tgsearchers6,sbsbsnsqq,kkxlzy,alyp_1,dianyingshare,WFYSFX02,cctv1211,liangxingzhinan,ammmziyuan,cili8888,jzmm_123pan,Q_dianying,domgmingapk,dianying4k,q_dianshiju,ucshare,godupan,peccxin,Movie888035,xlwpzy,zyywpzy,wydwpzy,gimy100,gimy115iso
+ENABLED_PLUGINS=labi,shandian,muou,wanou,hunhepan,pansearch,panta,susu,thepiratebay,xuexizhinan,ouge,erxiao,fox4k,clmao,cldi,libvio,yuhuage,u3c3,javdb,jutoushe,djgou,nyaa,xinjuc,aikanzy,quark4k,quarksoo,ash,zhizhen,duoduo,huban,jikepan,qupansou,panwiki,pan666,hdr4k,panyq
+PLUGIN_COUNT=36
 REDIS_HOST=${REDIS_HOST}
 REDIS_PORT=${REDIS_PORT}
 REDIS_PASSWORD=${REDIS_PASSWORD}
@@ -285,6 +289,13 @@ REDIS_PASSWORD=${REDIS_PASSWORD}
 </details>
 
 > 密钥生成方式：`openssl rand -base64 32`
+
+#### Telegram 频道同步说明
+
+- `CHANNELS` 已按当前启用策略追加本轮上游新增的 28 个频道，并保留本项目既有频道。
+- `ENABLED_PLUGINS` 已追加本轮新增的 9 个插件；其中部分外部站点在健康矩阵中曾返回超时、403、502 或空结果，线上可通过管理后台按需停用。
+- 已有部署更新环境变量后重启服务即可触发频道同步；后端启动时只会追加缺失频道，不会删除数据库中已有频道。
+- 如需在不停机情况下补齐频道，可在管理后台的 Telegram 频道管理中批量导入同一组频道名称。
 
 详细步骤请参考 [Zeabur 部署教程](docs/zeabur-deploy.md)。
 
@@ -368,7 +379,9 @@ bash scripts/local.sh
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `ENABLED_PLUGINS` | 启用的插件列表 | 全部内置插件 |
+| `CHANNELS` | 默认 Telegram 频道列表 | 见部署模板 |
+| `ENABLED_PLUGINS` | 启用的插件列表 | 见部署模板 |
+| `PLUGIN_COUNT` | 启用插件数量，用于默认并发估算 | `36` |
 | `CONCURRENCY` | 并发搜索数 | `50` |
 | `ASYNC_PLUGIN_ENABLED` | 启用异步插件 | `true` |
 | `ASYNC_RESPONSE_TIMEOUT` | 异步响应超时（秒） | `4` |

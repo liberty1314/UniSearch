@@ -35,13 +35,14 @@ type redisSearchCache struct {
 
 func newSearchCache(redisCache *cache.RedisCache, metrics *SearchMetricsRecorder) SearchCache {
 	searchCache := &redisSearchCache{
-		cache:   redisCache,
 		metrics: metrics,
 	}
 
 	if redisCache == nil {
 		return searchCache
 	}
+
+	searchCache.cache = redisCache
 
 	queueSize := 256
 	workerCount := 4

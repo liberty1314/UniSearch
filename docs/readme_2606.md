@@ -1,0 +1,36 @@
+- [2026-06-01 23:26] feat(plugin): 迁入 pansou 插件并同步频道配置
+  - Body: 新增 9 个 pansou 插件及对应契约测试、健康检查与冒烟验证工具，并在后端入口完成注册。同步默认频道、启用插件配置、部署说明和更新方案，同时补充热门轮播缩略卡片序号移除测试。
+  - Files:
+    - .env.example
+    - README.md
+    - backend/main.go
+    - backend/plugin/duoduo/duoduo.go
+    - backend/plugin/duoduo/duoduo_test.go
+    - backend/plugin/duoduo/html结构分析.md
+    - backend/plugin/hdr4k/hdr4k.go
+    - backend/plugin/hdr4k/hdr4k_test.go
+    - backend/plugin/huban/html结构分析.md
+    - backend/plugin/huban/huban.go
+    - backend/plugin/huban/huban_test.go
+    - backend/plugin/huban/json结构分析.md
+    - backend/plugin/jikepan/jikepan.go
+    - backend/plugin/jikepan/jikepan_test.go
+    - backend/plugin/pan666/pan666.go
+    - backend/plugin/pan666/pan666_test.go
+    - backend/plugin/panwiki/panwiki.go
+    - backend/plugin/panwiki/panwiki_test.go
+    - backend/plugin/panyq/panyq.go
+    - backend/plugin/panyq/panyq_test.go
+    - backend/plugin/qupansou/qupansou.go
+    - backend/plugin/qupansou/qupansou_test.go
+    - backend/plugin/zhizhen/zhizhen.go
+    - backend/plugin/zhizhen/zhizhen_test.go
+    - backend/service/search_cache.go
+    - backend/tools/pansou_health_check/main.go
+    - backend/tools/pansou_search_smoke/main.go
+    - backend/tools/validate_plugin_manifests.go
+    - docs/pansou插件频道更新开发计划.md
+    - docs/pansou插件频道更新方案.md
+    - frontend/src/components/trending/HotHeroCarousel.tsx
+    - frontend/src/components/trending/__tests__/HotHeroCarousel.test.tsx
+    - docs/readme_2606.md

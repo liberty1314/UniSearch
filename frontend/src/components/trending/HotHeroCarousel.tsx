@@ -273,10 +273,7 @@ const HotHeroCarousel: React.FC<HotHeroCarouselProps> = ({
 
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/18 to-transparent" />
                     <div className="absolute inset-x-0 bottom-0 px-2 pb-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/60">
-                        #{index + 1}
-                      </p>
-                      <p className="mt-1 line-clamp-1 text-xs font-semibold text-white">
+                      <p className="line-clamp-1 text-xs font-semibold text-white">
                         {item.title}
                       </p>
                     </div>
