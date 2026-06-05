@@ -358,6 +358,10 @@ const HotPage: React.FC = () => {
       />
 
       <div className="mx-auto max-w-6xl space-y-8">
+        {loading ? (
+          <HotPageSkeleton />
+        ) : null}
+
         {!loading && !errorMessage && hasHeroItems ? (
           <HotHeroCarousel
             period={period}
@@ -388,7 +392,7 @@ const HotPage: React.FC = () => {
           onYearChange={(value) => startTransition(() => dispatchToolbar({ type: "setYear", value }))}
         />
 
-        {loading ? <HotPageSkeleton /> : null}
+        {loading ? <HotMediaGridSkeleton count={6} showHeader /> : null}
 
         {!loading && errorMessage ? (
           <HotPageErrorState

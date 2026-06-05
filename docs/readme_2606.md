@@ -34,3 +34,17 @@
     - frontend/src/components/trending/HotHeroCarousel.tsx
     - frontend/src/components/trending/__tests__/HotHeroCarousel.test.tsx
     - docs/readme_2606.md
+
+- [2026-06-05 22:45] chore(repo): 精简热门页骨架并清理旧文档
+  - Body: 调整热门页加载时的首屏骨架与媒体网格占位，避免完整列表骨架挤占首屏。删除已沉淀或过期的方案与设计文档，并更新页面测试约束加载布局。
+  - Files:
+    - docs/pansou插件频道更新开发计划.md
+    - docs/pansou插件频道更新方案.md
+    - docs/开发计划.md
+    - docs/插件开发指南.md
+    - docs/系统开发设计文档.md
+    - docs/设计规范.md
+    - frontend/src/components/trending/HotPageSkeleton.tsx
+    - frontend/src/pages/HotPage.tsx
+    - frontend/src/pages/__tests__/HotPage.test.tsx
+    - docs/readme_2606.md

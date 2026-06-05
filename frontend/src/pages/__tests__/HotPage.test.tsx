@@ -837,7 +837,13 @@ describe("HotPage", () => {
 
     expect(screen.getByTestId("hot-page-skeleton")).toBeInTheDocument();
     expect(screen.getByTestId("hot-page-skeleton-hero")).toBeInTheDocument();
-    expect(screen.getAllByTestId("hot-page-skeleton-card")).toHaveLength(4);
+    expect(
+      screen.getByTestId("hot-page-skeleton-hero").compareDocumentPosition(screen.getByText("热榜控制台")),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.getAllByTestId("hot-page-skeleton-thumbnail")).toHaveLength(5);
+    expect(screen.getByTestId("hot-media-grid-skeleton")).toBeInTheDocument();
+    expect(screen.getAllByTestId("hot-media-card-skeleton")).toHaveLength(6);
+    expect(screen.queryByTestId("hot-page-skeleton-card")).not.toBeInTheDocument();
   });
 
   it("筛选切换刷新时保留当前内容并展示局部刷新层", async () => {
