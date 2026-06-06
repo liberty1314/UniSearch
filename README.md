@@ -64,11 +64,23 @@
 
 ## 本地质量检查
 
-执行以下命令完成后端测试、后端构建、前端类型检查、前端 lint、前端单元测试与前端生产构建：
+常用验证入口如下：
+
+```bash
+# 后端并发敏感路径，适合修改缓存、搜索、Redis 相关逻辑后先跑
+scripts/tests/backend-race.sh
+
+# 前端核心慢测和性能相关路径，适合修改路由、搜索、管理页交互后先跑
+scripts/tests/frontend-focused.sh
+```
+
+提交前执行完整本地质量脚本，覆盖后端测试、后端 race 测试、后端构建、前端类型检查、前端 lint、前端聚焦测试、前端单元测试与前端生产构建：
 
 ```bash
 scripts/tests/local-quality.sh
 ```
+
+任一脚本失败时先保留失败输出，优先单独重跑对应聚焦命令确认是否为稳定失败；稳定失败必须修复后再继续提交。
 
 前端生产构建默认不生成 sourcemap，减少静态产物体积。若需要为线上问题定位生成 hidden sourcemap，可执行：
 
@@ -137,20 +149,32 @@ TMDB_API_KEY=
 docker build -t unisearch:latest .
 ```
 
-#### 4. 启动服务
+#### 4. 执行数据库迁移
+
+```bash
+docker compose run --rm --entrypoint /app/backend/unisearch-migrate app
+```
+
+如需清理已经下线的旧表，确认备份后显式追加参数：
+
+```bash
+docker compose run --rm --entrypoint /app/backend/unisearch-migrate app -drop-deprecated
+```
+
+#### 5. 启动服务
 
 ```bash
 docker compose up -d
 ```
 
-#### 5. 访问应用
+#### 6. 访问应用
 
 浏览器打开 `http://你的服务器IP`（默认 80 端口）
 
-#### 6. 登录
+#### 7. 登录
 
 - 用户名：`admin`
-- 密码：`admin123`
+- 密码：`admin`
 - 首次登录后请立即修改密码
 
 #### 数据持久化
@@ -182,11 +206,16 @@ docker compose ps
 # 重启服务
 docker compose restart
 
+# 执行数据库迁移
+docker compose run --rm --entrypoint /app/backend/unisearch-migrate app
+
 # 停止服务
 docker compose down
 
 # 重新构建并启动（代码更新后）
-docker build -t unisearch:latest . && docker compose up -d
+docker build -t unisearch:latest .
+docker compose run --rm --entrypoint /app/backend/unisearch-migrate app
+docker compose up -d
 ```
 
 #### 自定义端口
@@ -246,7 +275,7 @@ server {
 
 > **⚠️ 重要提示：** 不要设置 `PORT` 变量。本项目架构为 Nginx(80) + 后端(8888) 内部代理，`PORT` 会覆盖后端端口导致代理失败。
 
-> **数据库自动创建：** 后端启动时会自动创建 `DB_NAME` 指定的数据库（如果不存在），无需手动建库。
+> **数据库自动创建：** 后端启动时会自动创建 `DB_NAME` 指定的数据库（如果不存在），无需手动建库。数据库表结构不会在主应用启动时隐式迁移，首次部署或模型变更后需要先运行迁移命令。
 
 #### Zeabur 环境变量模板
 
@@ -317,7 +346,14 @@ REDIS_PASSWORD=${REDIS_PASSWORD}
 cd backend
 cp .env.example .env
 # 编辑 .env 配置数据库连接
+go run ./cmd/migrate
 go run .
+```
+
+如需显式清理废弃表，确认备份后执行：
+
+```bash
+go run ./cmd/migrate -drop-deprecated
 ```
 
 #### 3. 启动前端
@@ -443,6 +479,9 @@ Redis 为可选依赖，连接失败时系统自动降级运行（无缓存）�
 
 **`Unknown database 'unisearch'`：**
 后端已支持自动创建数据库。如仍出现此错误，请确认 MySQL 服务已完全启动后重新部署主应用。
+
+**提示表不存在或默认管理员缺失：**
+先执行数据库迁移命令，再启动主应用。Docker 环境执行 `docker compose run --rm --entrypoint /app/backend/unisearch-migrate app`；本地开发执行 `cd backend && go run ./cmd/migrate`。
 
 **后端反复重启（exit status 1）：**
 检查 Zeabur 控制台的 Runtime Logs，常见原因：

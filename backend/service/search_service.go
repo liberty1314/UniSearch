@@ -184,3 +184,10 @@ func (s *SearchService) InvalidatePluginSelectorCache() {
 	}
 	s.pluginSelector.InvalidateCache()
 }
+
+func (s *SearchService) Close(ctx context.Context) error {
+	if s == nil || s.searchCache == nil {
+		return nil
+	}
+	return s.searchCache.Close(ctx)
+}

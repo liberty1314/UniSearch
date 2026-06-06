@@ -34,6 +34,7 @@ func (f *fakeHotRankingRefreshService) RefreshHotRankings(_ context.Context, per
 }
 
 type fakeHotRankingCacheForPreloader struct {
+	mu         sync.Mutex
 	clearCalls []string
 }
 
@@ -46,8 +47,18 @@ func (f *fakeHotRankingCacheForPreloader) Store(_ context.Context, _ model.HotRa
 }
 
 func (f *fakeHotRankingCacheForPreloader) ClearByPrefix(_ context.Context, prefix string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	f.clearCalls = append(f.clearCalls, prefix)
 	return nil
+}
+
+func (f *fakeHotRankingCacheForPreloader) ClearCalls() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	return append([]string(nil), f.clearCalls...)
 }
 
 func TestHotRankingPreloaderWarmAllRefreshesAllCombinations(t *testing.T) {
@@ -78,7 +89,7 @@ func TestHotRankingPreloaderWarmAllRefreshesAllCombinations(t *testing.T) {
 	if !containsRefreshCall(refreshService.calls, "day:all") {
 		t.Fatalf("expected aggregated all category to be preloaded, got calls=%v", refreshService.calls)
 	}
-	if len(cache.clearCalls) == 0 {
+	if len(cache.ClearCalls()) == 0 {
 		t.Fatalf("expected cache clear before preload refresh")
 	}
 }

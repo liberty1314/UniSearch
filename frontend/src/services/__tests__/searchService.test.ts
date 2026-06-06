@@ -16,6 +16,9 @@ vi.mock('@/lib/api', () => ({
 describe('SearchService', () => {
   beforeEach(() => {
     postMock.mockReset();
+    getMock.mockReset();
+    SearchService.clearHealthCacheForTest();
+    vi.useRealTimers();
   });
 
   it('forwards search API errors without dropping the status code', async () => {
@@ -132,5 +135,46 @@ describe('SearchService', () => {
         mediaTypes: ['movie'],
       },
     });
+  });
+
+  it('coalesces concurrent health checks into one request', async () => {
+    const healthResponse = {
+      status: 'ok',
+      plugins: ['pansearch'],
+      channels: ['tg-a'],
+    };
+    getMock.mockResolvedValue(healthResponse);
+
+    const [first, second] = await Promise.all([
+      SearchService.getHealth(),
+      SearchService.getHealth(),
+    ]);
+
+    expect(getMock).toHaveBeenCalledTimes(1);
+    expect(first).toBe(healthResponse);
+    expect(second).toBe(healthResponse);
+  });
+
+  it('reuses the health response only within the short ttl window', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-06T00:00:00.000Z'));
+    getMock
+      .mockResolvedValueOnce({ status: 'ok', plugins: ['first'], channels: [] })
+      .mockResolvedValueOnce({ status: 'ok', plugins: ['second'], channels: [] });
+
+    await expect(SearchService.getHealth()).resolves.toMatchObject({
+      plugins: ['first'],
+    });
+    await expect(SearchService.getHealth()).resolves.toMatchObject({
+      plugins: ['first'],
+    });
+    expect(getMock).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(5001);
+
+    await expect(SearchService.getHealth()).resolves.toMatchObject({
+      plugins: ['second'],
+    });
+    expect(getMock).toHaveBeenCalledTimes(2);
   });
 });

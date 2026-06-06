@@ -17,8 +17,8 @@ import {
 } from './RouteGuards';
 
 import Home from '@/pages/Home';
-import SearchPage from '@/pages/SearchPage';
-import HotPage from '@/pages/HotPage';
+const SearchPage = lazy(() => import('@/pages/SearchPage'));
+const HotPage = lazy(() => import('@/pages/HotPage'));
 const ResourceDetailPage = lazy(() => import('@/pages/ResourceDetailPage'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/pages/RegisterPage'));

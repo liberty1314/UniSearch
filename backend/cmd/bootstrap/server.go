@@ -63,6 +63,17 @@ func Run(srv *http.Server, app *App) error {
 		return fmt.Errorf("服务器关闭异常: %w", err)
 	}
 
+	if app.Search != nil {
+		fmt.Println("正在等待搜索缓存写队列完成...")
+		cacheCtx, cacheCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := app.Search.Close(cacheCtx); err != nil {
+			log.Printf("⚠️  搜索缓存写队列关闭超时: %v", err)
+		} else {
+			fmt.Println("✅ 搜索缓存写队列已完成")
+		}
+		cacheCancel()
+	}
+
 	if app.RedisCache != nil {
 		fmt.Println("正在关闭 Redis 连接...")
 		if err := app.RedisCache.Close(); err != nil {

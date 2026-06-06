@@ -1,6 +1,5 @@
 import React, {
   useState,
-  useMemo,
   useEffect,
   useRef,
   useCallback,
@@ -15,7 +14,10 @@ import LoadingState from "@/components/LoadingState";
 import SearchResultsHeader from "@/components/search-results/SearchResultsHeader";
 import SearchResultsList from "@/components/search-results/SearchResultsList";
 import SearchResultsState from "@/components/search-results/SearchResultsState";
-import { sortResources } from "@/utils/searchResultSorter";
+import {
+  useSearchResultsPresentation,
+  type SearchResultsViewMode,
+} from "@/components/search-results/useSearchResultsPresentation";
 import type { ResultItem } from "@/utils/cloudTypeUtils";
 import { SystemSettingsService } from "@/services/systemSettingsService";
 import {
@@ -24,10 +26,7 @@ import {
   normalizeExternalUrl,
   resolveResourceOpenTarget,
 } from "@/utils/resourceDisplay";
-import {
-  buildActiveFilterChips,
-  removeActiveFilterChip,
-} from "@/utils/searchFilters";
+import { removeActiveFilterChip } from "@/utils/searchFilters";
 import { SearchService } from "@/services/searchService";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -35,8 +34,6 @@ import { SearchService } from "@/services/searchService";
 interface SearchResultsProps {
   className?: string;
 }
-
-type ViewMode = "list" | "grid";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -80,7 +77,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   const hasManualViewPreferenceRef = useRef(false);
 
   const getResponsiveViewMode = useCallback(
-    (): ViewMode =>
+    (): SearchResultsViewMode =>
       typeof window !== "undefined" && window.innerWidth < 640
         ? "list"
         : "grid",
@@ -88,7 +85,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   );
 
   // 移动端（< 640px）默认使用列表视图，桌面端默认网格视图
-  const [viewMode, setViewMode] = useState<ViewMode>(getResponsiveViewMode);
+  const [viewMode, setViewMode] = useState<SearchResultsViewMode>(getResponsiveViewMode);
   const [passwordModal, setPasswordModal] = useState<{
     isOpen: boolean;
     password: string;
@@ -160,27 +157,16 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     };
   }, []);
 
-  // ── 结果展平 + 排序（全量，由 searchResultSorter 纯函数处理）──────────────
-
-  const allSortedResults = useMemo(
-    () => sortResources(searchResults?.resources, searchParams.keyword),
-    [searchParams.keyword, searchResults?.resources],
-  );
-
-  const activeFilterChips = useMemo(
-    () => buildActiveFilterChips(searchParams.filter),
-    [searchParams.filter],
-  );
-  const hasAdvancedFilters = activeFilterChips.length > 0;
-  const hasSourceFilters = Boolean(searchParams.cloudTypes?.length);
-  const hasAnyActiveFilters = hasAdvancedFilters || hasSourceFilters;
-
-  // ── 当前页切片 ─────────────────────────────────────────────────────────────
-
-  const displayedResults = useMemo(
-    () => allSortedResults.slice(0, displayedCount),
-    [allSortedResults, displayedCount],
-  );
+  const {
+    activeFilterChips,
+    allSortedResults,
+    displayedResults,
+    hasAnyActiveFilters,
+  } = useSearchResultsPresentation({
+    searchResults,
+    searchParams,
+    displayedCount,
+  });
 
   // ── 回调（useCallback 保持引用稳定，配合卡片的 React.memo）───────────────
 
@@ -237,7 +223,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     });
   }, [location.hash, location.pathname, location.search, navigate, searchParams.keyword]);
 
-  const handleViewModeChange = useCallback((mode: ViewMode) => {
+  const handleViewModeChange = useCallback((mode: SearchResultsViewMode) => {
     hasManualViewPreferenceRef.current = true;
     setViewMode(mode);
   }, []);

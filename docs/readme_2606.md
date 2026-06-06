@@ -48,3 +48,40 @@
     - frontend/src/pages/HotPage.tsx
     - frontend/src/pages/__tests__/HotPage.test.tsx
     - docs/readme_2606.md
+
+- [2026-06-06 14:34] feat(backend): 新增显式迁移并完善搜索链路验证
+  - Body: 抽离搜索请求解析并补齐缓存、执行器和 Redis 删除逻辑的并发测试，新增独立数据库迁移入口与本地质量脚本。前端同步拆分搜索结果展示逻辑，并缓存健康检查请求以减少重复调用。
+  - Footer: 破坏性变更: 主应用启动不再隐式执行数据库表结构迁移。Migration: 部署或模型变更后先执行 `go run ./cmd/migrate`，Docker 环境执行 `docker compose run --rm --entrypoint /app/backend/unisearch-migrate app`；确认备份后可追加 `-drop-deprecated` 清理废弃表。
+  - Files:
+    - .github/workflows/docker_ci.yml
+    - Dockerfile
+    - README.md
+    - backend/api/handler.go
+    - backend/api/search_request_parser.go
+    - backend/api/search_request_parser_test.go
+    - backend/cmd/bootstrap/app.go
+    - backend/cmd/bootstrap/server.go
+    - backend/cmd/migrate/main.go
+    - backend/database/migration.go
+    - backend/database/migration_test.go
+    - backend/service/hot_ranking_preloader_test.go
+    - backend/service/search_cache.go
+    - backend/service/search_cache_test.go
+    - backend/service/search_executor.go
+    - backend/service/search_executor_test.go
+    - backend/service/search_service.go
+    - backend/util/cache/redis_cache.go
+    - backend/util/cache/redis_cache_test.go
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
+    - frontend/src/components/search-results/useSearchResultsPresentation.ts
+    - frontend/src/routes/AppRoutes.tsx
+    - frontend/src/routes/__tests__/AppRoutes.test.tsx
+    - frontend/src/routes/appRouteUtils.ts
+    - frontend/src/services/__tests__/searchService.test.ts
+    - frontend/src/services/searchService.ts
+    - scripts/tests/backend-race.sh
+    - scripts/tests/frontend-focused.sh
+    - scripts/tests/local-quality.sh
+    - docs/readme_2606.md

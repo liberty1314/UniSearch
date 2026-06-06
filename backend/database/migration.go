@@ -43,9 +43,16 @@ func AutoMigrate() error {
 	log.Println("  - tg_channel_health_statuses 表已创建/更新")
 	log.Println("  - user_login_daily_stats 表已创建/更新")
 
+	return nil
+}
+
+// DropDeprecatedTables 显式删除已经下线的旧表。
+// 该操作具有破坏性，只允许由独立迁移命令触发，避免应用启动时隐式删表。
+func DropDeprecatedTables() error {
 	if DB.Migrator().HasTable(&model.APIKey{}) {
 		if err := DB.Migrator().DropTable(&model.APIKey{}); err != nil {
 			log.Printf("⚠️  删除 api_keys 表失败: %v", err)
+			return err
 		} else {
 			log.Println("  - 已删除废弃的 api_keys 表")
 		}

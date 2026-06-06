@@ -141,10 +141,10 @@ describe('PluginManagementView', () => {
     render(<PluginManagementView />);
 
     expect(await screen.findByRole('heading', { name: '插件中心' })).toBeInTheDocument();
-    expect(screen.getByText('目录版本 2026.05')).toBeInTheDocument();
+    expect(await screen.findByText(/目录版本 2026\.05/)).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: '插件状态筛选' })).toBeInTheDocument();
-    expect(screen.getByText('builtin-enabled-1')).toBeInTheDocument();
-    expect(screen.queryByText('builtin-enabled-11')).not.toBeInTheDocument();
+    expect(screen.getByTestId('plugin-market-card-builtin-enabled-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('plugin-market-card-builtin-enabled-11')).not.toBeInTheDocument();
 
     const initialDrawer = await screen.findByTestId('plugin-management-drawer');
     expect(within(initialDrawer).getByText('builtin-enabled-1')).toBeInTheDocument();
@@ -158,7 +158,7 @@ describe('PluginManagementView', () => {
     expect(within(pageSizeListbox).getByRole('option', { name: '100 条' })).toBeInTheDocument();
 
     await userEvent.click(within(pageSizeListbox).getByRole('option', { name: '20 条' }));
-    expect(await screen.findByText('builtin-enabled-11')).toBeInTheDocument();
+    expect(await screen.findByTestId('plugin-market-card-builtin-enabled-11')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('plugin-market-card-builtin-enabled-11'));
 
@@ -227,8 +227,12 @@ describe('PluginManagementView', () => {
     await userEvent.click(screen.getByRole('button', { name: '导入 URL 插件' }));
     const dialog = screen.getByRole('dialog');
 
-    await userEvent.type(screen.getByLabelText('插件名称 *'), 'custom-tags-plugin');
-    await userEvent.type(screen.getByLabelText('URL *'), 'https://example.com/plugin');
+    fireEvent.change(screen.getByLabelText('插件名称 *'), {
+      target: { value: 'custom-tags-plugin' },
+    });
+    fireEvent.change(screen.getByLabelText('URL *'), {
+      target: { value: 'https://example.com/plugin' },
+    });
 
     await userEvent.click(within(dialog).getByRole('button', { name: '插件标签选择器' }));
     const panel = await screen.findByTestId('plugin-tag-selector-panel');
@@ -239,9 +243,16 @@ describe('PluginManagementView', () => {
     fireEvent.click(within(panel).getByRole('button', { name: /电影/ }));
     fireEvent.change(screen.getByPlaceholderText('搜索或新增插件标签'), { target: { value: '新标签' } });
     fireEvent.click(screen.getByRole('button', { name: '新增标签 新标签' }));
-    await userEvent.click(screen.getByRole('button', { name: '添加插件' }));
 
     const fetchMock = vi.mocked(fetch);
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(
+          ([url, init]) => url === '/api/admin/tags' && init?.method === 'POST'
+        )
+      ).toBe(true);
+    });
+
     const tagCreateCall = fetchMock.mock.calls.find(
       ([url, init]) => url === '/api/admin/tags' && init?.method === 'POST'
     );
@@ -249,6 +260,16 @@ describe('PluginManagementView', () => {
     expect(JSON.parse(String(tagCreateCall?.[1]?.body))).toEqual({
       scope: 'plugin',
       name: '新标签',
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '添加插件' }));
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(
+          ([url, init]) => url === '/api/admin/plugins' && init?.method === 'POST'
+        )
+      ).toBe(true);
     });
 
     const pluginCreateCall = fetchMock.mock.calls.find(

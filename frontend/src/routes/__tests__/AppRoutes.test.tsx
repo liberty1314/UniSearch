@@ -83,10 +83,10 @@ const renderRoutesAt = (path: string) =>
   );
 
 describe('AppRoutes', () => {
-  it('keeps home and search routes out of the suspense fallback path', () => {
+  it('keeps only the home route out of the suspense fallback path', () => {
     expect(shouldUseLazyRouteFallback('/')).toBe(false);
-    expect(shouldUseLazyRouteFallback('/search')).toBe(false);
-    expect(shouldUseLazyRouteFallback('/hot')).toBe(false);
+    expect(shouldUseLazyRouteFallback('/search')).toBe(true);
+    expect(shouldUseLazyRouteFallback('/hot')).toBe(true);
     expect(shouldUseLazyRouteFallback('/resource/resource-1')).toBe(true);
     expect(shouldUseLazyRouteFallback('/login')).toBe(true);
   });

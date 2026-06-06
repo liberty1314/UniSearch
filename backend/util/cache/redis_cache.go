@@ -28,7 +28,7 @@ type redisClient interface {
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
 	Get(ctx context.Context, key string) *redis.StringCmd
 	Del(ctx context.Context, keys ...string) *redis.IntCmd
-	Keys(ctx context.Context, pattern string) *redis.StringSliceCmd
+	Scan(ctx context.Context, cursor uint64, match string, count int64) *redis.ScanCmd
 	Exists(ctx context.Context, keys ...string) *redis.IntCmd
 	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
 	Close() error
@@ -154,7 +154,6 @@ func (rc *RedisCache) SetWithTTL(ctx context.Context, key string, value interfac
 		return fmt.Errorf("Redis 写入失败: %w", err)
 	}
 
-	log.Printf("调试: 缓存写入成功 - 键: %s, TTL: %v", key, ttl)
 	return nil
 }
 
@@ -207,7 +206,6 @@ func (rc *RedisCache) Get(ctx context.Context, key string, dest interface{}) err
 		return fmt.Errorf("反序列化失败: %w", err)
 	}
 
-	log.Printf("调试: 缓存读取成功 - 键: %s", key)
 	return nil
 }
 
@@ -242,7 +240,6 @@ func (rc *RedisCache) Delete(ctx context.Context, key string) error {
 		return fmt.Errorf("Redis 删除失败: %w", err)
 	}
 
-	log.Printf("调试: 缓存删除成功 - 键: %s", key)
 	return nil
 }
 
@@ -254,16 +251,24 @@ func (rc *RedisCache) DeleteByPattern(ctx context.Context, pattern string) error
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	keys, err := rc.client.Keys(ctx, pattern).Result()
-	if err != nil {
-		return fmt.Errorf("Redis 查询键失败: %w", err)
-	}
-	if len(keys) == 0 {
-		return nil
-	}
+	var cursor uint64
+	const scanBatchSize int64 = 100
+	for {
+		keys, nextCursor, err := rc.client.Scan(ctx, cursor, pattern, scanBatchSize).Result()
+		if err != nil {
+			return fmt.Errorf("Redis 扫描键失败: %w", err)
+		}
 
-	if err := rc.client.Del(ctx, keys...).Err(); err != nil {
-		return fmt.Errorf("Redis 批量删除失败: %w", err)
+		if len(keys) > 0 {
+			if err := rc.client.Del(ctx, keys...).Err(); err != nil {
+				return fmt.Errorf("Redis 批量删除失败: %w", err)
+			}
+		}
+
+		if nextCursor == 0 {
+			break
+		}
+		cursor = nextCursor
 	}
 
 	return nil
@@ -302,7 +307,6 @@ func (rc *RedisCache) Exists(ctx context.Context, key string) (bool, error) {
 	}
 
 	exists := count > 0
-	log.Printf("调试: 缓存检查完成 - 键: %s, 存在: %v", key, exists)
 	return exists, nil
 }
 
@@ -337,7 +341,6 @@ func (rc *RedisCache) RefreshTTL(ctx context.Context, key string) error {
 		return fmt.Errorf("Redis TTL 刷新失败: %w", err)
 	}
 
-	log.Printf("🔄 缓存 TTL 已刷新 - 键: %s, 新TTL: %v", key, rc.ttl)
 	return nil
 }
 
@@ -394,10 +397,7 @@ func (rc *RedisCache) GetAndRefresh(ctx context.Context, key string, dest interf
 	if err := rc.client.Expire(ctx, key, rc.ttl).Err(); err != nil {
 		log.Printf("警告: 缓存 TTL 刷新失败 - 键: %s, 错误: %v", key, err)
 		// TTL 刷新失败不影响数据读取，只记录警告
-	} else {
-		log.Printf("🔄 缓存 TTL 已刷新 - 键: %s, 新TTL: %v", key, rc.ttl)
 	}
 
-	log.Printf("调试: 缓存读取成功 - 键: %s", key)
 	return nil
 }

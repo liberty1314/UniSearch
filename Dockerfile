@@ -15,6 +15,7 @@ RUN go mod download
 COPY backend/ ./
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -ldflags="-s -w -extldflags '-static'" -o unisearch .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -ldflags="-s -w -extldflags '-static'" -o unisearch-migrate ./cmd/migrate
 
 # ============================================
 # 阶段 2: 构建前端 (Node.js + pnpm)
@@ -42,6 +43,7 @@ RUN mkdir -p /app/backend /app/cache /var/log/supervisor
 
 # 从构建阶段复制产物
 COPY --from=backend-builder /app/backend/unisearch /app/backend/unisearch
+COPY --from=backend-builder /app/backend/unisearch-migrate /app/backend/unisearch-migrate
 COPY --from=backend-builder /app/backend/custom_plugins.json /app/backend/custom_plugins.json
 COPY --from=backend-builder /app/backend/plugin_market.default.json /app/backend/plugin_market.default.json
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html

@@ -2,6 +2,7 @@ package service
 
 import (
 	"log"
+	"sync"
 	"time"
 
 	"unisearch/config"
@@ -79,6 +80,7 @@ type pluginSearchExecutor struct {
 	pluginSelector PluginSelector
 	searchCache    SearchCache
 	metrics        *SearchMetricsRecorder
+	pluginLocks    sync.Map
 }
 
 func newPluginSearchExecutor(pluginSelector PluginSelector, searchCache SearchCache, metrics *SearchMetricsRecorder) PluginSearchExecutor {
@@ -137,6 +139,10 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 	for _, p := range availablePlugins {
 		currentPlugin := p
 		tasks = append(tasks, func() interface{} {
+			pluginLock := e.lockForPlugin(currentPlugin.Name())
+			pluginLock.Lock()
+			defer pluginLock.Unlock()
+
 			currentPlugin.SetMainCacheKey(cacheKey)
 			currentPlugin.SetCurrentKeyword(keyword)
 
@@ -191,6 +197,11 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 
 	e.searchCache.Store("plugin", cacheKey, keyword, allResults)
 	return allResults, warnings, nil
+}
+
+func (e *pluginSearchExecutor) lockForPlugin(name string) *sync.Mutex {
+	lock, _ := e.pluginLocks.LoadOrStore(name, &sync.Mutex{})
+	return lock.(*sync.Mutex)
 }
 
 func calculatePluginWorkerCount(concurrency int, pluginCount int) int {

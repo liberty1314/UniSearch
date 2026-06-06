@@ -8,6 +8,9 @@ mkdir -p "$GOCACHE"
 echo "== 后端测试 =="
 (cd "$ROOT_DIR/backend" && go test ./...)
 
+echo "== 后端 race 测试 =="
+"$ROOT_DIR/scripts/tests/backend-race.sh"
+
 echo "== 后端构建 =="
 (cd "$ROOT_DIR/backend" && go build ./...)
 
@@ -16,6 +19,9 @@ echo "== 前端类型检查 =="
 
 echo "== 前端静态检查 =="
 (cd "$ROOT_DIR/frontend" && ./node_modules/.bin/eslint .)
+
+echo "== 前端聚焦测试 =="
+"$ROOT_DIR/scripts/tests/frontend-focused.sh"
 
 echo "== 前端单元测试 =="
 (cd "$ROOT_DIR/frontend" && ./node_modules/.bin/vitest run)

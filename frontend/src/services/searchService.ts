@@ -9,6 +9,15 @@ import type {
 } from '@/types/api';
 import { normalizeFilterConfig } from '@/utils/searchFilters';
 
+const HEALTH_CACHE_TTL_MS = 5000;
+let healthCache:
+  | {
+      value: HealthResponse;
+      expiresAt: number;
+    }
+  | null = null;
+let healthRequest: Promise<HealthResponse> | null = null;
+
 /**
  * 搜索服务类
  */
@@ -64,18 +73,42 @@ export class SearchService {
    * @returns 健康状态信息
    */
   static async getHealth(): Promise<HealthResponse> {
-    try {
-      const response = await apiClient.get<HealthResponse>('/health');
-
-      if (response) {
-        return response;
-      } else {
-        throw new Error('获取系统状态失败');
-      }
-    } catch (error) {
-      console.error('Health check error:', error);
-      throw error;
+    const now = Date.now();
+    if (healthCache && healthCache.expiresAt > now) {
+      return healthCache.value;
     }
+
+    if (healthRequest) {
+      return healthRequest;
+    }
+
+    healthRequest = apiClient
+      .get<HealthResponse>('/health')
+      .then((response) => {
+        if (!response) {
+          throw new Error('获取系统状态失败');
+        }
+
+        healthCache = {
+          value: response,
+          expiresAt: Date.now() + HEALTH_CACHE_TTL_MS,
+        };
+        return response;
+      })
+      .catch((error) => {
+        console.error('Health check error:', error);
+        throw error;
+      })
+      .finally(() => {
+        healthRequest = null;
+      });
+
+    return healthRequest;
+  }
+
+  static clearHealthCacheForTest(): void {
+    healthCache = null;
+    healthRequest = null;
   }
 
   /**

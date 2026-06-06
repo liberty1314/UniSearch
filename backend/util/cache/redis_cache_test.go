@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,6 +16,8 @@ type fakeRedisClient struct {
 	getCalls    int
 	setCalls    int
 	delCalls    int
+	scanCalls   int
+	keysCalls   int
 	existsCalls int
 	expireCalls int
 }
@@ -57,6 +60,7 @@ func (f *fakeRedisClient) Del(_ context.Context, keys ...string) *redis.IntCmd {
 }
 
 func (f *fakeRedisClient) Keys(_ context.Context, pattern string) *redis.StringSliceCmd {
+	f.keysCalls++
 	var matched []string
 	if pattern == "*" {
 		for key := range f.values {
@@ -71,6 +75,17 @@ func (f *fakeRedisClient) Keys(_ context.Context, pattern string) *redis.StringS
 		}
 	}
 	return redis.NewStringSliceResult(matched, nil)
+}
+
+func (f *fakeRedisClient) Scan(_ context.Context, _ uint64, pattern string, _ int64) *redis.ScanCmd {
+	f.scanCalls++
+	var matched []string
+	for key := range f.values {
+		if redisPatternMatches(pattern, key) {
+			matched = append(matched, key)
+		}
+	}
+	return redis.NewScanCmdResult(matched, 0, nil)
 }
 
 func (f *fakeRedisClient) Exists(_ context.Context, keys ...string) *redis.IntCmd {
@@ -142,4 +157,47 @@ func TestRedisCacheDeleteRemovesKey(t *testing.T) {
 	if _, exists := client.values["k1"]; exists {
 		t.Fatal("expected key to be removed")
 	}
+}
+
+func TestRedisCacheDeleteByPatternUsesScan(t *testing.T) {
+	client := &fakeRedisClient{
+		values: map[string]string{
+			"search:a": `{"value":"a"}`,
+			"search:b": `{"value":"b"}`,
+			"other":    `{"value":"other"}`,
+		},
+	}
+	cache := &RedisCache{
+		client: client,
+		ttl:    time.Minute,
+	}
+
+	if err := cache.DeleteByPattern(context.Background(), "search:*"); err != nil {
+		t.Fatalf("按模式删除缓存失败：%v", err)
+	}
+	if client.scanCalls == 0 {
+		t.Fatal("期望按模式删除使用 SCAN")
+	}
+	if client.keysCalls != 0 {
+		t.Fatalf("按模式删除不应使用 KEYS，实际调用 %d 次", client.keysCalls)
+	}
+	if _, exists := client.values["search:a"]; exists {
+		t.Fatal("期望删除 search:a")
+	}
+	if _, exists := client.values["search:b"]; exists {
+		t.Fatal("期望删除 search:b")
+	}
+	if _, exists := client.values["other"]; !exists {
+		t.Fatal("不应删除不匹配的 key")
+	}
+}
+
+func redisPatternMatches(pattern string, key string) bool {
+	if pattern == "*" {
+		return true
+	}
+	if strings.HasSuffix(pattern, "*") {
+		return strings.HasPrefix(key, strings.TrimSuffix(pattern, "*"))
+	}
+	return pattern == key
 }

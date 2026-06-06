@@ -39,17 +39,7 @@ func Initialize() (*App, error) {
 		return nil, fmt.Errorf("数据库连接失败: %w", err)
 	}
 
-	log.Println("正在执行数据库迁移...")
-	if err := database.AutoMigrate(); err != nil {
-		return nil, fmt.Errorf("数据库迁移失败: %w", err)
-	}
-
-	log.Println("正在检查默认管理员账户...")
-	if err := database.SeedDefaultAdmin(); err != nil {
-		return nil, fmt.Errorf("创建默认管理员失败: %w", err)
-	}
-
-	log.Println("✓ 数据库初始化完成")
+	log.Println("✓ 数据库连接完成；结构迁移请通过独立迁移命令执行")
 	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	secretManager := initializeSecretManager()

@@ -518,6 +518,29 @@ describe("SearchResults", () => {
     expect(screen.getByTestId("search-result-grid-card")).toBeInTheDocument();
   });
 
+  it("keeps the rendered result count bounded for a 1000 item response", async () => {
+    const baseResource = searchStoreState.searchResults.resources[0];
+    searchStoreState.searchResults = {
+      ...searchStoreState.searchResults,
+      total: 1000,
+      resources: Array.from({ length: 1000 }, (_, index) => ({
+        ...baseResource,
+        id: `resource-${index}`,
+        title: `你的名字 ${index}`,
+        links: baseResource.links.map((link) => ({
+          ...link,
+          title: `你的名字 ${index}`,
+        })),
+      })),
+    };
+    searchStoreState.displayedCount = 48;
+
+    renderSearchResults();
+
+    expect(await screen.findAllByTestId("search-result-grid-card")).toHaveLength(48);
+    expect(screen.queryByText("你的名字 999")).not.toBeInTheDocument();
+  });
+
   it("does not show source warning copy when some search sources fail", async () => {
     searchStoreState.searchResults = {
       ...searchStoreState.searchResults,

@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"sync"
 	"sync/atomic"
 
 	"unisearch/config"
@@ -12,6 +14,7 @@ import (
 type SearchCache interface {
 	Load(scope string, key string, keyword string, target interface{}) (bool, error)
 	Store(scope string, key string, keyword string, value interface{})
+	Close(ctx context.Context) error
 }
 
 type cacheBackend interface {
@@ -30,6 +33,9 @@ type redisSearchCache struct {
 	cache            cacheBackend
 	metrics          *SearchMetricsRecorder
 	storeQueue       chan cacheStoreRequest
+	storeWG          sync.WaitGroup
+	storeMu          sync.RWMutex
+	closed           bool
 	droppedWriteLogs atomic.Int64
 }
 
@@ -56,9 +62,7 @@ func newSearchCache(redisCache *cache.RedisCache, metrics *SearchMetricsRecorder
 	}
 
 	searchCache.storeQueue = make(chan cacheStoreRequest, queueSize)
-	for i := 0; i < workerCount; i++ {
-		go searchCache.storeWorker()
-	}
+	searchCache.startStoreWorkers(workerCount)
 
 	return searchCache
 }
@@ -107,6 +111,12 @@ func (c *redisSearchCache) Store(scope string, key string, keyword string, value
 		return
 	}
 
+	c.storeMu.RLock()
+	defer c.storeMu.RUnlock()
+	if c.closed {
+		return
+	}
+
 	select {
 	case c.storeQueue <- request:
 	default:
@@ -116,7 +126,41 @@ func (c *redisSearchCache) Store(scope string, key string, keyword string, value
 	}
 }
 
+func (c *redisSearchCache) Close(ctx context.Context) error {
+	if c == nil || c.storeQueue == nil {
+		return nil
+	}
+
+	c.storeMu.Lock()
+	if !c.closed {
+		c.closed = true
+		close(c.storeQueue)
+	}
+	c.storeMu.Unlock()
+
+	done := make(chan struct{})
+	go func() {
+		c.storeWG.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("等待搜索缓存写队列关闭超时: %w", ctx.Err())
+	}
+}
+
+func (c *redisSearchCache) startStoreWorkers(workerCount int) {
+	for i := 0; i < workerCount; i++ {
+		c.storeWG.Add(1)
+		go c.storeWorker()
+	}
+}
+
 func (c *redisSearchCache) storeWorker() {
+	defer c.storeWG.Done()
 	for request := range c.storeQueue {
 		c.writeToCache(request)
 	}
