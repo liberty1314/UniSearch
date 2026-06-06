@@ -115,7 +115,7 @@ vi.mock('@/components/home/TrendingCategories', () => ({
   default: () => (
     <section>
       <h2>热门分类</h2>
-      <a href="/hot">进入热门榜单页</a>
+      <a href="/trending">进入热门榜单页</a>
       <div>trending-categories</div>
     </section>
   ),
@@ -224,7 +224,7 @@ describe('Home', () => {
   it('keeps a direct homepage entry to the hot rankings page', () => {
     renderHome();
 
-    expect(screen.getByRole('link', { name: '进入热门榜单页' })).toHaveAttribute('href', '/hot');
+    expect(screen.getByRole('link', { name: '进入热门榜单页' })).toHaveAttribute('href', '/trending');
   });
 
   it('首屏搜索工作台同时展示搜索框、准入提示和热门榜单入口', () => {
@@ -234,8 +234,9 @@ describe('Home', () => {
 
     expect(screen.getByTestId('home-search-workbench')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('搜索网盘资源...')).toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText('搜索网盘资源...')).toHaveLength(1);
     expect(screen.getByText('搜索结果需要登录后查看，热门榜单可直接浏览。')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /^热门榜单$/ })).toHaveAttribute('href', '/hot');
+    expect(screen.getByRole('link', { name: /^热门榜单$/ })).toHaveAttribute('href', '/trending');
   });
 
   it('renders elevated feature cards with dedicated depth layers', () => {
@@ -330,6 +331,20 @@ describe('Home', () => {
     expect(screen.getByText('支持 5+ 平台')).toBeInTheDocument();
     expect(screen.getByText('聚合识别主流链接类型')).toBeInTheDocument();
     expect(screen.getByText('持续更新资源索引')).toBeInTheDocument();
+  });
+
+  it('首页首屏辅助信息保持轻量层级并为移动端预留横向空间', () => {
+    searchAccessStatus = 'anonymous';
+
+    renderHome();
+
+    const trustStrip = screen.getByTestId('home-trust-strip');
+    const searchStage = screen.getByTestId('home-search-stage');
+
+    expect(trustStrip).toHaveClass('overflow-x-auto');
+    expect(trustStrip).toHaveClass('sm:overflow-visible');
+    expect(searchStage).toHaveClass('space-y-4');
+    expect(searchStage).toHaveClass('sm:space-y-6');
   });
 
   it('登录后不展示首页搜索准入提示', () => {

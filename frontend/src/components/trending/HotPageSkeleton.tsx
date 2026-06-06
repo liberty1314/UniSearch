@@ -115,16 +115,16 @@ const HotPageSkeleton: React.FC = () => {
       aria-label="热门榜单加载中"
     >
       <div
-        className="glass-card-premium relative h-[520px] overflow-hidden rounded-[2rem] bg-slate-950 p-0 shadow-[0_24px_60px_rgba(15,23,42,0.18)] md:h-[560px]"
+        className="glass-card-premium relative h-[clamp(420px,68vh,560px)] overflow-hidden rounded-[2rem] bg-slate-950 p-0 shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
         data-testid="hot-page-skeleton-hero"
       >
-        <div className="hot-page-skeleton-hero relative h-[520px] overflow-hidden md:h-[560px]">
+        <div className="hot-page-skeleton-hero relative h-[clamp(420px,68vh,560px)] overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.14),transparent_32%)]" />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950/92 via-slate-950/46 to-slate-950/24" />
           <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-slate-950/90 via-slate-950/48 to-transparent" />
 
-          <div className="relative z-10 flex h-[520px] flex-col justify-between p-6 pb-28 text-white md:h-[560px] md:p-8 md:pb-32 xl:pb-10">
-            <div className="flex min-h-0 max-w-full flex-1 flex-col lg:min-h-[400px]">
+          <div className="relative z-10 flex h-[clamp(420px,68vh,560px)] flex-col justify-between p-6 pb-28 text-white md:p-8 md:pb-32 xl:pb-10">
+            <div className="flex min-h-0 max-w-full flex-1 flex-col lg:min-h-0">
               <div className="flex flex-wrap items-center gap-2.5">
                 <HotSkeletonBlock className="h-8 w-28 rounded-full" />
                 <HotSkeletonBlock className="h-8 w-20 rounded-full" delay="120ms" />
@@ -136,7 +136,7 @@ const HotPageSkeleton: React.FC = () => {
               <HotSkeletonBlock className="mt-3 h-4 w-11/12 max-w-xl rounded-full" delay="360ms" />
               <HotSkeletonBlock className="mt-3 h-4 w-3/4 max-w-lg rounded-full" delay="400ms" />
 
-              <div className="mt-10 flex flex-col gap-5 lg:mt-auto lg:max-w-2xl lg:pt-16">
+              <div className="mt-10 flex flex-col gap-5 lg:mt-auto lg:max-w-2xl lg:pt-10">
                 <HotSkeletonBlock className="h-11 w-44 rounded-full" delay="460ms" />
 
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

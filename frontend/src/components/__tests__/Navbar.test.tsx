@@ -85,7 +85,7 @@ describe('Navbar', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('link', { name: '热门榜单' })).toHaveAttribute('href', '/hot');
+    expect(screen.getByRole('link', { name: '热门榜单' })).toHaveAttribute('href', '/trending');
   });
 
   it('移动菜单按钮具有明确名称', () => {

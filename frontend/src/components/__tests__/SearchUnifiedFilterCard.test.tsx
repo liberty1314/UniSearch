@@ -263,6 +263,69 @@ describe("SearchUnifiedFilterCard", () => {
     expect(screen.getByRole("menu", { name: "夸克网盘来源操作" })).toBeInTheDocument();
   });
 
+  it("编辑高级关键词时先写入草稿，点击应用后才触发搜索", async () => {
+    render(
+      <MemoryRouter>
+        <SearchUnifiedFilterCard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /展开高级条件/ }));
+
+    const includeInput = screen.getByPlaceholderText("输入关键词后按回车或逗号");
+    fireEvent.change(includeInput, { target: { value: "4K" } });
+    fireEvent.keyDown(includeInput, { key: "Enter" });
+
+    expect(screen.getByRole("button", { name: "4K" })).toBeInTheDocument();
+    expect(setSearchParamsMock).not.toHaveBeenCalled();
+    expect(performSearchMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "应用筛选" }));
+
+    await waitFor(() => {
+      expect(setSearchParamsMock).toHaveBeenCalledWith({
+        filter: { include: ["4K"] },
+      });
+    });
+    expect(performSearchMock).toHaveBeenCalledWith(
+      { filter: { include: ["4K"] } },
+      { preserveResults: true },
+    );
+  });
+
+  it("重置高级条件只清空草稿，应用后才同步为空筛选", async () => {
+    searchStoreState.searchParams.filter = {
+      include: ["4K"],
+    };
+
+    render(
+      <MemoryRouter>
+        <SearchUnifiedFilterCard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /展开高级条件/ }));
+    expect(screen.getByRole("button", { name: "4K" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "重置高级条件" }));
+
+    expect(screen.queryByRole("button", { name: "4K" })).not.toBeInTheDocument();
+    expect(setSearchParamsMock).not.toHaveBeenCalled();
+    expect(performSearchMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "应用筛选" }));
+
+    await waitFor(() => {
+      expect(setSearchParamsMock).toHaveBeenCalledWith({
+        filter: undefined,
+      });
+    });
+    expect(performSearchMock).toHaveBeenCalledWith(
+      { filter: undefined },
+      { preserveResults: true },
+    );
+  });
+
   it("清空全部筛选时会一次性重置网盘和高级条件", async () => {
     searchStoreState.searchParams.cloudTypes = [CloudType.QUARK];
     searchStoreState.searchParams.filter = {

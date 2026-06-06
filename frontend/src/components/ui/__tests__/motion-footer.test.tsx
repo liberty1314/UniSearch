@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { gsap } from 'gsap';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CinematicFooter } from '@/components/ui/motion-footer';
 
@@ -21,8 +22,26 @@ vi.mock('gsap/ScrollTrigger', () => ({
 }));
 
 describe('CinematicFooter', () => {
+  const setReducedMotion = (matches: boolean) => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
+    setReducedMotion(false);
     window.scrollTo = vi.fn();
   });
 
@@ -39,6 +58,24 @@ describe('CinematicFooter', () => {
       'href',
       'mailto:UniSearch@163.com'
     );
+  });
+
+  it('hides decorative cinematic layers from accessibility semantics', () => {
+    const { container } = render(<CinematicFooter />);
+
+    expect(container.querySelector('.footer-giant-bg-text')).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelector('.footer-marquee-band')).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelector('.footer-aurora')).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelector('.footer-bg-grid')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.queryByRole('link', { name: /UNISEARCH/ })).not.toBeInTheDocument();
+  });
+
+  it('skips GSAP scroll motion when reduced motion is preferred', () => {
+    setReducedMotion(true);
+
+    render(<CinematicFooter />);
+
+    expect(gsap.fromTo).not.toHaveBeenCalled();
   });
 
   it('uses restrained Apple-style glass tokens instead of the old neon palette', () => {

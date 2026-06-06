@@ -14,7 +14,7 @@
 
 ### 热门内容页
 
-- 新增 `/hot` 页面，基于 TMDB 数据展示电影、电视剧、动漫三类热门内容
+- 新增 `/trending` 页面，基于 TMDB 数据展示电影、电视剧、动漫三类热门内容
 - 支持每日、每周、每月、每年四种维度切换
 - 支持从热门内容卡片一键跳转到站内搜索结果页
 - 每日、每周使用 TMDB 趋势口径；每月、每年使用 TMDB 热门口径
@@ -128,7 +128,7 @@ REFRESH_TOKEN_ENCRYPT_KEY=你的32字节加密密钥
 REDIS_HOST=localhost
 REDIS_PORT=6379
 
-# TMDB 热门内容页（启用 /hot 必填，推荐二选一）
+# TMDB 热门内容页（启用 /trending 必填，推荐二选一）
 
 # 推荐：使用 Read Access Token
 TMDB_READ_ACCESS_TOKEN=你的_tmdb_read_access_token

@@ -28,12 +28,24 @@ import {
 } from "@/utils/resourceDisplay";
 import { removeActiveFilterChip } from "@/utils/searchFilters";
 import { SearchService } from "@/services/searchService";
+import { readJsonStorage, writeJsonStorage } from "@/lib/safeStorage";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface SearchResultsProps {
   className?: string;
 }
+
+const SEARCH_RESULTS_VIEW_MODE_KEY = "unisearch_search_results_view_mode";
+
+const isSearchResultsViewMode = (
+  value: unknown,
+): value is SearchResultsViewMode => value === "list" || value === "grid";
+
+const readStoredViewMode = (): SearchResultsViewMode | null => {
+  const value = readJsonStorage<unknown>(SEARCH_RESULTS_VIEW_MODE_KEY, null);
+  return isSearchResultsViewMode(value) ? value : null;
+};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -74,8 +86,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   );
 
   const debouncedIsLoading = useDebouncedValue(isLoading, 200);
-  const hasManualViewPreferenceRef = useRef(false);
-
   const getResponsiveViewMode = useCallback(
     (): SearchResultsViewMode =>
       typeof window !== "undefined" && window.innerWidth < 640
@@ -83,9 +93,27 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         : "grid",
     [],
   );
+  const initialViewModeRef = useRef<{
+    mode: SearchResultsViewMode;
+    hasStoredPreference: boolean;
+  } | null>(null);
+
+  if (!initialViewModeRef.current) {
+    const storedViewMode = readStoredViewMode();
+    initialViewModeRef.current = {
+      mode: storedViewMode || getResponsiveViewMode(),
+      hasStoredPreference: Boolean(storedViewMode),
+    };
+  }
+
+  const hasManualViewPreferenceRef = useRef(
+    initialViewModeRef.current.hasStoredPreference,
+  );
 
   // 移动端（< 640px）默认使用列表视图，桌面端默认网格视图
-  const [viewMode, setViewMode] = useState<SearchResultsViewMode>(getResponsiveViewMode);
+  const [viewMode, setViewMode] = useState<SearchResultsViewMode>(
+    initialViewModeRef.current.mode,
+  );
   const [passwordModal, setPasswordModal] = useState<{
     isOpen: boolean;
     password: string;
@@ -225,6 +253,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
 
   const handleViewModeChange = useCallback((mode: SearchResultsViewMode) => {
     hasManualViewPreferenceRef.current = true;
+    writeJsonStorage(SEARCH_RESULTS_VIEW_MODE_KEY, mode);
     setViewMode(mode);
   }, []);
 

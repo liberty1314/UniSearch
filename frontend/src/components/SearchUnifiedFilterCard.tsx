@@ -179,6 +179,13 @@ const SearchUnifiedFilterCard: React.FC = () => {
     () => normalizeFilterConfig(searchParams.filter),
     [searchParams.filter],
   );
+  const [draftFilter, setDraftFilter] = useState<FilterConfig | undefined>(
+    activeFilter,
+  );
+  const draftActiveFilter = useMemo(
+    () => normalizeFilterConfig(draftFilter),
+    [draftFilter],
+  );
   const activeFilterChips = useMemo(
     () => buildActiveFilterChips(activeFilter),
     [activeFilter],
@@ -189,6 +196,10 @@ const SearchUnifiedFilterCard: React.FC = () => {
   );
   const activeFilterCount = activeFilterChips.length;
   const activeConditionCount = activeFilterCount + (isAllSelected ? 0 : 1);
+
+  useEffect(() => {
+    setDraftFilter(activeFilter);
+  }, [activeFilter]);
 
   const syncSearchUrl = useCallback((nextParams: Partial<SearchParams>) => {
     const nextUrl = SearchService.buildSearchUrl({
@@ -212,10 +223,6 @@ const SearchUnifiedFilterCard: React.FC = () => {
     syncSearchUrl(nextParams);
     void performSearch(nextParams, { preserveResults: true });
   }, [performSearch, setSearchParams, syncSearchUrl]);
-
-  const applyFilter = useCallback((nextFilter: FilterConfig | undefined) => {
-    applySearchParams({ filter: normalizeFilterConfig(nextFilter) });
-  }, [applySearchParams]);
 
   const handleTypeToggle = (type: CloudTypeValue) => {
     const currentTypes = effectiveSelectedTypes;
@@ -279,11 +286,11 @@ const SearchUnifiedFilterCard: React.FC = () => {
       return;
     }
 
-    const nextFilter = cloneFilterConfig(searchParams.filter) || {};
+    const nextFilter = cloneFilterConfig(draftFilter) || {};
     const currentValues = new Set(nextFilter[field] || []);
     incomingValues.forEach((value) => currentValues.add(value));
     nextFilter[field] = Array.from(currentValues);
-    applyFilter(nextFilter);
+    setDraftFilter(normalizeFilterConfig(nextFilter));
 
     if (field === "include") {
       setIncludeDraft("");
@@ -293,7 +300,7 @@ const SearchUnifiedFilterCard: React.FC = () => {
   };
 
   const removeKeywordTag = (field: keyof FilterConfig, value: string) => {
-    const nextFilter = cloneFilterConfig(searchParams.filter) || {};
+    const nextFilter = cloneFilterConfig(draftFilter) || {};
     const nextValues = (nextFilter[field] || []).filter((item) => item !== value);
 
     if (nextValues.length > 0) {
@@ -302,11 +309,11 @@ const SearchUnifiedFilterCard: React.FC = () => {
       delete nextFilter[field];
     }
 
-    applyFilter(nextFilter);
+    setDraftFilter(normalizeFilterConfig(nextFilter));
   };
 
   const toggleFacetValue = (field: "mediaTypes", value: string) => {
-    const nextFilter = cloneFilterConfig(searchParams.filter) || {};
+    const nextFilter = cloneFilterConfig(draftFilter) || {};
     const currentValues = new Set(nextFilter[field] || []);
 
     if (currentValues.has(value)) {
@@ -322,7 +329,17 @@ const SearchUnifiedFilterCard: React.FC = () => {
       delete nextFilter[field];
     }
 
-    applyFilter(nextFilter);
+    setDraftFilter(normalizeFilterConfig(nextFilter));
+  };
+
+  const handleApplyAdvancedFilter = () => {
+    applySearchParams({ filter: normalizeFilterConfig(draftFilter) });
+  };
+
+  const handleResetAdvancedFilter = () => {
+    setDraftFilter(undefined);
+    setIncludeDraft("");
+    setExcludeDraft("");
   };
 
   const handleClearAllFilters = () => {
@@ -330,6 +347,9 @@ const SearchUnifiedFilterCard: React.FC = () => {
       return;
     }
 
+    setDraftFilter(undefined);
+    setIncludeDraft("");
+    setExcludeDraft("");
     applySearchParams({
       cloudTypes: [],
       filter: undefined,
@@ -514,7 +534,7 @@ const SearchUnifiedFilterCard: React.FC = () => {
                       className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-x-auto pr-1"
                     >
                       {/* 关键词 chip 需要稳定横向滚动和删除语义，保留原生按钮。 */}
-                      {(activeFilter?.[group.field] || []).map((value) => (
+                      {(draftActiveFilter?.[group.field] || []).map((value) => (
                         <button
                           key={`${group.field}-${value}`}
                           type="button"
@@ -567,7 +587,7 @@ const SearchUnifiedFilterCard: React.FC = () => {
                     <div className="mt-3 flex flex-wrap gap-2">
                       {/* 分面 chip 需要保留计数布局和快速切换状态，保留原生按钮。 */}
                       {group.options.map((option) => {
-                        const isActive = (activeFilter?.[group.field] || []).includes(option.value);
+                        const isActive = (draftActiveFilter?.[group.field] || []).includes(option.value);
                         return (
                           <button
                             key={`${group.field}-${option.value}`}
@@ -592,6 +612,34 @@ const SearchUnifiedFilterCard: React.FC = () => {
                 ))}
               </div>
             ) : null}
+
+            <div className="flex flex-col gap-3 rounded-[1.5rem] border border-cyan-200/60 bg-cyan-50/60 p-4 dark:border-cyan-300/15 dark:bg-cyan-400/[0.07] sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  高级条件待应用
+                </p>
+                <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                  包含词、排除词和媒体类型会先暂存，点击应用后再刷新结果。
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleResetAdvancedFilter}
+                  className="rounded-full"
+                >
+                  重置高级条件
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleApplyAdvancedFilter}
+                  className="rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-700 hover:to-cyan-600"
+                >
+                  应用筛选
+                </Button>
+              </div>
+            </div>
           </div>
         ) : null}
 

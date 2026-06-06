@@ -1,7 +1,7 @@
 import React from "react";
 import { act } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HelmetProvider } from "react-helmet-async";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -109,31 +109,15 @@ const createResponse = (overrides?: Partial<HotRankingResponse>): HotRankingResp
 const renderHotPage = () =>
   render(
     <HelmetProvider>
-      <MemoryRouter initialEntries={["/hot"]}>
+      <MemoryRouter initialEntries={["/trending"]}>
         <Routes>
           <Route path="/" element={<LocationProbe />} />
-          <Route path="/hot" element={<HotPage />} />
+          <Route path="/trending" element={<HotPage />} />
           <Route path="/search" element={<LocationProbe />} />
         </Routes>
       </MemoryRouter>
     </HelmetProvider>,
   );
-
-const findActiveHeroSlide = async () => {
-  const hero = await screen.findByTestId("hot-page-hero");
-  const activeSlide = hero.querySelector<HTMLElement>('[data-active="true"]');
-  expect(activeSlide).not.toBeNull();
-  return activeSlide as HTMLElement;
-};
-
-const findHeroSlideByLabel = async (label: string) => {
-  const hero = await screen.findByTestId("hot-page-hero");
-  await waitFor(() => {
-    const nextSlide = hero.querySelector<HTMLElement>(`[aria-label="${label}"]`);
-    expect(nextSlide).not.toBeNull();
-  });
-  return hero.querySelector<HTMLElement>(`[aria-label="${label}"]`) as HTMLElement;
-};
 
 describe("HotPage", () => {
   beforeEach(() => {
@@ -144,7 +128,7 @@ describe("HotPage", () => {
     );
   });
 
-  it("默认请求每日趋势总榜并渲染轮播与列表", async () => {
+  it("默认请求每日趋势总榜并直接渲染控制台与列表", async () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
@@ -164,20 +148,18 @@ describe("HotPage", () => {
       });
     });
 
-    const activeSlide = await findActiveHeroSlide();
-
-    expect(within(activeSlide).getByText("每日热门内容")).toBeInTheDocument();
-    expect(within(activeSlide).getByRole("heading", { level: 1, name: "沙丘 2" })).toBeInTheDocument();
-    expect(within(activeSlide).queryByRole("button", { name: "查看其他轮播项" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hot-page-hero")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hot-hero-frame")).not.toBeInTheDocument();
+    expect(screen.getByText("热榜控制台")).toBeInTheDocument();
     expect(screen.getAllByTestId("hot-media-card")).toHaveLength(6);
-    expect(screen.getAllByText("沙丘 2").length).toBeGreaterThan(1);
+    expect(screen.getByRole("heading", { level: 3, name: "沙丘 2" })).toBeInTheDocument();
   });
 
   it("切换到每周动漫趋势榜时会重新请求", async () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
-    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
     fireEvent.click(screen.getByRole("button", { name: "每周" }));
     fireEvent.click(screen.getByRole("button", { name: "动漫" }));
@@ -202,7 +184,7 @@ describe("HotPage", () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
-    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
     fireEvent.click(screen.getByLabelText("打开排序菜单"));
     fireEvent.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
@@ -244,7 +226,7 @@ describe("HotPage", () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
-    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
     expect(screen.getByRole("button", { name: "每月" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "每年" })).toBeDisabled();
@@ -257,7 +239,7 @@ describe("HotPage", () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
-    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
     const modeTabs = screen.getByTestId("hot-mode-tabs");
     const periodTabs = screen.getByTestId("hot-period-tabs");
@@ -283,7 +265,7 @@ describe("HotPage", () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
-    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
     expect(screen.queryByTestId("hot-toolbar-summary")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "重置条件" })).toBeInTheDocument();
@@ -321,7 +303,7 @@ describe("HotPage", () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
-    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
     fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
 
@@ -391,7 +373,7 @@ describe("HotPage", () => {
       );
 
     renderHotPage();
-    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
     fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
     await waitFor(() => {
@@ -468,7 +450,7 @@ describe("HotPage", () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
-    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
     fireEvent.click(screen.getByLabelText("打开排序菜单"));
     fireEvent.click(await screen.findByRole("menuitemradio", { name: "按时间" }));
@@ -529,7 +511,7 @@ describe("HotPage", () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
-    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
     await user.click(screen.getByRole("button", { name: "热门榜" }));
     await user.click(screen.getByRole("button", { name: "电影" }));
@@ -579,7 +561,7 @@ describe("HotPage", () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
-    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
     fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
     fireEvent.click(screen.getByRole("button", { name: "每月" }));
@@ -622,7 +604,7 @@ describe("HotPage", () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
-    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
     fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
     fireEvent.click(screen.getByRole("button", { name: "每年" }));
@@ -665,7 +647,7 @@ describe("HotPage", () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
-    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
     fireEvent.click(screen.getByRole("button", { name: "热门榜" }));
 
@@ -703,13 +685,13 @@ describe("HotPage", () => {
     });
   });
 
-  it("点击轮播搜索按钮会跳转到搜索页", async () => {
+  it("点击榜单卡片搜索按钮会跳转到搜索页", async () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
 
-    const activeSlide = await findActiveHeroSlide();
-    fireEvent.click(within(activeSlide).getByRole("button", { name: "立即搜索榜首内容" }));
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
+    fireEvent.click(screen.getAllByRole("button", { name: "搜索" })[0]);
 
     expect(await screen.findByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
     expect(screen.getByTestId("location-probe")).toHaveTextContent(
@@ -835,18 +817,15 @@ describe("HotPage", () => {
 
     renderHotPage();
 
-    expect(screen.getByTestId("hot-page-skeleton")).toBeInTheDocument();
-    expect(screen.getByTestId("hot-page-skeleton-hero")).toBeInTheDocument();
-    expect(
-      screen.getByTestId("hot-page-skeleton-hero").compareDocumentPosition(screen.getByText("热榜控制台")),
-    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(screen.getAllByTestId("hot-page-skeleton-thumbnail")).toHaveLength(5);
+    expect(screen.queryByTestId("hot-page-skeleton")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hot-page-skeleton-hero")).not.toBeInTheDocument();
+    expect(screen.getByText("热榜控制台")).toBeInTheDocument();
     expect(screen.getByTestId("hot-media-grid-skeleton")).toBeInTheDocument();
     expect(screen.getAllByTestId("hot-media-card-skeleton")).toHaveLength(6);
     expect(screen.queryByTestId("hot-page-skeleton-card")).not.toBeInTheDocument();
   });
 
-  it("筛选切换刷新时保留当前内容并展示局部刷新层", async () => {
+  it("筛选切换刷新时不展示轮播并展示局部刷新层", async () => {
     let resolveNextRequest: ((value: HotRankingResponse) => void) | null = null;
     getHotRankingsMock
       .mockResolvedValueOnce(createResponse())
@@ -855,12 +834,13 @@ describe("HotPage", () => {
       }));
 
     renderHotPage();
-    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
     fireEvent.click(screen.getByRole("button", { name: "每周" }));
 
     expect(screen.queryByTestId("hot-page-skeleton")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("heading", { level: 1, name: "沙丘 2" }).length).toBeGreaterThan(0);
+    expect(screen.queryByTestId("hot-page-hero")).not.toBeInTheDocument();
+    expect(screen.getByTestId("hot-media-grid-skeleton")).toBeInTheDocument();
 
     await act(async () => {
       resolveNextRequest?.(createResponse({
@@ -894,37 +874,8 @@ describe("HotPage", () => {
       page: 1,
       page_size: 100,
     });
-    expect(await screen.findByRole("heading", { level: 1, name: "头脑特工队 2" })).toBeInTheDocument();
-  });
-
-  it("点击轮播缩略项后会切换激活内容", async () => {
-    getHotRankingsMock.mockResolvedValue(
-      createResponse({
-        sections: [
-          {
-            category: "movie",
-            title: "热门电影",
-            description: "按热门趋势整理的电影热门内容。",
-            spotlight: createItem(1, "沙丘 2", "movie", "movie"),
-            items: [
-              createItem(1, "沙丘 2", "movie", "movie"),
-              createItem(2, "奥本海默", "movie", "movie"),
-            ],
-          },
-        ],
-      }),
-    );
-
-    renderHotPage();
-    await screen.findByRole("heading", { level: 1, name: "沙丘 2" });
-
-    const previewButton = screen.getByRole("button", { name: /切换到第 2 项：奥本海默/ });
-    fireEvent.click(previewButton);
-
-    await waitFor(async () => {
-      const activeSlide = await findHeroSlideByLabel("2 / 2");
-      expect(within(activeSlide).getByRole("heading", { level: 1, name: "奥本海默" })).toBeInTheDocument();
-    });
+    expect(await screen.findByRole("heading", { level: 3, name: "头脑特工队 2" })).toBeInTheDocument();
+    expect(screen.queryByTestId("hot-media-grid-skeleton")).not.toBeInTheDocument();
   });
 
   it("当前筛选无数据时展示空态引导", async () => {

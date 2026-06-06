@@ -86,7 +86,7 @@ describe('AppRoutes', () => {
   it('keeps only the home route out of the suspense fallback path', () => {
     expect(shouldUseLazyRouteFallback('/')).toBe(false);
     expect(shouldUseLazyRouteFallback('/search')).toBe(true);
-    expect(shouldUseLazyRouteFallback('/hot')).toBe(true);
+    expect(shouldUseLazyRouteFallback('/trending')).toBe(true);
     expect(shouldUseLazyRouteFallback('/resource/resource-1')).toBe(true);
     expect(shouldUseLazyRouteFallback('/login')).toBe(true);
   });
@@ -116,8 +116,8 @@ describe('AppRoutes', () => {
     expect(screen.queryByTestId('cinematic-footer')).not.toBeInTheDocument();
   });
 
-  it('renders the hot page at /hot', async () => {
-    renderRoutesAt('/hot');
+  it('renders the hot page at /trending', async () => {
+    renderRoutesAt('/trending');
 
     expect(await screen.findByText('Hot Page')).toBeInTheDocument();
     expect(screen.getByTestId('navbar')).toBeInTheDocument();

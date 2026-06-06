@@ -380,17 +380,27 @@ export function CinematicFooter() {
         style={{ clipPath: "polygon(0% 0, 100% 0%, 100% 100%, 0 100%)" }}
       >
         <footer className="cinematic-footer-wrapper obsidian-glass-shell fixed bottom-0 left-0 flex h-screen w-full flex-col justify-between overflow-hidden bg-gradient-to-br from-[#050505] via-[#101010] to-[#1d1d1f] text-slate-50 dark:text-slate-50">
-          <div className="footer-aurora animate-footer-breathe pointer-events-none absolute inset-0 z-0 blur-3xl" />
-          <div className="footer-bg-grid pointer-events-none absolute inset-0 z-0" />
+          <div
+            aria-hidden="true"
+            className="footer-aurora animate-footer-breathe pointer-events-none absolute inset-0 z-0 blur-3xl"
+          />
+          <div
+            aria-hidden="true"
+            className="footer-bg-grid pointer-events-none absolute inset-0 z-0"
+          />
 
           <div
             ref={giantTextRef}
+            aria-hidden="true"
             className="footer-giant-bg-text pointer-events-none absolute -bottom-4 left-1/2 z-0 -translate-x-1/2 select-none whitespace-nowrap sm:-bottom-8 md:-bottom-12"
           >
             UNISEARCH
           </div>
 
-          <div className="footer-marquee-band absolute left-0 top-12 z-10 w-full -rotate-2 scale-110 overflow-hidden border-y py-4 shadow-2xl backdrop-blur-md">
+          <div
+            aria-hidden="true"
+            className="footer-marquee-band absolute left-0 top-12 z-10 w-full -rotate-2 scale-110 overflow-hidden border-y py-4 shadow-2xl backdrop-blur-md"
+          >
             <div className="animate-footer-scroll-marquee flex w-max text-xs font-bold uppercase md:text-sm">
               <MarqueeItem />
               <MarqueeItem />

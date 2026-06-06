@@ -94,7 +94,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
       icon: Search,
     },
     {
-      path: '/hot',
+      path: '/trending',
       label: '热门榜单',
       icon: Flame,
     },

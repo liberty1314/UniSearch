@@ -16,6 +16,12 @@ import { getErrorCode, getErrorMessage } from "@/lib/error";
 
 const HOME_QUICK_KEYWORD_LIMIT = 4;
 const HOME_HOT_KEYWORDS_CACHE_TTL = 5 * 60 * 1000;
+const FALLBACK_HOME_QUICK_KEYWORDS = [
+  "电影",
+  "纪录片",
+  "前端教程",
+  "效率工具",
+] as const;
 
 type HomeHotKeywordsCache = {
   keywords: string[];
@@ -73,6 +79,9 @@ const pickHomeHotKeywords = (items: HotRankingItem[] = []) =>
     .filter((title, index, titles) => titles.indexOf(title) === index)
     .slice(0, HOME_QUICK_KEYWORD_LIMIT);
 
+const getFallbackHomeQuickKeywords = () =>
+  [...FALLBACK_HOME_QUICK_KEYWORDS].slice(0, HOME_QUICK_KEYWORD_LIMIT);
+
 const extractHomeHotKeywords = async (): Promise<string[]> => {
   const response = await hotRankingService.getHotRankings({
     mode: "trend",
@@ -102,11 +111,21 @@ const loadHomeHotKeywords = async (): Promise<string[]> => {
   if (!homeHotKeywordsRequest) {
     homeHotKeywordsRequest = extractHomeHotKeywords()
       .then((keywords) => {
+        const nextKeywords =
+          keywords.length > 0 ? keywords : getFallbackHomeQuickKeywords();
         homeHotKeywordsCache = {
-          keywords,
+          keywords: nextKeywords,
           expiresAt: Date.now() + HOME_HOT_KEYWORDS_CACHE_TTL,
         };
-        return keywords;
+        return nextKeywords;
+      })
+      .catch(() => {
+        const fallbackKeywords = getFallbackHomeQuickKeywords();
+        homeHotKeywordsCache = {
+          keywords: fallbackKeywords,
+          expiresAt: Date.now() + HOME_HOT_KEYWORDS_CACHE_TTL,
+        };
+        return fallbackKeywords;
       })
       .finally(() => {
         homeHotKeywordsRequest = null;
@@ -130,6 +149,7 @@ export function useSearchBoxController({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [activeHistoryIndex, setActiveHistoryIndex] = useState(-1);
   const [homeQuickKeywords, setHomeQuickKeywords] = useState<string[]>([]);
   const [isHomeQuickKeywordsLoading, setIsHomeQuickKeywordsLoading] = useState(
     false,
@@ -229,6 +249,7 @@ export function useSearchBoxController({
 
   useEffect(() => {
     if (!showHistory) {
+      setActiveHistoryIndex(-1);
       return;
     }
 
@@ -252,6 +273,19 @@ export function useSearchBoxController({
       document.removeEventListener("focusin", handleFocusIn);
     };
   }, [showHistory]);
+
+  useEffect(() => {
+    if (visibleSearchHistory.length === 0) {
+      setActiveHistoryIndex(-1);
+      return;
+    }
+
+    setActiveHistoryIndex((current) =>
+      current >= visibleSearchHistory.length
+        ? visibleSearchHistory.length - 1
+        : current,
+    );
+  }, [visibleSearchHistory.length]);
 
   const handleSearchError = async (error: unknown) => {
     const errorCode = getErrorCode(error);
@@ -345,6 +379,59 @@ export function useSearchBoxController({
     await executeSearch(keyword);
   };
 
+  const moveHistorySelection = (direction: "next" | "previous") => {
+    if (visibleSearchHistory.length === 0) {
+      return;
+    }
+
+    setShowHistory(true);
+    setActiveHistoryIndex((current) => {
+      if (current < 0) {
+        return direction === "next" ? 0 : visibleSearchHistory.length - 1;
+      }
+
+      if (direction === "next") {
+        return (current + 1) % visibleSearchHistory.length;
+      }
+
+      return (
+        (current - 1 + visibleSearchHistory.length) %
+        visibleSearchHistory.length
+      );
+    });
+  };
+
+  const submitActiveHistory = () => {
+    const keyword = visibleSearchHistory[activeHistoryIndex];
+    if (!showHistory || !keyword) {
+      return false;
+    }
+
+    void (async () => {
+      setInputValue(keyword);
+      await executeSearch(keyword);
+    })();
+    return true;
+  };
+
+  const removeActiveHistory = () => {
+    const keyword = visibleSearchHistory[activeHistoryIndex];
+    if (!showHistory || !keyword) {
+      return false;
+    }
+
+    removeFromHistory(keyword);
+    if (visibleSearchHistory.length <= 1) {
+      setShowHistory(false);
+      setActiveHistoryIndex(-1);
+    } else {
+      setActiveHistoryIndex((current) =>
+        Math.min(current, visibleSearchHistory.length - 2),
+      );
+    }
+    return true;
+  };
+
   return {
     inputRef,
     buttonRef,
@@ -355,6 +442,11 @@ export function useSearchBoxController({
     setIsFocused,
     showHistory,
     setShowHistory,
+    activeHistoryIndex,
+    setActiveHistoryIndex,
+    moveHistorySelection,
+    submitActiveHistory,
+    removeActiveHistory,
     visibleSearchHistory,
     homeQuickKeywords,
     isHomeQuickKeywordsLoading,
@@ -381,7 +473,10 @@ export function useSearchBoxController({
       clearHistory();
       setShowHistory(false);
     },
-    removeHistoryItem: removeFromHistory,
+    removeHistoryItem: (keyword: string) => {
+      removeFromHistory(keyword);
+      setActiveHistoryIndex(-1);
+    },
   };
 }
 

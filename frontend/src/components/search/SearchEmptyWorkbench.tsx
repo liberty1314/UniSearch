@@ -67,13 +67,13 @@ export function SearchEmptyWorkbench({
                 选一个线索，马上开始聚合搜索
               </h2>
               <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300/80">
-                未输入关键词时，这里只保留可执行入口：继续最近搜索、试试热门线索，或直接去热门榜单找当前更值得搜的内容。
+                未输入关键词时，这里只保留可执行入口：继续最近搜索，或从推荐关键词里挑一个线索开始。
               </p>
             </div>
 
             <Link
-              to="/hot"
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-400 px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_34px_rgba(14,165,233,0.24)] transition hover:-translate-y-0.5 hover:from-blue-700 hover:to-cyan-500"
+              to="/trending"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-slate-200/75 bg-white/70 px-4 py-2 text-sm font-medium text-cyan-700 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-white dark:border-white/10 dark:bg-slate-900/42 dark:text-cyan-200 dark:hover:border-cyan-300/30"
             >
               <Flame className="h-4 w-4" />
               查看热门榜单
@@ -103,74 +103,76 @@ export function SearchEmptyWorkbench({
             </div>
           ) : null}
 
-          <div className="grid gap-3 lg:grid-cols-3">
-            {starterGroups.map((group) => {
-              const Icon = group.icon;
-
-              return (
-                <div
-                  key={group.title}
-                  className="rounded-[1.25rem] border border-slate-200/70 bg-white/60 p-4 dark:border-white/10 dark:bg-slate-900/40"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.95rem] bg-cyan-50 text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-200">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        {group.title}
-                      </h3>
-                      <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                        {group.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {group.keywords.map((keyword) => (
-                      <button
-                        key={keyword}
-                        type="button"
-                        onClick={() => onKeywordSearch(keyword)}
-                        className="inline-flex items-center rounded-full border border-slate-200/75 bg-white/80 px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-cyan-400/40 dark:hover:text-cyan-200"
-                        aria-label={`快速搜索 ${keyword}`}
-                      >
-                        {keyword}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="flex flex-col gap-3 rounded-[1.25rem] border border-dashed border-cyan-200/80 bg-cyan-50/35 p-4 dark:border-cyan-300/20 dark:bg-cyan-400/[0.06] sm:flex-row sm:items-center sm:justify-between">
+          <div className="rounded-[1.25rem] border border-slate-200/70 bg-white/60 p-4 dark:border-white/10 dark:bg-slate-900/40">
             <div className="flex min-w-0 items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/80 text-cyan-700 shadow-sm dark:bg-slate-900/50 dark:text-cyan-200">
                 <Sparkles className="h-4 w-4" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  还没有想法？
+                  推荐关键词
                 </p>
                 <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                  试试这些宽泛关键词，再通过结果页筛选网盘类型和关键词。
+                  从常见场景或宽泛线索开始，再到结果页继续筛选网盘类型和关键词。
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 sm:justify-end">
-              {fallbackKeywords.map((keyword) => (
-                <button
-                  key={keyword}
-                  type="button"
-                  onClick={() => onKeywordSearch(keyword)}
-                  className="inline-flex items-center rounded-full border border-white/70 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:text-cyan-200"
-                  aria-label={`试试搜索 ${keyword}`}
-                >
-                  {keyword}
-                </button>
-              ))}
+            <div className="mt-4 grid gap-4 lg:grid-cols-3">
+              {starterGroups.map((group) => {
+                const Icon = group.icon;
+
+                return (
+                  <div key={group.title} className="min-w-0">
+                    <div className="flex items-start gap-2.5">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[0.8rem] bg-cyan-50 text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-200">
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          {group.title}
+                        </h3>
+                        <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                          {group.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {group.keywords.map((keyword) => (
+                        <button
+                          key={keyword}
+                          type="button"
+                          onClick={() => onKeywordSearch(keyword)}
+                          className="inline-flex items-center rounded-full border border-slate-200/75 bg-white/80 px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-cyan-400/40 dark:hover:text-cyan-200"
+                          aria-label={`快速搜索 ${keyword}`}
+                        >
+                          {keyword}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-5 border-t border-slate-200/65 pt-4 dark:border-white/10">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                通用线索
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {fallbackKeywords.map((keyword) => (
+                  <button
+                    key={keyword}
+                    type="button"
+                    onClick={() => onKeywordSearch(keyword)}
+                    className="inline-flex items-center rounded-full border border-white/70 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:text-cyan-200"
+                    aria-label={`试试搜索 ${keyword}`}
+                  >
+                    {keyword}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

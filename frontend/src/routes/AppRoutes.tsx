@@ -93,8 +93,8 @@ const AppRoutes: React.FC = () => {
               element={renderRouteElement('/search', <SearchPage />)}
             />
             <Route
-              path="/hot"
-              element={renderRouteElement('/hot', <HotPage />)}
+              path="/trending"
+              element={renderRouteElement('/trending', <HotPage />)}
             />
             <Route
               path="/resource/:resourceId"

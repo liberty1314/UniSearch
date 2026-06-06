@@ -113,7 +113,7 @@ const renderSearchPage = (
       >
         <Routes>
           <Route path="/" element={<LocationProbe />} />
-          <Route path="/hot" element={<LocationProbe />} />
+          <Route path="/trending" element={<LocationProbe />} />
           <Route path="/login" element={<LocationProbe />} />
           <Route
             path="/search"
@@ -224,14 +224,23 @@ describe("SearchPage", () => {
 
     expect(screen.getByTestId("search-empty-workbench")).toBeInTheDocument();
     expect(screen.getByText("搜索启动台")).toBeInTheDocument();
+    expect(screen.getByText("推荐关键词")).toBeInTheDocument();
+    expect(screen.getByText("通用线索")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "继续搜索 三体" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /查看热门榜单/ })).toHaveAttribute("href", "/hot");
+    const hotRankingLink = screen.getByRole("link", { name: /查看热门榜单/ });
+    expect(hotRankingLink).toHaveAttribute("href", "/trending");
+    expect(hotRankingLink.className).not.toContain("bg-gradient-to-r");
     expect(screen.getByText("auto-focus-on")).toBeInTheDocument();
+    expect(screen.queryByText("还没有想法？")).not.toBeInTheDocument();
     expect(screen.queryByText("search-results")).not.toBeInTheDocument();
   });
 
   it("点击启动台关键词会直接发起搜索并同步地址", () => {
     renderSearchPage("/search");
+
+    expect(screen.queryByText("继续最近搜索")).not.toBeInTheDocument();
+    expect(screen.getByText("推荐关键词")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "试试搜索 电影" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "快速搜索 4K" }));
 
@@ -289,10 +298,10 @@ describe("SearchPage", () => {
     );
   });
 
-  it("returns to the previous page when entering search from the hot ranking page", async () => {
+  it("returns to the previous page when entering search from the trending page", async () => {
     renderSearchPage("/search?q=%E7%94%B5%E5%BD%B1", {
       initialEntries: [
-        { pathname: "/hot" },
+        { pathname: "/trending" },
         { pathname: "/search", search: "?q=%E7%94%B5%E5%BD%B1" },
       ],
       initialIndex: 1,
@@ -302,6 +311,6 @@ describe("SearchPage", () => {
 
     expect(clearResultsMock).toHaveBeenCalled();
     expect(setSearchParamsMock).toHaveBeenCalledWith({ keyword: "" });
-    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/hot"');
+    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/trending"');
   });
 });

@@ -85,3 +85,39 @@
     - scripts/tests/frontend-focused.sh
     - scripts/tests/local-quality.sh
     - docs/readme_2606.md
+
+- [2026-06-06 18:12] feat(frontend): 完善搜索交互并调整热门页路由
+  - Body: 增强搜索框历史记录的键盘导航、选中提交和删除能力，支持搜索结果视图偏好持久化，并将高级筛选改为先暂存后应用。同步收敛首页、空搜索态、热门页和页脚的布局细节，补齐相关前端测试。
+  - Footer: 破坏性变更: 热门内容页路由由 `/hot` 调整为 `/trending`。Migration: 更新导航、文档、外部链接和测试断言中指向 `/hot` 的引用。
+  - Files:
+    - .gitignore
+    - README.md
+    - frontend/src/components/Navbar.tsx
+    - frontend/src/components/SearchBox.tsx
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/SearchUnifiedFilterCard.tsx
+    - frontend/src/components/__tests__/Navbar.test.tsx
+    - frontend/src/components/__tests__/SearchBox.test.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/__tests__/SearchUnifiedFilterCard.test.tsx
+    - frontend/src/components/home/HomeSearchWorkbench.tsx
+    - frontend/src/components/home/TrendingCategories.tsx
+    - frontend/src/components/home/__tests__/TrendingCategories.test.tsx
+    - frontend/src/components/search-box/SearchBoxActions.tsx
+    - frontend/src/components/search-box/SearchHistoryPanel.tsx
+    - frontend/src/components/search-box/SearchInput.tsx
+    - frontend/src/components/search/SearchEmptyWorkbench.tsx
+    - frontend/src/components/trending/HotHeroCarousel.tsx
+    - frontend/src/components/trending/HotPageSkeleton.tsx
+    - frontend/src/components/ui/__tests__/motion-footer.test.tsx
+    - frontend/src/components/ui/motion-footer.tsx
+    - frontend/src/config/constants.ts
+    - frontend/src/hooks/useSearchBoxController.ts
+    - frontend/src/pages/Home.tsx
+    - frontend/src/pages/HotPage.tsx
+    - frontend/src/pages/__tests__/Home.test.tsx
+    - frontend/src/pages/__tests__/HotPage.test.tsx
+    - frontend/src/pages/__tests__/SearchPage.test.tsx
+    - frontend/src/routes/AppRoutes.tsx
+    - frontend/src/routes/__tests__/AppRoutes.test.tsx
+    - docs/readme_2606.md

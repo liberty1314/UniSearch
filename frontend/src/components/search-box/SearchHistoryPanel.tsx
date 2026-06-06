@@ -4,6 +4,8 @@ import { toStyleVars } from "@/lib/styleVars";
 
 interface SearchHistoryPanelProps {
   history: string[];
+  activeIndex: number;
+  onActiveIndexChange: (index: number) => void;
   onSelect: (keyword: string) => void;
   onRemove: (keyword: string) => void;
   onClear: () => void;
@@ -11,6 +13,8 @@ interface SearchHistoryPanelProps {
 
 const SearchHistoryPanel: React.FC<SearchHistoryPanelProps> = ({
   history,
+  activeIndex,
+  onActiveIndexChange,
   onSelect,
   onRemove,
   onClear,
@@ -42,12 +46,17 @@ const SearchHistoryPanel: React.FC<SearchHistoryPanelProps> = ({
     </div>
     <div
       data-testid="search-history-list"
+      role="listbox"
+      aria-label="最近搜索"
       className="max-h-[300px] overflow-y-auto px-6 py-5 dark:bg-transparent"
     >
       <div className="flex flex-wrap gap-2.5">
         {history.map((keyword, index) => (
           <div
             key={keyword}
+            id={`search-history-option-${index}`}
+            role="option"
+            aria-selected={index === activeIndex}
             className="group/history relative max-w-full"
             style={toStyleVars({
               "--history-chip-delay": `${index * 24}ms`,
@@ -55,8 +64,13 @@ const SearchHistoryPanel: React.FC<SearchHistoryPanelProps> = ({
           >
             <button
               type="button"
+              onMouseEnter={() => onActiveIndexChange(index)}
               onClick={() => onSelect(keyword)}
-              className="history-chip-delay inline-flex max-w-full items-center rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-2 text-left text-[14px] font-medium text-slate-700 shadow-sm backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/60 hover:shadow-[0_8px_16px_rgba(0,0,0,0.06)] dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+              className={`history-chip-delay inline-flex max-w-full items-center rounded-full border-[0.5px] px-4 py-2 text-left text-[14px] font-medium shadow-sm backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/60 hover:shadow-[0_8px_16px_rgba(0,0,0,0.06)] dark:hover:bg-white/10 dark:hover:text-white ${
+                index === activeIndex
+                  ? "border-cyan-300/70 bg-cyan-50/80 text-cyan-800 ring-2 ring-cyan-300/45 dark:border-cyan-300/30 dark:bg-cyan-400/12 dark:text-cyan-100 dark:ring-cyan-300/20"
+                  : "border-slate-200/50 bg-white/40 text-slate-700 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-slate-300"
+              }`}
               aria-label={`使用历史记录搜索 ${keyword}`}
             >
               <span className="max-w-[12rem] truncate leading-none">

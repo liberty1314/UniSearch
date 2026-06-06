@@ -1,6 +1,6 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SearchBox } from "@/components/SearchBox";
 import { resetHomeHotKeywordsCacheForTests } from "@/components/searchBoxTestUtils";
@@ -290,14 +290,55 @@ describe("SearchBox", () => {
       <SearchBox accessHint="搜索结果需要登录后查看，输入关键词后会进入登录流程。" />,
     );
 
-    expect(
-      screen.getByText("搜索结果需要登录后查看，输入关键词后会进入登录流程。"),
-    ).toBeInTheDocument();
+    const accessHint = screen.getByText(
+      "搜索结果需要登录后查看，输入关键词后会进入登录流程。",
+    );
+
+    expect(accessHint).toBeInTheDocument();
+    expect(accessHint).toHaveClass("mt-2");
+    expect(accessHint).toHaveClass("text-[11px]");
+    expect(accessHint).toHaveClass("sm:mt-3");
+    expect(accessHint).toHaveClass("sm:text-xs");
 
     const input = screen.getByPlaceholderText("搜索网盘资源...");
     await userEvent.type(input, "星际穿越");
 
     expect(screen.getByRole("button", { name: "搜索" })).toBeEnabled();
+  });
+
+  it("keeps compact mobile spacing for the input, clear button, and search button", async () => {
+    render(<SearchBox />);
+
+    const input = screen.getByPlaceholderText("搜索网盘资源...");
+    expect(input).toHaveClass("pr-24");
+    expect(input).toHaveClass("sm:pr-32");
+
+    await userEvent.type(input, "电影");
+
+    const clearButton = screen.getByRole("button", { name: "清空输入" });
+    const searchButton = screen.getByRole("button", { name: "搜索" });
+
+    expect(clearButton).toHaveClass("right-[84px]");
+    expect(clearButton).toHaveClass("sm:right-[120px]");
+    expect(searchButton).toHaveClass("min-w-[78px]");
+    expect(searchButton).toHaveClass("sm:min-w-[96px]");
+  });
+
+  it("输入法组合态回车不会触发搜索", async () => {
+    render(<SearchBox />);
+
+    const input = screen.getByPlaceholderText("搜索网盘资源...");
+    await userEvent.type(input, "前端教程");
+
+    fireEvent.keyDown(input, {
+      key: "Enter",
+      code: "Enter",
+      keyCode: 229,
+    });
+
+    expect(setSearchParamsMock).not.toHaveBeenCalled();
+    expect(performSearchMock).not.toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
   });
 
   it("anchors the history popover to the search surface instead of the homepage helper chips", async () => {
@@ -309,7 +350,7 @@ describe("SearchBox", () => {
 
     const searchShell = screen.getByTestId("search-box-surface");
     const historyPopover = screen.getByTestId("search-history-surface");
-    const helperChipRow = screen.getByText("热门榜单").parentElement;
+    const helperChipRow = screen.getByText("试试这些").parentElement;
 
     expect(searchShell.parentElement).toContainElement(historyPopover);
     expect(helperChipRow).not.toContainElement(historyPopover);
@@ -337,6 +378,56 @@ describe("SearchBox", () => {
     await waitFor(() => {
       expect(screen.queryByText("最近搜索")).not.toBeInTheDocument();
     });
+  });
+
+  it("supports keyboard navigation and enter search for history items", async () => {
+    searchHistoryState = ["仙逆", "凡人修仙传"];
+
+    render(<SearchBox />);
+
+    const input = screen.getByPlaceholderText("搜索网盘资源...");
+    await userEvent.click(input);
+
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("option", { name: "仙逆" }),
+      ).toHaveAttribute("aria-selected", "true");
+    });
+
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(setSearchParamsMock).toHaveBeenCalledWith({ keyword: "仙逆" });
+    });
+    expect(performSearchMock).not.toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/search?q=%E4%BB%99%E9%80%86",
+      expectHomeToSearchNavigationState(),
+    );
+  });
+
+  it("supports arrow-up selection and backspace removal for history items when input is empty", async () => {
+    searchHistoryState = ["仙逆", "凡人修仙传"];
+
+    render(<SearchBox />);
+
+    const input = screen.getByPlaceholderText("搜索网盘资源...");
+    await userEvent.click(input);
+
+    fireEvent.keyDown(input, { key: "ArrowUp" });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("option", { name: "凡人修仙传" }),
+      ).toHaveAttribute("aria-selected", "true");
+    });
+
+    fireEvent.keyDown(input, { key: "Backspace" });
+
+    expect(removeFromHistoryMock).toHaveBeenCalledWith("凡人修仙传");
+    expect(performSearchMock).not.toHaveBeenCalled();
   });
 
   it("removes a single history item without triggering a search", async () => {
@@ -509,7 +600,7 @@ describe("SearchBox", () => {
 
     render(<SearchBox />);
 
-    expect(screen.getByText("热门榜单")).toBeInTheDocument();
+    expect(screen.getByText("试试这些")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "快速搜索 木乃伊" })).toBeInTheDocument();
     });
@@ -584,7 +675,7 @@ describe("SearchBox", () => {
     expect(getHotRankingsMock).toHaveBeenCalledTimes(1);
   });
 
-  it("renders no fallback keyword chips when the hot ranking request fails", async () => {
+  it("renders fallback keyword chips when the hot ranking request fails", async () => {
     getHotRankingsMock.mockRejectedValue(new Error("boom"));
 
     render(<SearchBox />);
@@ -595,8 +686,32 @@ describe("SearchBox", () => {
       expect(screen.queryByTestId("home-hot-keywords-skeleton")).not.toBeInTheDocument();
     });
 
-    expect(screen.queryByRole("button", { name: /快速搜索/ })).not.toBeInTheDocument();
-    expect(screen.queryByText("流浪地球")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "快速搜索 电影" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "快速搜索 前端教程" }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders fallback keyword chips when hot ranking response has no usable keywords", async () => {
+    getHotRankingsMock.mockResolvedValue({
+      ...baseHotRankingResponse,
+      sections: [],
+    });
+
+    render(<SearchBox />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("home-hot-keywords-skeleton")).not.toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByRole("button", { name: "快速搜索 电影" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "快速搜索 效率工具" }),
+    ).toBeInTheDocument();
   });
 
   it("hides homepage quick keyword chips on the standalone search page", () => {
@@ -609,7 +724,7 @@ describe("SearchBox", () => {
 
     render(<SearchBox />);
 
-    expect(screen.queryByText("热门榜单")).not.toBeInTheDocument();
+    expect(screen.queryByText("试试这些")).not.toBeInTheDocument();
   });
 
   it("clears the homepage input and resets button animation when returning from the search page", async () => {

@@ -102,7 +102,10 @@ const HotHeroCarousel: React.FC<HotHeroCarouselProps> = ({
       aria-roledescription="carousel"
       aria-label={`${titleMap[period]}轮播`}
     >
-      <div className="glass-card-premium relative h-[520px] overflow-hidden rounded-[2rem] bg-slate-950 p-0 shadow-[0_24px_60px_rgba(15,23,42,0.18)] md:h-[560px]">
+      <div
+        className="glass-card-premium relative h-[clamp(420px,68vh,560px)] overflow-hidden rounded-[2rem] bg-slate-950 p-0 shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+        data-testid="hot-hero-frame"
+      >
         <AnimatePresence initial={false}>
           <motion.div
             key={`${activeItem.id}-${period}-${activeIndex}`}
@@ -113,20 +116,24 @@ const HotHeroCarousel: React.FC<HotHeroCarouselProps> = ({
             transition={{ duration: shouldReduceMotion ? 0.18 : 0.46, ease: [0.22, 1, 0.36, 1] }}
           >
             <div
-              className="relative h-[520px] w-full bg-cover bg-center md:h-[560px]"
+              className="relative h-[clamp(420px,68vh,560px)] w-full bg-cover bg-center"
               style={backdropStyle}
               role="group"
               aria-roledescription="slide"
               aria-label={`${activeIndex + 1} / ${items.length}`}
               aria-hidden="false"
               data-active="true"
+              data-testid="hot-hero-slide"
             >
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.14),transparent_32%)]" />
                 <div className="absolute inset-0 bg-gradient-to-r from-slate-950/92 via-slate-950/46 to-slate-950/24" />
                 <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-slate-950/90 via-slate-950/48 to-transparent" />
 
-                <div className="relative z-10 flex h-[520px] flex-col justify-between p-6 pb-28 text-white md:h-[560px] md:p-8 md:pb-32 xl:pb-10">
-                  <div className="flex min-h-0 max-w-full flex-1 flex-col lg:min-h-[400px]">
+                <div
+                  className="relative z-10 flex h-[clamp(420px,68vh,560px)] flex-col justify-between p-6 pb-28 text-white md:p-8 md:pb-32 xl:pb-10"
+                  data-testid="hot-hero-content"
+                >
+                  <div className="flex min-h-0 max-w-full flex-1 flex-col lg:min-h-0">
                     <motion.div
                       className="flex flex-wrap items-center gap-2.5"
                       initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
@@ -176,7 +183,7 @@ const HotHeroCarousel: React.FC<HotHeroCarouselProps> = ({
                     </motion.p>
 
                     <motion.div
-                      className="mt-10 flex flex-col gap-5 lg:mt-auto lg:max-w-2xl lg:pt-16"
+                      className="mt-10 flex flex-col gap-5 lg:mt-auto lg:max-w-2xl lg:pt-10"
                       initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
                       animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
                       transition={{ delay: 0.24, duration: 0.36 }}
@@ -231,68 +238,70 @@ const HotHeroCarousel: React.FC<HotHeroCarouselProps> = ({
           </motion.div>
         </AnimatePresence>
 
-      </div>
+        {hasMultipleItems ? (
+          <div
+            className="absolute inset-x-0 bottom-4 z-20 flex items-center justify-center px-3"
+            data-testid="hot-hero-controls"
+          >
+            <div className="flex min-w-0 items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={goPrev}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-100"
+                aria-label="上一张"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
 
-      {hasMultipleItems ? (
-        <div className="flex items-center justify-center gap-3 px-2">
-          <div className="flex items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={goPrev}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-100"
-              aria-label="上一张"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
+              <div className="flex max-w-full gap-2 overflow-x-auto rounded-2xl bg-white/88 px-3 py-2 shadow-[0_18px_40px_rgba(15,23,42,0.12)] ring-1 ring-slate-200/80 backdrop-blur-md">
+                {items.map((item, index) => {
+                  const previewImage = item.backdrop_url || item.poster_url;
 
-            <div className="flex max-w-full gap-2 overflow-x-auto rounded-2xl bg-white/88 px-3 py-2 shadow-[0_18px_40px_rgba(15,23,42,0.12)] ring-1 ring-slate-200/80 backdrop-blur-md">
-              {items.map((item, index) => {
-                const previewImage = item.backdrop_url || item.poster_url;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => switchTo(index)}
+                      className={`group relative h-16 w-24 shrink-0 overflow-hidden rounded-xl border transition-all md:h-20 md:w-32 ${
+                        index === activeIndex
+                          ? "border-sky-400 shadow-[0_0_0_3px_rgba(56,189,248,0.22)]"
+                          : "border-slate-200 opacity-80 hover:opacity-100"
+                      }`}
+                      aria-label={`切换到第 ${index + 1} 项：${item.title}`}
+                    >
+                      {previewImage ? (
+                        <img
+                          src={previewImage}
+                          alt={item.title}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-[linear-gradient(135deg,#cbd5e1,#94a3b8)]" />
+                      )}
 
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => switchTo(index)}
-                    className={`group relative h-16 w-24 shrink-0 overflow-hidden rounded-xl border transition-all md:h-20 md:w-32 ${
-                      index === activeIndex
-                        ? "border-sky-400 shadow-[0_0_0_3px_rgba(56,189,248,0.22)]"
-                        : "border-slate-200 opacity-80 hover:opacity-100"
-                    }`}
-                    aria-label={`切换到第 ${index + 1} 项：${item.title}`}
-                  >
-                    {previewImage ? (
-                      <img
-                        src={previewImage}
-                        alt={item.title}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-[linear-gradient(135deg,#cbd5e1,#94a3b8)]" />
-                    )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/18 to-transparent" />
+                      <div className="absolute inset-x-0 bottom-0 px-2 pb-2">
+                        <p className="line-clamp-1 text-xs font-semibold text-white">
+                          {item.title}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
 
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/18 to-transparent" />
-                    <div className="absolute inset-x-0 bottom-0 px-2 pb-2">
-                      <p className="line-clamp-1 text-xs font-semibold text-white">
-                        {item.title}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
+              <button
+                type="button"
+                onClick={goNext}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-100"
+                aria-label="下一张"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </button>
             </div>
-
-            <button
-              type="button"
-              onClick={goNext}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-100"
-              aria-label="下一张"
-            >
-              <ArrowRight className="h-4 w-4" />
-            </button>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </section>
   );
 };

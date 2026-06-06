@@ -182,6 +182,7 @@ const renderSearchResults = () =>
 
 describe("SearchResults", () => {
   beforeEach(() => {
+    localStorage.clear();
     searchStoreState = {
       searchResults: {
         total: 1,
@@ -575,5 +576,24 @@ describe("SearchResults", () => {
     fireEvent(window, new Event("resize"));
 
     expect(stage.className).toContain("grid grid-cols-1");
+  });
+
+  it("restores and persists the user's search result view mode preference", async () => {
+    localStorage.setItem(
+      "unisearch_search_results_view_mode",
+      JSON.stringify("list"),
+    );
+
+    renderSearchResults();
+
+    const stage = await screen.findByTestId("search-results-stage");
+    expect(stage.className).toContain("flex flex-col");
+
+    fireEvent.click(screen.getByRole("button", { name: "切换为网格视图" }));
+
+    expect(stage.className).toContain("grid grid-cols-1");
+    expect(localStorage.getItem("unisearch_search_results_view_mode")).toBe(
+      JSON.stringify("grid"),
+    );
   });
 });

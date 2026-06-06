@@ -49,7 +49,7 @@ describe('TrendingCategories', () => {
 
     expect(screen.getByRole('heading', { level: 2, name: '热门分类' })).toBeInTheDocument();
     expect(screen.getByText('不知道搜什么时，先从常见资源方向或热门榜单快速开始。')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '进入热门榜单页' })).toHaveAttribute('href', '/hot');
+    expect(screen.getByRole('link', { name: '进入热门榜单页' })).toHaveAttribute('href', '/trending');
     expect(screen.getByText('先看热度，再搜资源')).toBeInTheDocument();
     expect(screen.getByText('进入榜单页')).toBeInTheDocument();
 

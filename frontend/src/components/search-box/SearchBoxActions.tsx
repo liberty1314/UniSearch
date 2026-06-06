@@ -20,7 +20,7 @@ const SearchBoxActions: React.FC<SearchBoxActionsProps> = ({
       ref={buttonRef}
       onClick={onSearch}
       disabled={disabled}
-      className="h-[44px] min-w-[96px] rounded-[1.5rem] border border-transparent bg-gradient-to-r from-blue-600 to-sky-500 font-semibold text-white shadow-[0_8px_16px_rgba(14,165,233,0.24)] outline-none ring-0 transition-all duration-300 hover:-translate-y-0.5 hover:from-blue-500 hover:to-sky-400 hover:shadow-[0_12px_24px_rgba(14,165,233,0.36)] focus:outline-none active:scale-95 dark:from-blue-600 dark:to-cyan-600 dark:shadow-[0_8px_16px_rgba(8,145,178,0.2)] dark:hover:from-blue-500 dark:hover:to-cyan-500 dark:hover:shadow-[0_12px_24px_rgba(8,145,178,0.36)]"
+      className="h-[44px] min-w-[78px] rounded-[1.5rem] border border-transparent bg-gradient-to-r from-blue-600 to-sky-500 font-semibold text-white shadow-[0_8px_16px_rgba(14,165,233,0.24)] outline-none ring-0 transition-all duration-300 hover:-translate-y-0.5 hover:from-blue-500 hover:to-sky-400 hover:shadow-[0_12px_24px_rgba(14,165,233,0.36)] focus:outline-none active:scale-95 sm:min-w-[96px] dark:from-blue-600 dark:to-cyan-600 dark:shadow-[0_8px_16px_rgba(8,145,178,0.2)] dark:hover:from-blue-500 dark:hover:to-cyan-500 dark:hover:shadow-[0_12px_24px_rgba(8,145,178,0.36)]"
     >
       搜索
     </StatefulButton>

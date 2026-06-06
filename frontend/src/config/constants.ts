@@ -13,7 +13,7 @@ export const TOAST_CONFIG = {
 export const KNOWN_ROUTE_PATTERNS = [
   '/',
   '/search',
-  '/hot',
+  '/trending',
   '/resource/:resourceId',
   '/login',
   '/register',

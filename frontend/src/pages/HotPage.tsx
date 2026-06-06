@@ -3,15 +3,12 @@ import { startTransition } from "react";
 import { useNavigate } from "react-router-dom";
 import PublicPageShell from "@/components/PublicPageShell";
 import SEO from "@/components/SEO";
-import HotHeroCarousel from "@/components/trending/HotHeroCarousel";
 import HotToolbar from "@/components/trending/HotToolbar";
 import HotMediaGrid from "@/components/trending/HotMediaGrid";
-import HotPageSkeleton from "@/components/trending/HotPageSkeleton";
 import { HotMediaGridSkeleton } from "@/components/trending/HotPageSkeleton";
 import HotPageErrorState from "@/components/trending/HotPageErrorState";
 import HotPageEmptyState from "@/components/trending/HotPageEmptyState";
 import {
-  buildHeroItems,
   buildHotPageMeta,
   resolvePrimarySection,
   resolveSecondarySections,
@@ -339,7 +336,6 @@ const HotPage: React.FC = () => {
     () => resolveSecondarySections(data?.sections ?? []),
     [data?.sections],
   );
-  const heroItems = React.useMemo(() => buildHeroItems(primarySection), [primarySection]);
   const renderSections = React.useMemo(() => {
     const sections = [primarySection, ...secondarySections].filter(
       (section): section is NonNullable<typeof section> => Boolean(section),
@@ -347,7 +343,6 @@ const HotPage: React.FC = () => {
 
     return sections;
   }, [primarySection, secondarySections]);
-  const hasHeroItems = heroItems.length > 0;
   const hasListItems = renderSections.some((section) => section.items.length > 0);
 
   return (
@@ -358,20 +353,6 @@ const HotPage: React.FC = () => {
       />
 
       <div className="mx-auto max-w-6xl space-y-8">
-        {loading ? (
-          <HotPageSkeleton />
-        ) : null}
-
-        {!loading && !errorMessage && hasHeroItems ? (
-          <HotHeroCarousel
-            period={period}
-            meta={pageMeta}
-            items={heroItems}
-            onSearch={handleSearch}
-            data-testid="hot-page-hero"
-          />
-        ) : null}
-
         <HotToolbar
           mode={mode}
           period={period}
@@ -441,7 +422,7 @@ const HotPage: React.FC = () => {
           </div>
         ) : null}
 
-        {!loading && !errorMessage && !hasHeroItems && !hasListItems ? (
+        {!loading && !errorMessage && !hasListItems ? (
           <HotPageEmptyState categoryLabel={pageMeta.categoryLabel} />
         ) : null}
       </div>

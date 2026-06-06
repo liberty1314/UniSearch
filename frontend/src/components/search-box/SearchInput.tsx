@@ -11,6 +11,9 @@ interface SearchInputProps {
   onBlur: () => void;
   onEscape: () => void;
   onClear: () => void;
+  onHistoryNavigate?: (direction: "next" | "previous") => void;
+  onHistorySubmit?: () => boolean;
+  onHistoryRemove?: () => boolean;
 }
 
 const SearchInput: React.FC<SearchInputProps> = ({
@@ -23,11 +26,39 @@ const SearchInput: React.FC<SearchInputProps> = ({
   onBlur,
   onEscape,
   onClear,
+  onHistoryNavigate,
+  onHistorySubmit,
+  onHistoryRemove,
 }) => {
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    const isComposing =
+      event.nativeEvent.isComposing || event.keyCode === 229;
+
+    if (event.key === "Enter" && isComposing) {
+      return;
+    }
+
     if (event.key === "Enter") {
       event.preventDefault();
+      if (onHistorySubmit?.()) {
+        return;
+      }
       onSubmit();
+      return;
+    }
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      onHistoryNavigate?.(event.key === "ArrowDown" ? "next" : "previous");
+      return;
+    }
+
+    if (
+      (event.key === "Delete" || event.key === "Backspace") &&
+      value.length === 0 &&
+      onHistoryRemove?.()
+    ) {
+      event.preventDefault();
       return;
     }
 
@@ -61,14 +92,14 @@ const SearchInput: React.FC<SearchInputProps> = ({
         onFocus={onFocus}
         onBlur={onBlur}
         placeholder={placeholder}
-        className="relative z-10 w-full bg-transparent py-4 pl-14 pr-28 text-base text-gray-900 placeholder-slate-400 focus:outline-none sm:py-5 sm:pr-32 sm:text-lg dark:text-slate-100 dark:placeholder:text-slate-500/80"
+        className="relative z-10 w-full bg-transparent py-4 pl-14 pr-24 text-base text-gray-900 placeholder-slate-400 focus:outline-none sm:py-5 sm:pr-32 sm:text-lg dark:text-slate-100 dark:placeholder:text-slate-500/80"
       />
 
       {value ? (
         <button
           type="button"
           onClick={onClear}
-          className="absolute right-[100px] top-1/2 z-20 -translate-y-1/2 rounded-full p-2 text-slate-400 transition-all duration-300 hover:scale-110 hover:bg-slate-100 hover:text-slate-600 active:scale-95 sm:right-[120px] dark:text-slate-500 dark:hover:bg-white/[0.08] dark:hover:text-slate-200"
+          className="absolute right-[84px] top-1/2 z-20 -translate-y-1/2 rounded-full p-2 text-slate-400 transition-all duration-300 hover:scale-110 hover:bg-slate-100 hover:text-slate-600 active:scale-95 sm:right-[120px] dark:text-slate-500 dark:hover:bg-white/[0.08] dark:hover:text-slate-200"
           aria-label="清空输入"
         >
           <IoCloseOutline className="h-5 w-5" />

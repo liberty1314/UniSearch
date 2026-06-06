@@ -22,7 +22,7 @@ export function HomeSearchWorkbench({
       <div className="flex flex-wrap items-center justify-center gap-2 px-2 text-sm">
         <span className="text-slate-500 dark:text-slate-400">不知道搜什么？</span>
         <Link
-          to="/hot"
+          to="/trending"
           className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200/70 bg-cyan-50/75 px-3 py-1.5 font-semibold text-cyan-700 shadow-sm transition hover:bg-cyan-100 dark:border-cyan-300/20 dark:bg-cyan-400/10 dark:text-cyan-200"
         >
           <Flame className="h-4 w-4" />

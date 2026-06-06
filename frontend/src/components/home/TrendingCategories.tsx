@@ -140,7 +140,7 @@ export const TrendingCategories = ({
         className="mb-5"
       >
         <Link
-          to="/hot"
+          to="/trending"
           aria-label="进入热门榜单页"
           data-testid="hot-ranking-entry"
           className="group block"
