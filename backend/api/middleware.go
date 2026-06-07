@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"strings"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"unisearch/config"
 	"unisearch/util"
+	"unisearch/util/logger"
 )
 
 func recordAuthenticatedRequestActivity(c *gin.Context) {
@@ -39,7 +39,12 @@ func recordAuthenticatedRequestActivity(c *gin.Context) {
 	}
 
 	if err := authService.MarkUserActiveByUserID(userID); err != nil {
-		log.Printf("⚠️  记录用户活跃统计失败: path=%s user_id=%d err=%v", c.Request.URL.Path, userID, err)
+		logger.Warn(
+			"auth_activity_record_failed",
+			logger.String("path", c.Request.URL.Path),
+			logger.Any("user_id", userID),
+			logger.Any("error", err),
+		)
 	}
 }
 
@@ -62,47 +67,43 @@ func CORSMiddleware() gin.HandlerFunc {
 // LoggerMiddleware 日志中间件
 func LoggerMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 开始时间
 		startTime := time.Now()
+		requestID := c.GetHeader("X-Request-ID")
+		if requestID == "" {
+			requestID = fmt.Sprintf("%x", startTime.UnixNano())
+		}
+		c.Set("request_id", requestID)
+		c.Writer.Header().Set("X-Request-ID", requestID)
 
-		// 处理请求
 		c.Next()
 
-		// 结束时间
-		endTime := time.Now()
-
-		// 执行时间
-		latencyTime := endTime.Sub(startTime)
-
-		// 请求方式
+		latencyTime := time.Since(startTime)
 		reqMethod := c.Request.Method
-
-		// 请求路由
 		reqURI := c.Request.RequestURI
 
-		// 对于搜索API，尝试解码关键词以便更好地显示
 		displayURI := reqURI
 		if strings.Contains(reqURI, "/api/search") && strings.Contains(reqURI, "kw=") {
 			if parsedURL, err := url.Parse(reqURI); err == nil {
 				if keyword := parsedURL.Query().Get("kw"); keyword != "" {
 					if decodedKeyword, err := url.QueryUnescape(keyword); err == nil {
-						// 替换原始URI中的编码关键词为解码后的关键词
 						displayURI = strings.Replace(reqURI, "kw="+keyword, "kw="+decodedKeyword, 1)
 					}
 				}
 			}
 		}
 
-		// 状态码
 		statusCode := c.Writer.Status()
-
-		// 请求IP
 		clientIP := c.ClientIP()
 
-		// 日志格式
-		gin.DefaultWriter.Write([]byte(
-			fmt.Sprintf("| %s | %s | %s | %d | %s\n",
-				clientIP, reqMethod, displayURI, statusCode, latencyTime.String())))
+		logger.Info(
+			"http_request",
+			logger.String("client_ip", clientIP),
+			logger.String("method", reqMethod),
+			logger.String("path", displayURI),
+			logger.String("request_id", requestID),
+			logger.Int("status", statusCode),
+			logger.Int64("latency_ms", latencyTime.Milliseconds()),
+		)
 	}
 }
 

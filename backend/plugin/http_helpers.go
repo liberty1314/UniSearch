@@ -2,13 +2,12 @@ package plugin
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"unisearch/util/logger"
 )
 
 type HTTPClientOptions struct {
@@ -74,18 +73,19 @@ func ParseHTMLDocument(resp *http.Response) (*goquery.Document, error) {
 }
 
 func LogEvent(pluginName string, event string, fields map[string]interface{}) {
+	loggerFields := make([]logger.Field, 0, len(fields)+2)
+	loggerFields = append(loggerFields, logger.String("plugin", pluginName))
+	loggerFields = append(loggerFields, logger.String("plugin_event", event))
+
 	keys := make([]string, 0, len(fields))
 	for key := range fields {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
 
-	parts := make([]string, 0, len(keys)+2)
-	parts = append(parts, fmt.Sprintf("plugin=%s", pluginName))
-	parts = append(parts, fmt.Sprintf("event=%s", event))
 	for _, key := range keys {
-		parts = append(parts, fmt.Sprintf("%s=%v", key, fields[key]))
+		loggerFields = append(loggerFields, logger.Any(key, fields[key]))
 	}
 
-	log.Printf("[plugin] %s", strings.Join(parts, " "))
+	logger.Info("plugin", loggerFields...)
 }

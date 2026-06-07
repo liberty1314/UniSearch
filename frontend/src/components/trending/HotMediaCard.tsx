@@ -3,6 +3,7 @@ import { Search, Star } from "lucide-react";
 import type { HotRankingItem } from "@/types/hotRanking";
 import type { HotRankingCategory } from "@/types/hotRanking";
 import { getHotCategoryLabel } from "@/components/trending/hotRankingPresentation";
+import { SearchService, type TrendingSearchAction } from "@/services/searchService";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -10,10 +11,14 @@ interface HotMediaCardProps {
   item: HotRankingItem;
   rank: number;
   category: HotRankingCategory;
-  onSearch: (item: HotRankingItem) => void;
+  onSearch: (item: HotRankingItem, action?: TrendingSearchAction) => void;
 }
 
 const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSearch }) => {
+  const searchActions = SearchService.buildTrendingSearchActions(item);
+  const primaryAction = searchActions.find((action) => action.isPrimary) || searchActions[0];
+  const secondaryActions = searchActions.filter((action) => !action.isPrimary);
+
   return (
     <Card className="group p-4 md:p-5" data-testid="hot-media-card">
       <div className="flex flex-col gap-4 sm:flex-row">
@@ -74,21 +79,33 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
             ))}
           </div>
 
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
               <span>上映/首播：{item.release_date || "未知"}</span>
               <span>热度 {item.popularity.toFixed(0)}</span>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onSearch(item)}
-              className="rounded-full"
-            >
-              <Search className="mr-2 h-4 w-4" />
-              搜索
-            </Button>
+            <div className="flex flex-wrap justify-start gap-2 sm:justify-end">
+              {secondaryActions.map((action) => (
+                <button
+                  key={action.key}
+                  type="button"
+                  onClick={() => onSearch(item, action)}
+                  className="rounded-full border border-slate-200/75 bg-white/70 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:border-cyan-200 hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-cyan-300/30 dark:hover:text-cyan-200"
+                >
+                  {action.label}
+                </button>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onSearch(item, primaryAction)}
+                className="rounded-full"
+              >
+                <Search className="mr-2 h-4 w-4" />
+                搜索
+              </Button>
+            </div>
           </div>
         </div>
       </div>

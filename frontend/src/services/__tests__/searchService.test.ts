@@ -122,6 +122,53 @@ describe('SearchService', () => {
     ).toBe('/search');
   });
 
+  it('为热门内容生成去重后的搜索动作', () => {
+    const actions = SearchService.buildTrendingSearchActions({
+      title: '沙丘 2',
+      original_title: 'Dune: Part Two',
+    });
+
+    expect(actions).toEqual([
+      {
+        key: 'title',
+        label: '搜片名',
+        keyword: '沙丘 2',
+        isPrimary: true,
+      },
+      {
+        key: 'original_title',
+        label: '搜原名',
+        keyword: 'Dune: Part Two',
+        isPrimary: false,
+      },
+      {
+        key: 'title_4k',
+        label: '搜 4K',
+        keyword: '沙丘 2 4K',
+        isPrimary: false,
+      },
+      {
+        key: 'title_collection',
+        label: '搜合集',
+        keyword: '沙丘 2 合集',
+        isPrimary: false,
+      },
+    ]);
+  });
+
+  it('热门内容搜索动作会忽略与片名相同的原名', () => {
+    const actions = SearchService.buildTrendingSearchActions({
+      title: '奥本海默',
+      original_title: '奥本海默',
+    });
+
+    expect(actions.map((action) => action.keyword)).toEqual([
+      '奥本海默',
+      '奥本海默 4K',
+      '奥本海默 合集',
+    ]);
+  });
+
   it('ignores legacy advanced filter query fields when parsing URLs', () => {
     expect(
       SearchService.parseSearchUrl(

@@ -35,6 +35,15 @@ const SearchPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const showSearchAccessHint = searchAccessStatus === "anonymous";
+  const fromTrending = (
+    location.state as {
+      fromTrending?: {
+        title?: string;
+        originalTitle?: string;
+        keyword?: string;
+      };
+    } | null
+  )?.fromTrending;
 
   const hasKeyword = useMemo(
     () => Boolean(searchParams.keyword?.trim()),
@@ -140,6 +149,11 @@ const SearchPage: React.FC = () => {
                 ? "输入关键词后会先完成登录确认，系统会保留本次搜索意图并继续查看结果。"
                 : "输入关键词后进入聚合搜索，也可以从最近搜索或热门线索直接开始。"}
             </p>
+            {fromTrending?.title ? (
+              <div className="inline-flex w-fit max-w-full items-center rounded-full border border-cyan-200/70 bg-cyan-50/75 px-3 py-1.5 text-xs font-medium text-cyan-700 dark:border-cyan-300/20 dark:bg-cyan-400/10 dark:text-cyan-200">
+                来自热门榜单：{fromTrending.keyword || fromTrending.title}
+              </div>
+            ) : null}
           </div>
         </div>
 

@@ -45,7 +45,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
         />
         <div
           data-testid="search-box-surface"
-          className="relative z-10 overflow-hidden rounded-[2rem] border-[0.5px] border-white/60 bg-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-[24px] transition-all duration-500 group-focus-within:-translate-y-1 group-focus-within:border-blue-300/60 group-focus-within:bg-white/70 group-focus-within:shadow-[0_20px_60px_rgba(0,0,0,0.08)] dark:border-white/[0.08] dark:bg-slate-950/40 dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] dark:group-focus-within:border-white/[0.15] dark:group-focus-within:bg-slate-800/40 dark:group-focus-within:shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
+          className="relative z-10 overflow-hidden rounded-[2rem] border-[0.5px] border-slate-200/70 bg-white/75 shadow-sm backdrop-blur-xl transition-all duration-300 group-focus-within:border-blue-300/70 group-focus-within:bg-white/[0.85] group-focus-within:shadow-md dark:border-white/[0.08] dark:bg-slate-950/[0.55] dark:shadow-[0_10px_24px_rgba(0,0,0,0.24)] dark:group-focus-within:border-white/[0.15] dark:group-focus-within:bg-slate-800/[0.55]"
         >
           <SearchInput
             inputRef={controller.inputRef}

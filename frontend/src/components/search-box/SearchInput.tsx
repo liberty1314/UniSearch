@@ -71,7 +71,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
   return (
     <>
       <svg
-        className="absolute left-6 top-1/2 z-20 h-6 w-6 -translate-y-1/2 text-slate-400 transition-colors duration-300 group-focus-within:text-blue-500 dark:text-slate-500 dark:group-focus-within:text-blue-400"
+        className="absolute left-6 top-1/2 z-20 h-6 w-6 -translate-y-1/2 text-blue-500 transition-colors duration-300 group-focus-within:text-blue-600 dark:text-cyan-300 dark:group-focus-within:text-cyan-200"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

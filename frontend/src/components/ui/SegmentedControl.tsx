@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { BRAND_SEGMENT_ACTIVE } from '@/lib/brandTheme';
 
 export interface SegmentedControlOption<T extends string> {
   value: T;
@@ -51,7 +52,7 @@ export function SegmentedControl<T extends string>({
             className={cn(
               'min-h-9 rounded-[0.8rem] px-3.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45 dark:focus-visible:ring-offset-slate-950',
               isActive
-                ? activeClassName ?? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_10px_24px_rgba(14,165,233,0.24)]'
+                ? activeClassName ?? BRAND_SEGMENT_ACTIVE
                 : 'text-slate-600 hover:bg-white/75 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/8 dark:hover:text-white',
               buttonClassName,
             )}

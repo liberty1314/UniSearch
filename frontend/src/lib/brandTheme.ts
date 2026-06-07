@@ -26,3 +26,15 @@ export const BLUE_CYAN_HOVER_TEXT = 'hover:text-blue-600 dark:hover:text-cyan-30
 export const BLUE_CYAN_HOVER_SURFACE = 'hover:bg-blue-50 dark:hover:bg-cyan-950/30';
 export const BLUE_CYAN_LINK_ACCENT =
   'hover:text-blue-600 dark:hover:text-cyan-300 hover:decoration-blue-500 dark:hover:decoration-cyan-300 focus-visible:ring-cyan-500/40';
+
+export const BRAND_PRIMARY_SURFACE = 'bg-blue-700 dark:bg-blue-500';
+export const BRAND_PRIMARY_SURFACE_HOVER = 'hover:bg-blue-800 dark:hover:bg-blue-400';
+export const BRAND_PRIMARY_TEXT = 'text-blue-700 dark:text-blue-300';
+export const BRAND_PRIMARY_TEXT_STRONG = 'text-blue-950 dark:text-blue-100';
+export const BRAND_PRIMARY_SOFT_SURFACE = 'bg-blue-50 dark:bg-blue-950/30';
+export const BRAND_PRIMARY_BORDER = 'border-blue-200 dark:border-blue-800/70';
+export const BRAND_PRIMARY_FOCUS_RING = 'focus-visible:ring-blue-500/45';
+export const BRAND_PRIMARY_BUTTON =
+  `${BRAND_PRIMARY_SURFACE} ${BRAND_PRIMARY_SURFACE_HOVER} text-white border border-blue-700 shadow-sm hover:shadow-md dark:border-blue-400`;
+export const BRAND_SEGMENT_ACTIVE =
+  `${BRAND_PRIMARY_SURFACE} text-white shadow-sm`;

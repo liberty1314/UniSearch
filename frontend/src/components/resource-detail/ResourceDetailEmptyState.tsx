@@ -8,6 +8,8 @@ interface ResourceDetailEmptyStateProps {
   backLabel: string;
   testId: string;
   onBack: () => void;
+  retryLabel?: string;
+  onRetrySearch?: () => void;
   onHome: () => void;
 }
 
@@ -17,6 +19,8 @@ const ResourceDetailEmptyState: React.FC<ResourceDetailEmptyStateProps> = ({
   backLabel,
   testId,
   onBack,
+  retryLabel,
+  onRetrySearch,
   onHome,
 }) => {
   return (
@@ -58,6 +62,16 @@ const ResourceDetailEmptyState: React.FC<ResourceDetailEmptyStateProps> = ({
             <Button type="button" onClick={onBack} className="rounded-full">
               {backLabel}
             </Button>
+            {retryLabel && onRetrySearch ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onRetrySearch}
+                className="rounded-full"
+              >
+                {retryLabel}
+              </Button>
+            ) : null}
             <Button type="button" variant="outline" onClick={onHome} className="rounded-full">
               返回首页
             </Button>

@@ -14,7 +14,7 @@ import {
   resolveSecondarySections,
 } from "@/components/trending/hotRankingPresentation";
 import { hotRankingService } from "@/services/hotRankingService";
-import { SearchService } from "@/services/searchService";
+import { SearchService, type TrendingSearchAction } from "@/services/searchService";
 import type {
   HotRankingCategory,
   HotRankingItem,
@@ -314,10 +314,13 @@ const HotPage: React.FC = () => {
     }
   };
 
-  const handleSearch = (item: HotRankingItem) => {
+  const handleSearch = (item: HotRankingItem, action?: TrendingSearchAction) => {
+    const searchAction = action || SearchService.buildTrendingSearchActions(item)[0];
+    const keyword = searchAction?.keyword || item.title;
+
     navigate(
       SearchService.buildSearchUrl({
-        keyword: item.title,
+        keyword,
         source: "all",
         resultType: "merge",
         cloudTypes: [],
@@ -327,6 +330,18 @@ const HotPage: React.FC = () => {
         refresh: false,
         ext: {},
       }),
+      {
+        state: {
+          fromTrending: {
+            title: item.title,
+            originalTitle: item.original_title,
+            keyword,
+            actionKey: searchAction?.key || "title",
+            category: item.ranking_category,
+            mediaType: item.media_type,
+          },
+        },
+      },
     );
   };
 

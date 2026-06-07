@@ -1,7 +1,6 @@
 package service
 
 import (
-	"log"
 	"sync"
 	"time"
 
@@ -44,12 +43,9 @@ func (e *tgSearchExecutor) Search(keyword string, channels []string, forceRefres
 	cacheKey := cache.GenerateTGCacheKey(keyword)
 	if !forceRefresh {
 		var cachedResults []model.SearchResult
-		cacheHit, cacheErr := e.searchCache.Load("tg", cacheKey, keyword, &cachedResults)
+		cacheHit, _ := e.searchCache.Load("tg", cacheKey, keyword, &cachedResults)
 		if cacheHit {
 			return cachedResults, nil
-		}
-		if cacheErr != nil {
-			log.Printf("⚠️ [TG搜索:%s] Redis 缓存读取失败: %v，降级到数据源查询", keyword, cacheErr)
 		}
 	}
 
@@ -116,12 +112,9 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 	cacheKey := cache.GeneratePluginCacheKey(keyword, availablePluginNames)
 	if !forceRefresh {
 		var cachedResults []model.SearchResult
-		cacheHit, cacheErr := e.searchCache.Load("plugin", cacheKey, keyword, &cachedResults)
+		cacheHit, _ := e.searchCache.Load("plugin", cacheKey, keyword, &cachedResults)
 		if cacheHit {
 			return cachedResults, nil, nil
-		}
-		if cacheErr != nil {
-			log.Printf("⚠️ [插件搜索] Redis 缓存读取失败，降级到直接查询 - 关键词: %s, 错误: %v", keyword, cacheErr)
 		}
 	}
 

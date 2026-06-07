@@ -287,15 +287,32 @@ export function useSearchBoxController({
     );
   }, [visibleSearchHistory.length]);
 
-  const handleSearchError = async (error: unknown) => {
+  const handleSearchError = async (error: unknown, keyword?: string) => {
     const errorCode = getErrorCode(error);
     const errorMessage = getErrorMessage(error, "搜索失败");
+    const nextKeyword = keyword?.trim();
 
     if (errorCode === 401) {
       if (!isAdmin && token) {
         logout();
         toast.error("登录状态已失效，请重新登录");
-        navigate("/login");
+        navigate("/login", {
+          state: nextKeyword
+            ? {
+                from: buildRouteSnapshotFromUrl(
+                  SearchService.buildSearchUrl({
+                    ...searchParams,
+                    keyword: nextKeyword,
+                  }),
+                ),
+                pendingSearch: {
+                  keyword: nextKeyword,
+                },
+              }
+            : {
+                from: getCurrentRouteSnapshot(),
+              },
+        });
         return undefined;
       }
       toast.warning("搜索前请先登录", { duration: 3000 });
@@ -351,7 +368,7 @@ export function useSearchBoxController({
       onSearch?.(keyword);
       setShowHistory(false);
     } catch (error) {
-      await handleSearchError(error);
+      await handleSearchError(error, keyword);
     }
   };
 

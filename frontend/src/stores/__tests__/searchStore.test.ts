@@ -129,6 +129,35 @@ describe("searchStore", () => {
     );
   });
 
+  it("成功搜索后会写入最近资源快照", async () => {
+    const { useSearchStore } = await import("@/stores/searchStore");
+
+    searchMock.mockResolvedValueOnce(buildSearchResults("你的名字 4K"));
+
+    await useSearchStore
+      .getState()
+      .performSearch({ keyword: "你的名字" });
+
+    const snapshots = JSON.parse(
+      localStorage.getItem("unisearch_recent_resource_snapshots") || "[]",
+    ) as Array<{
+      keyword?: string;
+      resource?: {
+        id?: string;
+        title?: string;
+      };
+    }>;
+
+    expect(snapshots[0]).toMatchObject({
+      keyword: "你的名字",
+      resource: {
+        id: "resource-1",
+        title: "你的名字 4K",
+      },
+    });
+    expect(snapshots.length).toBeLessThanOrEqual(20);
+  });
+
   it("清空结果会作废尚未完成的搜索请求", async () => {
     const { useSearchStore } = await import("@/stores/searchStore");
 

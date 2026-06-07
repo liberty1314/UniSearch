@@ -3,12 +3,12 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"sync/atomic"
 
 	"unisearch/config"
 	"unisearch/util/cache"
+	"unisearch/util/logger"
 )
 
 type SearchCache interface {
@@ -89,7 +89,12 @@ func (c *redisSearchCache) Load(scope string, key string, keyword string, target
 		})
 		return false, nil
 	default:
-		log.Printf("⚠️ [%s搜索] Redis 缓存读取失败: %v", scope, err)
+		logger.Warn(
+			"search_cache_load_failed",
+			logger.String("scope", scope),
+			logger.String("keyword", keyword),
+			logger.Any("error", err),
+		)
 		return false, err
 	}
 }
@@ -121,7 +126,7 @@ func (c *redisSearchCache) Store(scope string, key string, keyword string, value
 	case c.storeQueue <- request:
 	default:
 		if c.droppedWriteLogs.Add(1) == 1 {
-			log.Printf("⚠️ 搜索缓存写队列已满，后续写入将被丢弃直至队列恢复")
+			logger.Warn("search_cache_store_queue_full")
 		}
 	}
 }
@@ -168,7 +173,12 @@ func (c *redisSearchCache) storeWorker() {
 
 func (c *redisSearchCache) writeToCache(request cacheStoreRequest) {
 	if err := c.cache.Set(context.Background(), request.key, request.value); err != nil {
-		log.Printf("❌ [%s搜索] Redis 缓存写入失败: %v", request.scope, err)
+		logger.Error(
+			"search_cache_store_failed",
+			logger.String("scope", request.scope),
+			logger.String("keyword", request.keyword),
+			logger.Any("error", err),
+		)
 		return
 	}
 

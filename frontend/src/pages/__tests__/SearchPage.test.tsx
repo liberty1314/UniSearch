@@ -235,6 +235,28 @@ describe("SearchPage", () => {
     expect(screen.queryByText("search-results")).not.toBeInTheDocument();
   });
 
+  it("从热门榜单进入时展示来源提示", () => {
+    searchStoreState.searchParams.keyword = "沙丘 2 4K";
+
+    renderSearchPage("/search?q=%E6%B2%99%E4%B8%98%202%204K", {
+      initialEntries: [
+        {
+          pathname: "/search",
+          search: "?q=%E6%B2%99%E4%B8%98%202%204K",
+          state: {
+            fromTrending: {
+              title: "沙丘 2",
+              originalTitle: "Dune: Part Two",
+              keyword: "沙丘 2 4K",
+            },
+          },
+        },
+      ],
+    });
+
+    expect(screen.getByText("来自热门榜单：沙丘 2 4K")).toBeInTheDocument();
+  });
+
   it("点击启动台关键词会直接发起搜索并同步地址", () => {
     renderSearchPage("/search");
 

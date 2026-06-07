@@ -80,6 +80,25 @@ scripts/tests/frontend-focused.sh
 scripts/tests/local-quality.sh
 ```
 
+发布候选验证会在完整质量检查之外，追加 Docker 镜像 smoke、临时 MySQL/Redis 迁移验证和 Playwright E2E：
+
+```bash
+scripts/tests/release-candidate.sh
+```
+
+也可以按风险单独运行：
+
+```bash
+# 验证 Docker 镜像内主程序和迁移程序可执行
+scripts/tests/docker-smoke.sh
+
+# 启动临时 MySQL/Redis 并执行迁移
+scripts/tests/integration-env.sh
+
+# 运行前端端到端测试
+cd frontend && pnpm exec playwright test
+```
+
 任一脚本失败时先保留失败输出，优先单独重跑对应聚焦命令确认是否为稳定失败；稳定失败必须修复后再继续提交。
 
 前端生产构建默认不生成 sourcemap，减少静态产物体积。若需要为线上问题定位生成 hidden sourcemap，可执行：

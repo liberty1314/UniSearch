@@ -273,7 +273,7 @@ describe('Home', () => {
     expect(screen.getByTestId('public-page-glow')).toBeInTheDocument();
   });
 
-  it('keeps homepage hero and section typography on the blue/cyan theme axis', () => {
+  it('restores the blue-cyan gradient hero brand text', () => {
     searchAccessStatus = 'authenticated';
 
     renderHome();
@@ -284,6 +284,8 @@ describe('Home', () => {
     const animatedGrid = screen.getByTestId('animated-grid');
 
     expect(heroTitle).toHaveAttribute('data-colors', '#3b82f6,#0ea5e9,#06b6d4');
+    expect(heroTitle.className).toContain('text-4xl');
+    expect(heroTitle.className).toContain('font-extrabold');
     expect(heroSubtitle.className).toContain('text-slate-900');
     expect(heroSubtitle.className).not.toContain('text-transparent');
     expect(sectionTitle.className).toContain('text-blue-950');

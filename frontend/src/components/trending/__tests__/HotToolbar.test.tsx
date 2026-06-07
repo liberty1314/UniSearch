@@ -54,10 +54,13 @@ describe("HotToolbar", () => {
     expect(screen.getByRole("group", { name: "内容分类" })).toBeInTheDocument();
   });
 
-  it("内容分类选中态使用统一蓝青渐变", () => {
+  it("内容分类选中态使用统一纯色品牌色", () => {
     render(<HotToolbar {...baseProps} />);
 
-    expect(screen.getByRole("button", { name: "全部" }).className).toContain("from-blue-600");
+    const activeButton = screen.getByRole("button", { name: "全部" });
+
+    expect(activeButton.className).toContain("bg-blue-700");
+    expect(activeButton.className).not.toContain("from-blue-600");
   });
 
   it("控制台卡片使用非等宽列给时间和分类保留完整宽度", () => {

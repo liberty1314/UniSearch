@@ -2,6 +2,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { configDefaults } from "vitest/config";
 
 // https://vite.dev/config/
 export default defineConfig(() => {
@@ -14,6 +15,12 @@ export default defineConfig(() => {
       setupFiles: "./src/test/setup.ts",
       testTimeout: 15000,
       hookTimeout: 15000,
+      exclude: [
+        ...configDefaults.exclude,
+        "e2e/**",
+        "playwright-report/**",
+        "test-results/**",
+      ],
     },
     build: {
       sourcemap: enableSourcemap ? "hidden" as const : false,

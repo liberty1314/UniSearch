@@ -87,6 +87,8 @@ const LoginPage: React.FC = () => {
   // Animation State
   const particles = useAuthParticles();
   const routeState = location.state as AuthTransitionState | null;
+  const redirectState = location.state as RedirectLocationState | null;
+  const pendingKeyword = redirectState?.pendingSearch?.keyword?.trim();
   const authDirection = resolveAuthDirection(
     typeof routeState?.from === "string" ? routeState.from : undefined,
     location.pathname,
@@ -133,8 +135,7 @@ const LoginPage: React.FC = () => {
           response.refresh_token || null,
         );
         toast.success("登录成功，欢迎访问 UniSearch！");
-        const redirectState = location.state as RedirectLocationState | null;
-        const nextKeyword = redirectState?.pendingSearch?.keyword?.trim();
+        const nextKeyword = pendingKeyword;
         const redirectTarget = resolveRedirectTarget(redirectState);
         if (nextKeyword) {
           navigate(redirectTarget, {
@@ -239,6 +240,12 @@ const LoginPage: React.FC = () => {
                   onChange={(e) => setUsername(e.target.value)}
                   disabled={isLoading}
                 />
+
+                {pendingKeyword ? (
+                  <p className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 dark:border-blue-300/20 dark:bg-blue-400/10 dark:text-blue-200">
+                    登录后继续搜索：{pendingKeyword}
+                  </p>
+                ) : null}
 
                 <AuthInput
                   id="password"

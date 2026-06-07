@@ -241,6 +241,8 @@ pids
 .pnpm-store/
 frontend/.vite/
 frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
 
 # Backup files
 *.bak
@@ -348,6 +350,7 @@ DESIGN.md
 # ui
 .shared/
 .playwright-mcp/
+.impeccable/
 
 logs/
 #  IDE 配置文件
@@ -363,4 +366,3 @@ docs/superpowers/
 
 # 测试文件
 testsprite_tests/
-

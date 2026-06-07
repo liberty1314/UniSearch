@@ -257,11 +257,11 @@ describe("SearchBox", () => {
     render(<SearchBox />);
 
     const searchShell = screen.getByTestId("search-box-surface");
-    expect(searchShell).toHaveClass("bg-white/60");
-    expect(searchShell).toHaveClass("dark:bg-slate-950/40");
-    expect(searchShell).toHaveClass("border-white/60");
+    expect(searchShell).toHaveClass("bg-white/75");
+    expect(searchShell).toHaveClass("dark:bg-slate-950/[0.55]");
+    expect(searchShell).toHaveClass("border-slate-200/70");
     expect(searchShell).toHaveClass("dark:border-white/[0.08]");
-    expect(searchShell).toHaveClass("group-focus-within:border-blue-300/60");
+    expect(searchShell).toHaveClass("group-focus-within:border-blue-300/70");
 
     await userEvent.click(screen.getByPlaceholderText("搜索网盘资源..."));
 
@@ -963,7 +963,7 @@ describe("SearchBox", () => {
     );
   });
 
-  it("logs out expired JWT sessions and sends them back to /login", async () => {
+  it("logs out expired JWT sessions and sends them back to /login with the pending search", async () => {
     currentLocation = {
       pathname: "/search",
       search: "",
@@ -988,6 +988,19 @@ describe("SearchBox", () => {
       expect(logoutMock).toHaveBeenCalled();
     });
     expect(errorToastMock).toHaveBeenCalledWith("登录状态已失效，请重新登录");
-    expect(navigateMock).toHaveBeenCalledWith("/login");
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/login",
+      expect.objectContaining({
+        state: expect.objectContaining({
+          pendingSearch: {
+            keyword: "凡人修仙传",
+          },
+          from: expect.objectContaining({
+            pathname: "/search",
+            search: "?q=%E5%87%A1%E4%BA%BA%E4%BF%AE%E4%BB%99%E4%BC%A0",
+          }),
+        }),
+      }),
+    );
   });
 });

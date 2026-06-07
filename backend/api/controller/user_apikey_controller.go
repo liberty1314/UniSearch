@@ -4,6 +4,7 @@ import (
 	"log"
 	"strings"
 	"unisearch/service"
+	"unisearch/util/logger"
 
 	"github.com/gin-gonic/gin"
 )
@@ -133,7 +134,11 @@ func (ctrl *UserAPIKeyController) BindAPIKey(c *gin.Context) {
 		return
 	}
 
-	log.Printf("✓ 用户 %d 成功绑定 API Key: %s", uid, req.Key[:10]+"...")
+	logger.Info(
+		"user_api_key_bound",
+		logger.Any("api_key", req.Key),
+		logger.Any("user_id", uid),
+	)
 	c.JSON(200, gin.H{
 		"code":    200,
 		"message": "绑定成功",
@@ -150,7 +155,7 @@ func (ctrl *UserAPIKeyController) GetAPIKey(c *gin.Context) {
 	// 优先从 Context 获取 API Key（用于 API Key 登录的用户）
 	if apiKeyStr, exists := c.Get("api_key"); exists {
 		if key, ok := apiKeyStr.(string); ok && key != "" {
-			log.Printf("🔑 GetAPIKey: 检测到 API Key 登录，Key=%s...", key[:10])
+			logger.Info("user_api_key_session_detected", logger.Any("api_key", key))
 			// 通过 API Key 登录，直接查询该 API Key 的信息
 			apiKey, err := ctrl.apiKeyService.GetKey(key)
 			if err != nil {
@@ -164,7 +169,7 @@ func (ctrl *UserAPIKeyController) GetAPIKey(c *gin.Context) {
 			}
 
 			log.Printf("✓ GetAPIKey: 成功获取 API Key 信息，FirstUsedAt=%v, ExpiresAt=%v", apiKey.FirstUsedAt, apiKey.ExpiresAt)
-			
+
 			// 返回 API Key 信息
 			c.JSON(200, gin.H{
 				"code":    200,
@@ -183,7 +188,7 @@ func (ctrl *UserAPIKeyController) GetAPIKey(c *gin.Context) {
 	}
 
 	log.Printf("🔑 GetAPIKey: 未检测到 API Key 登录，尝试从用户绑定获取")
-	
+
 	// 从 Context 获取用户 ID（由 JWT 中间件设置）
 	userID, exists := c.Get("user_id")
 	if !exists {

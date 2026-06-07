@@ -7,6 +7,7 @@ import type {
   CloudTypeValue,
   FilterConfig,
 } from '@/types/api';
+import type { HotRankingItem } from '@/types/hotRanking';
 import { normalizeFilterConfig } from '@/utils/searchFilters';
 
 const HEALTH_CACHE_TTL_MS = 5000;
@@ -17,6 +18,13 @@ let healthCache:
     }
   | null = null;
 let healthRequest: Promise<HealthResponse> | null = null;
+
+export interface TrendingSearchAction {
+  key: 'title' | 'original_title' | 'title_4k' | 'title_collection';
+  label: string;
+  keyword: string;
+  isPrimary: boolean;
+}
 
 /**
  * 搜索服务类
@@ -158,6 +166,56 @@ export class SearchService {
     }
 
     return { valid: true };
+  }
+
+  /**
+   * 为热门内容生成可执行的搜索线索。
+   */
+  static buildTrendingSearchActions(
+    item: Pick<HotRankingItem, 'title' | 'original_title'>,
+  ): TrendingSearchAction[] {
+    const title = item.title.trim();
+    const originalTitle = item.original_title.trim();
+    const baseTitle = title || originalTitle;
+    const candidates: TrendingSearchAction[] = [
+      {
+        key: 'title',
+        label: '搜片名',
+        keyword: baseTitle,
+        isPrimary: true,
+      },
+      {
+        key: 'original_title',
+        label: '搜原名',
+        keyword: originalTitle,
+        isPrimary: false,
+      },
+      {
+        key: 'title_4k',
+        label: '搜 4K',
+        keyword: `${baseTitle} 4K`,
+        isPrimary: false,
+      },
+      {
+        key: 'title_collection',
+        label: '搜合集',
+        keyword: `${baseTitle} 合集`,
+        isPrimary: false,
+      },
+    ];
+    const seenKeywords = new Set<string>();
+
+    return candidates.filter((action) => {
+      const keyword = action.keyword.trim();
+      const normalizedKeyword = keyword.toLocaleLowerCase();
+      if (!keyword || seenKeywords.has(normalizedKeyword)) {
+        return false;
+      }
+
+      seenKeywords.add(normalizedKeyword);
+      action.keyword = keyword;
+      return true;
+    });
   }
 
   /**

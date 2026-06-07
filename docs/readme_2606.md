@@ -121,3 +121,71 @@
     - frontend/src/routes/AppRoutes.tsx
     - frontend/src/routes/__tests__/AppRoutes.test.tsx
     - docs/readme_2606.md
+
+- [2026-06-07 21:21] feat(release): 新增发布候选验证与资源快照兜底
+  - Body: 新增发布候选、Docker smoke、临时集成环境和 Playwright E2E 验证入口，并补充产品定位文档。同步引入结构化日志与敏感字段脱敏，增加搜索资源快照缓存，让详情页在刷新或缺少路由状态时仍可恢复资源内容。
+  - Files:
+    - .gitignore
+    - .impeccable/live/config.json
+    - PRODUCT.md
+    - README.md
+    - backend/api/controller/apikey_controller.go
+    - backend/api/controller/user_apikey_controller.go
+    - backend/api/middleware.go
+    - backend/api/middleware/jwt_auth.go
+    - backend/api/router.go
+    - backend/database/json_migrator.go
+    - backend/plugin/http_helpers.go
+    - backend/service/search_cache.go
+    - backend/service/search_executor.go
+    - backend/service/search_metrics.go
+    - backend/util/logger/logger.go
+    - backend/util/logger/logger_test.go
+    - docs/2026-06-07-next-optimization-development-plan.md
+    - docs/2026-06-07-next-optimization-roadmap.md
+    - frontend/e2e/admin-plugin.spec.ts
+    - frontend/e2e/auth-resume-search.spec.ts
+    - frontend/e2e/home-search.spec.ts
+    - frontend/e2e/test-helpers.ts
+    - frontend/e2e/trending-search.spec.ts
+    - frontend/package.json
+    - frontend/playwright.config.ts
+    - frontend/pnpm-lock.yaml
+    - frontend/src/components/SearchBox.tsx
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/__tests__/SearchBox.test.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/home/SearchResultsEmptyState.tsx
+    - frontend/src/components/resource-detail/ResourceDetailEmptyState.tsx
+    - frontend/src/components/search-box/SearchInput.tsx
+    - frontend/src/components/search-results/SearchResultsState.tsx
+    - frontend/src/components/trending/HotMediaCard.tsx
+    - frontend/src/components/trending/__tests__/HotMediaCard.test.tsx
+    - frontend/src/components/trending/__tests__/HotToolbar.test.tsx
+    - frontend/src/components/ui/SegmentedControl.tsx
+    - frontend/src/components/ui/button.tsx
+    - frontend/src/hooks/useSearchBoxController.ts
+    - frontend/src/index.css
+    - frontend/src/lib/__tests__/resourceSnapshot.test.ts
+    - frontend/src/lib/brandTheme.ts
+    - frontend/src/lib/resourceSnapshot.ts
+    - frontend/src/pages/Home.tsx
+    - frontend/src/pages/HotPage.tsx
+    - frontend/src/pages/LoginPage.tsx
+    - frontend/src/pages/ResourceDetailPage.tsx
+    - frontend/src/pages/SearchPage.tsx
+    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
+    - frontend/src/pages/__tests__/Home.test.tsx
+    - frontend/src/pages/__tests__/HotPage.test.tsx
+    - frontend/src/pages/__tests__/ResourceDetailPage.test.tsx
+    - frontend/src/pages/__tests__/SearchPage.test.tsx
+    - frontend/src/services/__tests__/searchService.test.ts
+    - frontend/src/services/searchService.ts
+    - frontend/src/stores/__tests__/searchStore.test.ts
+    - frontend/src/stores/searchStore.ts
+    - frontend/vite.config.ts
+    - scripts/tests/docker-smoke.sh
+    - scripts/tests/integration-env.sh
+    - scripts/tests/lib/docker-preflight.sh
+    - scripts/tests/release-candidate.sh
+    - docs/readme_2606.md

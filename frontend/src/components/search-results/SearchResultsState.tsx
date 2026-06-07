@@ -2,7 +2,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { SearchResultsSkeleton } from "@/components/SkeletonLoader";
 import { SearchResultsEmptyState } from "@/components/home/SearchResultsEmptyState";
-import type { SearchParams } from "@/types/api";
+import type { SearchParams, SearchSourceWarning } from "@/types/api";
 
 type ViewMode = "list" | "grid";
 
@@ -16,6 +16,7 @@ interface SearchResultsStateProps {
   viewMode: ViewMode;
   keyword?: string;
   hasAnyActiveFilters: boolean;
+  sourceWarnings?: SearchSourceWarning[];
   searchParams: SearchParams;
   onRetry: (params: SearchParams) => void;
   onClearFilters: () => void;
@@ -32,16 +33,20 @@ const SearchResultsState: React.FC<SearchResultsStateProps> = ({
   viewMode,
   keyword,
   hasAnyActiveFilters,
+  sourceWarnings = [],
   searchParams,
   onRetry,
   onClearFilters,
   onSuggestSearch,
 }) => {
+  const hasSourceWarnings = sourceWarnings.length > 0;
+
   if (error) {
     return (
       <SearchResultsEmptyState
         variant="error"
         error={error}
+        systemHint="部分搜索源可能不可用，请稍后重试或更换关键词。"
         onRetry={() => onRetry(searchParams)}
       />
     );
@@ -62,6 +67,11 @@ const SearchResultsState: React.FC<SearchResultsStateProps> = ({
         variant="no-results"
         keyword={keyword}
         className={className}
+        systemHint={
+          hasSourceWarnings
+            ? "部分搜索源可能暂时不可用，可以更换关键词或稍后再试。"
+            : undefined
+        }
         onSuggestSearch={onSuggestSearch}
       />
     );

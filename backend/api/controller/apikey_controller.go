@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unisearch/model"
 	"unisearch/service"
+	"unisearch/util/logger"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -145,7 +146,11 @@ func (ctrl *APIKeyController) GenerateAPIKey(c *gin.Context) {
 	}
 
 	// 生成成功，返回 API Key 信息
-	log.Printf("✓ API Key 生成成功: %s (ID: %d)", apiKey.Key, apiKey.ID)
+	logger.Info(
+		"api_key_generated",
+		logger.Any("api_key", apiKey.Key),
+		logger.Any("id", apiKey.ID),
+	)
 	c.JSON(200, GenerateAPIKeyResponse{
 		Code:    200,
 		Message: "生成成功",
@@ -359,7 +364,11 @@ func (ctrl *APIKeyController) BindAPIKey(c *gin.Context) {
 	if err := ctrl.apiKeyService.BindAPIKey(uid, req.Key); err != nil {
 		// 根据错误类型返回不同的状态码
 		if strings.Contains(err.Error(), "API Key 不存在") {
-			log.Printf("✗ 绑定失败: API Key 不存在 - %s", req.Key)
+			logger.Warn(
+				"api_key_bind_not_found",
+				logger.Any("api_key", req.Key),
+				logger.Any("user_id", uid),
+			)
 			c.JSON(404, BindAPIKeyResponse{
 				Code:    404,
 				Message: "API Key 不存在",
@@ -369,7 +378,11 @@ func (ctrl *APIKeyController) BindAPIKey(c *gin.Context) {
 		}
 
 		if strings.Contains(err.Error(), "API Key 已被绑定") {
-			log.Printf("✗ 绑定失败: API Key 已被绑定 - %s", req.Key)
+			logger.Warn(
+				"api_key_bind_already_used",
+				logger.Any("api_key", req.Key),
+				logger.Any("user_id", uid),
+			)
 			c.JSON(400, BindAPIKeyResponse{
 				Code:    400,
 				Message: "API Key 已被绑定",
@@ -400,7 +413,11 @@ func (ctrl *APIKeyController) BindAPIKey(c *gin.Context) {
 		return
 	}
 
-	log.Printf("✓ API Key 绑定成功: 用户ID=%d, Key=%s", uid, req.Key)
+	logger.Info(
+		"api_key_bound",
+		logger.Any("api_key", req.Key),
+		logger.Any("user_id", uid),
+	)
 	c.JSON(200, BindAPIKeyResponse{
 		Code:    200,
 		Message: "绑定成功",
@@ -459,7 +476,11 @@ func (ctrl *APIKeyController) GetAPIKeyInfo(c *gin.Context) {
 	}
 
 	// 查询成功，返回 API Key 信息
-	log.Printf("✓ 查询 API Key 信息成功: 用户ID=%d, Key=%s", uid, apiKey.Key)
+	logger.Info(
+		"api_key_info_loaded",
+		logger.Any("api_key", apiKey.Key),
+		logger.Any("user_id", uid),
+	)
 	c.JSON(200, GetAPIKeyInfoResponse{
 		Code:    200,
 		Message: "查询成功",

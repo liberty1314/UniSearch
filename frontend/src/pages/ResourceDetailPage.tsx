@@ -11,8 +11,10 @@ import ResourceDetailHero from "@/components/resource-detail/ResourceDetailHero"
 import { Button } from "@/components/ui/button";
 import { useSearchStore } from "@/stores/searchStore";
 import { SystemSettingsService } from "@/services/systemSettingsService";
+import { SearchService } from "@/services/searchService";
 import { toast } from "sonner";
 import type { ResourceDetailRouteState } from "@/types/api";
+import { findRecentResourceSnapshot } from "@/lib/resourceSnapshot";
 import {
   isMagnetTarget,
   normalizeExternalUrl,
@@ -107,7 +109,12 @@ const ResourceDetailPage: React.FC = () => {
     [resourceId, searchResults?.resources],
   );
 
-  const resource = resourceFromState || resourceFromStore;
+  const resourceFromSnapshot = useMemo(
+    () => findRecentResourceSnapshot(resourceId),
+    [resourceId],
+  );
+
+  const resource = resourceFromState || resourceFromStore || resourceFromSnapshot;
 
   const primaryOpenTarget = useMemo(() => {
     if (!resource) {
@@ -256,6 +263,26 @@ const ResourceDetailPage: React.FC = () => {
     navigate("/", { replace: true });
   }, [navigate, routeState]);
 
+  const retrySearchKeyword = useMemo(
+    () => routeState?.from?.keyword?.trim() || resourceId.trim(),
+    [resourceId, routeState?.from?.keyword],
+  );
+
+  const handleRetrySearch = useCallback(() => {
+    if (!retrySearchKeyword) {
+      return;
+    }
+
+    navigate(SearchService.buildSearchUrl({ keyword: retrySearchKeyword }), {
+      replace: true,
+      state: {
+        resumeSearch: { keyword: retrySearchKeyword },
+        routeTransition: "backward",
+        transitionSource: "resource-detail-retry-search",
+      },
+    });
+  }, [navigate, retrySearchKeyword]);
+
   const handlePasswordModalClose = useCallback(() => {
     setPasswordModal({
       isOpen: false,
@@ -318,6 +345,8 @@ const ResourceDetailPage: React.FC = () => {
           description="当前详情页没有可用的搜索上下文。你可以返回上一次搜索结果，或者回到首页重新搜索。"
           backLabel="返回上一次搜索"
           onBack={handleBack}
+          retryLabel="重新搜索当前线索"
+          onRetrySearch={handleRetrySearch}
           onHome={() => navigate("/")}
         />
       </PublicPageShell>

@@ -199,16 +199,16 @@ body {
 
 /* 玻璃态高级卡片样式 */
 .glass-card-premium {
-  @apply relative overflow-hidden rounded-[2rem] border-[0.5px] border-slate-200/55 bg-white/60 shadow-[0_14px_38px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/50 dark:shadow-[0_18px_46px_rgba(0,0,0,0.42)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_58px_rgba(15,23,42,0.12)] dark:hover:shadow-[0_28px_68px_rgba(0,0,0,0.58)];
+  @apply relative overflow-hidden rounded-[2rem] border-[0.5px] border-slate-200/60 bg-white/[0.72] shadow-[0_10px_28px_rgba(15,23,42,0.06)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/[0.58] dark:shadow-[0_14px_34px_rgba(0,0,0,0.34)] transition-all duration-300 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)] dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.42)];
 }
 
 /* 基础玻璃态面板 */
 .glass-panel {
-  @apply rounded-[1.4rem] border-[0.5px] border-slate-200/60 bg-white/60 shadow-[0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/45 dark:shadow-[0_18px_38px_rgba(0,0,0,0.34)];
+  @apply rounded-[1.4rem] border-[0.5px] border-slate-200/65 bg-white/[0.72] shadow-[0_8px_22px_rgba(15,23,42,0.06)] backdrop-blur-lg dark:border-white/10 dark:bg-slate-900/[0.55] dark:shadow-[0_12px_28px_rgba(0,0,0,0.28)];
 }
 
 .glass-toolbar {
-  @apply rounded-2xl border-[0.5px] border-slate-200/65 bg-white/60 shadow-[0_10px_26px_rgba(15,23,42,0.06)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/50 dark:shadow-[0_16px_36px_rgba(0,0,0,0.36)];
+  @apply rounded-2xl border-[0.5px] border-slate-200/70 bg-white/70 shadow-sm backdrop-blur-lg dark:border-white/10 dark:bg-slate-900/[0.58] dark:shadow-[0_10px_24px_rgba(0,0,0,0.26)];
 }
 
 .glass-input {

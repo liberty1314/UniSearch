@@ -8,9 +8,10 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import HotPage from "@/pages/HotPage";
 import type { HotRankingResponse } from "@/types/hotRanking";
 
-const { getHotRankingsMock, buildSearchUrlMock } = vi.hoisted(() => ({
+const { getHotRankingsMock, buildSearchUrlMock, buildTrendingSearchActionsMock } = vi.hoisted(() => ({
   getHotRankingsMock: vi.fn(),
   buildSearchUrlMock: vi.fn(),
+  buildTrendingSearchActionsMock: vi.fn(),
 }));
 
 vi.mock("@/services/hotRankingService", () => ({
@@ -22,6 +23,7 @@ vi.mock("@/services/hotRankingService", () => ({
 vi.mock("@/services/searchService", () => ({
   SearchService: {
     buildSearchUrl: buildSearchUrlMock,
+    buildTrendingSearchActions: buildTrendingSearchActionsMock,
   },
 }));
 
@@ -32,6 +34,7 @@ const LocationProbe = () => {
       {JSON.stringify({
         pathname: location.pathname,
         search: location.search,
+        state: location.state ?? null,
       })}
     </div>
   );
@@ -123,8 +126,37 @@ describe("HotPage", () => {
   beforeEach(() => {
     getHotRankingsMock.mockReset();
     buildSearchUrlMock.mockReset();
+    buildTrendingSearchActionsMock.mockReset();
     buildSearchUrlMock.mockImplementation(
       ({ keyword }: { keyword: string }) => `/search?q=${encodeURIComponent(keyword)}`,
+    );
+    buildTrendingSearchActionsMock.mockImplementation(
+      (item: { title: string; original_title: string }) => [
+        {
+          key: "title",
+          label: "搜片名",
+          keyword: item.title,
+          isPrimary: true,
+        },
+        {
+          key: "original_title",
+          label: "搜原名",
+          keyword: item.original_title,
+          isPrimary: false,
+        },
+        {
+          key: "title_4k",
+          label: "搜 4K",
+          keyword: `${item.title} 4K`,
+          isPrimary: false,
+        },
+        {
+          key: "title_collection",
+          label: "搜合集",
+          keyword: `${item.title} 合集`,
+          isPrimary: false,
+        },
+      ],
     );
   });
 
@@ -696,6 +728,32 @@ describe("HotPage", () => {
     expect(await screen.findByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
     expect(screen.getByTestId("location-probe")).toHaveTextContent(
       '"search":"?q=%E6%B2%99%E4%B8%98%202"',
+    );
+    expect(screen.getByTestId("location-probe")).toHaveTextContent(
+      '"fromTrending"',
+    );
+    expect(screen.getByTestId("location-probe")).toHaveTextContent(
+      '"actionKey":"title"',
+    );
+  });
+
+  it("点击榜单卡片快捷搜索入口会使用更明确的搜索线索", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
+
+    renderHotPage();
+
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
+    fireEvent.click(screen.getAllByRole("button", { name: "搜 4K" })[0]);
+
+    expect(await screen.findByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
+    expect(screen.getByTestId("location-probe")).toHaveTextContent(
+      '"search":"?q=%E6%B2%99%E4%B8%98%202%204K"',
+    );
+    expect(screen.getByTestId("location-probe")).toHaveTextContent(
+      '"keyword":"沙丘 2 4K"',
+    );
+    expect(screen.getByTestId("location-probe")).toHaveTextContent(
+      '"actionKey":"title_4k"',
     );
   });
 

@@ -269,6 +269,7 @@ describe('Auth entry pages', () => {
     );
 
     await screen.findByText('欢迎回来');
+    expect(screen.getByText('登录后继续搜索：三体')).toBeInTheDocument();
 
     await user.type(screen.getByLabelText('用户名'), 'neo');
     await user.type(screen.getByLabelText('密码'), 'matrix');

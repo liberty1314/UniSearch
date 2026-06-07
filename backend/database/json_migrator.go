@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 	"unisearch/model"
+	"unisearch/util/logger"
 
 	"gorm.io/gorm"
 )
@@ -89,19 +90,35 @@ func MigrateFromJSON(jsonFilePath string) error {
 		if err != nil {
 			// 检查是否是唯一性约束冲突（重复的 key）
 			if err == gorm.ErrDuplicatedKey {
-				log.Printf("⚠️  [%d/%d] 跳过重复的 API Key: %s", i+1, len(jsonKeys), jsonKey.Key)
+				logger.Warn(
+					"api_key_migration_duplicate",
+					logger.Any("api_key", jsonKey.Key),
+					logger.Int("index", i+1),
+					logger.Int("total", len(jsonKeys)),
+				)
 				skipCount++
 				continue
 			}
 
 			// 其他错误
-			log.Printf("✗ [%d/%d] 插入 API Key 失败: %s, 错误: %v", i+1, len(jsonKeys), jsonKey.Key, err)
+			logger.Error(
+				"api_key_migration_insert_failed",
+				logger.Any("api_key", jsonKey.Key),
+				logger.Any("error", err),
+				logger.Int("index", i+1),
+				logger.Int("total", len(jsonKeys)),
+			)
 			errorCount++
 			continue
 		}
 
 		// 插入成功
-		log.Printf("✓ [%d/%d] 成功迁移 API Key: %s", i+1, len(jsonKeys), jsonKey.Key)
+		logger.Info(
+			"api_key_migrated",
+			logger.Any("api_key", jsonKey.Key),
+			logger.Int("index", i+1),
+			logger.Int("total", len(jsonKeys)),
+		)
 		successCount++
 	}
 

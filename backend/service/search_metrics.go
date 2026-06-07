@@ -1,14 +1,11 @@
 package service
 
 import (
-	"fmt"
-	"log"
-	"sort"
-	"strings"
 	"sync"
 	"time"
 
 	"unisearch/config"
+	"unisearch/util/logger"
 )
 
 type SearchMetricsRecorder struct {
@@ -76,19 +73,12 @@ func (r *SearchMetricsRecorder) RecordSearch(scope string, keyword string, durat
 }
 
 func logSearchEvent(event string, fields map[string]interface{}) {
-	keys := make([]string, 0, len(fields))
-	for key := range fields {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	parts := make([]string, 0, len(keys)+1)
-	parts = append(parts, fmt.Sprintf("event=%s", event))
-	for _, key := range keys {
-		parts = append(parts, fmt.Sprintf("%s=%v", key, fields[key]))
+	loggerFields := make([]logger.Field, 0, len(fields))
+	for key, value := range fields {
+		loggerFields = append(loggerFields, logger.Any(key, value))
 	}
 
-	log.Printf("[search] %s", strings.Join(parts, " "))
+	logger.Info(event, loggerFields...)
 }
 
 func logSearchEventIfEnabled(event string, fields map[string]interface{}) {

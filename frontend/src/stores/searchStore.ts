@@ -8,6 +8,7 @@ import {
   removeStorage,
   writeJsonStorage,
 } from "@/lib/safeStorage";
+import { writeRecentResourceSnapshots } from "@/lib/resourceSnapshot";
 import {
   createSearchRequestId,
   invalidateSearchRequests,
@@ -196,6 +197,7 @@ export const useSearchStore = create<SearchState>()(
             lastCompletedSearchParams: normalizeSearchParams(finalParams),
             hasMore: totalCount > state.pageSize, // 判断是否有更多数据
           });
+          writeRecentResourceSnapshots(results.resources, finalParams.keyword);
 
           // 添加到搜索历史
           if (finalParams.keyword) {

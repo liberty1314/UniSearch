@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import HotMediaCard from "@/components/trending/HotMediaCard";
 import type { HotRankingItem } from "@/types/hotRanking";
@@ -31,5 +31,21 @@ describe("HotMediaCard", () => {
     expect(screen.getByText("电影")).toBeInTheDocument();
     expect(screen.getByText("热度 800")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "搜索" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "搜原名" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "搜 4K" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "搜合集" })).toBeInTheDocument();
+  });
+
+  it("点击快捷搜索入口会返回对应搜索动作", () => {
+    const onSearch = vi.fn();
+
+    render(<HotMediaCard item={item} rank={1} category="movie" onSearch={onSearch} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "搜 4K" }));
+
+    expect(onSearch).toHaveBeenCalledWith(item, expect.objectContaining({
+      key: "title_4k",
+      keyword: "奥本海默 4K",
+    }));
   });
 });

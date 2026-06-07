@@ -507,6 +507,51 @@ describe("SearchResults", () => {
     expect(screen.getByText("可以调整网盘、包含关键词或排除关键词，或者清空筛选条件后重新查看全部结果。")).toBeInTheDocument();
   });
 
+  it("shows a system-level availability hint when the search request fails", async () => {
+    searchStoreState = {
+      ...searchStoreState,
+      searchResults: null,
+      error: "搜索请求超时",
+    };
+
+    renderSearchResults();
+
+    expect(await screen.findByText("搜索请求失败")).toBeInTheDocument();
+    expect(screen.getByText("部分搜索源可能不可用，请稍后重试或更换关键词。")).toBeInTheDocument();
+  });
+
+  it("shows a system-level warning on empty results without exposing source-level details", async () => {
+    searchStoreState.searchResults = {
+      total: 0,
+      resources: [],
+      facets: {
+        cloud_types: {},
+        source_types: {},
+        media_types: {},
+        target_types: {},
+        capabilities: {},
+        action_types: {},
+      },
+      warnings: [
+        {
+          source: "failed-plugin",
+          message: "该搜索源暂时不可用，已返回其他来源结果",
+        },
+      ],
+    };
+
+    renderSearchResults();
+
+    expect(await screen.findByText("未找到相关资源")).toBeInTheDocument();
+    expect(
+      screen.getByText("部分搜索源可能暂时不可用，可以更换关键词或稍后再试。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("failed-plugin")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("该搜索源暂时不可用，已返回其他来源结果"),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows a refresh hint without clearing previous results during in-place refresh", async () => {
     searchStoreState = {
       ...searchStoreState,

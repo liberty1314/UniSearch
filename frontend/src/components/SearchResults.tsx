@@ -300,6 +300,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         viewMode={viewMode}
         keyword={searchParams.keyword}
         hasAnyActiveFilters={hasAnyActiveFilters}
+        sourceWarnings={searchResults?.warnings}
         searchParams={searchParams}
         onRetry={(params) => {
           void performSearch(params);

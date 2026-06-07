@@ -20,6 +20,8 @@ interface SearchResultsEmptyStateProps {
   onSuggestSearch?: (keyword: string) => void;
   /** 仅 variant="filtered-results" 时使用，清空筛选回调 */
   onClearFilters?: () => void;
+  /** 系统级可用性提示，不描述单条结果或来源质量 */
+  systemHint?: string;
 }
 
 // ─── 推荐搜索词 ───────────────────────────────────────────────────────────────
@@ -32,7 +34,8 @@ const SUGGEST_KEYWORDS = ["考研", "原神", "短剧", "电子书", "黑神话�
 const ErrorState: React.FC<{
   error: string;
   onRetry?: () => void;
-}> = ({ error, onRetry }) => (
+  systemHint?: string;
+}> = ({ error, onRetry, systemHint }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -53,6 +56,11 @@ const ErrorState: React.FC<{
         <p className="text-gray-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed mb-8">
           {error}
         </p>
+        {systemHint ? (
+          <p className="mx-auto mb-8 max-w-md rounded-2xl border border-amber-200/70 bg-amber-50/80 px-4 py-3 text-sm leading-6 text-amber-800 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-100">
+            {systemHint}
+          </p>
+        ) : null}
 
         {onRetry && (
           <button
@@ -72,7 +80,8 @@ const NoResultsState: React.FC<{
   keyword: string;
   className?: string;
   onSuggestSearch?: (keyword: string) => void;
-}> = ({ keyword, className, onSuggestSearch }) => (
+  systemHint?: string;
+}> = ({ keyword, className, onSuggestSearch, systemHint }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.95 }}
     animate={{ opacity: 1, scale: 1 }}
@@ -97,6 +106,11 @@ const NoResultsState: React.FC<{
           </span>
           "相关的资源。
         </p>
+        {systemHint ? (
+          <p className="mx-auto mb-8 max-w-lg rounded-2xl border border-amber-200/70 bg-amber-50/80 px-4 py-3 text-sm leading-6 text-amber-800 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-100">
+            {systemHint}
+          </p>
+        ) : null}
 
         {onSuggestSearch && (
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -196,9 +210,16 @@ export const SearchResultsEmptyState: React.FC<SearchResultsEmptyStateProps> = (
   onRetry,
   onSuggestSearch,
   onClearFilters,
+  systemHint,
 }) => {
   if (variant === "error") {
-    return <ErrorState error={error ?? "搜索出现错误，请稍后再试"} onRetry={onRetry} />;
+    return (
+      <ErrorState
+        error={error ?? "搜索出现错误，请稍后再试"}
+        onRetry={onRetry}
+        systemHint={systemHint}
+      />
+    );
   }
 
   if (variant === "no-results") {
@@ -207,6 +228,7 @@ export const SearchResultsEmptyState: React.FC<SearchResultsEmptyStateProps> = (
         keyword={keyword ?? ""}
         className={className}
         onSuggestSearch={onSuggestSearch}
+        systemHint={systemHint}
       />
     );
   }

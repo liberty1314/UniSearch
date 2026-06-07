@@ -270,7 +270,7 @@ const Home: React.FC = () => {
                     key={step.title}
                     className="glass-panel relative overflow-hidden p-6 text-left"
                   >
-                    <div className="mb-5 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(14,165,233,0.22)]">
+                    <div className="mb-5 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-700 text-sm font-semibold text-white shadow-sm dark:bg-blue-500">
                       {index + 1}
                     </div>
                     <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50">

@@ -218,6 +218,29 @@ describe("ResourceDetailPage", () => {
     expect(screen.queryByText("全部链接")).not.toBeInTheDocument();
   });
 
+  it("restores resource details from recent resource snapshots when route state and store are missing", async () => {
+    searchStoreState = {
+      searchResults: null,
+    };
+    localStorage.setItem(
+      "unisearch_recent_resource_snapshots",
+      JSON.stringify([
+        {
+          keyword: "你的名字",
+          savedAt: Date.now(),
+          resource: resourceFixture,
+        },
+      ]),
+    );
+
+    renderDetailPage("/resource/resource-1");
+
+    expect(await screen.findByTestId("resource-detail-page")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "你的名字 4K" }),
+    ).toBeInTheDocument();
+  });
+
   it("shows an empty state when both route state and store resource are missing", async () => {
     searchStoreState = {
       searchResults: {
@@ -230,6 +253,31 @@ describe("ResourceDetailPage", () => {
     expect(await screen.findByTestId("resource-detail-empty-state")).toBeInTheDocument();
     expect(screen.getByText("资源上下文已失效")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "返回首页" })).toBeInTheDocument();
+  });
+
+  it("offers a retry search action when the resource snapshot cannot be restored", async () => {
+    searchStoreState = {
+      searchResults: null,
+    };
+
+    renderDetailPage({
+      pathname: "/resource/missing-resource",
+      state: {
+        from: {
+          pathname: "/search",
+          search: "?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97",
+          keyword: "你的名字",
+        },
+      },
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "重新搜索当前线索" }));
+
+    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
+    expect(screen.getByTestId("location-probe")).toHaveTextContent(
+      '"search":"?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97"',
+    );
+    expect(screen.getByTestId("location-probe")).toHaveTextContent('"keyword":"你的名字"');
   });
 
   it("shows disabled state when the resource detail page switch is off", async () => {

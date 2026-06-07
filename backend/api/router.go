@@ -21,7 +21,8 @@ func SetupRouter(deps RouterDeps) *gin.Engine {
 	authController := controller.NewAuthController(deps.AuthService)
 
 	gin.SetMode(gin.ReleaseMode)
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Recovery())
 	r.Use(CORSMiddleware())
 	r.Use(LoggerMiddleware())
 	r.Use(ValidationMiddleware())
