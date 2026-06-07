@@ -343,8 +343,6 @@ describe("ResourceDetailPage", () => {
 
     const summaryHeading = await screen.findByRole("heading", { level: 2, name: "资源摘要" });
     const summarySection = summaryHeading.closest("section");
-    const metaStrip = screen.getByTestId("resource-detail-meta-strip");
-    const metaItems = screen.getAllByTestId("resource-detail-meta-item");
     const summaryContent = screen.getByTestId("resource-detail-summary-content");
     const bodyBridge = screen.getByTestId("resource-detail-body-bridge");
 
@@ -352,15 +350,8 @@ describe("ResourceDetailPage", () => {
     expect(bodyBridge.className).toContain("resource-detail-body-bridge");
     expect(summarySection).toHaveAttribute("data-testid", "resource-detail-summary");
     expect(summarySection?.className).toContain("resource-detail-summary-panel");
-    expect(metaStrip.className).toContain("resource-detail-meta-strip");
-    expect(metaItems).toHaveLength(4);
-    expect(metaStrip).toHaveTextContent("发布时间");
-    expect(metaStrip).toHaveTextContent("链接数量");
-    expect(metaStrip).toHaveTextContent("访问方式");
-    expect(metaStrip).toHaveTextContent("资源体积");
-    expect(metaStrip).toHaveTextContent("3");
-    expect(metaStrip).toHaveTextContent("可直接打开");
-    expect(metaStrip).toHaveTextContent("2.15 GiB");
+    expect(screen.queryByTestId("resource-detail-meta-strip")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("resource-detail-meta-item")).not.toBeInTheDocument();
     expect(summaryContent.className).toContain("resource-detail-summary-flow");
     expect(screen.queryByRole("heading", { level: 2, name: "全部链接" })).not.toBeInTheDocument();
   });

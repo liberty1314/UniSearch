@@ -189,3 +189,10 @@
     - scripts/tests/lib/docker-preflight.sh
     - scripts/tests/release-candidate.sh
     - docs/readme_2606.md
+
+- [2026-06-07 23:00] refactor(frontend): 精简资源详情页摘要布局
+  - Body: 移除资源详情页摘要上方的元信息条，让主体区域直接聚焦资源摘要与右侧操作面板。同步更新详情页测试，确认旧元信息条不再渲染。
+  - Files:
+    - frontend/src/pages/ResourceDetailPage.tsx
+    - frontend/src/pages/__tests__/ResourceDetailPage.test.tsx
+    - docs/readme_2606.md

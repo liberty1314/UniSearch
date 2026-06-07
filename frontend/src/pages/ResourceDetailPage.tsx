@@ -176,25 +176,6 @@ const ResourceDetailPage: React.FC = () => {
     return "查看 UniSearch 聚合出的资源详情、链接与扩展信息。";
   }, [resource?.description, resource?.detail.content]);
 
-  const metaItems = useMemo(
-    () => {
-      if (!resource) {
-        return [];
-      }
-
-      return [
-        { label: "发布时间", value: formatDetailTime(resource.published_at) },
-        { label: "链接数量", value: `${resource.links.length}` },
-        {
-          label: "访问方式",
-          value: primaryOpenTarget?.target ? "可直接打开" : "仅可查看详情",
-        },
-        { label: "资源体积", value: primaryOpenTarget?.sizeLabel || "未提供" },
-      ];
-    },
-    [primaryOpenTarget?.sizeLabel, primaryOpenTarget?.target, resource],
-  );
-
   const summaryParagraphs = useMemo(() => {
     const content = resource?.detail.content?.trim();
     if (!content) {
@@ -401,70 +382,38 @@ const ResourceDetailPage: React.FC = () => {
             className="resource-detail-body-bridge grid gap-6 xl:grid-cols-[minmax(0,1fr),300px] xl:gap-7"
           >
             <div className="space-y-6">
-              <section
-                data-testid="resource-detail-meta-strip"
-                className="resource-detail-meta-strip grid rounded-[1.7rem] px-4 py-2.5 sm:grid-cols-2 sm:px-5 sm:py-3 xl:grid-cols-4"
-              >
-                {metaItems.map((item, index) => (
-                  <motion.div
-                    key={item.label}
-                    initial={{ opacity: 0, y: 18 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.08 + index * 0.04, duration: 0.4 }}
-                    data-testid="resource-detail-meta-item"
-                    className={[
-                      "px-2 py-3 sm:px-3 xl:px-4",
-                      index > 0 ? "border-t border-slate-200/60 dark:border-white/[0.08]" : "",
-                      index % 2 === 1 ? "sm:border-l" : "",
-                      index >= 2 ? "sm:border-t" : "sm:border-t-0",
-                      index > 0 ? "xl:border-l" : "xl:border-l-0",
-                      "xl:border-t-0",
-                    ].join(" ")}
-                  >
-                    <div className="text-[11px] font-semibold tracking-[0.18em] text-slate-400 dark:text-slate-500">
-                      {item.label}
+              {resource.detail.content ? (
+                <section
+                  data-testid="resource-detail-summary"
+                  className="resource-detail-summary-panel overflow-hidden rounded-[2rem] px-6 py-6 sm:px-7 sm:py-7 xl:px-10 xl:py-8"
+                >
+                  <div className="max-w-[70ch] space-y-4">
+                    <h2
+                      className="resource-detail-section-title sm:text-[1.85rem]"
+                      style={{ fontFamily: '"Baskerville", "Times New Roman", "Songti SC", "STSong", serif' }}
+                    >
+                      资源摘要
+                    </h2>
+                    <div
+                      data-testid="resource-detail-summary-content"
+                      className="resource-detail-summary-flow text-[15px] text-slate-700 dark:text-slate-100 sm:text-base"
+                    >
+                      {summaryParagraphs.map((paragraph, index) => (
+                        <p
+                          key={`${index}-${paragraph.slice(0, 24)}`}
+                          className={
+                            index === 0
+                              ? "whitespace-pre-line text-[15.5px] leading-8 text-slate-800 dark:text-slate-50 sm:text-[17px]"
+                              : "whitespace-pre-line text-[15px] leading-8 text-slate-700 dark:text-slate-100 sm:text-base"
+                          }
+                        >
+                          {paragraph}
+                        </p>
+                      ))}
                     </div>
-                    <div className="mt-1 text-sm font-semibold leading-6 text-slate-900 dark:text-slate-100 sm:text-[15px]">
-                      {item.value}
-                    </div>
-                  </motion.div>
-                ))}
-              </section>
-
-              <div className="space-y-6">
-                {resource.detail.content ? (
-                  <section
-                    data-testid="resource-detail-summary"
-                    className="resource-detail-summary-panel overflow-hidden rounded-[2rem] px-6 py-6 sm:px-7 sm:py-7 xl:px-10 xl:py-8"
-                  >
-                    <div className="max-w-[70ch] space-y-4">
-                      <h2
-                        className="resource-detail-section-title sm:text-[1.85rem]"
-                        style={{ fontFamily: '"Baskerville", "Times New Roman", "Songti SC", "STSong", serif' }}
-                      >
-                        资源摘要
-                      </h2>
-                      <div
-                        data-testid="resource-detail-summary-content"
-                        className="resource-detail-summary-flow text-[15px] text-slate-700 dark:text-slate-100 sm:text-base"
-                      >
-                        {summaryParagraphs.map((paragraph, index) => (
-                          <p
-                            key={`${index}-${paragraph.slice(0, 24)}`}
-                            className={
-                              index === 0
-                                ? "whitespace-pre-line text-[15.5px] leading-8 text-slate-800 dark:text-slate-50 sm:text-[17px]"
-                                : "whitespace-pre-line text-[15px] leading-8 text-slate-700 dark:text-slate-100 sm:text-base"
-                            }
-                          >
-                            {paragraph}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  </section>
-                ) : null}
-              </div>
+                  </div>
+                </section>
+              ) : null}
             </div>
 
             <ResourceDetailActionPanel
