@@ -53,15 +53,8 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
             placeholder={placeholder}
             onChange={controller.setInputValue}
             onSubmit={handleSearch}
-            onFocus={() => {
-              controller.setIsFocused(true);
-              if (controller.visibleSearchHistory.length > 0) {
-                controller.setShowHistory(true);
-              }
-            }}
-            onBlur={() => {
-              controller.setIsFocused(false);
-            }}
+            onFocus={controller.handleInputFocus}
+            onBlur={controller.handleInputBlur}
             onEscape={() => {
               controller.setShowHistory(false);
             }}

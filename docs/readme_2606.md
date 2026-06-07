@@ -196,3 +196,11 @@
     - frontend/src/pages/ResourceDetailPage.tsx
     - frontend/src/pages/__tests__/ResourceDetailPage.test.tsx
     - docs/readme_2606.md
+
+- [2026-06-08 00:03] fix(frontend): 修复清空搜索框后历史浮层回弹
+  - Body: 将搜索框聚焦与失焦逻辑收敛到控制器，并在清空输入时临时抑制最近搜索浮层重新打开。补充搜索页清空输入场景测试，确认历史浮层关闭且输入框仍保持焦点。
+  - Files:
+    - frontend/src/components/SearchBox.tsx
+    - frontend/src/components/__tests__/SearchBox.test.tsx
+    - frontend/src/hooks/useSearchBoxController.ts
+    - docs/readme_2606.md

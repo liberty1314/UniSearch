@@ -774,6 +774,33 @@ describe("SearchBox", () => {
     expect(resetButtonMock).toHaveBeenCalled();
   });
 
+  it("在搜索页清空输入时关闭最近搜索浮层并阻止重新聚焦打开", async () => {
+    currentLocation = {
+      pathname: "/search",
+      search: "?q=%E8%B0%9C%E5%8D%B0%E5%A5%B3%E5%AD%90",
+      hash: "",
+      state: undefined,
+    };
+    searchHistoryState = ["谜印女子", "流浪地球"];
+    searchStoreState = {
+      searchParams: { keyword: "谜印女子" },
+      isLoading: false,
+    };
+
+    render(<SearchBox />);
+
+    const input = screen.getByPlaceholderText("搜索网盘资源...");
+    await userEvent.click(input);
+    expect(screen.getByText("最近搜索")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "清空输入" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("最近搜索")).not.toBeInTheDocument();
+    });
+    expect(input).toHaveFocus();
+  });
+
   it("keeps instant searching behavior when already on the standalone results page", async () => {
     currentLocation = {
       pathname: "/search",

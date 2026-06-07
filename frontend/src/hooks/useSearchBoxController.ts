@@ -147,6 +147,7 @@ export function useSearchBoxController({
   const inputRef = useRef<HTMLInputElement>(null);
   const buttonRef = useRef<StatefulButtonHandle>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const suppressHistoryOnFocusRef = useRef(false);
   const [isFocused, setIsFocused] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [activeHistoryIndex, setActiveHistoryIndex] = useState(-1);
@@ -449,6 +450,22 @@ export function useSearchBoxController({
     return true;
   };
 
+  const handleInputFocus = () => {
+    setIsFocused(true);
+    if (suppressHistoryOnFocusRef.current) {
+      suppressHistoryOnFocusRef.current = false;
+      return;
+    }
+
+    if (visibleSearchHistory.length > 0) {
+      setShowHistory(true);
+    }
+  };
+
+  const handleInputBlur = () => {
+    setIsFocused(false);
+  };
+
   return {
     inputRef,
     buttonRef,
@@ -457,6 +474,8 @@ export function useSearchBoxController({
     setInputValue,
     isFocused,
     setIsFocused,
+    handleInputFocus,
+    handleInputBlur,
     showHistory,
     setShowHistory,
     activeHistoryIndex,
@@ -471,7 +490,10 @@ export function useSearchBoxController({
     isLoading,
     submitKeyword,
     clearInput: () => {
+      suppressHistoryOnFocusRef.current = true;
       setInputValue("");
+      setShowHistory(false);
+      setActiveHistoryIndex(-1);
       clearResults();
       if (location.pathname === "/" && location.search) {
         navigate("/", { replace: true, state: { skipSearchSync: true } });
