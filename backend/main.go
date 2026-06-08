@@ -48,6 +48,7 @@ import (
 	_ "unisearch/plugin/quarksoo"
 	_ "unisearch/plugin/qupansou"
 	_ "unisearch/plugin/shandian"
+	_ "unisearch/plugin/sidhub"
 	_ "unisearch/plugin/susu"
 	_ "unisearch/plugin/thepiratebay"
 	_ "unisearch/plugin/u3c3"

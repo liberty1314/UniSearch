@@ -204,3 +204,13 @@
     - frontend/src/components/__tests__/SearchBox.test.tsx
     - frontend/src/hooks/useSearchBoxController.ts
     - docs/readme_2606.md
+
+- [2026-06-09 00:08] feat(plugin): 新增 SidHub 搜索插件
+  - Body: 新增 SidHub/SeedHub 影视资源搜索插件，支持搜索页解析、详情页链接提取、夸克跳转解析、结果缓存与插件清单注册。同步默认启用插件列表、插件计数和部署说明。
+  - Files:
+    - .env.example
+    - README.md
+    - backend/main.go
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - docs/readme_2606.md
