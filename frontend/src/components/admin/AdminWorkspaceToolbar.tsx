@@ -16,10 +16,12 @@ interface AdminWorkspaceToolbarProps {
   addButtonClassName: string;
   batchTestClassName: string;
   batchTestDisabled: boolean;
+  showAddButton?: boolean;
+  showBatchDelete?: boolean;
   onSetStatusFilter: (value: UnifiedStatusFilter) => void;
-  onOpenAddDialog: () => void;
+  onOpenAddDialog?: () => void;
   onBatchToggle: (isEnabled: boolean) => void;
-  onOpenBatchDeleteConfirm: () => void;
+  onOpenBatchDeleteConfirm?: () => void;
   onBatchTest: () => void;
   onToggleSelectFiltered: () => void;
 }
@@ -37,6 +39,8 @@ export function AdminWorkspaceToolbar({
   addButtonClassName,
   batchTestClassName,
   batchTestDisabled,
+  showAddButton = true,
+  showBatchDelete = true,
   onSetStatusFilter,
   onOpenAddDialog,
   onBatchToggle,
@@ -59,7 +63,7 @@ export function AdminWorkspaceToolbar({
             </Button>
           ))}
         </div>
-        {!isReadOnly && (
+        {!isReadOnly && showAddButton ? (
           <Button
             onClick={onOpenAddDialog}
             className={addButtonClassName}
@@ -69,7 +73,7 @@ export function AdminWorkspaceToolbar({
             <Plus className="mr-1 h-4 w-4" />
             {addButtonLabel}
           </Button>
-        )}
+        ) : null}
       </div>
 
       {!isReadOnly && (
@@ -91,15 +95,17 @@ export function AdminWorkspaceToolbar({
           >
             批量停用
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onOpenBatchDeleteConfirm}
-            disabled={isOperationBusy || selectedCount === 0}
-            className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-          >
-            批量删除
-          </Button>
+          {showBatchDelete ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenBatchDeleteConfirm}
+              disabled={isOperationBusy || selectedCount === 0}
+              className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+            >
+              批量删除
+            </Button>
+          ) : null}
           <Button
             variant="outline"
             size="sm"

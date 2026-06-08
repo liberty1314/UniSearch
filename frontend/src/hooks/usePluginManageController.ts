@@ -9,26 +9,15 @@ import type {
   CreateAdminTagRequest,
   CreateAdminTagResponse,
   DeleteAdminTagResponse,
-  CreatePluginResponse,
-  CreatePluginRequest,
-  PluginCatalogInstallRequest,
-  PluginCatalogInstallResponse,
   PluginCatalogResponse,
   PluginInfo,
-  TestURLRequest,
-  TestURLResponse,
   UpdateAdminTagRequest,
   UpdateAdminTagResponse,
-  UpdatePluginRequest,
-  UpdatePluginResponse,
 } from '@/types/api';
 import { comparePlugins } from '@/components/admin/adminListSort';
 import {
-  appendCustomPlugin,
   applyBatchEnabledState,
   markPluginTestResult,
-  removePluginsByName,
-  updateEditedPlugin,
   updatePluginEnabledState,
 } from '@/components/admin/pluginManageStateUtils';
 import {
@@ -49,7 +38,6 @@ import {
   getRequestErrorMessage,
   requestAuthed,
   requestAuthedJson,
-  readErrorMessage,
   toastBatchResult,
 } from '@/components/admin/adminWorkspaceApi';
 import {
@@ -57,13 +45,7 @@ import {
   buildSelectionPreviewText,
   replaceSelectedKeys,
 } from '@/components/admin/workspaceSelection';
-import {
-  parseCapabilitiesInput,
-  type AddPluginForm,
-  type EditPluginForm,
-  type TestStatus,
-  type URLTestStatus,
-} from '@/components/admin/pluginManageDialogShared';
+import { type TestStatus } from '@/components/admin/pluginManageDialogShared';
 import { usePluginManageDialogState } from './usePluginManageDialogState';
 import { useWorkspaceTestStatus } from './useWorkspaceTestStatus';
 
@@ -82,18 +64,7 @@ export type UsePluginManageControllerResult = {
   testingStatus: Record<string, TestStatus>;
   isBatchTesting: boolean;
   isBatchUpdating: boolean;
-  isBatchDeleting: boolean;
-  isAdding: boolean;
-  isTestingUrl: boolean;
-  addDialogOpen: boolean;
-  addForm: AddPluginForm;
-  urlTestResult: URLTestStatus;
-  urlTestMessage: string;
   detailPluginName: string | null;
-  editingPluginName: string | null;
-  editForm: EditPluginForm;
-  deleteConfirm: { open: boolean; pluginName: string | null };
-  batchDeleteConfirmOpen: boolean;
   statusFilter: UnifiedStatusFilter;
   currentPage: number;
   pageSize: number;
@@ -101,7 +72,6 @@ export type UsePluginManageControllerResult = {
   filteredItems: PluginInfo[];
   pagedItems: PluginInfo[];
   totalPages: number;
-  sourceFilter: 'all' | 'local' | 'remote';
   categoryFilter: string;
   capabilityFilter: string;
   availableCategories: string[];
@@ -117,7 +87,6 @@ export type UsePluginManageControllerResult = {
   selectedPluginPreviewText: string;
   isAllFilteredSelected: boolean;
   activeDetailPlugin: PluginInfo | null;
-  activeEditingPlugin: PluginInfo | null;
   isOperationBusy: boolean;
   isCatalogLoading: boolean;
   catalogVersion: string;
@@ -126,37 +95,18 @@ export type UsePluginManageControllerResult = {
   setCurrentPage: (value: number) => void;
   setPageSize: (value: number) => void;
   setSearchKeyword: (value: string) => void;
-  setSourceFilter: (value: 'all' | 'local' | 'remote') => void;
   setCategoryFilter: (value: string) => void;
   setCapabilityFilter: (value: string) => void;
   setSelectedTagFilters: (value: string[]) => void;
-  setAddDialogOpen: (open: boolean) => void;
-  setAddForm: React.Dispatch<React.SetStateAction<AddPluginForm>>;
-  setUrlTestResult: (status: URLTestStatus) => void;
-  setUrlTestMessage: (message: string) => void;
   setDetailPluginName: (name: string | null) => void;
-  setEditingPluginName: (name: string | null) => void;
-  setEditForm: React.Dispatch<React.SetStateAction<EditPluginForm>>;
-  setDeleteConfirm: React.Dispatch<React.SetStateAction<{ open: boolean; pluginName: string | null }>>;
-  setBatchDeleteConfirmOpen: (open: boolean) => void;
   selectKey: (name: string, checked: boolean) => void;
-  resetAddDialogState: () => void;
   handleClose: () => void;
-  openAddDialog: () => void;
-  openEditDialog: (plugin: PluginInfo) => void;
   handleOpenDetail: (plugin: PluginInfo) => void;
-  handleAddFormKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
-  handleTestAddPluginURL: () => Promise<void>;
-  handleAddPlugin: () => Promise<void>;
   handleTestPlugin: (plugin: PluginInfo) => Promise<void>;
   handleBatchTest: () => Promise<void>;
   handleTogglePluginEnabled: (plugin: PluginInfo) => Promise<void>;
   handleBatchTogglePlugins: (isEnabled: boolean) => Promise<void>;
   handleToggleSelectFiltered: () => void;
-  handleConfirmDeletePlugin: () => Promise<void>;
-  handleBatchDeletePlugins: () => Promise<void>;
-  handleSaveEdit: () => Promise<void>;
-  handleInstallPlugin: (plugin: PluginInfo) => Promise<void>;
   handleCreateTag: (name: string) => Promise<AdminTagOption | null>;
   handleUpdateTag: (id: number, name: string) => Promise<AdminTagOption | null>;
   handleDeleteTag: (id: number) => Promise<boolean>;
@@ -178,10 +128,6 @@ export function usePluginManageController({
   const [isCatalogLoading, setIsCatalogLoading] = useState(false);
   const [isBatchTesting, setIsBatchTesting] = useState(false);
   const [isBatchUpdating, setIsBatchUpdating] = useState(false);
-  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [isTestingUrl, setIsTestingUrl] = useState(false);
-  const [sourceFilter, setSourceFilter] = useState<'all' | 'local' | 'remote'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [capabilityFilter, setCapabilityFilter] = useState('all');
   const [tagOptions, setTagOptions] = useState<AdminTagOption[]>([]);
@@ -207,11 +153,11 @@ export function usePluginManageController({
     setLocalPlugins(plugins);
   }, [plugins]);
 
-  const fetchCatalog = useCallback(async (source: 'all' | 'local' | 'remote' = 'all') => {
+  const fetchCatalog = useCallback(async () => {
     setIsCatalogLoading(true);
     try {
       const response = await requestAuthedJson<PluginCatalogResponse>(
-        `/api/admin/plugin-center/catalog?source=${source}&refresh=false`,
+        '/api/admin/plugin-center/catalog?refresh=false',
         token,
         '获取插件中心目录失败'
       );
@@ -226,7 +172,7 @@ export function usePluginManageController({
 
   useEffect(() => {
     if (!isOpen) return;
-    void fetchCatalog('all');
+    void fetchCatalog();
   }, [fetchCatalog, isOpen]);
 
   const fetchTagOptions = useCallback(async () => {
@@ -254,9 +200,6 @@ export function usePluginManageController({
     if (isOpen) return;
     setHasPendingChanges(false);
     clearTestingStatus();
-    setIsAdding(false);
-    setIsTestingUrl(false);
-    setSourceFilter('all');
     setCategoryFilter('all');
     setCapabilityFilter('all');
     setTagOptions([]);
@@ -264,7 +207,7 @@ export function usePluginManageController({
     setCatalogVersion('local');
   }, [clearTestingStatus, isOpen]);
 
-  const dialogState = usePluginManageDialogState(isOpen, localPlugins, isReadOnly);
+  const dialogState = usePluginManageDialogState(isOpen, localPlugins);
 
   const availableCategories = useMemo(() => {
     const values = new Set<string>();
@@ -289,12 +232,6 @@ export function usePluginManageController({
   }, [localPlugins]);
 
   const visiblePlugins = useMemo(() => localPlugins.filter((plugin) => {
-    if (sourceFilter === 'local' && !plugin.is_local && !plugin.installed) {
-      return false;
-    }
-    if (sourceFilter === 'remote' && !plugin.is_remote) {
-      return false;
-    }
     if (categoryFilter !== 'all' && plugin.category !== categoryFilter) {
       return false;
     }
@@ -305,7 +242,7 @@ export function usePluginManageController({
       return false;
     }
     return true;
-  }), [capabilityFilter, categoryFilter, localPlugins, selectedTagFilters, sourceFilter]);
+  }), [capabilityFilter, categoryFilter, localPlugins, selectedTagFilters]);
 
   const getPluginKey = useCallback((plugin: PluginInfo) => plugin.name, []);
   const matchesPluginStatus = useCallback(
@@ -351,7 +288,7 @@ export function usePluginManageController({
     pageSize,
   });
 
-  const isOperationBusy = isBatchTesting || isBatchUpdating || isBatchDeleting || isAdding;
+  const isOperationBusy = isBatchTesting || isBatchUpdating;
 
   const selectedPluginPreviewText = useMemo(
     () => buildSelectionPreviewText(orderedItems, selectedPluginNames, (plugin) => plugin.name, (plugin) => plugin.name),
@@ -372,135 +309,6 @@ export function usePluginManageController({
     onClose();
   }, [clearTestingTimers, hasPendingChanges, onClose, onSuccess]);
 
-  const handleAddPlugin = useCallback(async () => {
-    const normalizedName = dialogState.addForm.name.trim();
-    const normalizedURL = dialogState.addForm.url.trim();
-
-    if (!normalizedName) {
-      toast.error('请输入插件名称');
-      return;
-    }
-    if (!normalizedURL) {
-      toast.error('请输入插件 URL');
-      return;
-    }
-
-    const duplicated = localPlugins.some(
-      (plugin) => plugin.name.trim().toLowerCase() === normalizedName.toLowerCase()
-    );
-    if (duplicated) {
-      toast.error('插件名称已存在，请更换名称');
-      return;
-    }
-
-    setIsAdding(true);
-    try {
-      const capabilities = parseCapabilitiesInput(dialogState.addForm.capabilitiesText);
-      const version = dialogState.addForm.version.trim() || '0.0.0';
-      const category = dialogState.addForm.category.trim() || 'search';
-      const payload: CreatePluginRequest = {
-        name: normalizedName,
-        url: normalizedURL,
-        priority: dialogState.addForm.priority,
-        description: dialogState.addForm.description.trim(),
-        version,
-        category,
-        capabilities,
-        tags: normalizeSingleTagSelection(dialogState.addForm.tags),
-      };
-
-      const response = await requestAuthedJson<CreatePluginResponse>('/api/admin/plugins', token, '添加插件失败', {
-        method: 'POST',
-        body: payload,
-      });
-
-      const fallbackPlugin: PluginInfo = {
-        name: normalizedName,
-        url: normalizedURL,
-        priority: dialogState.addForm.priority,
-        description: dialogState.addForm.description.trim(),
-        plugin_type: 'custom',
-        is_enabled: true,
-        status: 'custom',
-        id: `search.${normalizedName}`,
-        version,
-        category,
-        capabilities: capabilities.length ? capabilities : ['resource.search'],
-        tags: normalizeSingleTagSelection(dialogState.addForm.tags),
-        manifest_status: 'generated',
-      };
-      setLocalPlugins((prev) =>
-        appendCustomPlugin(prev, { ...fallbackPlugin, ...response.plugin })
-      );
-      setStatusFilter('all');
-      setCurrentPage(1);
-      setHasPendingChanges(true);
-      toast.success(`插件 ${normalizedName} 添加成功`);
-      dialogState.resetAddDialogState();
-      onSuccess();
-      void fetchCatalog('all');
-    } catch (error) {
-      toast.error(getRequestErrorMessage(error, '添加插件出错'));
-    } finally {
-      setIsAdding(false);
-    }
-  }, [dialogState, fetchCatalog, localPlugins, onSuccess, setCurrentPage, setStatusFilter, token]);
-
-  const handleAddFormKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== 'Enter') return;
-    if (isAdding || !dialogState.addForm.name.trim() || !dialogState.addForm.url.trim()) return;
-    event.preventDefault();
-    void handleAddPlugin();
-  }, [dialogState.addForm.name, dialogState.addForm.url, handleAddPlugin, isAdding]);
-
-  const handleTestAddPluginURL = useCallback(async () => {
-    const normalizedURL = dialogState.addForm.url.trim();
-    if (!normalizedURL) {
-      toast.error('请输入插件 URL');
-      return;
-    }
-
-    setIsTestingUrl(true);
-    dialogState.setUrlTestResult('idle');
-    dialogState.setUrlTestMessage('');
-    try {
-      const payload: TestURLRequest = { url: normalizedURL };
-      const response = await fetch('/api/admin/test-url', {
-        method: 'POST',
-        headers: buildAuthHeaders(token, true),
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const message = await readErrorMessage(response, 'URL 连通性测试失败');
-        dialogState.setUrlTestResult('error');
-        dialogState.setUrlTestMessage(message);
-        toast.error(message);
-        return;
-      }
-
-      const result = (await response.json()) as TestURLResponse;
-      if (result.success) {
-        const message = result.message || 'URL 连通性测试成功';
-        dialogState.setUrlTestResult('success');
-        dialogState.setUrlTestMessage(message);
-        toast.success(message);
-        return;
-      }
-
-      const message = result.error || result.message || 'URL 连通性测试失败';
-      dialogState.setUrlTestResult('error');
-      dialogState.setUrlTestMessage(message);
-      toast.error(message);
-    } catch {
-      dialogState.setUrlTestResult('error');
-      dialogState.setUrlTestMessage('URL 连通性测试出错');
-      toast.error('URL 连通性测试出错');
-    } finally {
-      setIsTestingUrl(false);
-    }
-  }, [dialogState, token]);
-
   const handleTestPlugin = useCallback(async (plugin: PluginInfo) => {
     markTesting(plugin.name);
 
@@ -512,7 +320,7 @@ export function usePluginManageController({
 
       if (response.ok) {
         markResult(plugin.name, 'success');
-      setLocalPlugins((prev) => markPluginTestResult(prev, plugin.name, true));
+        setLocalPlugins((prev) => markPluginTestResult(prev, plugin.name, true));
         toast.success(`插件 ${plugin.name} 连通性测试成功`);
       } else {
         markResult(plugin.name, 'error');
@@ -526,7 +334,7 @@ export function usePluginManageController({
     }
 
     onSuccess();
-    void fetchCatalog('all');
+    void fetchCatalog();
     resetKeyLater(plugin.name, 5000);
   }, [fetchCatalog, markResult, markTesting, onSuccess, resetKeyLater, token]);
 
@@ -573,7 +381,7 @@ export function usePluginManageController({
 
     setIsBatchTesting(false);
     onSuccess();
-    void fetchCatalog('all');
+    void fetchCatalog();
     resetAllLater(10000);
   }, [fetchCatalog, localPlugins, markBatchTesting, markResult, onSuccess, resetAllLater, token]);
 
@@ -595,7 +403,7 @@ export function usePluginManageController({
       setLocalPlugins((prev) => updatePluginEnabledState(prev, plugin.name, nextEnabled));
       setHasPendingChanges(true);
       toast.success(`插件 ${plugin.name} 已${nextEnabled ? '启用' : '停用'}`);
-      void fetchCatalog('all');
+      void fetchCatalog();
     } catch (error) {
       toast.error(getRequestErrorMessage(error, `插件 ${plugin.name} 状态更新出错`));
     }
@@ -635,7 +443,7 @@ export function usePluginManageController({
 
       setSelectedPlugins(failedSet);
       toastBatchResult(`批量${isEnabled ? '启用' : '停用'}`, result);
-      void fetchCatalog('all');
+      void fetchCatalog();
     } catch (error) {
       toast.error(getRequestErrorMessage(error, '批量更新插件状态出错'));
     } finally {
@@ -650,135 +458,6 @@ export function usePluginManageController({
     }
     selectAllFiltered();
   }, [clearSelected, isAllFilteredSelected, selectAllFiltered]);
-
-  const handleConfirmDeletePlugin = useCallback(async () => {
-    const pluginName = dialogState.deleteConfirm.pluginName;
-    if (!pluginName) return;
-
-    setIsBatchDeleting(true);
-    try {
-      await requestAuthed(`/api/admin/plugins/${pluginName}`, token, '删除插件失败', {
-        method: 'DELETE',
-      });
-
-      setLocalPlugins((prev) => removePluginsByName(prev, new Set([pluginName])));
-      selectKey(pluginName, false);
-      setHasPendingChanges(true);
-      toast.success(`插件 ${pluginName} 已删除`);
-      dialogState.setDeleteConfirm({ open: false, pluginName: null });
-      void fetchCatalog('all');
-    } catch (error) {
-      toast.error(getRequestErrorMessage(error, '删除插件出错'));
-    } finally {
-      setIsBatchDeleting(false);
-    }
-  }, [dialogState, fetchCatalog, selectKey, token]);
-
-  const handleBatchDeletePlugins = useCallback(async () => {
-    if (selectedPluginNames.size === 0) {
-      toast.error('请先选择要删除的插件');
-      return;
-    }
-
-    setIsBatchDeleting(true);
-    try {
-      const result = await requestAuthedJson<BatchPluginOperationResponse>(
-        '/api/admin/plugins/batch-delete',
-        token,
-        '批量删除插件失败',
-        {
-          method: 'POST',
-          body: {
-            plugin_names: Array.from(selectedPluginNames),
-          },
-        }
-      );
-      const successSet = new Set(result.success ?? []);
-      const failedSet = new Set((result.failed ?? []).map((item) => item.plugin_name));
-
-      if (successSet.size > 0) {
-        setLocalPlugins((prev) => removePluginsByName(prev, successSet));
-        setHasPendingChanges(true);
-      }
-
-      setSelectedPlugins(failedSet);
-      dialogState.setBatchDeleteConfirmOpen(false);
-      toastBatchResult('批量删除', result);
-      void fetchCatalog('all');
-    } catch (error) {
-      toast.error(getRequestErrorMessage(error, '批量删除插件出错'));
-    } finally {
-      setIsBatchDeleting(false);
-    }
-  }, [dialogState, fetchCatalog, selectedPluginNames, setSelectedPlugins, token]);
-
-  const handleSaveEdit = useCallback(async () => {
-    if (!dialogState.editingPluginName) return;
-
-    try {
-      const payload: UpdatePluginRequest = {
-        priority: dialogState.editForm.priority,
-        description: dialogState.editForm.description,
-        url: dialogState.editForm.url,
-        version: dialogState.editForm.version.trim() || '0.0.0',
-        category: dialogState.editForm.category.trim() || 'search',
-        capabilities: parseCapabilitiesInput(dialogState.editForm.capabilitiesText),
-        tags: normalizeSingleTagSelection(dialogState.editForm.tags),
-      };
-
-      const response = await requestAuthedJson<UpdatePluginResponse>(
-        `/api/admin/plugins/${dialogState.editingPluginName}`,
-        token,
-        '更新插件失败',
-        {
-          method: 'PUT',
-          body: payload,
-        }
-      );
-
-      setLocalPlugins((prev) =>
-        updateEditedPlugin(prev, dialogState.editingPluginName!, dialogState.editForm, response.plugin)
-      );
-      setHasPendingChanges(true);
-      dialogState.setEditingPluginName(null);
-      toast.success('插件更新成功');
-      void fetchCatalog('all');
-    } catch (error) {
-      toast.error(getRequestErrorMessage(error, '更新插件出错'));
-    }
-  }, [dialogState, fetchCatalog, token]);
-
-  const handleInstallPlugin = useCallback(async (plugin: PluginInfo) => {
-    if (!plugin.id) {
-      toast.error('缺少插件目录 ID，无法导入');
-      return;
-    }
-
-    try {
-      const payload: PluginCatalogInstallRequest = { id: plugin.id };
-      const response = await requestAuthedJson<PluginCatalogInstallResponse>(
-        '/api/admin/plugin-center/install',
-        token,
-        '导入插件失败',
-        {
-          method: 'POST',
-          body: payload,
-        }
-      );
-
-      setLocalPlugins((prev) => prev.map((item) => (
-        item.id === plugin.id
-          ? { ...item, ...response.item, installed: true, is_enabled: true, is_local: true, available_actions: response.item.available_actions }
-          : item
-      )));
-      toast.success(`插件 ${plugin.name} 导入成功`);
-      setHasPendingChanges(true);
-      onSuccess();
-      void fetchCatalog('all');
-    } catch (error) {
-      toast.error(getRequestErrorMessage(error, '导入插件出错'));
-    }
-  }, [fetchCatalog, onSuccess, token]);
 
   const handleCreateTag = useCallback(async (name: string) => {
     setIsCreatingTag(true);
@@ -826,14 +505,6 @@ export function usePluginManageController({
       setTagOptions((prev) => replaceTagOption(prev, response.item));
       if (previousName) {
         setSelectedTagFiltersState((prev) => normalizeSingleTagSelection(replaceTagName(prev, previousName, response.item.name)));
-        dialogState.setAddForm((prev) => ({
-          ...prev,
-          tags: normalizeSingleTagSelection(replaceTagName(prev.tags, previousName, response.item.name)),
-        }));
-        dialogState.setEditForm((prev) => ({
-          ...prev,
-          tags: normalizeSingleTagSelection(replaceTagName(prev.tags, previousName, response.item.name)),
-        }));
         setLocalPlugins((prev) => prev.map((plugin) => ({
           ...plugin,
           tags: replaceTagName(plugin.tags || [], previousName, response.item.name),
@@ -847,7 +518,7 @@ export function usePluginManageController({
     } finally {
       setUpdatingTagId(null);
     }
-  }, [dialogState, tagOptions, token]);
+  }, [tagOptions, token]);
 
   const handleDeleteTag = useCallback(async (id: number) => {
     setDeletingTagId(id);
@@ -864,14 +535,6 @@ export function usePluginManageController({
       setTagOptions((prev) => removeTagOption(prev, id));
       if (currentOption) {
         setSelectedTagFiltersState((prev) => normalizeSingleTagSelection(removeTagName(prev, currentOption.name)));
-        dialogState.setAddForm((prev) => ({
-          ...prev,
-          tags: normalizeSingleTagSelection(removeTagName(prev.tags, currentOption.name)),
-        }));
-        dialogState.setEditForm((prev) => ({
-          ...prev,
-          tags: normalizeSingleTagSelection(removeTagName(prev.tags, currentOption.name)),
-        }));
         setLocalPlugins((prev) => prev.map((plugin) => ({
           ...plugin,
           tags: removeTagName(plugin.tags || [], currentOption.name),
@@ -885,7 +548,7 @@ export function usePluginManageController({
     } finally {
       setDeletingTagId(null);
     }
-  }, [dialogState, tagOptions, token]);
+  }, [tagOptions, token]);
 
   const setSelectedTagFilters = useCallback((value: string[]) => {
     setSelectedTagFiltersState(value);
@@ -898,18 +561,7 @@ export function usePluginManageController({
     testingStatus,
     isBatchTesting,
     isBatchUpdating,
-    isBatchDeleting,
-    isAdding,
-    isTestingUrl,
-    addDialogOpen: dialogState.addDialogOpen,
-    addForm: dialogState.addForm,
-    urlTestResult: dialogState.urlTestResult,
-    urlTestMessage: dialogState.urlTestMessage,
     detailPluginName: dialogState.detailPluginName,
-    editingPluginName: dialogState.editingPluginName,
-    editForm: dialogState.editForm,
-    deleteConfirm: dialogState.deleteConfirm,
-    batchDeleteConfirmOpen: dialogState.batchDeleteConfirmOpen,
     statusFilter,
     currentPage,
     searchKeyword,
@@ -917,7 +569,6 @@ export function usePluginManageController({
     pagedItems,
     totalPages,
     pageSize,
-    sourceFilter,
     categoryFilter,
     capabilityFilter,
     availableCategories,
@@ -933,7 +584,6 @@ export function usePluginManageController({
     selectedPluginPreviewText,
     isAllFilteredSelected,
     activeDetailPlugin: dialogState.activeDetailPlugin,
-    activeEditingPlugin: dialogState.activeEditingPlugin,
     isOperationBusy,
     isCatalogLoading,
     catalogVersion,
@@ -942,37 +592,18 @@ export function usePluginManageController({
     setCurrentPage,
     setPageSize,
     setSearchKeyword,
-    setSourceFilter,
     setCategoryFilter,
     setCapabilityFilter,
     setSelectedTagFilters,
-    setAddDialogOpen: dialogState.setAddDialogOpen,
-    setAddForm: dialogState.setAddForm,
-    setUrlTestResult: dialogState.setUrlTestResult,
-    setUrlTestMessage: dialogState.setUrlTestMessage,
     setDetailPluginName: dialogState.setDetailPluginName,
-    setEditingPluginName: dialogState.setEditingPluginName,
-    setEditForm: dialogState.setEditForm,
-    setDeleteConfirm: dialogState.setDeleteConfirm,
-    setBatchDeleteConfirmOpen: dialogState.setBatchDeleteConfirmOpen,
     selectKey,
-    resetAddDialogState: dialogState.resetAddDialogState,
     handleClose,
-    openAddDialog: dialogState.openAddDialog,
-    openEditDialog: dialogState.openEditDialog,
     handleOpenDetail: dialogState.handleOpenDetail,
-    handleAddFormKeyDown,
-    handleTestAddPluginURL,
-    handleAddPlugin,
     handleTestPlugin,
     handleBatchTest,
     handleTogglePluginEnabled,
     handleBatchTogglePlugins,
     handleToggleSelectFiltered,
-    handleConfirmDeletePlugin,
-    handleBatchDeletePlugins,
-    handleSaveEdit,
-    handleInstallPlugin,
     handleCreateTag,
     handleUpdateTag,
     handleDeleteTag,

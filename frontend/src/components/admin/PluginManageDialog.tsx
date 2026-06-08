@@ -1,22 +1,15 @@
 import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Activity, Edit3, Save } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { AdminDialogMode, PluginInfo } from '@/types/api';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { PluginAddDialog } from './PluginAddDialog';
-import { AdminTagMultiSelect } from './AdminTagMultiSelect';
 import {
   PluginManageWorkspace,
   type PluginManageWorkspaceViewModel,
@@ -63,7 +56,6 @@ export function PluginManageSurface({
     localPluginsCount: controller.localPlugins.length,
     searchKeyword: controller.searchKeyword,
     statusFilter: controller.statusFilter,
-    sourceFilter: controller.sourceFilter,
     categoryFilter: controller.categoryFilter,
     capabilityFilter: controller.capabilityFilter,
     availableCategories: controller.availableCategories,
@@ -82,22 +74,16 @@ export function PluginManageSurface({
     onClose: controller.handleClose,
     onSetSearchKeyword: controller.setSearchKeyword,
     onSetStatusFilter: controller.setStatusFilter,
-    onSetSourceFilter: controller.setSourceFilter,
     onSetCategoryFilter: controller.setCategoryFilter,
     onSetCapabilityFilter: controller.setCapabilityFilter,
-    onOpenAddDialog: controller.openAddDialog,
     onBatchToggle: (nextEnabled) => void controller.handleBatchTogglePlugins(nextEnabled),
-    onOpenBatchDeleteConfirm: () => controller.setBatchDeleteConfirmOpen(true),
     onBatchTest: () => void controller.handleBatchTest(),
     onToggleSelectFiltered: controller.handleToggleSelectFiltered,
     onSelectPlugin: controller.selectKey,
     onOpenDetail: controller.handleOpenDetail,
     onTestPlugin: (plugin) => void controller.handleTestPlugin(plugin),
     onTogglePluginEnabled: (plugin) => void controller.handleTogglePluginEnabled(plugin),
-    onOpenEditDialog: controller.openEditDialog,
-    onOpenDeleteConfirm: (pluginName) => controller.setDeleteConfirm({ open: true, pluginName }),
     onPageChange: controller.setCurrentPage,
-    onInstallPlugin: (plugin) => void controller.handleInstallPlugin(plugin),
   };
 
   const workspaceNode = presentation === 'modal'
@@ -107,38 +93,6 @@ export function PluginManageSurface({
   return (
     <>
       {workspaceNode}
-
-      <PluginAddDialog
-        open={controller.addDialogOpen}
-        isAdding={controller.isAdding}
-        isTestingUrl={controller.isTestingUrl}
-        addForm={controller.addForm}
-        tagOptions={controller.tagOptions}
-        isTagOptionsLoading={controller.isTagOptionsLoading}
-        isCreatingTag={controller.isCreatingTag}
-        updatingTagId={controller.updatingTagId}
-        deletingTagId={controller.deletingTagId}
-        urlTestResult={controller.urlTestResult}
-        urlTestMessage={controller.urlTestMessage}
-        onOpenChange={controller.setAddDialogOpen}
-        onAddFormChange={(updater) => {
-          controller.setAddForm((prev) => {
-            const next = updater(prev);
-            if (next.url !== prev.url) {
-              controller.setUrlTestResult('idle');
-              controller.setUrlTestMessage('');
-            }
-            return next;
-          });
-        }}
-        onCreateTag={controller.handleCreateTag}
-        onUpdateTag={controller.handleUpdateTag}
-        onDeleteTag={controller.handleDeleteTag}
-        onAddFormKeyDown={controller.handleAddFormKeyDown}
-        onReset={controller.resetAddDialogState}
-        onTestURL={() => void controller.handleTestAddPluginURL()}
-        onSubmit={() => void controller.handleAddPlugin()}
-      />
 
       <Dialog
         open={Boolean(controller.activeDetailPlugin)}
@@ -161,9 +115,7 @@ export function PluginManageSurface({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-slate-500 dark:text-slate-400">类型</p>
-                    <p className="font-medium">
-                      {controller.activeDetailPlugin.plugin_type === 'custom' ? '自定义插件' : '内置插件'}
-                    </p>
+                    <p className="font-medium">内置插件</p>
                   </div>
                   <div>
                     <p className="text-slate-500 dark:text-slate-400">优先级</p>
@@ -307,192 +259,10 @@ export function PluginManageSurface({
                 ) : null}
               </div>
 
-              {!controller.isReadOnly && controller.activeDetailPlugin.plugin_type === 'custom' ? (
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      controller.setDetailPluginName(null);
-                      controller.openEditDialog(controller.activeDetailPlugin);
-                    }}
-                  >
-                    <Edit3 className="mr-1 h-4 w-4" />
-                    编辑该插件
-                  </Button>
-                </DialogFooter>
-              ) : null}
             </>
           ) : null}
         </DialogContent>
       </Dialog>
-
-      <Dialog
-        open={Boolean(controller.activeEditingPlugin)}
-        onOpenChange={(open) => {
-          if (!open) controller.setEditingPluginName(null);
-        }}
-      >
-        <DialogContent className="max-w-xl">
-          {controller.activeEditingPlugin ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>编辑插件</DialogTitle>
-                <DialogDescription>{controller.activeEditingPlugin.name}</DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <div>
-                    <Label>插件名称</Label>
-                    <Input
-                      value={controller.activeEditingPlugin.name}
-                      disabled
-                      className="bg-slate-100 dark:bg-slate-800"
-                    />
-                  </div>
-                  <div>
-                    <Label>优先级</Label>
-                    <Input
-                      type="number"
-                      value={controller.editForm.priority}
-                      onChange={(event) =>
-                        controller.setEditForm((prev) => ({
-                          ...prev,
-                          priority: Number.parseInt(event.target.value, 10) || 0,
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label>URL</Label>
-                  <Input
-                    value={controller.editForm.url}
-                    onChange={(event) =>
-                      controller.setEditForm((prev) => ({ ...prev, url: event.target.value }))
-                    }
-                    disabled={controller.activeEditingPlugin.plugin_type !== 'custom'}
-                  />
-                </div>
-
-                <div>
-                  <Label>描述</Label>
-                  <Input
-                    value={controller.editForm.description}
-                    onChange={(event) =>
-                      controller.setEditForm((prev) => ({
-                        ...prev,
-                        description: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <div>
-                    <Label>版本</Label>
-                    <Input
-                      value={controller.editForm.version}
-                      onChange={(event) =>
-                        controller.setEditForm((prev) => ({
-                          ...prev,
-                          version: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label>分类</Label>
-                    <Input
-                      value={controller.editForm.category}
-                      onChange={(event) =>
-                        controller.setEditForm((prev) => ({
-                          ...prev,
-                          category: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label>能力</Label>
-                  <Input
-                    value={controller.editForm.capabilitiesText}
-                    onChange={(event) =>
-                      controller.setEditForm((prev) => ({
-                        ...prev,
-                        capabilitiesText: event.target.value,
-                      }))
-                    }
-                    placeholder="resource.search, resource.search.handoff"
-                  />
-                </div>
-
-                <div>
-                  <Label>标签</Label>
-                  <AdminTagMultiSelect
-                    scope="plugin"
-                    value={controller.editForm.tags}
-                    options={controller.tagOptions}
-                    loading={controller.isTagOptionsLoading}
-                    creating={controller.isCreatingTag}
-                    updatingTagId={controller.updatingTagId}
-                    deletingTagId={controller.deletingTagId}
-                    onChange={(nextTags) =>
-                      controller.setEditForm((prev) => ({
-                        ...prev,
-                        tags: nextTags,
-                      }))
-                    }
-                    onCreateTag={controller.handleCreateTag}
-                    onUpdateTag={controller.handleUpdateTag}
-                    onDeleteTag={controller.handleDeleteTag}
-                    allowManageOptions
-                    searchPlaceholder="搜索或新增插件标签"
-                    placeholder="选择一个插件标签，或搜索后新增"
-                  />
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => controller.setEditingPluginName(null)}>
-                  取消
-                </Button>
-                <Button onClick={() => void controller.handleSaveEdit()}>
-                  <Save className="mr-1 h-4 w-4" />
-                  保存
-                </Button>
-              </DialogFooter>
-            </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
-
-      <ConfirmDialog
-        open={controller.deleteConfirm.open}
-        onOpenChange={(open) =>
-          !open && controller.setDeleteConfirm({ open: false, pluginName: null })
-        }
-        title="删除插件"
-        description={`确定要删除插件 "${controller.deleteConfirm.pluginName || ''}" 吗？`}
-        confirmText="删除"
-        variant="destructive"
-        onConfirm={() => void controller.handleConfirmDeletePlugin()}
-        isLoading={controller.isBatchDeleting}
-      />
-
-      <ConfirmDialog
-        open={controller.batchDeleteConfirmOpen}
-        onOpenChange={controller.setBatchDeleteConfirmOpen}
-        title="确认批量删除插件"
-        description={`将删除 ${controller.selectedCount} 个已选插件${controller.selectedPluginPreviewText ? `（例如：${controller.selectedPluginPreviewText}）` : ''}。内置插件会自动跳过。`}
-        confirmText="删除"
-        variant="destructive"
-        onConfirm={() => void controller.handleBatchDeletePlugins()}
-        isLoading={controller.isBatchDeleting}
-      />
     </>
   );
 }

@@ -1,21 +1,6 @@
 import type { PluginInfo } from '@/types/api';
-import { parseCapabilitiesInput, type EditPluginForm } from './pluginManageDialogShared';
-import { normalizeSingleTagSelection } from './adminTagUtils';
 
 type PluginNameSet = Set<string>;
-
-export const appendCustomPlugin = (
-  plugins: PluginInfo[],
-  nextPlugin: PluginInfo
-): PluginInfo[] => [
-  {
-    ...nextPlugin,
-    plugin_type: 'custom',
-    is_enabled: true,
-    status: 'custom',
-  },
-  ...plugins,
-];
 
 export const markPluginTestResult = (
   plugins: PluginInfo[],
@@ -76,36 +61,3 @@ export const applyBatchEnabledState = (
             : 'inactive',
     };
   });
-
-export const removePluginsByName = (
-  plugins: PluginInfo[],
-  namesToRemove: PluginNameSet
-): PluginInfo[] => plugins.filter((plugin) => !namesToRemove.has(plugin.name));
-
-export const updateEditedPlugin = (
-  plugins: PluginInfo[],
-  pluginName: string,
-  editForm: EditPluginForm,
-  responsePlugin?: PluginInfo
-): PluginInfo[] =>
-  plugins.map((plugin) =>
-    plugin.name === pluginName
-      ? responsePlugin
-        ? {
-            ...responsePlugin,
-            status: responsePlugin.status ?? plugin.status,
-            is_enabled: responsePlugin.is_enabled ?? plugin.is_enabled,
-            plugin_type: responsePlugin.plugin_type ?? plugin.plugin_type,
-          }
-        : {
-            ...plugin,
-            priority: editForm.priority,
-            description: editForm.description,
-            url: editForm.url,
-            version: editForm.version,
-            category: editForm.category,
-          capabilities: parseCapabilitiesInput(editForm.capabilitiesText),
-            tags: normalizeSingleTagSelection(editForm.tags),
-          }
-      : plugin
-  );

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"unisearch/config"
 	"unisearch/model"
 	"unisearch/util"
 
@@ -317,18 +316,6 @@ func (s *AdminTagService) deleteChannelTag(existing model.AdminTag) error {
 }
 
 func (s *AdminTagService) updatePluginTag(existing model.AdminTag, displayName string, normalizedName string) (*model.AdminTag, error) {
-	customPlugins := config.GetCustomPluginsConfig()
-	snapshot := customPlugins.GetPlugins()
-	updatedPlugins := make([]config.CustomPlugin, len(snapshot))
-	copy(updatedPlugins, snapshot)
-	for index := range updatedPlugins {
-		updatedPlugins[index].Tags = util.ReplaceTagInList(updatedPlugins[index].Tags, existing.Name, displayName)
-	}
-
-	if err := customPlugins.SetPlugins(updatedPlugins); err != nil {
-		return nil, fmt.Errorf("更新插件标签失败: %w", err)
-	}
-
 	oldName := existing.Name
 	oldNormalizedName := existing.NormalizedName
 	existing.Name = displayName
@@ -347,7 +334,6 @@ func (s *AdminTagService) updatePluginTag(existing model.AdminTag, displayName s
 	}); err != nil {
 		existing.Name = oldName
 		existing.NormalizedName = oldNormalizedName
-		_ = customPlugins.SetPlugins(snapshot)
 		return nil, fmt.Errorf("更新标签失败: %w", err)
 	}
 
@@ -355,20 +341,7 @@ func (s *AdminTagService) updatePluginTag(existing model.AdminTag, displayName s
 }
 
 func (s *AdminTagService) deletePluginTag(existing model.AdminTag) error {
-	customPlugins := config.GetCustomPluginsConfig()
-	snapshot := customPlugins.GetPlugins()
-	updatedPlugins := make([]config.CustomPlugin, len(snapshot))
-	copy(updatedPlugins, snapshot)
-	for index := range updatedPlugins {
-		updatedPlugins[index].Tags = util.RemoveTagFromList(updatedPlugins[index].Tags, existing.Name)
-	}
-
-	if err := customPlugins.SetPlugins(updatedPlugins); err != nil {
-		return fmt.Errorf("删除插件标签失败: %w", err)
-	}
-
 	if err := s.db.Delete(&model.AdminTag{}, existing.ID).Error; err != nil {
-		_ = customPlugins.SetPlugins(snapshot)
 		return fmt.Errorf("删除标签失败: %w", err)
 	}
 	return nil

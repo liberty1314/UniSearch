@@ -1,13 +1,9 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"testing"
 
-	"unisearch/config"
 	"unisearch/model"
 
 	"gorm.io/driver/sqlite"
@@ -26,35 +22,6 @@ func newAdminTagServiceTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("auto migrate admin tags: %v", err)
 	}
 	return db
-}
-
-func setupCustomPluginsTestFile(t *testing.T, plugins []config.CustomPlugin) string {
-	t.Helper()
-
-	path := filepath.Join(t.TempDir(), "custom_plugins.json")
-	data, err := json.MarshalIndent(plugins, "", "  ")
-	if err != nil {
-		t.Fatalf("marshal custom plugins: %v", err)
-	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		t.Fatalf("write custom plugins: %v", err)
-	}
-
-	previous := os.Getenv("CUSTOM_PLUGINS_PATH")
-	if err := os.Setenv("CUSTOM_PLUGINS_PATH", path); err != nil {
-		t.Fatalf("set custom plugins path: %v", err)
-	}
-	config.ResetCustomPluginsConfigForTest()
-	t.Cleanup(func() {
-		if previous == "" {
-			_ = os.Unsetenv("CUSTOM_PLUGINS_PATH")
-		} else {
-			_ = os.Setenv("CUSTOM_PLUGINS_PATH", previous)
-		}
-		config.ResetCustomPluginsConfigForTest()
-	})
-
-	return path
 }
 
 func TestAdminTagServiceCreateTagSeparatesScopes(t *testing.T) {
@@ -185,17 +152,9 @@ func TestAdminTagServiceDeleteTagRemovesFromChannels(t *testing.T) {
 	}
 }
 
-func TestAdminTagServiceUpdateTagSyncsCustomPlugins(t *testing.T) {
+func TestAdminTagServiceUpdatePluginTagOnlyUpdatesDictionary(t *testing.T) {
 	db := newAdminTagServiceTestDB(t)
 	svc := NewAdminTagService(db)
-	setupCustomPluginsTestFile(t, []config.CustomPlugin{
-		{
-			Name:    "custom-pan",
-			URL:     "https://example.com",
-			Enabled: true,
-			Tags:    []string{"影视", "夸克"},
-		},
-	})
 
 	tag, err := svc.CreateTag(model.AdminTagScopePlugin, "影视")
 	if err != nil {
@@ -210,23 +169,18 @@ func TestAdminTagServiceUpdateTagSyncsCustomPlugins(t *testing.T) {
 		t.Fatalf("expected updated plugin tag, got %#v", updated)
 	}
 
-	plugins := config.GetCustomPluginsConfig().GetPlugins()
-	if len(plugins) != 1 || len(plugins[0].Tags) != 2 || plugins[0].Tags[0] != "电影" {
-		t.Fatalf("expected synced plugin tags, got %#v", plugins)
+	tags, err := svc.ListTags(model.AdminTagScopePlugin)
+	if err != nil {
+		t.Fatalf("list plugin tags: %v", err)
+	}
+	if len(tags) != 1 || tags[0].Name != "电影" {
+		t.Fatalf("expected plugin tag dictionary to be updated, got %#v", tags)
 	}
 }
 
-func TestAdminTagServiceDeleteTagRemovesFromCustomPlugins(t *testing.T) {
+func TestAdminTagServiceDeletePluginTagOnlyDeletesDictionaryEntry(t *testing.T) {
 	db := newAdminTagServiceTestDB(t)
 	svc := NewAdminTagService(db)
-	setupCustomPluginsTestFile(t, []config.CustomPlugin{
-		{
-			Name:    "custom-pan",
-			URL:     "https://example.com",
-			Enabled: true,
-			Tags:    []string{"影视", "夸克"},
-		},
-	})
 
 	tag, err := svc.CreateTag(model.AdminTagScopePlugin, "影视")
 	if err != nil {
@@ -237,8 +191,11 @@ func TestAdminTagServiceDeleteTagRemovesFromCustomPlugins(t *testing.T) {
 		t.Fatalf("delete tag: %v", err)
 	}
 
-	plugins := config.GetCustomPluginsConfig().GetPlugins()
-	if len(plugins) != 1 || len(plugins[0].Tags) != 1 || plugins[0].Tags[0] != "夸克" {
-		t.Fatalf("expected removed plugin tag, got %#v", plugins)
+	tags, err := svc.ListTags(model.AdminTagScopePlugin)
+	if err != nil {
+		t.Fatalf("list plugin tags: %v", err)
+	}
+	if len(tags) != 0 {
+		t.Fatalf("expected plugin tag dictionary entry to be deleted, got %#v", tags)
 	}
 }

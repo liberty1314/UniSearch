@@ -214,3 +214,44 @@
     - backend/plugin/sidhub/sidhub.go
     - backend/plugin/sidhub/sidhub_test.go
     - docs/readme_2606.md
+
+- [2026-06-09 00:11] feat(plugin-center): 改为内置插件中心并新增搜索源
+  - Body: 插件中心改为只管理源码注册的内置插件，移除自定义 URL 插件配置、导入、编辑和删除流程。新增看剧吧与 52API 搜索插件，并同步默认启用配置、管理后台与测试覆盖。
+  - Footer: 破坏性变更: 下线自定义 URL 插件配置和插件中心导入能力，新增插件必须通过 Go 源码插件注册；Migration: 移除 CUSTOM_PLUGINS_PATH 和旧 custom_plugins.json / plugin_market.default.json 配置，按需配置 PLUGIN_52API_KEY 后重启服务。
+  - Files:
+    - .env.example
+    - Dockerfile
+    - README.md
+    - backend/.env.example
+    - backend/api/admin_handler.go
+    - backend/api/admin_routes_test.go
+    - backend/api/plugin_center_handler_test.go
+    - backend/api/plugin_manifest_response_test.go
+    - backend/api/router_admin.go
+    - backend/config/custom_plugins.go
+    - backend/custom_plugins.json
+    - backend/main.go
+    - backend/plugin/api52/api52.go
+    - backend/plugin/api52/api52_test.go
+    - backend/plugin/kanjuba/kanjuba.go
+    - backend/plugin/kanjuba/kanjuba_test.go
+    - backend/plugin_market.default.json
+    - backend/service/admin_tag_service.go
+    - backend/service/admin_tag_service_test.go
+    - backend/service/plugin_catalog_service.go
+    - backend/service/plugin_catalog_service_test.go
+    - docs/2026-06-08-built-in-plugin-center-development-plan.md
+    - frontend/src/components/admin/AdminWorkspaceToolbar.tsx
+    - frontend/src/components/admin/PluginAddDialog.tsx
+    - frontend/src/components/admin/PluginManageDialog.tsx
+    - frontend/src/components/admin/PluginManageWorkspace.tsx
+    - frontend/src/components/admin/PluginManagementView.tsx
+    - frontend/src/components/admin/__tests__/PluginManageDialog.test.tsx
+    - frontend/src/components/admin/__tests__/PluginManageWorkspace.test.tsx
+    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
+    - frontend/src/components/admin/pluginManageDialogShared.ts
+    - frontend/src/components/admin/pluginManageStateUtils.ts
+    - frontend/src/hooks/usePluginManageController.ts
+    - frontend/src/hooks/usePluginManageDialogState.ts
+    - frontend/src/types/api.ts
+    - docs/readme_2606.md

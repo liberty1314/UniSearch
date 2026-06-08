@@ -3,16 +3,13 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   Activity,
   ArrowUpRight,
-  CloudDownload,
   CheckCircle2,
-  Edit3,
   Eye,
   Layers,
   Loader2,
   Search,
   ToggleLeft,
   ToggleRight,
-  Trash2,
   X,
   XCircle,
   Zap,
@@ -56,7 +53,6 @@ export interface PluginManageWorkspaceViewModel {
   localPluginsCount: number;
   searchKeyword: string;
   statusFilter: UnifiedStatusFilter;
-  sourceFilter: 'all' | 'local' | 'remote';
   categoryFilter: string;
   capabilityFilter: string;
   availableCategories: string[];
@@ -75,22 +71,16 @@ export interface PluginManageWorkspaceViewModel {
   onClose: () => void;
   onSetSearchKeyword: (value: string) => void;
   onSetStatusFilter: (value: UnifiedStatusFilter) => void;
-  onSetSourceFilter: (value: 'all' | 'local' | 'remote') => void;
   onSetCategoryFilter: (value: string) => void;
   onSetCapabilityFilter: (value: string) => void;
-  onOpenAddDialog: () => void;
   onBatchToggle: (isEnabled: boolean) => void;
-  onOpenBatchDeleteConfirm: () => void;
   onBatchTest: () => void;
   onToggleSelectFiltered: () => void;
   onSelectPlugin: (pluginName: string, checked: boolean) => void;
   onOpenDetail: (plugin: PluginInfo) => void;
   onTestPlugin: (plugin: PluginInfo) => void;
   onTogglePluginEnabled: (plugin: PluginInfo) => void;
-  onOpenEditDialog: (plugin: PluginInfo) => void;
-  onOpenDeleteConfirm: (pluginName: string) => void;
   onPageChange: (page: number) => void;
-  onInstallPlugin: (plugin: PluginInfo) => void;
 }
 
 interface PluginManageWorkspaceProps {
@@ -115,7 +105,6 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
     localPluginsCount,
     searchKeyword,
     statusFilter,
-    sourceFilter,
     categoryFilter,
     capabilityFilter,
     availableCategories = ['all'],
@@ -134,22 +123,16 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
     onClose,
     onSetSearchKeyword,
     onSetStatusFilter,
-    onSetSourceFilter,
     onSetCategoryFilter,
     onSetCapabilityFilter,
-    onOpenAddDialog,
     onBatchToggle,
-    onOpenBatchDeleteConfirm,
     onBatchTest,
     onToggleSelectFiltered,
     onSelectPlugin,
     onOpenDetail,
     onTestPlugin,
     onTogglePluginEnabled,
-    onOpenEditDialog,
-    onOpenDeleteConfirm,
     onPageChange,
-    onInstallPlugin,
   } = workspace;
 
   if (presentation === 'modal' && !isOpen) {
@@ -204,7 +187,7 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.4fr),repeat(4,minmax(0,0.8fr))]">
+        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.4fr),repeat(3,minmax(0,0.8fr))]">
           <Input
             value={searchKeyword}
             onChange={(event) => onSetSearchKeyword(event.target.value)}
@@ -213,17 +196,6 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
             reserveMessageSpace={false}
             className="h-10 rounded-2xl bg-white/80 py-2 text-sm dark:bg-white/[0.03]"
             startAdornment={<Search className="h-4 w-4 text-slate-400" />}
-          />
-
-          <AdminSelectField
-            value={sourceFilter}
-            onChange={(value) => onSetSourceFilter(value as 'all' | 'local' | 'remote')}
-            ariaLabel="插件来源筛选"
-            options={[
-              { value: 'all', label: '全部来源' },
-              { value: 'local', label: '本地已安装' },
-              { value: 'remote', label: '远程市场' },
-            ]}
           />
 
           <AdminSelectField
@@ -256,17 +228,6 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
             >
               {isAllFilteredSelected ? '清空选择' : '全选当前筛选'}
             </Button>
-            {!isReadOnly ? (
-              <Button
-                type="button"
-                variant="primary"
-                onClick={onOpenAddDialog}
-                disabled={isOperationBusy}
-                className="h-10 rounded-2xl px-4 text-sm"
-              >
-                添加 URL 插件
-              </Button>
-            ) : null}
           </div>
         </div>
 
@@ -281,12 +242,12 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
           addButtonLabel="添加插件"
           addButtonAriaLabel="添加插件"
           addButtonClassName="hidden"
+          showAddButton={false}
+          showBatchDelete={false}
           batchTestClassName="border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-cyan-800/70 dark:text-cyan-300 dark:hover:bg-cyan-950/30"
           batchTestDisabled={isOperationBusy || localPluginsCount === 0}
           onSetStatusFilter={onSetStatusFilter}
-          onOpenAddDialog={onOpenAddDialog}
           onBatchToggle={onBatchToggle}
-          onOpenBatchDeleteConfirm={onOpenBatchDeleteConfirm}
           onBatchTest={onBatchTest}
           onToggleSelectFiltered={onToggleSelectFiltered}
         />
@@ -327,9 +288,7 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
                           <Badge className={pluginStatusBadgeClass(pluginStatus)}>
                             {pluginStatusText(pluginStatus)}
                           </Badge>
-                          {plugin.installed === false ? <Badge variant="outline">未安装</Badge> : null}
-                          {plugin.is_remote ? <Badge variant="outline">远程</Badge> : null}
-                          {plugin.is_local ? <Badge variant="outline">本地</Badge> : null}
+                          <Badge variant="outline">内置</Badge>
                         </div>
                         <p className="mt-1 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">
                           {plugin.description || '无描述'}
@@ -363,11 +322,6 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
                             : '未测试'}
                         </span>
                       </div>
-                      {plugin.install?.type === 'custom_url' && plugin.installed === false ? (
-                        <div className="mt-2 break-all text-[11px] text-slate-500 dark:text-slate-400">
-                          {plugin.install.url}
-                        </div>
-                      ) : null}
                     </div>
 
                     <div className="mt-auto flex flex-wrap items-center gap-2">
@@ -381,20 +335,7 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
                         详情
                       </Button>
 
-                      {!isReadOnly && plugin.installed === false ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onInstallPlugin(plugin)}
-                          disabled={isOperationBusy}
-                          className="h-8 px-2 border-cyan-200 text-cyan-700 hover:bg-cyan-50 dark:border-cyan-800 dark:text-cyan-300 dark:hover:bg-cyan-950/20"
-                        >
-                          <CloudDownload className="mr-1 h-4 w-4" />
-                          一键导入
-                        </Button>
-                      ) : null}
-
-                      {!isReadOnly && plugin.installed !== false ? (
+                      {!isReadOnly ? (
                         <>
                           <Button
                             variant="outline"
@@ -424,28 +365,6 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
                             {plugin.is_enabled ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
                           </Button>
 
-                          {plugin.plugin_type === 'custom' ? (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onOpenEditDialog(plugin)}
-                                className="h-8 px-2"
-                              >
-                                <Edit3 className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onOpenDeleteConfirm(plugin.name)}
-                                aria-label={`删除插件 ${plugin.name}`}
-                                disabled={isOperationBusy}
-                                className="h-8 px-2 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          ) : null}
                         </>
                       ) : null}
 

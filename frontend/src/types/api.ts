@@ -473,39 +473,6 @@ export interface PluginUIMetadata {
   task_templates: string[];
 }
 
-export interface CreatePluginRequest {
-  name: string;
-  url: string;
-  priority: number;
-  description: string;
-  version?: string;
-  category?: string;
-  capabilities?: string[];
-  tags?: string[];
-}
-
-export interface CreatePluginResponse {
-  success: boolean;
-  message: string;
-  plugin?: PluginInfo;
-}
-
-export interface UpdatePluginRequest {
-  url: string;
-  priority: number;
-  description: string;
-  version?: string;
-  category?: string;
-  capabilities?: string[];
-  tags?: string[];
-}
-
-export interface UpdatePluginResponse {
-  success: boolean;
-  message: string;
-  plugin?: PluginInfo;
-}
-
 export type AdminTagScope = 'plugin' | 'channel';
 
 export interface AdminTagOption {
@@ -547,33 +514,9 @@ export interface PluginCatalogResponse {
   items: PluginInfo[];
 }
 
-export interface PluginCatalogInstallRequest {
-  id: string;
-}
-
-export interface PluginCatalogInstallResponse {
-  success: boolean;
-  item: PluginInfo;
-}
-
-export interface TestURLRequest {
-  url: string;
-}
-
-export interface TestURLResponse {
-  success: boolean;
-  message: string;
-  error?: string;
-  status_code?: number;
-}
-
 export interface BatchPluginStatusRequest {
   plugin_names: string[];
   is_enabled: boolean;
-}
-
-export interface BatchDeletePluginsRequest {
-  plugin_names: string[];
 }
 
 export interface BatchPluginOperationError {

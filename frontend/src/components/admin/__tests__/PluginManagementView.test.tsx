@@ -109,25 +109,6 @@ describe('PluginManagementView', () => {
         };
       }
 
-      if (url === '/api/admin/plugins' && init?.method === 'POST') {
-        return {
-          ok: true,
-          json: async () => ({
-            success: true,
-            plugin: {
-              name: 'custom-tags-plugin',
-              priority: 3,
-              status: 'custom',
-              plugin_type: 'custom',
-              is_enabled: true,
-              description: '带标签的自定义插件',
-              url: 'https://example.com/plugin',
-              tags: ['电影', '夸克'],
-            },
-          }),
-        };
-      }
-
       return {
         ok: true,
         json: async () => ({}),
@@ -218,67 +199,25 @@ describe('PluginManagementView', () => {
     expect(within(selectionBar).getByRole('button', { name: '全选当前筛选' })).toBeInTheDocument();
     expect(within(selectionBar).getByRole('button', { name: '批量启用' })).toBeInTheDocument();
     expect(within(selectionBar).getByRole('button', { name: '批量测试' })).toBeInTheDocument();
+    expect(within(selectionBar).queryByRole('button', { name: '批量删除' })).not.toBeInTheDocument();
   });
 
-  it('插件标签选择器只展示插件词库并支持新增标签', async () => {
+  it('插件中心不暴露导入和自定义创建入口', async () => {
     render(<PluginManagementView />);
 
     await screen.findByRole('heading', { name: '插件中心' });
-    await userEvent.click(screen.getByRole('button', { name: '导入 URL 插件' }));
-    const dialog = screen.getByRole('dialog');
 
-    fireEvent.change(screen.getByLabelText('插件名称 *'), {
-      target: { value: 'custom-tags-plugin' },
-    });
-    fireEvent.change(screen.getByLabelText('URL *'), {
-      target: { value: 'https://example.com/plugin' },
-    });
-
-    await userEvent.click(within(dialog).getByRole('button', { name: '插件标签选择器' }));
-    const panel = await screen.findByTestId('plugin-tag-selector-panel');
-    expect(within(panel).getByText('电影')).toBeInTheDocument();
-    expect(within(panel).queryByText('影视')).not.toBeInTheDocument();
-    expect(within(panel).queryByRole('button', { name: '编辑标签 电影' })).not.toBeInTheDocument();
-
-    fireEvent.click(within(panel).getByRole('button', { name: /电影/ }));
-    fireEvent.change(screen.getByPlaceholderText('搜索或新增插件标签'), { target: { value: '新标签' } });
-    fireEvent.click(screen.getByRole('button', { name: '新增标签 新标签' }));
+    expect(screen.queryByRole('button', { name: '导入 URL 插件' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '添加 URL 插件' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '一键导入' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '测试URL' })).not.toBeInTheDocument();
 
     const fetchMock = vi.mocked(fetch);
-    await waitFor(() => {
-      expect(
-        fetchMock.mock.calls.some(
-          ([url, init]) => url === '/api/admin/tags' && init?.method === 'POST'
-        )
-      ).toBe(true);
-    });
-
-    const tagCreateCall = fetchMock.mock.calls.find(
-      ([url, init]) => url === '/api/admin/tags' && init?.method === 'POST'
-    );
-    expect(tagCreateCall).toBeTruthy();
-    expect(JSON.parse(String(tagCreateCall?.[1]?.body))).toEqual({
-      scope: 'plugin',
-      name: '新标签',
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: '添加插件' }));
-
-    await waitFor(() => {
-      expect(
-        fetchMock.mock.calls.some(
-          ([url, init]) => url === '/api/admin/plugins' && init?.method === 'POST'
-        )
-      ).toBe(true);
-    });
-
-    const pluginCreateCall = fetchMock.mock.calls.find(
-      ([url, init]) => url === '/api/admin/plugins' && init?.method === 'POST'
-    );
-
-    expect(pluginCreateCall).toBeTruthy();
-    const requestBody = JSON.parse(String(pluginCreateCall?.[1]?.body));
-    expect(requestBody.tags).toEqual(['新标签']);
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) => url === '/api/admin/plugins' && init?.method === 'POST'
+      )
+    ).toBe(false);
   });
 
   it('支持在筛选框内编辑和删除插件标签词库项', async () => {

@@ -10,6 +10,7 @@ import (
 	// 添加新插件时，只需在此处添加对应的导入语句即可
 	_ "unisearch/plugin/aikanzy"
 	_ "unisearch/plugin/alupan"
+	_ "unisearch/plugin/api52"
 	_ "unisearch/plugin/ash"
 	_ "unisearch/plugin/cldi"
 	_ "unisearch/plugin/clmao"
@@ -27,6 +28,7 @@ import (
 	_ "unisearch/plugin/jikepan"
 	_ "unisearch/plugin/jsnoteclub"
 	_ "unisearch/plugin/jutoushe"
+	_ "unisearch/plugin/kanjuba"
 	_ "unisearch/plugin/kkmao"
 	_ "unisearch/plugin/kkv"
 	_ "unisearch/plugin/labi"
