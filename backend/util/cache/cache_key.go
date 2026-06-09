@@ -26,6 +26,9 @@ var (
 	allChannelsHash string
 )
 
+// searchResultCacheSchemaVersion 用于隔离搜索结果结构变更前后的缓存。
+const searchResultCacheSchemaVersion = "v2"
+
 // 初始化预计算的哈希值
 func init() {
 	// 预计算空列表的哈希值
@@ -52,7 +55,7 @@ func init() {
 // 返回格式: tg:search:{query_hash}
 // 注意：此函数签名已更改以符合 Redis 缓存迁移规范
 func GenerateTGCacheKey(query string) string {
-	hash := sha256.Sum256([]byte(query))
+	hash := sha256.Sum256([]byte(searchResultCacheSchemaVersion + ":" + query))
 	return fmt.Sprintf("tg:search:%x", hash)
 }
 
@@ -77,7 +80,7 @@ func GenerateTGCacheKeyLegacy(keyword string, channels []string) string {
 func GeneratePluginCacheKey(query string, pluginNames []string) string {
 	normalizedQuery := strings.ToLower(strings.TrimSpace(query))
 	pluginsHash := getPluginsHash(pluginNames)
-	hash := sha256.Sum256([]byte(normalizedQuery + ":" + pluginsHash))
+	hash := sha256.Sum256([]byte(searchResultCacheSchemaVersion + ":" + normalizedQuery + ":" + pluginsHash))
 	return fmt.Sprintf("plugin:search:%x", hash)
 }
 

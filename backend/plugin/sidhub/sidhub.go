@@ -3,6 +3,7 @@ package sidhub
 import (
 	"bytes"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"net/http"
 	"net/url"
@@ -20,14 +21,14 @@ import (
 )
 
 const (
-	pluginName           = "sidhub"
-	defaultPriority      = 3
-	primaryBaseURL       = "https://sidhub.cc"
-	fallbackBaseURL      = "https://www.seedhub.cc"
-	maxSearchCards       = 5
-	maxDetailLinks       = 80
-	maxQuarkResolveLinks = 8
-	cacheTTL             = 1 * time.Hour
+	pluginName                 = "sidhub"
+	defaultPriority            = 3
+	primaryBaseURL             = "https://sidhub.cc"
+	fallbackBaseURL            = "https://www.seedhub.cc"
+	maxSearchCards             = 5
+	maxExpandedResultsPerMovie = 240
+	maxQuarkResolveLinks       = 8
+	cacheTTL                   = 1 * time.Hour
 )
 
 var (
@@ -42,6 +43,9 @@ var (
 	thunderRegex        = regexp.MustCompile(`(?i)thunder://[^\s<"']+`)
 	quarkResolvedRegex  = regexp.MustCompile(`https?://pan\.quark\.cn/s/[0-9A-Za-z]+`)
 	spaceCollapseRegex  = regexp.MustCompile(`\s+`)
+	groupCountRegex     = regexp.MustCompile(`[（(]\d+[）)]`)
+	sidHubSizeRegex     = regexp.MustCompile(`(?i)\d+(?:\.\d+)?\s*(?:G|GB|M|MB)`)
+	sidHubYearTextRegex = regexp.MustCompile(`20\d{2}年`)
 	linkStartPathPrefix = "/link_start/"
 )
 
@@ -70,8 +74,13 @@ type sidHubMovie struct {
 }
 
 type sidHubLinkEntry struct {
-	Link  model.Link
-	Title string
+	Link       model.Link
+	Title      string
+	GroupLabel string
+	Index      int
+	Size       string
+	Year       string
+	Badges     []string
 }
 
 func init() {
@@ -95,7 +104,7 @@ func NewSidHubPlugin() *SidHubAsyncPlugin {
 			SourceLabel:         "SidHub",
 			SourceGroup:         "search",
 			SupportedMediaTypes: []string{"movie", "tv", "anime", "documentary", "unknown"},
-			TargetTypes:         []string{"share"},
+			TargetTypes:         []string{"share", "download"},
 			Priority:            defaultPriority,
 		},
 		UI: model.PluginUIMetadata{
@@ -187,11 +196,11 @@ func (p *SidHubAsyncPlugin) searchBaseURL(baseURL string, keyword string) ([]mod
 		if detailErr == nil {
 			parsedEntries, parseErr := parseDetailLinkEntries(bytes.NewReader(detailBody), baseURL, card.Title)
 			if parseErr == nil {
-				entries = limitLinkEntries(p.resolveQuarkLinks(parsedEntries), maxDetailLinks)
+				entries, _ = limitExpandedSidHubEntries(p.resolveQuarkLinks(parsedEntries))
 			}
 		}
 
-		results = append(results, buildResult(card, entries))
+		results = append(results, buildExpandedResults(card, entries)...)
 	}
 
 	return results, nil
@@ -340,8 +349,10 @@ func parseDetailLinkEntries(reader io.Reader, baseURL string, movieTitle string)
 		return nil, fmt.Errorf("解析 SidHub 详情页失败: %w", err)
 	}
 
-	entries := make([]sidHubLinkEntry, 0, maxDetailLinks)
+	entries := make([]sidHubLinkEntry, 0)
 	seen := make(map[string]struct{})
+	entries = append(entries, parseNativeSidHubDetailEntries(doc, baseURL, movieTitle, seen)...)
+	entries = append(entries, parseTabbedDetailEntries(doc, baseURL, movieTitle, seen)...)
 
 	doc.Find("a[href]").Each(func(index int, selection *goquery.Selection) {
 		href, _ := selection.Attr("href")
@@ -392,15 +403,111 @@ func parseDetailLinkEntries(reader io.Reader, baseURL string, movieTitle string)
 	return entries, nil
 }
 
+func parseNativeSidHubDetailEntries(doc *goquery.Document, baseURL string, movieTitle string, seen map[string]struct{}) []sidHubLinkEntry {
+	entries := []sidHubLinkEntry{}
+	groups := []struct {
+		selector string
+		label    string
+		linkType string
+	}{
+		{selector: ".seed-list", label: "磁力", linkType: "magnet"},
+		{selector: ".baidu-list", label: "百度", linkType: "baidu"},
+		{selector: ".quark-list", label: "夸克", linkType: "quark"},
+		{selector: ".xunlei-list", label: "迅雷", linkType: "xunlei"},
+		{selector: ".uc-list", label: "UC", linkType: "uc"},
+		{selector: ".ali-list, .aliyun-list", label: "阿里", linkType: "aliyun"},
+	}
+
+	for _, group := range groups {
+		doc.Find(group.selector).Each(func(_ int, scope *goquery.Selection) {
+			parseEntriesInScope(scope, baseURL, movieTitle, group.linkType, group.label, &entries, seen)
+		})
+	}
+
+	return entries
+}
+
+func parseTabbedDetailEntries(doc *goquery.Document, baseURL string, movieTitle string, seen map[string]struct{}) []sidHubLinkEntry {
+	entries := []sidHubLinkEntry{}
+
+	doc.Find("a,button").Each(func(_ int, tab *goquery.Selection) {
+		rawLabel := cleanText(tab.Text())
+		linkType := normalizeSidHubGroupLabel(rawLabel)
+		if linkType == "" {
+			return
+		}
+
+		targetID := resolveTabTargetID(tab)
+		if targetID == "" {
+			return
+		}
+
+		panel := doc.Find("#" + targetID).First()
+		if panel.Length() == 0 {
+			return
+		}
+
+		parseEntriesInScope(panel, baseURL, movieTitle, linkType, cleanSidHubGroupLabel(rawLabel), &entries, seen)
+	})
+
+	return entries
+}
+
+func resolveTabTargetID(tab *goquery.Selection) string {
+	for _, attr := range []string{"aria-controls", "data-target", "data-tab"} {
+		if value, exists := tab.Attr(attr); exists {
+			value = strings.TrimPrefix(strings.TrimSpace(value), "#")
+			if value != "" {
+				return value
+			}
+		}
+	}
+
+	if href, exists := tab.Attr("href"); exists {
+		href = strings.TrimSpace(href)
+		if strings.HasPrefix(href, "#") {
+			return strings.TrimPrefix(href, "#")
+		}
+	}
+
+	return ""
+}
+
+func parseEntriesInScope(scope *goquery.Selection, baseURL string, movieTitle string, linkType string, groupLabel string, entries *[]sidHubLinkEntry, seen map[string]struct{}) {
+	scope.Find("a[href], [data-url], [data-href], [data-clipboard-text], input[value]").Each(func(_ int, selection *goquery.Selection) {
+		rawURL := firstNonEmptyAttr(selection, "href", "data-url", "data-href", "data-clipboard-text", "value")
+		if !isPotentialSidHubResourceURL(rawURL) {
+			return
+		}
+		linkURL := absoluteURL(baseURL, rawURL)
+		if linkURL == "" {
+			return
+		}
+
+		row := resourceRowContainer(selection)
+		rowText := cleanText(row.Text())
+		entry := sidHubLinkEntry{
+			Link: model.Link{
+				Type:      linkType,
+				URL:       linkURL,
+				Password:  extractPassword(linkURL),
+				WorkTitle: cleanText(movieTitle),
+			},
+			Title:      resolveSidHubEntryTitle(selection, row, movieTitle),
+			GroupLabel: groupLabel,
+			Index:      len(*entries) + 1,
+			Size:       extractSidHubSize(rowText),
+			Year:       extractSidHubYear(rowText),
+			Badges:     extractSidHubBadges(row),
+		}
+		addLinkEntry(entries, seen, entry)
+	})
+}
+
 func buildResult(card sidHubMovie, entries []sidHubLinkEntry) model.SearchResult {
 	links := make([]model.Link, 0, len(entries))
 	for _, entry := range entries {
 		links = append(links, entry.Link)
-	}
-
-	images := []string{}
-	if card.CoverURL != "" {
-		images = append(images, card.CoverURL)
 	}
 
 	return model.SearchResult{
@@ -409,7 +516,7 @@ func buildResult(card sidHubMovie, entries []sidHubLinkEntry) model.SearchResult
 		Content:        buildResultContent(card, entries),
 		Links:          links,
 		Tags:           append([]string(nil), card.Tags...),
-		Images:         images,
+		Images:         imagesFromCard(card),
 		SourcePluginID: pluginName,
 		SourceType:     "plugin",
 		SourceName:     "SidHub",
@@ -427,6 +534,125 @@ func buildResult(card sidHubMovie, entries []sidHubLinkEntry) model.SearchResult
 			"link_count":       len(links),
 		},
 	}
+}
+
+func buildExpandedResults(card sidHubMovie, entries []sidHubLinkEntry) []model.SearchResult {
+	if len(entries) == 0 {
+		return []model.SearchResult{buildResult(card, nil)}
+	}
+
+	results := make([]model.SearchResult, 0, len(entries))
+	for index, entry := range entries {
+		if entry.Index == 0 {
+			entry.Index = index + 1
+		}
+		results = append(results, buildExpandedResult(card, entry))
+	}
+	return results
+}
+
+func buildExpandedResult(card sidHubMovie, entry sidHubLinkEntry) model.SearchResult {
+	title := cleanText(entry.Title)
+	if title == "" {
+		title = card.Title
+	}
+
+	return model.SearchResult{
+		UniqueID:       buildExpandedUniqueID(card.ID, entry),
+		Title:          title,
+		Content:        buildExpandedContent(card, entry),
+		Links:          []model.Link{entry.Link},
+		Tags:           mergeSidHubTags(card.Tags, entry.Badges),
+		Images:         imagesFromCard(card),
+		SourcePluginID: pluginName,
+		SourceType:     "plugin",
+		SourceName:     "SidHub",
+		MediaType:      card.MediaType,
+		TargetType:     resolveSidHubTargetType(entry.Link.Type),
+		DetailURL:      card.DetailURL,
+		Capabilities: model.ResourceCapabilities{
+			Searchable:      true,
+			ShareSearchable: isShareType(entry.Link.Type),
+			Downloadable:    true,
+		},
+		Meta: map[string]interface{}{
+			"sid_hub_movie_id":    card.ID,
+			"sid_hub_detail_url":  card.DetailURL,
+			"sid_hub_link_type":   entry.Link.Type,
+			"sid_hub_group_label": entry.GroupLabel,
+			"sid_hub_size":        entry.Size,
+			"sid_hub_year":        entry.Year,
+			"sid_hub_index":       entry.Index,
+		},
+	}
+}
+
+func imagesFromCard(card sidHubMovie) []string {
+	if card.CoverURL == "" {
+		return []string{}
+	}
+	return []string{card.CoverURL}
+}
+
+func buildExpandedUniqueID(movieID string, entry sidHubLinkEntry) string {
+	hash := fnv.New32a()
+	_, _ = hash.Write([]byte(entry.Link.Type))
+	_, _ = hash.Write([]byte(entry.Link.URL))
+	return fmt.Sprintf("%s-%s-%s-%08x", pluginName, movieID, entry.Link.Type, hash.Sum32())
+}
+
+func buildExpandedContent(card sidHubMovie, entry sidHubLinkEntry) string {
+	parts := []string{}
+	if card.Content != "" {
+		parts = append(parts, card.Content)
+	}
+	if entry.GroupLabel != "" {
+		parts = append(parts, "资源类型: "+entry.GroupLabel)
+	}
+	if entry.Size != "" {
+		parts = append(parts, "大小: "+entry.Size)
+	}
+	if entry.Year != "" {
+		parts = append(parts, "更新: "+entry.Year)
+	}
+	if len(entry.Badges) > 0 {
+		parts = append(parts, "标签: "+strings.Join(entry.Badges, " / "))
+	}
+	return strings.Join(parts, "\n")
+}
+
+func mergeSidHubTags(cardTags []string, badges []string) []string {
+	result := append([]string(nil), cardTags...)
+	seen := map[string]struct{}{}
+	for _, tag := range result {
+		seen[tag] = struct{}{}
+	}
+
+	for _, badge := range badges {
+		badge = cleanText(badge)
+		if badge == "" {
+			continue
+		}
+		if _, exists := seen[badge]; exists {
+			continue
+		}
+		seen[badge] = struct{}{}
+		result = append(result, badge)
+	}
+	return result
+}
+
+func resolveSidHubTargetType(linkType string) string {
+	switch linkType {
+	case "magnet", "ed2k", "thunder":
+		return "download"
+	default:
+		return "share"
+	}
+}
+
+func isShareType(linkType string) bool {
+	return resolveSidHubTargetType(linkType) == "share"
 }
 
 func buildSearchURL(baseURL string, keyword string) string {
@@ -553,6 +779,115 @@ func inferMediaType(text string) string {
 	default:
 		return "unknown"
 	}
+}
+
+func normalizeSidHubGroupLabel(value string) string {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	switch {
+	case strings.Contains(normalized, "磁力"), strings.Contains(normalized, "magnet"):
+		return "magnet"
+	case strings.Contains(normalized, "百度"), strings.Contains(normalized, "baidu"):
+		return "baidu"
+	case strings.Contains(normalized, "夸克"), strings.Contains(normalized, "quark"):
+		return "quark"
+	case strings.Contains(normalized, "迅雷"), strings.Contains(normalized, "xunlei"):
+		return "xunlei"
+	case strings.Contains(normalized, "uc"):
+		return "uc"
+	case strings.Contains(normalized, "阿里"), strings.Contains(normalized, "aliyun"), strings.Contains(normalized, "alipan"):
+		return "aliyun"
+	default:
+		return ""
+	}
+}
+
+func cleanSidHubGroupLabel(value string) string {
+	return cleanText(groupCountRegex.ReplaceAllString(value, ""))
+}
+
+func firstNonEmptyAttr(selection *goquery.Selection, attrs ...string) string {
+	for _, attr := range attrs {
+		if value, exists := selection.Attr(attr); exists && strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func isPotentialSidHubResourceURL(rawURL string) bool {
+	trimmed := strings.TrimSpace(rawURL)
+	if trimmed == "" {
+		return false
+	}
+
+	lowerURL := strings.ToLower(trimmed)
+	if strings.HasPrefix(lowerURL, "#") || strings.HasPrefix(lowerURL, "javascript:") {
+		return false
+	}
+	if strings.HasPrefix(lowerURL, "magnet:") || strings.HasPrefix(lowerURL, "ed2k:") || strings.HasPrefix(lowerURL, "thunder:") {
+		return true
+	}
+	if strings.Contains(lowerURL, linkStartPathPrefix) {
+		return true
+	}
+	if strings.HasPrefix(lowerURL, "http://") || strings.HasPrefix(lowerURL, "https://") {
+		return determineDirectLinkType(trimmed) != ""
+	}
+	return false
+}
+
+func resourceRowContainer(selection *goquery.Selection) *goquery.Selection {
+	row := selection.ParentsFiltered("li,tr,.item,.resource,.download-item,div").First()
+	if row.Length() == 0 {
+		return selection.Parent()
+	}
+	return row
+}
+
+func resolveSidHubEntryTitle(selection *goquery.Selection, row *goquery.Selection, movieTitle string) string {
+	title := cleanText(attrOrText(selection, "title"))
+	if title != "" {
+		return title
+	}
+
+	text := cleanText(row.Text())
+	text = sidHubSizeRegex.ReplaceAllString(text, "")
+	text = sidHubYearTextRegex.ReplaceAllString(text, "")
+	text = cleanText(text)
+	if text != "" {
+		return text
+	}
+	return cleanText(movieTitle)
+}
+
+func extractSidHubSize(text string) string {
+	return cleanText(sidHubSizeRegex.FindString(text))
+}
+
+func extractSidHubYear(text string) string {
+	return cleanText(sidHubYearTextRegex.FindString(text))
+}
+
+func extractSidHubBadges(row *goquery.Selection) []string {
+	badges := []string{}
+	seen := map[string]struct{}{}
+
+	row.Find("span,b,strong,em,.tag,.badge").Each(func(_ int, badge *goquery.Selection) {
+		text := cleanText(badge.Text())
+		if text == "" || extractSidHubSize(text) != "" || extractSidHubYear(text) != "" {
+			return
+		}
+		if len([]rune(text)) > 12 {
+			return
+		}
+		if _, exists := seen[text]; exists {
+			return
+		}
+		seen[text] = struct{}{}
+		badges = append(badges, text)
+	})
+
+	return badges
 }
 
 func normalizeLinkType(value string) string {
@@ -718,6 +1053,15 @@ func limitLinkEntries(entries []sidHubLinkEntry, limit int) []sidHubLinkEntry {
 	limited := make([]sidHubLinkEntry, limit)
 	copy(limited, entries[:limit])
 	return limited
+}
+
+func limitExpandedSidHubEntries(entries []sidHubLinkEntry) ([]sidHubLinkEntry, bool) {
+	if maxExpandedResultsPerMovie <= 0 || len(entries) <= maxExpandedResultsPerMovie {
+		return entries, false
+	}
+	limited := make([]sidHubLinkEntry, maxExpandedResultsPerMovie)
+	copy(limited, entries[:maxExpandedResultsPerMovie])
+	return limited, true
 }
 
 func cloneResults(results []model.SearchResult) []model.SearchResult {

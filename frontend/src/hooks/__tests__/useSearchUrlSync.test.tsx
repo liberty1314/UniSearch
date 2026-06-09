@@ -1,5 +1,5 @@
 import React from "react";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSearchUrlSync } from "@/hooks/useSearchUrlSync";
@@ -167,6 +167,40 @@ describe("useSearchUrlSync", () => {
 
     expect(setSearchParamsMock).not.toHaveBeenCalled();
     expect(performSearchMock).not.toHaveBeenCalled();
+  });
+
+  it("窗口重新聚焦时按当前 URL 重新校验搜索结果", async () => {
+    searchStoreState.searchResults = {
+      resources: [{ id: "old-resource" }],
+    };
+    renderHookProbe("/search?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97&types=xunlei");
+
+    await waitFor(() => {
+      expect(performSearchMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          keyword: "你的名字",
+          cloudTypes: ["xunlei"],
+        }),
+        { preserveResults: true },
+      );
+    });
+
+    performSearchMock.mockClear();
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 11_000);
+
+    fireEvent.focus(window);
+
+    await waitFor(() => {
+      expect(performSearchMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          keyword: "你的名字",
+          cloudTypes: ["xunlei"],
+        }),
+        { preserveResults: true },
+      );
+    });
+
+    nowSpy.mockRestore();
   });
 
   it("/search 无 q 时调用 clearResults", async () => {

@@ -2,6 +2,8 @@ package sidhub
 
 import (
 	"errors"
+	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -12,6 +14,77 @@ import (
 	"unisearch/plugin"
 	"unisearch/plugin/testutil"
 )
+
+const sidHubTabbedDownloadFixture = `
+<section id="downloads">
+  <nav class="download-tabs">
+    <a href="#magnet-pane">磁力(3)</a>
+    <a href="#baidu-pane">百度(2)</a>
+    <a href="#quark-pane">夸克(2)</a>
+    <a href="#xunlei-pane">迅雷(2)</a>
+    <a href="#uc-pane">UC(1)</a>
+    <a href="#aliyun-pane">阿里(0)</a>
+  </nav>
+  <div id="magnet-pane">
+    <ul>
+      <li><a href="/link_start/?redirect_to=magnet_1" title="你的名字。国粤日多音轨 8.19G">你的名字。国粤日多音轨</a><span>8.19G</span><span>蓝光</span><time>2025年</time></li>
+      <li><a href="/link_start/?redirect_to=magnet_2">Kimi.no.Na.wa.2016.1080p.Remux</a><span>24.89G</span><span>无损</span><time>2025年</time></li>
+      <li><a href="magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567">直接磁力</a><span>2.28G</span></li>
+    </ul>
+  </div>
+  <div id="baidu-pane">
+    <ul>
+      <li><a href="/link_start/?redirect_to=baidu_1" title="百度资源一">百度资源一</a></li>
+      <li><a href="https://pan.baidu.com/s/abc?pwd=1234">百度资源二</a></li>
+    </ul>
+  </div>
+  <div id="quark-pane">
+    <ul>
+      <li><a href="/link_start/?redirect_to=quark_1">夸克资源一</a></li>
+      <li><a href="https://pan.quark.cn/s/q2">夸克资源二</a></li>
+    </ul>
+  </div>
+  <div id="xunlei-pane">
+    <ul>
+      <li><a href="/link_start/?redirect_to=xunlei_1">迅雷资源一</a></li>
+      <li><a href="https://pan.xunlei.com/s/x2">迅雷资源二</a></li>
+    </ul>
+  </div>
+  <div id="uc-pane">
+    <ul>
+      <li><a href="/link_start/?redirect_to=uc_1">UC资源一</a></li>
+    </ul>
+  </div>
+  <div id="aliyun-pane"></div>
+</section>`
+
+const sidHubNativeDownloadFixture = `
+<section id="downloads">
+  <nav class="nav-links">
+    <div class="nav-item"><a class="nav-link seed-tab router-link-active" href="javascript:switchTab('seed');">磁力(2)</a></div>
+    <div class="nav-item"><a class="nav-link uc-tab" href="javascript:switchTab('uc');">UC(1)</a></div>
+  </nav>
+  <div class="seed-list">
+    <p><span class="seeds-header"><a class="sort" href="javascript:doSort(1);">大小</a> / <a class="sort" href="javascript:doSort(0);">更新于↓</a></span></p>
+    <ul class="seeds">
+      <li>
+        <a target="_blank" rel="nofollow" title="你的名字。[国粤日多音轨][8.19G]" href="/link_start/?seed_id=529070&amp;movie_title=你的名字。的磁力">你的名字。[国粤日多音轨]</a> / <code class="size">8.19G</code>
+        <code class="seed-feature">蓝光</code>
+        <span>2025年</span>
+      </li>
+      <li>
+        <a target="_blank" rel="nofollow" title="Kimi.no.Na.wa.2016.1080p.Remux[24.89G]" href="/link_start/?seed_id=478334&amp;movie_title=你的名字。的磁力">Kimi.no.Na.wa.2016.1080p.Remux</a> / <code class="size">24.89G</code>
+        <code class="seed-feature">无损</code>
+        <span>2025年</span>
+      </li>
+    </ul>
+  </div>
+  <div class="uc-list">
+    <ul>
+      <li><a title="UC资源一" href="/link_start/?pan_id=uc_1&amp;movie_title=你的名字。">UC资源一</a></li>
+    </ul>
+  </div>
+</section>`
 
 func TestSidHubPluginContract(t *testing.T) {
 	p := NewSidHubPlugin()
@@ -129,6 +202,118 @@ func TestParseDetailLinks(t *testing.T) {
 	}
 }
 
+func TestParseDetailLinkEntriesUsesDownloadTabs(t *testing.T) {
+	entries, err := parseDetailLinkEntries(strings.NewReader(sidHubTabbedDownloadFixture), "https://sidhub.cc", "你的名字。")
+	if err != nil {
+		t.Fatalf("解析 SidHub 页签资源失败: %v", err)
+	}
+
+	counts := countSidHubEntryTypes(entries)
+	expected := map[string]int{
+		"magnet": 3,
+		"baidu":  2,
+		"quark":  2,
+		"xunlei": 2,
+		"uc":     1,
+	}
+	if !reflect.DeepEqual(counts, expected) {
+		t.Fatalf("期望按页签识别全部资源类型，实际为 %#v", counts)
+	}
+
+	first := entries[0]
+	if first.Link.Type != "magnet" || first.GroupLabel != "磁力" || first.Size != "8.19G" || first.Year != "2025年" {
+		t.Fatalf("期望首个磁力资源携带页签、大小和年份，实际为 %#v", first)
+	}
+	if !containsString(first.Badges, "蓝光") {
+		t.Fatalf("期望解析标签蓝光，实际为 %#v", first.Badges)
+	}
+}
+
+func TestParseDetailLinkEntriesUsesNativeSeedHubLists(t *testing.T) {
+	entries, err := parseDetailLinkEntries(strings.NewReader(sidHubNativeDownloadFixture), "https://www.seedhub.cc", "你的名字。")
+	if err != nil {
+		t.Fatalf("解析 SeedHub 原生资源列表失败: %v", err)
+	}
+
+	counts := countSidHubEntryTypes(entries)
+	expected := map[string]int{
+		"magnet": 2,
+		"uc":     1,
+	}
+	if !reflect.DeepEqual(counts, expected) {
+		t.Fatalf("期望按原生列表识别磁力和 UC 资源，实际为 %#v", counts)
+	}
+	if len(entries) != 3 {
+		t.Fatalf("期望排序链接被跳过，仅保留 3 条资源，实际为 %#v", entries)
+	}
+	if entries[0].Link.Type != "magnet" || entries[0].GroupLabel != "磁力" || entries[0].Size != "8.19G" {
+		t.Fatalf("期望首个原生列表资源识别为磁力并带大小，实际为 %#v", entries[0])
+	}
+}
+
+func TestSidHubBuildsOneResultPerDownloadEntry(t *testing.T) {
+	card := sidHubMovie{
+		ID:        "4259",
+		Title:     "你的名字。 君の名は。",
+		DetailURL: "https://sidhub.cc/movies/4259/",
+		Content:   "2016 / 动漫 / 日本 / 日语",
+		MediaType: "anime",
+		Tags:      []string{"2016"},
+	}
+	entries := []sidHubLinkEntry{
+		{
+			Link:       model.Link{Type: "magnet", URL: "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567", WorkTitle: "你的名字。"},
+			Title:      "你的名字。国粤日多音轨",
+			GroupLabel: "磁力",
+			Index:      1,
+			Size:       "8.19G",
+			Year:       "2025年",
+			Badges:     []string{"蓝光"},
+		},
+		{
+			Link:       model.Link{Type: "quark", URL: "https://pan.quark.cn/s/q2", WorkTitle: "你的名字。"},
+			Title:      "夸克资源二",
+			GroupLabel: "夸克",
+			Index:      2,
+		},
+	}
+
+	results := buildExpandedResults(card, entries)
+	if len(results) != 2 {
+		t.Fatalf("期望每条下载资源展开为独立结果，实际为 %d", len(results))
+	}
+	if results[0].UniqueID == results[1].UniqueID {
+		t.Fatalf("期望展开结果具有稳定且不同的 UniqueID，实际为 %q", results[0].UniqueID)
+	}
+	if results[0].Title != "你的名字。国粤日多音轨" || len(results[0].Links) != 1 || results[0].Links[0].Type != "magnet" {
+		t.Fatalf("期望首条结果为独立磁力资源，实际为 %#v", results[0])
+	}
+	if results[0].TargetType != "download" {
+		t.Fatalf("期望磁力结果 target_type 为 download，实际为 %q", results[0].TargetType)
+	}
+	if results[1].TargetType != "share" {
+		t.Fatalf("期望网盘结果 target_type 为 share，实际为 %q", results[1].TargetType)
+	}
+}
+
+func TestLimitExpandedSidHubEntriesKeepsTypicalDetailPage(t *testing.T) {
+	entries := make([]sidHubLinkEntry, 158)
+	for index := range entries {
+		entries[index] = sidHubLinkEntry{
+			Link:  model.Link{Type: "magnet", URL: fmt.Sprintf("magnet:?xt=urn:btih:%040d", index)},
+			Title: fmt.Sprintf("资源 %d", index+1),
+		}
+	}
+
+	limited, truncated := limitExpandedSidHubEntries(entries)
+	if truncated {
+		t.Fatal("158 条 SidHub 详情资源不应被截断")
+	}
+	if len(limited) != 158 {
+		t.Fatalf("期望保留 158 条，实际为 %d", len(limited))
+	}
+}
+
 func TestNormalizeLinkType(t *testing.T) {
 	cases := map[string]string{
 		"quark":       "quark",
@@ -149,6 +334,14 @@ func TestNormalizeLinkType(t *testing.T) {
 			t.Fatalf("normalizeLinkType(%q) 期望 %q，实际为 %q", input, expected, actual)
 		}
 	}
+}
+
+func countSidHubEntryTypes(entries []sidHubLinkEntry) map[string]int {
+	counts := make(map[string]int)
+	for _, entry := range entries {
+		counts[entry.Link.Type]++
+	}
+	return counts
 }
 
 func TestBuildSearchURL(t *testing.T) {
@@ -186,7 +379,7 @@ func TestSidHubDoSearchFetchesDetailsAndUsesCache(t *testing.T) {
 
 	searchURL := "https://sidhub.cc/s/%E6%80%AA%E5%A5%87%E7%89%A9%E8%AF%AD/"
 	detailURL := "https://sidhub.cc/movies/119254/"
-	linkStartURL := "https://sidhub.cc/link_start/?redirect_to=pan_id_10&movie_title=%E6%80%AA%E5%A5%87%E7%89%A9%E8%AF%AD"
+	linkStartURL := "https://sidhub.cc/link_start/?redirect_to=quark_1"
 	fixtures := map[string]string{
 		searchURL: `
 <article>
@@ -197,11 +390,7 @@ func TestSidHubDoSearchFetchesDetailsAndUsesCache(t *testing.T) {
   <span>类型:科幻/悬疑</span>
   <span>豆瓣评分: 9.6</span>
 </article>`,
-		detailURL: `
-<section>
-  <a data-link="quark" title="【怪奇物语】【4K】" href="/link_start/?redirect_to=pan_id_10&amp;movie_title=%E6%80%AA%E5%A5%87%E7%89%A9%E8%AF%AD">夸克</a>
-  <a title="磁力资源" href="magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567">磁力</a>
-</section>`,
+		detailURL:    sidHubTabbedDownloadFixture,
 		linkStartURL: `<html><body><a href="https://pan.quark.cn/s/real123">打开夸克</a></body></html>`,
 	}
 	fetchCount := map[string]int{}
@@ -218,24 +407,34 @@ func TestSidHubDoSearchFetchesDetailsAndUsesCache(t *testing.T) {
 	if err != nil {
 		t.Fatalf("搜索失败: %v", err)
 	}
-	if len(results) != 1 {
-		t.Fatalf("期望 1 条结果，实际为 %d", len(results))
+	if len(results) != 10 {
+		t.Fatalf("期望 SidHub 下载项展开为 10 条结果，实际为 %d", len(results))
 	}
-	result := results[0]
-	if result.UniqueID != "sidhub-119254" {
-		t.Fatalf("期望 UniqueID 为 sidhub-119254，实际为 %q", result.UniqueID)
+
+	counts := map[string]int{}
+	hasResolvedQuark := false
+	for _, result := range results {
+		if result.SourcePluginID != "sidhub" || result.SourceName != "SidHub" {
+			t.Fatalf("期望来源为 SidHub，实际为 %#v", result)
+		}
+		if len(result.Links) != 1 {
+			t.Fatalf("期望每条展开结果只包含一个链接，实际为 %#v", result.Links)
+		}
+		if result.MediaType != "tv" {
+			t.Fatalf("期望媒体类型为 tv，实际为 %q", result.MediaType)
+		}
+		counts[result.Links[0].Type]++
+		if result.Links[0].URL == "https://pan.quark.cn/s/real123" {
+			hasResolvedQuark = true
+		}
 	}
-	if len(result.Links) != 2 {
-		t.Fatalf("期望解析 2 个链接，实际为 %#v", result.Links)
+
+	expected := map[string]int{"magnet": 3, "baidu": 2, "quark": 2, "xunlei": 2, "uc": 1}
+	if !reflect.DeepEqual(counts, expected) {
+		t.Fatalf("期望展开结果类型计数为 %#v，实际为 %#v", expected, counts)
 	}
-	if result.Links[0].URL != "https://pan.quark.cn/s/real123" {
-		t.Fatalf("期望夸克跳转被解析为真实链接，实际为 %q", result.Links[0].URL)
-	}
-	if result.MediaType != "tv" || result.SourcePluginID != "sidhub" {
-		t.Fatalf("期望媒体类型和来源被设置，实际为 media=%q source=%q", result.MediaType, result.SourcePluginID)
-	}
-	if !strings.Contains(result.Content, "资源类型: quark 1 / magnet 1") {
-		t.Fatalf("期望内容包含资源类型摘要，实际为 %q", result.Content)
+	if !hasResolvedQuark {
+		t.Fatalf("期望夸克跳转被解析为真实链接，实际为 %#v", results)
 	}
 
 	p.fetcher = func(targetURL string) ([]byte, error) {
@@ -245,7 +444,7 @@ func TestSidHubDoSearchFetchesDetailsAndUsesCache(t *testing.T) {
 	if err != nil {
 		t.Fatalf("缓存搜索失败: %v", err)
 	}
-	if len(cachedResults) != 1 || cachedResults[0].UniqueID != "sidhub-119254" {
+	if len(cachedResults) != 10 || cachedResults[0].SourcePluginID != "sidhub" {
 		t.Fatalf("期望缓存返回同一结果，实际为 %#v", cachedResults)
 	}
 	if fetchCount[searchURL] != 1 || fetchCount[detailURL] != 1 || fetchCount[linkStartURL] != 1 {

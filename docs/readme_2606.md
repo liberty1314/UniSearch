@@ -255,3 +255,16 @@
     - frontend/src/hooks/usePluginManageDialogState.ts
     - frontend/src/types/api.ts
     - docs/readme_2606.md
+
+- [2026-06-09 17:46] feat(sidhub): 展开详情资源为独立搜索结果
+  - Body: SidHub 详情页资源按磁力、百度、夸克、迅雷、UC 等分组解析，并为每条资源生成独立结果、元数据和下载能力。同步补充缓存键与前端搜索参数同步测试，保留一份真实响应样本用于排查。
+  - Files:
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - backend/service/search_response_builder_test.go
+    - backend/util/cache/cache_key.go
+    - backend/util/cache/cache_key_test.go
+    - frontend/src/hooks/__tests__/useSearchUrlSync.test.tsx
+    - frontend/src/hooks/useSearchUrlSync.ts
+    - sidhub-search-response-148.json
+    - docs/readme_2606.md

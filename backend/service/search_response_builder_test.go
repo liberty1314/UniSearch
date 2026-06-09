@@ -163,6 +163,43 @@ func TestSearchResponseBuilderHonorsCloudTypesAndSkipFilterForResources(t *testi
 	}
 }
 
+func TestSearchResponseBuilderFiltersExpandedSidHubResultsByCloudType(t *testing.T) {
+	builder := newSearchResponseBuilder()
+	results := []model.SearchResult{
+		{
+			UniqueID:       "sidhub-4259-magnet-a",
+			Title:          "你的名字 磁力资源",
+			SourcePluginID: "sidhub",
+			SourceType:     "plugin",
+			SourceName:     "SidHub",
+			Links:          []model.Link{{Type: "magnet", URL: "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567"}},
+		},
+		{
+			UniqueID:       "sidhub-4259-xunlei-a",
+			Title:          "你的名字 迅雷资源",
+			SourcePluginID: "sidhub",
+			SourceType:     "plugin",
+			SourceName:     "SidHub",
+			Links:          []model.Link{{Type: "xunlei", URL: "https://pan.xunlei.com/s/x"}},
+		},
+	}
+
+	response := builder.Build(results, NormalizedSearchRequest{
+		Keyword:    "你的名字",
+		CloudTypes: []string{"magnet"},
+	})
+	if response.Total != 1 || len(response.Resources) != 1 {
+		t.Fatalf("期望只保留 1 条 SidHub 磁力展开结果，实际为 %#v", response)
+	}
+	resource := response.Resources[0]
+	if resource.Source.ID != "sidhub" || len(resource.Links) != 1 || resource.Links[0].Type != "magnet" {
+		t.Fatalf("期望只保留 SidHub 磁力展开结果，实际为 %#v", response)
+	}
+	if _, exists := response.Facets.CloudTypes["xunlei"]; exists {
+		t.Fatalf("期望迅雷类型被筛选掉，实际 facets 为 %#v", response.Facets.CloudTypes)
+	}
+}
+
 func TestSearchResponseBuilderAdaptsSearchResultToResourceProtocol(t *testing.T) {
 	builder := newSearchResponseBuilder()
 	response := builder.Build([]model.SearchResult{
@@ -354,7 +391,7 @@ func TestSearchResponseBuilderKeepsOnlyMatchedLinkTitlesInMixedResult(t *testing
 		{
 			UniqueID: "mixed-links-1",
 			Title:    "#电影",
-			Content: "速度与激情10\n链接：https://pan.quark.cn/s/fast\n\n女神炫技写真\n链接：https://pan.quark.cn/s/noise",
+			Content:  "速度与激情10\n链接：https://pan.quark.cn/s/fast\n\n女神炫技写真\n链接：https://pan.quark.cn/s/noise",
 			Links: []model.Link{
 				{Type: "quark", URL: "https://pan.quark.cn/s/fast"},
 				{Type: "quark", URL: "https://pan.quark.cn/s/noise"},
