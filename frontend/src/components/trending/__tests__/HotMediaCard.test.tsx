@@ -48,4 +48,17 @@ describe("HotMediaCard", () => {
       keyword: "奥本海默 4K",
     }));
   });
+
+  it("在类型数组为空值时也能稳定渲染", () => {
+    const itemWithNullGenres = {
+      ...item,
+      genre_names: null,
+    } as unknown as HotRankingItem;
+
+    render(<HotMediaCard item={itemWithNullGenres} rank={1} category="movie" onSearch={vi.fn()} />);
+
+    expect(screen.getByText("奥本海默")).toBeInTheDocument();
+    expect(screen.queryByText("剧情")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "搜索" })).toBeInTheDocument();
+  });
 });

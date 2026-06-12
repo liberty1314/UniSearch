@@ -268,3 +268,15 @@
     - frontend/src/hooks/useSearchUrlSync.ts
     - sidhub-search-response-148.json
     - docs/readme_2606.md
+
+- [2026-06-12 21:51] fix(hot-ranking): 归一化热榜类型空值避免渲染崩溃
+  - Body: 热榜映射在缺少类型数据时改为返回空数组，前端热门卡片与高亮区也统一对 `null` 做兜底处理。补充后端与前端测试，覆盖空类型数组的渲染场景。
+  - Files:
+    - backend/service/hot_ranking_mapper.go
+    - backend/service/hot_ranking_mapper_test.go
+    - frontend/src/components/trending/HotHighlightGrid.tsx
+    - frontend/src/components/trending/HotMediaCard.tsx
+    - frontend/src/components/trending/__tests__/HotHighlightGrid.test.tsx
+    - frontend/src/components/trending/__tests__/HotMediaCard.test.tsx
+    - frontend/src/types/hotRanking.ts
+    - docs/readme_2606.md

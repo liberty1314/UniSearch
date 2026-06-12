@@ -18,6 +18,8 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
   const searchActions = SearchService.buildTrendingSearchActions(item);
   const primaryAction = searchActions.find((action) => action.isPrimary) || searchActions[0];
   const secondaryActions = searchActions.filter((action) => !action.isPrimary);
+  // 真实接口历史数据中可能返回 null，这里统一归一化避免页面渲染崩溃。
+  const genreNames = Array.isArray(item.genre_names) ? item.genre_names : [];
 
   return (
     <Card className="group p-4 md:p-5" data-testid="hot-media-card">
@@ -69,7 +71,7 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            {item.genre_names.map((genre) => (
+            {genreNames.map((genre) => (
               <span
                 key={genre}
                 className="rounded-full border border-slate-200/70 bg-white/75 px-3 py-1 text-xs font-medium text-slate-600 dark:border-white/10 dark:bg-slate-900/50 dark:text-slate-300"

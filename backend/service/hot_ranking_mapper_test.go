@@ -56,3 +56,15 @@ func TestIsAnimeTVDetectsAnimationGenre(t *testing.T) {
 		t.Fatal("expected non-animation tv not to be anime")
 	}
 }
+
+func TestResolveGenreNamesReturnsEmptySliceWhenMissing(t *testing.T) {
+	result := resolveGenreNames(nil, map[int]string{16: "动画"})
+
+	if result == nil {
+		t.Fatal("expected empty slice instead of nil")
+	}
+
+	if len(result) != 0 {
+		t.Fatalf("expected empty slice, got %d items", len(result))
+	}
+}

@@ -14,6 +14,8 @@ const HotHighlightGrid: React.FC<HotHighlightGridProps> = ({ item, onSearch }) =
     return null;
   }
 
+  const genreNames = Array.isArray(item.genre_names) ? item.genre_names : [];
+
   return (
     <Card className="overflow-hidden p-0" data-testid="hot-page-highlight">
       <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
@@ -50,7 +52,7 @@ const HotHighlightGrid: React.FC<HotHighlightGridProps> = ({ item, onSearch }) =
               热门标签
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {(item.genre_names.length > 0 ? item.genre_names : ["待补充"]).map((genre) => (
+              {(genreNames.length > 0 ? genreNames : ["待补充"]).map((genre) => (
                 <span
                   key={genre}
                   className="rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 dark:border-white/10 dark:bg-slate-900/50 dark:text-slate-300"

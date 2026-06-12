@@ -17,9 +17,9 @@ export interface HotRankingItem {
   vote_count: number;
   popularity: number;
   release_date: string;
-  genre_names: string[];
+  genre_names: string[] | null;
   region?: string;
-  origin_countries?: string[];
+  origin_countries?: string[] | null;
   tmdb_url: string;
 }
 

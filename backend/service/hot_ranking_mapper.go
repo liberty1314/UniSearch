@@ -51,7 +51,7 @@ func mapTVResultToHotRankingItem(item TMDBTVResult, category model.HotRankingCat
 
 func resolveGenreNames(genreIDs []int, genres map[int]string) []string {
 	if len(genreIDs) == 0 || len(genres) == 0 {
-		return nil
+		return []string{}
 	}
 
 	result := make([]string, 0, len(genreIDs))
@@ -61,6 +61,9 @@ func resolveGenreNames(genreIDs []int, genres map[int]string) []string {
 			continue
 		}
 		result = append(result, name)
+	}
+	if len(result) == 0 {
+		return []string{}
 	}
 	return result
 }

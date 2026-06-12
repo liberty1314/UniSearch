@@ -32,4 +32,15 @@ describe("HotHighlightGrid", () => {
     expect(screen.getByRole("button", { name: "搜索" })).toBeInTheDocument();
     expect(screen.queryByText("查看 TMDB 条目")).not.toBeInTheDocument();
   });
+
+  it("在热门标签为空值时展示兜底文案", () => {
+    const itemWithNullGenres = {
+      ...item,
+      genre_names: null,
+    } as unknown as HotRankingItem;
+
+    render(<HotHighlightGrid item={itemWithNullGenres} onSearch={vi.fn()} />);
+
+    expect(screen.getByText("待补充")).toBeInTheDocument();
+  });
 });
