@@ -126,9 +126,11 @@ describe('PluginManagementView', () => {
     expect(screen.getByRole('combobox', { name: '插件状态筛选' })).toBeInTheDocument();
     expect(screen.getByTestId('plugin-market-card-builtin-enabled-1')).toBeInTheDocument();
     expect(screen.queryByTestId('plugin-market-card-builtin-enabled-11')).not.toBeInTheDocument();
+    expect(screen.getByTestId('plugin-market-card-builtin-enabled-1')).toHaveClass('dark:bg-slate-950/[0.52]');
 
     const initialDrawer = await screen.findByTestId('plugin-management-drawer');
     expect(within(initialDrawer).getByText('builtin-enabled-1')).toBeInTheDocument();
+    expect(within(initialDrawer).getByText(/内置插件示例 1/).closest('div')).toHaveClass('dark:bg-slate-950/[0.40]');
 
     const pageSizeSelect = screen.getByRole('combobox', { name: '每页条数' });
     await userEvent.click(pageSizeSelect);

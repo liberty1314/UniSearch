@@ -8,11 +8,11 @@ export const buildHotToolbarTabClassName = (active: boolean, activeClassName: st
   active
     ? activeClassName
     : cn(
-        "bg-white/72 text-slate-600 dark:bg-slate-900/45 dark:text-slate-300",
-        !disabled && "hover:border-cyan-200 hover:bg-white hover:text-slate-900 dark:hover:border-cyan-400/35 dark:hover:bg-slate-900/70 dark:hover:text-white"
+        "bg-white/72 text-slate-600 dark:bg-slate-950/[0.48] dark:text-slate-300",
+        !disabled && "hover:border-cyan-200 hover:bg-white hover:text-slate-900 dark:hover:border-cyan-400/[0.24] dark:hover:bg-cyan-400/[0.08] dark:hover:text-white"
       ),
   disabled && "opacity-40 cursor-not-allowed"
 );
 
 export const hotToolbarHintClassName =
-  "mt-2 px-2 text-[12px] leading-5 text-slate-400 dark:text-slate-500";
+  "mt-2 px-2 text-[12px] leading-5 text-slate-400 dark:text-slate-300";

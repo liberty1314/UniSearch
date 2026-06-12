@@ -51,7 +51,7 @@ const HotHero: React.FC<HotHeroProps> = ({ period, meta, "data-testid": dataTest
       <div className="absolute inset-x-0 top-0 h-32 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_58%)]" />
       <div className="relative z-10 grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] lg:items-end">
         <div>
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400 dark:text-slate-500">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400 dark:text-slate-300">
             热门榜单
           </p>
           <h1 className="text-3xl font-bold tracking-tight text-blue-950 dark:text-cyan-100 sm:text-4xl">
@@ -66,10 +66,10 @@ const HotHero: React.FC<HotHeroProps> = ({ period, meta, "data-testid": dataTest
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2.5">
-            <span className="inline-flex items-center rounded-full border border-cyan-200/60 bg-white/75 px-3.5 py-1.5 text-sm font-medium text-cyan-700 shadow-sm dark:border-cyan-300/20 dark:bg-slate-900/45 dark:text-cyan-200">
+            <span className="inline-flex items-center rounded-full border border-cyan-200/60 bg-white/75 px-3.5 py-1.5 text-sm font-medium text-cyan-700 shadow-sm dark:border-cyan-300/[0.18] dark:bg-slate-950/[0.48] dark:text-cyan-200">
               {periodLabelMap[period]}
             </span>
-            <span className="inline-flex items-center rounded-full border border-slate-200/70 bg-white/80 px-3.5 py-1.5 text-sm font-medium text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300">
+            <span className="inline-flex items-center rounded-full border border-slate-200/70 bg-white/80 px-3.5 py-1.5 text-sm font-medium text-slate-600 shadow-sm dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-300">
               {meta.categoryLabel}
             </span>
           </div>

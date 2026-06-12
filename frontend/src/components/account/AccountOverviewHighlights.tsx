@@ -81,12 +81,12 @@ const AccountOverviewHighlights: React.FC<AccountOverviewHighlightsProps> = ({
         >
           <div className="relative flex flex-col justify-between h-full space-y-6">
             <div
-              className={`flex h-12 w-12 items-center justify-center rounded-[14px] border-[0.5px] border-white/80 bg-gradient-to-b from-white/80 to-white/40 shadow-[inset_0_1px_4px_rgba(255,255,255,0.6),0_4px_12px_rgba(0,0,0,0.04)] backdrop-blur-md dark:border-white/10 dark:from-slate-800/80 dark:to-slate-800/40 dark:shadow-[inset_0_1px_4px_rgba(255,255,255,0.05),0_4px_12px_rgba(0,0,0,0.2)] transition-transform duration-500 group-hover:scale-110 ${iconClass}`}
+              className={`flex h-12 w-12 items-center justify-center rounded-[14px] border-[0.5px] border-white/80 bg-gradient-to-b from-white/80 to-white/40 shadow-[inset_0_1px_4px_rgba(255,255,255,0.6),0_4px_12px_rgba(0,0,0,0.04)] backdrop-blur-md dark:border-cyan-300/[0.14] dark:from-slate-950/[0.78] dark:to-slate-950/[0.48] dark:shadow-[inset_0_1px_4px_rgba(148,163,184,0.06),0_8px_20px_rgba(2,6,23,0.24)] transition-transform duration-500 group-hover:scale-110 ${iconClass}`}
             >
               <Icon className="h-5 w-5" strokeWidth={2.5} />
             </div>
             <div className="space-y-1.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-300">
                 {label}
               </p>
               <p

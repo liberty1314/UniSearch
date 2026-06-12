@@ -370,7 +370,7 @@ export const AdminTagMultiSelect: React.FC<AdminTagMultiSelectProps> = ({
                   setCreatedTagName('');
                 }}
                 placeholder={searchPlaceholder || `搜索${getScopeLabel(scope)}标签`}
-                className="h-11 rounded-[1rem] border-slate-200/80 bg-white/80 text-sm shadow-none dark:border-white/10 dark:bg-slate-900/60"
+                className="h-11 rounded-[1rem] border-slate-200/80 bg-white/80 text-sm shadow-none dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.58]"
                 containerClassName="flex-1"
                 reserveMessageSpace={false}
               />
@@ -389,7 +389,7 @@ export const AdminTagMultiSelect: React.FC<AdminTagMultiSelectProps> = ({
                         : '开启标签管理'
                   }
                   className={cn(
-                    'h-11 w-11 shrink-0 rounded-[1rem] border-slate-200/80 bg-white/80 text-slate-600 shadow-none hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:bg-white/5',
+                    'h-11 w-11 shrink-0 rounded-[1rem] border-slate-200/80 bg-white/80 text-slate-600 shadow-none hover:bg-slate-50 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.58] dark:text-slate-200 dark:hover:bg-cyan-400/[0.08]',
                     manageMode && !canCreate ? 'border-cyan-300/80 text-cyan-600 dark:border-cyan-500/60 dark:text-cyan-300' : '',
                   )}
                 >
@@ -436,7 +436,7 @@ export const AdminTagMultiSelect: React.FC<AdminTagMultiSelectProps> = ({
               </div>
             ) : null}
 
-            <ScrollArea className="mt-3 min-h-0 flex-1 rounded-[1rem] border border-slate-200/70 dark:border-white/10">
+            <ScrollArea className="mt-3 min-h-0 flex-1 rounded-[1rem] border border-slate-200/70 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.30]">
               <div className="space-y-1 p-2">
                 {loading ? (
                   <div className="flex h-20 items-center justify-center text-sm text-slate-500 dark:text-slate-400">

@@ -138,7 +138,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
                   hasLogin
                     ? 'border-cyan-400/30 bg-cyan-500/70 dark:border-cyan-300/30 dark:bg-cyan-300/80'
                     : user.is_enabled
-                      ? 'border-slate-200/70 bg-slate-200/40 dark:border-white/10 dark:bg-white/10'
+                      ? 'border-slate-200/70 bg-slate-200/40 dark:border-cyan-300/[0.14] dark:bg-cyan-400/[0.08]'
                       : 'border-red-200/40 bg-red-300/20 dark:border-red-900/30 dark:bg-red-950/30'
                 )}
               />
@@ -291,7 +291,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
 
     return (
       <div className="space-y-4">
-        <div className="relative flex items-start justify-between gap-4 overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-r from-slate-50/90 to-transparent p-4 dark:border-white/10 dark:from-slate-900/80">
+        <div className="relative flex items-start justify-between gap-4 overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-r from-slate-50/90 to-transparent p-4 dark:border-cyan-300/[0.12] dark:from-slate-950/[0.68]">
           <div className={cn('pointer-events-none absolute inset-0 bg-gradient-to-l', getStatusConfig(user).gradientClassName)} />
           <div className="flex items-start gap-4">
             {renderUserAvatar(user, 'h-14 w-14', 'text-lg')}
@@ -320,30 +320,30 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
 
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">创建时间</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-300">创建时间</p>
             <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">{new Date(user.created_at).toLocaleDateString('zh-CN')}</p>
           </div>
           <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">最后登录</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-300">最后登录</p>
             <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">
               {user.last_login_at ? formatDistanceToNow(new Date(user.last_login_at), { addSuffix: true, locale: zhCN }) : '从未登录'}
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">账户类型</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-300">账户类型</p>
             <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">{getRoleText(user.role)}</p>
           </div>
         </div>
 
         <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">本月登录情况</p>
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-300">本月登录情况</p>
           {renderMonthlyLoginBars(user)}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="outline"
-            className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
+            className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-cyan-300/[0.14] dark:text-slate-200')}
             onClick={() => {
               onEditClick(user);
             }}
@@ -423,7 +423,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
         </div>
 
         {/* Content: Stats */}
-        <div className="grid grid-cols-2 gap-2 rounded-[1rem] border-[0.5px] border-slate-200/50 bg-white/40 p-2 text-xs text-gray-500 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-400">
+        <div className="grid grid-cols-2 gap-2 rounded-[1rem] border-[0.5px] border-slate-200/50 bg-white/40 p-2 text-xs text-gray-500 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-300">
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] uppercase tracking-wider opacity-70">创建时间</span>
             <span>{new Date(user.created_at).toLocaleDateString('zh-CN')}</span>

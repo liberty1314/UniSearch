@@ -83,7 +83,7 @@ export const ApplePagination: React.FC<ApplePaginationProps> = ({
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="flex flex-col gap-4 rounded-[1.35rem] border-[0.5px] border-slate-200/50 bg-white/30 p-4 backdrop-blur-md dark:border-white/10 dark:bg-slate-900/30 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-4 rounded-[1.35rem] border-[0.5px] border-slate-200/50 bg-white/30 p-4 backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.44] sm:flex-row sm:items-center sm:justify-between">
       {/* 左侧：显示信息和每页数量选择 */}
       <div className="hidden sm:flex items-center gap-4">
         {/* 显示范围信息 */}
@@ -107,7 +107,7 @@ export const ApplePagination: React.FC<ApplePaginationProps> = ({
                   value: String(size),
                   label: `${size} 条`,
                 }))}
-                triggerClassName="h-8 min-h-8 rounded-xl border-[0.5px] border-slate-200/50 bg-white/60 px-2 text-sm text-slate-900 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/40 dark:text-white"
+                triggerClassName="h-8 min-h-8 rounded-xl border-[0.5px] border-slate-200/50 bg-white/60 px-2 text-sm text-slate-900 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-white"
                 itemClassName="py-1.5"
               />
             </div>
@@ -127,7 +127,7 @@ export const ApplePagination: React.FC<ApplePaginationProps> = ({
               (e.target as HTMLElement).blur();
             }}
             disabled={currentPage === 1 || isLoading}
-            className="h-9 rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-3 text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/60 focus:outline-none focus:ring-0 dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200 dark:hover:bg-slate-800/60"
+            className="h-9 rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-3 text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/60 focus:outline-none focus:ring-0 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-200 dark:hover:border-cyan-300/[0.24] dark:hover:bg-cyan-400/[0.08]"
           >
             <ChevronLeft className="w-4 h-4 sm:mr-1" />
             <span className="hidden sm:inline">上一页</span>
@@ -135,7 +135,7 @@ export const ApplePagination: React.FC<ApplePaginationProps> = ({
         </motion.div>
 
         {/* 页码按钮与胶囊背景 */}
-        <motion.div layout className="flex items-center gap-1 rounded-full border-[0.5px] border-slate-200/50 bg-white/40 p-1 shadow-inner backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40">
+        <motion.div layout className="flex items-center gap-1 rounded-full border-[0.5px] border-slate-200/50 bg-white/40 p-1 shadow-inner backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48]">
           <AnimatePresence mode="popLayout" initial={false}>
             {/* 第一页（如果不在显示范围内） */}
             {pageNumbers[0] > 1 && (
@@ -213,7 +213,7 @@ export const ApplePagination: React.FC<ApplePaginationProps> = ({
               (e.target as HTMLElement).blur();
             }}
             disabled={currentPage === totalPages || isLoading}
-            className="h-9 rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-3 text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/60 focus:outline-none focus:ring-0 dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200 dark:hover:bg-slate-800/60"
+            className="h-9 rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-3 text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/60 focus:outline-none focus:ring-0 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-200 dark:hover:border-cyan-300/[0.24] dark:hover:bg-cyan-400/[0.08]"
           >
             <span className="hidden sm:inline">下一页</span>
             <ChevronRight className="w-4 h-4 ml-0 sm:ml-1" />

@@ -60,7 +60,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={onBatchExtend}
-                    className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'flex h-9 items-center gap-2 border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
+                    className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'flex h-9 items-center gap-2 border-slate-200/50 text-slate-700 dark:border-cyan-300/[0.14] dark:text-slate-200')}
                     disabled={disabled}
                 >
                     <Clock className="w-4 h-4" />
@@ -70,7 +70,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={onBatchExport}
-                    className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'flex h-9 items-center gap-2 border-slate-200/50 text-slate-700 hover:text-slate-900 dark:border-white/10 dark:text-slate-200')}
+                    className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'flex h-9 items-center gap-2 border-slate-200/50 text-slate-700 hover:text-slate-900 dark:border-cyan-300/[0.14] dark:text-slate-200')}
                     disabled={disabled}
                 >
                     <Download className="w-4 h-4" />
@@ -90,7 +90,7 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={onClearSelection}
-                    className="flex h-9 items-center gap-2 rounded-full border-[0.5px] border-slate-200/50 bg-white/40 text-slate-700 backdrop-blur-md hover:bg-white/60 dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200 dark:hover:bg-slate-800/60"
+                    className="flex h-9 items-center gap-2 rounded-full border-[0.5px] border-slate-200/50 bg-white/40 text-slate-700 backdrop-blur-md hover:bg-white/60 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-200 dark:hover:border-cyan-300/[0.24] dark:hover:bg-cyan-400/[0.08]"
                     disabled={disabled}
                 >
                     <X className="w-4 h-4" />

@@ -59,9 +59,9 @@ export const SystemSettingsView: React.FC = () => {
             {/* Apple iOS Style Settings Group - Authentication */}
             <div className="space-y-3">
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider px-4">登录认证与用户</h2>
-                <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-[1.5rem] overflow-hidden shadow-sm">
+                <div className="bg-white/60 dark:bg-slate-950/[0.56] backdrop-blur-xl border border-slate-200/60 dark:border-cyan-300/[0.14] rounded-[1.5rem] overflow-hidden shadow-sm dark:shadow-[0_14px_34px_rgba(2,6,23,0.34)]">
                     {/* Item 1: Enable User Auth */}
-                    <div className="flex items-center justify-between p-5 sm:px-6 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                    <div className="flex items-center justify-between p-5 sm:px-6 transition-colors hover:bg-slate-50/50 dark:hover:bg-cyan-400/[0.06]">
                         <div className="flex items-start gap-4">
                             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
                                 <Shield className="w-5 h-5" />
@@ -85,7 +85,7 @@ export const SystemSettingsView: React.FC = () => {
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
-                                className="overflow-hidden bg-slate-50/30 dark:bg-slate-950/20"
+                                className="overflow-hidden bg-slate-50/30 dark:bg-slate-950/[0.36]"
                             >
                                 <div className="border-t border-slate-100 dark:border-white/5 ml-16">
                                     <div className="flex items-center justify-between py-4 pr-5 sm:pr-6">
@@ -127,8 +127,8 @@ export const SystemSettingsView: React.FC = () => {
 
             <div className="space-y-3">
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider px-4">搜索展示</h2>
-                <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-[1.5rem] overflow-hidden shadow-sm">
-                    <div className="flex items-center justify-between p-5 sm:px-6 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                <div className="bg-white/60 dark:bg-slate-950/[0.56] backdrop-blur-xl border border-slate-200/60 dark:border-cyan-300/[0.14] rounded-[1.5rem] overflow-hidden shadow-sm dark:shadow-[0_14px_34px_rgba(2,6,23,0.34)]">
+                    <div className="flex items-center justify-between p-5 sm:px-6 transition-colors hover:bg-slate-50/50 dark:hover:bg-cyan-400/[0.06]">
                         <div className="flex items-start gap-4">
                             <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-xl">
                                 <FileSearch className="w-5 h-5" />
@@ -155,7 +155,7 @@ export const SystemSettingsView: React.FC = () => {
             {/* Apple iOS Style Settings Group - General Site Info */}
             <div className="space-y-3">
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider px-4">站点展示</h2>
-                <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-[1.5rem] overflow-hidden shadow-sm p-5 sm:p-6 space-y-5">
+                <div className="bg-white/60 dark:bg-slate-950/[0.56] backdrop-blur-xl border border-slate-200/60 dark:border-cyan-300/[0.14] rounded-[1.5rem] overflow-hidden shadow-sm p-5 sm:p-6 space-y-5 dark:shadow-[0_14px_34px_rgba(2,6,23,0.34)]">
                     <div className="flex items-start gap-4">
                         <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
                             <Globe className="w-5 h-5" />
@@ -193,7 +193,7 @@ export const SystemSettingsView: React.FC = () => {
 
             <div className="space-y-3">
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider px-4">TMDB 配置</h2>
-                <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-[1.5rem] overflow-hidden shadow-sm p-5 sm:p-6 space-y-5">
+                <div className="bg-white/60 dark:bg-slate-950/[0.56] backdrop-blur-xl border border-slate-200/60 dark:border-cyan-300/[0.14] rounded-[1.5rem] overflow-hidden shadow-sm p-5 sm:p-6 space-y-5 dark:shadow-[0_14px_34px_rgba(2,6,23,0.34)]">
                     <div className="flex items-start gap-4">
                         <div className="p-2 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl">
                             <KeyRound className="w-5 h-5" />
@@ -222,7 +222,7 @@ export const SystemSettingsView: React.FC = () => {
                                             type="button"
                                             onClick={() => setIsTMDBTokenVisible((value) => !value)}
                                             aria-label={isTMDBTokenVisible ? '隐藏 TMDB 令牌' : '查看 TMDB 令牌'}
-                                            className="text-slate-400 transition hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                                            className="text-slate-400 transition hover:text-slate-600 dark:text-slate-300 dark:hover:text-cyan-200"
                                             disabled={!tmdbReadAccessToken && !tmdbCurrentTokenPreview}
                                         >
                                             {isTMDBTokenVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

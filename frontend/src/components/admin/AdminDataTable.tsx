@@ -212,7 +212,7 @@ export function AdminDataTable<T extends object>({
             animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
             exit={shouldReduceMotion ? undefined : { opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: 0.2 }}
-            className="flex-1 overflow-auto rounded-[1.5rem] border-[0.5px] border-slate-200/50 bg-white/90 p-5 shadow-[0_24px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/95"
+            className="flex-1 overflow-auto rounded-[1.5rem] border-[0.5px] border-slate-200/50 bg-white/90 p-5 shadow-[0_24px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-cyan-300/[0.14] dark:bg-slate-950/95"
           >
             {renderDesktopOverlay(activeOverlayItem, closeOverlay)}
           </motion.div>
@@ -272,8 +272,8 @@ export function AdminDataTable<T extends object>({
                   whileHover={shouldReduceMotion ? undefined : { y: -1 }}
                   transition={{ type: 'spring', stiffness: 380, damping: 26 }}
                   className={cn(
-                    'relative min-h-[72px] overflow-hidden rounded-2xl border border-slate-200/60 bg-white/45 p-4 text-sm shadow-sm backdrop-blur-xl transition-colors dark:border-white/10 dark:bg-slate-900/45',
-                    hoverable && 'hover:bg-white/65 dark:hover:bg-slate-800/60'
+                    'relative min-h-[72px] overflow-hidden rounded-2xl border border-slate-200/60 bg-white/45 p-4 text-sm shadow-sm backdrop-blur-xl transition-colors dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48]',
+                    hoverable && 'hover:bg-white/65 dark:hover:bg-cyan-400/[0.08]'
                   )}
                 >
                   {accentClassName ? (
@@ -323,7 +323,7 @@ export function AdminDataTable<T extends object>({
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
-          className="flex h-12 w-12 items-center justify-center rounded-2xl border-[0.5px] border-slate-200/50 bg-white/40 backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40"
+          className="flex h-12 w-12 items-center justify-center rounded-2xl border-[0.5px] border-slate-200/50 bg-white/40 backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48]"
         >
           <Database className="h-5 w-5 text-blue-600 dark:text-cyan-300" />
         </motion.div>
@@ -338,7 +338,7 @@ export function AdminDataTable<T extends object>({
   const renderEmpty = () => (
     <div className="flex min-h-[260px] items-center justify-center px-6 py-14">
       <div className="flex max-w-sm flex-col items-center gap-4 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border-[0.5px] border-slate-200/50 bg-white/40 backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border-[0.5px] border-slate-200/50 bg-white/40 backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48]">
           <Database className="h-5 w-5 text-blue-600 dark:text-cyan-300" />
         </div>
         <div className="space-y-1">
@@ -394,10 +394,10 @@ export function AdminDataTable<T extends object>({
                   exit={shouldReduceMotion ? undefined : { opacity: 0, y: -8 }}
                   transition={{ duration: 0.2, delay: shouldReduceMotion ? 0 : index * 0.02 }}
                   className={cn(
-                    'rounded-2xl bg-white/40 dark:bg-slate-900/40',
+                    'rounded-2xl bg-white/40 dark:bg-slate-950/[0.48]',
                     activeOverlayItem && rowKey(item) === rowKey(activeOverlayItem) && 'ring-1 ring-cyan-200/70 dark:ring-cyan-700/70',
                     activeOverlayItem && disableInteractionsWhenOverlayOpen && rowKey(item) !== rowKey(activeOverlayItem) && 'opacity-35',
-                    hoverable && 'hover:bg-white/60 dark:hover:bg-slate-800/60',
+                    hoverable && 'hover:bg-white/60 dark:hover:bg-cyan-400/[0.08]',
                     (onRowClick || renderDesktopOverlay) && 'cursor-pointer'
                   )}
                   onClick={() => handleDesktopRowClick(item, index)}
@@ -439,7 +439,7 @@ export function AdminDataTable<T extends object>({
             exit={shouldReduceMotion ? undefined : { opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.18, delay: shouldReduceMotion ? 0 : index * 0.02 }}
             className={cn(
-              'overflow-hidden rounded-2xl border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/40',
+              'overflow-hidden rounded-2xl border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-4 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48]',
               onRowClick && 'cursor-pointer'
             )}
             onClick={() => onRowClick?.(item, index)}
@@ -453,7 +453,7 @@ export function AdminDataTable<T extends object>({
                   .filter((column) => !column.hideOnMobile)
                   .map((column) => (
                     <div key={column.key} className="space-y-1">
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-300">
                         {column.title}
                       </span>
                       <div className="text-sm text-slate-800 dark:text-slate-100">
@@ -484,7 +484,7 @@ export function AdminDataTable<T extends object>({
 
       {showCount && (
         <div className="flex justify-end px-5 pt-4">
-          <div className="inline-flex items-center gap-2 self-start rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-300">
+          <div className="inline-flex items-center gap-2 self-start rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-200">
             <span className={`inline-block h-2 w-2 rounded-full bg-cyan-500 ${loading ? 'animate-pulse' : ''}`} />
             {loading ? '同步中' : `共 ${sortedData.length} ${countLabel}`}
           </div>

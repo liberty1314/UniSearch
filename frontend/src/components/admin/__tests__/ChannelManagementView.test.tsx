@@ -117,6 +117,8 @@ describe('ChannelManagementView', () => {
     const initialDrawer = await screen.findByTestId('channel-management-drawer');
     expect(within(initialDrawer).getByText('chan-12')).toBeInTheDocument();
     expect(within(initialDrawer).getByText('timeout')).toBeInTheDocument();
+    expect(screen.getByTestId('channel-row-12')).toHaveClass('dark:bg-slate-950/[0.52]');
+    expect(within(initialDrawer).getByText('timeout').closest('div')).toHaveClass('dark:bg-slate-950/[0.40]');
 
     const pageSizeSelect = screen.getByRole('combobox', { name: '每页条数' });
     await userEvent.click(pageSizeSelect);

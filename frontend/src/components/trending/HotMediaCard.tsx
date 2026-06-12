@@ -48,7 +48,7 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
                   排名 #{rank}
                 </p>
-                <span className="rounded-full border border-slate-200/70 bg-white/75 px-2.5 py-0.5 text-[11px] font-medium text-slate-500 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300">
+                <span className="rounded-full border border-slate-200/70 bg-white/75 px-2.5 py-0.5 text-[11px] font-medium text-slate-500 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-300">
                   {getHotCategoryLabel(category)}
                 </span>
               </div>
@@ -74,7 +74,7 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
             {genreNames.map((genre) => (
               <span
                 key={genre}
-                className="rounded-full border border-slate-200/70 bg-white/75 px-3 py-1 text-xs font-medium text-slate-600 dark:border-white/10 dark:bg-slate-900/50 dark:text-slate-300"
+                className="rounded-full border border-slate-200/70 bg-white/75 px-3 py-1 text-xs font-medium text-slate-600 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.50] dark:text-slate-300"
               >
                 {genre}
               </span>
@@ -92,7 +92,7 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
                   key={action.key}
                   type="button"
                   onClick={() => onSearch(item, action)}
-                  className="rounded-full border border-slate-200/75 bg-white/70 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:border-cyan-200 hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-cyan-300/30 dark:hover:text-cyan-200"
+                  className="rounded-full border border-slate-200/75 bg-white/70 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:border-cyan-200 hover:bg-white hover:text-cyan-700 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-300 dark:hover:border-cyan-300/[0.24] dark:hover:bg-cyan-400/[0.08] dark:hover:text-cyan-200"
                 >
                   {action.label}
                 </button>

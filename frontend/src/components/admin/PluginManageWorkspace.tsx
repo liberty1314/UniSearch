@@ -270,7 +270,7 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.02 }}
                   data-testid={`plugin-card-${plugin.name}`}
-                  className="rounded-[24px] border border-slate-200 bg-white/80 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.05)] transition-colors hover:border-slate-300 dark:border-slate-600 dark:bg-slate-900/40 dark:hover:border-slate-500"
+                  className="rounded-[24px] border border-slate-200 bg-white/80 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.05)] transition-colors hover:border-slate-300 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.48] dark:hover:border-cyan-300/[0.22]"
                 >
                   <div className="flex h-full flex-col gap-4">
                     <div className="flex min-w-0 items-start gap-3">

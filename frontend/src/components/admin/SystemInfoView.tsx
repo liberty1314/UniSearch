@@ -311,7 +311,7 @@ export const SystemInfoView: React.FC = () => {
         aria-label="进入 Telegram 频道管理页"
         {...createCardNavigationProps('channel_management')}
       >
-        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/30">
+        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-cyan-300/[0.08] dark:bg-slate-950/[0.38]">
           <div className="flex items-center justify-between gap-2">
             <div>
               <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
@@ -325,7 +325,7 @@ export const SystemInfoView: React.FC = () => {
                 系统监控仅保留摘要，点击进入完整管理页
               </CardDescription>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 shadow-sm dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:text-slate-200">
               点击进入管理页
               <ArrowUpRight className="h-3.5 w-3.5" />
             </div>
@@ -333,7 +333,7 @@ export const SystemInfoView: React.FC = () => {
         </CardHeader>
         <CardContent className="p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40">
+            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.48]">
               <p className="text-xs text-slate-500 dark:text-slate-400">总频道（数据库）</p>
               <p className="text-xl font-semibold text-slate-800 dark:text-slate-100">{channelSummary.total}</p>
             </div>
@@ -345,7 +345,7 @@ export const SystemInfoView: React.FC = () => {
               <p className="text-xs text-red-700 dark:text-red-300">异常</p>
               <p className="text-xl font-semibold text-red-700 dark:text-red-300">{channelSummary.error}</p>
             </div>
-            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/40">
+            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.48]">
               <p className="text-xs text-slate-500 dark:text-slate-400">已禁用</p>
               <p className="text-xl font-semibold text-slate-700 dark:text-slate-200">{channelSummary.disabled}</p>
             </div>
@@ -365,7 +365,7 @@ export const SystemInfoView: React.FC = () => {
         aria-label="进入插件中心管理页"
         {...createCardNavigationProps('plugin_management')}
       >
-        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/30">
+        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-cyan-300/[0.08] dark:bg-slate-950/[0.38]">
           <div className="flex items-center justify-between gap-2">
             <div>
               <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
@@ -376,7 +376,7 @@ export const SystemInfoView: React.FC = () => {
                 系统监控仅保留摘要，点击进入完整管理页
               </CardDescription>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 shadow-sm dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:text-slate-200">
               点击进入管理页
               <ArrowUpRight className="h-3.5 w-3.5" />
             </div>
@@ -384,7 +384,7 @@ export const SystemInfoView: React.FC = () => {
         </CardHeader>
         <CardContent className="p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40">
+            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.48]">
               <p className="text-xs text-slate-500 dark:text-slate-400">总插件</p>
               <p className="text-xl font-semibold text-slate-800 dark:text-slate-100">{pluginSummary.total}</p>
             </div>
@@ -396,7 +396,7 @@ export const SystemInfoView: React.FC = () => {
               <p className="text-xs text-red-700 dark:text-red-300">异常</p>
               <p className="text-xl font-semibold text-red-700 dark:text-red-300">{pluginSummary.error}</p>
             </div>
-            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/40">
+            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.48]">
               <p className="text-xs text-slate-500 dark:text-slate-400">不活跃</p>
               <p className="text-xl font-semibold text-slate-700 dark:text-slate-200">{pluginSummary.inactive}</p>
             </div>
@@ -405,7 +405,7 @@ export const SystemInfoView: React.FC = () => {
       </Card>
 
       <Card className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden')}>
-        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-white/5 dark:bg-slate-900/30">
+        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-cyan-300/[0.08] dark:bg-slate-950/[0.38]">
           <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
             <Server className="w-5 h-5 text-blue-600 dark:text-cyan-300" />
             系统配置

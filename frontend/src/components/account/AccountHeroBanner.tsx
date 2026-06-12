@@ -57,7 +57,7 @@ const AccountHeroBanner: React.FC<AccountHeroBannerProps> = ({
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-400 dark:text-slate-300">
                 Account Workspace
               </p>
               <h1 className="text-3xl font-semibold tracking-tight text-slate-800 dark:text-white sm:text-4xl">
@@ -69,11 +69,11 @@ const AccountHeroBanner: React.FC<AccountHeroBannerProps> = ({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border-[0.5px] border-slate-200/60 bg-white/60 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/50 dark:text-slate-300">
+              <span className="inline-flex items-center gap-2 rounded-full border-[0.5px] border-slate-200/60 bg-white/60 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.46] dark:text-slate-200">
                 <Sparkles className="h-3.5 w-3.5" />
                 {roleLabel}
               </span>
-              <span className="inline-flex items-center rounded-full border-[0.5px] border-slate-200/60 bg-white/60 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/50 dark:text-slate-300">
+              <span className="inline-flex items-center rounded-full border-[0.5px] border-slate-200/60 bg-white/60 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.46] dark:text-slate-200">
                 个人中心
               </span>
             </div>
@@ -82,13 +82,13 @@ const AccountHeroBanner: React.FC<AccountHeroBannerProps> = ({
 
         <div className="grid gap-3 sm:grid-cols-2 lg:w-[360px] lg:grid-cols-1">
           <div className="glass-panel p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-300">
               身份标签
             </p>
             <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-white">{roleSummary}</p>
           </div>
           <div className="glass-panel p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-300">
               状态摘要
             </p>
             <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-white">{loginSummary}</p>

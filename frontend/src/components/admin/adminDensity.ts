@@ -5,9 +5,9 @@ export const ADMIN_DENSITY = {
   cardPaddingMd: 'p-4 sm:p-5',
   cardPaddingLg: 'p-5 sm:p-6',
   cardRadius: 'rounded-[1.2rem]',
-  cardShadow: 'shadow-[0_6px_20px_rgba(15,23,42,0.05)] dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]',
+  cardShadow: 'shadow-[0_6px_20px_rgba(15,23,42,0.05)] dark:shadow-[0_14px_34px_rgba(2,6,23,0.38)]',
   toolbarRadius: 'rounded-[1rem]',
 } as const;
 
 export const ADMIN_COMPACT_SURFACE_CLASSES =
-  'relative overflow-hidden border border-slate-200/70 bg-white/70 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/42';
+  'relative overflow-hidden border border-slate-200/70 bg-white/70 backdrop-blur-xl dark:border-cyan-300/[0.16] dark:bg-slate-950/[0.62]';

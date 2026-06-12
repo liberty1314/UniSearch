@@ -55,7 +55,7 @@ const HotHighlightGrid: React.FC<HotHighlightGridProps> = ({ item, onSearch }) =
               {(genreNames.length > 0 ? genreNames : ["待补充"]).map((genre) => (
                 <span
                   key={genre}
-                  className="rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 dark:border-white/10 dark:bg-slate-900/50 dark:text-slate-300"
+                  className="rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.50] dark:text-slate-300"
                 >
                   {genre}
                 </span>

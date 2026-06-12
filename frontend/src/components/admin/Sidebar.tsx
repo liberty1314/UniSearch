@@ -57,7 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
                             {isActive && (
                                 <motion.div
                                     layoutId={`${layoutPrefix}-admin-sidebar-active`}
-                                    className="absolute inset-0 rounded-[1.4rem] border-[0.5px] border-slate-200/60 bg-white/70 shadow-[0_8px_24px_rgba(0,0,0,0.08)] dark:border-white/10 dark:bg-slate-800/70 dark:shadow-[0_8px_24px_rgba(0,0,0,0.24)]"
+                                    className="absolute inset-0 rounded-[1.4rem] border-[0.5px] border-slate-200/60 bg-white/70 shadow-[0_8px_24px_rgba(0,0,0,0.08)] dark:border-cyan-300/[0.18] dark:bg-slate-950/[0.82] dark:shadow-[0_14px_30px_rgba(2,6,23,0.34)]"
                                     transition={ADMIN_GENTLE_SPRING}
                                 />
                             )}
@@ -73,18 +73,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
                                     'relative z-10 flex w-full items-center gap-3 rounded-[1.4rem] border border-transparent px-4 py-4 text-left shadow-none transition-colors duration-300',
                                     isActive
                                         ? 'text-blue-600 dark:text-cyan-300'
-                                        : 'text-slate-600 hover:bg-slate-100/50 dark:text-slate-300 dark:hover:bg-slate-900/40'
+                                        : 'text-slate-600 hover:bg-slate-100/50 dark:text-slate-300 dark:hover:bg-cyan-400/[0.08]'
                                 )}
                             >
                                 <span className="relative flex h-9 w-9 shrink-0 items-center justify-center">
                                     {isActive ? (
                                         <motion.div
                                             layoutId={`${layoutPrefix}-admin-sidebar-icon`}
-                                            className="absolute inset-0 rounded-2xl border-[0.5px] border-slate-200/70 bg-white shadow-[0_4px_16px_rgba(37,99,235,0.14)] dark:border-white/10 dark:bg-slate-800 dark:shadow-[0_4px_16px_rgba(96,165,250,0.16)]"
+                                            className="absolute inset-0 rounded-2xl border-[0.5px] border-slate-200/70 bg-white shadow-[0_4px_16px_rgba(37,99,235,0.14)] dark:border-cyan-300/[0.18] dark:bg-slate-950/[0.86] dark:shadow-[0_8px_18px_rgba(34,211,238,0.10)]"
                                             transition={ADMIN_GENTLE_SPRING}
                                         />
                                     ) : (
-                                        <div className="absolute inset-0 rounded-2xl border-[0.5px] border-slate-200/50 bg-white/40 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40" />
+                                        <div className="absolute inset-0 rounded-2xl border-[0.5px] border-slate-200/50 bg-white/40 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.48]" />
                                     )}
                                     <span className="relative z-10">
                                         {item.icon}
@@ -141,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
                         )}
                     >
                         <div className="flex items-center gap-3 px-5 pb-4 pt-5">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-slate-800/40">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 shadow-sm backdrop-blur-xl dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48]">
                                 <img
                                     src="/Uni.png?v=20250908"
                                     alt="UniSearch Logo"
@@ -149,7 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
                                 />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500/80 dark:text-slate-400/80">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500/80 dark:text-slate-300/80">
                                     Admin Workspace
                                 </p>
                                 <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-800 dark:text-white">
@@ -168,7 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
                             <div className={cn(
                                 'rounded-[1.35rem] px-4 py-3 text-xs leading-5',
                                 ADMIN_SUBTLE_RAIL_CLASSES,
-                                'text-slate-500 dark:text-slate-400'
+                                'text-slate-500 dark:text-slate-300'
                             )}>
                                 <p className="font-medium text-slate-700 dark:text-slate-200">
                                     UniSearch 管理工作区
@@ -193,7 +193,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
                 >
                     <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-5 dark:border-white/5">
                         <div className="flex items-center gap-3">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-[1.1rem] border-[0.5px] border-slate-200/50 bg-white/40 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-slate-800/40">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-[1.1rem] border-[0.5px] border-slate-200/50 bg-white/40 shadow-sm backdrop-blur-xl dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48]">
                                 <img
                                     src="/Uni.png?v=20250908"
                                     alt="UniSearch Logo"
@@ -204,7 +204,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
                                 <h2 className="text-lg font-semibold tracking-tight text-slate-800 dark:text-white">
                                     管理后台
                                 </h2>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                <p className="text-xs text-slate-500 dark:text-slate-300">
                                     UniSearch Workspace
                                 </p>
                             </div>
@@ -215,7 +215,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
                                 variant="ghost"
                                 size="icon"
                                 onClick={onMobileToggle}
-                                className="rounded-full border border-slate-200/50 bg-white/40 text-slate-600 hover:bg-white/60 dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-300 dark:hover:bg-slate-800/60"
+                                className="rounded-full border border-slate-200/50 bg-white/40 text-slate-600 hover:bg-white/60 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-300 dark:hover:border-cyan-300/[0.24] dark:hover:bg-cyan-400/[0.08]"
                             >
                                 <X className="h-5 w-5" />
                             </Button>
@@ -225,7 +225,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
                     {renderNavList('mobile')}
 
                     <div className="border-t border-white/10 p-4 dark:border-white/5">
-                        <div className="rounded-[1.35rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 text-xs text-slate-500 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-400">
+                        <div className="rounded-[1.35rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 text-xs text-slate-500 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-300">
                             <p className="font-medium text-slate-700 dark:text-slate-200">
                                 管理工作区
                             </p>

@@ -32,7 +32,7 @@ import {
 import { type Variants } from 'framer-motion';
 
 const countPillClassName =
-  'inline-flex items-center gap-2 rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-300';
+  'inline-flex items-center gap-2 rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-200';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -153,7 +153,7 @@ const AdminUsersView: React.FC = () => {
                       size="sm"
                       onClick={handleBatchUpdateRole}
                       disabled={isLoadingUsers || isBatchOperating || isDeletingUser}
-                      className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
+                      className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-cyan-300/[0.14] dark:text-slate-200')}
                     >
                       <Shield className="w-4 h-4 sm:mr-1" />
                       <span className="hidden sm:inline">批量修改角色</span>
@@ -199,7 +199,7 @@ const AdminUsersView: React.FC = () => {
                           }
                         }}
                         containerClassName="h-9 [&>div:last-child]:hidden"
-                        className="h-9 w-full border-[0.5px] border-slate-200/70 bg-white/60 py-0 text-sm leading-9 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/40"
+                        className="h-9 w-full border-[0.5px] border-slate-200/70 bg-white/60 py-0 text-sm leading-9 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52]"
                       />
                     </div>
 
@@ -217,7 +217,7 @@ const AdminUsersView: React.FC = () => {
                         size="sm"
                         onClick={() => void loadUsers()}
                         disabled={isLoadingUsers || isBatchOperating}
-                        className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
+                        className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-cyan-300/[0.14] dark:text-slate-200')}
                       >
                         <RefreshCw className={`w-4 h-4 ${isLoadingUsers ? 'animate-spin' : ''}`} />
                       </Button>
@@ -248,7 +248,7 @@ const AdminUsersView: React.FC = () => {
               </div>
             ) : users.length === 0 ? (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 300, damping: 25 }} className="text-center py-20 flex flex-col items-center justify-center">
-                <div className="inline-flex rounded-[2rem] border border-slate-200/60 bg-white/60 p-6 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-slate-800/40 mb-6">
+                <div className="mb-6 inline-flex rounded-[2rem] border border-slate-200/60 bg-white/60 p-6 shadow-sm backdrop-blur-xl dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48]">
                   <Users className="w-12 h-12 text-blue-400/80 dark:text-cyan-600/80" />
                 </div>
                 <h3 className="text-xl font-semibold text-slate-800 dark:text-white mb-2">

@@ -428,7 +428,7 @@ const HotPage: React.FC = () => {
                     void handleLoadMore();
                   }}
                   disabled={loadingMore}
-                  className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-cyan-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-100"
+                  className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-cyan-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:text-slate-100 dark:hover:border-cyan-300/[0.24] dark:hover:bg-cyan-400/[0.08]"
                 >
                   {loadingMore ? "加载中..." : "加载更多"}
                 </button>

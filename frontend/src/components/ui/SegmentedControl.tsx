@@ -35,7 +35,7 @@ export function SegmentedControl<T extends string>({
       aria-label={ariaLabel}
       data-testid={testId}
       className={cn(
-        'inline-flex flex-nowrap items-center gap-1 rounded-[1rem] border border-slate-200/70 bg-white/58 p-1 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/42',
+        'inline-flex flex-nowrap items-center gap-1 rounded-[1rem] border border-slate-200/70 bg-white/58 p-1 shadow-sm backdrop-blur-xl dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.46]',
         className,
       )}
     >

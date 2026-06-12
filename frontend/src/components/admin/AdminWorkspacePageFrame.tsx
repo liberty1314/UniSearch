@@ -194,7 +194,7 @@ export function AdminDetailDrawer({
     >
       {open ? (
         <>
-          <div className="flex items-start justify-between gap-3 border-b border-slate-200/60 px-5 py-5 dark:border-white/10">
+          <div className="flex items-start justify-between gap-3 border-b border-slate-200/60 px-5 py-5 dark:border-cyan-300/[0.12]">
             <div className="min-w-0 space-y-1">
               <h2 className="truncate text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
               {description ? <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p> : null}
@@ -211,7 +211,7 @@ export function AdminDetailDrawer({
             </Button>
           </div>
           <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">{children}</div>
-          {footer ? <div className="border-t border-slate-200/60 px-5 py-4 dark:border-white/10">{footer}</div> : null}
+          {footer ? <div className="border-t border-slate-200/60 px-5 py-4 dark:border-cyan-300/[0.12]">{footer}</div> : null}
         </>
       ) : (
         <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">

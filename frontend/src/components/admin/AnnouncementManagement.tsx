@@ -52,7 +52,7 @@ const getPriorityColor = (priority: AnnouncementPriority): string => {
     case 'high': return 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30';
     case 'medium': return 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30';
     case 'low': return 'text-blue-600 dark:text-cyan-300 bg-blue-100 dark:bg-cyan-950/40';
-    default: return 'text-gray-600 dark:text-slate-400 bg-gray-100 dark:bg-slate-800/40';
+    default: return 'text-gray-600 dark:text-slate-300 bg-gray-100 dark:bg-slate-950/[0.48]';
   }
 };
 
@@ -125,7 +125,7 @@ export const AnnouncementManagement: React.FC = () => {
             <p className="mt-4 text-slate-500 dark:text-slate-400">加载中...</p>
           </div>
         ) : (
-          <div className="flex items-start justify-between rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 p-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40">
+          <div className="flex items-start justify-between rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 p-4 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48]">
             <div className="flex-1">
               <Label className="text-base font-medium text-slate-800 dark:text-white flex items-center gap-2">
                 <Megaphone className="w-4 h-4 text-blue-600 dark:text-cyan-300" />
@@ -175,7 +175,7 @@ export const AnnouncementManagement: React.FC = () => {
           </Button>
         </div>
 
-        <div className="mb-5 grid gap-3 rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-slate-50/60 p-4 dark:border-white/10 dark:bg-slate-900/30 md:grid-cols-4">
+        <div className="mb-5 grid gap-3 rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-slate-50/60 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.40] md:grid-cols-4">
           <Input
             value={filters.keyword}
             onChange={(event) => updateFilters({ keyword: event.target.value })}
@@ -238,7 +238,7 @@ export const AnnouncementManagement: React.FC = () => {
             <Button
               variant="outline"
               onClick={resetFilters}
-              className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
+              className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-cyan-300/[0.14] dark:text-slate-200')}
             >
               重置筛选
             </Button>
@@ -263,7 +263,7 @@ export const AnnouncementManagement: React.FC = () => {
             <Button
               onClick={handleCreate}
               variant="outline"
-              className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'mt-4 border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
+              className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'mt-4 border-slate-200/50 text-slate-700 dark:border-cyan-300/[0.14] dark:text-slate-200')}
             >
               <Plus className="w-4 h-4 mr-2" />
               创建第一个公告
@@ -276,7 +276,7 @@ export const AnnouncementManagement: React.FC = () => {
                 key={announcement.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="rounded-[1.35rem] border-[0.5px] border-slate-200/50 bg-white/40 p-4 shadow-sm backdrop-blur-md transition-all hover:shadow-[0_16px_32px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-800/40"
+                className="rounded-[1.35rem] border-[0.5px] border-slate-200/50 bg-white/40 p-4 shadow-sm backdrop-blur-md transition-all hover:shadow-[0_16px_32px_rgba(15,23,42,0.08)] dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48]"
               >
                 <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                   <div className="flex-1">
@@ -292,7 +292,7 @@ export const AnnouncementManagement: React.FC = () => {
                           已启用
                         </span>
                       ) : (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-slate-800/40 dark:text-slate-400">
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-slate-950/[0.48] dark:text-slate-300">
                           已禁用
                         </span>
                       )}
@@ -322,7 +322,7 @@ export const AnnouncementManagement: React.FC = () => {
                       variant="outline"
                       size="sm"
                       title={announcement.is_enabled ? '禁用' : '启用'}
-                      className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
+                      className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-cyan-300/[0.14] dark:text-slate-200')}
                     >
                       {announcement.is_enabled ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
                     </Button>
@@ -331,7 +331,7 @@ export const AnnouncementManagement: React.FC = () => {
                       variant="outline"
                       size="sm"
                       title="编辑"
-                      className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-white/10 dark:text-slate-200')}
+                      className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-cyan-300/[0.14] dark:text-slate-200')}
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -471,7 +471,7 @@ export const AnnouncementManagement: React.FC = () => {
               <Label>启用公告</Label>
             </div>
 
-            <div className="space-y-2 rounded-[1.25rem] border-[0.5px] border-slate-200/60 bg-slate-50/70 p-4 dark:border-white/10 dark:bg-slate-900/30">
+            <div className="space-y-2 rounded-[1.25rem] border-[0.5px] border-slate-200/60 bg-slate-50/70 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.40]">
               <Label className="text-sm font-medium text-slate-700 dark:text-slate-200">
                 实时预览
               </Label>

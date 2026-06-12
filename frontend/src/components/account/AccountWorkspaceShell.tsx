@@ -61,7 +61,7 @@ const AccountWorkspaceShell: React.FC<AccountWorkspaceShellProps> = ({
           <div className={`${ACCOUNT_PANEL_SURFACE_CLASSES} ${ACCOUNT_PANEL_SURFACE_HOVER_CLASSES} p-3`}>
             <div className="mb-3 flex items-center gap-2 px-2 pt-2">
               <Fingerprint className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400 dark:text-slate-300">
                 Workspace
               </p>
             </div>
@@ -84,7 +84,7 @@ const AccountWorkspaceShell: React.FC<AccountWorkspaceShellProps> = ({
                       {isActive ? (
                         <motion.div 
                           layoutId="activeAccountNavBg"
-                          className="absolute inset-0 z-0 rounded-[1.4rem] border-[0.5px] border-white/60 bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06),0_1px_3px_rgb(0,0,0,0.02)] dark:border-white/10 dark:bg-slate-800/80" 
+                          className="absolute inset-0 z-0 rounded-[1.4rem] border-[0.5px] border-white/60 bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06),0_1px_3px_rgb(0,0,0,0.02)] dark:border-cyan-300/[0.18] dark:bg-slate-950/[0.82] dark:shadow-[0_14px_30px_rgba(2,6,23,0.32)]" 
                           transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                         />
                       ) : null}
@@ -95,7 +95,7 @@ const AccountWorkspaceShell: React.FC<AccountWorkspaceShellProps> = ({
                         aria-pressed={isActive}
                         className={cn(
                           'relative z-10 h-auto w-full justify-start rounded-[1.4rem] border border-transparent bg-transparent px-4 py-4 text-left shadow-none transition-colors duration-300',
-                          !isActive && 'hover:bg-slate-100/50 dark:hover:bg-slate-800/40'
+                          !isActive && 'hover:bg-slate-100/50 dark:hover:bg-cyan-400/[0.08]'
                         )}
                       >
                         <span className="flex w-full items-center gap-3">
@@ -103,16 +103,16 @@ const AccountWorkspaceShell: React.FC<AccountWorkspaceShellProps> = ({
                             {isActive ? (
                               <motion.div 
                                 layoutId="activeAccountNavIconBg"
-                                className="absolute inset-0 z-0 rounded-[14px] bg-white shadow-[0_4px_16px_rgba(37,99,235,0.15)] ring-[0.5px] ring-slate-900/5 dark:bg-slate-800 dark:ring-white/10 dark:shadow-[0_4px_16px_rgba(96,165,250,0.2)]" 
+                                className="absolute inset-0 z-0 rounded-[14px] bg-white shadow-[0_4px_16px_rgba(37,99,235,0.15)] ring-[0.5px] ring-slate-900/5 dark:bg-slate-950/[0.86] dark:ring-cyan-300/[0.18] dark:shadow-[0_8px_18px_rgba(34,211,238,0.10)]" 
                                 transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                               />
                             ) : (
-                              <div className="absolute inset-0 z-0 rounded-[14px] border-[0.5px] border-white/60 bg-white/40 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-800/40" />
+                              <div className="absolute inset-0 z-0 rounded-[14px] border-[0.5px] border-white/60 bg-white/40 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.46]" />
                             )}
                             <Icon
                               className={cn(
                                 'relative z-10 h-4 w-4 transition-colors duration-300',
-                                isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'
+                                isActive ? 'text-blue-600 dark:text-cyan-300' : 'text-slate-600 dark:text-slate-300'
                               )}
                             />
                           </span>
@@ -121,7 +121,7 @@ const AccountWorkspaceShell: React.FC<AccountWorkspaceShellProps> = ({
                               className={cn(
                                 'block text-[15px] font-semibold leading-tight tracking-tight transition-colors duration-300',
                                 isActive
-                                  ? 'text-blue-600 dark:text-blue-400'
+                                  ? 'text-blue-600 dark:text-cyan-200'
                                   : 'text-slate-700 dark:text-slate-200'
                               )}
                             >

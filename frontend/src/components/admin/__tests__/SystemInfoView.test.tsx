@@ -117,7 +117,7 @@ describe('SystemInfoView', () => {
   });
 
   it('仅展示摘要卡片并支持跳转到独立管理页', async () => {
-    render(<SystemInfoView />);
+    const { container } = render(<SystemInfoView />);
 
     await screen.findByText('Telegram 频道摘要');
     expect(screen.getByText('插件状态摘要')).toBeInTheDocument();
@@ -134,6 +134,8 @@ describe('SystemInfoView', () => {
     expect(screen.queryByText('chan-alpha')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '查看全部' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '编辑' })).not.toBeInTheDocument();
+    expect(container.innerHTML).toContain('dark:border-cyan-300/[0.14]');
+    expect(container.innerHTML).toContain('dark:bg-slate-950/[0.48]');
 
     fireEvent.click(screen.getByRole('button', { name: '进入 Telegram 频道管理页' }));
     expect(navigateMock).toHaveBeenNthCalledWith(1, '/admin?view=channel_management');

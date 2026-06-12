@@ -6,10 +6,10 @@ const DisclaimerPage: React.FC = () => {
   return (
     <div className="obsidian-shell min-h-screen bg-white">
       <div className="container mx-auto px-4 pt-24 pb-16 sm:pb-20">
-        <article className="glass-card-premium relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-gray-200/70 dark:border-white/10">
+        <article className="glass-card-premium relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-gray-200/70 dark:border-cyan-300/[0.14]">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-nebula-500/70 to-transparent dark:via-nebula-300/70" />
 
-          <header className="px-6 sm:px-8 pt-7 sm:pt-9 pb-5 border-b border-gray-200/70 dark:border-white/10">
+          <header className="border-b border-gray-200/70 px-6 pb-5 pt-7 dark:border-cyan-300/[0.12] sm:px-8 sm:pt-9">
             <p className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-nebula-700 dark:text-nebula-300 bg-nebula-100/80 dark:bg-nebula-900/30 border border-nebula-200/80 dark:border-nebula-700/40">
               Legal Notice
             </p>

@@ -76,12 +76,12 @@ export const StatsCard: React.FC<StatsCardProps> = ({
                 )} />
 
                 <div className="relative z-10 flex h-full flex-col gap-4">
-                    <div className={cn('inline-flex h-12 w-12 items-center justify-center rounded-[1.1rem] border-[0.5px] border-slate-200/50 backdrop-blur-md dark:border-white/10', colors.iconBg)}>
+                    <div className={cn('inline-flex h-12 w-12 items-center justify-center rounded-[1.1rem] border-[0.5px] border-slate-200/50 backdrop-blur-md dark:border-cyan-300/[0.12]', colors.iconBg)}>
                         <Icon className={cn('h-5 w-5', colors.icon)} />
                     </div>
 
                     <div className="space-y-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-400">
                             {title}
                         </p>
                         <div className="flex items-end justify-between gap-3">

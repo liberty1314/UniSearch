@@ -295,3 +295,50 @@
     - frontend/src/pages/Home.tsx
     - frontend/src/pages/__tests__/Home.test.tsx
     - docs/readme_2606.md
+
+- [2026-06-12 23:53] style(frontend): 优化多个前端组件在深色模式下的背景色与边框透明度样式
+  - Body: 统一调整了深色模式下页面的背景色、边框以及悬停状态的透明度，以提升整体视觉层次感。同时更新了关联页面的单元测试断言，确保渲染结果的一致性。
+  - Files:
+    - frontend/src/components/account/AccountHeroBanner.tsx
+    - frontend/src/components/account/AccountOverviewHighlights.tsx
+    - frontend/src/components/account/AccountOverviewPanel.tsx
+    - frontend/src/components/account/AccountSecurityPanel.tsx
+    - frontend/src/components/account/AccountWorkspaceShell.tsx
+    - frontend/src/components/account/accountDesign.ts
+    - frontend/src/components/admin/AdminDataTable.tsx
+    - frontend/src/components/admin/AdminSearchInput.tsx
+    - frontend/src/components/admin/AdminTagMultiSelect.tsx
+    - frontend/src/components/admin/AdminUsersView.tsx
+    - frontend/src/components/admin/AdminWorkspacePageFrame.tsx
+    - frontend/src/components/admin/AnnouncementManagement.tsx
+    - frontend/src/components/admin/ApplePagination.tsx
+    - frontend/src/components/admin/AppleUserTable.tsx
+    - frontend/src/components/admin/BatchActionsBar.tsx
+    - frontend/src/components/admin/ChannelManagementView.tsx
+    - frontend/src/components/admin/PluginManageWorkspace.tsx
+    - frontend/src/components/admin/PluginManagementView.tsx
+    - frontend/src/components/admin/Sidebar.tsx
+    - frontend/src/components/admin/StatsCard.tsx
+    - frontend/src/components/admin/SystemInfoView.tsx
+    - frontend/src/components/admin/SystemSettingsView.tsx
+    - frontend/src/components/admin/TableFilterDropdown.tsx
+    - frontend/src/components/admin/__tests__/ChannelManagementView.test.tsx
+    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
+    - frontend/src/components/admin/__tests__/Sidebar.test.tsx
+    - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
+    - frontend/src/components/admin/adminDensity.ts
+    - frontend/src/components/admin/adminDesign.ts
+    - frontend/src/components/admin/adminDropdown.ts
+    - frontend/src/components/trending/HotHero.tsx
+    - frontend/src/components/trending/HotHighlightGrid.tsx
+    - frontend/src/components/trending/HotMediaCard.tsx
+    - frontend/src/components/trending/HotSectionSummary.tsx
+    - frontend/src/components/trending/hotToolbarTabStyles.ts
+    - frontend/src/components/ui/SegmentedControl.tsx
+    - frontend/src/components/ui/button.tsx
+    - frontend/src/pages/DisclaimerPage.tsx
+    - frontend/src/pages/HotPage.tsx
+    - frontend/src/pages/__tests__/AccountPage.test.tsx
+    - frontend/src/pages/__tests__/DisclaimerPage.test.tsx
+    - frontend/src/pages/__tests__/HotPage.test.tsx
+    - docs/readme_2606.md

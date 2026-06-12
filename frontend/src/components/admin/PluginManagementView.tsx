@@ -282,7 +282,7 @@ export const PluginManagementView: React.FC = () => {
                         key={plugin.name}
                         data-testid={`plugin-market-card-${plugin.name}`}
                         onClick={() => controller.handleOpenDetail(plugin)}
-                        className="group cursor-pointer rounded-[1.4rem] border border-slate-200/70 bg-white/75 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg dark:border-white/10 dark:bg-slate-950/35 dark:hover:border-white/20"
+                        className="group cursor-pointer rounded-[1.4rem] border border-slate-200/70 bg-white/75 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:hover:border-cyan-300/[0.24]"
                       >
                         <div className="flex h-full flex-col gap-4">
                           <div className="flex items-start justify-between gap-3">
@@ -330,7 +330,7 @@ export const PluginManagementView: React.FC = () => {
                             ))}
                           </div>
 
-                          <div className="grid gap-3 rounded-[1.1rem] border border-slate-200/70 bg-slate-50/80 p-3 text-sm dark:border-white/10 dark:bg-slate-900/40">
+                          <div className="grid gap-3 rounded-[1.1rem] border border-slate-200/70 bg-slate-50/80 p-3 text-sm dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.44]">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-slate-500 dark:text-slate-400">来源</span>
                               <span className="font-medium text-slate-700 dark:text-slate-200">
@@ -391,16 +391,16 @@ export const PluginManagementView: React.FC = () => {
           >
             {activePlugin ? (
               <div className="space-y-4 text-sm">
-                <div className="rounded-[1.2rem] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-slate-900/30">
+                <div className="rounded-[1.2rem] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.40]">
                   <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{activePlugin.description || '暂无描述'}</p>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
-                  <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-white/10">
+                  <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.34]">
                     <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">来源</p>
                     <p className="mt-2 font-medium text-slate-900 dark:text-white">{activePlugin.resource?.source_label || activePlugin.source_type || '本地'}</p>
                     <p className="mt-1 text-slate-500 dark:text-slate-400">{activePlugin.author || '未填写作者'}</p>
                   </div>
-                  <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-white/10">
+                  <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.34]">
                     <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">健康状态</p>
                     <p className="mt-2 font-medium text-slate-900 dark:text-white">
                       {activePlugin.health ? (activePlugin.health.is_healthy ? '正常' : '异常') : '未测试'}
@@ -421,7 +421,7 @@ export const PluginManagementView: React.FC = () => {
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">安装信息</p>
-                  <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-white/10">
+                  <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.34]">
                     <p className="font-medium text-slate-900 dark:text-white">{activePlugin.install?.type || activePlugin.plugin_type}</p>
                     {activePlugin.install?.url ? (
                       <p className="mt-2 break-all text-slate-500 dark:text-slate-400">{activePlugin.install.url}</p>

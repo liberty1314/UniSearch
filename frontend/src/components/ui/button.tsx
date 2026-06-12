@@ -13,7 +13,7 @@ const buttonVariants = cva(
         default: BRAND_PRIMARY_BUTTON,
         primary: BRAND_PRIMARY_BUTTON,
         destructive: 'bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md border border-red-600 dark:bg-red-500 dark:hover:bg-red-400 dark:border-red-400',
-        outline: 'glass-toolbar border-slate-300/55 bg-white/25 text-slate-700 shadow-glass-soft hover:bg-white/55 dark:border-white/12 dark:bg-slate-900/30 dark:text-slate-200 dark:hover:bg-slate-900/58',
+        outline: 'glass-toolbar border-slate-300/55 bg-white/25 text-slate-700 shadow-glass-soft hover:bg-white/55 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:text-slate-200 dark:hover:border-cyan-300/[0.24] dark:hover:bg-cyan-400/[0.08] dark:hover:text-cyan-100',
         secondary: 'glass-toolbar text-slate-800 shadow-glass-soft hover:bg-white/72 dark:text-slate-200 dark:hover:bg-slate-900/65',
         glass: 'glass text-slate-800 shadow-glass-strong hover:bg-white/72 hover:shadow-glass-strong dark:text-slate-200 dark:hover:bg-slate-900/58 dark:hover:shadow-glass-dark',
         ghost: 'text-slate-700 dark:text-slate-300 hover:bg-white/45 dark:hover:bg-slate-800/45 backdrop-blur-sm',

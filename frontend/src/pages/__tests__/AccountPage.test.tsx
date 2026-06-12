@@ -103,7 +103,7 @@ describe('AccountPage', () => {
   it('renders account workspace navigation and toggles between overview and security modules', async () => {
     const user = userEvent.setup();
 
-    renderAccountPage();
+    const { container } = renderAccountPage();
 
     expect(await screen.findByText('欢迎回来，alice')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /账号概览/ })).toBeInTheDocument();
@@ -115,6 +115,8 @@ describe('AccountPage', () => {
     expect(screen.getByText('快捷动作')).toBeInTheDocument();
     expect(screen.getByText('安全提示')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '立即修改密码' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^修改密码$/ })).toHaveClass('dark:hover:bg-cyan-400/[0.08]');
+    expect(container.innerHTML).toContain('dark:bg-slate-950/[0.82]');
 
     expect(screen.queryByLabelText('当前密码')).not.toBeInTheDocument();
 

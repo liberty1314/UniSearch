@@ -122,7 +122,7 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
                     border-[0.5px] transition-all duration-200
                     ${hasSelection
                         ? 'border-cyan-200/60 bg-cyan-50/80 text-cyan-600 shadow-sm dark:border-cyan-900/30 dark:bg-cyan-950/30 dark:text-cyan-300'
-                        : 'border-slate-200/50 bg-white/40 text-slate-400 shadow-sm backdrop-blur-md hover:text-slate-600 dark:border-white/10 dark:bg-slate-800/40 dark:hover:text-slate-300'
+                        : 'border-slate-200/50 bg-white/40 text-slate-400 shadow-sm backdrop-blur-md hover:text-slate-600 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:hover:text-slate-300'
                     }
                 `}
                 title="筛选"

@@ -218,7 +218,7 @@ export const ChannelManagementView: React.FC = () => {
                         key={channel.id}
                         data-testid={`channel-row-${channel.id}`}
                         onClick={() => controller.setDetailChannelId(channel.id)}
-                        className="cursor-pointer rounded-[1.3rem] border border-slate-200/70 bg-white/75 p-4 transition hover:border-slate-300 hover:shadow-md dark:border-white/10 dark:bg-slate-950/35 dark:hover:border-white/20"
+                        className="cursor-pointer rounded-[1.3rem] border border-slate-200/70 bg-white/75 p-4 transition hover:border-slate-300 hover:shadow-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:hover:border-cyan-300/[0.24]"
                       >
                         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr),minmax(0,0.8fr),auto] xl:items-center">
                           <div className="flex items-start gap-3">
@@ -263,7 +263,7 @@ export const ChannelManagementView: React.FC = () => {
                               ) : null}
                             </div>
                           </div>
-                          <div className="rounded-[1.1rem] border border-slate-200/70 bg-slate-50/80 p-3 text-sm dark:border-white/10 dark:bg-slate-900/40">
+                          <div className="rounded-[1.1rem] border border-slate-200/70 bg-slate-50/80 p-3 text-sm dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.44]">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-slate-500 dark:text-slate-400">健康状态</span>
                               <span className="font-medium text-slate-700 dark:text-slate-200">{describeChannelHealth(channel)}</span>
@@ -375,10 +375,10 @@ export const ChannelManagementView: React.FC = () => {
           >
             {activeChannel ? (
               <div className="space-y-4 text-sm">
-                <div className="rounded-[1.15rem] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-slate-900/30">
+                <div className="rounded-[1.15rem] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.40]">
                   <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{activeChannel.last_error || '当前没有记录到错误信息。'}</p>
                 </div>
-                <div className="space-y-3 rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-white/10">
+                <div className="space-y-3 rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.34]">
                   <div>
                     <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">频道标签</p>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -427,19 +427,19 @@ export const ChannelManagementView: React.FC = () => {
                   </div>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
-                  <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-white/10">
+                  <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.34]">
                     <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">启用状态</p>
                     <p className="mt-2 font-medium text-slate-900 dark:text-white">{activeChannel.is_enabled ? '已启用' : '已禁用'}</p>
                   </div>
-                  <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-white/10">
+                  <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.34]">
                     <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">健康状态</p>
                     <p className="mt-2 font-medium text-slate-900 dark:text-white">{describeChannelHealth(activeChannel)}</p>
                   </div>
-                  <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-white/10">
+                  <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.34]">
                     <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">最近检查</p>
                     <p className="mt-2 font-medium text-slate-900 dark:text-white">{activeChannel.last_checked_at || '暂无'}</p>
                   </div>
-                  <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-white/10">
+                  <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.34]">
                     <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">检查来源</p>
                     <p className="mt-2 font-medium text-slate-900 dark:text-white">{activeChannel.check_source || '暂无'}</p>
                   </div>
