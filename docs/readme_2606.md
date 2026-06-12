@@ -280,3 +280,9 @@
     - frontend/src/components/trending/__tests__/HotMediaCard.test.tsx
     - frontend/src/types/hotRanking.ts
     - docs/readme_2606.md
+
+- [2026-06-12 22:13] ci(github-actions): 调整 Docker 构建工作流认证方式
+  - Body: Docker 构建工作流改用 `github.actor` 和 `GITHUB_TOKEN` 完成登录，减少对单独 Docker 凭据的依赖。保持现有镜像构建流程不变，只收敛认证来源。
+  - Files:
+    - .github/workflows/docker_ci.yml
+    - docs/readme_2606.md
