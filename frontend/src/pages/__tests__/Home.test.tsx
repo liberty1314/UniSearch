@@ -349,6 +349,24 @@ describe('Home', () => {
     expect(searchStage).toHaveClass('sm:space-y-6');
   });
 
+  it('在夜间主题背景下为信任条胶囊提供更清晰的对比层级', () => {
+    searchAccessStatus = 'anonymous';
+
+    renderHome();
+
+    const trustStrip = screen.getByTestId('home-trust-strip');
+    const trustChip = screen.getByText('支持 5+ 平台').closest('div');
+    const trustDot = trustChip?.querySelector('span.h-2.w-2');
+
+    expect(trustStrip).toHaveClass('dark:text-slate-300');
+    expect(trustChip).not.toBeNull();
+    expect(trustChip).toHaveClass('dark:border-cyan-300/[0.16]');
+    expect(trustChip).toHaveClass('dark:bg-slate-950/[0.58]');
+    expect(trustChip).toHaveClass('dark:text-slate-100');
+    expect(trustDot).not.toBeNull();
+    expect(trustDot).toHaveClass('dark:shadow-[0_0_0_5px_rgba(34,211,238,0.16)]');
+  });
+
   it('登录后不展示首页搜索准入提示', () => {
     searchAccessStatus = 'authenticated';
 

@@ -94,7 +94,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
 
       {controller.isHomePage ? (
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2 px-1 sm:mt-4 sm:gap-2.5">
-          <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 sm:text-xs">
+          <span className="text-[11px] font-medium text-slate-400 dark:text-slate-400 sm:text-xs">
             试试这些
           </span>
           {controller.isHomeQuickKeywordsLoading ? (
@@ -127,7 +127,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
                     controller.setInputValue(keyword);
                     void controller.submitKeyword(keyword);
                   }}
-                  className="inline-flex items-center rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/42 dark:text-slate-300 dark:hover:border-cyan-400/40 dark:hover:text-cyan-200 sm:px-3.5 sm:py-1.5 sm:text-sm"
+                  className="inline-flex items-center rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-white hover:text-cyan-700 dark:border-cyan-300/[0.18] dark:bg-slate-950/[0.55] dark:text-slate-100 dark:shadow-[0_12px_30px_rgba(2,6,23,0.32)] dark:hover:border-cyan-300/[0.40] dark:hover:bg-cyan-400/10 dark:hover:text-cyan-100 sm:px-3.5 sm:py-1.5 sm:text-sm"
                   aria-label={`快速搜索 ${keyword}`}
                 >
                   {keyword}

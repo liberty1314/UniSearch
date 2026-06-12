@@ -286,3 +286,12 @@
   - Files:
     - .github/workflows/docker_ci.yml
     - docs/readme_2606.md
+
+- [2026-06-12 23:06] fix(frontend): 增强首页夜间主题对比层级
+  - Body: 首页搜索框快捷词与信任条在夜间主题下补足更高对比度的背景、边框与文字色，避免浅色样式在深色背景中发虚。补充首页与搜索框测试，覆盖夜间主题胶囊样式。
+  - Files:
+    - frontend/src/components/SearchBox.tsx
+    - frontend/src/components/__tests__/SearchBox.test.tsx
+    - frontend/src/pages/Home.tsx
+    - frontend/src/pages/__tests__/Home.test.tsx
+    - docs/readme_2606.md

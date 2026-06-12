@@ -187,14 +187,14 @@ const Home: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={statsTransition}
           data-testid="home-trust-strip"
-          className="relative z-20 mx-auto mt-6 flex max-w-full items-center gap-2 overflow-x-auto px-1 pb-1 text-xs text-slate-500 [scrollbar-width:none] dark:text-slate-400 sm:mt-8 sm:max-w-3xl sm:flex-wrap sm:justify-center sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 sm:text-sm"
+          className="relative z-20 mx-auto mt-6 flex max-w-full items-center gap-2 overflow-x-auto px-1 pb-1 text-xs text-slate-500 [scrollbar-width:none] dark:text-slate-300 sm:mt-8 sm:max-w-3xl sm:flex-wrap sm:justify-center sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 sm:text-sm"
         >
           {trustSignals.map((signal) => (
             <div
               key={signal}
-              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200/60 bg-white/55 px-3 py-1.5 shadow-[0_8px_22px_rgba(15,23,42,0.04)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/38 sm:px-4 sm:py-2"
+              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200/60 bg-white/55 px-3 py-1.5 text-slate-600 shadow-[0_8px_22px_rgba(15,23,42,0.04)] backdrop-blur-xl dark:border-cyan-300/[0.16] dark:bg-slate-950/[0.58] dark:text-slate-100 dark:shadow-[0_14px_36px_rgba(2,6,23,0.34)] sm:px-4 sm:py-2"
             >
-              <span className="h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_0_4px_rgba(34,211,238,0.14)]" />
+              <span className="h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_0_4px_rgba(34,211,238,0.14)] dark:shadow-[0_0_0_5px_rgba(34,211,238,0.16)]" />
               <span className="font-medium">{signal}</span>
             </div>
           ))}

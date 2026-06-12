@@ -615,6 +615,49 @@ describe("SearchBox", () => {
     );
   });
 
+  it("uses higher-contrast helper chips for the homepage dark surface", async () => {
+    getHotRankingsMock.mockResolvedValue({
+      ...baseHotRankingResponse,
+      sections: [
+        {
+          category: "movie",
+          title: "热门电影",
+          description: "desc",
+          spotlight: {
+            id: 1,
+            tmdb_id: 1,
+            media_type: "movie",
+            ranking_category: "movie",
+            title: "木乃伊",
+            original_title: "木乃伊",
+            overview: "",
+            poster_url: "",
+            backdrop_url: "",
+            vote_average: 0,
+            vote_count: 0,
+            popularity: 0,
+            release_date: "",
+            genre_names: [],
+            tmdb_url: "",
+          },
+          items: [],
+        },
+      ],
+    });
+
+    render(<SearchBox />);
+
+    const helperLabel = screen.getByText("试试这些");
+    expect(helperLabel).toHaveClass("dark:text-slate-400");
+
+    const helperChip = await screen.findByRole("button", { name: "快速搜索 木乃伊" });
+    expect(helperChip).toHaveClass("dark:border-cyan-300/[0.18]");
+    expect(helperChip).toHaveClass("dark:bg-slate-950/[0.55]");
+    expect(helperChip).toHaveClass("dark:text-slate-100");
+    expect(helperChip).toHaveClass("dark:hover:bg-cyan-400/10");
+    expect(helperChip).toHaveClass("dark:hover:text-cyan-100");
+  });
+
   it("shows a skeleton while homepage hot keywords are loading", () => {
     getHotRankingsMock.mockImplementation(
       () =>
