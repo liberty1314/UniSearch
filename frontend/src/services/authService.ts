@@ -15,9 +15,13 @@ import type {
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 
 export class AuthService {
-  static async register(username: string, password: string): Promise<RegisterResponse> {
+  static async register(username: string, password: string): Promise<LoginWithRememberResponse> {
     const request: RegisterRequest = { username, password };
-    return apiClient.post<RegisterResponse>('/auth/register', request);
+    return apiClient.post<LoginWithRememberResponse>('/auth/register', request);
+  }
+
+  static async checkUsername(username: string): Promise<boolean> {
+    return apiClient.get<boolean>('/auth/check-username', { params: { username } });
   }
 
   static async userLogin(

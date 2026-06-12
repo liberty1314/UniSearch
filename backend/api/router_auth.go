@@ -9,6 +9,7 @@ func registerAuthRoutes(api *gin.RouterGroup, deps RouterDeps, authController *c
 	auth := api.Group("/auth")
 	{
 		auth.POST("/register", authController.Register)
+		auth.GET("/check-username", authController.CheckUsername)
 		auth.POST("/login", func(c *gin.Context) {
 			c.Set("refreshTokenService", deps.RefreshTokenService)
 			authController.Login(c)

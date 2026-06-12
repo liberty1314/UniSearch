@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
+import { useAuthStore } from "@/stores/authStore";
 import { AuthService } from "@/services/authService";
 import { SystemSettingsService } from "@/services/systemSettingsService";
 import {
@@ -83,6 +84,7 @@ const getPasswordStrengthHelperText = (password: string) => {
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { setToken } = useAuthStore();
 
   // System Settings
   const [isLoadingSettings, setIsLoadingSettings] = useState<boolean>(true);
@@ -95,6 +97,8 @@ const RegisterPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
 
   // Animation State
   const particles = useAuthParticles();
@@ -123,6 +127,30 @@ const RegisterPage: React.FC = () => {
     };
     loadSettings();
   }, [navigate]);
+
+  // Real-time username check with debounce
+  useEffect(() => {
+    const trimmed = username.trim();
+    if (trimmed.length < 3 || trimmed.length > 32) {
+      setUsernameAvailable(null);
+      setIsCheckingUsername(false);
+      return;
+    }
+
+    setIsCheckingUsername(true);
+    const timer = setTimeout(async () => {
+      try {
+        const available = await AuthService.checkUsername(trimmed);
+        setUsernameAvailable(available);
+      } catch (e) {
+        setUsernameAvailable(null);
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [username]);
 
   const handleRegister = async () => {
     if (isLoading) {
@@ -153,9 +181,20 @@ const RegisterPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await AuthService.register(username.trim(), password);
-      toast.success("注册成功，请先登录后开始搜索");
-      navigate("/login");
+      const response = await AuthService.register(username.trim(), password);
+      if (response && response.access_token) {
+        setToken(
+          response.access_token,
+          response.username,
+          false,
+          response.refresh_token || null,
+        );
+        toast.success("注册成功，已为您自动登录");
+        navigate("/", { replace: true });
+      } else {
+        toast.success("注册成功，请登录");
+        navigate("/login");
+      }
     } catch (error) {
       console.error("Register failed:", error);
       const dataError = getErrorDataError(error);
@@ -170,12 +209,14 @@ const RegisterPage: React.FC = () => {
   };
 
   const usernameError = !submitAttempted
-    ? undefined
+    ? (usernameAvailable === false ? "用户名已被占用" : undefined)
     : !username.trim()
       ? "请输入用户名"
       : username.length < 3 || username.length > 32
         ? "用户名长度必须在3-32字符之间"
-        : undefined;
+        : usernameAvailable === false
+          ? "用户名已被占用"
+          : undefined;
 
   const passwordError = !submitAttempted
     ? undefined
@@ -305,6 +346,13 @@ const RegisterPage: React.FC = () => {
                   onChange={(e) => setUsername(e.target.value)}
                   error={usernameError}
                   disabled={isLoading}
+                  endAdornment={
+                    isCheckingUsername ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                    ) : usernameAvailable === true ? (
+                      <span className="text-emerald-500 text-xs font-medium px-2">可用</span>
+                    ) : null
+                  }
                 />
 
                 <div>

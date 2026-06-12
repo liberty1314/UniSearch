@@ -271,7 +271,8 @@ func extractBearerToken(c *gin.Context) string {
 // isPublicPath 检查是否为公开路径
 func isPublicPath(path string) bool {
 	publicPaths := []string{
-		"/api/auth/register", // 新增：用户注册接口
+		"/api/auth/register",       // 新增：用户注册接口
+		"/api/auth/check-username", // 新增：用户名校验接口
 		"/api/auth/login",
 		"/api/auth/refresh",  // 新增：刷新令牌
 		"/api/auth/revoke",   // 新增：撤销令牌

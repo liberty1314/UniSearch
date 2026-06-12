@@ -103,14 +103,19 @@ func (s *AuthService) Register(username, password string) (*model.User, error) {
 		return nil, errors.New("密码不能为空")
 	}
 
+	minU := config.AppConfig.AuthUsernameMinLength
+	maxU := config.AppConfig.AuthUsernameMaxLength
+	minP := config.AppConfig.AuthPasswordMinLength
+	maxP := config.AppConfig.AuthPasswordMaxLength
+
 	// 验证用户名长度
-	if len(username) < 3 || len(username) > 32 {
-		return nil, errors.New("用户名长度必须在3-32字符之间")
+	if len(username) < minU || len(username) > maxU {
+		return nil, fmt.Errorf("用户名长度必须在%d-%d字符之间", minU, maxU)
 	}
 
 	// 验证密码长度
-	if len(password) < 6 || len(password) > 64 {
-		return nil, errors.New("密码长度必须在6-64字符之间")
+	if len(password) < minP || len(password) > maxP {
+		return nil, fmt.Errorf("密码长度必须在%d-%d字符之间", minP, maxP)
 	}
 
 	// 检查用户名是否已存在。
@@ -148,6 +153,26 @@ func (s *AuthService) Register(username, password string) (*model.User, error) {
 
 	log.Printf("✓ 用户注册成功: %s (ID: %d)", user.Username, user.ID)
 	return user, nil
+}
+
+// CheckUsernameExist 检查用户名是否已存在
+func (s *AuthService) CheckUsernameExist(username string) (bool, error) {
+	username = strings.TrimSpace(username)
+	if username == "" {
+		return false, errors.New("用户名不能为空")
+	}
+
+	var existingUser model.User
+	result := s.db.Unscoped().Where("username = ?", username).First(&existingUser)
+	if result.Error == nil {
+		// 用户已存在
+		return true, nil
+	} else if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		// 数据库查询错误
+		return false, fmt.Errorf("查询用户失败: %w", result.Error)
+	}
+	// 不存在
+	return false, nil
 }
 
 // Login 用户登录

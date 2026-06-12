@@ -102,10 +102,14 @@ type Config struct {
 	HotRankingCacheTTLMonth      time.Duration
 	HotRankingCacheTTLYear       time.Duration
 	// 认证相关配置
-	AuthEnabled     bool              // 是否启用认证
-	AuthUsers       map[string]string // 用户名:密码映射
-	AuthTokenExpiry time.Duration     // Token有效期
-	AuthJWTSecret   string            // JWT签名密钥（向后兼容，优先使用密钥管理服务）
+	AuthEnabled           bool              // 是否启用认证
+	AuthUsers             map[string]string // 用户名:密码映射
+	AuthTokenExpiry       time.Duration     // Token有效期
+	AuthJWTSecret         string            // JWT签名密钥（向后兼容，优先使用密钥管理服务）
+	AuthUsernameMinLength int               // 用户名最小长度
+	AuthUsernameMaxLength int               // 用户名最大长度
+	AuthPasswordMinLength int               // 密码最小长度
+	AuthPasswordMaxLength int               // 密码最大长度
 
 	// 密钥管理配置
 	SecretBackend   string // 密钥后端类型（database 或 environment）
@@ -221,10 +225,14 @@ func Init() {
 		HotRankingCacheTTLMonth:      getHotRankingCacheTTL("HOT_RANKING_CACHE_TTL_MONTH", 6*time.Hour),
 		HotRankingCacheTTLYear:       getHotRankingCacheTTL("HOT_RANKING_CACHE_TTL_YEAR", 12*time.Hour),
 		// 认证相关配置
-		AuthEnabled:     getAuthEnabled(),
-		AuthUsers:       getAuthUsers(),
-		AuthTokenExpiry: getAuthTokenExpiry(),
-		AuthJWTSecret:   getAuthJWTSecret(),
+		AuthEnabled:           getAuthEnabled(),
+		AuthUsers:             getAuthUsers(),
+		AuthTokenExpiry:       getAuthTokenExpiry(),
+		AuthJWTSecret:         getAuthJWTSecret(),
+		AuthUsernameMinLength: getAuthUsernameMinLength(),
+		AuthUsernameMaxLength: getAuthUsernameMaxLength(),
+		AuthPasswordMinLength: getAuthPasswordMinLength(),
+		AuthPasswordMaxLength: getAuthPasswordMaxLength(),
 
 		// 密钥管理配置
 		SecretBackend:   getSecretBackend(),
@@ -857,6 +865,54 @@ func getAsyncLogEnabled() bool {
 	}
 	return enabled
 }
+func getAuthUsernameMinLength() int {
+	val := os.Getenv("AUTH_USERNAME_MIN_LENGTH")
+	if val == "" {
+		return 3
+	}
+	length, err := strconv.Atoi(val)
+	if err != nil || length <= 0 {
+		return 3
+	}
+	return length
+}
+
+func getAuthUsernameMaxLength() int {
+	val := os.Getenv("AUTH_USERNAME_MAX_LENGTH")
+	if val == "" {
+		return 32
+	}
+	length, err := strconv.Atoi(val)
+	if err != nil || length <= 0 {
+		return 32
+	}
+	return length
+}
+
+func getAuthPasswordMinLength() int {
+	val := os.Getenv("AUTH_PASSWORD_MIN_LENGTH")
+	if val == "" {
+		return 6
+	}
+	length, err := strconv.Atoi(val)
+	if err != nil || length <= 0 {
+		return 6
+	}
+	return length
+}
+
+func getAuthPasswordMaxLength() int {
+	val := os.Getenv("AUTH_PASSWORD_MAX_LENGTH")
+	if val == "" {
+		return 64
+	}
+	length, err := strconv.Atoi(val)
+	if err != nil || length <= 0 {
+		return 64
+	}
+	return length
+}
+
 
 // 从环境变量获取认证开关，如果未设置则默认关闭
 func getAuthEnabled() bool {

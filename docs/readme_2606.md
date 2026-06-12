@@ -394,3 +394,15 @@
     - scratch/update_channels.py
     - test_urls.py
     - docs/readme_2606.md
+
+- [2026-06-13 01:21] feat(auth): 优化注册流程支持用户名查重与自动登录
+  - Body: 重构了注册页面的交互流程，增加用户名的实时查重校验与防抖处理。注册成功后将通过返回的令牌实现自动登录。同时在后端支持通过环境变量自定义用户名与密码的长度限制，并新增了对应的查重接口。
+  - Files:
+    - backend/api/controller/auth_controller.go
+    - backend/api/middleware.go
+    - backend/api/router_auth.go
+    - backend/config/config.go
+    - backend/service/auth_service.go
+    - frontend/src/pages/RegisterPage.tsx
+    - frontend/src/services/authService.ts
+    - docs/readme_2606.md

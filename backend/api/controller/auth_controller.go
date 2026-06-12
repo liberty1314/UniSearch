@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -29,16 +30,10 @@ func NewAuthController(authService *service.AuthService) *AuthController {
 
 // RegisterRequest 用户注册请求结构
 type RegisterRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=32"` // 用户名（3-32字符）
-	Password string `json:"password" binding:"required,min=6,max=64"` // 密码（6-64字符）
+	Username string `json:"username" binding:"required"` // 用户名
+	Password string `json:"password" binding:"required"` // 密码
 }
 
-// RegisterResponse 用户注册响应结构
-type RegisterResponse struct {
-	Code    int         `json:"code"`           // 响应码
-	Message string      `json:"message"`        // 响应消息
-	Data    interface{} `json:"data,omitempty"` // 响应数据（成功时包含用户信息）
-}
 
 // LoginRequest 用户登录请求结构（支持记住我）
 type LoginRequest struct {
@@ -72,7 +67,7 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 	// 参数验证（使用 Gin binding 标签）
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Printf("✗ 注册请求参数验证失败: %v", err)
-		c.JSON(400, RegisterResponse{
+		c.JSON(400, LoginResponse{
 			Code:    400,
 			Message: "请求参数无效: " + err.Error(),
 			Data:    nil,
@@ -84,20 +79,25 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 	req.Username = strings.TrimSpace(req.Username)
 	req.Password = strings.TrimSpace(req.Password)
 
+	minU := config.AppConfig.AuthUsernameMinLength
+	maxU := config.AppConfig.AuthUsernameMaxLength
+	minP := config.AppConfig.AuthPasswordMinLength
+	maxP := config.AppConfig.AuthPasswordMaxLength
+
 	// 额外验证：确保去除空白后仍然满足长度要求
-	if len(req.Username) < 3 || len(req.Username) > 32 {
-		c.JSON(400, RegisterResponse{
+	if len(req.Username) < minU || len(req.Username) > maxU {
+		c.JSON(400, LoginResponse{
 			Code:    400,
-			Message: "用户名长度必须在3-32字符之间",
+			Message: fmt.Sprintf("用户名长度必须在%d-%d字符之间", minU, maxU),
 			Data:    nil,
 		})
 		return
 	}
 
-	if len(req.Password) < 6 || len(req.Password) > 64 {
-		c.JSON(400, RegisterResponse{
+	if len(req.Password) < minP || len(req.Password) > maxP {
+		c.JSON(400, LoginResponse{
 			Code:    400,
-			Message: "密码长度必须在6-64字符之间",
+			Message: fmt.Sprintf("密码长度必须在%d-%d字符之间", minP, maxP),
 			Data:    nil,
 		})
 		return
@@ -109,7 +109,7 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 		// 根据错误类型返回不同的状态码
 		if strings.Contains(err.Error(), "用户名已存在") {
 			log.Printf("✗ 注册失败: 用户名已存在 - %s", req.Username)
-			c.JSON(400, RegisterResponse{
+			c.JSON(400, LoginResponse{
 				Code:    400,
 				Message: "用户名已存在",
 				Data:    nil,
@@ -119,7 +119,7 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 
 		// 其他错误（数据库错误等）
 		log.Printf("✗ 注册失败: %v", err)
-		c.JSON(500, RegisterResponse{
+		c.JSON(500, LoginResponse{
 			Code:    500,
 			Message: "服务暂时不可用",
 			Data:    nil,
@@ -127,16 +127,37 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 		return
 	}
 
-	// 注册成功，返回用户信息（仅返回 user_id 和 username）
 	log.Printf("✓ 用户注册成功: %s (ID: %d)", user.Username, user.ID)
-	c.JSON(200, RegisterResponse{
-		Code:    200,
-		Message: "注册成功",
-		Data: gin.H{
-			"user_id":  user.ID,
-			"username": user.Username,
-		},
+	// 注册即登录：自动颁发 Token
+	ctrl.handleDatabaseUserLogin(c, LoginRequest{
+		Username: req.Username,
+		Password: req.Password,
 	})
+}
+
+// CheckUsername 检查用户名是否可用
+// GET /api/auth/check-username
+func (ctrl *AuthController) CheckUsername(c *gin.Context) {
+	username := strings.TrimSpace(c.Query("username"))
+	if username == "" {
+		c.JSON(400, gin.H{"code": 400, "message": "用户名不能为空", "data": false})
+		return
+	}
+
+	minU := config.AppConfig.AuthUsernameMinLength
+	maxU := config.AppConfig.AuthUsernameMaxLength
+	if len(username) < minU || len(username) > maxU {
+		c.JSON(400, gin.H{"code": 400, "message": fmt.Sprintf("用户名长度必须在%d-%d字符之间", minU, maxU), "data": false})
+		return
+	}
+
+	exists, err := ctrl.authService.CheckUsernameExist(username)
+	if err != nil {
+		c.JSON(500, gin.H{"code": 500, "message": "检查失败", "data": false})
+		return
+	}
+
+	c.JSON(200, gin.H{"code": 200, "message": "success", "data": !exists})
 }
 
 // Login 处理用户登录请求（统一接口）
