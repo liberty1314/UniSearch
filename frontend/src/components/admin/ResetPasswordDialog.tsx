@@ -12,12 +12,14 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { toast } from 'sonner';
 import { UserService } from '../../services/userService';
+import { SystemSettingsService } from '@/services/systemSettingsService';
 import type { UserInfo } from '../../types/api';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import {
   validateAccountPassword,
   validateAccountPasswordConfirmation,
 } from '@/components/account/passwordValidation';
+import { DEFAULT_AUTH_POLICY, resolveAuthPolicy } from '@/lib/authPolicy';
 import { getErrorDataError } from '@/lib/error';
 
 interface ResetPasswordDialogProps {
@@ -48,6 +50,7 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authPolicy, setAuthPolicy] = useState(DEFAULT_AUTH_POLICY);
   const [errors, setErrors] = useState<{
     newPassword?: string;
     confirmPassword?: string;
@@ -64,6 +67,23 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const loadAuthPolicy = async () => {
+      try {
+        const settings = await SystemSettingsService.getSettings();
+        setAuthPolicy(resolveAuthPolicy(settings));
+      } catch {
+        setAuthPolicy(DEFAULT_AUTH_POLICY);
+      }
+    };
+
+    void loadAuthPolicy();
+  }, [open]);
+
   // 处理新密码输入
   const handleNewPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -71,7 +91,11 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
     
     // 实时验证
     if (errors.newPassword) {
-      const error = validateAccountPassword(value, { required: true });
+      const error = validateAccountPassword(value, {
+        required: true,
+        minLength: authPolicy.passwordMinLength,
+        maxLength: authPolicy.passwordMaxLength,
+      });
       setErrors((prev) => ({ ...prev, newPassword: error }));
     }
     
@@ -103,7 +127,11 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
     }
 
     // 验证所有字段
-    const newPasswordError = validateAccountPassword(newPassword, { required: true });
+    const newPasswordError = validateAccountPassword(newPassword, {
+      required: true,
+      minLength: authPolicy.passwordMinLength,
+      maxLength: authPolicy.passwordMaxLength,
+    });
     const confirmPasswordError = validateAccountPasswordConfirmation(confirmPassword, newPassword, {
       required: true,
     });
@@ -155,7 +183,7 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
                   type={showNewPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={handleNewPasswordChange}
-                  placeholder="请输入新密码（6-64 个字符）"
+                  placeholder={`请输入新密码（${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength} 个字符）`}
                   className={errors.newPassword ? 'border-destructive' : ''}
                   disabled={isSubmitting}
                   autoComplete="new-password"
@@ -179,7 +207,7 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
                 <p className="text-sm text-destructive">{errors.newPassword}</p>
               )}
               <p className="text-xs text-muted-foreground">
-                密码长度应在 6-64 个字符之间
+                {`密码长度应在 ${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength} 个字符之间，首尾空格会计入密码内容`}
               </p>
             </div>
 

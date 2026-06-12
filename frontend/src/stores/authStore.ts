@@ -56,17 +56,16 @@ export const useAuthStore = create<AuthState>()(
 
       checkAuth: () => {
         const state = get();
-        return !!state.token;
+        return !!state.token || !!state.refreshToken;
       },
     }),
     {
       name: 'auth-storage',
       partialize: (state) => ({
-        token: state.token,
         refreshToken: state.refreshToken,
-        username: state.username,
-        isAuthenticated: state.isAuthenticated,
-        isAdmin: state.isAdmin,
+        username: state.refreshToken ? state.username : null,
+        isAuthenticated: !!state.refreshToken,
+        isAdmin: state.refreshToken ? state.isAdmin : false,
       }),
     }
   )

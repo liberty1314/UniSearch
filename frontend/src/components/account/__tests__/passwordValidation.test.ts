@@ -29,4 +29,13 @@ describe('account password validation', () => {
       validateAccountPasswordConfirmation('correct-password', 'correct-password', { required: true })
     ).toBeUndefined();
   });
+
+  it('supports custom password length policies', () => {
+    expect(validateAccountPassword('1234567', { required: true, minLength: 8, maxLength: 20 })).toBe(
+      '密码长度至少为 8 个字符'
+    );
+    expect(validateAccountPassword('a'.repeat(21), { required: true, minLength: 8, maxLength: 20 })).toBe(
+      '密码长度不能超过 20 个字符'
+    );
+  });
 });

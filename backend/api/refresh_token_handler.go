@@ -62,7 +62,7 @@ func AdminLoginWithRememberHandler(refreshTokenService *service.RefreshTokenServ
 		}
 
 		// 速率限制检查
-		if !loginRateLimiter.Allow(c.ClientIP()) {
+		if !adminLoginRateLimiter.Allow(buildRateLimitKey(c)) {
 			c.JSON(429, gin.H{
 				"error": "请求过于频繁，请稍后再试",
 				"code":  "RATE_LIMIT_EXCEEDED",
@@ -133,6 +133,11 @@ func UserLoginWithRememberHandler(refreshTokenService *service.RefreshTokenServi
 		var req LoginWithRememberRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(400, gin.H{"error": "参数错误：用户名和密码不能为空"})
+			return
+		}
+
+		if !userLoginRateLimiter.Allow(buildRateLimitKey(c, req.Username)) {
+			c.JSON(429, gin.H{"error": "请求过于频繁，请稍后再试"})
 			return
 		}
 
@@ -274,8 +279,9 @@ func RefreshAccessTokenHandler(refreshTokenService *service.RefreshTokenService)
 		// 验证刷新令牌
 		token, err := refreshTokenService.ValidateToken(decryptedToken, deviceFingerprint)
 		if err != nil {
+			log.Printf("刷新令牌验证失败: %v", err)
 			c.JSON(401, gin.H{
-				"error": "刷新令牌验证失败: " + err.Error(),
+				"error": "刷新令牌无效或已过期",
 				"code":  "REFRESH_TOKEN_VALIDATION_FAILED",
 			})
 			return

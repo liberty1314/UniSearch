@@ -1,8 +1,10 @@
+export const ADMIN_DROPDOWN_LAYER_Z_INDEX = 'z-[140]';
+
 export const ADMIN_DROPDOWN_TRIGGER_CLASSES =
   'h-11 w-full rounded-[1.1rem] border border-slate-200/70 bg-white/70 px-3 py-2 text-sm text-slate-700 shadow-sm backdrop-blur-md ring-offset-background placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-100';
 
 export const ADMIN_DROPDOWN_CONTENT_CLASSES =
-  'z-[110] max-h-[min(24rem,calc(100vh-1.5rem))] min-w-[var(--radix-select-trigger-width)] w-max max-w-[min(28rem,calc(100vw-1.5rem))] overflow-hidden rounded-[1.25rem] border border-slate-200/70 bg-white/95 text-slate-900 shadow-[0_20px_60px_rgba(15,23,42,0.16)] backdrop-blur-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 dark:border-cyan-300/[0.14] dark:bg-slate-950/95 dark:text-slate-100';
+  `${ADMIN_DROPDOWN_LAYER_Z_INDEX} max-h-[min(24rem,calc(100vh-1.5rem))] min-w-[var(--radix-select-trigger-width)] w-max max-w-[min(28rem,calc(100vw-1.5rem))] overflow-hidden rounded-[1.25rem] border border-slate-200/70 bg-white/95 text-slate-900 shadow-[0_20px_60px_rgba(15,23,42,0.16)] backdrop-blur-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 dark:border-cyan-300/[0.14] dark:bg-slate-950/95 dark:text-slate-100`;
 
 export const ADMIN_DROPDOWN_ITEM_CLASSES =
   'relative flex w-full cursor-default select-none items-center rounded-[0.9rem] py-2 pl-8 pr-3 text-sm outline-none transition focus:bg-slate-100 focus:text-slate-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 dark:focus:bg-white/10 dark:focus:text-white';
@@ -10,7 +12,7 @@ export const ADMIN_DROPDOWN_ITEM_CLASSES =
 export const ADMIN_DROPDOWN_PANEL_CLASSES =
   'rounded-[1.35rem] border border-slate-200/70 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.16)] backdrop-blur-xl dark:border-cyan-300/[0.14] dark:bg-slate-950/95';
 
-export const ADMIN_DROPDOWN_BACKDROP_Z_INDEX = 'z-[109]';
+export const ADMIN_DROPDOWN_BACKDROP_Z_INDEX = 'z-[139]';
 
 const CJK_CHAR_WIDTH = 16;
 const LATIN_CHAR_WIDTH = 8;

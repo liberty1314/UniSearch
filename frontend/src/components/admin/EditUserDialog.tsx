@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { UserService } from '@/services/userService';
+import { SystemSettingsService } from '@/services/systemSettingsService';
 import { useAuthStore } from '@/stores/authStore';
+import { DEFAULT_AUTH_POLICY, resolveAuthPolicy } from '@/lib/authPolicy';
 import {
     Dialog,
     DialogContent,
@@ -37,7 +39,7 @@ interface EditUserDialogProps {
  * 编辑用户对话框组件
  * 
  * 允许管理员编辑现有用户信息，包含以下功能：
- * - 用户名输入（3-32 字符）
+ * - 用户名输入（以后端认证策略为准，默认 3-32 字符）
  * - 角色选择（admin 或 user）
  * - 如果是当前用户，禁用角色选择
  * - 前端验证和后端错误处理
@@ -51,6 +53,7 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }: EditUser
     // 表单字段状态
     const [username, setUsername] = useState<string>('');
     const [role, setRole] = useState<'admin' | 'user'>('user');
+    const [authPolicy, setAuthPolicy] = useState(DEFAULT_AUTH_POLICY);
 
     // 加载状态
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -70,11 +73,28 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }: EditUser
         }
     }, [open, user]);
 
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        const loadAuthPolicy = async () => {
+            try {
+                const settings = await SystemSettingsService.getSettings();
+                setAuthPolicy(resolveAuthPolicy(settings));
+            } catch {
+                setAuthPolicy(DEFAULT_AUTH_POLICY);
+            }
+        };
+
+        void loadAuthPolicy();
+    }, [open]);
+
     /**
      * 验证表单
      * 
      * 验证规则：
-     * - 用户名长度：3-32 字符
+     * - 用户名长度：以后端认证策略为准
      * - 角色：必须为 admin 或 user
      */
     const validateForm = (): boolean => {
@@ -84,8 +104,12 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }: EditUser
             return false;
         }
 
-        if (username.length < 3 || username.length > 32) {
-            toast.error('用户名长度必须在 3-32 字符之间');
+        const trimmedUsername = username.trim();
+        if (
+            trimmedUsername.length < authPolicy.usernameMinLength ||
+            trimmedUsername.length > authPolicy.usernameMaxLength
+        ) {
+            toast.error(`用户名长度必须在 ${authPolicy.usernameMinLength}-${authPolicy.usernameMaxLength} 字符之间`);
             return false;
         }
 
@@ -201,13 +225,13 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }: EditUser
                         label="用户名"
                         id="edit-username"
                         type="text"
-                        placeholder="请输入用户名（3-32 字符）"
+                        placeholder={`请输入用户名（${authPolicy.usernameMinLength}-${authPolicy.usernameMaxLength} 字符）`}
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         onKeyDown={handleKeyDown}
                         disabled={isLoading}
                         autoComplete="off"
-                        helperText="用户名长度为 3-32 字符"
+                        helperText={`用户名长度为 ${authPolicy.usernameMinLength}-${authPolicy.usernameMaxLength} 字符`}
                         required
                     />
 

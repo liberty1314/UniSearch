@@ -46,6 +46,7 @@ import {
   AUTH_ENTRY_PAGE_CONTAINER_CLASS,
 } from "@/components/auth/authEntryLayout";
 import { getErrorDataError, getErrorMessage } from "@/lib/error";
+import { DEFAULT_AUTH_POLICY, resolveAuthPolicy } from "@/lib/authPolicy";
 import { cn } from "@/lib/utils";
 
 // ─── 密码强度计算 ─────────────────────────────────────────────────────────────
@@ -69,16 +70,22 @@ const calcPasswordStrength = (pwd: string): 0 | 1 | 2 | 3 => {
 
 const STRENGTH_LABELS = ["", "弱", "中", "强"] as const;
 
-const getPasswordStrengthHelperText = (password: string) => {
+const getPasswordStrengthHelperText = (
+  password: string,
+  policy: {
+    passwordMinLength: number;
+    passwordMaxLength: number;
+  },
+) => {
   if (!password) {
-    return "密码长度需在 6-64 个字符之间";
+    return `密码长度需在 ${policy.passwordMinLength}-${policy.passwordMaxLength} 个字符之间，首尾空格会计入密码内容`;
   }
 
   const passwordStrength = calcPasswordStrength(password);
   const strengthLabel =
     passwordStrength > 0 ? STRENGTH_LABELS[passwordStrength] : "太短";
 
-  return `密码强度：${strengthLabel}`;
+  return `密码强度：${strengthLabel}，首尾空格会计入密码内容`;
 };
 
 const RegisterPage: React.FC = () => {
@@ -99,6 +106,7 @@ const RegisterPage: React.FC = () => {
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [authPolicy, setAuthPolicy] = useState(DEFAULT_AUTH_POLICY);
 
   // Animation State
   const particles = useAuthParticles();
@@ -114,6 +122,7 @@ const RegisterPage: React.FC = () => {
     const loadSettings = async () => {
       try {
         const settings = await SystemSettingsService.getSettings();
+        setAuthPolicy(resolveAuthPolicy(settings));
 
         if (!settings.enable_user_auth || !settings.enable_user_signup) {
           toast.error("用户注册功能已关闭");
@@ -131,7 +140,10 @@ const RegisterPage: React.FC = () => {
   // Real-time username check with debounce
   useEffect(() => {
     const trimmed = username.trim();
-    if (trimmed.length < 3 || trimmed.length > 32) {
+    if (
+      trimmed.length < authPolicy.usernameMinLength ||
+      trimmed.length > authPolicy.usernameMaxLength
+    ) {
       setUsernameAvailable(null);
       setIsCheckingUsername(false);
       return;
@@ -150,7 +162,7 @@ const RegisterPage: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [username]);
+  }, [authPolicy.usernameMaxLength, authPolicy.usernameMinLength, username]);
 
   const handleRegister = async () => {
     if (isLoading) {
@@ -169,13 +181,23 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
-    if (username.length < 3 || username.length > 32) {
-      toast.error("用户名长度必须在3-32字符之间");
+    if (
+      username.trim().length < authPolicy.usernameMinLength ||
+      username.trim().length > authPolicy.usernameMaxLength
+    ) {
+      toast.error(
+        `用户名长度必须在${authPolicy.usernameMinLength}-${authPolicy.usernameMaxLength}字符之间`,
+      );
       return;
     }
 
-    if (password.length < 6 || password.length > 64) {
-      toast.error("密码长度必须在6-64字符之间");
+    if (
+      password.length < authPolicy.passwordMinLength ||
+      password.length > authPolicy.passwordMaxLength
+    ) {
+      toast.error(
+        `密码长度必须在${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength}字符之间`,
+      );
       return;
     }
 
@@ -212,8 +234,9 @@ const RegisterPage: React.FC = () => {
     ? (usernameAvailable === false ? "用户名已被占用" : undefined)
     : !username.trim()
       ? "请输入用户名"
-      : username.length < 3 || username.length > 32
-        ? "用户名长度必须在3-32字符之间"
+      : username.trim().length < authPolicy.usernameMinLength ||
+          username.trim().length > authPolicy.usernameMaxLength
+        ? `用户名长度必须在${authPolicy.usernameMinLength}-${authPolicy.usernameMaxLength}字符之间`
         : usernameAvailable === false
           ? "用户名已被占用"
           : undefined;
@@ -222,8 +245,9 @@ const RegisterPage: React.FC = () => {
     ? undefined
     : !password.trim()
       ? "请输入密码"
-      : password.length < 6 || password.length > 64
-        ? "密码长度必须在6-64字符之间"
+      : password.length < authPolicy.passwordMinLength ||
+          password.length > authPolicy.passwordMaxLength
+        ? `密码长度必须在${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength}字符之间`
         : undefined;
 
   const confirmPasswordError = !submitAttempted
@@ -341,7 +365,7 @@ const RegisterPage: React.FC = () => {
                   icon={<User className="w-4 h-4" />}
                   type="text"
                   autoComplete="username"
-                  placeholder="3-32个字符"
+                  placeholder={`${authPolicy.usernameMinLength}-${authPolicy.usernameMaxLength}个字符`}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   error={usernameError}
@@ -364,7 +388,7 @@ const RegisterPage: React.FC = () => {
                     icon={<Lock className="w-4 h-4" />}
                     type={showPassword ? "text" : "password"}
                     autoComplete="new-password"
-                    placeholder="6-64个字符"
+                    placeholder={`${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength}个字符`}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     error={passwordError}
@@ -372,7 +396,7 @@ const RegisterPage: React.FC = () => {
                     helperText={
                       passwordError
                         ? undefined
-                        : getPasswordStrengthHelperText(password)
+                        : getPasswordStrengthHelperText(password, authPolicy)
                     }
                     endAdornment={
                       <button

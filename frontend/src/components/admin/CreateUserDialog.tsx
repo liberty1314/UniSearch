@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
 import { UserService } from '@/services/userService';
+import { SystemSettingsService } from '@/services/systemSettingsService';
 import { getErrorDataCode, getErrorDataError, getErrorMessage, getErrorStatus } from '@/lib/error';
+import { DEFAULT_AUTH_POLICY, resolveAuthPolicy } from '@/lib/authPolicy';
 import {
     Dialog,
     DialogContent,
@@ -45,8 +47,8 @@ interface CreateUserDialogProps {
  * 创建用户对话框组件
  * 
  * 允许管理员创建新用户账户，包含以下功能：
- * - 用户名输入（3-32 字符）
- * - 密码输入（6-64 字符）
+ * - 用户名输入（以后端认证策略为准，默认 3-32 字符）
+ * - 密码输入（以后端认证策略为准，默认 6-64 字符）
  * - 确认密码输入（必须与密码一致）
  * - 角色选择（admin 或 user）
  * - 前端验证和后端错误处理
@@ -62,6 +64,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
     const [showPassword, setShowPassword] = useState<boolean>(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
     const [showRestoreDialog, setShowRestoreDialog] = useState<boolean>(false);
+    const [authPolicy, setAuthPolicy] = useState(DEFAULT_AUTH_POLICY);
 
     // 加载状态
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -81,12 +84,29 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
         }
     }, [open]);
 
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        const loadAuthPolicy = async () => {
+            try {
+                const settings = await SystemSettingsService.getSettings();
+                setAuthPolicy(resolveAuthPolicy(settings));
+            } catch {
+                setAuthPolicy(DEFAULT_AUTH_POLICY);
+            }
+        };
+
+        void loadAuthPolicy();
+    }, [open]);
+
     /**
      * 验证表单
      * 
      * 验证规则：
-     * - 用户名长度：3-32 字符
-     * - 密码长度：6-64 字符
+     * - 用户名长度：以后端认证策略为准
+     * - 密码长度：以后端认证策略为准
      * - 密码一致性：密码和确认密码必须相同
      * - 角色：必须为 admin 或 user
      */
@@ -99,8 +119,11 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
             return false;
         }
 
-        if (trimmedUsername.length < 3 || trimmedUsername.length > 32) {
-            toast.error('用户名长度必须在 3-32 字符之间');
+        if (
+            trimmedUsername.length < authPolicy.usernameMinLength ||
+            trimmedUsername.length > authPolicy.usernameMaxLength
+        ) {
+            toast.error(`用户名长度必须在 ${authPolicy.usernameMinLength}-${authPolicy.usernameMaxLength} 字符之间`);
             return false;
         }
 
@@ -110,8 +133,11 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
             return false;
         }
 
-        if (password.length < 6 || password.length > 64) {
-            toast.error('密码长度必须在 6-64 字符之间');
+        if (
+            password.length < authPolicy.passwordMinLength ||
+            password.length > authPolicy.passwordMaxLength
+        ) {
+            toast.error(`密码长度必须在 ${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength} 字符之间`);
             return false;
         }
 
@@ -248,13 +274,13 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
                             label="用户名"
                             id="username"
                             type="text"
-                            placeholder="请输入用户名（3-32 字符）"
+                            placeholder={`请输入用户名（${authPolicy.usernameMinLength}-${authPolicy.usernameMaxLength} 字符）`}
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             onKeyDown={handleKeyDown}
                             disabled={isLoading}
                             autoComplete="off"
-                            helperText="用户名长度为 3-32 字符"
+                            helperText={`用户名长度为 ${authPolicy.usernameMinLength}-${authPolicy.usernameMaxLength} 字符`}
                             required
                         />
 
@@ -263,13 +289,13 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
                             label="密码"
                             id="password"
                             type={showPassword ? 'text' : 'password'}
-                            placeholder="请输入密码（6-64 字符）"
+                            placeholder={`请输入密码（${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength} 字符）`}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             onKeyDown={handleKeyDown}
                             disabled={isLoading}
                             autoComplete="new-password"
-                            helperText="密码长度为 6-64 字符"
+                            helperText={`密码长度为 ${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength} 字符，首尾空格会计入密码内容`}
                             endAdornment={renderPasswordToggle(showPassword, () => setShowPassword((prev) => !prev), '密码')}
                             required
                         />

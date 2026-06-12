@@ -11,6 +11,7 @@ interface AccountSecurityPanelProps {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
+  passwordPolicyText: string;
   passwordError?: string;
   confirmError?: string;
   isSaving: boolean;
@@ -24,6 +25,7 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
   currentPassword,
   newPassword,
   confirmPassword,
+  passwordPolicyText,
   passwordError,
   confirmError,
   isSaving,
@@ -79,7 +81,7 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
               placeholder="请输入新密码"
               autoComplete="new-password"
               error={passwordError}
-              helperText="密码长度需控制在 6-64 个字符之间"
+              helperText={passwordPolicyText}
               startAdornment={<Fingerprint className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />}
               className="h-12 rounded-xl border-[0.5px] border-slate-300 bg-white shadow-sm hover:border-slate-400 focus:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all dark:border-slate-600 dark:bg-slate-900"
               containerClassName="space-y-1.5"
@@ -121,7 +123,7 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
                 </h3>
               </div>
               <div className="space-y-3 text-sm leading-7 text-slate-600 dark:text-slate-300/90">
-                <p>请为当前账户设置 6 到 64 个字符的新密码，并尽量避免和旧密码重复。</p>
+                <p>{passwordPolicyText}，并尽量避免和旧密码重复。</p>
                 <p>完成修改后，建议在常用设备上重新确认登录状态，确保凭证已更新。</p>
               </div>
             </div>

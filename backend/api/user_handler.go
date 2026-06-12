@@ -1,9 +1,11 @@
 package api
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"unisearch/model"
@@ -51,26 +53,26 @@ type CreateUserResponse struct {
 
 // CreateUserRequest 创建用户请求
 type CreateUserRequest struct {
-	Username         string `json:"username" binding:"required,min=3,max=32"`
-	Password         string `json:"password" binding:"required,min=6,max=64"`
+	Username         string `json:"username" binding:"required"`
+	Password         string `json:"password" binding:"required"`
 	Role             string `json:"role" binding:"required,oneof=admin user"`
 	RestoreIfDeleted bool   `json:"restore_if_deleted"`
 }
 
 // UpdateUserRequest 更新用户请求
 type UpdateUserRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=32"`
+	Username string `json:"username" binding:"required"`
 	Role     string `json:"role" binding:"required,oneof=admin user"`
 }
 
 // ResetPasswordRequest 重置密码请求
 type ResetPasswordRequest struct {
-	Password string `json:"password" binding:"required,min=6,max=64"`
+	Password string `json:"password" binding:"required"`
 }
 
 type ChangePasswordRequest struct {
 	CurrentPassword string `json:"current_password" binding:"required,min=1"`
-	NewPassword     string `json:"new_password" binding:"required,min=6,max=64"`
+	NewPassword     string `json:"new_password" binding:"required"`
 }
 
 // SetUserStatusRequest 设置用户状态请求
@@ -256,19 +258,26 @@ func CreateUserHandler(userService *service.UserService) gin.HandlerFunc {
 		// 调用服务层
 		user, restored, err := userService.CreateUser(req.Username, req.Password, req.Role, req.RestoreIfDeleted)
 		if err != nil {
+			var validationErr *service.AuthValidationError
 			// 根据错误类型返回不同的状态码
 			switch err.Error() {
 			case "用户名已存在":
 				respondError(c, http.StatusConflict, err.Error(), "USERNAME_EXISTS")
 			case "用户名对应的账号已被删除，请确认是否恢复该账号":
 				respondError(c, http.StatusConflict, err.Error(), "USER_SOFT_DELETED")
-			case "用户名长度必须在3-32字符之间", "用户名只能包含字母、数字、下划线和连字符":
-				respondError(c, http.StatusBadRequest, err.Error(), "INVALID_USERNAME")
-			case "密码长度必须在6-64字符之间":
-				respondError(c, http.StatusBadRequest, err.Error(), "INVALID_PASSWORD")
 			case "角色必须是admin或user":
 				respondError(c, http.StatusBadRequest, err.Error(), "INVALID_ROLE")
+			case "用户名只能包含字母、数字、下划线和连字符":
+				respondError(c, http.StatusBadRequest, err.Error(), "INVALID_USERNAME")
 			default:
+				if errors.As(err, &validationErr) {
+					errorCode := "INVALID_PASSWORD"
+					if strings.Contains(validationErr.Error(), "用户名") {
+						errorCode = "INVALID_USERNAME"
+					}
+					respondError(c, http.StatusBadRequest, validationErr.Error(), errorCode)
+					return
+				}
 				log.Printf("✗ 创建用户内部错误: username=%s role=%s err=%v", req.Username, req.Role, err)
 				respondError(c, http.StatusInternalServerError, "创建用户失败", "INTERNAL_SERVER_ERROR")
 			}
@@ -315,6 +324,7 @@ func UpdateUserHandler(userService *service.UserService) gin.HandlerFunc {
 		// 调用服务层
 		user, err := userService.UpdateUser(uint(userID), req.Username, req.Role, currentUserID)
 		if err != nil {
+			var validationErr *service.AuthValidationError
 			// 根据错误类型返回不同的状态码
 			switch err.Error() {
 			case "用户不存在":
@@ -323,11 +333,15 @@ func UpdateUserHandler(userService *service.UserService) gin.HandlerFunc {
 				respondError(c, http.StatusForbidden, err.Error(), "CANNOT_MODIFY_SELF_ROLE")
 			case "用户名已存在":
 				respondError(c, http.StatusConflict, err.Error(), "USERNAME_EXISTS")
-			case "用户名长度必须在3-32字符之间", "用户名只能包含字母、数字、下划线和连字符":
-				respondError(c, http.StatusBadRequest, err.Error(), "INVALID_USERNAME")
 			case "角色必须是admin或user":
 				respondError(c, http.StatusBadRequest, err.Error(), "INVALID_ROLE")
+			case "用户名只能包含字母、数字、下划线和连字符":
+				respondError(c, http.StatusBadRequest, err.Error(), "INVALID_USERNAME")
 			default:
+				if errors.As(err, &validationErr) {
+					respondError(c, http.StatusBadRequest, validationErr.Error(), "INVALID_USERNAME")
+					return
+				}
 				respondError(c, http.StatusInternalServerError, "更新用户失败", "INTERNAL_SERVER_ERROR")
 			}
 			return
@@ -359,13 +373,16 @@ func ResetPasswordHandler(userService *service.UserService) gin.HandlerFunc {
 		// 调用服务层
 		err = userService.ResetPassword(uint(userID), req.Password)
 		if err != nil {
+			var validationErr *service.AuthValidationError
 			// 根据错误类型返回不同的状态码
 			switch err.Error() {
 			case "用户不存在":
 				respondError(c, http.StatusNotFound, err.Error(), "USER_NOT_FOUND")
-			case "密码长度必须在6-64字符之间":
-				respondError(c, http.StatusBadRequest, err.Error(), "INVALID_PASSWORD")
 			default:
+				if errors.As(err, &validationErr) {
+					respondError(c, http.StatusBadRequest, validationErr.Error(), "INVALID_PASSWORD")
+					return
+				}
 				respondError(c, http.StatusInternalServerError, "重置密码失败", "INTERNAL_SERVER_ERROR")
 			}
 			return
@@ -392,12 +409,15 @@ func ChangePasswordHandler(userService *service.UserService) gin.HandlerFunc {
 		}
 
 		if err := userService.ChangePassword(currentUserID, req.CurrentPassword, req.NewPassword); err != nil {
-			switch err.Error() {
-			case "当前密码错误":
+			var validationErr *service.AuthValidationError
+			switch {
+			case errors.As(err, &validationErr):
+				respondError(c, http.StatusBadRequest, validationErr.Error(), "INVALID_PASSWORD")
+			case err.Error() == "当前密码错误":
 				respondError(c, http.StatusUnauthorized, err.Error(), "CURRENT_PASSWORD_INVALID")
-			case "当前密码不能为空", "密码长度必须在6-64字符之间":
+			case err.Error() == "当前密码不能为空":
 				respondError(c, http.StatusBadRequest, err.Error(), "INVALID_PASSWORD")
-			case "用户不存在":
+			case err.Error() == "用户不存在":
 				respondError(c, http.StatusNotFound, err.Error(), "USER_NOT_FOUND")
 			default:
 				log.Printf("✗ 用户修改密码失败: user_id=%d err=%v", currentUserID, err)

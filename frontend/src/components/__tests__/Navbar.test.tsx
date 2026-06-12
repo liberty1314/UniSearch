@@ -1,24 +1,43 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Navbar from '@/components/Navbar';
 
-const { authState, unreadAnnouncementsMock, toggleMobileSidebarMock, revokeRefreshTokenMock } = vi.hoisted(() => ({
-  authState: {
+const {
+  authState,
+  unreadAnnouncementsMock,
+  toggleMobileSidebarMock,
+  revokeRefreshTokenMock,
+  useAuthStoreMock,
+} = vi.hoisted(() => {
+  const authState = {
     isAuthenticated: true,
     isAdmin: true,
     username: 'admin',
+    refreshToken: 'refresh-token',
     logout: vi.fn(),
-  },
-  unreadAnnouncementsMock: vi.fn(() => []),
-  toggleMobileSidebarMock: vi.fn(),
-  revokeRefreshTokenMock: vi.fn(),
-}));
+  };
+
+  const useAuthStoreMock = Object.assign(
+    () => authState,
+    {
+      getState: () => authState,
+    }
+  );
+
+  return {
+    authState,
+    unreadAnnouncementsMock: vi.fn(() => []),
+    toggleMobileSidebarMock: vi.fn(),
+    revokeRefreshTokenMock: vi.fn(),
+    useAuthStoreMock,
+  };
+});
 
 vi.mock('@/stores/authStore', () => ({
-  useAuthStore: () => authState,
+  useAuthStore: useAuthStoreMock,
 }));
 
 vi.mock('@/stores/announcementStore', () => ({
@@ -62,6 +81,7 @@ describe('Navbar', () => {
     unreadAnnouncementsMock.mockClear();
     toggleMobileSidebarMock.mockClear();
     revokeRefreshTokenMock.mockClear();
+    authState.logout.mockClear();
   });
 
   it('links admins to the underscore-form admin dashboard url', async () => {
@@ -96,5 +116,23 @@ describe('Navbar', () => {
     );
 
     expect(screen.getByRole('button', { name: '打开菜单' })).toBeInTheDocument();
+  });
+
+  it('退出登录时会先撤销 refresh token 再清理本地登录态', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole('button', { name: /admin/i }));
+    await user.click(screen.getByRole('button', { name: '退出登录' }));
+
+    await waitFor(() => {
+      expect(revokeRefreshTokenMock).toHaveBeenCalledWith('refresh-token');
+    });
+    expect(authState.logout).toHaveBeenCalled();
   });
 });

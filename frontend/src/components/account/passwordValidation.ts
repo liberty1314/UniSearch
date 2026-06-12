@@ -1,5 +1,7 @@
 interface PasswordValidationOptions {
   required?: boolean;
+  minLength?: number;
+  maxLength?: number;
 }
 
 export const ACCOUNT_PASSWORD_MIN_LENGTH = 6;
@@ -7,18 +9,22 @@ export const ACCOUNT_PASSWORD_MAX_LENGTH = 64;
 
 export const validateAccountPassword = (
   password: string,
-  { required = false }: PasswordValidationOptions = {}
+  {
+    required = false,
+    minLength = ACCOUNT_PASSWORD_MIN_LENGTH,
+    maxLength = ACCOUNT_PASSWORD_MAX_LENGTH,
+  }: PasswordValidationOptions = {}
 ): string | undefined => {
   if (!password) {
     return required ? '请输入新密码' : undefined;
   }
 
-  if (password.length < ACCOUNT_PASSWORD_MIN_LENGTH) {
-    return `密码长度至少为 ${ACCOUNT_PASSWORD_MIN_LENGTH} 个字符`;
+  if (password.length < minLength) {
+    return `密码长度至少为 ${minLength} 个字符`;
   }
 
-  if (password.length > ACCOUNT_PASSWORD_MAX_LENGTH) {
-    return `密码长度不能超过 ${ACCOUNT_PASSWORD_MAX_LENGTH} 个字符`;
+  if (password.length > maxLength) {
+    return `密码长度不能超过 ${maxLength} 个字符`;
   }
 
   return undefined;

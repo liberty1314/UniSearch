@@ -32,8 +32,8 @@ export type {
  * 
  * 此类型定义了注册接口的请求参数。
  * 
- * @property {string} username - 用户名（长度限制：3-32 字符）
- * @property {string} password - 密码（长度限制：6-128 字符）
+ * @property {string} username - 用户名（长度限制以后端认证策略为准，默认 3-32 字符）
+ * @property {string} password - 密码（长度限制以后端认证策略为准，默认 6-64 字符）
  * 
  * @see RegisterResponse - 注册响应类型
  * @see AuthService.register - 使用此类型的注册方法
@@ -46,14 +46,16 @@ export interface RegisterRequest {
 /**
  * 用户注册响应（数据部分）
  * 
- * 此类型定义了注册接口返回的业务数据结构。
+ * 注册成功后后端会直接复用登录流程，返回统一登录载荷。
  * 实际 API 返回格式为 `ApiResponse<RegisterResponse>`，即：
  * ```json
  * {
  *   "code": 200,
- *   "message": "注册成功",
+ *   "message": "登录成功",
  *   "data": {
- *     "user_id": 1,
+ *     "access_token": "eyJhbGc...",
+ *     "expires_at": 1234567890,
+ *     "refresh_token": "optional-refresh-token",
  *     "username": "test"
  *   }
  * }
@@ -61,14 +63,18 @@ export interface RegisterRequest {
  * 
  * 前端响应拦截器会自动解包 `data` 字段，Service 层直接获得 `RegisterResponse` 对象。
  * 
- * @property {number} user_id - 新创建的用户 ID
+ * @property {string} access_token - 注册成功后立即可用的访问令牌
+ * @property {number} expires_at - 访问令牌过期时间（Unix 时间戳，秒）
+ * @property {string} [refresh_token] - 仅在后端开启“记住我”并返回刷新令牌时存在
  * @property {string} username - 用户名
  * 
  * @see ApiResponse - 通用 API 响应结构
  * @see AuthService.register - 使用此类型的注册方法
  */
 export interface RegisterResponse {
-  user_id: number;
+  access_token: string;
+  expires_at: number;
+  refresh_token?: string;
   username: string;
 }
 
@@ -798,7 +804,7 @@ export interface SuccessResponse {
  *   "code": 400,
  *   "message": "请求参数无效",
  *   "data": {
- *     "error": "用户名长度必须在3-32字符之间",
+ *     "error": "用户名长度必须在后端策略允许范围内",
  *     "code": "VALIDATION_ERROR"
  *   }
  * }

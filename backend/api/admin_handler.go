@@ -3,7 +3,6 @@ package api
 import (
 	"log"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -32,54 +31,6 @@ type APIKeyCreateRequest struct {
 	DailySearchLimit int    `json:"daily_search_limit"` // 每日搜索次数限制，0表示不限制
 }
 
-// RateLimiter 简单的内存速率限制器
-type RateLimiter struct {
-	attempts    map[string][]time.Time
-	mu          sync.Mutex
-	maxAttempts int
-	window      time.Duration
-}
-
-// NewRateLimiter 创建速率限制器实例
-func NewRateLimiter(maxAttempts int, window time.Duration) *RateLimiter {
-	return &RateLimiter{
-		attempts:    make(map[string][]time.Time),
-		maxAttempts: maxAttempts,
-		window:      window,
-	}
-}
-
-// Allow 检查是否允许请求
-func (rl *RateLimiter) Allow(ip string) bool {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-
-	now := time.Now()
-	cutoff := now.Add(-rl.window)
-
-	// 清理过期记录
-	attempts := rl.attempts[ip]
-	valid := []time.Time{}
-	for _, t := range attempts {
-		if t.After(cutoff) {
-			valid = append(valid, t)
-		}
-	}
-
-	// 检查是否超限
-	if len(valid) >= rl.maxAttempts {
-		return false
-	}
-
-	// 记录本次尝试
-	valid = append(valid, now)
-	rl.attempts[ip] = valid
-	return true
-}
-
-// 全局速率限制器实例（5次尝试/分钟）
-var loginRateLimiter = NewRateLimiter(5, time.Minute)
-
 func resolvePluginStatusByHealthMap(pluginName, defaultStatus string, healthMap map[string]bool) string {
 	healthy, ok := healthMap[pluginName]
 	if !ok {
@@ -103,7 +54,7 @@ func AdminLoginHandler(c *gin.Context) {
 	}
 
 	// 速率限制检查
-	if !loginRateLimiter.Allow(c.ClientIP()) {
+	if !adminLoginRateLimiter.Allow(buildRateLimitKey(c)) {
 		c.JSON(429, gin.H{
 			"error": "请求过于频繁，请稍后再试",
 			"code":  "RATE_LIMIT_EXCEEDED",

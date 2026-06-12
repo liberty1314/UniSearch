@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strings"
+	"unisearch/config"
 	"unisearch/service"
 
 	"github.com/gin-gonic/gin"
@@ -37,6 +38,10 @@ func GetSystemSettingsHandler(c *gin.Context) {
 		"enable_user_auth":             settings.EnableUserAuth,
 		"enable_user_login":            settings.EnableUserLogin,
 		"enable_user_signup":           settings.EnableUserSignup,
+		"auth_username_min_length":     config.AppConfig.AuthUsernameMinLength,
+		"auth_username_max_length":     config.AppConfig.AuthUsernameMaxLength,
+		"auth_password_min_length":     config.AppConfig.AuthPasswordMinLength,
+		"auth_password_max_length":     config.AppConfig.AuthPasswordMaxLength,
 		"enable_resource_detail_page":  settings.EnableResourceDetailPage,
 		"public_site_url":              settings.PublicSiteURL,
 		"default_copy_format_template": settings.DefaultCopyFormatTemplate,

@@ -1,9 +1,28 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CreateUserDialog } from '@/components/admin/CreateUserDialog';
 
+const { getSettingsMock } = vi.hoisted(() => ({
+  getSettingsMock: vi.fn(),
+}));
+
+vi.mock('@/services/systemSettingsService', () => ({
+  SystemSettingsService: {
+    getSettings: getSettingsMock,
+  },
+}));
+
 describe('CreateUserDialog', () => {
+  beforeEach(() => {
+    getSettingsMock.mockResolvedValue({
+      auth_username_min_length: 5,
+      auth_username_max_length: 18,
+      auth_password_min_length: 8,
+      auth_password_max_length: 20,
+    });
+  });
+
   it('toggles password visibility for both password fields', async () => {
     const user = userEvent.setup();
 
@@ -35,5 +54,18 @@ describe('CreateUserDialog', () => {
 
     expect(passwordInput.type).toBe('password');
     expect(confirmPasswordInput.type).toBe('password');
+  });
+
+  it('renders auth policy driven helper text', async () => {
+    render(
+      <CreateUserDialog
+        open
+        onOpenChange={() => {}}
+        onSuccess={() => {}}
+      />
+    );
+
+    expect(await screen.findByText('用户名长度为 5-18 字符')).toBeInTheDocument();
+    expect(screen.getByText('密码长度为 8-20 字符，首尾空格会计入密码内容')).toBeInTheDocument();
   });
 });

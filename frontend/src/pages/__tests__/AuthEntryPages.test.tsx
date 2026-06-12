@@ -14,6 +14,7 @@ const {
   adminLoginWithRememberMock,
   userLoginMock,
   registerMock,
+  checkUsernameMock,
 } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   getSettingsMock: vi.fn(),
@@ -21,6 +22,7 @@ const {
   adminLoginWithRememberMock: vi.fn(),
   userLoginMock: vi.fn(),
   registerMock: vi.fn(),
+  checkUsernameMock: vi.fn(),
 }));
 
 vi.mock('sonner', () => ({
@@ -50,6 +52,7 @@ vi.mock('@/services/authService', () => ({
     adminLoginWithRemember: adminLoginWithRememberMock,
     userLogin: userLoginMock,
     register: registerMock,
+    checkUsername: checkUsernameMock,
   },
 }));
 
@@ -91,11 +94,17 @@ describe('Auth entry pages', () => {
     adminLoginWithRememberMock.mockReset();
     userLoginMock.mockReset();
     registerMock.mockReset();
+    checkUsernameMock.mockReset();
     getSettingsMock.mockResolvedValue({
       enable_user_auth: true,
       enable_user_login: true,
       enable_user_signup: true,
+      auth_username_min_length: 3,
+      auth_username_max_length: 32,
+      auth_password_min_length: 6,
+      auth_password_max_length: 64,
     });
+    checkUsernameMock.mockResolvedValue(true);
   });
 
   it('does not render the decorative sparkle icon on the login page', async () => {
@@ -316,7 +325,8 @@ describe('Auth entry pages', () => {
 
   it('submits the register form only once when enter is pressed in the confirmation field', async () => {
     registerMock.mockResolvedValue({
-      user_id: 1,
+      access_token: 'token',
+      refresh_token: 'refresh',
       username: 'trinity',
     });
 
@@ -337,6 +347,97 @@ describe('Auth entry pages', () => {
     await waitFor(() => {
       expect(registerMock).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('checks username availability in real time with the normalized username', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/register']}>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('创建账户');
+
+    await user.type(screen.getByLabelText('用户名'), ' neo01 ');
+
+    await waitFor(() => {
+      expect(checkUsernameMock).toHaveBeenCalledWith('neo01');
+    });
+  });
+
+  it('uses the register success payload to complete auto login', async () => {
+    registerMock.mockResolvedValue({
+      access_token: 'token',
+      expires_at: 1234567890,
+      refresh_token: 'refresh',
+      username: 'trinity',
+    });
+
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/register']}>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('创建账户');
+
+    await user.type(screen.getByLabelText('用户名'), 'trinity');
+    await user.type(screen.getByLabelText(/^密码$/), 'secret123');
+    await user.type(screen.getByLabelText('确认密码'), 'secret123');
+    await user.click(screen.getByRole('button', { name: '立即注册' }));
+
+    await waitFor(() => {
+      expect(setTokenMock).toHaveBeenCalledWith('token', 'trinity', false, 'refresh');
+    });
+
+    expect(registerMock).toHaveBeenCalledWith('trinity', 'secret123');
+    expect(navigateMock).toHaveBeenCalledWith('/', { replace: true });
+  });
+
+  it('uses the configured auth policy instead of hard-coded register limits', async () => {
+    getSettingsMock.mockResolvedValue({
+      enable_user_auth: true,
+      enable_user_login: true,
+      enable_user_signup: true,
+      auth_username_min_length: 5,
+      auth_username_max_length: 12,
+      auth_password_min_length: 8,
+      auth_password_max_length: 20,
+    });
+
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/register']}>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('创建账户');
+
+    await user.type(screen.getByLabelText('用户名'), 'neo1');
+    await user.type(screen.getByLabelText(/^密码$/), 'secret12');
+    await user.type(screen.getByLabelText('确认密码'), 'secret12');
+    await user.click(screen.getByRole('button', { name: '立即注册' }));
+
+    expect(await screen.findByText('用户名长度必须在5-12字符之间')).toBeInTheDocument();
+    expect(registerMock).not.toHaveBeenCalled();
+  });
+
+  it('explains that password whitespace is treated as part of the password', async () => {
+    render(
+      <MemoryRouter initialEntries={['/register']}>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('创建账户');
+
+    expect(screen.getByText('密码长度需在 6-64 个字符之间，首尾空格会计入密码内容')).toBeInTheDocument();
   });
 
   it('submits the admin login form only once when enter is pressed in the password field', async () => {

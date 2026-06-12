@@ -77,12 +77,29 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 
 	// 去除首尾空白字符
 	req.Username = strings.TrimSpace(req.Username)
-	req.Password = strings.TrimSpace(req.Password)
 
 	minU := config.AppConfig.AuthUsernameMinLength
 	maxU := config.AppConfig.AuthUsernameMaxLength
 	minP := config.AppConfig.AuthPasswordMinLength
 	maxP := config.AppConfig.AuthPasswordMaxLength
+
+	if req.Username == "" {
+		c.JSON(400, LoginResponse{
+			Code:    400,
+			Message: "用户名不能为空",
+			Data:    nil,
+		})
+		return
+	}
+
+	if strings.TrimSpace(req.Password) == "" {
+		c.JSON(400, LoginResponse{
+			Code:    400,
+			Message: "密码不能为空",
+			Data:    nil,
+		})
+		return
+	}
 
 	// 额外验证：确保去除空白后仍然满足长度要求
 	if len(req.Username) < minU || len(req.Username) > maxU {
@@ -106,8 +123,17 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 	// 调用服务层进行注册
 	user, err := ctrl.authService.Register(req.Username, req.Password)
 	if err != nil {
-		// 根据错误类型返回不同的状态码
-		if strings.Contains(err.Error(), "用户名已存在") {
+		var validationErr *service.AuthValidationError
+		if errors.As(err, &validationErr) {
+			c.JSON(400, LoginResponse{
+				Code:    400,
+				Message: validationErr.Error(),
+				Data:    nil,
+			})
+			return
+		}
+
+		if errors.Is(err, service.ErrUsernameExists) {
 			log.Printf("✗ 注册失败: 用户名已存在 - %s", req.Username)
 			c.JSON(400, LoginResponse{
 				Code:    400,
@@ -179,7 +205,6 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 
 	// 去除首尾空白字符
 	req.Username = strings.TrimSpace(req.Username)
-	req.Password = strings.TrimSpace(req.Password)
 
 	// 验证非空（去除空白后）
 	if req.Username == "" {
@@ -191,7 +216,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 		return
 	}
 
-	if req.Password == "" {
+	if strings.TrimSpace(req.Password) == "" {
 		c.JSON(400, LoginResponse{
 			Code:    400,
 			Message: "密码不能为空",
@@ -207,8 +232,17 @@ func (ctrl *AuthController) handleDatabaseUserLogin(c *gin.Context, req LoginReq
 	// 调用服务层进行登录
 	token, user, _, err := ctrl.authService.Login(req.Username, req.Password)
 	if err != nil {
-		// 根据错误类型返回不同的状态码
-		if strings.Contains(err.Error(), "用户名或密码错误") {
+		var validationErr *service.AuthValidationError
+		if errors.As(err, &validationErr) {
+			c.JSON(400, LoginResponse{
+				Code:    400,
+				Message: validationErr.Error(),
+				Data:    nil,
+			})
+			return
+		}
+
+		if errors.Is(err, service.ErrInvalidCredentials) {
 			log.Printf("✗ 登录失败: 用户名或密码错误 - %s", req.Username)
 			c.JSON(401, LoginResponse{
 				Code:    401,
@@ -219,7 +253,7 @@ func (ctrl *AuthController) handleDatabaseUserLogin(c *gin.Context, req LoginReq
 		}
 
 		// 账户被禁用
-		if strings.Contains(err.Error(), "账户已被禁用") || strings.Contains(err.Error(), "禁用") {
+		if errors.Is(err, service.ErrAccountDisabled) {
 			log.Printf("✗ 登录失败: 账户已被禁用 - %s", req.Username)
 			c.JSON(403, LoginResponse{
 				Code:    403,

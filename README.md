@@ -28,7 +28,7 @@
 
 ### 用户与权限
 
-- 用户注册/登录（JWT + 刷新令牌）
+- 用户注册/登录（JWT + 刷新令牌，注册成功后自动登录）
 - RBAC 角色管理（管理员/普通用户）
 - API Key 系统：支持按日搜索配额、有效期控制
 - 批量创建/导出/延期 API Key
@@ -424,6 +424,10 @@ bash scripts/local.sh
 | `SECRET_MASTER_KEY` | 密钥管理主密钥 | — |
 | `REFRESH_TOKEN_ENCRYPT_KEY` | 刷新令牌加密密钥 | — |
 | `AUTH_TOKEN_EXPIRY` | JWT 有效期（小时） | `24` |
+| `AUTH_USERNAME_MIN_LENGTH` | 用户名最小长度 | `3` |
+| `AUTH_USERNAME_MAX_LENGTH` | 用户名最大长度 | `32` |
+| `AUTH_PASSWORD_MIN_LENGTH` | 密码最小长度 | `6` |
+| `AUTH_PASSWORD_MAX_LENGTH` | 密码最大长度 | `64` |
 
 ### Redis（可选）
 

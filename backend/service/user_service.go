@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"unisearch/config"
 	"unisearch/model"
 	"unisearch/util"
 
@@ -150,9 +151,18 @@ func (s *UserService) GetUserByID(userID uint) (*model.User, error) {
 
 // validateUsername 验证用户名
 func (s *UserService) validateUsername(username string) error {
+	minLength := config.AppConfig.AuthUsernameMinLength
+	maxLength := config.AppConfig.AuthUsernameMaxLength
+	if minLength == 0 {
+		minLength = 3
+	}
+	if maxLength == 0 {
+		maxLength = 32
+	}
+
 	// 验证长度
-	if len(username) < 3 || len(username) > 32 {
-		return errors.New("用户名长度必须在3-32字符之间")
+	if len(username) < minLength || len(username) > maxLength {
+		return newAuthValidationError(fmt.Sprintf("用户名长度必须在%d-%d字符之间", minLength, maxLength))
 	}
 
 	// 验证字符（只允许字母、数字、下划线、连字符）
@@ -166,8 +176,17 @@ func (s *UserService) validateUsername(username string) error {
 
 // validatePassword 验证密码
 func (s *UserService) validatePassword(password string) error {
-	if len(password) < 6 || len(password) > 64 {
-		return errors.New("密码长度必须在6-64字符之间")
+	minLength := config.AppConfig.AuthPasswordMinLength
+	maxLength := config.AppConfig.AuthPasswordMaxLength
+	if minLength == 0 {
+		minLength = 6
+	}
+	if maxLength == 0 {
+		maxLength = 64
+	}
+
+	if len(password) < minLength || len(password) > maxLength {
+		return newAuthValidationError(fmt.Sprintf("密码长度必须在%d-%d字符之间", minLength, maxLength))
 	}
 	return nil
 }

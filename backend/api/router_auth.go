@@ -8,14 +8,14 @@ import (
 func registerAuthRoutes(api *gin.RouterGroup, deps RouterDeps, authController *controller.AuthController) {
 	auth := api.Group("/auth")
 	{
-		auth.POST("/register", authController.Register)
-		auth.GET("/check-username", authController.CheckUsername)
-		auth.POST("/login", func(c *gin.Context) {
+		auth.POST("/register", registerRateLimitMiddleware(), authController.Register)
+		auth.GET("/check-username", checkUsernameRateLimitMiddleware(), authController.CheckUsername)
+		auth.POST("/login", loginRateLimitMiddleware(), func(c *gin.Context) {
 			c.Set("refreshTokenService", deps.RefreshTokenService)
 			authController.Login(c)
 		})
 		auth.GET("/validate", authController.ValidateToken)
-		auth.POST("/refresh", RefreshAccessTokenHandler(deps.RefreshTokenService))
+		auth.POST("/refresh", refreshRateLimitMiddleware(), RefreshAccessTokenHandler(deps.RefreshTokenService))
 		auth.POST("/revoke", RevokeRefreshTokenHandler(deps.RefreshTokenService))
 		auth.POST("/verify", VerifyHandler)
 		auth.POST("/logout", LogoutHandler)

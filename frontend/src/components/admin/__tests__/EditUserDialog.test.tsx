@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
@@ -8,9 +8,19 @@ const authState = {
   username: 'admin',
 };
 
+const { getSettingsMock } = vi.hoisted(() => ({
+  getSettingsMock: vi.fn(),
+}));
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector?: (state: typeof authState) => unknown) =>
     (selector ? selector(authState) : authState),
+}));
+
+vi.mock('@/services/systemSettingsService', () => ({
+  SystemSettingsService: {
+    getSettings: getSettingsMock,
+  },
 }));
 
 const mockUser: UserInfo = {
@@ -23,7 +33,20 @@ const mockUser: UserInfo = {
   last_login_at: '2026-05-01T14:17:08.000Z',
 };
 
+const getBracketZIndex = (className: string): number => {
+  const match = className.match(/z-\[(\d+)\]/);
+  return match ? Number(match[1]) : 0;
+};
+
 describe('EditUserDialog', () => {
+  beforeEach(() => {
+    getSettingsMock.mockReset();
+    getSettingsMock.mockResolvedValue({
+      auth_username_min_length: 4,
+      auth_username_max_length: 16,
+    });
+  });
+
   beforeAll(() => {
     if (!HTMLElement.prototype.scrollIntoView) {
       HTMLElement.prototype.scrollIntoView = () => {};
@@ -71,6 +94,19 @@ describe('EditUserDialog', () => {
 
     const listbox = await screen.findByRole('listbox');
     expect(within(listbox).getByRole('option', { name: '管理员' })).toBeInTheDocument();
-    expect(listbox.className).toContain('z-[110]');
+    expect(getBracketZIndex(listbox.className)).toBeGreaterThan(getBracketZIndex(dialog.className));
+  });
+
+  it('renders username helper text from auth policy', async () => {
+    render(
+      <EditUserDialog
+        open
+        onOpenChange={() => {}}
+        user={mockUser}
+        onSuccess={() => {}}
+      />
+    );
+
+    expect(await screen.findByText('用户名长度为 4-16 字符')).toBeInTheDocument();
   });
 });

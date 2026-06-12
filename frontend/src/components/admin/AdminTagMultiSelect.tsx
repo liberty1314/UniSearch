@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   ADMIN_DROPDOWN_BACKDROP_Z_INDEX,
   ADMIN_DROPDOWN_ITEM_CLASSES,
+  ADMIN_DROPDOWN_LAYER_Z_INDEX,
   ADMIN_DROPDOWN_PANEL_CLASSES,
   ADMIN_DROPDOWN_TRIGGER_CLASSES,
   computeFloatingDropdownPosition,
@@ -359,7 +360,7 @@ export const AdminTagMultiSelect: React.FC<AdminTagMultiSelectProps> = ({
             data-testid={panelTestId || `${scope}-tag-selector-panel`}
             className={cn(
               ADMIN_DROPDOWN_PANEL_CLASSES,
-              'z-[110] flex max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden p-3'
+              `${ADMIN_DROPDOWN_LAYER_Z_INDEX} flex max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden p-3`
             )}
           >
             <div className="flex items-center gap-2">

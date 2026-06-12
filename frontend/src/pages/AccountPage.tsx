@@ -12,7 +12,9 @@ import {
 import PublicPageShell from '@/components/PublicPageShell';
 import SEO from '@/components/SEO';
 import { apiClient } from '@/lib/api';
+import { DEFAULT_AUTH_POLICY, resolveAuthPolicy } from '@/lib/authPolicy';
 import { getErrorMessage } from '@/lib/error';
+import { SystemSettingsService } from '@/services/systemSettingsService';
 import { useAuthStore } from '@/stores/authStore';
 
 const AccountPage: React.FC = () => {
@@ -24,6 +26,7 @@ const AccountPage: React.FC = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [authPolicy, setAuthPolicy] = useState(DEFAULT_AUTH_POLICY);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -40,9 +43,27 @@ const AccountPage: React.FC = () => {
     void loadProfile();
   }, []);
 
+  useEffect(() => {
+    const loadAuthPolicy = async () => {
+      try {
+        const settings = await SystemSettingsService.getSettings();
+        setAuthPolicy(resolveAuthPolicy(settings));
+      } catch {
+        setAuthPolicy(DEFAULT_AUTH_POLICY);
+      }
+    };
+
+    void loadAuthPolicy();
+  }, []);
+
   const passwordError = useMemo(
-    () => validateAccountPassword(newPassword, { required: false }),
-    [newPassword]
+    () =>
+      validateAccountPassword(newPassword, {
+        required: false,
+        minLength: authPolicy.passwordMinLength,
+        maxLength: authPolicy.passwordMaxLength,
+      }),
+    [authPolicy.passwordMaxLength, authPolicy.passwordMinLength, newPassword]
   );
 
   const confirmError = useMemo(
@@ -56,15 +77,19 @@ const AccountPage: React.FC = () => {
       return;
     }
 
-    const nextPasswordError = validateAccountPassword(newPassword.trim(), { required: true });
+    const nextPasswordError = validateAccountPassword(newPassword, {
+      required: true,
+      minLength: authPolicy.passwordMinLength,
+      maxLength: authPolicy.passwordMaxLength,
+    });
     if (nextPasswordError) {
       toast.error(nextPasswordError);
       return;
     }
 
     const nextConfirmError = validateAccountPasswordConfirmation(
-      confirmPassword.trim(),
-      newPassword.trim(),
+      confirmPassword,
+      newPassword,
       { required: true }
     );
     if (nextConfirmError) {
@@ -89,6 +114,8 @@ const AccountPage: React.FC = () => {
       setIsSaving(false);
     }
   };
+
+  const passwordPolicyText = `密码长度需控制在 ${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength} 个字符之间，首尾空格会计入密码内容`;
 
   return (
     <PublicPageShell contentClassName="container mx-auto px-4 py-8 pb-16 pt-24">
@@ -134,6 +161,7 @@ const AccountPage: React.FC = () => {
                     currentPassword={currentPassword}
                     newPassword={newPassword}
                     confirmPassword={confirmPassword}
+                    passwordPolicyText={passwordPolicyText}
                     passwordError={passwordError}
                     confirmError={confirmError}
                     isSaving={isSaving}

@@ -413,3 +413,57 @@
     - frontend/src/pages/RegisterPage.tsx
     - frontend/src/services/authService.ts
     - docs/readme_2606.md
+
+- [2026-06-13 06:08] feat(auth): 改进访问令牌存储机制并统一账户密码长度策略
+  - Body: 移除了前端本地存储中的短效访问令牌以提升安全性，认证态恢复改为依赖刷新令牌。同时在后端系统配置接口中透出用户与密码的长度限制，并使管理员页面与用户中心统一遵循该动态策略。
+  - Files:
+    - .env.example
+    - README.md
+    - backend/.env.example
+    - backend/api/account_auth_flow_test.go
+    - backend/api/admin_handler.go
+    - backend/api/controller/auth_controller.go
+    - backend/api/rate_limiter.go
+    - backend/api/refresh_token_handler.go
+    - backend/api/router_auth.go
+    - backend/api/system_settings_handler.go
+    - backend/api/system_settings_handler_test.go
+    - backend/api/user_handler.go
+    - backend/service/auth_errors.go
+    - backend/service/auth_service.go
+    - backend/service/auth_service_test.go
+    - backend/service/user_service.go
+    - docs/2026-06-07-next-optimization-development-plan.md
+    - docs/2026-06-07-next-optimization-roadmap.md
+    - docs/2026-06-08-built-in-plugin-center-development-plan.md
+    - docs/2026-06-13-account-center-optimization-development-plan.md
+    - docs/2026-06-13-auth-login-register-optimization-development-plan.md
+    - docs/2026-06-13-auth-token-storage-migration-stage1.md
+    - frontend/src/components/__tests__/MobileMenu.test.tsx
+    - frontend/src/components/__tests__/Navbar.test.tsx
+    - frontend/src/components/account/AccountSecurityPanel.tsx
+    - frontend/src/components/account/__tests__/passwordValidation.test.ts
+    - frontend/src/components/account/passwordValidation.ts
+    - frontend/src/components/admin/AdminTagMultiSelect.tsx
+    - frontend/src/components/admin/CreateUserDialog.tsx
+    - frontend/src/components/admin/EditUserDialog.tsx
+    - frontend/src/components/admin/ResetPasswordDialog.tsx
+    - frontend/src/components/admin/TableFilterDropdown.tsx
+    - frontend/src/components/admin/__tests__/CreateUserDialog.test.tsx
+    - frontend/src/components/admin/__tests__/EditUserDialog.test.tsx
+    - frontend/src/components/admin/__tests__/ResetPasswordDialog.test.tsx
+    - frontend/src/components/admin/adminDropdown.ts
+    - frontend/src/components/ui/select.tsx
+    - frontend/src/lib/authPolicy.ts
+    - frontend/src/pages/AccountPage.tsx
+    - frontend/src/pages/RegisterPage.tsx
+    - frontend/src/pages/__tests__/AccountPage.test.tsx
+    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
+    - frontend/src/services/__tests__/authService.test.ts
+    - frontend/src/services/systemSettingsService.ts
+    - frontend/src/stores/__tests__/authStore.test.ts
+    - frontend/src/stores/__tests__/searchAccessStore.test.ts
+    - frontend/src/stores/authStore.ts
+    - frontend/src/stores/searchAccessStore.ts
+    - frontend/src/types/api.ts
+    - docs/readme_2606.md

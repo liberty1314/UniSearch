@@ -8,6 +8,7 @@ let authState = {
   isAuthenticated: false,
   isAdmin: false,
   token: null as string | null,
+  refreshToken: null as string | null,
   username: null as string | null,
 };
 
@@ -34,6 +35,7 @@ describe('searchAccessStore', () => {
       isAuthenticated: false,
       isAdmin: false,
       token: null,
+      refreshToken: null,
       username: null,
     };
     getMock.mockReset();
@@ -47,6 +49,7 @@ describe('searchAccessStore', () => {
       isAuthenticated: true,
       isAdmin: false,
       token: 'jwt-token',
+      refreshToken: null,
       username: 'lihua',
     };
 
@@ -62,6 +65,7 @@ describe('searchAccessStore', () => {
       isAuthenticated: true,
       isAdmin: false,
       token: 'jwt-token-a',
+      refreshToken: null,
       username: 'lihua',
     };
 
@@ -73,6 +77,7 @@ describe('searchAccessStore', () => {
       isAuthenticated: true,
       isAdmin: false,
       token: 'jwt-token-b',
+      refreshToken: null,
       username: 'other-user',
     };
 
@@ -80,5 +85,21 @@ describe('searchAccessStore', () => {
 
     expect(secondStatus).toBe('authenticated');
     expect(getMock).not.toHaveBeenCalled();
+  });
+
+  it('treats refresh-token sessions as authenticated during access token restore', async () => {
+    authState = {
+      isAuthenticated: true,
+      isAdmin: false,
+      token: null,
+      refreshToken: 'refresh-token',
+      username: 'lihua',
+    };
+
+    const { useSearchAccessStore } = await import('@/stores/searchAccessStore');
+    const status = await useSearchAccessStore.getState().refresh({ force: true });
+
+    expect(status).toBe('authenticated');
+    expect(useSearchAccessStore.getState().status).toBe('authenticated');
   });
 });

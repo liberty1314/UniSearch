@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"unisearch/config"
 	"unisearch/model"
 	"unisearch/service"
 
@@ -39,6 +40,12 @@ func newSystemSettingsHandlerService(t *testing.T) *service.SystemSettingsServic
 func TestGetSystemSettingsHandlerReturnsPublicConfigFields(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+	config.AppConfig = &config.Config{
+		AuthUsernameMinLength: 5,
+		AuthUsernameMaxLength: 18,
+		AuthPasswordMinLength: 8,
+		AuthPasswordMaxLength: 72,
+	}
 
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
@@ -65,6 +72,22 @@ func TestGetSystemSettingsHandlerReturnsPublicConfigFields(t *testing.T) {
 
 	if _, ok := response["enable_resource_detail_page"]; !ok {
 		t.Fatalf("expected enable_resource_detail_page in response, got %v", response)
+	}
+
+	if response["auth_username_min_length"] != float64(5) {
+		t.Fatalf("expected auth_username_min_length to be 5, got %v", response["auth_username_min_length"])
+	}
+
+	if response["auth_username_max_length"] != float64(18) {
+		t.Fatalf("expected auth_username_max_length to be 18, got %v", response["auth_username_max_length"])
+	}
+
+	if response["auth_password_min_length"] != float64(8) {
+		t.Fatalf("expected auth_password_min_length to be 8, got %v", response["auth_password_min_length"])
+	}
+
+	if response["auth_password_max_length"] != float64(72) {
+		t.Fatalf("expected auth_password_max_length to be 72, got %v", response["auth_password_max_length"])
 	}
 }
 

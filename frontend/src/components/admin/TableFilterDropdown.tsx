@@ -11,6 +11,7 @@ import {
 import {
     ADMIN_DROPDOWN_BACKDROP_Z_INDEX,
     ADMIN_DROPDOWN_ITEM_CLASSES,
+    ADMIN_DROPDOWN_LAYER_Z_INDEX,
     ADMIN_DROPDOWN_PANEL_CLASSES,
     computeFloatingDropdownPosition,
     estimateDropdownContentWidth,
@@ -155,7 +156,7 @@ export const TableFilterDropdown: React.FC<TableFilterDropdownProps> = ({
                                 width: dropdownPosition.width,
                                 maxHeight: dropdownPosition.maxHeight,
                             }}
-                            className={`${ADMIN_DROPDOWN_PANEL_CLASSES} fixed z-[110] overflow-hidden`}
+                            className={`${ADMIN_DROPDOWN_PANEL_CLASSES} fixed ${ADMIN_DROPDOWN_LAYER_Z_INDEX} overflow-hidden`}
                         >
                             <div className="p-2 space-y-0.5">
                                 {options.map((option, index) => {

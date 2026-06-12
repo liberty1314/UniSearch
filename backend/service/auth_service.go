@@ -83,8 +83,8 @@ func (s *AuthService) ensureDailyActivity(userID uint, now time.Time) error {
 
 // Register 用户注册
 // 参数：
-//   - username: 用户名（3-32字符）
-//   - password: 密码（6-64字符）
+//   - username: 用户名（以后端认证策略为准，默认 3-32 字符）
+//   - password: 密码（以后端认证策略为准，默认 6-64 字符）
 //
 // 返回：
 //   - *model.User: 创建的用户对象（不包含密码哈希）
@@ -94,13 +94,12 @@ func (s *AuthService) ensureDailyActivity(userID uint, now time.Time) error {
 func (s *AuthService) Register(username, password string) (*model.User, error) {
 	// 验证参数非空
 	username = strings.TrimSpace(username)
-	password = strings.TrimSpace(password)
 
 	if username == "" {
-		return nil, errors.New("用户名不能为空")
+		return nil, newAuthValidationError("用户名不能为空")
 	}
-	if password == "" {
-		return nil, errors.New("密码不能为空")
+	if strings.TrimSpace(password) == "" {
+		return nil, newAuthValidationError("密码不能为空")
 	}
 
 	minU := config.AppConfig.AuthUsernameMinLength
@@ -110,12 +109,12 @@ func (s *AuthService) Register(username, password string) (*model.User, error) {
 
 	// 验证用户名长度
 	if len(username) < minU || len(username) > maxU {
-		return nil, fmt.Errorf("用户名长度必须在%d-%d字符之间", minU, maxU)
+		return nil, newAuthValidationError(fmt.Sprintf("用户名长度必须在%d-%d字符之间", minU, maxU))
 	}
 
 	// 验证密码长度
 	if len(password) < minP || len(password) > maxP {
-		return nil, fmt.Errorf("密码长度必须在%d-%d字符之间", minP, maxP)
+		return nil, newAuthValidationError(fmt.Sprintf("密码长度必须在%d-%d字符之间", minP, maxP))
 	}
 
 	// 检查用户名是否已存在。
@@ -124,7 +123,7 @@ func (s *AuthService) Register(username, password string) (*model.User, error) {
 	result := s.db.Unscoped().Where("username = ?", username).First(&existingUser)
 	if result.Error == nil {
 		// 用户已存在
-		return nil, errors.New("用户名已存在")
+		return nil, ErrUsernameExists
 	} else if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// 数据库查询错误
 		return nil, fmt.Errorf("查询用户失败: %w", result.Error)
@@ -146,7 +145,7 @@ func (s *AuthService) Register(username, password string) (*model.User, error) {
 	// 保存到数据库
 	if err := s.db.Create(user).Error; err != nil {
 		if isAuthDuplicateEntryError(err) {
-			return nil, errors.New("用户名已存在")
+			return nil, ErrUsernameExists
 		}
 		return nil, fmt.Errorf("创建用户失败: %w", err)
 	}
@@ -159,7 +158,7 @@ func (s *AuthService) Register(username, password string) (*model.User, error) {
 func (s *AuthService) CheckUsernameExist(username string) (bool, error) {
 	username = strings.TrimSpace(username)
 	if username == "" {
-		return false, errors.New("用户名不能为空")
+		return false, newAuthValidationError("用户名不能为空")
 	}
 
 	var existingUser model.User
@@ -190,13 +189,12 @@ func (s *AuthService) CheckUsernameExist(username string) (bool, error) {
 func (s *AuthService) Login(username, password string) (token string, user *model.User, apiKey string, err error) {
 	// 验证参数非空
 	username = strings.TrimSpace(username)
-	password = strings.TrimSpace(password)
 
 	if username == "" {
-		return "", nil, "", errors.New("用户名不能为空")
+		return "", nil, "", newAuthValidationError("用户名不能为空")
 	}
-	if password == "" {
-		return "", nil, "", errors.New("密码不能为空")
+	if strings.TrimSpace(password) == "" {
+		return "", nil, "", newAuthValidationError("密码不能为空")
 	}
 
 	// 查询用户
@@ -205,7 +203,7 @@ func (s *AuthService) Login(username, password string) (token string, user *mode
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			// 用户不存在，返回通用错误消息（安全考虑）
-			return "", nil, "", errors.New("用户名或密码错误")
+			return "", nil, "", ErrInvalidCredentials
 		}
 		// 数据库查询错误
 		return "", nil, "", fmt.Errorf("查询用户失败: %w", result.Error)
@@ -214,12 +212,12 @@ func (s *AuthService) Login(username, password string) (token string, user *mode
 	// 验证密码
 	if !util.ComparePassword(dbUser.PasswordHash, password) {
 		// 密码错误，返回通用错误消息（安全考虑）
-		return "", nil, "", errors.New("用户名或密码错误")
+		return "", nil, "", ErrInvalidCredentials
 	}
 
 	// 检查账户是否被禁用
 	if !dbUser.IsEnabled {
-		return "", nil, "", errors.New("账户已被禁用，请联系管理员")
+		return "", nil, "", ErrAccountDisabled
 	}
 
 	// 生成 JWT Token

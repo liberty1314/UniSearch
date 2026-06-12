@@ -5,9 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HelmetProvider } from 'react-helmet-async';
 import AccountPage from '@/pages/AccountPage';
 
-const { getMock, postMock, toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
+const { getMock, postMock, getSettingsMock, toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
   getMock: vi.fn(),
   postMock: vi.fn(),
+  getSettingsMock: vi.fn(),
   toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
 }));
@@ -66,6 +67,12 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+vi.mock('@/services/systemSettingsService', () => ({
+  SystemSettingsService: {
+    getSettings: getSettingsMock,
+  },
+}));
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: () => ({
     username: 'cached-user',
@@ -89,6 +96,7 @@ describe('AccountPage', () => {
     postMock.mockReset();
     toastErrorMock.mockReset();
     toastSuccessMock.mockReset();
+    getSettingsMock.mockReset();
 
     getMock.mockResolvedValue({
       id: 1,
@@ -97,6 +105,10 @@ describe('AccountPage', () => {
       is_enabled: true,
       last_login_at: '2026-04-05T08:00:00.000Z',
       created_at: '2026-03-01T08:00:00.000Z',
+    });
+    getSettingsMock.mockResolvedValue({
+      auth_password_min_length: 8,
+      auth_password_max_length: 20,
     });
   });
 
@@ -125,6 +137,7 @@ describe('AccountPage', () => {
     expect(screen.getByText('安全设置')).toBeInTheDocument();
     expect(screen.getByText('ACCOUNT SECURITY')).toBeInTheDocument();
     expect(screen.getByText('密码更新建议')).toBeInTheDocument();
+    expect(screen.getAllByText('密码长度需控制在 8-20 个字符之间，首尾空格会计入密码内容').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('当前密码')).toBeInTheDocument();
     expect(screen.queryByText('安全提示')).not.toBeInTheDocument();
   });
@@ -153,6 +166,22 @@ describe('AccountPage', () => {
 
     expect(postMock).not.toHaveBeenCalled();
     expect(toastErrorMock).toHaveBeenCalledWith('两次输入的密码不一致');
+  });
+
+  it('uses the configured auth policy when validating the new password', async () => {
+    const user = userEvent.setup();
+
+    renderAccountPage();
+
+    await screen.findByRole('button', { name: /^修改密码$/ });
+    await user.click(screen.getByRole('button', { name: /^修改密码$/ }));
+    await user.type(screen.getByLabelText('当前密码'), 'old-password');
+    await user.type(screen.getByLabelText('新密码'), 'short77');
+    await user.type(screen.getByLabelText('确认新密码'), 'short77');
+    await user.click(screen.getByRole('button', { name: '更新密码' }));
+
+    expect(postMock).not.toHaveBeenCalled();
+    expect(toastErrorMock).toHaveBeenCalledWith('密码长度至少为 8 个字符');
   });
 
   it('submits password changes and clears the form on success', async () => {
