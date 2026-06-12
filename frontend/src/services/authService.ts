@@ -9,7 +9,6 @@ import type {
   RefreshTokenRequest,
   RefreshTokenResponse,
   RegisterRequest,
-  RegisterResponse,
   RevokeRefreshTokenRequest,
 } from '@/types/api';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';

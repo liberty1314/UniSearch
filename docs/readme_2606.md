@@ -406,3 +406,10 @@
     - frontend/src/pages/RegisterPage.tsx
     - frontend/src/services/authService.ts
     - docs/readme_2606.md
+
+- [2026-06-13 01:28] style(frontend): 清理无用的导入与未使用的异常变量
+  - Body: 移除了 RegisterPage 中未使用的异常变量以及 authService 中多余的类型导入，修复相关的 lint 警告。
+  - Files:
+    - frontend/src/pages/RegisterPage.tsx
+    - frontend/src/services/authService.ts
+    - docs/readme_2606.md

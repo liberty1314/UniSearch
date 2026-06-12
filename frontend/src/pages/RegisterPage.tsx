@@ -142,7 +142,7 @@ const RegisterPage: React.FC = () => {
       try {
         const available = await AuthService.checkUsername(trimmed);
         setUsernameAvailable(available);
-      } catch (e) {
+      } catch {
         setUsernameAvailable(null);
       } finally {
         setIsCheckingUsername(false);
