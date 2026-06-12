@@ -16,15 +16,9 @@ import (
 	"unisearch/plugin"
 	"unisearch/util"
 
-	_ "unisearch/plugin/duoduo"
-	_ "unisearch/plugin/hdr4k"
 	_ "unisearch/plugin/huban"
-	_ "unisearch/plugin/jikepan"
-	_ "unisearch/plugin/pan666"
 	_ "unisearch/plugin/panwiki"
 	_ "unisearch/plugin/panyq"
-	_ "unisearch/plugin/qupansou"
-	_ "unisearch/plugin/zhizhen"
 )
 
 const (

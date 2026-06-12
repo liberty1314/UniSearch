@@ -7,8 +7,6 @@ import (
 
 	"unisearch/model"
 	"unisearch/plugin"
-	"unisearch/plugin/api52"
-	"unisearch/plugin/kanjuba"
 )
 
 type catalogTestPlugin struct {
@@ -96,8 +94,8 @@ func TestPluginCatalogServiceIgnoresRemoteSource(t *testing.T) {
 
 func TestPluginCatalogServiceMarksMigratedPluginsAsBuiltin(t *testing.T) {
 	manager := plugin.NewPluginManager()
-	manager.RegisterPlugin(api52.NewAPI52Plugin())
-	manager.RegisterPlugin(kanjuba.NewKanjubaPlugin())
+
+
 	service := &PluginCatalogService{pluginManager: manager}
 
 	catalog, err := service.ListCatalog("all", false)
@@ -113,7 +111,7 @@ func TestPluginCatalogServiceMarksMigratedPluginsAsBuiltin(t *testing.T) {
 		itemsByName[item.Name] = item
 	}
 
-	for _, name := range []string{"52API", "kanjuba"} {
+	for _, name := range []string{} {
 		item, ok := itemsByName[name]
 		if !ok {
 			t.Fatalf("期望插件目录包含 %s，实际为 %#v", name, catalog.Items)

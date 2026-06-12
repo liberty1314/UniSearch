@@ -342,3 +342,55 @@
     - frontend/src/pages/__tests__/DisclaimerPage.test.tsx
     - frontend/src/pages/__tests__/HotPage.test.tsx
     - docs/readme_2606.md
+
+- [2026-06-13 00:58] refactor(plugin): 移除失效的搜索插件并清理关联配置
+  - Body: 移除了 libvio, api52, pan666 等 15 个因站点失效或无法访问的搜索插件，并同步清理了这些插件的单元测试、相关注册配置以及异常频道环境变量。同时添加了 URL 可用性检测的临时测试脚本。
+  - Footer: 破坏性变更: 移除了 15 个内置搜索插件，对应搜索源将不再提供服务
+  - Files:
+    - .env.example
+    - backend/main.go
+    - backend/plugin/api52/api52.go
+    - backend/plugin/api52/api52_test.go
+    - backend/plugin/ash/ash.go
+    - backend/plugin/ash/html结构分析.md
+    - backend/plugin/cldi/cldi.go
+    - backend/plugin/cldi/html结构分析.md
+    - backend/plugin/djgou/djgou.go
+    - backend/plugin/duoduo/duoduo.go
+    - backend/plugin/duoduo/duoduo_test.go
+    - backend/plugin/duoduo/html结构分析.md
+    - backend/plugin/fox4k/fox4k.go
+    - backend/plugin/fox4k/fox4k_test.go
+    - backend/plugin/fox4k/html结构分析.md
+    - backend/plugin/hdr4k/hdr4k.go
+    - backend/plugin/hdr4k/hdr4k_test.go
+    - backend/plugin/jikepan/jikepan.go
+    - backend/plugin/jikepan/jikepan_test.go
+    - backend/plugin/kanjuba/kanjuba.go
+    - backend/plugin/kanjuba/kanjuba_test.go
+    - backend/plugin/libvio/html结构分析.md
+    - backend/plugin/libvio/libvio.go
+    - backend/plugin/libvio/libvio_test.go
+    - backend/plugin/pan666/pan666.go
+    - backend/plugin/pan666/pan666_test.go
+    - backend/plugin/qupansou/qupansou.go
+    - backend/plugin/qupansou/qupansou_test.go
+    - backend/plugin/test_results.txt
+    - backend/plugin/xuexizhinan/html结构分析.md
+    - backend/plugin/xuexizhinan/xuexizhinan.go
+    - backend/plugin/xuexizhinan/xuexizhinan_test.go
+    - backend/plugin/yuhuage/yuhuage.go
+    - backend/plugin/zhizhen/zhizhen.go
+    - backend/plugin/zhizhen/zhizhen_test.go
+    - backend/service/plugin_catalog_service_test.go
+    - backend/tools/pansou_health_check/main.go
+    - backend/tools/pansou_search_smoke/main.go
+    - backend/tools/validate_plugin_manifests.go
+    - scratch/djgou.html
+    - scratch/remove_imports.py
+    - scratch/test_djgou.py
+    - scratch/test_libvio.py
+    - scratch/test_urls.py
+    - scratch/update_channels.py
+    - test_urls.py
+    - docs/readme_2606.md

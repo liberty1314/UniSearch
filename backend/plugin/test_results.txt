@@ -1,0 +1,58 @@
+ok  	unisearch/plugin	0.187s
+?   	unisearch/plugin/aikanzy	[no test files]
+ok  	unisearch/plugin/alupan	0.213s
+ok  	unisearch/plugin/api52	0.348s
+?   	unisearch/plugin/ash	[no test files]
+?   	unisearch/plugin/cldi	[no test files]
+?   	unisearch/plugin/clmao	[no test files]
+ok  	unisearch/plugin/daishudj	0.399s
+?   	unisearch/plugin/djgou	[no test files]
+ok  	unisearch/plugin/duoduo	0.441s
+ok  	unisearch/plugin/dyyj	0.558s
+?   	unisearch/plugin/erxiao	[no test files]
+?   	unisearch/plugin/feikuai	[no test files]
+ok  	unisearch/plugin/fox4k	0.673s
+ok  	unisearch/plugin/hdr4k	0.812s
+ok  	unisearch/plugin/huban	0.932s
+?   	unisearch/plugin/hunhepan	[no test files]
+ok  	unisearch/plugin/javdb	1.064s
+ok  	unisearch/plugin/jikepan	1.190s
+?   	unisearch/plugin/jsnoteclub	[no test files]
+?   	unisearch/plugin/jutoushe	[no test files]
+ok  	unisearch/plugin/kanjuba	1.307s
+ok  	unisearch/plugin/kkmao	1.359s
+?   	unisearch/plugin/kkv	[no test files]
+?   	unisearch/plugin/labi	[no test files]
+ok  	unisearch/plugin/libvio	1.374s
+?   	unisearch/plugin/lou1	[no test files]
+?   	unisearch/plugin/meitizy	[no test files]
+ok  	unisearch/plugin/mikuclub	1.407s
+?   	unisearch/plugin/mizixing	[no test files]
+?   	unisearch/plugin/muou	[no test files]
+?   	unisearch/plugin/nyaa	[no test files]
+?   	unisearch/plugin/ouge	[no test files]
+ok  	unisearch/plugin/pan666	1.439s
+ok  	unisearch/plugin/pansearch	1.459s
+ok  	unisearch/plugin/panta	1.403s
+ok  	unisearch/plugin/panwiki	1.420s
+ok  	unisearch/plugin/panyq	1.406s
+ok  	unisearch/plugin/parser	1.415s
+?   	unisearch/plugin/qingying	[no test files]
+ok  	unisearch/plugin/quark4k	1.382s
+?   	unisearch/plugin/quarksoo	[no test files]
+ok  	unisearch/plugin/qupansou	1.379s
+?   	unisearch/plugin/shandian	[no test files]
+ok  	unisearch/plugin/sidhub	1.038s
+?   	unisearch/plugin/susu	[no test files]
+?   	unisearch/plugin/testutil	[no test files]
+?   	unisearch/plugin/thepiratebay	[no test files]
+?   	unisearch/plugin/u3c3	[no test files]
+?   	unisearch/plugin/wanou	[no test files]
+?   	unisearch/plugin/weibo	[no test files]
+?   	unisearch/plugin/xinjuc	[no test files]
+ok  	unisearch/plugin/xuexizhinan	1.148s
+?   	unisearch/plugin/yiove	[no test files]
+?   	unisearch/plugin/ypfxw	[no test files]
+?   	unisearch/plugin/yuhuage	[no test files]
+ok  	unisearch/plugin/zhizhen	1.230s
+?   	unisearch/plugin/zxzj	[no test files]
