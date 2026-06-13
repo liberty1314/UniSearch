@@ -475,3 +475,12 @@
     - frontend/src/hooks/useSearchBoxController.ts
     - frontend/src/hooks/useSearchUrlSync.ts
     - docs/readme_2606.md
+
+- [2026-06-13 09:33] fix(search): 修复参数同步测试并完善状态重置逻辑
+  - Body: 修复了引入 `preserveResults: false` 以及 `forceSkeleton` 后导致的搜索组件单元测试失败。同时微调了 Hook 中的同步与导航顺序，确保当状态跳过同步时能正确将请求参数同步到全局 Store，避免搜索状态丢失。
+  - Files:
+    - frontend/src/components/__tests__/SearchBox.test.tsx
+    - frontend/src/hooks/__tests__/useSearchUrlSync.test.tsx
+    - frontend/src/hooks/useSearchBoxController.ts
+    - frontend/src/hooks/useSearchUrlSync.ts
+    - docs/readme_2606.md

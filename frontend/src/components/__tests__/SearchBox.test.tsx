@@ -870,6 +870,7 @@ describe("SearchBox", () => {
           plugins: [],
           filter: undefined,
         }),
+        { preserveResults: false }
       );
     });
     expect(navigateMock).toHaveBeenCalledWith(
@@ -930,6 +931,7 @@ describe("SearchBox", () => {
         plugins: [],
         filter: undefined,
       }),
+      { preserveResults: false }
     );
     expect(navigateMock).toHaveBeenCalledWith(
       "/search?q=%E5%87%A1%E4%BA%BA%E4%BF%AE%E4%BB%99%E4%BC%A0",
@@ -986,6 +988,7 @@ describe("SearchBox", () => {
           plugins: [],
           filter: undefined,
         }),
+        { preserveResults: false }
       );
     });
     expect(navigateMock).toHaveBeenCalledWith(

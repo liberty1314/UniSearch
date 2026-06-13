@@ -67,37 +67,6 @@ export function useSearchUrlSync(): void {
       return;
     }
 
-    const snapshot = JSON.stringify({
-      keyword,
-      source: parsedParams.source,
-      resultType: parsedParams.resultType,
-      cloudTypes: parsedParams.cloudTypes,
-      channels: parsedParams.channels,
-      plugins: parsedParams.plugins,
-      filter: parsedParams.filter,
-    });
-
-    if (state?.skipSearchSync) {
-      handledUrlSearchRef.current = snapshot;
-      if (location.state) {
-        navigate(`${location.pathname}${location.search}${location.hash}`, {
-          replace: true,
-          state: undefined,
-        });
-      }
-      return;
-    }
-
-    const isAlreadyHandledUrl = handledUrlSearchRef.current === snapshot;
-
-    if (!state?.skipSearchSync && isAlreadyHandledUrl) {
-      if (state?.forceSkeleton) {
-        // 继续执行
-      } else {
-        return;
-      }
-    }
-
     const nextParams = {
       keyword,
       source: parsedParams.source || "all",
@@ -111,7 +80,39 @@ export function useSearchUrlSync(): void {
       filter: parsedParams.filter,
     };
 
+    const snapshot = JSON.stringify({
+      keyword,
+      source: parsedParams.source,
+      resultType: parsedParams.resultType,
+      cloudTypes: parsedParams.cloudTypes,
+      channels: parsedParams.channels,
+      plugins: parsedParams.plugins,
+      filter: parsedParams.filter,
+    });
+
+    const isAlreadyHandledUrl = handledUrlSearchRef.current === snapshot;
+
+    if (!state?.skipSearchSync && isAlreadyHandledUrl) {
+      if (state?.forceSkeleton) {
+        // 继续执行
+      } else {
+        return;
+      }
+    }
+
     setSearchParams(nextParams);
+
+    if (state?.skipSearchSync) {
+      handledUrlSearchRef.current = snapshot;
+      if (location.state) {
+        navigate(`${location.pathname}${location.search}${location.hash}`, {
+          replace: true,
+          state: undefined,
+        });
+      }
+      return;
+    }
+
     handledUrlSearchRef.current = snapshot;
 
     const forceSkeleton = state?.forceSkeleton ?? false;

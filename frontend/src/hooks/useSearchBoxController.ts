@@ -361,10 +361,10 @@ export function useSearchBoxController({
 
     try {
       if (currentUrl !== nextUrl) {
-        void performSearch(nextParams, { preserveResults: false });
         navigate(nextUrl, {
           state: { skipSearchSync: true },
         });
+        await performSearch(nextParams, { preserveResults: false });
       } else {
         await buttonRef.current?.run(() => performSearch(nextParams, { preserveResults: false }));
       }

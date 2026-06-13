@@ -181,7 +181,7 @@ describe("useSearchUrlSync", () => {
           keyword: "你的名字",
           cloudTypes: ["xunlei"],
         }),
-        { preserveResults: true },
+        { preserveResults: false },
       );
     });
 
@@ -196,7 +196,7 @@ describe("useSearchUrlSync", () => {
           keyword: "你的名字",
           cloudTypes: ["xunlei"],
         }),
-        { preserveResults: true },
+        { preserveResults: false },
       );
     });
 
