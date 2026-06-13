@@ -109,7 +109,7 @@ export const TrendingCategories = ({
       return;
     }
 
-    navigate(targetUrl);
+    navigate(targetUrl, { state: { forceSkeleton: true } });
   };
 
   return (

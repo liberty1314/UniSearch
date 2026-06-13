@@ -467,3 +467,11 @@
     - frontend/src/stores/searchAccessStore.ts
     - frontend/src/types/api.ts
     - docs/readme_2606.md
+
+- [2026-06-13 09:02] fix(search): 修复跨页面搜索跳转时骨架屏丢失与结果残留问题
+  - Body: 优化了从首页热榜等入口跳转搜索时的页面切换逻辑，通过注入强制刷新标记并在搜索控制器与 URL 同步 Hook 中正确处理 `preserveResults` 参数，解决了新搜索请求发出前残留旧搜索结果或不展示骨架屏的问题。
+  - Files:
+    - frontend/src/components/home/TrendingCategories.tsx
+    - frontend/src/hooks/useSearchBoxController.ts
+    - frontend/src/hooks/useSearchUrlSync.ts
+    - docs/readme_2606.md

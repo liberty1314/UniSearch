@@ -13,6 +13,7 @@ export function useSearchUrlSync(): void {
     performSearch,
     setSearchParams,
     clearResults,
+    lastCompletedSearchParams,
   } = useSearchStore();
   const { isAuthenticated } = useAuthStore();
   const location = useLocation();
@@ -56,7 +57,7 @@ export function useSearchUrlSync(): void {
   ]);
 
   useEffect(() => {
-    const state = location.state as { skipSearchSync?: boolean } | null;
+    const state = location.state as { skipSearchSync?: boolean; forceSkeleton?: boolean } | null;
     const parsedParams = SearchService.parseSearchUrl(location.search);
     const keyword = parsedParams.keyword?.trim();
 
@@ -64,6 +65,37 @@ export function useSearchUrlSync(): void {
       handledUrlSearchRef.current = null;
       clearResults();
       return;
+    }
+
+    const snapshot = JSON.stringify({
+      keyword,
+      source: parsedParams.source,
+      resultType: parsedParams.resultType,
+      cloudTypes: parsedParams.cloudTypes,
+      channels: parsedParams.channels,
+      plugins: parsedParams.plugins,
+      filter: parsedParams.filter,
+    });
+
+    if (state?.skipSearchSync) {
+      handledUrlSearchRef.current = snapshot;
+      if (location.state) {
+        navigate(`${location.pathname}${location.search}${location.hash}`, {
+          replace: true,
+          state: undefined,
+        });
+      }
+      return;
+    }
+
+    const isAlreadyHandledUrl = handledUrlSearchRef.current === snapshot;
+
+    if (!state?.skipSearchSync && isAlreadyHandledUrl) {
+      if (state?.forceSkeleton) {
+        // 继续执行
+      } else {
+        return;
+      }
     }
 
     const nextParams = {
@@ -79,31 +111,17 @@ export function useSearchUrlSync(): void {
       filter: parsedParams.filter,
     };
 
-    const snapshot = JSON.stringify(nextParams);
-    const isAlreadyHandledUrl = handledUrlSearchRef.current === snapshot;
-
-    if (!state?.skipSearchSync && isAlreadyHandledUrl) {
-      return;
-    }
-
     setSearchParams(nextParams);
-
-    if (state?.skipSearchSync) {
-      handledUrlSearchRef.current = snapshot;
-      if (location.state) {
-        navigate(`${location.pathname}${location.search}${location.hash}`, {
-          replace: true,
-          state: undefined,
-        });
-      }
-      return;
-    }
-
     handledUrlSearchRef.current = snapshot;
+
+    const forceSkeleton = state?.forceSkeleton ?? false;
     lastFocusRevalidateAtRef.current = Date.now();
-    void performSearch(nextParams, { preserveResults: Boolean(searchResults) });
+    void performSearch(nextParams, {
+      preserveResults: forceSkeleton ? false : Boolean(searchResults) && lastCompletedSearchParams?.keyword === nextParams.keyword,
+    });
   }, [
     clearResults,
+    lastCompletedSearchParams?.keyword,
     location.hash,
     location.pathname,
     location.search,
@@ -147,7 +165,11 @@ export function useSearchUrlSync(): void {
           ext: searchParams.ext || {},
           filter: parsedParams.filter,
         },
-        { preserveResults: Boolean(searchResults) },
+        {
+          preserveResults:
+            Boolean(searchResults) &&
+            lastCompletedSearchParams?.keyword === keyword,
+        },
       );
     };
 
@@ -166,6 +188,7 @@ export function useSearchUrlSync(): void {
     };
   }, [
     isAuthenticated,
+    lastCompletedSearchParams?.keyword,
     location.pathname,
     location.search,
     performSearch,
