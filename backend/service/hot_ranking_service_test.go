@@ -66,6 +66,10 @@ type fakeHotRankingCache struct {
 	storeQuery model.HotRankingQuery
 }
 
+func (f *fakeHotRankingCache) IsCacheEnabled() bool {
+	return true
+}
+
 func (f *fakeHotRankingCache) Load(_ context.Context, query model.HotRankingQuery, target *model.HotRankingResponse) (bool, error) {
 	f.loadCalls++
 	f.loadQuery = query

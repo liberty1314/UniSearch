@@ -21,6 +21,10 @@ type fakeHotRankingQueryService struct {
 	invocationCount int
 }
 
+func (f *fakeHotRankingQueryService) IsCacheEnabled() bool {
+	return true
+}
+
 func (f *fakeHotRankingQueryService) GetHotRankings(_ context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
 	f.invocationCount++
 	f.lastQuery = query

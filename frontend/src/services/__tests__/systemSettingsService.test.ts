@@ -130,7 +130,7 @@ describe('SystemSettingsService TMDB admin api', () => {
 
     const result = await SystemSettingsService.triggerHotRankingPreload('token');
 
-    expect(postMock).toHaveBeenCalledWith('/admin/system-settings/cache/hot-ranking/preload');
+    expect(postMock).toHaveBeenCalledWith('/admin/system-settings/cache/hot-ranking/preload', undefined, { timeout: 0 });
     expect(result.result.total).toBe(56);
   });
 

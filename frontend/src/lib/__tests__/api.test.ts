@@ -15,7 +15,7 @@ describe('apiClient handleError', () => {
       request: {},
     });
 
-    expect(message).toBe('搜索超时，请缩小范围或稍后重试');
+    expect(message).toBe('请求超时，请稍后重试');
   });
 
   it('keeps generic network message for non-timeout network errors', () => {

@@ -39,6 +39,10 @@ type fakeHotRankingCacheForPreloader struct {
 	clearCalls []string
 }
 
+func (f *fakeHotRankingCacheForPreloader) IsCacheEnabled() bool {
+	return true
+}
+
 func (f *fakeHotRankingCacheForPreloader) Load(_ context.Context, _ model.HotRankingQuery, _ *model.HotRankingResponse) (bool, error) {
 	return false, nil
 }

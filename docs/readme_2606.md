@@ -529,3 +529,15 @@
     - frontend/src/services/__tests__/systemSettingsService.test.ts
     - frontend/src/services/systemSettingsService.ts
     - docs/readme_2606.md
+
+- [2026-06-13 22:03] fix(admin): 修复缓存配置面板的关联测试及接口超时提示
+  - Body: 修复了前端缓存配置面板的接口传参类型与超时断言失败的问题。同步修复了后端因增加 `IsCacheEnabled` 接口而导致的 Mocks 测试编译错误，确保整个配置面板流程通过所有的单元测试验证。
+  - Files:
+    - backend/api/hot_ranking_handler_test.go
+    - backend/api/system_settings_handler_test.go
+    - backend/service/hot_ranking_preloader_test.go
+    - backend/service/hot_ranking_service_test.go
+    - frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx
+    - frontend/src/lib/__tests__/api.test.ts
+    - frontend/src/services/__tests__/systemSettingsService.test.ts
+    - docs/readme_2606.md

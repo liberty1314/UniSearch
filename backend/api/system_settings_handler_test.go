@@ -53,14 +53,14 @@ func (f *fakeHotRankingCacheAdminService) WarmCache(_ *service.SystemSettingsSer
 	f.warmCalls++
 	now := time.Date(2026, 6, 13, 9, 45, 0, 0, time.FixedZone("CST", 8*3600))
 	f.lastResult = &service.HotRankingPreloadSnapshot{
-		Result: service.HotRankingPreloadResult{
+		Result: &service.HotRankingPreloadResult{
 			Total:   56,
 			Success: 56,
 			Failed:  0,
 		},
 		UpdatedAt: now,
 	}
-	return f.lastResult.Result
+	return *f.lastResult.Result
 }
 
 func (f *fakeHotRankingCacheAdminService) ClearCache(_ *service.SystemSettingsService) error {
