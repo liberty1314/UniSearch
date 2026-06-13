@@ -315,11 +315,13 @@ func TestHotRankingServiceUsesDiscoverForTrendWhenCustomSortSelected(t *testing.
 }
 
 func TestHotRankingServiceReturnsCachedValueWithoutCallingTMDB(t *testing.T) {
+	SetGlobalCacheSettingsService(nil)
 	now := time.Date(2026, 5, 23, 12, 0, 0, 0, time.UTC)
 	cache := &fakeHotRankingCache{
 		loadResult: true,
 		loadValue: model.HotRankingResponse{
 			Period:    model.HotRankingPeriodWeek,
+			PageSize:  50,
 			UpdatedAt: now,
 			Source:    "tmdb",
 			Sections: []model.HotRankingSection{
@@ -338,7 +340,7 @@ func TestHotRankingServiceReturnsCachedValueWithoutCallingTMDB(t *testing.T) {
 		Period:   model.HotRankingPeriodWeek,
 		Category: model.HotRankingCategoryTV,
 		Page:     1,
-		PageSize: 100,
+		PageSize: 50,
 	})
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
@@ -354,6 +356,7 @@ func TestHotRankingServiceReturnsCachedValueWithoutCallingTMDB(t *testing.T) {
 }
 
 func TestHotRankingServiceUsesFullCacheForHomepageSizedRequests(t *testing.T) {
+	SetGlobalCacheSettingsService(nil)
 	now := time.Date(2026, 5, 24, 8, 0, 0, 0, time.UTC)
 	cache := &fakeHotRankingCache{
 		loadResult: true,
@@ -361,7 +364,7 @@ func TestHotRankingServiceUsesFullCacheForHomepageSizedRequests(t *testing.T) {
 			Mode:      model.HotRankingModeTrend,
 			Period:    model.HotRankingPeriodDay,
 			Page:      1,
-			PageSize:  100,
+			PageSize:  50,
 			UpdatedAt: now,
 			Source:    "tmdb",
 			Sections: []model.HotRankingSection{
@@ -392,8 +395,8 @@ func TestHotRankingServiceUsesFullCacheForHomepageSizedRequests(t *testing.T) {
 		t.Fatalf("expected nil error, got %v", err)
 	}
 
-	if cache.loadQuery.PageSize != 100 {
-		t.Fatalf("expected cache lookup with full page size 100, got %d", cache.loadQuery.PageSize)
+	if cache.loadQuery.PageSize != 50 {
+		t.Fatalf("expected cache lookup with preload page size 50, got %d", cache.loadQuery.PageSize)
 	}
 
 	if response.PageSize != 20 {
@@ -406,6 +409,7 @@ func TestHotRankingServiceUsesFullCacheForHomepageSizedRequests(t *testing.T) {
 }
 
 func TestHotRankingServiceStoresHomepageSizedRequestsIntoFullCacheSlot(t *testing.T) {
+	SetGlobalCacheSettingsService(nil)
 	tmdb := &fakeTMDBService{
 		movieGenres: map[int]string{28: "动作"},
 		tvGenres:    map[int]string{18: "剧情", 16: "动画"},
@@ -435,12 +439,12 @@ func TestHotRankingServiceStoresHomepageSizedRequestsIntoFullCacheSlot(t *testin
 		t.Fatalf("expected one cache store call, got %d", cache.storeCalls)
 	}
 
-	if cache.storeQuery.PageSize != 100 {
-		t.Fatalf("expected full cache slot page size 100, got %d", cache.storeQuery.PageSize)
+	if cache.storeQuery.PageSize != 50 {
+		t.Fatalf("expected preload cache slot page size 50, got %d", cache.storeQuery.PageSize)
 	}
 
-	if cache.loadValue.PageSize != 100 {
-		t.Fatalf("expected stored cache value page size 100, got %d", cache.loadValue.PageSize)
+	if cache.loadValue.PageSize != 50 {
+		t.Fatalf("expected stored cache value page size 50, got %d", cache.loadValue.PageSize)
 	}
 
 	if response.PageSize != 20 {
@@ -520,6 +524,7 @@ func TestHotRankingServiceRefreshBypassesCacheAndStoresLatestValue(t *testing.T)
 }
 
 func TestHotRankingServiceReturnsAggregatedSectionsForAll(t *testing.T) {
+	SetGlobalCacheSettingsService(nil)
 	tmdb := &fakeTMDBService{
 		movieGenres: map[int]string{28: "动作"},
 		tvGenres:    map[int]string{16: "动画", 18: "剧情"},
@@ -577,7 +582,7 @@ func TestHotRankingServiceReturnsAggregatedSectionsForAll(t *testing.T) {
 		Period:   model.HotRankingPeriodWeek,
 		Category: model.HotRankingCategoryAll,
 		Page:     1,
-		PageSize: 100,
+		PageSize: 20,
 	})
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)

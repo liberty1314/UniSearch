@@ -2,7 +2,9 @@ package service
 
 import (
 	"testing"
+	"time"
 
+	"unisearch/config"
 	"unisearch/model"
 
 	"gorm.io/driver/sqlite"
@@ -12,7 +14,7 @@ import (
 func newSystemSettingsTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open sqlite db: %v", err)
 	}
@@ -25,6 +27,23 @@ func newSystemSettingsTestDB(t *testing.T) *gorm.DB {
 }
 
 func TestSystemSettingsServiceGetSettingsCreatesDefaults(t *testing.T) {
+	oldConfig := config.AppConfig
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	config.AppConfig = &config.Config{
+		CacheEnabled:                 true,
+		CacheWriteQueueSize:          512,
+		CacheWriteWorkers:            6,
+		HotRankingPreloadEnabled:     true,
+		HotRankingPreloadTime:        "00:30",
+		HotRankingPreloadConcurrency: 3,
+		HotRankingPreloadTimeout:     45 * time.Second,
+		HotRankingCacheTTLDay:        12 * time.Hour,
+		RedisTTL:                     2 * time.Hour,
+	}
+
 	service := NewSystemSettingsService(newSystemSettingsTestDB(t))
 
 	settings, err := service.GetSettings()
@@ -46,6 +65,78 @@ func TestSystemSettingsServiceGetSettingsCreatesDefaults(t *testing.T) {
 
 	if settings.DefaultCopyFormatTemplate != "" {
 		t.Fatalf("expected empty default_copy_format_template, got %q", settings.DefaultCopyFormatTemplate)
+	}
+
+	if !settings.CacheEnabled {
+		t.Fatalf("expected cache_enabled default to be true, got %+v", settings)
+	}
+
+	if settings.SearchCacheTTLSeconds != 7200 {
+		t.Fatalf("expected search_cache_ttl_seconds to use env default 7200, got %d", settings.SearchCacheTTLSeconds)
+	}
+
+	if settings.CacheWriteQueueSize != 512 || settings.CacheWriteWorkers != 6 {
+		t.Fatalf("expected cache write settings to use env defaults, got queue=%d workers=%d", settings.CacheWriteQueueSize, settings.CacheWriteWorkers)
+	}
+
+	if settings.HotRankingPreloadTime != "00:30" {
+		t.Fatalf("expected hot_ranking_preload_time to use env default 00:30, got %q", settings.HotRankingPreloadTime)
+	}
+
+	if settings.HotRankingPreloadLimit != 50 {
+		t.Fatalf("expected hot_ranking_preload_limit default 50, got %d", settings.HotRankingPreloadLimit)
+	}
+
+	if settings.HotRankingCacheTTLSeconds != 43200 {
+		t.Fatalf("expected hot_ranking_cache_ttl_seconds to use env default 43200, got %d", settings.HotRankingCacheTTLSeconds)
+	}
+}
+
+func TestSystemSettingsServiceUpdateCacheSettingsAutoMigratesLegacySchema(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite db: %v", err)
+	}
+
+	createLegacyTableSQL := `
+	CREATE TABLE system_settings (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		enable_user_auth NUMERIC NOT NULL DEFAULT 1,
+		enable_user_login NUMERIC NOT NULL DEFAULT 1,
+		enable_user_signup NUMERIC NOT NULL DEFAULT 1,
+		announcement_enabled NUMERIC NOT NULL DEFAULT 0,
+		enable_resource_detail_page NUMERIC NOT NULL DEFAULT 0,
+		public_site_url TEXT NOT NULL DEFAULT '',
+		default_copy_format_template TEXT NOT NULL DEFAULT '',
+		created_at DATETIME,
+		updated_at DATETIME
+	);`
+	if err := db.Exec(createLegacyTableSQL).Error; err != nil {
+		t.Fatalf("create legacy system_settings table: %v", err)
+	}
+
+	service := NewSystemSettingsService(db)
+	searchTTL := 5400
+	queueSize := 512
+
+	cacheSettings, err := service.UpdateCacheSettings(CacheSettingsUpdateInput{
+		SearchCacheTTLSeconds: &searchTTL,
+		CacheWriteQueueSize:   &queueSize,
+	})
+	if err != nil {
+		t.Fatalf("UpdateCacheSettings on legacy schema returned error: %v", err)
+	}
+
+	if cacheSettings.SearchCacheTTLSeconds != 5400 {
+		t.Fatalf("expected migrated schema to persist search cache ttl, got %d", cacheSettings.SearchCacheTTLSeconds)
+	}
+
+	if !db.Migrator().HasColumn(&model.SystemSettings{}, "cache_enabled") {
+		t.Fatal("expected legacy schema to auto-migrate cache_enabled column")
+	}
+
+	if !db.Migrator().HasColumn(&model.SystemSettings{}, "search_cache_ttl_seconds") {
+		t.Fatal("expected legacy schema to auto-migrate search_cache_ttl_seconds column")
 	}
 }
 
@@ -92,4 +183,155 @@ func TestSystemSettingsServiceUpdateSettingsPreservesExistingFields(t *testing.T
 	if updated.DefaultCopyFormatTemplate != initialTemplate {
 		t.Fatalf("expected default_copy_format_template to be preserved, got %q", updated.DefaultCopyFormatTemplate)
 	}
+}
+
+func TestSystemSettingsServiceGetCacheSettingsReturnsPlanDefaults(t *testing.T) {
+	oldConfig := config.AppConfig
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	config.AppConfig = nil
+	service := NewSystemSettingsService(newSystemSettingsTestDB(t))
+
+	cacheSettings, err := service.GetCacheSettings()
+	if err != nil {
+		t.Fatalf("GetCacheSettings returned error: %v", err)
+	}
+
+	if cacheSettings.SearchCacheTTLSeconds != 3600 {
+		t.Fatalf("expected search cache ttl default 3600, got %d", cacheSettings.SearchCacheTTLSeconds)
+	}
+
+	if !cacheSettings.HotRankingCacheEnabled || !cacheSettings.HotRankingPreloadEnabled {
+		t.Fatalf("expected hot ranking cache defaults enabled, got %+v", cacheSettings)
+	}
+
+	if cacheSettings.HotRankingPreloadTime != "00:00" {
+		t.Fatalf("expected hot ranking preload time default 00:00, got %q", cacheSettings.HotRankingPreloadTime)
+	}
+
+	if cacheSettings.HotRankingPreloadLimit != 50 {
+		t.Fatalf("expected hot ranking preload limit default 50, got %d", cacheSettings.HotRankingPreloadLimit)
+	}
+
+	if cacheSettings.HotRankingCacheTTLSeconds != 86400 {
+		t.Fatalf("expected hot ranking cache ttl default 86400, got %d", cacheSettings.HotRankingCacheTTLSeconds)
+	}
+}
+
+func TestSystemSettingsServiceUpdateCacheSettingsPreservesExistingFields(t *testing.T) {
+	service := NewSystemSettingsService(newSystemSettingsTestDB(t))
+
+	searchTTL := 5400
+	queueSize := 1024
+	preloadTime := "01:30"
+	initial, err := service.UpdateCacheSettings(CacheSettingsUpdateInput{
+		SearchCacheTTLSeconds: &searchTTL,
+		CacheWriteQueueSize:   &queueSize,
+		HotRankingPreloadTime: &preloadTime,
+	})
+	if err != nil {
+		t.Fatalf("initial UpdateCacheSettings returned error: %v", err)
+	}
+
+	if initial.SearchCacheTTLSeconds != 5400 || initial.CacheWriteQueueSize != 1024 || initial.HotRankingPreloadTime != "01:30" {
+		t.Fatalf("expected initial cache settings to be stored, got %+v", initial)
+	}
+
+	workers := 8
+	preloadLimit := 80
+	updated, err := service.UpdateCacheSettings(CacheSettingsUpdateInput{
+		CacheWriteWorkers:      &workers,
+		HotRankingPreloadLimit: &preloadLimit,
+	})
+	if err != nil {
+		t.Fatalf("partial UpdateCacheSettings returned error: %v", err)
+	}
+
+	if updated.SearchCacheTTLSeconds != 5400 {
+		t.Fatalf("expected search cache ttl to be preserved, got %d", updated.SearchCacheTTLSeconds)
+	}
+
+	if updated.CacheWriteQueueSize != 1024 {
+		t.Fatalf("expected queue size to be preserved, got %d", updated.CacheWriteQueueSize)
+	}
+
+	if updated.CacheWriteWorkers != 8 || updated.HotRankingPreloadLimit != 80 {
+		t.Fatalf("expected updated fields to be applied, got %+v", updated)
+	}
+
+	if updated.HotRankingPreloadTime != "01:30" {
+		t.Fatalf("expected preload time to be preserved, got %q", updated.HotRankingPreloadTime)
+	}
+}
+
+func TestSystemSettingsServiceUpdateCacheSettingsRejectsInvalidValues(t *testing.T) {
+	service := NewSystemSettingsService(newSystemSettingsTestDB(t))
+
+	invalidTime := "24:60"
+	if _, err := service.UpdateCacheSettings(CacheSettingsUpdateInput{
+		HotRankingPreloadTime: &invalidTime,
+	}); err == nil {
+		t.Fatal("expected invalid preload time to be rejected")
+	}
+
+	searchTTL := 30
+	if _, err := service.UpdateCacheSettings(CacheSettingsUpdateInput{
+		SearchCacheTTLSeconds: &searchTTL,
+	}); err == nil {
+		t.Fatal("expected invalid search ttl to be rejected")
+	}
+
+	concurrency := 99
+	if _, err := service.UpdateCacheSettings(CacheSettingsUpdateInput{
+		HotRankingPreloadConcurrency: &concurrency,
+	}); err == nil {
+		t.Fatal("expected invalid preload concurrency to be rejected")
+	}
+}
+
+func TestSystemSettingsServiceGetCacheSettingOptionsMarksDynamicDefaults(t *testing.T) {
+	oldConfig := config.AppConfig
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	config.AppConfig = &config.Config{
+		CacheEnabled:                 true,
+		CacheWriteQueueSize:          768,
+		CacheWriteWorkers:            6,
+		HotRankingPreloadEnabled:     true,
+		HotRankingPreloadTime:        "03:15",
+		HotRankingPreloadConcurrency: 5,
+		HotRankingPreloadTimeout:     75 * time.Second,
+		HotRankingCacheTTLDay:        36 * time.Hour,
+		RedisTTL:                     90 * time.Minute,
+	}
+
+	service := NewSystemSettingsService(newSystemSettingsTestDB(t))
+	options := service.GetCacheSettingOptions()
+
+	assertContainsCacheSettingOption(t, options.SearchCacheTTLSeconds, "5400", "90 分钟（默认）")
+	assertContainsCacheSettingOption(t, options.CacheWriteQueueSize, "768", "768（默认）")
+	assertContainsCacheSettingOption(t, options.CacheWriteWorkers, "6", "6（默认）")
+	assertContainsCacheSettingOption(t, options.HotRankingPreloadTime, "03:15", "03:15（默认）")
+	assertContainsCacheSettingOption(t, options.HotRankingCacheTTLSeconds, "129600", "36 小时（默认）")
+	assertContainsCacheSettingOption(t, options.HotRankingPreloadConcurrency, "5", "5（默认）")
+	assertContainsCacheSettingOption(t, options.HotRankingPreloadTimeoutSeconds, "75", "75 秒（默认）")
+}
+
+func assertContainsCacheSettingOption(t *testing.T, options []CacheSettingOption, expectedValue string, expectedLabel string) {
+	t.Helper()
+
+	for _, option := range options {
+		if option.Value == expectedValue {
+			if option.Label != expectedLabel {
+				t.Fatalf("expected option label %q for value %s, got %q", expectedLabel, expectedValue, option.Label)
+			}
+			return
+		}
+	}
+
+	t.Fatalf("expected option value %s to exist in %+v", expectedValue, options)
 }

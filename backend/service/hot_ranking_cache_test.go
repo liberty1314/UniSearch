@@ -38,19 +38,23 @@ func TestResolveHotRankingCacheTTLUsesPeriodSpecificConfig(t *testing.T) {
 	oldConfig := config.AppConfig
 	defer func() {
 		config.AppConfig = oldConfig
+		SetGlobalCacheSettingsService(nil)
 	}()
 
-	config.AppConfig = &config.Config{
-		HotRankingCacheTTLDay:   10 * time.Minute,
-		HotRankingCacheTTLWeek:  2 * time.Hour,
-		HotRankingCacheTTLMonth: 6 * time.Hour,
-		HotRankingCacheTTLYear:  12 * time.Hour,
+	config.AppConfig = &config.Config{}
+	settingsService := NewSystemSettingsService(newSystemSettingsTestDB(t))
+	ttl := 24 * 60 * 60
+	if _, err := settingsService.UpdateCacheSettings(CacheSettingsUpdateInput{
+		HotRankingCacheTTLSeconds: &ttl,
+	}); err != nil {
+		t.Fatalf("update cache settings: %v", err)
 	}
+	SetGlobalCacheSettingsService(settingsService)
 
-	if got := resolveHotRankingCacheTTL(model.HotRankingPeriodDay); got != 10*time.Minute {
-		t.Fatalf("expected day ttl, got %v", got)
+	if got := resolveHotRankingCacheTTL(model.HotRankingPeriodDay); got != 24*time.Hour {
+		t.Fatalf("expected unified ttl 24h, got %v", got)
 	}
-	if got := resolveHotRankingCacheTTL(model.HotRankingPeriodYear); got != 12*time.Hour {
-		t.Fatalf("expected year ttl, got %v", got)
+	if got := resolveHotRankingCacheTTL(model.HotRankingPeriodYear); got != 24*time.Hour {
+		t.Fatalf("expected unified ttl 24h for year, got %v", got)
 	}
 }

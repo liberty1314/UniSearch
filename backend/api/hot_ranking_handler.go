@@ -11,6 +11,7 @@ import (
 
 type HotRankingQueryService interface {
 	GetHotRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error)
+	IsCacheEnabled() bool
 }
 
 func GetHotRankingHandler(hotRankingService HotRankingQueryService) gin.HandlerFunc {
@@ -42,6 +43,12 @@ func GetHotRankingHandler(hotRankingService HotRankingQueryService) gin.HandlerF
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, model.NewErrorResponse(500, "获取热门榜单失败: "+err.Error()))
 			return
+		}
+
+		if !hotRankingService.IsCacheEnabled() {
+			c.Header("Cache-Control", "public, max-age=3600")
+		} else {
+			c.Header("Cache-Control", "no-cache")
 		}
 
 		c.JSON(http.StatusOK, model.NewSuccessResponse(response))

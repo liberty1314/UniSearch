@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"unisearch/config"
 	"unisearch/model"
@@ -20,7 +22,7 @@ import (
 func newSystemSettingsHandlerService(t *testing.T) *service.SystemSettingsService {
 	t.Helper()
 
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open sqlite db: %v", err)
 	}
@@ -35,6 +37,52 @@ func newSystemSettingsHandlerService(t *testing.T) *service.SystemSettingsServic
 	service.SetGlobalSecretManager(service.NewDatabaseSecretManager(db, "test-master-key-12345678901234567890"))
 
 	return service.NewSystemSettingsService(db)
+}
+
+type fakeHotRankingCacheAdminService struct {
+	mu         sync.Mutex
+	warmCalls  int
+	clearCalls int
+	lastResult *service.HotRankingPreloadSnapshot
+}
+
+func (f *fakeHotRankingCacheAdminService) WarmCache(_ *service.SystemSettingsService, _ service.HotRankingPreloaderConfig) service.HotRankingPreloadResult {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	f.warmCalls++
+	now := time.Date(2026, 6, 13, 9, 45, 0, 0, time.FixedZone("CST", 8*3600))
+	f.lastResult = &service.HotRankingPreloadSnapshot{
+		Result: service.HotRankingPreloadResult{
+			Total:   56,
+			Success: 56,
+			Failed:  0,
+		},
+		UpdatedAt: now,
+	}
+	return f.lastResult.Result
+}
+
+func (f *fakeHotRankingCacheAdminService) ClearCache(_ *service.SystemSettingsService) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.clearCalls++
+	return nil
+}
+
+func (f *fakeHotRankingCacheAdminService) HasCacheBackend() bool {
+	return true
+}
+
+func (f *fakeHotRankingCacheAdminService) GetLastPreloadSnapshot() *service.HotRankingPreloadSnapshot {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.lastResult == nil {
+		return nil
+	}
+
+	copyValue := *f.lastResult
+	return &copyValue
 }
 
 func TestGetSystemSettingsHandlerReturnsPublicConfigFields(t *testing.T) {
@@ -291,5 +339,143 @@ func TestUpdateTMDBAdminSettingsHandlerReturnsErrorForEnvironmentSecretBackend(t
 
 	if !strings.Contains(recorder.Body.String(), "后台不可写") {
 		t.Fatalf("expected env backend error message, got %s", recorder.Body.String())
+	}
+}
+
+func TestGetCacheSettingsHandlerReturnsCacheConfigAndRuntimeInfo(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+	SetHotRankingCacheAdminService(&fakeHotRankingCacheAdminService{})
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodGet, "/api/admin/system-settings/cache", nil)
+
+	GetCacheSettingsHandler(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response["search_cache_ttl_seconds"] != float64(3600) {
+		t.Fatalf("expected search cache ttl 3600, got %v", response["search_cache_ttl_seconds"])
+	}
+
+	if response["redis_connected"] != true {
+		t.Fatalf("expected redis_connected true, got %v", response["redis_connected"])
+	}
+
+	if response["config_source"] != "database" {
+		t.Fatalf("expected config_source database, got %v", response["config_source"])
+	}
+
+	cacheSettingOptions, ok := response["cache_setting_options"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected cache_setting_options object, got %T", response["cache_setting_options"])
+	}
+
+	searchTTLOptions, ok := cacheSettingOptions["search_cache_ttl_seconds"].([]any)
+	if !ok || len(searchTTLOptions) == 0 {
+		t.Fatalf("expected search_cache_ttl_seconds options, got %v", cacheSettingOptions["search_cache_ttl_seconds"])
+	}
+}
+
+func TestUpdateCacheSettingsHandlerPersistsNewValues(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+
+	body := bytes.NewBufferString(`{
+		"cache_enabled":true,
+		"search_cache_ttl_seconds":5400,
+		"cache_write_queue_size":512,
+		"hot_ranking_preload_time":"01:15",
+		"hot_ranking_preload_limit":60
+	}`)
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodPut, "/api/admin/system-settings/cache", body)
+	context.Request.Header.Set("Content-Type", "application/json")
+
+	UpdateCacheSettingsHandler(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response["search_cache_ttl_seconds"] != float64(5400) {
+		t.Fatalf("expected updated search cache ttl, got %v", response["search_cache_ttl_seconds"])
+	}
+
+	if response["hot_ranking_preload_time"] != "01:15" {
+		t.Fatalf("expected updated preload time, got %v", response["hot_ranking_preload_time"])
+	}
+}
+
+func TestUpdateCacheSettingsHandlerRejectsEmptyPayload(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodPut, "/api/admin/system-settings/cache", bytes.NewBufferString(`{}`))
+	context.Request.Header.Set("Content-Type", "application/json")
+
+	UpdateCacheSettingsHandler(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestTriggerHotRankingPreloadHandlerRunsWarmTask(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+	adminService := &fakeHotRankingCacheAdminService{}
+	SetHotRankingCacheAdminService(adminService)
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodPost, "/api/admin/system-settings/cache/hot-ranking/preload", nil)
+
+	TriggerHotRankingPreloadHandler(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	if adminService.warmCalls != 1 {
+		t.Fatalf("expected warm cache to be called once, got %d", adminService.warmCalls)
+	}
+}
+
+func TestClearHotRankingCacheHandlerClearsCache(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+	adminService := &fakeHotRankingCacheAdminService{}
+	SetHotRankingCacheAdminService(adminService)
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodDelete, "/api/admin/system-settings/cache/hot-ranking", nil)
+
+	ClearHotRankingCacheHandler(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	if adminService.clearCalls != 1 {
+		t.Fatalf("expected clear cache to be called once, got %d", adminService.clearCalls)
 	}
 }

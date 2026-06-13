@@ -11,28 +11,33 @@ import (
 )
 
 type HotRankingRefreshService interface {
-	RefreshHotRankings(ctx context.Context, period model.HotRankingPeriod, category model.HotRankingCategory) (model.HotRankingResponse, error)
+	GetHotRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error)
 }
 
 type HotRankingPreloaderConfig struct {
-	Enabled     bool
-	DailyTime   string
-	Timeout     time.Duration
-	Concurrency int
-	Location    *time.Location
+	Enabled        bool
+	DailyTime      string
+	Limit          int
+	Timeout        time.Duration
+	Concurrency    int
+	Location       *time.Location
+	ResultHandler  func(HotRankingPreloadResult)
+	ConfigResolver func() HotRankingPreloaderConfig
 }
 
 type HotRankingPreloadError struct {
-	Period   model.HotRankingPeriod
-	Category model.HotRankingCategory
-	Err      error
+	Mode     model.HotRankingMode     `json:"mode"`
+	Period   model.HotRankingPeriod   `json:"period"`
+	Category model.HotRankingCategory `json:"category"`
+	SortBy   model.HotRankingSortBy   `json:"sort_by"`
+	Err      error                    `json:"-"`
 }
 
 type HotRankingPreloadResult struct {
-	Total   int
-	Success int
-	Failed  int
-	Errors  []HotRankingPreloadError
+	Total   int                      `json:"total"`
+	Success int                      `json:"success"`
+	Failed  int                      `json:"failed"`
+	Errors  []HotRankingPreloadError `json:"errors"`
 }
 
 type HotRankingPreloader struct {
@@ -76,19 +81,18 @@ func NewHotRankingPreloaderWithCache(refreshService HotRankingRefreshService, ra
 }
 
 func (p *HotRankingPreloader) WarmAll(ctx context.Context) HotRankingPreloadResult {
-	result := HotRankingPreloadResult{
-		Total: (len(hotRankingTrendPreloadPeriods) + len(hotRankingPopularPreloadPeriods)) * len(hotRankingPreloadCategories),
-	}
-	if p == nil || !p.config.Enabled || p.refreshService == nil {
+	currentConfig := p.currentConfig()
+	tasks := buildHotRankingPreloadTasks(currentConfig.Limit)
+	result := HotRankingPreloadResult{Total: len(tasks)}
+	if p == nil || !currentConfig.Enabled || p.refreshService == nil {
 		return result
 	}
 
-	type task struct {
-		period   model.HotRankingPeriod
-		category model.HotRankingCategory
+	if p.cache != nil {
+		_ = p.cache.ClearByPrefix(ctx, "hot-ranking:v2")
 	}
 
-	taskCh := make(chan task)
+	taskCh := make(chan model.HotRankingQuery)
 	resultCh := make(chan HotRankingPreloadError, result.Total)
 	var workers sync.WaitGroup
 	var collector sync.WaitGroup
@@ -109,56 +113,39 @@ func (p *HotRankingPreloader) WarmAll(ctx context.Context) HotRankingPreloadResu
 		}
 	}()
 
-	for i := 0; i < p.config.Concurrency; i++ {
+	for i := 0; i < currentConfig.Concurrency; i++ {
 		workers.Add(1)
 		go func() {
 			defer workers.Done()
-			for item := range taskCh {
+			for query := range taskCh {
 				taskCtx := ctx
 				cancel := func() {}
-				if p.config.Timeout > 0 {
-					taskCtx, cancel = context.WithTimeout(ctx, p.config.Timeout)
+				if currentConfig.Timeout > 0 {
+					taskCtx, cancel = context.WithTimeout(ctx, currentConfig.Timeout)
 				}
 
-				if p.cache != nil {
-					_ = p.cache.ClearByPrefix(taskCtx, "hot-ranking:v2")
-				}
-				_, err := p.refreshService.RefreshHotRankings(taskCtx, item.period, item.category)
+				_, err := p.refreshService.GetHotRankings(taskCtx, query)
 				cancel()
 				resultCh <- HotRankingPreloadError{
-					Period:   item.period,
-					Category: item.category,
+					Mode:     query.Mode,
+					Period:   query.Period,
+					Category: query.Category,
+					SortBy:   query.SortBy,
 					Err:      err,
 				}
 			}
 		}()
 	}
 
-	for _, period := range hotRankingTrendPreloadPeriods {
-		for _, category := range hotRankingPreloadCategories {
-			select {
-			case <-ctx.Done():
-				close(taskCh)
-				workers.Wait()
-				close(resultCh)
-				collector.Wait()
-				return result
-			case taskCh <- task{period: period, category: category}:
-			}
-		}
-	}
-
-	for _, period := range hotRankingPopularPreloadPeriods {
-		for _, category := range hotRankingPreloadCategories {
-			select {
-			case <-ctx.Done():
-				close(taskCh)
-				workers.Wait()
-				close(resultCh)
-				collector.Wait()
-				return result
-			case taskCh <- task{period: period, category: category}:
-			}
+	for _, task := range tasks {
+		select {
+		case <-ctx.Done():
+			close(taskCh)
+			workers.Wait()
+			close(resultCh)
+			collector.Wait()
+			return result
+		case taskCh <- task:
 		}
 	}
 
@@ -170,13 +157,30 @@ func (p *HotRankingPreloader) WarmAll(ctx context.Context) HotRankingPreloadResu
 }
 
 func (p *HotRankingPreloader) Start(ctx context.Context) {
-	if p == nil || !p.config.Enabled || p.refreshService == nil {
+	if p == nil || p.refreshService == nil {
 		return
 	}
 
 	go func() {
 		for {
-			nextRun, err := p.NextRun(time.Now().In(p.config.Location))
+			currentConfig := p.currentConfig()
+			if !currentConfig.Enabled {
+				timer := time.NewTimer(time.Minute)
+				select {
+				case <-ctx.Done():
+					if !timer.Stop() {
+						select {
+						case <-timer.C:
+						default:
+						}
+					}
+					return
+				case <-timer.C:
+					continue
+				}
+			}
+
+			nextRun, err := p.NextRun(time.Now().In(currentConfig.Location))
 			if err != nil {
 				log.Printf("热门榜单预热器调度失败: %v", err)
 				return
@@ -201,6 +205,9 @@ func (p *HotRankingPreloader) Start(ctx context.Context) {
 			}
 
 			result := p.WarmAll(ctx)
+			if currentConfig.ResultHandler != nil {
+				currentConfig.ResultHandler(result)
+			}
 			p.logResult("每日热门榜单预热完成", result)
 		}
 	}()
@@ -211,13 +218,14 @@ func (p *HotRankingPreloader) NextRun(now time.Time) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("热门榜单预热器未初始化")
 	}
 
-	location := p.config.Location
+	currentConfig := p.currentConfig()
+	location := currentConfig.Location
 	if location == nil {
 		location = time.Local
 	}
 	now = now.In(location)
 
-	target, err := time.ParseInLocation("15:04", p.config.DailyTime, location)
+	target, err := time.ParseInLocation("15:04", currentConfig.DailyTime, location)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("无效的热门榜单预热时间配置: %w", err)
 	}
@@ -237,13 +245,16 @@ func (p *HotRankingPreloader) logResult(prefix string, result HotRankingPreloadR
 
 	log.Printf("%s，总任务=%d，成功=%d，失败=%d", prefix, result.Total, result.Success, result.Failed)
 	for _, item := range result.Errors {
-		log.Printf("热门榜单预热失败: period=%s category=%s err=%v", item.Period, item.Category, item.Err)
+		log.Printf("热门榜单预热失败: mode=%s period=%s category=%s sort_by=%s err=%v", item.Mode, item.Period, item.Category, item.SortBy, item.Err)
 	}
 }
 
 func normalizeHotRankingPreloaderConfig(cfg HotRankingPreloaderConfig) HotRankingPreloaderConfig {
 	if cfg.DailyTime == "" {
-		cfg.DailyTime = "10:00"
+		cfg.DailyTime = "00:00"
+	}
+	if cfg.Limit <= 0 {
+		cfg.Limit = 50
 	}
 	if cfg.Timeout <= 0 {
 		cfg.Timeout = 30 * time.Second
@@ -260,4 +271,62 @@ func normalizeHotRankingPreloaderConfig(cfg HotRankingPreloaderConfig) HotRankin
 		}
 	}
 	return cfg
+}
+
+func buildHotRankingPreloadTasks(limit int) []model.HotRankingQuery {
+	tasks := make([]model.HotRankingQuery, 0, 56)
+
+	for _, period := range hotRankingTrendPreloadPeriods {
+		for _, category := range hotRankingPreloadCategories {
+			tasks = append(tasks, model.HotRankingQuery{
+				Mode:     model.HotRankingModeTrend,
+				Period:   period,
+				Category: category,
+				SortBy:   model.HotRankingSortByPopularity,
+				Page:     1,
+				PageSize: limit,
+			})
+		}
+	}
+
+	popularSorts := []model.HotRankingSortBy{
+		model.HotRankingSortByPopularity,
+		model.HotRankingSortByReleaseDate,
+		model.HotRankingSortByVoteAverage,
+	}
+	for _, period := range hotRankingPopularPreloadPeriods {
+		for _, category := range hotRankingPreloadCategories {
+			for _, sortBy := range popularSorts {
+				tasks = append(tasks, model.HotRankingQuery{
+					Mode:     model.HotRankingModePopular,
+					Period:   period,
+					Category: category,
+					SortBy:   sortBy,
+					Page:     1,
+					PageSize: limit,
+				})
+			}
+		}
+	}
+
+	return tasks
+}
+
+func (p *HotRankingPreloader) currentConfig() HotRankingPreloaderConfig {
+	if p == nil {
+		return normalizeHotRankingPreloaderConfig(HotRankingPreloaderConfig{})
+	}
+
+	cfg := p.config
+	if p.config.ConfigResolver != nil {
+		cfg = p.config.ConfigResolver()
+		if cfg.ResultHandler == nil {
+			cfg.ResultHandler = p.config.ResultHandler
+		}
+		if cfg.ConfigResolver == nil {
+			cfg.ConfigResolver = p.config.ConfigResolver
+		}
+	}
+
+	return normalizeHotRankingPreloaderConfig(cfg)
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"unisearch/model"
@@ -15,6 +16,14 @@ import (
 type HotRankingService struct {
 	tmdbService TMDBService
 	cache       HotRankingCache
+	preloadMu   sync.RWMutex
+	lastPreload *HotRankingPreloadSnapshot
+}
+
+type HotRankingPreloadSnapshot struct {
+	Result    *HotRankingPreloadResult `json:"result,omitempty"`
+	UpdatedAt time.Time                `json:"updated_at"`
+	Status    string                   `json:"status"`
 }
 
 func NewHotRankingService(tmdbService TMDBService, rankingCache HotRankingCache) *HotRankingService {
@@ -29,6 +38,13 @@ func NewHotRankingService(tmdbService TMDBService, rankingCache HotRankingCache)
 
 func NewHotRankingServiceWithRedis(redisCache *cache.RedisCache) *HotRankingService {
 	return NewHotRankingService(NewTMDBService(), newHotRankingCache(redisCache))
+}
+
+func (s *HotRankingService) IsCacheEnabled() bool {
+	if s == nil || s.cache == nil {
+		return false
+	}
+	return s.cache.IsCacheEnabled()
 }
 
 func (s *HotRankingService) GetHotRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
@@ -94,6 +110,78 @@ func (s *HotRankingService) RefreshHotRankings(ctx context.Context, period model
 	}
 
 	return response, nil
+}
+
+func (s *HotRankingService) WarmCache(_ *SystemSettingsService, cfg HotRankingPreloaderConfig) HotRankingPreloadResult {
+	if s == nil {
+		return HotRankingPreloadResult{}
+	}
+
+	preloader := NewHotRankingPreloaderWithCache(s, s.cache, cfg)
+	result := preloader.WarmAll(context.Background())
+	s.setLastPreloadSnapshot(result)
+	return result
+}
+
+func (s *HotRankingService) ClearCache(_ *SystemSettingsService) error {
+	if s == nil || s.cache == nil {
+		return nil
+	}
+
+	err := s.cache.ClearByPrefix(context.Background(), "hot-ranking:v2")
+	if err == nil {
+		s.MarkCacheCleared()
+	}
+	return err
+}
+
+func (s *HotRankingService) HasCacheBackend() bool {
+	return s != nil && s.cache != nil
+}
+
+func (s *HotRankingService) GetLastPreloadSnapshot() *HotRankingPreloadSnapshot {
+	if s == nil {
+		return nil
+	}
+
+	s.preloadMu.RLock()
+	defer s.preloadMu.RUnlock()
+	if s.lastPreload == nil {
+		return nil
+	}
+
+	copyValue := *s.lastPreload
+	return &copyValue
+}
+
+func (s *HotRankingService) setLastPreloadSnapshot(result HotRankingPreloadResult) {
+	s.preloadMu.Lock()
+	defer s.preloadMu.Unlock()
+	s.lastPreload = &HotRankingPreloadSnapshot{
+		Result:    &result,
+		UpdatedAt: time.Now(),
+		Status:    "success",
+	}
+}
+
+func (s *HotRankingService) MarkCacheCleared() {
+	if s == nil {
+		return
+	}
+	s.preloadMu.Lock()
+	defer s.preloadMu.Unlock()
+	s.lastPreload = &HotRankingPreloadSnapshot{
+		Result:    nil,
+		UpdatedAt: time.Now(),
+		Status:    "cleared",
+	}
+}
+
+func (s *HotRankingService) RecordPreloadResult(result HotRankingPreloadResult) {
+	if s == nil {
+		return
+	}
+	s.setLastPreloadSnapshot(result)
 }
 
 func (s *HotRankingService) fetchHotRankings(ctx context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
@@ -267,7 +355,8 @@ func (s *HotRankingService) fetchPopularMovieRankings(ctx context.Context, query
 		return model.HotRankingResponse{}, err
 	}
 
-	rawItems, err := s.fetchDiscoverMoviePages(ctx, buildMovieDiscoverParams(query))
+	params := buildMovieDiscoverParams(query)
+	rawItems, err := s.fetchDiscoverMoviePages(ctx, params, query.PageSize)
 	if err != nil {
 		return model.HotRankingResponse{}, err
 	}
@@ -286,7 +375,7 @@ func (s *HotRankingService) fetchPopularTVRankings(ctx context.Context, query mo
 		return model.HotRankingResponse{}, err
 	}
 
-	rawItems, err := s.fetchDiscoverTVPages(ctx, buildTVDiscoverParams(query, nil))
+	rawItems, err := s.fetchDiscoverTVPages(ctx, buildTVDiscoverParams(query, nil), query.PageSize)
 	if err != nil {
 		return model.HotRankingResponse{}, err
 	}
@@ -305,7 +394,7 @@ func (s *HotRankingService) fetchPopularAnimeRankings(ctx context.Context, query
 		return model.HotRankingResponse{}, err
 	}
 
-	rawItems, err := s.fetchDiscoverTVPages(ctx, buildTVDiscoverParams(query, []int{16}))
+	rawItems, err := s.fetchDiscoverTVPages(ctx, buildTVDiscoverParams(query, []int{16}), query.PageSize)
 	if err != nil {
 		return model.HotRankingResponse{}, err
 	}
@@ -321,10 +410,10 @@ func (s *HotRankingService) fetchPopularAnimeRankings(ctx context.Context, query
 	return buildHotRankingResponse(query, model.HotRankingCategoryAnime, items), nil
 }
 
-func (s *HotRankingService) fetchDiscoverMoviePages(ctx context.Context, params TMDBDiscoverMovieParams) ([]TMDBMovieResult, error) {
-	pageCount := pageCountForSize(params.Page, 100)
-	items := make([]TMDBMovieResult, 0, 100)
-	basePage := resolveBasePage(params.Page, 100)
+func (s *HotRankingService) fetchDiscoverMoviePages(ctx context.Context, params TMDBDiscoverMovieParams, pageSize int) ([]TMDBMovieResult, error) {
+	pageCount := pageCountForSize(params.Page, pageSize)
+	items := make([]TMDBMovieResult, 0, pageSize)
+	basePage := resolveBasePage(params.Page, pageSize)
 
 	for offset := 0; offset < pageCount; offset++ {
 		pageParams := params
@@ -339,13 +428,23 @@ func (s *HotRankingService) fetchDiscoverMoviePages(ctx context.Context, params 
 		}
 	}
 
+	offsetIndex := resolveItemOffset(params.Page, pageSize)
+	if len(items) > offsetIndex {
+		items = items[offsetIndex:]
+	} else {
+		items = nil
+	}
+	if len(items) > pageSize {
+		items = items[:pageSize]
+	}
+
 	return items, nil
 }
 
-func (s *HotRankingService) fetchDiscoverTVPages(ctx context.Context, params TMDBDiscoverTVParams) ([]TMDBTVResult, error) {
-	pageCount := pageCountForSize(params.Page, 100)
-	items := make([]TMDBTVResult, 0, 100)
-	basePage := resolveBasePage(params.Page, 100)
+func (s *HotRankingService) fetchDiscoverTVPages(ctx context.Context, params TMDBDiscoverTVParams, pageSize int) ([]TMDBTVResult, error) {
+	pageCount := pageCountForSize(params.Page, pageSize)
+	items := make([]TMDBTVResult, 0, pageSize)
+	basePage := resolveBasePage(params.Page, pageSize)
 
 	for offset := 0; offset < pageCount; offset++ {
 		pageParams := params
@@ -360,6 +459,16 @@ func (s *HotRankingService) fetchDiscoverTVPages(ctx context.Context, params TMD
 		}
 	}
 
+	offsetIndex := resolveItemOffset(params.Page, pageSize)
+	if len(items) > offsetIndex {
+		items = items[offsetIndex:]
+	} else {
+		items = nil
+	}
+	if len(items) > pageSize {
+		items = items[:pageSize]
+	}
+
 	return items, nil
 }
 
@@ -367,7 +476,7 @@ func buildMovieDiscoverParams(query model.HotRankingQuery) TMDBDiscoverMoviePara
 	params := TMDBDiscoverMovieParams{
 		SortBy:       resolveDiscoverSortBy(query),
 		VoteCountGTE: 50,
-		Page:         resolveBasePage(query.Page, query.PageSize),
+		Page:         query.Page,
 	}
 
 	switch query.Period {
@@ -392,7 +501,7 @@ func buildTVDiscoverParams(query model.HotRankingQuery, genres []int) TMDBDiscov
 		SortBy:       resolveDiscoverSortBy(query),
 		VoteCountGTE: 50,
 		WithGenres:   genres,
-		Page:         resolveBasePage(query.Page, query.PageSize),
+		Page:         query.Page,
 	}
 
 	switch query.Period {
@@ -569,19 +678,27 @@ func validateHotRankingQuery(query model.HotRankingQuery) error {
 }
 
 func resolveHotRankingCacheQuery(query model.HotRankingQuery) (model.HotRankingQuery, bool) {
+	cacheLimit := GetRuntimeCacheSettings().HotRankingPreloadLimit
+	if cacheLimit <= 0 {
+		cacheLimit = defaultHotRankingPreloadLimit
+	}
+
 	if query.Page != 1 {
 		return query, false
 	}
 
 	cacheQuery := query
 	if cacheQuery.PageSize <= 0 {
-		cacheQuery.PageSize = 100
+		cacheQuery.PageSize = cacheLimit
 	}
-	if cacheQuery.PageSize < 100 {
-		cacheQuery.PageSize = 100
+	if cacheQuery.PageSize > cacheLimit {
+		return cacheQuery, false
+	}
+	if cacheQuery.PageSize < cacheLimit {
+		cacheQuery.PageSize = cacheLimit
 	}
 
-	return cacheQuery, cacheQuery.PageSize == 100
+	return cacheQuery, cacheQuery.PageSize == cacheLimit
 }
 
 func adaptHotRankingResponsePageSize(response model.HotRankingResponse, pageSize int) model.HotRankingResponse {
@@ -591,7 +708,7 @@ func adaptHotRankingResponsePageSize(response model.HotRankingResponse, pageSize
 
 	adapted := response
 	adapted.PageSize = pageSize
-	adapted.HasMore = false
+	adapted.HasMore = response.HasMore
 	if adapted.NextPage > 0 {
 		adapted.NextPage = adapted.Page + 1
 	}
@@ -599,10 +716,10 @@ func adaptHotRankingResponsePageSize(response model.HotRankingResponse, pageSize
 	adapted.Sections = make([]model.HotRankingSection, 0, len(response.Sections))
 	for _, section := range response.Sections {
 		nextSection := section
-		nextSection.Items = limitHotRankingItems(section.Items, pageSize)
-		if len(nextSection.Items) > 0 {
+		if len(section.Items) > pageSize {
 			adapted.HasMore = true
 		}
+		nextSection.Items = limitHotRankingItems(section.Items, pageSize)
 		adapted.Sections = append(adapted.Sections, nextSection)
 	}
 
@@ -621,6 +738,15 @@ func resolveBasePage(page int, pageSize int) int {
 		return 1
 	}
 	return ((page - 1) * pageSize / 20) + 1
+}
+
+func resolveItemOffset(page int, pageSize int) int {
+	if page <= 1 {
+		return 0
+	}
+	targetStartItem := (page - 1) * pageSize
+	basePageStartItem := (resolveBasePage(page, pageSize) - 1) * 20
+	return targetStartItem - basePageStartItem
 }
 
 func pageCountForSize(page int, pageSize int) int {

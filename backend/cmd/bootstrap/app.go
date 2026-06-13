@@ -65,6 +65,7 @@ func Initialize() (*App, error) {
 	fmt.Println("User 服务已启动（用户管理功能已启用）")
 
 	systemSettingsService := service.NewSystemSettingsService(database.GetDB())
+	service.SetGlobalCacheSettingsService(systemSettingsService)
 	fmt.Println("SystemSettings 服务已启动（系统设置功能已启用）")
 
 	announcementService := service.NewAnnouncementService(database.GetDB())

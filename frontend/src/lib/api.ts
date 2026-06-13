@@ -244,7 +244,11 @@ class ApiClient {
       }
     } else if (error.request) {
       if (error.code === 'ECONNABORTED') {
-        return '搜索超时，请缩小范围或稍后重试';
+        const url = error.config?.url || '';
+        if (url.includes('/search')) {
+          return '搜索超时，请缩小范围或稍后重试';
+        }
+        return '请求超时，请稍后重试';
       }
       // 网络错误
       return '网络连接失败，请检查网络设置';

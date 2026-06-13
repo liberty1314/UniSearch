@@ -164,7 +164,7 @@ const HotPage: React.FC = () => {
     month: state.mode === "popular" && state.period === "month" ? state.month : undefined,
     year: state.mode === "popular" && state.period === "year" ? state.year : undefined,
     page,
-    page_size: 100,
+    page_size: 50,
   }), []);
 
   const dataRef = React.useRef<HotRankingResponse | null>(null);

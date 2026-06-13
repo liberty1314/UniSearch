@@ -40,7 +40,7 @@ func (e *tgSearchExecutor) Search(keyword string, channels []string, forceRefres
 		e.metrics.RecordSearch("tg", keyword, time.Since(startedAt), len(results), err)
 	}()
 
-	cacheKey := cache.GenerateTGCacheKey(keyword)
+	cacheKey := cache.GenerateTGCacheKey(keyword, channels)
 	if !forceRefresh {
 		var cachedResults []model.SearchResult
 		cacheHit, _ := e.searchCache.Load("tg", cacheKey, keyword, &cachedResults)
@@ -109,7 +109,7 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 		availablePluginNames = append(availablePluginNames, p.Name())
 	}
 
-	cacheKey := cache.GeneratePluginCacheKey(keyword, availablePluginNames)
+	cacheKey := cache.GeneratePluginCacheKey(keyword, availablePluginNames, ext)
 	if !forceRefresh {
 		var cachedResults []model.SearchResult
 		cacheHit, _ := e.searchCache.Load("plugin", cacheKey, keyword, &cachedResults)

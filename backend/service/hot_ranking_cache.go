@@ -14,6 +14,7 @@ type HotRankingCache interface {
 	Load(ctx context.Context, query model.HotRankingQuery, target *model.HotRankingResponse) (bool, error)
 	Store(ctx context.Context, query model.HotRankingQuery, value model.HotRankingResponse) error
 	ClearByPrefix(ctx context.Context, prefix string) error
+	IsCacheEnabled() bool
 }
 
 type hotRankingCache struct {
@@ -24,8 +25,18 @@ func newHotRankingCache(redisCache *cache.RedisCache) HotRankingCache {
 	return &hotRankingCache{cache: redisCache}
 }
 
+func (c *hotRankingCache) IsCacheEnabled() bool {
+	if c == nil || c.cache == nil {
+		return false
+	}
+	return GetRuntimeCacheSettings().HotRankingCacheEnabled
+}
+
 func (c *hotRankingCache) Load(ctx context.Context, query model.HotRankingQuery, target *model.HotRankingResponse) (bool, error) {
 	if c == nil || c.cache == nil {
+		return false, nil
+	}
+	if !GetRuntimeCacheSettings().HotRankingCacheEnabled {
 		return false, nil
 	}
 
@@ -42,6 +53,9 @@ func (c *hotRankingCache) Load(ctx context.Context, query model.HotRankingQuery,
 
 func (c *hotRankingCache) Store(ctx context.Context, query model.HotRankingQuery, value model.HotRankingResponse) error {
 	if c == nil || c.cache == nil {
+		return nil
+	}
+	if !GetRuntimeCacheSettings().HotRankingCacheEnabled {
 		return nil
 	}
 
@@ -107,28 +121,15 @@ func resolveHotRankingTimeKey(query model.HotRankingQuery) string {
 }
 
 func resolveHotRankingCacheTTL(period model.HotRankingPeriod) time.Duration {
-	if config.AppConfig == nil {
-		return 30 * time.Minute
+	_ = period
+	cacheSettings := GetRuntimeCacheSettings()
+	if cacheSettings.HotRankingCacheTTLSeconds > 0 {
+		return time.Duration(cacheSettings.HotRankingCacheTTLSeconds) * time.Second
 	}
 
-	switch period {
-	case model.HotRankingPeriodWeek:
-		if config.AppConfig.HotRankingCacheTTLWeek > 0 {
-			return config.AppConfig.HotRankingCacheTTLWeek
-		}
-	case model.HotRankingPeriodMonth:
-		if config.AppConfig.HotRankingCacheTTLMonth > 0 {
-			return config.AppConfig.HotRankingCacheTTLMonth
-		}
-	case model.HotRankingPeriodYear:
-		if config.AppConfig.HotRankingCacheTTLYear > 0 {
-			return config.AppConfig.HotRankingCacheTTLYear
-		}
-	default:
-		if config.AppConfig.HotRankingCacheTTLDay > 0 {
-			return config.AppConfig.HotRankingCacheTTLDay
-		}
+	if config.AppConfig != nil && config.AppConfig.HotRankingCacheTTLDay > 0 {
+		return config.AppConfig.HotRankingCacheTTLDay
 	}
 
-	return 30 * time.Minute
+	return 24 * time.Hour
 }

@@ -33,6 +33,24 @@ const SYSTEM_INFO_CACHE_TTL_MS = 1500;
 let systemInfoRequestInFlight: Promise<SystemInfoResponse | null> | null = null;
 let systemInfoCache: { value: SystemInfoResponse | null; expiresAt: number; token: string | null } | null = null;
 
+type CacheSettingsSummary = {
+  cache_enabled: boolean;
+  search_cache_ttl_seconds: number;
+  hot_ranking_cache_enabled: boolean;
+  hot_ranking_preload_enabled: boolean;
+  hot_ranking_preload_time: string;
+  hot_ranking_preload_limit: number;
+  hot_ranking_cache_ttl_seconds: number;
+  redis_connected: boolean;
+  last_preload_result?: {
+    total: number;
+    success: number;
+    failed: number;
+  };
+  last_preload_at?: string;
+  last_preload_status?: string;
+};
+
 const fetchSystemInfoSingleFlight = async (token: string | null, force = false): Promise<SystemInfoResponse | null> => {
   if (!token) {
     return null;
@@ -105,6 +123,20 @@ const fetchChannelSummary = async (token: string): Promise<{ total: number; enab
   };
 };
 
+const fetchCacheSettingsSummary = async (token: string): Promise<CacheSettingsSummary | null> => {
+  const response = await fetch('/api/admin/system-settings/cache', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('获取缓存配置失败');
+  }
+
+  return (await response.json()) as CacheSettingsSummary;
+};
+
 /**
  * 系统监控视图组件
  *
@@ -124,6 +156,7 @@ export const SystemInfoView: React.FC = () => {
     disabled: 0,
     error: 0,
   });
+  const [cacheSettings, setCacheSettings] = useState<CacheSettingsSummary | null>(null);
   const isMountedRef = useRef(false);
 
   useEffect(() => {
@@ -155,9 +188,13 @@ export const SystemInfoView: React.FC = () => {
     }
 
     try {
-      const data = await fetchSystemInfoSingleFlight(token, force);
+      const [data, cacheConfig] = await Promise.all([
+        fetchSystemInfoSingleFlight(token, force),
+        token ? fetchCacheSettingsSummary(token) : Promise.resolve(null),
+      ]);
       if (isMountedRef.current) {
         setSystemInfo(data);
+        setCacheSettings(cacheConfig);
 
         if (data) {
           const enabledFromConfig = data.config.channels.length;
@@ -423,21 +460,49 @@ export const SystemInfoView: React.FC = () => {
               </div>
               <div className="space-y-2 pl-6 text-sm">
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
-                  <span className="text-slate-500 dark:text-slate-400">缓存路径:</span>
-                  <span className="text-slate-700 dark:text-slate-300 font-mono text-xs break-all">
-                    {systemInfo.config.cache_path}
+                  <span className="text-slate-500 dark:text-slate-400">Redis 状态:</span>
+                  <Badge variant={cacheSettings?.redis_connected ? 'success' : 'outline'}>
+                    {cacheSettings?.redis_connected ? '已连接' : '未连接'}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">搜索缓存 TTL:</span>
+                  <span className="text-slate-700 dark:text-slate-300">
+                    {cacheSettings?.search_cache_ttl_seconds ?? '--'} 秒
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500 dark:text-slate-400">最大大小:</span>
+                  <span className="text-slate-500 dark:text-slate-400">榜单预热时间:</span>
                   <span className="text-slate-700 dark:text-slate-300">
-                    {systemInfo.config.cache_max_size_mb} MB
+                    {cacheSettings?.hot_ranking_preload_time ?? '--'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500 dark:text-slate-400">TTL:</span>
+                  <span className="text-slate-500 dark:text-slate-400">榜单预热条数:</span>
                   <span className="text-slate-700 dark:text-slate-300">
-                    {systemInfo.config.cache_ttl_minutes} 分钟
+                    {cacheSettings?.hot_ranking_preload_limit ?? '--'} 条
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">榜单缓存 TTL:</span>
+                  <span className="text-slate-700 dark:text-slate-300">
+                    {cacheSettings?.hot_ranking_cache_ttl_seconds ?? '--'} 秒
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-slate-500 dark:text-slate-400">最近预热结果:</span>
+                  <span className="text-slate-700 dark:text-slate-300">
+                    {cacheSettings?.last_preload_status === 'cleared'
+                      ? `缓存已被清理 (${(() => {
+                          if (!cacheSettings.last_preload_at) return '暂无时间';
+                          const d = new Date(cacheSettings.last_preload_at);
+                          if (isNaN(d.getTime())) return cacheSettings.last_preload_at;
+                          const pad = (n: number) => n.toString().padStart(2, '0');
+                          return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+                        })()})`
+                      : cacheSettings?.last_preload_result
+                        ? `任务 ${cacheSettings.last_preload_result.total} / 成功 ${cacheSettings.last_preload_result.success} / 失败 ${cacheSettings.last_preload_result.failed}`
+                        : '暂无记录'}
                   </span>
                 </div>
               </div>

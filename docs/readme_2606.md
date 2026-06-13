@@ -484,3 +484,48 @@
     - frontend/src/hooks/useSearchBoxController.ts
     - frontend/src/hooks/useSearchUrlSync.ts
     - docs/readme_2606.md
+
+- [2026-06-13 21:37] feat(admin): 完善缓存系统配置中心与热榜预热管理
+  - Body: 实现了包含搜索缓存与热榜缓存在内的系统配置界面化，将静态环境变量与硬编码参数重构为支持在线调整的运行时配置。在管理员系统设置页面新增缓存选项卡，支持预热并发、容量、TTL等配置，并允许手动触发全量热榜数据预热或清理操作。
+  - Files:
+    - .env.example
+    - README.md
+    - backend/api/hot_ranking_handler.go
+    - backend/api/router.go
+    - backend/api/router_admin.go
+    - backend/api/system_settings_handler.go
+    - backend/api/system_settings_handler_test.go
+    - backend/cmd/bootstrap/app.go
+    - backend/cmd/bootstrap/server.go
+    - backend/model/system_settings.go
+    - backend/service/cache_runtime_settings.go
+    - backend/service/hot_ranking_cache.go
+    - backend/service/hot_ranking_cache_test.go
+    - backend/service/hot_ranking_preloader.go
+    - backend/service/hot_ranking_preloader_test.go
+    - backend/service/hot_ranking_service.go
+    - backend/service/hot_ranking_service_test.go
+    - backend/service/search_cache.go
+    - backend/service/search_cache_test.go
+    - backend/service/search_executor.go
+    - backend/service/search_executor_test.go
+    - backend/service/system_settings_service.go
+    - backend/service/system_settings_service_test.go
+    - backend/util/cache/cache_key.go
+    - backend/util/cache/cache_key_test.go
+    - docs/2026-06-13-cache-configuration-development-plan.md
+    - docs/2026-06-13-hot-ranking-and-search-cache-plan.md
+    - frontend/src/components/admin/SystemInfoView.tsx
+    - frontend/src/components/admin/SystemSettingsView.tsx
+    - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
+    - frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx
+    - frontend/src/hooks/__tests__/useSystemSettingsController.test.tsx
+    - frontend/src/hooks/useSystemSettingsController.ts
+    - frontend/src/lib/api.ts
+    - frontend/src/lib/systemSettingsCacheOptions.ts
+    - frontend/src/pages/HotPage.tsx
+    - frontend/src/pages/__tests__/HotPage.test.tsx
+    - frontend/src/services/__tests__/hotRankingService.test.ts
+    - frontend/src/services/__tests__/systemSettingsService.test.ts
+    - frontend/src/services/systemSettingsService.ts
+    - docs/readme_2606.md

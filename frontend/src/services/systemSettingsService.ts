@@ -32,6 +32,55 @@ export interface TMDBAdminSettingsResponse {
     read_access_token?: string;
 }
 
+export interface CacheSettingOption {
+    value: string;
+    label: string;
+}
+
+export interface CacheSettingOptionCatalog {
+    search_cache_ttl_seconds: CacheSettingOption[];
+    cache_write_queue_size: CacheSettingOption[];
+    cache_write_workers: CacheSettingOption[];
+    hot_ranking_preload_time: CacheSettingOption[];
+    hot_ranking_preload_limit: CacheSettingOption[];
+    hot_ranking_cache_ttl_seconds: CacheSettingOption[];
+    hot_ranking_preload_concurrency: CacheSettingOption[];
+    hot_ranking_preload_timeout_seconds: CacheSettingOption[];
+}
+
+export interface CacheSettingsResponse {
+    cache_enabled: boolean;
+    search_cache_ttl_seconds: number;
+    cache_write_queue_size: number;
+    cache_write_workers: number;
+    hot_ranking_cache_enabled: boolean;
+    hot_ranking_preload_enabled: boolean;
+    hot_ranking_preload_time: string;
+    hot_ranking_preload_limit: number;
+    hot_ranking_cache_ttl_seconds: number;
+    hot_ranking_preload_concurrency: number;
+    hot_ranking_preload_timeout_seconds: number;
+    config_source: 'database';
+    cache_setting_options?: CacheSettingOptionCatalog;
+    redis_connected: boolean;
+    last_preload_result?: {
+        total: number;
+        success: number;
+        failed: number;
+    };
+    last_preload_at?: string;
+    last_preload_status?: string;
+}
+
+export interface CachePreloadResponse {
+    message: string;
+    result: {
+        total: number;
+        success: number;
+        failed: number;
+    };
+}
+
 /**
  * 系统设置服务
  */
@@ -119,5 +168,28 @@ export class SystemSettingsService {
     ): Promise<TMDBAdminSettingsResponse> {
         void unusedToken;
         return apiClient.put<TMDBAdminSettingsResponse>('/admin/system-settings/tmdb', payload);
+    }
+
+    static async getCacheSettings(unusedToken: string): Promise<CacheSettingsResponse> {
+        void unusedToken;
+        return apiClient.get<CacheSettingsResponse>('/admin/system-settings/cache');
+    }
+
+    static async updateCacheSettings(
+        unusedToken: string,
+        payload: Partial<Omit<CacheSettingsResponse, 'config_source' | 'cache_setting_options' | 'redis_connected' | 'last_preload_result' | 'last_preload_at' | 'last_preload_status'>>
+    ): Promise<CacheSettingsResponse> {
+        void unusedToken;
+        return apiClient.put<CacheSettingsResponse>('/admin/system-settings/cache', payload);
+    }
+
+    static async triggerHotRankingPreload(unusedToken: string): Promise<CachePreloadResponse> {
+        void unusedToken;
+        return apiClient.post<CachePreloadResponse>('/admin/system-settings/cache/hot-ranking/preload', undefined, { timeout: 0 });
+    }
+
+    static async clearHotRankingCache(unusedToken: string): Promise<{ message: string }> {
+        void unusedToken;
+        return apiClient.delete<{ message: string }>('/admin/system-settings/cache/hot-ranking');
     }
 }

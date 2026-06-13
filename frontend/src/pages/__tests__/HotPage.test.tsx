@@ -69,7 +69,7 @@ const createResponse = (overrides?: Partial<HotRankingResponse>): HotRankingResp
   time_key: "current",
   time_label: "当前周期",
   page: 1,
-  page_size: 100,
+  page_size: 50,
   has_more: false,
   updated_at: "2026-05-24T10:00:00Z",
   source: "tmdb",
@@ -176,7 +176,7 @@ describe("HotPage", () => {
         month: undefined,
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
 
@@ -207,7 +207,7 @@ describe("HotPage", () => {
         month: undefined,
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
   });
@@ -232,7 +232,7 @@ describe("HotPage", () => {
         month: undefined,
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
 
@@ -249,7 +249,7 @@ describe("HotPage", () => {
         month: undefined,
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
   });
@@ -326,7 +326,7 @@ describe("HotPage", () => {
         month: expect.stringMatching(/^\d{4}-\d{2}$/),
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
   });
@@ -419,7 +419,7 @@ describe("HotPage", () => {
         month: undefined,
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
 
@@ -436,7 +436,7 @@ describe("HotPage", () => {
         month: undefined,
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
 
@@ -455,7 +455,7 @@ describe("HotPage", () => {
         month: undefined,
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
 
@@ -473,7 +473,7 @@ describe("HotPage", () => {
         month: undefined,
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
   });
@@ -498,7 +498,7 @@ describe("HotPage", () => {
         month: undefined,
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
 
@@ -515,7 +515,7 @@ describe("HotPage", () => {
         month: undefined,
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
 
@@ -533,7 +533,7 @@ describe("HotPage", () => {
         month: undefined,
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
   });
@@ -562,7 +562,7 @@ describe("HotPage", () => {
         month: undefined,
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
 
@@ -584,7 +584,7 @@ describe("HotPage", () => {
         month: undefined,
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
   });
@@ -609,7 +609,7 @@ describe("HotPage", () => {
         month: expect.stringMatching(/^\d{4}-\d{2}$/),
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
 
@@ -627,7 +627,7 @@ describe("HotPage", () => {
         month: "2026-04",
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
   });
@@ -652,7 +652,7 @@ describe("HotPage", () => {
         month: undefined,
         year: expect.stringMatching(/^\d{4}$/),
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
 
@@ -670,7 +670,7 @@ describe("HotPage", () => {
         month: undefined,
         year: "2025",
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
   });
@@ -694,7 +694,7 @@ describe("HotPage", () => {
         month: undefined,
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
 
@@ -712,7 +712,7 @@ describe("HotPage", () => {
         month: undefined,
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
   });
@@ -837,7 +837,7 @@ describe("HotPage", () => {
         month: expect.stringMatching(/^\d{4}-\d{2}$/),
         year: undefined,
         page: 1,
-        page_size: 100,
+        page_size: 50,
       });
     });
 
@@ -854,7 +854,7 @@ describe("HotPage", () => {
       month: expect.stringMatching(/^\d{4}-\d{2}$/),
       year: undefined,
       page: 1,
-      page_size: 100,
+      page_size: 50,
     });
   });
 
@@ -933,7 +933,7 @@ describe("HotPage", () => {
       month: undefined,
       year: undefined,
       page: 1,
-      page_size: 100,
+      page_size: 50,
     });
     expect(await screen.findByRole("heading", { level: 3, name: "头脑特工队 2" })).toBeInTheDocument();
     expect(screen.queryByTestId("hot-media-grid-skeleton")).not.toBeInTheDocument();

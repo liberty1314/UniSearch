@@ -29,6 +29,11 @@ var (
 // searchResultCacheSchemaVersion 用于隔离搜索结果结构变更前后的缓存。
 const searchResultCacheSchemaVersion = "v2"
 
+var searchResultExtWhitelist = []string{
+	"sidhub_base_url",
+	"title_en",
+}
+
 // 初始化预计算的哈希值
 func init() {
 	// 预计算空列表的哈希值
@@ -54,8 +59,10 @@ func init() {
 // 使用 SHA256 哈希算法生成查询字符串的哈希值
 // 返回格式: tg:search:{query_hash}
 // 注意：此函数签名已更改以符合 Redis 缓存迁移规范
-func GenerateTGCacheKey(query string) string {
-	hash := sha256.Sum256([]byte(searchResultCacheSchemaVersion + ":" + query))
+func GenerateTGCacheKey(query string, channels []string) string {
+	normalizedQuery := strings.ToLower(strings.TrimSpace(query))
+	channelsHash := getChannelsHash(channels)
+	hash := sha256.Sum256([]byte(searchResultCacheSchemaVersion + ":" + normalizedQuery + ":" + channelsHash))
 	return fmt.Sprintf("tg:search:%x", hash)
 }
 
@@ -77,10 +84,11 @@ func GenerateTGCacheKeyLegacy(keyword string, channels []string) string {
 // GeneratePluginCacheKey 为插件搜索生成缓存键（新版本 - Redis 迁移）
 // 缓存键包含查询词与实际参与搜索的插件集合，避免启停后缓存污染
 // 返回格式: plugin:search:{query_and_plugins_hash}
-func GeneratePluginCacheKey(query string, pluginNames []string) string {
+func GeneratePluginCacheKey(query string, pluginNames []string, ext map[string]interface{}) string {
 	normalizedQuery := strings.ToLower(strings.TrimSpace(query))
 	pluginsHash := getPluginsHash(pluginNames)
-	hash := sha256.Sum256([]byte(searchResultCacheSchemaVersion + ":" + normalizedQuery + ":" + pluginsHash))
+	extSignature := buildWhitelistedExtSignature(ext)
+	hash := sha256.Sum256([]byte(searchResultCacheSchemaVersion + ":" + normalizedQuery + ":" + pluginsHash + ":" + extSignature))
 	return fmt.Sprintf("plugin:search:%x", hash)
 }
 
@@ -239,6 +247,33 @@ func calculateListHash(items []string) string {
 		h.Write([]byte(item))
 	}
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func buildWhitelistedExtSignature(ext map[string]interface{}) string {
+	if len(ext) == 0 {
+		return "default"
+	}
+
+	pairs := make([]string, 0, len(searchResultExtWhitelist))
+	for _, key := range searchResultExtWhitelist {
+		value, ok := ext[key]
+		if !ok {
+			continue
+		}
+
+		normalizedValue := strings.TrimSpace(fmt.Sprint(value))
+		if normalizedValue == "" {
+			continue
+		}
+		pairs = append(pairs, key+"="+normalizedValue)
+	}
+
+	if len(pairs) == 0 {
+		return "default"
+	}
+
+	sort.Strings(pairs)
+	return strings.Join(pairs, "&")
 }
 
 // GenerateCacheKeyV2 根据所有影响搜索结果的参数生成缓存键

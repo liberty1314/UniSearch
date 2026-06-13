@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"unisearch/config"
 	"unisearch/util/cache"
@@ -19,7 +20,7 @@ type SearchCache interface {
 
 type cacheBackend interface {
 	Get(ctx context.Context, key string, dest interface{}) error
-	Set(ctx context.Context, key string, value interface{}) error
+	SetWithTTL(ctx context.Context, key string, value interface{}, ttl time.Duration) error
 }
 
 type cacheStoreRequest struct {
@@ -172,7 +173,8 @@ func (c *redisSearchCache) storeWorker() {
 }
 
 func (c *redisSearchCache) writeToCache(request cacheStoreRequest) {
-	if err := c.cache.Set(context.Background(), request.key, request.value); err != nil {
+	cacheSettings := GetRuntimeCacheSettings()
+	if err := c.cache.SetWithTTL(context.Background(), request.key, request.value, time.Duration(cacheSettings.SearchCacheTTLSeconds)*time.Second); err != nil {
 		logger.Error(
 			"search_cache_store_failed",
 			logger.String("scope", request.scope),

@@ -14,6 +14,7 @@ func SetupRouter(deps RouterDeps) *gin.Engine {
 	SetSearchService(deps.SearchService)
 	SetAuthService(deps.AuthService)
 	SetSystemSettingsService(deps.SystemSettingsService)
+	SetHotRankingCacheAdminService(deps.HotRankingService)
 	SetTGChannelService(deps.TGChannelService)
 	SetTGChannelHealthService(deps.TGChannelHealthService)
 	SetAdminTagService(deps.AdminTagService)

@@ -107,6 +107,27 @@ describe('SystemInfoView', () => {
         };
       }
 
+      if (url === '/api/admin/system-settings/cache') {
+        return {
+          ok: true,
+          json: async () => ({
+            cache_enabled: true,
+            search_cache_ttl_seconds: 3600,
+            hot_ranking_cache_enabled: true,
+            hot_ranking_preload_enabled: true,
+            hot_ranking_preload_time: '00:00',
+            hot_ranking_preload_limit: 50,
+            hot_ranking_cache_ttl_seconds: 86400,
+            redis_connected: true,
+            last_preload_result: {
+              total: 56,
+              success: 56,
+              failed: 0,
+            },
+          }),
+        };
+      }
+
       return {
         ok: false,
         json: async () => ({}),
@@ -134,6 +155,9 @@ describe('SystemInfoView', () => {
     expect(screen.queryByText('chan-alpha')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '查看全部' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '编辑' })).not.toBeInTheDocument();
+    expect(screen.getByText('搜索缓存 TTL:')).toBeInTheDocument();
+    expect(screen.getByText('3600 秒')).toBeInTheDocument();
+    expect(screen.getByText('任务 56 / 成功 56 / 失败 0')).toBeInTheDocument();
     expect(container.innerHTML).toContain('dark:border-cyan-300/[0.14]');
     expect(container.innerHTML).toContain('dark:bg-slate-950/[0.48]');
 

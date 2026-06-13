@@ -17,8 +17,8 @@ type fakeHotRankingRefreshService struct {
 	errors map[string]error
 }
 
-func (f *fakeHotRankingRefreshService) RefreshHotRankings(_ context.Context, period model.HotRankingPeriod, category model.HotRankingCategory) (model.HotRankingResponse, error) {
-	key := fmt.Sprintf("%s:%s", period, category)
+func (f *fakeHotRankingRefreshService) GetHotRankings(_ context.Context, query model.HotRankingQuery) (model.HotRankingResponse, error) {
+	key := fmt.Sprintf("%s:%s:%s:%s:%d", query.Mode, query.Period, query.Category, query.SortBy, query.PageSize)
 	f.mu.Lock()
 	f.calls = append(f.calls, key)
 	f.mu.Unlock()
@@ -26,9 +26,10 @@ func (f *fakeHotRankingRefreshService) RefreshHotRankings(_ context.Context, per
 		return model.HotRankingResponse{}, err
 	}
 	return model.HotRankingResponse{
-		Period: period,
+		Mode:   query.Mode,
+		Period: query.Period,
 		Sections: []model.HotRankingSection{
-			{Category: category},
+			{Category: query.Category},
 		},
 	}, nil
 }
@@ -66,7 +67,8 @@ func TestHotRankingPreloaderWarmAllRefreshesAllCombinations(t *testing.T) {
 	cache := &fakeHotRankingCacheForPreloader{}
 	preloader := NewHotRankingPreloaderWithCache(refreshService, cache, HotRankingPreloaderConfig{
 		Enabled:     true,
-		DailyTime:   "10:00",
+		DailyTime:   "00:00",
+		Limit:       50,
 		Timeout:     2 * time.Second,
 		Concurrency: 3,
 		Location:    time.FixedZone("CST", 8*3600),
@@ -74,35 +76,39 @@ func TestHotRankingPreloaderWarmAllRefreshesAllCombinations(t *testing.T) {
 
 	result := preloader.WarmAll(context.Background())
 
-	if result.Total != 24 {
-		t.Fatalf("expected 24 tasks, got %d", result.Total)
+	if result.Total != 56 {
+		t.Fatalf("expected 56 tasks, got %d", result.Total)
 	}
 
-	if result.Success != 24 || result.Failed != 0 {
+	if result.Success != 56 || result.Failed != 0 {
 		t.Fatalf("expected all warm tasks success, got success=%d failed=%d", result.Success, result.Failed)
 	}
 
-	if len(refreshService.calls) != 24 {
-		t.Fatalf("expected 24 refresh calls, got %d", len(refreshService.calls))
+	if len(refreshService.calls) != 56 {
+		t.Fatalf("expected 56 refresh calls, got %d", len(refreshService.calls))
 	}
 
-	if !containsRefreshCall(refreshService.calls, "day:all") {
+	if !containsRefreshCall(refreshService.calls, "trend:day:all:popularity.desc:50") {
 		t.Fatalf("expected aggregated all category to be preloaded, got calls=%v", refreshService.calls)
 	}
-	if len(cache.ClearCalls()) == 0 {
-		t.Fatalf("expected cache clear before preload refresh")
+	if !containsRefreshCall(refreshService.calls, "popular:year:anime:vote_average.desc:50") {
+		t.Fatalf("expected popular year anime vote_average task to be preloaded, got calls=%v", refreshService.calls)
+	}
+	if len(cache.ClearCalls()) != 1 {
+		t.Fatalf("expected cache clear once before preload refresh, got %d", len(cache.ClearCalls()))
 	}
 }
 
 func TestHotRankingPreloaderWarmAllContinuesWhenSingleRefreshFails(t *testing.T) {
 	refreshService := &fakeHotRankingRefreshService{
 		errors: map[string]error{
-			"day:movie": errors.New("tmdb failed"),
+			"trend:day:movie:popularity.desc:50": errors.New("tmdb failed"),
 		},
 	}
 	preloader := NewHotRankingPreloader(refreshService, HotRankingPreloaderConfig{
 		Enabled:     true,
-		DailyTime:   "10:00",
+		DailyTime:   "00:00",
+		Limit:       50,
 		Timeout:     2 * time.Second,
 		Concurrency: 2,
 		Location:    time.FixedZone("CST", 8*3600),
@@ -110,19 +116,19 @@ func TestHotRankingPreloaderWarmAllContinuesWhenSingleRefreshFails(t *testing.T)
 
 	result := preloader.WarmAll(context.Background())
 
-	if result.Total != 24 {
-		t.Fatalf("expected 24 tasks, got %d", result.Total)
+	if result.Total != 56 {
+		t.Fatalf("expected 56 tasks, got %d", result.Total)
 	}
 
-	if result.Success != 22 || result.Failed != 2 {
-		t.Fatalf("expected two failures for duplicated day/movie refresh, got success=%d failed=%d", result.Success, result.Failed)
+	if result.Success != 55 || result.Failed != 1 {
+		t.Fatalf("expected one failure for failed day/movie refresh, got success=%d failed=%d", result.Success, result.Failed)
 	}
 
-	if len(result.Errors) != 2 {
-		t.Fatalf("expected two error details, got %d", len(result.Errors))
+	if len(result.Errors) != 1 {
+		t.Fatalf("expected one error detail, got %d", len(result.Errors))
 	}
 
-	if len(refreshService.calls) != 24 {
+	if len(refreshService.calls) != 56 {
 		t.Fatalf("expected warm all to continue after failure, got %d calls", len(refreshService.calls))
 	}
 }
@@ -166,5 +172,17 @@ func TestHotRankingPreloaderNextRunUsesNextLocalSchedule(t *testing.T) {
 	expected = time.Date(2026, 5, 24, 10, 0, 0, 0, location)
 	if !nextRun.Equal(expected) {
 		t.Fatalf("expected next day run %v, got %v", expected, nextRun)
+	}
+}
+
+func TestNormalizeHotRankingPreloaderConfigUsesNewDefaults(t *testing.T) {
+	config := normalizeHotRankingPreloaderConfig(HotRankingPreloaderConfig{})
+
+	if config.DailyTime != "00:00" {
+		t.Fatalf("expected default daily time 00:00, got %q", config.DailyTime)
+	}
+
+	if config.Limit != 50 {
+		t.Fatalf("expected default limit 50, got %d", config.Limit)
 	}
 }

@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { SystemSettingsService } from '@/services/systemSettingsService';
+import { SystemSettingsService, type CacheSettingsResponse } from '@/services/systemSettingsService';
 import { useAuthStore } from '@/stores/authStore';
 import { getErrorDataError, getErrorMessage } from '@/lib/error';
 import { resolvePublicSiteUrl } from '@/lib/publicSiteConfig';
+import { DEFAULT_CACHE_SETTINGS, normalizeCacheSettings } from '@/lib/systemSettingsCacheOptions';
 
 export type SavingState = 'auth' | 'login' | 'signup' | 'resource_detail' | 'display' | null;
 export type TMDBConfigSource = 'secret_manager' | 'env_fallback' | 'unconfigured';
@@ -19,10 +20,14 @@ export const useSystemSettingsController = () => {
   const [publicSiteUrl, setPublicSiteUrl] = useState<string>(resolvePublicSiteUrl());
   const [tmdbReadAccessToken, setTMDBReadAccessToken] = useState<string>('');
   const [tmdbCurrentTokenPreview, setTMDBCurrentTokenPreview] = useState<string>('');
+  const [cacheSettings, setCacheSettings] = useState<CacheSettingsResponse>(DEFAULT_CACHE_SETTINGS);
   
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<SavingState>(null);
   const [isSavingTMDB, setIsSavingTMDB] = useState<boolean>(false);
+  const [isSavingCache, setIsSavingCache] = useState<boolean>(false);
+  const [isTriggeringHotPreload, setIsTriggeringHotPreload] = useState<boolean>(false);
+  const [isClearingHotCache, setIsClearingHotCache] = useState<boolean>(false);
   
   // 原始值（用于错误恢复）
   const [originalValues, setOriginalValues] = useState({
@@ -55,6 +60,9 @@ export const useSystemSettingsController = () => {
 
       const tmdbSettings = await SystemSettingsService.getTMDBSettings(token);
       setTMDBCurrentTokenPreview(tmdbSettings.read_access_token ?? '');
+
+      const latestCacheSettings = await SystemSettingsService.getCacheSettings(token);
+      setCacheSettings(normalizeCacheSettings(latestCacheSettings));
     } catch (error) {
       console.error('加载系统设置失败:', error);
       toast.error('加载系统设置失败：' + (getErrorDataError(error) || getErrorMessage(error)));
@@ -200,6 +208,81 @@ export const useSystemSettingsController = () => {
     }
   };
 
+  const updateCacheField = useCallback(<K extends keyof CacheSettingsResponse>(field: K, value: CacheSettingsResponse[K]) => {
+    setCacheSettings((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  }, []);
+
+  const reloadCacheSettings = useCallback(async () => {
+    if (!token) return;
+
+    const latest = await SystemSettingsService.getCacheSettings(token);
+    setCacheSettings(normalizeCacheSettings(latest));
+  }, [token]);
+
+  const handleSaveCacheSettings = async () => {
+    if (!token) return;
+
+    setIsSavingCache(true);
+    try {
+      const nextSettings = await SystemSettingsService.updateCacheSettings(token, {
+        cache_enabled: cacheSettings.cache_enabled,
+        search_cache_ttl_seconds: cacheSettings.search_cache_ttl_seconds,
+        cache_write_queue_size: cacheSettings.cache_write_queue_size,
+        cache_write_workers: cacheSettings.cache_write_workers,
+        hot_ranking_cache_enabled: cacheSettings.hot_ranking_cache_enabled,
+        hot_ranking_preload_enabled: cacheSettings.hot_ranking_preload_enabled,
+        hot_ranking_preload_time: cacheSettings.hot_ranking_preload_time,
+        hot_ranking_preload_limit: cacheSettings.hot_ranking_preload_limit,
+        hot_ranking_cache_ttl_seconds: cacheSettings.hot_ranking_cache_ttl_seconds,
+        hot_ranking_preload_concurrency: cacheSettings.hot_ranking_preload_concurrency,
+        hot_ranking_preload_timeout_seconds: cacheSettings.hot_ranking_preload_timeout_seconds,
+      });
+      setCacheSettings(normalizeCacheSettings(nextSettings));
+      toast.success('缓存配置已更新');
+    } catch (error) {
+      console.error('保存缓存配置失败:', error);
+      toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
+      void reloadCacheSettings();
+    } finally {
+      setIsSavingCache(false);
+    }
+  };
+
+  const handleTriggerHotRankingPreload = async () => {
+    if (!token) return;
+
+    setIsTriggeringHotPreload(true);
+    try {
+      const result = await SystemSettingsService.triggerHotRankingPreload(token);
+      await reloadCacheSettings();
+      toast.success(`热门榜单预热完成：成功 ${result.result.success}/${result.result.total}`);
+    } catch (error) {
+      console.error('立即预热热门榜单失败:', error);
+      toast.error('预热失败：' + (getErrorDataError(error) || getErrorMessage(error)));
+    } finally {
+      setIsTriggeringHotPreload(false);
+    }
+  };
+
+  const handleClearHotRankingCache = async () => {
+    if (!token) return;
+
+    setIsClearingHotCache(true);
+    try {
+      await SystemSettingsService.clearHotRankingCache(token);
+      await reloadCacheSettings();
+      toast.success('热门榜单缓存已清理');
+    } catch (error) {
+      console.error('清理热门榜单缓存失败:', error);
+      toast.error('清理失败：' + (getErrorDataError(error) || getErrorMessage(error)));
+    } finally {
+      setIsClearingHotCache(false);
+    }
+  };
+
   return {
     state: {
       enableUserAuth,
@@ -209,19 +292,27 @@ export const useSystemSettingsController = () => {
       publicSiteUrl,
       tmdbReadAccessToken,
       tmdbCurrentTokenPreview,
+      cacheSettings,
       isLoading,
       isSaving,
       isSavingTMDB,
+      isSavingCache,
+      isTriggeringHotPreload,
+      isClearingHotCache,
     },
     actions: {
       setPublicSiteUrl,
       setTMDBReadAccessToken,
+      updateCacheField,
       handleToggleAuth,
       handleToggleLogin,
       handleToggleSignup,
       handleToggleResourceDetailPage,
       handleSaveDisplayConfig,
       handleSaveTMDBConfig,
+      handleSaveCacheSettings,
+      handleTriggerHotRankingPreload,
+      handleClearHotRankingCache,
     }
   };
 };

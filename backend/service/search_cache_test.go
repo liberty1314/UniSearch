@@ -13,6 +13,7 @@ type fakeCacheBackend struct {
 	getErr     error
 	setStarted chan struct{}
 	releaseSet chan struct{}
+	lastTTL    time.Duration
 
 	mu       sync.Mutex
 	setCalls int
@@ -22,9 +23,10 @@ func (f *fakeCacheBackend) Get(_ context.Context, _ string, _ interface{}) error
 	return f.getErr
 }
 
-func (f *fakeCacheBackend) Set(_ context.Context, _ string, _ interface{}) error {
+func (f *fakeCacheBackend) SetWithTTL(_ context.Context, _ string, _ interface{}, ttl time.Duration) error {
 	f.mu.Lock()
 	f.setCalls++
+	f.lastTTL = ttl
 	f.mu.Unlock()
 
 	if f.setStarted != nil {
@@ -47,9 +49,16 @@ func (f *fakeCacheBackend) Calls() int {
 	return f.setCalls
 }
 
+func (f *fakeCacheBackend) TTL() time.Duration {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.lastTTL
+}
+
 func TestRedisSearchCacheStoreUsesAsyncWorkers(t *testing.T) {
 	oldConfig := config.AppConfig
 	config.AppConfig = &config.Config{CacheEnabled: true}
+	SetGlobalCacheSettingsService(nil)
 	defer func() {
 		config.AppConfig = oldConfig
 	}()
@@ -89,6 +98,7 @@ func TestRedisSearchCacheStoreUsesAsyncWorkers(t *testing.T) {
 func TestRedisSearchCacheStoreDropsWhenQueueFull(t *testing.T) {
 	oldConfig := config.AppConfig
 	config.AppConfig = &config.Config{CacheEnabled: true}
+	SetGlobalCacheSettingsService(nil)
 	defer func() {
 		config.AppConfig = oldConfig
 	}()
@@ -134,6 +144,7 @@ func TestRedisSearchCacheStoreDropsWhenQueueFull(t *testing.T) {
 func TestRedisSearchCacheCloseDrainsQueuedWrites(t *testing.T) {
 	oldConfig := config.AppConfig
 	config.AppConfig = &config.Config{CacheEnabled: true}
+	SetGlobalCacheSettingsService(nil)
 	defer func() {
 		config.AppConfig = oldConfig
 	}()
@@ -193,5 +204,35 @@ func closeSearchCacheForTest(t *testing.T, searchCache *redisSearchCache) {
 	defer cancel()
 	if err := searchCache.Close(ctx); err != nil {
 		t.Fatalf("关闭测试缓存失败：%v", err)
+	}
+}
+
+func TestRedisSearchCacheStoreUsesRuntimeTTL(t *testing.T) {
+	oldConfig := config.AppConfig
+	defer func() {
+		config.AppConfig = oldConfig
+		SetGlobalCacheSettingsService(nil)
+	}()
+
+	config.AppConfig = &config.Config{CacheEnabled: true}
+	settingsService := NewSystemSettingsService(newSystemSettingsTestDB(t))
+	searchTTL := 5400
+	if _, err := settingsService.UpdateCacheSettings(CacheSettingsUpdateInput{
+		SearchCacheTTLSeconds: &searchTTL,
+	}); err != nil {
+		t.Fatalf("update cache settings: %v", err)
+	}
+	SetGlobalCacheSettingsService(settingsService)
+
+	backend := &fakeCacheBackend{}
+	searchCache := &redisSearchCache{
+		cache:   backend,
+		metrics: newSearchMetricsRecorder(),
+	}
+
+	searchCache.Store("plugin", "k1", "仙逆", []string{"value"})
+
+	if backend.TTL() != 90*time.Minute {
+		t.Fatalf("expected runtime ttl 90m, got %v", backend.TTL())
 	}
 }

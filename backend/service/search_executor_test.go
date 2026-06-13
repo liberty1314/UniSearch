@@ -142,7 +142,7 @@ func TestPluginSearchExecutorIsolatesRequestStatePerPlugin(t *testing.T) {
 			t.Fatalf("expected %s search to observe its own keyword, got %s", outcome.keyword, result.Title)
 		}
 
-		expectedCacheKey := cache.GeneratePluginCacheKey(outcome.keyword, []string{statefulPlugin.Name()})
+		expectedCacheKey := cache.GeneratePluginCacheKey(outcome.keyword, []string{statefulPlugin.Name()}, nil)
 		if result.Content != expectedCacheKey {
 			t.Fatalf("expected %s search to observe cache key %s, got %s", outcome.keyword, expectedCacheKey, result.Content)
 		}

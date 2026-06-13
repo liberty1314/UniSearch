@@ -116,7 +116,8 @@ func startHotRankingPreloader(ctx context.Context, app *App) {
 		log.Println("热门榜单预热器未启动：热门榜单服务不可用")
 		return
 	}
-	if !config.AppConfig.HotRankingPreloadEnabled {
+	cacheSettings := service.GetRuntimeCacheSettings()
+	if !cacheSettings.HotRankingCacheEnabled || !cacheSettings.HotRankingPreloadEnabled {
 		log.Println("热门榜单预热器已禁用")
 		return
 	}
@@ -125,26 +126,42 @@ func startHotRankingPreloader(ctx context.Context, app *App) {
 		return
 	}
 
+	buildPreloaderConfig := func() service.HotRankingPreloaderConfig {
+		runtimeSettings := service.GetRuntimeCacheSettings()
+		return service.HotRankingPreloaderConfig{
+			Enabled:       runtimeSettings.HotRankingCacheEnabled && runtimeSettings.HotRankingPreloadEnabled,
+			DailyTime:     runtimeSettings.HotRankingPreloadTime,
+			Limit:         runtimeSettings.HotRankingPreloadLimit,
+			Timeout:       time.Duration(runtimeSettings.HotRankingPreloadTimeoutSeconds) * time.Second,
+			Concurrency:   runtimeSettings.HotRankingPreloadConcurrency,
+			ResultHandler: app.HotRanking.RecordPreloadResult,
+		}
+	}
+
 	preloader := service.NewHotRankingPreloader(app.HotRanking, service.HotRankingPreloaderConfig{
-		Enabled:     config.AppConfig.HotRankingPreloadEnabled,
-		DailyTime:   config.AppConfig.HotRankingPreloadTime,
-		Timeout:     config.AppConfig.HotRankingPreloadTimeout,
-		Concurrency: config.AppConfig.HotRankingPreloadConcurrency,
+		Enabled:        cacheSettings.HotRankingPreloadEnabled,
+		DailyTime:      cacheSettings.HotRankingPreloadTime,
+		Limit:          cacheSettings.HotRankingPreloadLimit,
+		Timeout:        time.Duration(cacheSettings.HotRankingPreloadTimeoutSeconds) * time.Second,
+		Concurrency:    cacheSettings.HotRankingPreloadConcurrency,
+		ResultHandler:  app.HotRanking.RecordPreloadResult,
+		ConfigResolver: buildPreloaderConfig,
 	})
 
 	go func() {
 		result := preloader.WarmAll(ctx)
+		app.HotRanking.RecordPreloadResult(result)
 		log.Printf("热门榜单启动预热完成，总任务=%d，成功=%d，失败=%d", result.Total, result.Success, result.Failed)
 		for _, item := range result.Errors {
-			log.Printf("热门榜单启动预热失败: period=%s category=%s err=%v", item.Period, item.Category, item.Err)
+			log.Printf("热门榜单启动预热失败: mode=%s period=%s category=%s sort_by=%s err=%v", item.Mode, item.Period, item.Category, item.SortBy, item.Err)
 		}
 	}()
 
 	preloader.Start(ctx)
 	log.Printf("热门榜单预热器已启动：每日刷新时间=%s，并发=%d，超时=%v",
-		config.AppConfig.HotRankingPreloadTime,
-		config.AppConfig.HotRankingPreloadConcurrency,
-		config.AppConfig.HotRankingPreloadTimeout,
+		cacheSettings.HotRankingPreloadTime,
+		cacheSettings.HotRankingPreloadConcurrency,
+		time.Duration(cacheSettings.HotRankingPreloadTimeoutSeconds)*time.Second,
 	)
 }
 

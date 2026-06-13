@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strings"
+	"time"
 	"unisearch/config"
 	"unisearch/service"
 
@@ -10,10 +11,22 @@ import (
 )
 
 var systemSettingsService *service.SystemSettingsService
+var hotRankingCacheAdminService hotRankingCacheAdminController
+
+type hotRankingCacheAdminController interface {
+	WarmCache(settingsService *service.SystemSettingsService, cfg service.HotRankingPreloaderConfig) service.HotRankingPreloadResult
+	ClearCache(settingsService *service.SystemSettingsService) error
+	HasCacheBackend() bool
+	GetLastPreloadSnapshot() *service.HotRankingPreloadSnapshot
+}
 
 // SetSystemSettingsService 设置系统设置服务
 func SetSystemSettingsService(service *service.SystemSettingsService) {
 	systemSettingsService = service
+}
+
+func SetHotRankingCacheAdminService(adminService hotRankingCacheAdminController) {
+	hotRankingCacheAdminService = adminService
 }
 
 // GetSystemSettingsHandler 获取系统设置（公开接口）
@@ -208,5 +221,168 @@ func UpdateTMDBAdminSettingsHandler(c *gin.Context) {
 		"updated_at":        settings.UpdatedAt,
 		"source":            settings.Source,
 		"read_access_token": settings.ReadAccessToken,
+	})
+}
+
+func GetCacheSettingsHandler(c *gin.Context) {
+	if systemSettingsService == nil {
+		writeCacheAdminError(c, http.StatusInternalServerError, "系统设置服务未初始化")
+		return
+	}
+
+	settings, err := systemSettingsService.GetCacheSettings()
+	if err != nil {
+		writeCacheAdminError(c, http.StatusInternalServerError, "获取缓存配置失败："+err.Error())
+		return
+	}
+
+	response := buildCacheSettingsResponse(settings)
+	c.JSON(http.StatusOK, response)
+}
+
+func UpdateCacheSettingsHandler(c *gin.Context) {
+	if systemSettingsService == nil {
+		writeCacheAdminError(c, http.StatusInternalServerError, "系统设置服务未初始化")
+		return
+	}
+
+	var req struct {
+		CacheEnabled                    *bool   `json:"cache_enabled"`
+		SearchCacheTTLSeconds           *int    `json:"search_cache_ttl_seconds"`
+		CacheWriteQueueSize             *int    `json:"cache_write_queue_size"`
+		CacheWriteWorkers               *int    `json:"cache_write_workers"`
+		HotRankingCacheEnabled          *bool   `json:"hot_ranking_cache_enabled"`
+		HotRankingPreloadEnabled        *bool   `json:"hot_ranking_preload_enabled"`
+		HotRankingPreloadTime           *string `json:"hot_ranking_preload_time"`
+		HotRankingPreloadLimit          *int    `json:"hot_ranking_preload_limit"`
+		HotRankingCacheTTLSeconds       *int    `json:"hot_ranking_cache_ttl_seconds"`
+		HotRankingPreloadConcurrency    *int    `json:"hot_ranking_preload_concurrency"`
+		HotRankingPreloadTimeoutSeconds *int    `json:"hot_ranking_preload_timeout_seconds"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		writeCacheAdminError(c, http.StatusBadRequest, "请求参数错误："+err.Error())
+		return
+	}
+
+	if req.CacheEnabled == nil &&
+		req.SearchCacheTTLSeconds == nil &&
+		req.CacheWriteQueueSize == nil &&
+		req.CacheWriteWorkers == nil &&
+		req.HotRankingCacheEnabled == nil &&
+		req.HotRankingPreloadEnabled == nil &&
+		req.HotRankingPreloadTime == nil &&
+		req.HotRankingPreloadLimit == nil &&
+		req.HotRankingCacheTTLSeconds == nil &&
+		req.HotRankingPreloadConcurrency == nil &&
+		req.HotRankingPreloadTimeoutSeconds == nil {
+		writeCacheAdminError(c, http.StatusBadRequest, "请求参数错误：至少需要提供一个缓存设置字段")
+		return
+	}
+
+	settings, err := systemSettingsService.UpdateCacheSettings(service.CacheSettingsUpdateInput{
+		CacheEnabled:                    req.CacheEnabled,
+		SearchCacheTTLSeconds:           req.SearchCacheTTLSeconds,
+		CacheWriteQueueSize:             req.CacheWriteQueueSize,
+		CacheWriteWorkers:               req.CacheWriteWorkers,
+		HotRankingCacheEnabled:          req.HotRankingCacheEnabled,
+		HotRankingPreloadEnabled:        req.HotRankingPreloadEnabled,
+		HotRankingPreloadTime:           req.HotRankingPreloadTime,
+		HotRankingPreloadLimit:          req.HotRankingPreloadLimit,
+		HotRankingCacheTTLSeconds:       req.HotRankingCacheTTLSeconds,
+		HotRankingPreloadConcurrency:    req.HotRankingPreloadConcurrency,
+		HotRankingPreloadTimeoutSeconds: req.HotRankingPreloadTimeoutSeconds,
+	})
+	if err != nil {
+		writeCacheAdminError(c, http.StatusBadRequest, "更新缓存配置失败："+err.Error())
+		return
+	}
+
+	response := buildCacheSettingsResponse(settings)
+	response["message"] = "缓存配置已更新"
+	c.JSON(http.StatusOK, response)
+}
+
+func TriggerHotRankingPreloadHandler(c *gin.Context) {
+	if systemSettingsService == nil {
+		writeCacheAdminError(c, http.StatusInternalServerError, "系统设置服务未初始化")
+		return
+	}
+	if hotRankingCacheAdminService == nil {
+		writeCacheAdminError(c, http.StatusInternalServerError, "热门榜单缓存服务未初始化")
+		return
+	}
+
+	cacheSettings, err := systemSettingsService.GetCacheSettings()
+	if err != nil {
+		writeCacheAdminError(c, http.StatusInternalServerError, "获取缓存配置失败："+err.Error())
+		return
+	}
+
+	result := hotRankingCacheAdminService.WarmCache(systemSettingsService, service.HotRankingPreloaderConfig{
+		Enabled:     true,
+		DailyTime:   cacheSettings.HotRankingPreloadTime,
+		Timeout:     time.Duration(cacheSettings.HotRankingPreloadTimeoutSeconds) * time.Second,
+		Concurrency: cacheSettings.HotRankingPreloadConcurrency,
+	})
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "热门榜单预热已完成",
+		"result":  result,
+	})
+}
+
+func ClearHotRankingCacheHandler(c *gin.Context) {
+	if systemSettingsService == nil {
+		writeCacheAdminError(c, http.StatusInternalServerError, "系统设置服务未初始化")
+		return
+	}
+	if hotRankingCacheAdminService == nil {
+		writeCacheAdminError(c, http.StatusInternalServerError, "热门榜单缓存服务未初始化")
+		return
+	}
+
+	if err := hotRankingCacheAdminService.ClearCache(systemSettingsService); err != nil {
+		writeCacheAdminError(c, http.StatusInternalServerError, "清理热门榜单缓存失败："+err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "热门榜单缓存已清理",
+	})
+}
+
+func buildCacheSettingsResponse(settings *service.CacheSettings) gin.H {
+	response := gin.H{
+		"cache_enabled":                       settings.CacheEnabled,
+		"search_cache_ttl_seconds":            settings.SearchCacheTTLSeconds,
+		"cache_write_queue_size":              settings.CacheWriteQueueSize,
+		"cache_write_workers":                 settings.CacheWriteWorkers,
+		"hot_ranking_cache_enabled":           settings.HotRankingCacheEnabled,
+		"hot_ranking_preload_enabled":         settings.HotRankingPreloadEnabled,
+		"hot_ranking_preload_time":            settings.HotRankingPreloadTime,
+		"hot_ranking_preload_limit":           settings.HotRankingPreloadLimit,
+		"hot_ranking_cache_ttl_seconds":       settings.HotRankingCacheTTLSeconds,
+		"hot_ranking_preload_concurrency":     settings.HotRankingPreloadConcurrency,
+		"hot_ranking_preload_timeout_seconds": settings.HotRankingPreloadTimeoutSeconds,
+		"config_source":                       "database",
+		"cache_setting_options":               systemSettingsService.GetCacheSettingOptions(),
+		"redis_connected":                     hotRankingCacheAdminService != nil && hotRankingCacheAdminService.HasCacheBackend(),
+	}
+
+	if hotRankingCacheAdminService != nil {
+		if snapshot := hotRankingCacheAdminService.GetLastPreloadSnapshot(); snapshot != nil {
+			response["last_preload_result"] = snapshot.Result
+			response["last_preload_at"] = snapshot.UpdatedAt
+			response["last_preload_status"] = snapshot.Status
+		}
+	}
+
+	return response
+}
+
+func writeCacheAdminError(c *gin.Context, statusCode int, message string) {
+	c.JSON(statusCode, gin.H{
+		"error": message,
 	})
 }

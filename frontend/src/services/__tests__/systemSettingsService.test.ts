@@ -1,15 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SystemSettingsService } from '@/services/systemSettingsService';
 
-const { getMock, putMock } = vi.hoisted(() => ({
+const { getMock, putMock, postMock, deleteMock } = vi.hoisted(() => ({
   getMock: vi.fn(),
   putMock: vi.fn(),
+  postMock: vi.fn(),
+  deleteMock: vi.fn(),
 }));
 
 vi.mock('@/lib/api', () => ({
   apiClient: {
     get: getMock,
     put: putMock,
+    post: postMock,
+    delete: deleteMock,
   },
 }));
 
@@ -17,6 +21,8 @@ describe('SystemSettingsService TMDB admin api', () => {
   beforeEach(() => {
     getMock.mockReset();
     putMock.mockReset();
+    postMock.mockReset();
+    deleteMock.mockReset();
   });
 
   it('获取 TMDB 管理配置状态', async () => {
@@ -47,5 +53,95 @@ describe('SystemSettingsService TMDB admin api', () => {
       tmdb_read_access_token: 'new-token',
     });
     expect(result.source).toBe('secret_manager');
+  });
+
+  it('获取缓存配置', async () => {
+    getMock.mockResolvedValue({
+      cache_enabled: true,
+      search_cache_ttl_seconds: 3600,
+      cache_write_queue_size: 256,
+      cache_write_workers: 4,
+      hot_ranking_cache_enabled: true,
+      hot_ranking_preload_enabled: true,
+      hot_ranking_preload_time: '00:00',
+      hot_ranking_preload_limit: 50,
+      hot_ranking_cache_ttl_seconds: 86400,
+      hot_ranking_preload_concurrency: 2,
+      hot_ranking_preload_timeout_seconds: 30,
+      config_source: 'database',
+      cache_setting_options: {
+        search_cache_ttl_seconds: [{ value: '3600', label: '1 小时（默认）' }],
+        cache_write_queue_size: [{ value: '256', label: '256（默认）' }],
+        cache_write_workers: [{ value: '4', label: '4（默认）' }],
+        hot_ranking_preload_time: [{ value: '00:00', label: '00:00（默认）' }],
+        hot_ranking_preload_limit: [{ value: '50', label: '50 条（默认）' }],
+        hot_ranking_cache_ttl_seconds: [{ value: '86400', label: '24 小时（默认）' }],
+        hot_ranking_preload_concurrency: [{ value: '2', label: '2（默认）' }],
+        hot_ranking_preload_timeout_seconds: [{ value: '30', label: '30 秒（默认）' }],
+      },
+      redis_connected: true,
+    });
+
+    const result = await SystemSettingsService.getCacheSettings('token');
+
+    expect(getMock).toHaveBeenCalledWith('/admin/system-settings/cache');
+    expect(result.hot_ranking_preload_limit).toBe(50);
+    expect(result.cache_setting_options?.search_cache_ttl_seconds[0]?.label).toBe('1 小时（默认）');
+  });
+
+  it('更新缓存配置', async () => {
+    putMock.mockResolvedValue({
+      cache_enabled: true,
+      search_cache_ttl_seconds: 5400,
+      cache_write_queue_size: 512,
+      cache_write_workers: 4,
+      hot_ranking_cache_enabled: true,
+      hot_ranking_preload_enabled: true,
+      hot_ranking_preload_time: '01:00',
+      hot_ranking_preload_limit: 60,
+      hot_ranking_cache_ttl_seconds: 86400,
+      hot_ranking_preload_concurrency: 2,
+      hot_ranking_preload_timeout_seconds: 30,
+      config_source: 'database',
+      redis_connected: true,
+    });
+
+    const result = await SystemSettingsService.updateCacheSettings('token', {
+      search_cache_ttl_seconds: 5400,
+      hot_ranking_preload_time: '01:00',
+    });
+
+    expect(putMock).toHaveBeenCalledWith('/admin/system-settings/cache', {
+      search_cache_ttl_seconds: 5400,
+      hot_ranking_preload_time: '01:00',
+    });
+    expect(result.search_cache_ttl_seconds).toBe(5400);
+  });
+
+  it('触发热门榜单立即预热', async () => {
+    postMock.mockResolvedValue({
+      message: '热门榜单预热已完成',
+      result: {
+        total: 56,
+        success: 56,
+        failed: 0,
+      },
+    });
+
+    const result = await SystemSettingsService.triggerHotRankingPreload('token');
+
+    expect(postMock).toHaveBeenCalledWith('/admin/system-settings/cache/hot-ranking/preload');
+    expect(result.result.total).toBe(56);
+  });
+
+  it('清理热门榜单缓存', async () => {
+    deleteMock.mockResolvedValue({
+      message: '热门榜单缓存已清理',
+    });
+
+    const result = await SystemSettingsService.clearHotRankingCache('token');
+
+    expect(deleteMock).toHaveBeenCalledWith('/admin/system-settings/cache/hot-ranking');
+    expect(result.message).toBe('热门榜单缓存已清理');
   });
 });
