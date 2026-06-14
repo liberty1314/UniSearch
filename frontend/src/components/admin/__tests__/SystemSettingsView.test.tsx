@@ -3,6 +3,26 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SystemSettingsView } from '../SystemSettingsView';
+import type { CacheSettingsResponse } from '@/services/systemSettingsService';
+
+const createCacheSettings = (
+  overrides: Partial<CacheSettingsResponse> = {},
+): CacheSettingsResponse => ({
+  cache_enabled: true,
+  search_cache_ttl_seconds: 3600,
+  cache_write_queue_size: 256,
+  cache_write_workers: 4,
+  hot_ranking_cache_enabled: true,
+  hot_ranking_preload_enabled: true,
+  hot_ranking_preload_time: '00:00',
+  hot_ranking_preload_limit: 50,
+  hot_ranking_cache_ttl_seconds: 86400,
+  hot_ranking_preload_concurrency: 2,
+  hot_ranking_preload_timeout_seconds: 30,
+  config_source: 'database',
+  redis_connected: true,
+  ...overrides,
+});
 
 const controllerState = {
   enableUserAuth: true,
@@ -12,22 +32,7 @@ const controllerState = {
   publicSiteUrl: '',
   tmdbReadAccessToken: '',
   tmdbCurrentTokenPreview: 'tmdb-token-preview',
-  cacheSettings: {
-    cache_enabled: true,
-    search_cache_ttl_seconds: 3600,
-    cache_write_queue_size: 256,
-    cache_write_workers: 4,
-    hot_ranking_cache_enabled: true,
-    hot_ranking_preload_enabled: true,
-    hot_ranking_preload_time: '00:00',
-    hot_ranking_preload_limit: 50,
-    hot_ranking_cache_ttl_seconds: 86400,
-    hot_ranking_preload_concurrency: 2,
-    hot_ranking_preload_timeout_seconds: 30,
-    config_source: 'database' as const,
-    redis_connected: true,
-    cache_setting_options: undefined,
-  },
+  cacheSettings: createCacheSettings(),
   isLoading: false,
   isSaving: null,
   isSavingTMDB: false,
@@ -71,21 +76,7 @@ describe('SystemSettingsView TMDB section', () => {
     actions.setTMDBReadAccessToken.mockImplementation((value: string) => {
       controllerState.tmdbReadAccessToken = value;
     });
-    controllerState.cacheSettings = {
-      cache_enabled: true,
-      search_cache_ttl_seconds: 3600,
-      cache_write_queue_size: 256,
-      cache_write_workers: 4,
-      hot_ranking_cache_enabled: true,
-      hot_ranking_preload_enabled: true,
-      hot_ranking_preload_time: '00:00',
-      hot_ranking_preload_limit: 50,
-      hot_ranking_cache_ttl_seconds: 86400,
-      hot_ranking_preload_concurrency: 2,
-      hot_ranking_preload_timeout_seconds: 30,
-      config_source: 'database',
-      redis_connected: true,
-    };
+    controllerState.cacheSettings = createCacheSettings();
   });
 
   it('展示单输入框令牌配置并允许查看当前令牌', () => {
@@ -147,8 +138,7 @@ describe('SystemSettingsView TMDB section', () => {
   });
 
   it('优先展示后端返回的缓存下拉项', () => {
-    controllerState.cacheSettings = {
-      ...controllerState.cacheSettings,
+    controllerState.cacheSettings = createCacheSettings({
       search_cache_ttl_seconds: 5400,
       cache_setting_options: {
         search_cache_ttl_seconds: [{ value: '5400', label: '90 分钟（默认）' }],
@@ -160,7 +150,7 @@ describe('SystemSettingsView TMDB section', () => {
         hot_ranking_preload_concurrency: [{ value: '5', label: '5（默认）' }],
         hot_ranking_preload_timeout_seconds: [{ value: '75', label: '75 秒（默认）' }],
       },
-    };
+    });
 
     render(<SystemSettingsView />);
 

@@ -1,12 +1,12 @@
 # UniSearch
 
-一个高性能多源聚合网盘资源搜索平台，支持 40+ 搜索插件、多云盘平台覆盖、用户管理与 API Key 系统。使用 Go (Gin)、React、TypeScript 和 MySQL 构建。
+一个高性能多源聚合网盘资源搜索平台，默认启用 24 个搜索插件，支持多云盘平台覆盖、用户管理与 API Key 系统。使用 Go (Gin)、React、TypeScript 和 MySQL 构建。
 
 ## 功能特性
 
 ### 聚合搜索引擎
 
-- 40+ 搜索插件并发执行，覆盖主流网盘和资源站
+- 24 个默认搜索插件并发执行，覆盖主流网盘和资源站
 - 支持百度网盘、阿里云盘、夸克网盘、天翼云盘、迅雷网盘、115 网盘、中国移动云盘等
 - 异步插件系统：快速响应 + 后台持续聚合，搜索结果实时追加
 - 来源筛选：按云盘类型过滤搜索结果
@@ -58,7 +58,7 @@
 - MySQL 8.0 (GORM)
 - Redis 7 缓存
 - JWT 认证 + 刷新令牌
-- 插件化架构（40+ 内置插件）
+- 插件化架构（默认启用 24 个内置插件）
 - Nginx 反向代理（Docker 部署）
 - Supervisor 进程管理（Docker 部署）
 
@@ -310,9 +310,8 @@ AUTH_JWT_SECRET=请替换为随机密钥
 SECRET_MASTER_KEY=请替换为随机主密钥
 REFRESH_TOKEN_ENCRYPT_KEY=请替换为随机加密密钥
 CHANNELS=SharePanBaidu,tianyifc,yunpanxunlei,BaiduCloudDisk,shareAliyun,Aliyun_4K_Movies,ali_yppan,bdbdndn11,yunpanx,yp123pan,bsbdbfjfjff,txtyzy,peccxinpd,gotopan,PanjClub,baicaoZY,MCPH01,MCPH02,MCPH03,bdwpzhpd,ysxb48,jdjdn1111,yggpan,MCPH086,zaihuayun,Q66Share,ucwpzy,Quark_Movies,XiangxiuNBB,ydypzyfx,ucquark,xx123pan,yingshifenxiang123,zyfb123,tyypzhpd,tianyirigeng,cloudtianyi,hdhhd21,Lsp115,oneonefivewpfx,qixingzhenren,taoxgzy,Channel_Shares_115,tyysypzypd,vip115hot,wp123zy,yunpan139,yunpan189,yunpanuc,yydf_hzl,leoziyuan,Q_dongman,yoyokuakeduanju,TG654TG,QukanMovie,yeqingjie_GJG666,movielover8888_film3,Baidu_netdisk,D_wusun,FLMdongtianfudi,KaiPanshare,QQZYDAPP,rjyxfx,PikPak_Share_Channel,btzhi,newproductsourcing,duan_ju,QuarkFree,yunpanNB,kkdj001,xxzlzn,pxyunpanxunlei,jxwpzy,kuakedongman,xiangnikanj,solidsexydoll,guoman4K,zdqxm,kduanju,cilidianying,CBduanju,SharePanFilms,dzsgx,BooksRealm,Oscar_4Kmovies,douerpan,baidu_yppan,Q_jilupian,Netdisk_Movies,yunpanquark,ciliziyuanku,tgbokee,gokuapan,gimy115,WFYSFX03,tgsearchers6,sbsbsnsqq,kkxlzy,alyp_1,dianyingshare,WFYSFX02,cctv1211,liangxingzhinan,ammmziyuan,cili8888,jzmm_123pan,Q_dianying,domgmingapk,dianying4k,q_dianshiju,ucshare,godupan,peccxin,Movie888035,xlwpzy,zyywpzy,wydwpzy,gimy100,gimy115iso
-ENABLED_PLUGINS=labi,shandian,muou,wanou,hunhepan,pansearch,panta,susu,thepiratebay,xuexizhinan,ouge,erxiao,fox4k,clmao,cldi,libvio,yuhuage,u3c3,javdb,jutoushe,djgou,nyaa,xinjuc,aikanzy,quark4k,quarksoo,ash,zhizhen,duoduo,huban,jikepan,qupansou,panwiki,pan666,hdr4k,panyq,sidhub,kanjuba,52API
-PLUGIN_COUNT=39
-PLUGIN_52API_KEY=
+ENABLED_PLUGINS=labi,shandian,muou,wanou,hunhepan,pansearch,panta,susu,thepiratebay,ouge,erxiao,clmao,u3c3,javdb,jutoushe,nyaa,xinjuc,aikanzy,quark4k,quarksoo,huban,panwiki,panyq,sidhub
+PLUGIN_COUNT=24
 ```
 
 <details>
@@ -328,9 +327,8 @@ AUTH_JWT_SECRET=请替换为随机密钥
 SECRET_MASTER_KEY=请替换为随机主密钥
 REFRESH_TOKEN_ENCRYPT_KEY=请替换为随机加密密钥
 CHANNELS=SharePanBaidu,tianyifc,yunpanxunlei,BaiduCloudDisk,shareAliyun,Aliyun_4K_Movies,ali_yppan,bdbdndn11,yunpanx,yp123pan,bsbdbfjfjff,txtyzy,peccxinpd,gotopan,PanjClub,baicaoZY,MCPH01,MCPH02,MCPH03,bdwpzhpd,ysxb48,jdjdn1111,yggpan,MCPH086,zaihuayun,Q66Share,ucwpzy,Quark_Movies,XiangxiuNBB,ydypzyfx,ucquark,xx123pan,yingshifenxiang123,zyfb123,tyypzhpd,tianyirigeng,cloudtianyi,hdhhd21,Lsp115,oneonefivewpfx,qixingzhenren,taoxgzy,Channel_Shares_115,tyysypzypd,vip115hot,wp123zy,yunpan139,yunpan189,yunpanuc,yydf_hzl,leoziyuan,Q_dongman,yoyokuakeduanju,TG654TG,QukanMovie,yeqingjie_GJG666,movielover8888_film3,Baidu_netdisk,D_wusun,FLMdongtianfudi,KaiPanshare,QQZYDAPP,rjyxfx,PikPak_Share_Channel,btzhi,newproductsourcing,duan_ju,QuarkFree,yunpanNB,kkdj001,xxzlzn,pxyunpanxunlei,jxwpzy,kuakedongman,xiangnikanj,solidsexydoll,guoman4K,zdqxm,kduanju,cilidianying,CBduanju,SharePanFilms,dzsgx,BooksRealm,Oscar_4Kmovies,douerpan,baidu_yppan,Q_jilupian,Netdisk_Movies,yunpanquark,ciliziyuanku,tgbokee,gokuapan,gimy115,WFYSFX03,tgsearchers6,sbsbsnsqq,kkxlzy,alyp_1,dianyingshare,WFYSFX02,cctv1211,liangxingzhinan,ammmziyuan,cili8888,jzmm_123pan,Q_dianying,domgmingapk,dianying4k,q_dianshiju,ucshare,godupan,peccxin,Movie888035,xlwpzy,zyywpzy,wydwpzy,gimy100,gimy115iso
-ENABLED_PLUGINS=labi,shandian,muou,wanou,hunhepan,pansearch,panta,susu,thepiratebay,xuexizhinan,ouge,erxiao,fox4k,clmao,cldi,libvio,yuhuage,u3c3,javdb,jutoushe,djgou,nyaa,xinjuc,aikanzy,quark4k,quarksoo,ash,zhizhen,duoduo,huban,jikepan,qupansou,panwiki,pan666,hdr4k,panyq,sidhub,kanjuba,52API
-PLUGIN_COUNT=39
-PLUGIN_52API_KEY=
+ENABLED_PLUGINS=labi,shandian,muou,wanou,hunhepan,pansearch,panta,susu,thepiratebay,ouge,erxiao,clmao,u3c3,javdb,jutoushe,nyaa,xinjuc,aikanzy,quark4k,quarksoo,huban,panwiki,panyq,sidhub
+PLUGIN_COUNT=24
 REDIS_HOST=${REDIS_HOST}
 REDIS_PORT=${REDIS_PORT}
 REDIS_PASSWORD=${REDIS_PASSWORD}
@@ -343,13 +341,13 @@ REDIS_PASSWORD=${REDIS_PASSWORD}
 #### Telegram 频道同步说明
 
 - `CHANNELS` 已按当前启用策略追加本轮上游新增的 28 个频道，并保留本项目既有频道。
-- `ENABLED_PLUGINS` 已追加本轮新增的内置插件，包含 `sidhub`、`kanjuba` 和 `52API`；其中部分外部站点在健康矩阵中曾返回超时、403、502 或空结果，线上可通过管理后台按需停用。
-- 启用 `52API` 时必须配置 `PLUGIN_52API_KEY`，未配置时插件会返回明确错误，不会写入任何默认密钥。
+- `ENABLED_PLUGINS` 当前固定为默认 24 个内置插件；Zeabur 可不设置该变量，镜像会使用同一份默认清单。
+- 如需临时扩展内置插件，应显式覆盖 `ENABLED_PLUGINS` 并同步更新 `PLUGIN_COUNT`，避免并发估算与插件中心数量不一致。
 - 插件中心已下线 URL 导入和自定义插件配置；新增插件需要在 `backend/plugin/<插件名>` 实现源码插件，在 `backend/main.go` 添加空导入，并通过 `ENABLED_PLUGINS` 控制启用。
 - 已有部署更新环境变量后重启服务即可触发频道同步；后端启动时只会追加缺失频道，不会删除数据库中已有频道。
 - 如需在不停机情况下补齐频道，可在管理后台的 Telegram 频道管理中批量导入同一组频道名称。
 
-详细步骤请参考 [Zeabur 部署教程](docs/zeabur-deploy.md)。
+本节即为 Zeabur 部署教程，更新预发布环境时以这里的模板为准。
 
 ---
 
@@ -462,8 +460,7 @@ bash scripts/local.sh
 |------|------|--------|
 | `CHANNELS` | 默认 Telegram 频道列表 | 见部署模板 |
 | `ENABLED_PLUGINS` | 启用的插件列表 | 见部署模板 |
-| `PLUGIN_COUNT` | 启用插件数量，用于默认并发估算 | `39` |
-| `PLUGIN_52API_KEY` | 52API 网盘搜索请求密钥 | — |
+| `PLUGIN_COUNT` | 启用插件数量，用于默认并发估算 | `24` |
 | `CONCURRENCY` | 并发搜索数 | `50` |
 | `ASYNC_PLUGIN_ENABLED` | 启用异步插件 | `true` |
 | `ASYNC_RESPONSE_TIMEOUT` | 异步响应超时（秒） | `4` |
@@ -490,14 +487,13 @@ bash scripts/local.sh
 │   ├── config/                # 配置管理
 │   ├── database/              # 数据库初始化与迁移（支持自动建库）
 │   ├── model/                 # 数据模型
-│   ├── plugin/                # 搜索插件（40+）
+│   ├── plugin/                # 搜索插件（默认启用 24 个）
 │   ├── service/               # 业务服务
 │   ├── util/                  # 工具函数
 │   ├── main.go                # 入口文件
 │   ├── go.mod
 │   └── go.sum
 ├── docs/                      # 项目文档
-│   └── zeabur-deploy.md       # Zeabur 部署教程
 ├── scripts/                   # 运维脚本
 ├── Dockerfile                 # 多阶段构建（单容器：前端+后端+Nginx）
 ├── docker-compose.yml         # 容器编排（app + MySQL + Redis）

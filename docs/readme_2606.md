@@ -541,3 +541,14 @@
     - frontend/src/lib/__tests__/api.test.ts
     - frontend/src/services/__tests__/systemSettingsService.test.ts
     - docs/readme_2606.md
+
+- [2026-06-14 09:16] refactor(config): 收敛默认启用插件清单并补充配置读取的单元测试
+  - Body: 将默认启用的插件列表抽离为全局默认清单 `defaultEnabledPlugins`，统一了环境变量缺失时的加载策略和插件数量默认计算。增加了对应的配置解析单元测试，并在前端测试中提取了缓存设置的工厂函数以提升可维护性。
+  - Files:
+    - Dockerfile
+    - README.md
+    - backend/.env.example
+    - backend/config/config.go
+    - backend/config/config_test.go
+    - frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx
+    - docs/readme_2606.md

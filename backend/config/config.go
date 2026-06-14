@@ -68,7 +68,7 @@ type Config struct {
 	PluginTimeout        time.Duration // 插件超时时间（Duration）
 	// 异步插件相关配置
 	AsyncPluginEnabled        bool          // 是否启用异步插件
-	EnabledPlugins            []string      // 启用的具体插件列表（空表示启用所有）
+	EnabledPlugins            []string      // 启用的具体插件列表（缺省使用默认清单，显式空表示不启用插件）
 	AsyncResponseTimeout      int           // 响应超时时间（秒）
 	AsyncResponseTimeoutDur   time.Duration // 响应超时时间（Duration）
 	AsyncMaxBackgroundWorkers int           // 最大后台工作者数量
@@ -145,6 +145,18 @@ type Config struct {
 
 // 全局配置实例
 var AppConfig *Config
+
+var defaultEnabledPlugins = []string{
+	"labi", "shandian", "muou", "wanou", "hunhepan", "pansearch",
+	"panta", "susu", "thepiratebay", "ouge", "erxiao", "clmao",
+	"u3c3", "javdb", "jutoushe", "nyaa", "xinjuc", "aikanzy",
+	"quark4k", "quarksoo", "huban", "panwiki", "panyq", "sidhub",
+}
+
+// DefaultEnabledPlugins 返回当前部署默认启用的内置插件清单。
+func DefaultEnabledPlugins() []string {
+	return append([]string(nil), defaultEnabledPlugins...)
+}
 
 // 初始化配置
 func Init() {
@@ -313,9 +325,9 @@ func getDefaultConcurrency() int {
 		}
 	}
 
-	// 如果没有指定插件数，默认使用7个（当前已知的插件数）
+	// 如果没有指定插件数，使用当前默认插件清单数量。
 	if pluginCount == 0 {
-		pluginCount = 7
+		pluginCount = len(defaultEnabledPlugins)
 	}
 
 	// 计算并发数 = 频道数 + 插件数 + 10
@@ -498,15 +510,14 @@ func getAsyncPluginEnabled() bool {
 	return enabled != "false" && enabled != "0"
 }
 
-// 从环境变量获取启用的插件列表
-// 返回nil表示未设置环境变量（不启用任何插件）
+// 从环境变量获取启用的插件列表。
+// 返回默认清单表示未设置环境变量时使用当前部署策略。
 // 返回[]string{}表示设置为空（不启用任何插件）
 // 返回具体列表表示启用指定插件
 func getEnabledPlugins() []string {
 	plugins, exists := os.LookupEnv("ENABLED_PLUGINS")
 	if !exists {
-		// 未设置环境变量时返回nil，表示不启用任何插件
-		return nil
+		return DefaultEnabledPlugins()
 	}
 
 	if plugins == "" {
@@ -912,7 +923,6 @@ func getAuthPasswordMaxLength() int {
 	}
 	return length
 }
-
 
 // 从环境变量获取认证开关，如果未设置则默认关闭
 func getAuthEnabled() bool {
