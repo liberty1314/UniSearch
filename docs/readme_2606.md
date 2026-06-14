@@ -552,3 +552,32 @@
     - backend/config/config_test.go
     - frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx
     - docs/readme_2606.md
+
+- [2026-06-14 11:25] chore(repo): 拆分核心服务单体文件并清理测试残留文件
+  - Body: 将庞大的后台配置与搜索服务文件按领域模型进行了拆分（如 `config_auth.go`、`search_scoring.go` 等），提升代码可读性与内聚度。清理了开发过程中残留的 `scratch/` 测试脚本及测试响应样本，同时更新了忽略规则与部署文档。
+  - Files:
+    - .env.example
+    - .gitignore
+    - .impeccable/live/config.json
+    - AGENTS.md
+    - DESIGN.md
+    - Dockerfile
+    - backend/config/config.go
+    - backend/config/config_auth.go
+    - backend/config/config_env.go
+    - backend/config/config_redis.go
+    - backend/config/config_tmdb.go
+    - backend/service/search_facets.go
+    - backend/service/search_response_builder.go
+    - backend/service/search_scoring.go
+    - backend/service/search_title_extract.go
+    - scratch/djgou.html
+    - scratch/remove_imports.py
+    - scratch/test_djgou.py
+    - scratch/test_libvio.py
+    - scratch/test_urls.py
+    - scratch/update_channels.py
+    - scripts/gen-production-secrets.sh
+    - sidhub-search-response-148.json
+    - test_urls.py
+    - docs/readme_2606.md

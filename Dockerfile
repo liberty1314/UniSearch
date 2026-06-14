@@ -52,10 +52,6 @@ COPY supervisord.conf /etc/supervisord.conf
 
 # 设置环境变量
 ENV PORT=8888 \
-    CACHE_PATH=/app/cache \
-    CACHE_ENABLED=true \
-    CACHE_MAX_SIZE=100 \
-    CACHE_TTL=60 \
     TZ=Asia/Shanghai \
     ASYNC_PLUGIN_ENABLED=true \
     ASYNC_RESPONSE_TIMEOUT=4 \
