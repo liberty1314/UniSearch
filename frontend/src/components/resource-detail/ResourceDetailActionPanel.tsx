@@ -1,17 +1,13 @@
 import React from "react";
 import { Copy, ExternalLink, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-interface ResourceTarget {
-  url: string;
-  password: string;
-  cloudType: string;
-}
+import type { ResourceOpenTarget } from "@/utils/resourceDisplay";
+import { isScanTransferTarget } from "@/utils/resourceDisplay";
 
 interface ResourceDetailActionPanelProps {
-  primaryTarget: ResourceTarget | null;
-  detailTarget: ResourceTarget | null;
-  onOpenTarget: (target: ResourceTarget | null) => void;
+  primaryTarget: ResourceOpenTarget | null;
+  detailTarget: ResourceOpenTarget | null;
+  onOpenTarget: (target: ResourceOpenTarget | null) => void;
   onCopyText: (value: string, successMessage: string) => void;
 }
 
@@ -22,6 +18,20 @@ const ResourceDetailActionPanel: React.FC<ResourceDetailActionPanelProps> = ({
   onCopyText,
 }) => {
   const hasPassword = Boolean(primaryTarget?.password);
+  const scanTransferMode = isScanTransferTarget(primaryTarget);
+  const primaryStatusLabel = primaryTarget?.url
+    ? scanTransferMode
+      ? "需手机扫码"
+      : "可直接处理"
+    : "仅支持查看详情";
+  const passwordStatusLabel = scanTransferMode
+    ? primaryTarget?.scanTransfer?.refreshable
+      ? "支持刷新二维码"
+      : "需手机端完成"
+    : hasPassword
+      ? "已提供"
+      : "无需";
+  const primaryButtonLabel = scanTransferMode ? "扫码转存" : "打开主资源";
 
   return (
     <aside className="xl:self-start">
@@ -48,14 +58,14 @@ const ResourceDetailActionPanel: React.FC<ResourceDetailActionPanelProps> = ({
             <div className="flex items-center justify-between gap-3 text-sm">
               <span className="text-slate-500 dark:text-slate-400">主链接状态</span>
               <span className="font-medium text-slate-900 dark:text-slate-100">
-                {primaryTarget?.url ? "可直接处理" : "仅支持查看详情"}
+                {primaryStatusLabel}
               </span>
             </div>
             <div className="mt-3 border-t border-slate-200/60 pt-3 dark:border-white/[0.08]" />
             <div className="flex items-center justify-between gap-3 text-sm">
               <span className="text-slate-500 dark:text-slate-400">提取码</span>
               <span className="font-medium text-slate-900 dark:text-slate-100">
-                {hasPassword ? "已提供" : "无需"}
+                {passwordStatusLabel}
               </span>
             </div>
           </div>
@@ -68,7 +78,7 @@ const ResourceDetailActionPanel: React.FC<ResourceDetailActionPanelProps> = ({
               className="resource-detail-button-primary rounded-full"
             >
               <ExternalLink className="mr-2 h-4 w-4" />
-              打开主资源
+              {primaryButtonLabel}
             </Button>
             <Button
               type="button"

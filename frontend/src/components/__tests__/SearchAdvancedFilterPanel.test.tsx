@@ -60,7 +60,7 @@ describe("SearchAdvancedFilterPanel", () => {
     };
   });
 
-  it("只展示媒体类型结构化筛选，不再展示跳转类型和资源能力", () => {
+  it("只展示关键词筛选，不再展示媒体类型、跳转类型和资源能力", () => {
     render(
       <MemoryRouter initialEntries={["/search?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97"]}>
         <SearchAdvancedFilterPanel />
@@ -69,7 +69,9 @@ describe("SearchAdvancedFilterPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /高级筛选/i }));
 
-    expect(screen.getByText("媒体类型")).toBeInTheDocument();
+    expect(screen.getByText("包含关键词")).toBeInTheDocument();
+    expect(screen.getByText("排除关键词")).toBeInTheDocument();
+    expect(screen.queryByText("媒体类型")).not.toBeInTheDocument();
     expect(screen.queryByText("跳转类型")).not.toBeInTheDocument();
     expect(screen.queryByText("资源能力")).not.toBeInTheDocument();
     expect(screen.queryByText("可下载")).not.toBeInTheDocument();

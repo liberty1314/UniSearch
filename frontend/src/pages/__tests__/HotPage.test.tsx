@@ -128,7 +128,29 @@ describe("HotPage", () => {
     buildSearchUrlMock.mockReset();
     buildTrendingSearchActionsMock.mockReset();
     buildSearchUrlMock.mockImplementation(
-      ({ keyword }: { keyword: string }) => `/search?q=${encodeURIComponent(keyword)}`,
+      ({
+        keyword,
+        filter,
+      }: {
+        keyword: string;
+        filter?: {
+          include?: string[];
+          exclude?: string[];
+        };
+      }) => {
+        const searchParams = new URLSearchParams();
+        searchParams.set("q", keyword);
+
+        if (filter?.include?.length) {
+          searchParams.set("include", filter.include.join(","));
+        }
+
+        if (filter?.exclude?.length) {
+          searchParams.set("exclude", filter.exclude.join(","));
+        }
+
+        return `/search?${searchParams.toString()}`;
+      },
     );
     buildTrendingSearchActionsMock.mockImplementation(
       (item: { title: string; original_title: string }) => [
@@ -147,13 +169,7 @@ describe("HotPage", () => {
         {
           key: "title_4k",
           label: "搜 4K",
-          keyword: `${item.title} 4K`,
-          isPrimary: false,
-        },
-        {
-          key: "title_collection",
-          label: "搜合集",
-          keyword: `${item.title} 合集`,
+          keyword: item.title,
           isPrimary: false,
         },
       ],
@@ -727,7 +743,7 @@ describe("HotPage", () => {
 
     expect(await screen.findByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
     expect(screen.getByTestId("location-probe")).toHaveTextContent(
-      '"search":"?q=%E6%B2%99%E4%B8%98%202"',
+      '"search":"?q=%E6%B2%99%E4%B8%98+2"',
     );
     expect(screen.getByTestId("location-probe")).toHaveTextContent(
       '"fromTrending"',
@@ -747,10 +763,10 @@ describe("HotPage", () => {
 
     expect(await screen.findByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
     expect(screen.getByTestId("location-probe")).toHaveTextContent(
-      '"search":"?q=%E6%B2%99%E4%B8%98%202%204K"',
+      '"search":"?q=%E6%B2%99%E4%B8%98+2&include=4K&exclude=%E9%A2%84%E5%91%8A%2C%E6%9E%AA%E7%89%88"',
     );
     expect(screen.getByTestId("location-probe")).toHaveTextContent(
-      '"keyword":"沙丘 2 4K"',
+      '"keyword":"沙丘 2"',
     );
     expect(screen.getByTestId("location-probe")).toHaveTextContent(
       '"actionKey":"title_4k"',

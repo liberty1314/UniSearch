@@ -6,6 +6,8 @@ import type {
   HealthResponse,
   CloudTypeValue,
   FilterConfig,
+  ScanTransferRefreshRequest,
+  ScanTransferRefreshResponse,
 } from '@/types/api';
 import type { HotRankingItem } from '@/types/hotRanking';
 import { normalizeFilterConfig } from '@/utils/searchFilters';
@@ -20,7 +22,7 @@ let healthCache:
 let healthRequest: Promise<HealthResponse> | null = null;
 
 export interface TrendingSearchAction {
-  key: 'title' | 'original_title' | 'title_4k' | 'title_collection';
+  key: 'title' | 'original_title' | 'title_4k';
   label: string;
   keyword: string;
   isPrimary: boolean;
@@ -72,6 +74,29 @@ export class SearchService {
       }
     } catch (error) {
       console.error('Search error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 刷新当前资源的扫码转存载荷。
+   */
+  static async refreshScanTransfer(
+    payload: ScanTransferRefreshRequest,
+  ): Promise<ScanTransferRefreshResponse> {
+    try {
+      const response = await apiClient.post<ScanTransferRefreshResponse>(
+        '/resources/scan-transfer/refresh',
+        payload,
+      );
+
+      if (response) {
+        return response;
+      }
+
+      throw new Error('刷新二维码失败');
+    } catch (error) {
+      console.error('Refresh scan transfer error:', error);
       throw error;
     }
   }
@@ -193,13 +218,7 @@ export class SearchService {
       {
         key: 'title_4k',
         label: '搜 4K',
-        keyword: `${baseTitle} 4K`,
-        isPrimary: false,
-      },
-      {
-        key: 'title_collection',
-        label: '搜合集',
-        keyword: `${baseTitle} 合集`,
+        keyword: baseTitle,
         isPrimary: false,
       },
     ];
@@ -208,7 +227,11 @@ export class SearchService {
     return candidates.filter((action) => {
       const keyword = action.keyword.trim();
       const normalizedKeyword = keyword.toLocaleLowerCase();
-      if (!keyword || seenKeywords.has(normalizedKeyword)) {
+      if (!keyword) {
+        return false;
+      }
+
+      if (action.key === 'original_title' && seenKeywords.has(normalizedKeyword)) {
         return false;
       }
 

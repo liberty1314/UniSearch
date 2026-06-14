@@ -555,7 +555,7 @@ describe("ResourceDetailPage", () => {
     );
   });
 
-  it("opens the primary resource directly on the detail page even when a password is provided", async () => {
+  it("opens the shared access modal on the detail page when a password is provided", async () => {
     const passwordProtectedPrimaryResource: ResourceObject = {
       ...resourceFixture,
       id: "resource-password-primary",
@@ -570,10 +570,6 @@ describe("ResourceDetailPage", () => {
       ],
     };
 
-    const openSpy = vi.spyOn(window, "open").mockReturnValue({
-      opener: null,
-    } as Window);
-
     renderDetailPage({
       pathname: "/resource/resource-password-primary",
       state: {
@@ -586,7 +582,52 @@ describe("ResourceDetailPage", () => {
     expect(openPrimaryButtons).toHaveLength(1);
     fireEvent.click(openPrimaryButtons[0]);
 
-    expect(openSpy).toHaveBeenCalledWith("https://example.com/password-protected-resource", "_blank");
-    expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();
+    expect(screen.getByTestId("password-modal")).toHaveTextContent(
+      "1234|https://example.com/password-protected-resource|quark",
+    );
+  });
+
+  it("opens the shared access modal on the detail page for scan transfer resources", async () => {
+    const scanTransferResource: ResourceObject = {
+      ...resourceFixture,
+      id: "resource-scan-transfer",
+      links: [
+        {
+          type: "quark",
+          url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+          password: "",
+          access_mode: "scan_transfer",
+          scan_transfer: {
+            qr_code_base64: "data:image/png;base64,abc123",
+            refreshable: true,
+            refresh_key: "seedhub:4259:quark:1",
+          },
+          title: "你的名字 扫码资源",
+          datetime: "2026-03-15T00:00:00Z",
+        },
+      ],
+    };
+
+    const openSpy = vi.spyOn(window, "open").mockReturnValue({
+      opener: null,
+    } as Window);
+
+    renderDetailPage({
+      pathname: "/resource/resource-scan-transfer",
+      state: {
+        resource: scanTransferResource,
+        from: { pathname: "/", label: "搜索结果", keyword: "你的名字" },
+      },
+    });
+
+    const openPrimaryButtons = await screen.findAllByRole("button", { name: "扫码转存" });
+    expect(openPrimaryButtons).toHaveLength(1);
+    expect(screen.getByText("需手机扫码")).toBeInTheDocument();
+    fireEvent.click(openPrimaryButtons[0]);
+
+    expect(screen.getByTestId("password-modal")).toHaveTextContent(
+      "|https://www.seedhub.cc/link_start/?redirect_to=quark_scan|quark",
+    );
+    expect(openSpy).not.toHaveBeenCalled();
   });
 });

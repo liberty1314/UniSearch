@@ -33,7 +33,7 @@ describe("HotMediaCard", () => {
     expect(screen.getByRole("button", { name: "搜索" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "搜原名" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "搜 4K" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "搜合集" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "搜合集" })).not.toBeInTheDocument();
   });
 
   it("点击快捷搜索入口会返回对应搜索动作", () => {
@@ -45,7 +45,7 @@ describe("HotMediaCard", () => {
 
     expect(onSearch).toHaveBeenCalledWith(item, expect.objectContaining({
       key: "title_4k",
-      keyword: "奥本海默 4K",
+      keyword: "奥本海默",
     }));
   });
 

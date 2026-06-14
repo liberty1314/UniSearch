@@ -1,8 +1,10 @@
 import type {
+  ResourceAccessMode,
   ResourceAction,
   ResourceDetailRouteState,
   ResourceLink,
   ResourceObject,
+  ScanTransferInfo,
 } from "@/types/api";
 import type { ResultItem } from "@/utils/cloudTypeUtils";
 
@@ -10,6 +12,9 @@ export interface ResourceOpenTarget {
   url: string;
   password: string;
   cloudType: string;
+  accessMode: ResourceAccessMode;
+  scanTransfer?: ScanTransferInfo;
+  resourceId?: string;
 }
 
 export interface ResourceSourcePresentation {
@@ -205,6 +210,63 @@ export const normalizeExternalUrl = (url: string): string => {
 export const isMagnetTarget = (target: Pick<ResourceOpenTarget, "url" | "cloudType"> | null): boolean =>
   Boolean(target && (target.cloudType === "magnet" || isMagnetUrl(target.url)));
 
+export const isScanTransferTarget = (
+  target: Pick<ResourceOpenTarget, "accessMode" | "scanTransfer"> | null,
+): boolean => Boolean(target && (target.accessMode === "scan_transfer" || target.scanTransfer));
+
+const resolveLinkAccessMode = (
+  link: Pick<ResourceLink, "url" | "password" | "access_mode" | "scan_transfer"> | null | undefined,
+  fallbackUrl?: string,
+): ResourceAccessMode => {
+  if (link?.access_mode) {
+    return link.access_mode;
+  }
+  if (link?.scan_transfer) {
+    return "scan_transfer";
+  }
+  if (link?.password?.trim()) {
+    return "password_open";
+  }
+  if (link?.url?.trim() || fallbackUrl?.trim()) {
+    return "direct_open";
+  }
+  return "direct_open";
+};
+
+const normalizeScanTransferInfo = (value: unknown): ScanTransferInfo | undefined => {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+  const readString = (key: keyof ScanTransferInfo): string | undefined => {
+    const current = record[key];
+    return typeof current === "string" && current.trim() ? current.trim() : undefined;
+  };
+  const readBoolean = (key: keyof ScanTransferInfo): boolean | undefined => {
+    const current = record[key];
+    return typeof current === "boolean" ? current : undefined;
+  };
+
+  const normalized: ScanTransferInfo = {
+    provider: readString("provider"),
+    qr_code_base64: readString("qr_code_base64"),
+    qr_code_image_url: readString("qr_code_image_url"),
+    qr_code_value: readString("qr_code_value"),
+    mobile_url: readString("mobile_url"),
+    transfer_code: readString("transfer_code"),
+    instruction: readString("instruction"),
+    source_page_url: readString("source_page_url"),
+    expires_hint: readString("expires_hint"),
+    refreshable: readBoolean("refreshable"),
+    refresh_key: readString("refresh_key"),
+  };
+
+  return Object.values(normalized).some((item) => item !== undefined)
+    ? normalized
+    : undefined;
+};
+
 export const resolveResourceOpenTarget = (
   item: Pick<ResultItem, "resource" | "primaryLink" | "cloudType">,
 ): ResourceOpenTarget | null => {
@@ -215,6 +277,9 @@ export const resolveResourceOpenTarget = (
       cloudType: isMagnetUrl(item.primaryLink.url)
         ? "magnet"
         : item.primaryLink.type || item.cloudType,
+      accessMode: resolveLinkAccessMode(item.primaryLink),
+      scanTransfer: item.primaryLink.scan_transfer,
+      resourceId: item.resource.id,
     };
   }
 
@@ -229,6 +294,8 @@ export const resolveResourceOpenTarget = (
     cloudType: isMagnetUrl(detailUrl)
       ? "magnet"
       : item.cloudType || item.resource.target_type || "detail",
+    accessMode: resolveLinkAccessMode(item.primaryLink, detailUrl),
+    resourceId: item.resource.id,
   };
 };
 
@@ -245,12 +312,28 @@ export const resolveResourceActionTarget = (
   const actionPassword = toNonEmptyString(payload.password) || "";
   const actionCloudType =
     toNonEmptyString(payload.link_type) || item.cloudType || item.primaryLink?.type || "unknown";
+  const actionScanTransfer = normalizeScanTransferInfo(payload.scan_transfer);
+  const actionAccessMode = (
+    toNonEmptyString(payload.access_mode) ||
+    resolveLinkAccessMode(
+      {
+        url: actionUrl || item.primaryLink?.url || "",
+        password: actionPassword,
+        access_mode: undefined,
+        scan_transfer: actionScanTransfer,
+      },
+      item.resource.detail.url,
+    )
+  ) as ResourceAccessMode;
 
   if (actionUrl) {
     return {
       url: actionUrl,
       password: actionPassword,
       cloudType: isMagnetUrl(actionUrl) ? "magnet" : actionCloudType,
+      accessMode: actionAccessMode,
+      scanTransfer: actionScanTransfer,
+      resourceId: item.resource.id,
     };
   }
 

@@ -3,8 +3,26 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { SearchService } from "@/services/searchService";
 import { useAuthStore } from "@/stores/authStore";
 import { useSearchStore } from "@/stores/searchStore";
+import type { SearchParams } from "@/types/api";
 
 const SEARCH_REVALIDATE_INTERVAL_MS = 10_000;
+
+const buildResumeSearchParams = (
+  params: Partial<SearchParams> | undefined,
+  fallbackSearchParams: SearchParams,
+  keyword: string,
+): SearchParams => ({
+  keyword,
+  source: params?.source || fallbackSearchParams.source || "all",
+  resultType: params?.resultType || fallbackSearchParams.resultType || "merge",
+  cloudTypes: [...(params?.cloudTypes || [])],
+  channels: [...(params?.channels || [])],
+  plugins: [...(params?.plugins || [])],
+  concurrency: params?.concurrency || fallbackSearchParams.concurrency || 5,
+  refresh: false,
+  ext: params?.ext ? { ...params.ext } : fallbackSearchParams.ext || {},
+  filter: params?.filter,
+});
 
 export function useSearchUrlSync(): void {
   const {
@@ -24,9 +42,19 @@ export function useSearchUrlSync(): void {
 
   useEffect(() => {
     const state = location.state as {
-      resumeSearch?: { keyword?: string };
+      resumeSearch?: {
+        keyword?: string;
+        params?: Partial<SearchParams>;
+        fromTrending?: {
+          title?: string;
+          originalTitle?: string;
+          keyword?: string;
+        };
+      };
     } | null;
-    const keyword = state?.resumeSearch?.keyword?.trim();
+    const resumeParams = state?.resumeSearch?.params;
+    const keyword =
+      resumeParams?.keyword?.trim() || state?.resumeSearch?.keyword?.trim();
 
     if (!isAuthenticated || !keyword) {
       if (!keyword) {
@@ -35,18 +63,22 @@ export function useSearchUrlSync(): void {
       return;
     }
 
-    const resumeKey = `${location.pathname}:${keyword}`;
+    const resumeKey = `${location.pathname}:${JSON.stringify(resumeParams || keyword)}`;
     if (handledResumeSearchRef.current === resumeKey) {
       return;
     }
 
     handledResumeSearchRef.current = resumeKey;
     navigate(
-      SearchService.buildSearchUrl({
-        ...searchParams,
-        keyword,
-      }),
-      { replace: true, state: undefined },
+      SearchService.buildSearchUrl(
+        buildResumeSearchParams(resumeParams, searchParams, keyword),
+      ),
+      {
+        replace: true,
+        state: state?.resumeSearch?.fromTrending
+          ? { fromTrending: state.resumeSearch.fromTrending }
+          : undefined,
+      },
     );
   }, [
     isAuthenticated,

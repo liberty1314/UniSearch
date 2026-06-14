@@ -19,6 +19,22 @@ const FILTER_FIELDS: Array<keyof FilterConfig> = [
   "mediaTypes",
 ];
 
+const VISIBLE_FILTER_FIELDS: Array<keyof FilterConfig> = [
+  "include",
+  "exclude",
+];
+
+const getFilterValueLabel = (
+  field: keyof FilterConfig,
+  value: string,
+): string => {
+  if (field !== "mediaTypes") {
+    return value;
+  }
+
+  return DEFAULT_FACET_LABELS[value] || toTitleCaseLabel(value);
+};
+
 export const normalizeFilterValues = (values?: string[]): string[] => {
   if (!values?.length) {
     return [];
@@ -78,12 +94,12 @@ export const buildActiveFilterChips = (
     return [];
   }
 
-  return FILTER_FIELDS.flatMap((field) =>
+  return VISIBLE_FILTER_FIELDS.flatMap((field) =>
     (normalized[field] || []).map((value) => ({
       id: `${field}:${value}`,
       field,
       value,
-      label: `${FILTER_LABELS[field]}：${value}`,
+      label: `${FILTER_LABELS[field]}：${getFilterValueLabel(field, value)}`,
     })),
   );
 };
@@ -143,9 +159,21 @@ const toTitleCaseLabel = (value: string) =>
 export const buildFacetFilterOptions = (
   facets: Record<string, number> | undefined,
   customLabels?: Record<string, string>,
-): FacetFilterOption[] =>
-  Object.entries(facets || {})
-    .filter(([, count]) => count > 0)
+  selectedValues?: string[],
+): FacetFilterOption[] => {
+  const normalizedSelectedValues = Array.from(
+    new Set((selectedValues || []).map((value) => value.trim()).filter(Boolean)),
+  );
+
+  return Object.entries(
+    normalizedSelectedValues.reduce<Record<string, number>>((acc, value) => {
+      if (!(value in acc)) {
+        acc[value] = 0;
+      }
+      return acc;
+    }, { ...(facets || {}) }),
+  )
+    .filter(([value, count]) => count > 0 || normalizedSelectedValues.includes(value))
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], "zh-CN"))
     .map(([value, count]) => ({
       value,
@@ -155,3 +183,4 @@ export const buildFacetFilterOptions = (
         toTitleCaseLabel(value),
       count,
     }));
+};

@@ -68,6 +68,34 @@ describe('SearchService', () => {
     });
   });
 
+  it('刷新扫码转存载荷时会透传当前资源定位信息', async () => {
+    const refreshResponse = {
+      resource_id: 'seedhub-scan-1',
+      link_url: 'https://www.seedhub.cc/link_start/?redirect_to=quark_scan',
+      access_mode: 'scan_transfer',
+      scan_transfer: {
+        qr_code_base64: 'data:image/png;base64,new456',
+        refreshable: true,
+        refresh_key: 'seedhub:4259:quark:1',
+      },
+    };
+    postMock.mockResolvedValue(refreshResponse);
+
+    await expect(
+      SearchService.refreshScanTransfer({
+        resource_id: 'seedhub-scan-1',
+        link_url: 'https://www.seedhub.cc/link_start/?redirect_to=quark_scan',
+        refresh_key: 'seedhub:4259:quark:1',
+      }),
+    ).resolves.toBe(refreshResponse);
+
+    expect(postMock).toHaveBeenCalledWith('/resources/scan-transfer/refresh', {
+      resource_id: 'seedhub-scan-1',
+      link_url: 'https://www.seedhub.cc/link_start/?redirect_to=quark_scan',
+      refresh_key: 'seedhub:4259:quark:1',
+    });
+  });
+
   it('round-trips advanced filters through the search URL codec', () => {
     const url = SearchService.buildSearchUrl({
       keyword: '你的名字',
@@ -144,13 +172,7 @@ describe('SearchService', () => {
       {
         key: 'title_4k',
         label: '搜 4K',
-        keyword: '沙丘 2 4K',
-        isPrimary: false,
-      },
-      {
-        key: 'title_collection',
-        label: '搜合集',
-        keyword: '沙丘 2 合集',
+        keyword: '沙丘 2',
         isPrimary: false,
       },
     ]);
@@ -162,10 +184,19 @@ describe('SearchService', () => {
       original_title: '奥本海默',
     });
 
-    expect(actions.map((action) => action.keyword)).toEqual([
-      '奥本海默',
-      '奥本海默 4K',
-      '奥本海默 合集',
+    expect(actions).toEqual([
+      {
+        key: 'title',
+        label: '搜片名',
+        keyword: '奥本海默',
+        isPrimary: true,
+      },
+      {
+        key: 'title_4k',
+        label: '搜 4K',
+        keyword: '奥本海默',
+        isPrimary: false,
+      },
     ]);
   });
 

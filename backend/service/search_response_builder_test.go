@@ -293,6 +293,74 @@ func TestSearchResponseBuilderGeneratesActionsForMultipleLinksAndMagnet(t *testi
 	}
 }
 
+func TestSearchResponseBuilderPreservesScanTransferProtocol(t *testing.T) {
+	builder := newSearchResponseBuilder()
+	response := builder.Build([]model.SearchResult{
+		{
+			UniqueID: "seedhub-scan-1",
+			Title:    "需要扫码转存的资源",
+			Links: []model.Link{
+				{
+					Type:       "quark",
+					URL:        "https://pan.quark.cn/s/scan-transfer",
+					AccessMode: "scan_transfer",
+					ScanTransfer: &model.ScanTransferInfo{
+						QRCodeBase64: "data:image/png;base64,abc123",
+						MobileURL:    "quark://scan-transfer/123",
+						TransferCode: "转存口令",
+						Instruction:  "请使用夸克 App 扫码转存",
+						Refreshable:  true,
+						RefreshKey:   "seedhub:4259:quark:0",
+					},
+				},
+			},
+		},
+	}, NormalizedSearchRequest{Keyword: "扫码", ResultType: "results"})
+
+	if len(response.Resources) != 1 {
+		t.Fatalf("expected one resource, got %d", len(response.Resources))
+	}
+
+	resource := response.Resources[0]
+	if len(resource.Links) != 1 {
+		t.Fatalf("expected one resource link, got %#v", resource.Links)
+	}
+
+	link := resource.Links[0]
+	if link.AccessMode != "scan_transfer" {
+		t.Fatalf("expected link access_mode to be preserved, got %#v", link)
+	}
+	if link.ScanTransfer == nil {
+		t.Fatalf("expected scan_transfer payload to be preserved, got %#v", link)
+	}
+	if link.ScanTransfer.RefreshKey != "seedhub:4259:quark:0" {
+		t.Fatalf("expected refresh key to be preserved, got %#v", link.ScanTransfer)
+	}
+
+	if len(resource.Actions) != 1 {
+		t.Fatalf("expected one generated action, got %#v", resource.Actions)
+	}
+
+	payload := resource.Actions[0].Payload
+	if payload["access_mode"] != "scan_transfer" {
+		t.Fatalf("expected action payload access_mode to be preserved, got %#v", payload)
+	}
+
+	rawScanTransfer, ok := payload["scan_transfer"]
+	if !ok {
+		t.Fatalf("expected action payload to include scan_transfer, got %#v", payload)
+	}
+
+	scanTransfer, ok := rawScanTransfer.(*model.ScanTransferInfo)
+	if !ok {
+		t.Fatalf("expected action payload scan_transfer to be *model.ScanTransferInfo, got %T", rawScanTransfer)
+	}
+
+	if scanTransfer.TransferCode != "转存口令" {
+		t.Fatalf("expected action payload scan_transfer transfer_code to be preserved, got %#v", scanTransfer)
+	}
+}
+
 func TestSearchResponseBuilderKeepsResourceWithoutLinks(t *testing.T) {
 	builder := newSearchResponseBuilder()
 	response := builder.Build([]model.SearchResult{

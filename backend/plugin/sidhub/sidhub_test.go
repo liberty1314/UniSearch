@@ -86,6 +86,107 @@ const sidHubNativeDownloadFixture = `
   </div>
 </section>`
 
+const sidHubActiveTabFallbackFixture = `
+<section id="downloads">
+  <nav class="resource-tabs">
+    <a class="tab">磁力(8)</a>
+    <a class="tab router-link-active">百度(12)</a>
+    <a class="tab">夸克(10)</a>
+    <a class="tab">迅雷(7)</a>
+    <a class="tab">UC(0)</a>
+    <a class="tab">阿里(0)</a>
+  </nav>
+  <div class="resource-items">
+    <ul>
+      <li>
+        <a href="/link_start/?redirect_to=pan_id_612954&amp;movie_title=%E2%9C%85%E3%80%90%E5%A4%A7%E6%BF%9B%E3%80%91%E3%80%90WEB-4K%E3%80%91%E3%80%90%E4%B8%AD%E5%AD%97%E3%80%91%E3%80%90%E6%AD%A3%E5%BC%8F%E7%89%88%E3%80%91">
+          ✅【大濛】【WEB-4K】【中字】【正式版】
+        </a>
+        <span>今天</span>
+      </li>
+    </ul>
+  </div>
+</section>`
+
+const sidHubQuarkRowTitleFallbackFixture = `
+<section id="downloads">
+  <nav class="resource-tabs">
+    <a class="tab">磁力(8)</a>
+    <a class="tab">百度(12)</a>
+    <a class="tab router-link-active">夸克(10)</a>
+    <a class="tab">迅雷(7)</a>
+    <a class="tab">UC(0)</a>
+    <a class="tab">阿里(0)</a>
+  </nav>
+  <div class="resource-items">
+    <ul>
+      <li>
+        <span class="resource-title">✅【大濛】【4K+1080P】【内嵌简中字幕】【流媒体正式版】</span>
+        <a class="open-link" href="/link_start/?redirect_to=pan_id_4k&amp;movie_title=%E5%A4%A7%E6%BF%9B">打开</a>
+        <span>2天前</span>
+      </li>
+    </ul>
+  </div>
+</section>`
+
+const sidHubRowNoiseFixture = `
+<section id="downloads">
+  <div class="quark-list">
+    <ul>
+      <li>
+        <span class="resource-title">大濛 2160P 杜比视界</span>
+        <a class="open-link" href="/link_start/?redirect_to=quark_noise&amp;movie_title=%E5%A4%A7%E6%BF%9B">查看</a>
+        <code class="size">12.5G</code>
+        <span class="seed-feature">蓝光</span>
+        <span>今天</span>
+      </li>
+    </ul>
+  </div>
+</section>`
+
+const sidHubAttributeResourceURLFixture = `
+<section id="downloads">
+  <div class="quark-list">
+    <ul>
+      <li><button data-url="/link_start/?redirect_to=quark_data_url&amp;movie_title=%E5%A4%A7%E6%BF%9B">大濛 data-url 资源</button></li>
+      <li><button data-clipboard-text="https://pan.quark.cn/s/clipboard123">大濛 clipboard 资源</button></li>
+      <li><label>大濛 input 资源<input value="https://pan.quark.cn/s/input123" /></label></li>
+    </ul>
+  </div>
+</section>`
+
+const sidHubScanTransferFixture = `
+<html>
+  <body>
+    <div class="scan-transfer-panel">
+      <p>请使用手机扫码转存，网盘链接容易被吞</p>
+      <img class="qrcode" src="data:image/png;base64,abc123" />
+      <a class="mobile-open" href="quark://scan-transfer/123">打开夸克 App</a>
+      <code>转存口令：ABCD1234</code>
+    </div>
+  </body>
+</html>`
+
+const sidHubScanTransferFallbackFixture = `
+<html>
+  <body>
+    <div class="scan-transfer-panel">
+      <p>请使用手机扫码转存</p>
+      <a class="mobile-open" href="quark://scan-transfer/fallback">打开夸克 App</a>
+    </div>
+  </body>
+</html>`
+
+const sidHubScanTransferCodeOnlyFixture = `
+<html>
+  <body>
+    <main>
+      <p>请使用手机扫码转存</p>
+      <p>转存口令：EFGH5678</p>
+    </main>
+  </body>
+</html>`
+
 func TestSidHubPluginContract(t *testing.T) {
 	p := NewSidHubPlugin()
 	testutil.AssertPluginContract(t, p)
@@ -97,8 +198,8 @@ func TestSidHubPluginManifest(t *testing.T) {
 	if manifest.ID != "search.sidhub" {
 		t.Fatalf("期望插件 ID 为 search.sidhub，实际为 %q", manifest.ID)
 	}
-	if manifest.Name != "SidHub" {
-		t.Fatalf("期望插件展示名为 SidHub，实际为 %q", manifest.Name)
+	if manifest.Name != "SeedHub" {
+		t.Fatalf("期望插件展示名为 SeedHub，实际为 %q", manifest.Name)
 	}
 	if manifest.Resource.Priority != defaultPriority {
 		t.Fatalf("期望插件优先级为 %d，实际为 %d", defaultPriority, manifest.Resource.Priority)
@@ -109,6 +210,7 @@ func TestSidHubPluginManifest(t *testing.T) {
 }
 
 func TestParseSearchCards(t *testing.T) {
+	// 覆盖矩阵：S1、S2、S3。
 	html := `
 <section class="grid">
   <article class="movie-card">
@@ -166,7 +268,33 @@ func TestParseSearchCards(t *testing.T) {
 	}
 }
 
+func TestParseSearchCardsSupportsGenericMovieContainers(t *testing.T) {
+	// 覆盖矩阵：S5。
+	html := `
+<section class="grid">
+  <article class="movie-card">
+    <a class="poster-link" href="/movies/120138/">
+      <img data-original="/poster-dameng.jpg" />
+      <strong class="title">大濛</strong>
+    </a>
+    <p>2025 / 电影 / 中国大陆 / 汉语普通话</p>
+  </article>
+</section>`
+
+	cards, err := parseSearchCards(strings.NewReader(html), "https://sidhub.cc", 10)
+	if err != nil {
+		t.Fatalf("解析通用搜索卡片失败: %v", err)
+	}
+	if len(cards) != 1 {
+		t.Fatalf("期望解析 1 个通用卡片，实际为 %#v", cards)
+	}
+	if cards[0].Title != "大濛" || cards[0].ID != "120138" {
+		t.Fatalf("期望从链接文本和路径解析通用卡片，实际为 %#v", cards[0])
+	}
+}
+
 func TestParseDetailLinks(t *testing.T) {
+	// 覆盖矩阵：D5、T1。
 	html := `
 <section id="downloads">
   <a class="btn" data-link="quark" title="【怪奇物语】【4K】" href="/link_start/?redirect_to=pan_id_10&amp;movie_title=%E6%80%AA%E5%A5%87%E7%89%A9%E8%AF%AD">夸克</a>
@@ -203,6 +331,7 @@ func TestParseDetailLinks(t *testing.T) {
 }
 
 func TestParseDetailLinkEntriesUsesDownloadTabs(t *testing.T) {
+	// 覆盖矩阵：D2、T2、T3。
 	entries, err := parseDetailLinkEntries(strings.NewReader(sidHubTabbedDownloadFixture), "https://sidhub.cc", "你的名字。")
 	if err != nil {
 		t.Fatalf("解析 SidHub 页签资源失败: %v", err)
@@ -230,6 +359,7 @@ func TestParseDetailLinkEntriesUsesDownloadTabs(t *testing.T) {
 }
 
 func TestParseDetailLinkEntriesUsesNativeSeedHubLists(t *testing.T) {
+	// 覆盖矩阵：D1、T4。
 	entries, err := parseDetailLinkEntries(strings.NewReader(sidHubNativeDownloadFixture), "https://www.seedhub.cc", "你的名字。")
 	if err != nil {
 		t.Fatalf("解析 SeedHub 原生资源列表失败: %v", err)
@@ -293,6 +423,153 @@ func TestSidHubBuildsOneResultPerDownloadEntry(t *testing.T) {
 	}
 	if results[1].TargetType != "share" {
 		t.Fatalf("期望网盘结果 target_type 为 share，实际为 %q", results[1].TargetType)
+	}
+}
+
+func TestParseDetailLinkEntriesFallsBackToActiveSeedHubTab(t *testing.T) {
+	// 覆盖矩阵：D3、D4、T5。
+	entries, err := parseDetailLinkEntries(strings.NewReader(sidHubActiveTabFallbackFixture), "https://www.seedhub.cc", "大濛")
+	if err != nil {
+		t.Fatalf("解析 SeedHub 当前详情页资源失败: %v", err)
+	}
+
+	if len(entries) != 1 {
+		t.Fatalf("期望从当前 SeedHub 详情页样式解析 1 条资源，实际为 %#v", entries)
+	}
+
+	entry := entries[0]
+	if entry.Link.Type != "baidu" {
+		t.Fatalf("期望根据激活页签推断为百度资源，实际为 %#v", entry)
+	}
+	if !strings.Contains(entry.Title, "WEB-4K") {
+		t.Fatalf("期望标题保留 WEB-4K 关键词，实际为 %#v", entry)
+	}
+}
+
+func TestParseDetailLinkEntriesUsesRowTitleForQuark4KResource(t *testing.T) {
+	// 覆盖矩阵：D6、F2。
+	entries, err := parseDetailLinkEntries(strings.NewReader(sidHubQuarkRowTitleFallbackFixture), "https://www.seedhub.cc", "大濛")
+	if err != nil {
+		t.Fatalf("解析 SeedHub 夸克行标题资源失败: %v", err)
+	}
+
+	if len(entries) != 1 {
+		t.Fatalf("期望从夸克激活页签解析 1 条资源，实际为 %#v", entries)
+	}
+
+	entry := entries[0]
+	if entry.Link.Type != "quark" {
+		t.Fatalf("期望根据激活页签推断为夸克资源，实际为 %#v", entry)
+	}
+	if !strings.Contains(entry.Title, "4K+1080P") {
+		t.Fatalf("期望短链接文案时回退到整行资源标题，实际为 %#v", entry)
+	}
+}
+
+func TestParseDetailLinkEntriesCleansRowNoiseForTitleBadgesAndMeta(t *testing.T) {
+	// 覆盖矩阵：D7、阶段 3 标题来源和类型来源可观测性。
+	entries, err := parseDetailLinkEntries(strings.NewReader(sidHubRowNoiseFixture), "https://www.seedhub.cc", "大濛")
+	if err != nil {
+		t.Fatalf("解析 SeedHub 噪声行资源失败: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("期望解析 1 条噪声行资源，实际为 %#v", entries)
+	}
+
+	entry := entries[0]
+	if entry.Title != "大濛 2160P 杜比视界" {
+		t.Fatalf("期望标题清理大小、日期和动作词，实际为 %q", entry.Title)
+	}
+	if entry.Size != "12.5G" {
+		t.Fatalf("期望提取资源大小，实际为 %q", entry.Size)
+	}
+	if !containsString(entry.Badges, "蓝光") {
+		t.Fatalf("期望保留真实标签蓝光，实际为 %#v", entry.Badges)
+	}
+	if containsString(entry.Badges, "今天") {
+		t.Fatalf("日期不应作为资源标签，实际为 %#v", entry.Badges)
+	}
+	if entry.TitleSource != "row_text" || entry.LinkTypeSource != "group_label" {
+		t.Fatalf("期望记录标题和类型来源，实际为 %#v", entry)
+	}
+}
+
+func TestParseDetailLinkEntriesSupportsAttributeResourceURLs(t *testing.T) {
+	// 覆盖矩阵：D8、D9、D10。
+	entries, err := parseDetailLinkEntries(strings.NewReader(sidHubAttributeResourceURLFixture), "https://www.seedhub.cc", "大濛")
+	if err != nil {
+		t.Fatalf("解析 SeedHub 属性资源链接失败: %v", err)
+	}
+	if len(entries) != 3 {
+		t.Fatalf("期望解析 data-url、data-clipboard-text 和 input[value] 三类资源，实际为 %#v", entries)
+	}
+
+	expectedURLs := []string{
+		"https://www.seedhub.cc/link_start/?redirect_to=quark_data_url&movie_title=%E5%A4%A7%E6%BF%9B",
+		"https://pan.quark.cn/s/clipboard123",
+		"https://pan.quark.cn/s/input123",
+	}
+	for index, expectedURL := range expectedURLs {
+		entry := entries[index]
+		if entry.Link.Type != "quark" || entry.Link.URL != expectedURL {
+			t.Fatalf("第 %d 条资源类型或 URL 不符合预期，实际为 %#v", index+1, entry)
+		}
+		if entry.Title == "" {
+			t.Fatalf("第 %d 条资源应保留可展示标题，实际为 %#v", index+1, entry)
+		}
+	}
+}
+
+func TestParseDetailLinkEntriesPrefersNearestContextOverUnrelatedActiveTab(t *testing.T) {
+	// 覆盖矩阵：T6。
+	html := `
+<section id="downloads">
+  <nav class="resource-tabs">
+    <a class="tab active">百度(12)</a>
+    <a class="tab">夸克(10)</a>
+  </nav>
+  <div class="resource-items">
+    <section data-type="quark">
+      <a href="/link_start/?redirect_to=pan_id_nearest&amp;movie_title=%E5%A4%A7%E6%BF%9B">大濛 最近上下文资源</a>
+    </section>
+  </div>
+</section>`
+
+	entries, err := parseDetailLinkEntries(strings.NewReader(html), "https://www.seedhub.cc", "大濛")
+	if err != nil {
+		t.Fatalf("解析最近上下文资源失败: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("期望解析 1 条最近上下文资源，实际为 %#v", entries)
+	}
+	if entries[0].Link.Type != "quark" || entries[0].LinkTypeSource != "active_tab" {
+		t.Fatalf("期望优先使用资源区最近上下文而非无关 active 页签，实际为 %#v", entries[0])
+	}
+}
+
+func TestBuildExpandedResultRecordsSidHubParseSources(t *testing.T) {
+	// 覆盖矩阵：阶段 3 解析来源可观测性。
+	card := sidHubMovie{
+		ID:        "120138",
+		Title:     "大濛",
+		DetailURL: "https://sidhub.cc/movies/120138/",
+		MediaType: "movie",
+	}
+	entry := sidHubLinkEntry{
+		Link:           model.Link{Type: "quark", URL: "https://pan.quark.cn/s/source", WorkTitle: "大濛"},
+		Title:          "大濛 2160P 杜比视界",
+		GroupLabel:     "夸克",
+		Index:          1,
+		TitleSource:    "row_text",
+		LinkTypeSource: "group_label",
+	}
+
+	result := buildExpandedResult(card, entry)
+	if result.Meta["sid_hub_title_source"] != "row_text" {
+		t.Fatalf("期望记录标题来源，实际为 %#v", result.Meta)
+	}
+	if result.Meta["sid_hub_link_type_source"] != "group_label" {
+		t.Fatalf("期望记录链接类型来源，实际为 %#v", result.Meta)
 	}
 }
 
@@ -414,8 +691,8 @@ func TestSidHubDoSearchFetchesDetailsAndUsesCache(t *testing.T) {
 	counts := map[string]int{}
 	hasResolvedQuark := false
 	for _, result := range results {
-		if result.SourcePluginID != "sidhub" || result.SourceName != "SidHub" {
-			t.Fatalf("期望来源为 SidHub，实际为 %#v", result)
+		if result.SourcePluginID != "sidhub" || result.SourceName != "SeedHub" {
+			t.Fatalf("期望来源为 SeedHub，实际为 %#v", result)
 		}
 		if len(result.Links) != 1 {
 			t.Fatalf("期望每条展开结果只包含一个链接，实际为 %#v", result.Links)
@@ -452,6 +729,183 @@ func TestSidHubDoSearchFetchesDetailsAndUsesCache(t *testing.T) {
 	}
 }
 
+func TestResolveLinkStartLinkDetectsScanTransfer(t *testing.T) {
+	original := model.Link{
+		Type:      "quark",
+		URL:       "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+		WorkTitle: "你的名字。",
+	}
+
+	resolved, handled, err := resolveLinkStartLink(original, []byte(sidHubScanTransferFixture), "4259", 2)
+	if err != nil {
+		t.Fatalf("解析扫码转存页失败: %v", err)
+	}
+	if !handled {
+		t.Fatal("期望识别为已处理的扫码转存页")
+	}
+	if resolved.URL != original.URL {
+		t.Fatalf("期望扫码转存保留原始 link_start 地址，实际为 %q", resolved.URL)
+	}
+	if resolved.AccessMode != "scan_transfer" {
+		t.Fatalf("期望访问模式为 scan_transfer，实际为 %#v", resolved)
+	}
+	if resolved.ScanTransfer == nil {
+		t.Fatalf("期望生成扫码转存载荷，实际为 %#v", resolved)
+	}
+	if resolved.ScanTransfer.QRCodeBase64 != "data:image/png;base64,abc123" {
+		t.Fatalf("期望提取二维码 base64，实际为 %#v", resolved.ScanTransfer)
+	}
+	if resolved.ScanTransfer.MobileURL != "quark://scan-transfer/123" {
+		t.Fatalf("期望提取手机深链，实际为 %#v", resolved.ScanTransfer)
+	}
+	if resolved.ScanTransfer.TransferCode != "ABCD1234" {
+		t.Fatalf("期望提取转存口令，实际为 %#v", resolved.ScanTransfer)
+	}
+	if !strings.Contains(resolved.ScanTransfer.Instruction, "手机扫码转存") {
+		t.Fatalf("期望提取扫码提示文案，实际为 %#v", resolved.ScanTransfer)
+	}
+	if !resolved.ScanTransfer.Refreshable || resolved.ScanTransfer.RefreshKey != "seedhub:4259:quark:2" {
+		t.Fatalf("期望生成稳定刷新信息，实际为 %#v", resolved.ScanTransfer)
+	}
+}
+
+func TestResolveLinkStartLinkKeepsFallbackScanTransferPayload(t *testing.T) {
+	original := model.Link{
+		Type:      "quark",
+		URL:       "https://www.seedhub.cc/link_start/?redirect_to=quark_scan_fallback",
+		WorkTitle: "你的名字。",
+	}
+
+	resolved, handled, err := resolveLinkStartLink(original, []byte(sidHubScanTransferFallbackFixture), "4259", 3)
+	if err != nil {
+		t.Fatalf("解析半残缺扫码转存页失败: %v", err)
+	}
+	if !handled {
+		t.Fatal("期望半残缺扫码页也能被识别")
+	}
+	if resolved.AccessMode != "scan_transfer" || resolved.ScanTransfer == nil {
+		t.Fatalf("期望半残缺扫码页仍输出 scan_transfer，实际为 %#v", resolved)
+	}
+	if resolved.ScanTransfer.QRCodeBase64 != "" && resolved.ScanTransfer.QRCodeImageURL != "" {
+		t.Fatalf("期望当前回退样本不强制要求二维码图片，实际为 %#v", resolved.ScanTransfer)
+	}
+	if resolved.ScanTransfer.MobileURL != "quark://scan-transfer/fallback" {
+		t.Fatalf("期望保留手机深链，实际为 %#v", resolved.ScanTransfer)
+	}
+	if resolved.ScanTransfer.SourcePageURL != original.URL {
+		t.Fatalf("期望保留原始扫码页地址，实际为 %#v", resolved.ScanTransfer)
+	}
+}
+
+func TestResolveLinkStartLinkDetectsCodeOnlyScanTransfer(t *testing.T) {
+	// 覆盖矩阵：L4。
+	original := model.Link{
+		Type:      "quark",
+		URL:       "https://www.seedhub.cc/link_start/?redirect_to=quark_code_only",
+		WorkTitle: "大濛",
+	}
+
+	resolved, handled, err := resolveLinkStartLink(original, []byte(sidHubScanTransferCodeOnlyFixture), "120138", 4)
+	if err != nil {
+		t.Fatalf("解析只有口令的扫码转存页失败: %v", err)
+	}
+	if !handled {
+		t.Fatal("期望只有口令和提示的页面也识别为扫码转存")
+	}
+	if resolved.AccessMode != "scan_transfer" || resolved.ScanTransfer == nil {
+		t.Fatalf("期望返回扫码转存载荷，实际为 %#v", resolved)
+	}
+	if resolved.ScanTransfer.TransferCode != "EFGH5678" {
+		t.Fatalf("期望提取转存口令，实际为 %#v", resolved.ScanTransfer)
+	}
+}
+
+func TestFetchURLRejectsCloudflareChallengeFromInjectedFetcher(t *testing.T) {
+	// 覆盖矩阵：L5。
+	p := NewSidHubPlugin()
+	p.fetcher = func(targetURL string) ([]byte, error) {
+		return []byte("Just a moment... window._cf_chl_opt Cloudflare"), nil
+	}
+
+	_, err := p.fetchURL("https://www.seedhub.cc/link_start/?redirect_to=challenge")
+	if err == nil || !strings.Contains(err.Error(), "Cloudflare") {
+		t.Fatalf("期望测试抓取器返回挑战页时被拒绝，实际为 %v", err)
+	}
+}
+
+func TestSidHubDoSearchBuildsScanTransferResult(t *testing.T) {
+	searchCache = sync.Map{}
+	p := NewSidHubPlugin()
+
+	searchURL := "https://www.seedhub.cc/s/%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97/"
+	detailURL := "https://www.seedhub.cc/movies/4259/"
+	linkStartURL := "https://www.seedhub.cc/link_start/?redirect_to=quark_scan"
+	fixtures := map[string]string{
+		searchURL: `
+<article>
+  <a title="你的名字。 君の名は。" class="image" href="/movies/4259/">
+    <img src="/poster.jpg" />
+  </a>
+  <p>2016 / 动漫 / 日本 / 日语</p>
+  <span>类型:爱情/动画/剧情</span>
+</article>`,
+		detailURL: `
+<section id="downloads">
+  <div class="quark-list">
+    <ul>
+      <li><a href="/link_start/?redirect_to=quark_scan" title="夸克扫码资源">夸克扫码资源</a></li>
+    </ul>
+  </div>
+</section>`,
+		linkStartURL: sidHubScanTransferFixture,
+	}
+	p.fetcher = func(targetURL string) ([]byte, error) {
+		body, ok := fixtures[targetURL]
+		if !ok {
+			return nil, errors.New("未注册的测试地址")
+		}
+		return []byte(body), nil
+	}
+
+	results, err := p.doSearch(nil, "你的名字", map[string]interface{}{"sidhub_base_url": "https://www.seedhub.cc"})
+	if err != nil {
+		t.Fatalf("搜索扫码转存资源失败: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("期望生成 1 条扫码资源结果，实际为 %#v", results)
+	}
+
+	link := results[0].Links[0]
+	if link.AccessMode != "scan_transfer" || link.ScanTransfer == nil {
+		t.Fatalf("期望展开结果携带扫码协议，实际为 %#v", results[0])
+	}
+	if link.ScanTransfer.RefreshKey != "seedhub:4259:quark:1" {
+		t.Fatalf("期望结果携带稳定刷新键，实际为 %#v", link.ScanTransfer)
+	}
+}
+
+func TestSidHubRefreshScanTransferReturnsLatestPayload(t *testing.T) {
+	p := NewSidHubPlugin()
+	linkStartURL := "https://www.seedhub.cc/link_start/?redirect_to=quark_scan"
+	p.fetcher = func(targetURL string) ([]byte, error) {
+		if targetURL != linkStartURL {
+			return nil, errors.New("未注册的测试地址")
+		}
+		return []byte(sidHubScanTransferFixture), nil
+	}
+
+	refreshedLink, err := p.RefreshScanTransfer(linkStartURL, "seedhub:4259:quark:1")
+	if err != nil {
+		t.Fatalf("刷新扫码转存载荷失败: %v", err)
+	}
+	if refreshedLink.AccessMode != "scan_transfer" || refreshedLink.ScanTransfer == nil {
+		t.Fatalf("期望刷新结果仍为扫码转存载荷，实际为 %#v", refreshedLink)
+	}
+	if refreshedLink.ScanTransfer.RefreshKey != "seedhub:4259:quark:1" {
+		t.Fatalf("期望刷新后保留相同 refresh_key，实际为 %#v", refreshedLink.ScanTransfer)
+	}
+}
+
 func TestSidHubDoSearchHandlesEmptyAndFetchErrors(t *testing.T) {
 	searchCache = sync.Map{}
 	p := NewSidHubPlugin()
@@ -468,8 +922,8 @@ func TestSidHubDoSearchHandlesEmptyAndFetchErrors(t *testing.T) {
 		return nil, errors.New("测试失败")
 	}
 	_, err = p.doSearch(nil, "不存在", map[string]interface{}{"sidhub_base_url": "https://sidhub.cc"})
-	if err == nil || !strings.Contains(err.Error(), "SidHub 搜索失败") {
-		t.Fatalf("期望返回 SidHub 搜索失败错误，实际为 %v", err)
+	if err == nil || !strings.Contains(err.Error(), "SeedHub 搜索失败") {
+		t.Fatalf("期望返回 SeedHub 搜索失败错误，实际为 %v", err)
 	}
 }
 

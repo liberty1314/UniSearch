@@ -25,10 +25,44 @@ export interface ResourceSource {
   plugin_id?: string;
 }
 
+export type ResourceAccessMode =
+  | "direct_open"
+  | "password_open"
+  | "scan_transfer";
+
+export interface ScanTransferInfo {
+  provider?: string;
+  qr_code_base64?: string;
+  qr_code_image_url?: string;
+  qr_code_value?: string;
+  mobile_url?: string;
+  transfer_code?: string;
+  instruction?: string;
+  source_page_url?: string;
+  expires_hint?: string;
+  refreshable?: boolean;
+  refresh_key?: string;
+}
+
+export interface ScanTransferRefreshRequest {
+  resource_id?: string;
+  link_url: string;
+  refresh_key: string;
+}
+
+export interface ScanTransferRefreshResponse {
+  resource_id?: string;
+  link_url: string;
+  access_mode?: ResourceAccessMode;
+  scan_transfer?: ScanTransferInfo;
+}
+
 export interface ResourceLink {
   type: string;
   url: string;
   password?: string;
+  access_mode?: ResourceAccessMode;
+  scan_transfer?: ScanTransferInfo;
   title?: string;
   work_title?: string;
   datetime?: string;

@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,6 +23,7 @@ import (
 
 const (
 	pluginName                 = "sidhub"
+	pluginDisplayName          = "SeedHub"
 	defaultPriority            = 3
 	primaryBaseURL             = "https://sidhub.cc"
 	fallbackBaseURL            = "https://www.seedhub.cc"
@@ -42,12 +44,43 @@ var (
 	ed2kRegex           = regexp.MustCompile(`(?i)ed2k://\|file\|[^\s<"']+`)
 	thunderRegex        = regexp.MustCompile(`(?i)thunder://[^\s<"']+`)
 	quarkResolvedRegex  = regexp.MustCompile(`https?://pan\.quark\.cn/s/[0-9A-Za-z]+`)
+	httpURLRegex        = regexp.MustCompile(`https?://[^\s"'<>]+`)
+	base64ImageRegex    = regexp.MustCompile(`data:image/[^;]+;base64,[A-Za-z0-9+/=]+`)
+	transferCodeRegex   = regexp.MustCompile(`(?:转存|提取|访问|分享)?(?:口令|密码|验证码|提取码|访问码)\s*[:：]?\s*([A-Za-z0-9]{4,})`)
 	spaceCollapseRegex  = regexp.MustCompile(`\s+`)
 	groupCountRegex     = regexp.MustCompile(`[（(]\d+[）)]`)
 	sidHubSizeRegex     = regexp.MustCompile(`(?i)\d+(?:\.\d+)?\s*(?:G|GB|M|MB)`)
 	sidHubYearTextRegex = regexp.MustCompile(`20\d{2}年`)
+	sidHubDateTextRegex = regexp.MustCompile(`(?:今天|昨天|\d+\s*天前)`)
 	linkStartPathPrefix = "/link_start/"
 )
+
+var scanTransferHintTexts = []string{
+	"手机扫码转存",
+	"请使用手机",
+	"扫码转存",
+	"网盘链接容易被吞",
+	"使用手机扫码",
+}
+
+var sidHubLowSignalEntryTitles = map[string]struct{}{
+	"打开":   {},
+	"打开链接": {},
+	"查看":   {},
+	"查看链接": {},
+	"下载":   {},
+	"复制":   {},
+	"复制链接": {},
+	"链接":   {},
+	"网盘":   {},
+	"网盘链接": {},
+	"夸克":   {},
+	"百度":   {},
+	"迅雷":   {},
+	"uc":   {},
+	"阿里":   {},
+	"磁力":   {},
+}
 
 type cachedSearchResult struct {
 	results   []model.SearchResult
@@ -74,13 +107,15 @@ type sidHubMovie struct {
 }
 
 type sidHubLinkEntry struct {
-	Link       model.Link
-	Title      string
-	GroupLabel string
-	Index      int
-	Size       string
-	Year       string
-	Badges     []string
+	Link           model.Link
+	Title          string
+	GroupLabel     string
+	Index          int
+	Size           string
+	Year           string
+	Badges         []string
+	TitleSource    string
+	LinkTypeSource string
 }
 
 func init() {
@@ -92,16 +127,16 @@ func NewSidHubPlugin() *SidHubAsyncPlugin {
 	basePlugin := plugin.NewBaseAsyncPlugin(pluginName, defaultPriority)
 	basePlugin.SetManifest(model.PluginManifest{
 		ID:              "search.sidhub",
-		Name:            "SidHub",
+		Name:            pluginDisplayName,
 		Version:         "1.0.0",
 		Category:        "search",
-		Description:     "基于 SidHub 的影视、动漫资源搜索插件。",
+		Description:     "基于 SeedHub 的影视、动漫资源搜索插件。",
 		CoreVersion:     ">=1.0.0 <2.0.0",
 		ContractVersion: "1.0",
 		Capabilities:    []string{"resource.search"},
 		Permissions:     []string{"network"},
 		Resource: model.ResourceDescriptor{
-			SourceLabel:         "SidHub",
+			SourceLabel:         pluginDisplayName,
 			SourceGroup:         "search",
 			SupportedMediaTypes: []string{"movie", "tv", "anime", "documentary", "unknown"},
 			TargetTypes:         []string{"share", "download"},
@@ -121,7 +156,12 @@ func NewSidHubPlugin() *SidHubAsyncPlugin {
 
 // DisplayName 返回后台展示名称。
 func (p *SidHubAsyncPlugin) DisplayName() string {
-	return "SidHub"
+	return pluginDisplayName
+}
+
+// SetFetcherForTest 注入测试抓取器，便于在单测中固定 link_start 页面样本。
+func (p *SidHubAsyncPlugin) SetFetcherForTest(fetcher func(string) ([]byte, error)) {
+	p.fetcher = fetcher
 }
 
 // Search 执行搜索并返回结果。
@@ -172,7 +212,7 @@ func (p *SidHubAsyncPlugin) doSearch(client *http.Client, keyword string, ext ma
 	}
 
 	if lastErr != nil {
-		return nil, fmt.Errorf("[%s] SidHub 搜索失败: %w", p.Name(), lastErr)
+		return nil, fmt.Errorf("[%s] %s 搜索失败: %w", p.Name(), pluginDisplayName, lastErr)
 	}
 	return []model.SearchResult{}, nil
 }
@@ -196,7 +236,7 @@ func (p *SidHubAsyncPlugin) searchBaseURL(baseURL string, keyword string) ([]mod
 		if detailErr == nil {
 			parsedEntries, parseErr := parseDetailLinkEntries(bytes.NewReader(detailBody), baseURL, card.Title)
 			if parseErr == nil {
-				entries, _ = limitExpandedSidHubEntries(p.resolveQuarkLinks(parsedEntries))
+				entries, _ = limitExpandedSidHubEntries(p.resolveLinkStartEntries(parsedEntries, card.ID))
 			}
 		}
 
@@ -208,7 +248,14 @@ func (p *SidHubAsyncPlugin) searchBaseURL(baseURL string, keyword string) ([]mod
 
 func (p *SidHubAsyncPlugin) fetchURL(targetURL string) ([]byte, error) {
 	if p.fetcher != nil {
-		return p.fetcher(targetURL)
+		body, err := p.fetcher(targetURL)
+		if err != nil {
+			return nil, err
+		}
+		if isCloudflareChallenge(body) {
+			return nil, fmt.Errorf("请求 %s 仍返回 Cloudflare 挑战页", targetURL)
+		}
+		return body, nil
 	}
 
 	scraper, err := p.getScraper()
@@ -237,6 +284,37 @@ func (p *SidHubAsyncPlugin) fetchURL(targetURL string) ([]byte, error) {
 	return body, nil
 }
 
+// RefreshScanTransfer 重新抓取当前扫码转存页并返回最新载荷。
+func (p *SidHubAsyncPlugin) RefreshScanTransfer(linkURL string, refreshKey string) (model.Link, error) {
+	movieID, linkType, entryIndex, err := parseSeedHubRefreshKey(refreshKey)
+	if err != nil {
+		return model.Link{}, err
+	}
+
+	trimmedURL := strings.TrimSpace(linkURL)
+	if trimmedURL == "" || !strings.Contains(trimmedURL, linkStartPathPrefix) {
+		return model.Link{}, fmt.Errorf("无效的 SeedHub 刷新链接")
+	}
+
+	body, err := p.fetchURL(trimmedURL)
+	if err != nil {
+		return model.Link{}, fmt.Errorf("获取 SeedHub 刷新页失败: %w", err)
+	}
+
+	refreshedLink, handled, err := resolveLinkStartLink(model.Link{
+		Type: linkType,
+		URL:  trimmedURL,
+	}, body, movieID, entryIndex)
+	if err != nil {
+		return model.Link{}, err
+	}
+	if !handled || refreshedLink.AccessMode != "scan_transfer" || refreshedLink.ScanTransfer == nil {
+		return model.Link{}, fmt.Errorf("当前资源未返回可刷新的扫码转存载荷")
+	}
+
+	return refreshedLink, nil
+}
+
 func (p *SidHubAsyncPlugin) getScraper() (*cloudscraper.Scraper, error) {
 	p.scraperOnce.Do(func() {
 		p.scraper, p.scraperErr = cloudscraper.New(
@@ -249,15 +327,17 @@ func (p *SidHubAsyncPlugin) getScraper() (*cloudscraper.Scraper, error) {
 	return p.scraper, nil
 }
 
-func (p *SidHubAsyncPlugin) resolveQuarkLinks(entries []sidHubLinkEntry) []sidHubLinkEntry {
+func (p *SidHubAsyncPlugin) resolveLinkStartEntries(entries []sidHubLinkEntry, movieID string) []sidHubLinkEntry {
 	resolved := make([]sidHubLinkEntry, 0, len(entries))
 	quarkResolveCount := 0
 
 	for _, entry := range entries {
 		nextEntry := entry
-		if entry.Link.Type == "quark" && strings.Contains(entry.Link.URL, linkStartPathPrefix) && quarkResolveCount < maxQuarkResolveLinks {
-			if resolvedURL, err := p.resolveQuarkURL(entry.Link.URL); err == nil && resolvedURL != "" {
-				nextEntry.Link.URL = resolvedURL
+		if shouldResolveSeedHubLinkStart(entry.Link) && quarkResolveCount < maxQuarkResolveLinks {
+			if body, err := p.fetchURL(entry.Link.URL); err == nil {
+				if resolvedLink, handled, resolveErr := resolveLinkStartLink(entry.Link, body, movieID, entry.Index); resolveErr == nil && handled {
+					nextEntry.Link = resolvedLink
+				}
 			}
 			quarkResolveCount++
 		}
@@ -265,6 +345,273 @@ func (p *SidHubAsyncPlugin) resolveQuarkLinks(entries []sidHubLinkEntry) []sidHu
 	}
 
 	return resolved
+}
+
+func shouldResolveSeedHubLinkStart(link model.Link) bool {
+	if !strings.Contains(link.URL, linkStartPathPrefix) {
+		return false
+	}
+	return isShareType(link.Type)
+}
+
+func resolveLinkStartLink(original model.Link, body []byte, movieID string, entryIndex int) (model.Link, bool, error) {
+	resolvedLink := cloneSidHubLink(original)
+
+	if directURL := extractDirectResourceURLFromLinkStart(body, original.Type); directURL != "" {
+		resolvedLink.URL = directURL
+		if directType := determineDirectLinkType(directURL); directType != "" {
+			resolvedLink.Type = directType
+		}
+		resolvedLink.Password = extractPassword(directURL)
+		resolvedLink.AccessMode = resolveSeedHubLinkAccessMode(resolvedLink)
+		resolvedLink.ScanTransfer = nil
+		return resolvedLink, true, nil
+	}
+
+	scanTransfer, detected, err := extractScanTransferInfo(body, original.URL, original.Type, movieID, entryIndex)
+	if err != nil {
+		return original, false, err
+	}
+	if !detected {
+		return original, false, nil
+	}
+
+	resolvedLink.AccessMode = "scan_transfer"
+	resolvedLink.ScanTransfer = scanTransfer
+	return resolvedLink, true, nil
+}
+
+func extractDirectResourceURLFromLinkStart(body []byte, expectedType string) string {
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(body))
+	if err != nil {
+		return ""
+	}
+
+	candidates := make([]string, 0, 8)
+	doc.Find("[href], [data-url], [data-href], [data-clipboard-text]").Each(func(_ int, selection *goquery.Selection) {
+		for _, attr := range []string{"href", "data-url", "data-href", "data-clipboard-text"} {
+			if value, exists := selection.Attr(attr); exists {
+				value = cleanText(value)
+				if value != "" {
+					candidates = append(candidates, value)
+				}
+			}
+		}
+	})
+	candidates = append(candidates, httpURLRegex.FindAllString(string(body), -1)...)
+
+	expectedType = strings.TrimSpace(expectedType)
+	for _, candidate := range candidates {
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "" {
+			continue
+		}
+		directType := determineDirectLinkType(candidate)
+		if directType == "" {
+			continue
+		}
+		if expectedType == "" || expectedType == directType {
+			return candidate
+		}
+	}
+
+	for _, candidate := range candidates {
+		candidate = strings.TrimSpace(candidate)
+		if determineDirectLinkType(candidate) != "" {
+			return candidate
+		}
+	}
+
+	return ""
+}
+
+func extractScanTransferInfo(body []byte, sourcePageURL string, linkType string, movieID string, entryIndex int) (*model.ScanTransferInfo, bool, error) {
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(body))
+	if err != nil {
+		return nil, false, err
+	}
+
+	pageText := cleanText(doc.Text())
+	qrCodeBase64 := base64ImageRegex.FindString(string(body))
+	qrCodeImageURL := extractScanTransferQRCodeImage(doc)
+	qrCodeValue := extractScanTransferQRCodeValue(doc)
+	mobileURL := extractScanTransferMobileURL(doc)
+	transferCode := extractScanTransferCode(pageText)
+	instruction := extractScanTransferInstruction(pageText)
+
+	detected := qrCodeBase64 != "" ||
+		qrCodeImageURL != "" ||
+		qrCodeValue != "" ||
+		mobileURL != "" ||
+		transferCode != "" ||
+		instruction != ""
+	if !detected {
+		return nil, false, nil
+	}
+
+	scanTransfer := &model.ScanTransferInfo{
+		Provider:       strings.TrimSpace(linkType),
+		QRCodeBase64:   qrCodeBase64,
+		QRCodeImageURL: qrCodeImageURL,
+		QRCodeValue:    qrCodeValue,
+		MobileURL:      mobileURL,
+		TransferCode:   transferCode,
+		Instruction:    instruction,
+		SourcePageURL:  sourcePageURL,
+	}
+
+	if refreshKey := buildSeedHubRefreshKey(movieID, linkType, entryIndex); refreshKey != "" {
+		scanTransfer.Refreshable = true
+		scanTransfer.RefreshKey = refreshKey
+	}
+
+	return scanTransfer, true, nil
+}
+
+func extractScanTransferQRCodeImage(doc *goquery.Document) string {
+	qrCodeImageURL := ""
+	doc.Find("img").EachWithBreak(func(_ int, selection *goquery.Selection) bool {
+		src, exists := selection.Attr("src")
+		if !exists {
+			return true
+		}
+		src = strings.TrimSpace(src)
+		if src == "" || strings.HasPrefix(strings.ToLower(src), "data:image/") {
+			return true
+		}
+
+		marker := strings.ToLower(strings.Join([]string{
+			selection.AttrOr("class", ""),
+			selection.AttrOr("alt", ""),
+			selection.AttrOr("id", ""),
+			src,
+		}, " "))
+		if strings.Contains(marker, "qr") || strings.Contains(marker, "二维码") || strings.Contains(marker, "qrcode") {
+			qrCodeImageURL = src
+			return false
+		}
+		return true
+	})
+	return qrCodeImageURL
+}
+
+func extractScanTransferQRCodeValue(doc *goquery.Document) string {
+	for _, selector := range []string{"[data-qrcode]", "[data-qr]", "[data-qr-code]", "input[value]", "textarea"} {
+		found := ""
+		doc.Find(selector).EachWithBreak(func(_ int, selection *goquery.Selection) bool {
+			for _, attr := range []string{"data-qrcode", "data-qr", "data-qr-code", "value"} {
+				if value, exists := selection.Attr(attr); exists {
+					value = strings.TrimSpace(value)
+					if value != "" && !strings.HasPrefix(strings.ToLower(value), "data:image/") {
+						found = value
+						return false
+					}
+				}
+			}
+			text := cleanText(selection.Text())
+			if text != "" && strings.Contains(strings.ToLower(text), "://") {
+				found = text
+				return false
+			}
+			return true
+		})
+		if found != "" {
+			return found
+		}
+	}
+	return ""
+}
+
+func extractScanTransferMobileURL(doc *goquery.Document) string {
+	mobileURL := ""
+	doc.Find("[href], [data-url], [data-href]").EachWithBreak(func(_ int, selection *goquery.Selection) bool {
+		for _, attr := range []string{"href", "data-url", "data-href"} {
+			value, exists := selection.Attr(attr)
+			if !exists {
+				continue
+			}
+			value = strings.TrimSpace(value)
+			lowerValue := strings.ToLower(value)
+			if value == "" {
+				continue
+			}
+			if strings.HasPrefix(lowerValue, "quark://") ||
+				strings.HasPrefix(lowerValue, "baiduboxapp://") ||
+				strings.HasPrefix(lowerValue, "alipan://") ||
+				strings.HasPrefix(lowerValue, "uc://") ||
+				strings.HasPrefix(lowerValue, "xunlei://") {
+				mobileURL = value
+				return false
+			}
+		}
+		return true
+	})
+	return mobileURL
+}
+
+func extractScanTransferCode(pageText string) string {
+	matches := transferCodeRegex.FindStringSubmatch(pageText)
+	if len(matches) < 2 {
+		return ""
+	}
+	return cleanText(matches[1])
+}
+
+func extractScanTransferInstruction(pageText string) string {
+	for _, hint := range scanTransferHintTexts {
+		if strings.Contains(pageText, hint) {
+			return pageText
+		}
+	}
+	return ""
+}
+
+func buildSeedHubRefreshKey(movieID string, linkType string, entryIndex int) string {
+	if strings.TrimSpace(movieID) == "" || strings.TrimSpace(linkType) == "" || entryIndex <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("seedhub:%s:%s:%d", strings.TrimSpace(movieID), strings.TrimSpace(linkType), entryIndex)
+}
+
+func parseSeedHubRefreshKey(refreshKey string) (string, string, int, error) {
+	parts := strings.Split(strings.TrimSpace(refreshKey), ":")
+	if len(parts) != 4 || parts[0] != "seedhub" {
+		return "", "", 0, fmt.Errorf("无效的 SeedHub refresh_key")
+	}
+
+	movieID := strings.TrimSpace(parts[1])
+	linkType := normalizeLinkType(parts[2])
+	entryIndex, err := strconv.Atoi(strings.TrimSpace(parts[3]))
+	if movieID == "" || linkType == "" || err != nil || entryIndex <= 0 {
+		return "", "", 0, fmt.Errorf("无效的 SeedHub refresh_key")
+	}
+
+	return movieID, linkType, entryIndex, nil
+}
+
+func resolveSeedHubLinkAccessMode(link model.Link) string {
+	if strings.TrimSpace(link.AccessMode) != "" {
+		return strings.TrimSpace(link.AccessMode)
+	}
+	if link.ScanTransfer != nil {
+		return "scan_transfer"
+	}
+	if strings.TrimSpace(link.Password) != "" {
+		return "password_open"
+	}
+	if strings.TrimSpace(link.URL) != "" {
+		return "direct_open"
+	}
+	return ""
+}
+
+func cloneSidHubLink(link model.Link) model.Link {
+	cloned := link
+	if link.ScanTransfer != nil {
+		scanTransfer := *link.ScanTransfer
+		cloned.ScanTransfer = &scanTransfer
+	}
+	return cloned
 }
 
 func (p *SidHubAsyncPlugin) resolveQuarkURL(linkURL string) (string, error) {
@@ -288,7 +635,7 @@ func parseSearchCards(reader io.Reader, baseURL string, limit int) ([]sidHubMovi
 	cards := make([]sidHubMovie, 0, limit)
 	seenIDs := make(map[string]struct{})
 
-	doc.Find(`a[title][href*="/movies/"]`).EachWithBreak(func(index int, selection *goquery.Selection) bool {
+	doc.Find(`a[href*="/movies/"]`).EachWithBreak(func(index int, selection *goquery.Selection) bool {
 		if limit > 0 && len(cards) >= limit {
 			return false
 		}
@@ -357,14 +704,12 @@ func parseDetailLinkEntries(reader io.Reader, baseURL string, movieTitle string)
 	doc.Find("a[href]").Each(func(index int, selection *goquery.Selection) {
 		href, _ := selection.Attr("href")
 		href = strings.TrimSpace(href)
-		if href == "" {
+		if href == "" || !isPotentialSidHubResourceURL(href) {
 			return
 		}
 
-		linkType := normalizeLinkType(dataLinkValue(selection))
-		if linkType == "" {
-			linkType = determineDirectLinkType(href)
-		}
+		contextLabel := resolveSidHubContextLabel(selection, doc)
+		linkType, linkTypeSource := resolveSidHubLinkType(selection, href, contextLabel)
 		if linkType == "" {
 			return
 		}
@@ -374,6 +719,10 @@ func parseDetailLinkEntries(reader io.Reader, baseURL string, movieTitle string)
 			return
 		}
 
+		row := resourceRowContainer(selection)
+		rowText := cleanText(row.Text())
+		badges := extractSidHubBadges(row)
+		title, titleSource := resolveSidHubEntryTitle(selection, row, movieTitle, badges)
 		addLinkEntry(&entries, seen, sidHubLinkEntry{
 			Link: model.Link{
 				Type:      linkType,
@@ -381,7 +730,13 @@ func parseDetailLinkEntries(reader io.Reader, baseURL string, movieTitle string)
 				Password:  extractPassword(linkURL),
 				WorkTitle: cleanText(movieTitle),
 			},
-			Title: cleanText(attrOrText(selection, "title")),
+			Title:          title,
+			GroupLabel:     cleanSidHubGroupLabel(contextLabel),
+			Size:           extractSidHubSize(rowText),
+			Year:           extractSidHubYear(rowText),
+			Badges:         badges,
+			TitleSource:    titleSource,
+			LinkTypeSource: linkTypeSource,
 		})
 	})
 
@@ -396,7 +751,9 @@ func parseDetailLinkEntries(reader io.Reader, baseURL string, movieTitle string)
 				URL:       linkURL,
 				WorkTitle: cleanText(movieTitle),
 			},
-			Title: cleanText(movieTitle),
+			Title:          cleanText(movieTitle),
+			TitleSource:    "movie_title_fallback",
+			LinkTypeSource: "direct_url",
 		})
 	}
 
@@ -486,6 +843,8 @@ func parseEntriesInScope(scope *goquery.Selection, baseURL string, movieTitle st
 
 		row := resourceRowContainer(selection)
 		rowText := cleanText(row.Text())
+		badges := extractSidHubBadges(row)
+		title, titleSource := resolveSidHubEntryTitle(selection, row, movieTitle, badges)
 		entry := sidHubLinkEntry{
 			Link: model.Link{
 				Type:      linkType,
@@ -493,12 +852,14 @@ func parseEntriesInScope(scope *goquery.Selection, baseURL string, movieTitle st
 				Password:  extractPassword(linkURL),
 				WorkTitle: cleanText(movieTitle),
 			},
-			Title:      resolveSidHubEntryTitle(selection, row, movieTitle),
-			GroupLabel: groupLabel,
-			Index:      len(*entries) + 1,
-			Size:       extractSidHubSize(rowText),
-			Year:       extractSidHubYear(rowText),
-			Badges:     extractSidHubBadges(row),
+			Title:          title,
+			GroupLabel:     groupLabel,
+			Index:          len(*entries) + 1,
+			Size:           extractSidHubSize(rowText),
+			Year:           extractSidHubYear(rowText),
+			Badges:         badges,
+			TitleSource:    titleSource,
+			LinkTypeSource: "group_label",
 		}
 		addLinkEntry(entries, seen, entry)
 	})
@@ -519,7 +880,7 @@ func buildResult(card sidHubMovie, entries []sidHubLinkEntry) model.SearchResult
 		Images:         imagesFromCard(card),
 		SourcePluginID: pluginName,
 		SourceType:     "plugin",
-		SourceName:     "SidHub",
+		SourceName:     pluginDisplayName,
 		MediaType:      card.MediaType,
 		TargetType:     "share",
 		DetailURL:      card.DetailURL,
@@ -566,7 +927,7 @@ func buildExpandedResult(card sidHubMovie, entry sidHubLinkEntry) model.SearchRe
 		Images:         imagesFromCard(card),
 		SourcePluginID: pluginName,
 		SourceType:     "plugin",
-		SourceName:     "SidHub",
+		SourceName:     pluginDisplayName,
 		MediaType:      card.MediaType,
 		TargetType:     resolveSidHubTargetType(entry.Link.Type),
 		DetailURL:      card.DetailURL,
@@ -576,13 +937,15 @@ func buildExpandedResult(card sidHubMovie, entry sidHubLinkEntry) model.SearchRe
 			Downloadable:    true,
 		},
 		Meta: map[string]interface{}{
-			"sid_hub_movie_id":    card.ID,
-			"sid_hub_detail_url":  card.DetailURL,
-			"sid_hub_link_type":   entry.Link.Type,
-			"sid_hub_group_label": entry.GroupLabel,
-			"sid_hub_size":        entry.Size,
-			"sid_hub_year":        entry.Year,
-			"sid_hub_index":       entry.Index,
+			"sid_hub_movie_id":         card.ID,
+			"sid_hub_detail_url":       card.DetailURL,
+			"sid_hub_link_type":        entry.Link.Type,
+			"sid_hub_group_label":      entry.GroupLabel,
+			"sid_hub_size":             entry.Size,
+			"sid_hub_year":             entry.Year,
+			"sid_hub_index":            entry.Index,
+			"sid_hub_title_source":     entry.TitleSource,
+			"sid_hub_link_type_source": entry.LinkTypeSource,
 		},
 	}
 }
@@ -781,6 +1144,29 @@ func inferMediaType(text string) string {
 	}
 }
 
+func resolveSidHubContextLabel(selection *goquery.Selection, doc *goquery.Document) string {
+	for current, depth := selection, 0; current != nil && current.Length() > 0 && depth < 6; current, depth = current.Parent(), depth+1 {
+		for _, attr := range []string{"data-link", "data-type", "data-tab", "aria-label", "id", "class"} {
+			if value, exists := current.Attr(attr); exists {
+				if normalized := normalizeSidHubGroupLabel(value); normalized != "" {
+					return cleanText(value)
+				}
+			}
+		}
+	}
+
+	activeTabLabel := ""
+	doc.Find(".router-link-active, .active, .is-active, [aria-selected='true']").EachWithBreak(func(_ int, node *goquery.Selection) bool {
+		text := cleanText(node.Text())
+		if normalizeSidHubGroupLabel(text) == "" {
+			return true
+		}
+		activeTabLabel = text
+		return false
+	})
+	return activeTabLabel
+}
+
 func normalizeSidHubGroupLabel(value string) string {
 	normalized := strings.ToLower(strings.TrimSpace(value))
 	switch {
@@ -799,6 +1185,44 @@ func normalizeSidHubGroupLabel(value string) string {
 	default:
 		return ""
 	}
+}
+
+func inferSidHubLinkTypeFromLinkStart(rawURL string) string {
+	parsedURL, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return ""
+	}
+
+	query := parsedURL.Query()
+	if seedID := strings.TrimSpace(query.Get("seed_id")); seedID != "" {
+		return "magnet"
+	}
+
+	redirectTarget := strings.TrimSpace(query.Get("redirect_to"))
+	if redirectTarget != "" {
+		return normalizeSidHubGroupLabel(redirectTarget)
+	}
+
+	return ""
+}
+
+func resolveSidHubLinkType(selection *goquery.Selection, href string, contextLabel string) (string, string) {
+	if linkType := normalizeLinkType(dataLinkValue(selection)); linkType != "" {
+		return linkType, "data_link"
+	}
+	if linkType := determineDirectLinkType(href); linkType != "" {
+		return linkType, "direct_url"
+	}
+	if linkType := inferSidHubLinkTypeFromLinkStart(href); linkType != "" {
+		if strings.Contains(strings.ToLower(href), "seed_id=") {
+			return linkType, "seed_id"
+		}
+		return linkType, "redirect_to"
+	}
+	if linkType := normalizeSidHubGroupLabel(contextLabel); linkType != "" {
+		return linkType, "active_tab"
+	}
+	return "", ""
 }
 
 func cleanSidHubGroupLabel(value string) string {
@@ -844,20 +1268,75 @@ func resourceRowContainer(selection *goquery.Selection) *goquery.Selection {
 	return row
 }
 
-func resolveSidHubEntryTitle(selection *goquery.Selection, row *goquery.Selection, movieTitle string) string {
-	title := cleanText(attrOrText(selection, "title"))
-	if title != "" {
-		return title
+func resolveSidHubEntryTitle(selection *goquery.Selection, row *goquery.Selection, movieTitle string, badges []string) (string, string) {
+	explicitTitle := cleanText(selection.AttrOr("title", ""))
+	if isSpecificSidHubEntryTitle(explicitTitle, movieTitle) {
+		return explicitTitle, "title_attr"
 	}
 
-	text := cleanText(row.Text())
+	linkText := cleanText(selection.Text())
+	rowTitle := cleanSidHubEntryRowTitle(row.Text(), linkText, badges)
+	if isSpecificSidHubEntryTitle(rowTitle, movieTitle) {
+		return rowTitle, "row_text"
+	}
+	if isSpecificSidHubEntryTitle(linkText, movieTitle) {
+		return linkText, "link_text"
+	}
+	if explicitTitle != "" {
+		return explicitTitle, "title_attr"
+	}
+	if rowTitle != "" {
+		return rowTitle, "row_text"
+	}
+	if linkText != "" {
+		return linkText, "link_text"
+	}
+	return cleanText(movieTitle), "movie_title_fallback"
+}
+
+func cleanSidHubEntryRowTitle(rowText string, linkText string, badges []string) string {
+	text := cleanText(rowText)
 	text = sidHubSizeRegex.ReplaceAllString(text, "")
 	text = sidHubYearTextRegex.ReplaceAllString(text, "")
-	text = cleanText(text)
-	if text != "" {
-		return text
+	text = sidHubDateTextRegex.ReplaceAllString(text, "")
+
+	if isLowSignalSidHubEntryTitle(linkText) {
+		text = strings.ReplaceAll(text, linkText, "")
 	}
-	return cleanText(movieTitle)
+	for _, badge := range badges {
+		badge = cleanText(badge)
+		if badge != "" {
+			text = strings.ReplaceAll(text, badge, "")
+		}
+	}
+	for _, noise := range []string{"打开链接", "查看链接", "复制链接", "打开", "查看", "下载", "复制"} {
+		text = strings.ReplaceAll(text, noise, "")
+	}
+
+	return cleanText(text)
+}
+
+func isSpecificSidHubEntryTitle(title string, movieTitle string) bool {
+	title = cleanText(title)
+	if title == "" || isLowSignalSidHubEntryTitle(title) {
+		return false
+	}
+
+	trimmedMovieTitle := cleanText(movieTitle)
+	if trimmedMovieTitle != "" && strings.Contains(title, trimmedMovieTitle) {
+		return true
+	}
+	return len([]rune(title)) >= 6
+}
+
+func isLowSignalSidHubEntryTitle(title string) bool {
+	normalized := strings.ToLower(cleanText(title))
+	normalized = strings.Trim(normalized, "：:[]【】()（） ")
+	if normalized == "" {
+		return true
+	}
+	_, exists := sidHubLowSignalEntryTitles[normalized]
+	return exists
 }
 
 func extractSidHubSize(text string) string {
@@ -874,7 +1353,10 @@ func extractSidHubBadges(row *goquery.Selection) []string {
 
 	row.Find("span,b,strong,em,.tag,.badge").Each(func(_ int, badge *goquery.Selection) {
 		text := cleanText(badge.Text())
-		if text == "" || extractSidHubSize(text) != "" || extractSidHubYear(text) != "" {
+		if text == "" ||
+			extractSidHubSize(text) != "" ||
+			extractSidHubYear(text) != "" ||
+			sidHubDateTextRegex.MatchString(text) {
 			return
 		}
 		if len([]rune(text)) > 12 {

@@ -330,6 +330,7 @@ describe("SearchResults", () => {
 
     renderSearchResults();
     await screen.findByTestId("search-result-grid-card-wrapper");
+    expect(screen.queryByText("需扫码")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
 
     expect(openSpy).toHaveBeenCalledWith("https://example.com/resource", "_blank");
@@ -362,10 +363,41 @@ describe("SearchResults", () => {
 
     renderSearchResults();
     await screen.findByTestId("search-result-grid-card-wrapper");
+    expect(screen.queryByText("需扫码")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
 
     expect(screen.getByTestId("password-modal")).toHaveTextContent(
       "|magnet:?xt=urn:btih:testhash|magnet",
+    );
+    expect(openSpy).not.toHaveBeenCalled();
+  });
+
+  it("opens the shared access modal for scan transfer resources", async () => {
+    searchStoreState.searchResults.resources[0].links[0] = {
+      type: "quark",
+      url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+      password: "",
+      access_mode: "scan_transfer",
+      scan_transfer: {
+        qr_code_base64: "data:image/png;base64,abc123",
+        refreshable: true,
+        refresh_key: "seedhub:4259:quark:1",
+      },
+      title: "你的名字 扫码资源",
+      datetime: "2026-03-15T00:00:00Z",
+    };
+
+    const openSpy = vi.spyOn(window, "open").mockReturnValue({
+      opener: null,
+    } as Window);
+
+    renderSearchResults();
+    await screen.findByTestId("search-result-grid-card-wrapper");
+    expect(screen.getByText("需扫码")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
+
+    expect(screen.getByTestId("password-modal")).toHaveTextContent(
+      "|https://www.seedhub.cc/link_start/?redirect_to=quark_scan|quark",
     );
     expect(openSpy).not.toHaveBeenCalled();
   });
@@ -507,7 +539,7 @@ describe("SearchResults", () => {
     expect(screen.getByText("可以调整网盘、包含关键词或排除关键词，或者清空筛选条件后重新查看全部结果。")).toBeInTheDocument();
   });
 
-  it("shows a system-level availability hint when the search request fails", async () => {
+  it("search request failure no longer renders source availability hint", async () => {
     searchStoreState = {
       ...searchStoreState,
       searchResults: null,
@@ -517,10 +549,12 @@ describe("SearchResults", () => {
     renderSearchResults();
 
     expect(await screen.findByText("搜索请求失败")).toBeInTheDocument();
-    expect(screen.getByText("部分搜索源可能不可用，请稍后重试或更换关键词。")).toBeInTheDocument();
+    expect(
+      screen.queryByText("部分搜索源可能不可用，请稍后重试或更换关键词。"),
+    ).not.toBeInTheDocument();
   });
 
-  it("shows a system-level warning on empty results without exposing source-level details", async () => {
+  it("empty results with source warnings no longer render extra availability copy", async () => {
     searchStoreState.searchResults = {
       total: 0,
       resources: [],
@@ -544,8 +578,8 @@ describe("SearchResults", () => {
 
     expect(await screen.findByText("未找到相关资源")).toBeInTheDocument();
     expect(
-      screen.getByText("部分搜索源可能暂时不可用，可以更换关键词或稍后再试。"),
-    ).toBeInTheDocument();
+      screen.queryByText("部分搜索源可能暂时不可用，可以更换关键词或稍后再试。"),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("failed-plugin")).not.toBeInTheDocument();
     expect(
       screen.queryByText("该搜索源暂时不可用，已返回其他来源结果"),

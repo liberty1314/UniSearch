@@ -18,12 +18,16 @@ export type {
 } from '@/types/search';
 export type {
   ResourceAction,
+  ResourceAccessMode,
   ResourceCapabilities,
   ResourceDetail,
   ResourceDetailRouteState,
   ResourceFacets,
   ResourceLink,
   ResourceObject,
+  ScanTransferRefreshRequest,
+  ScanTransferRefreshResponse,
+  ScanTransferInfo,
   ResourceSource,
 } from '@/types/resource';
 

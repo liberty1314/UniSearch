@@ -40,6 +40,8 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
     const { resource, primaryLink, cloudType, datetime } = item;
     const cloudInfo = getCloudTypeInfo(cloudType);
     const hasPassword = Boolean(primaryLink?.password?.trim());
+    const scanTransferMode =
+      primaryLink?.access_mode === "scan_transfer" || Boolean(primaryLink?.scan_transfer);
     const sizeLabel = resolveResourceDisplaySize(item);
     const displayTitle = resolveResourceDisplayTitle(resource);
 
@@ -155,6 +157,11 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
                 >
                   <IoKeyOutline className="w-3 h-3" />
                   <span>有码</span>
+                </div>
+              )}
+              {scanTransferMode && (
+                <div className="flex shrink-0 items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-full border border-amber-200/70 dark:bg-amber-400/[0.08] dark:text-amber-200 dark:border-amber-300/18">
+                  <span>需扫码</span>
                 </div>
               )}
             </div>

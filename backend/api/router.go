@@ -50,6 +50,7 @@ func registerPublicRoutes(api *gin.RouterGroup, deps RouterDeps) {
 	api.POST("/system-settings/announcement-enabled", JWTMiddleware(), AdminMiddleware(), SetAnnouncementFeatureEnabledHandler(deps.SystemSettingsService))
 	api.POST("/search", SearchJWTMiddleware(), SearchHandler)
 	api.GET("/search", SearchJWTMiddleware(), SearchHandler)
+	api.POST("/resources/scan-transfer/refresh", SearchJWTMiddleware(), RefreshScanTransferHandler)
 }
 
 func registerUserRoutes(api *gin.RouterGroup, deps RouterDeps, authController *controller.AuthController) {

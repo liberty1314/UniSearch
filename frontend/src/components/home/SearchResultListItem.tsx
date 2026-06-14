@@ -37,6 +37,8 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
     const { resource, primaryLink, cloudType, datetime } = item;
     const cloudInfo = getCloudTypeInfo(cloudType);
     const hasPassword = Boolean(primaryLink?.password?.trim());
+    const scanTransferMode =
+      primaryLink?.access_mode === "scan_transfer" || Boolean(primaryLink?.scan_transfer);
     const sizeLabel = resolveResourceDisplaySize(item);
     const displayTitle = resolveResourceDisplayTitle(resource);
 
@@ -128,6 +130,11 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
               <div className="flex-shrink-0 px-2.5 py-1 bg-green-50 dark:bg-emerald-400/[0.08] text-green-600 dark:text-emerald-200 text-xs font-medium rounded-full border border-green-200/50 dark:border-emerald-300/16 flex items-center gap-1">
                 <IoKeyOutline className="w-3.5 h-3.5" />
                 <span>有码</span>
+              </div>
+            )}
+            {scanTransferMode && (
+              <div className="flex-shrink-0 px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-full border border-amber-200/70 dark:bg-amber-400/[0.08] dark:text-amber-200 dark:border-amber-300/18">
+                <span>需扫码</span>
               </div>
             )}
             {showDetailEntry ? (

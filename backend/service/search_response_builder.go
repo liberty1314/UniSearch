@@ -187,12 +187,14 @@ func buildResourceLinks(result model.SearchResult, linkTitleMap map[string]strin
 		}
 
 		resourceLinks = append(resourceLinks, model.ResourceLink{
-			Type:      linkType,
-			URL:       candidate.link.URL,
-			Password:  candidate.link.Password,
-			Title:     candidate.title,
-			WorkTitle: candidate.link.WorkTitle,
-			Datetime:  datetime,
+			Type:         linkType,
+			URL:          candidate.link.URL,
+			Password:     candidate.link.Password,
+			AccessMode:   resolveLinkAccessMode(candidate.link),
+			ScanTransfer: cloneScanTransferInfo(candidate.link.ScanTransfer),
+			Title:        candidate.title,
+			WorkTitle:    candidate.link.WorkTitle,
+			Datetime:     datetime,
 		})
 	}
 
@@ -346,13 +348,17 @@ func resolveResourceActions(result model.SearchResult, links []model.ResourceLin
 	actions := make([]model.ResourceAction, 0, len(links)+1)
 	for _, link := range links {
 		payload := map[string]interface{}{
-			"url":        link.URL,
-			"link_type":  link.Type,
-			"title":      link.Title,
-			"work_title": link.WorkTitle,
+			"url":         link.URL,
+			"link_type":   link.Type,
+			"title":       link.Title,
+			"work_title":  link.WorkTitle,
+			"access_mode": link.AccessMode,
 		}
 		if strings.TrimSpace(link.Password) != "" {
 			payload["password"] = link.Password
+		}
+		if link.ScanTransfer != nil {
+			payload["scan_transfer"] = cloneScanTransferInfo(link.ScanTransfer)
 		}
 		actions = append(actions, model.ResourceAction{
 			Key:     "link." + link.Type + ".open",
@@ -375,6 +381,30 @@ func resolveResourceActions(result model.SearchResult, links []model.ResourceLin
 	}
 
 	return actions
+}
+
+func resolveLinkAccessMode(link model.Link) string {
+	if accessMode := strings.TrimSpace(link.AccessMode); accessMode != "" {
+		return accessMode
+	}
+	if link.ScanTransfer != nil {
+		return "scan_transfer"
+	}
+	if strings.TrimSpace(link.Password) != "" {
+		return "password_open"
+	}
+	if strings.TrimSpace(link.URL) != "" {
+		return "direct_open"
+	}
+	return ""
+}
+
+func cloneScanTransferInfo(info *model.ScanTransferInfo) *model.ScanTransferInfo {
+	if info == nil {
+		return nil
+	}
+	cloned := *info
+	return &cloned
 }
 
 func cloneMeta(meta map[string]interface{}) map[string]interface{} {

@@ -1,17 +1,26 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import SearchBox from "@/components/SearchBox";
 import SearchResults from "@/components/SearchResults";
 import SearchUnifiedFilterCard from "@/components/SearchUnifiedFilterCard";
 import { SearchEmptyWorkbench } from "@/components/search/SearchEmptyWorkbench";
+import {
+  buildTrendingLaunchEntries,
+} from "@/components/search/searchLaunchpadPresets";
+import type {
+  SearchLaunchPreset,
+  SearchLaunchTrendingEntry,
+} from "@/components/search/searchLaunchpadTypes";
 import PublicPageShell from "@/components/PublicPageShell";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { useSearchUrlSync } from "@/hooks/useSearchUrlSync";
+import { hotRankingService } from "@/services/hotRankingService";
 import { SearchService } from "@/services/searchService";
 import { useSearchAccessStatus } from "@/stores/searchAccessStore";
 import { useSearchStore } from "@/stores/searchStore";
+import type { SearchParams } from "@/types/api";
 
 const buildRouteSnapshotFromUrl = (url: string) => {
   const parsedUrl = new URL(url, window.location.origin);
@@ -22,18 +31,38 @@ const buildRouteSnapshotFromUrl = (url: string) => {
   };
 };
 
+const buildPresetSearchParams = (
+  presetParams: SearchParams,
+  currentSearchParams: SearchParams,
+): SearchParams => ({
+  keyword: presetParams.keyword.trim(),
+  source: presetParams.source || "all",
+  resultType: presetParams.resultType || "merge",
+  cloudTypes: [...(presetParams.cloudTypes || [])],
+  channels: [...(presetParams.channels || [])],
+  plugins: [...(presetParams.plugins || [])],
+  concurrency: presetParams.concurrency || currentSearchParams.concurrency || 5,
+  refresh: false,
+  ext: presetParams.ext ? { ...presetParams.ext } : currentSearchParams.ext || {},
+  filter: presetParams.filter,
+});
+
 const SearchPage: React.FC = () => {
   const {
     searchParams,
     setSearchParams,
     clearResults,
     performSearch,
-    searchHistory,
+    recentEffectiveSearches,
+    removeRecentEffectiveSearch,
+    clearRecentEffectiveSearches,
   } = useSearchStore();
   const { status: searchAccessStatus } = useSearchAccessStatus();
   useSearchUrlSync();
   const location = useLocation();
   const navigate = useNavigate();
+  const [trendingEntries, setTrendingEntries] = useState<SearchLaunchTrendingEntry[]>([]);
+  const [isTrendingLoading, setIsTrendingLoading] = useState(false);
   const showSearchAccessHint = searchAccessStatus === "anonymous";
   const fromTrending = (
     location.state as {
@@ -49,6 +78,52 @@ const SearchPage: React.FC = () => {
     () => Boolean(searchParams.keyword?.trim()),
     [searchParams.keyword],
   );
+
+  useEffect(() => {
+    if (hasKeyword) {
+      setTrendingEntries([]);
+      setIsTrendingLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsTrendingLoading(true);
+
+    void hotRankingService
+      .getHotRankings({
+        mode: "trend",
+        period: "day",
+        category: "all",
+        page_size: 6,
+      })
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+
+        const items = response.sections
+          .flatMap((section) => section.items || [])
+          .filter((item) => item.title?.trim())
+          .slice(0, 6);
+
+        setTrendingEntries(buildTrendingLaunchEntries(items));
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error("加载搜索启动台热榜失败:", error);
+          setTrendingEntries([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsTrendingLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasKeyword]);
 
   const handleBack = () => {
     clearResults();
@@ -71,47 +146,42 @@ const SearchPage: React.FC = () => {
     });
   };
 
-  const handleQuickSearch = (keywordInput: string) => {
-    const keyword = keywordInput.trim();
+  const handlePresetSearch = (preset: SearchLaunchPreset) => {
+    const keyword = preset.params.keyword.trim();
     if (!keyword) {
       return;
     }
 
-    const nextParams = {
-      ...searchParams,
-      keyword,
-      cloudTypes: [],
-      channels: [],
-      plugins: [],
-      filter: undefined,
-    };
+    const nextParams = buildPresetSearchParams(preset.params, searchParams);
     const targetUrl = SearchService.buildSearchUrl(nextParams);
 
     if (showSearchAccessHint) {
       navigate("/login", {
         state: {
           from: buildRouteSnapshotFromUrl(targetUrl),
-          pendingSearch: { keyword },
+          pendingSearch: {
+            keyword,
+            params: nextParams,
+            fromTrending: preset.fromTrending,
+          },
         },
       });
       return;
     }
 
-    setSearchParams({
-      keyword,
-      cloudTypes: [],
-      channels: [],
-      plugins: [],
-      filter: undefined,
-    });
-    void performSearch(nextParams, { preserveResults: false });
-
     const currentUrl = `${location.pathname}${location.search}`;
     if (targetUrl !== currentUrl) {
       navigate(targetUrl, {
-        state: { skipSearchSync: true },
+        state: {
+          forceSkeleton: true,
+          ...(preset.fromTrending ? { fromTrending: preset.fromTrending } : {}),
+        },
       });
+      return;
     }
+
+    setSearchParams(nextParams);
+    void performSearch(nextParams, { preserveResults: false });
   };
 
   return (
@@ -177,8 +247,12 @@ const SearchPage: React.FC = () => {
             </>
           ) : (
             <SearchEmptyWorkbench
-              recentKeywords={searchHistory}
-              onKeywordSearch={handleQuickSearch}
+              recentSearches={recentEffectiveSearches}
+              trendingEntries={trendingEntries}
+              isTrendingLoading={isTrendingLoading}
+              onPresetSearch={handlePresetSearch}
+              onRemoveRecentSearch={removeRecentEffectiveSearch}
+              onClearRecentSearches={clearRecentEffectiveSearches}
             />
           )}
         </div>

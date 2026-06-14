@@ -23,7 +23,9 @@ import { SystemSettingsService } from "@/services/systemSettingsService";
 import {
   buildResourceDetailRouteState,
   isMagnetTarget,
+  isScanTransferTarget,
   normalizeExternalUrl,
+  type ResourceOpenTarget,
   resolveResourceOpenTarget,
 } from "@/utils/resourceDisplay";
 import { removeActiveFilterChip } from "@/utils/searchFilters";
@@ -114,17 +116,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   const [viewMode, setViewMode] = useState<SearchResultsViewMode>(
     initialViewModeRef.current.mode,
   );
-  const [passwordModal, setPasswordModal] = useState<{
-    isOpen: boolean;
-    password: string;
-    url: string;
-    cloudType: string;
-  }>({
-    isOpen: false,
-    password: "",
-    url: "",
-    cloudType: "",
-  });
+  const [passwordModalTarget, setPasswordModalTarget] = useState<ResourceOpenTarget | null>(null);
   const [enableResourceDetailPage, setEnableResourceDetailPage] = useState(true);
 
   // ── 无限滚动观察器 ─────────────────────────────────────────────────────────
@@ -217,13 +209,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         return;
       }
 
-      if (openTarget.password || isMagnetTarget(openTarget)) {
-        setPasswordModal({
-          isOpen: true,
-          password: openTarget.password,
-          url: openTarget.url,
-          cloudType: openTarget.cloudType,
-        });
+      if (openTarget.password || isMagnetTarget(openTarget) || isScanTransferTarget(openTarget)) {
+        setPasswordModalTarget(openTarget);
         return;
       }
 
@@ -233,7 +220,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   );
 
   const handlePasswordModalClose = useCallback(() => {
-    setPasswordModal({ isOpen: false, password: "", url: "", cloudType: "" });
+    setPasswordModalTarget(null);
   }, []);
 
   const handleOpenDetail = useCallback((item: ResultItem) => {
@@ -307,7 +294,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         }}
         onClearFilters={handleClearAllFilters}
         onSuggestSearch={(kw) => {
-          void performSearch({ ...searchParams, keyword: kw });
+          const nextKeyword = kw.trim();
+          if (!nextKeyword) {
+            return;
+          }
+
+          setSearchParams({ keyword: nextKeyword });
+          syncSearchUrl({ keyword: nextKeyword });
+          void performSearch({ keyword: nextKeyword }, { preserveResults: false });
         }}
       />
     );
@@ -368,11 +362,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
 
       {/* 密码弹窗 */}
       <PasswordModal
-        isOpen={passwordModal.isOpen}
+        isOpen={Boolean(passwordModalTarget)}
         onClose={handlePasswordModalClose}
-        password={passwordModal.password}
-        url={passwordModal.url}
-        cloudType={passwordModal.cloudType}
+        password={passwordModalTarget?.password || ""}
+        url={passwordModalTarget?.url || ""}
+        cloudType={passwordModalTarget?.cloudType || ""}
+        resourceId={passwordModalTarget?.resourceId}
+        accessMode={passwordModalTarget?.accessMode}
+        scanTransfer={passwordModalTarget?.scanTransfer}
       />
     </div>
   );

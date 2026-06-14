@@ -600,3 +600,57 @@
     - frontend/src/types/api.ts
     - scripts/build.sh
     - docs/readme_2606.md
+
+- [2026-06-14 22:41] feat(search): 优化搜索启动台体验并新增 SeedHub 扫码转存支持
+  - Body: 引入静态化配置驱动的启动台预设词组，优化了首页和空白搜索状态下的搜索引导体验；重构了搜索过滤器面板为高级弹窗侧边栏。同时为 SeedHub 插件新增了扫码转存 API 与解析映射逻辑，支持前端动态刷新与展示失效/待扫描二维码状态，完善全场景异常状态处理。
+  - Files:
+    - backend/api/filter_test.go
+    - backend/api/handler.go
+    - backend/api/router.go
+    - backend/api/scan_transfer_handler.go
+    - backend/api/scan_transfer_handler_test.go
+    - backend/api/search_filter_refresh_test.go
+    - backend/model/response.go
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - backend/service/search_response_builder.go
+    - backend/service/search_response_builder_test.go
+    - docs/2026-06-14-search-launchpad-optimization-development-plan.md
+    - docs/2026-06-14-seedhub-parser-scenario-matrix-development-plan.md
+    - docs/2026-06-14-seedhub-qr-transfer-support-development-plan.md
+    - docs/2026-06-14-seedhub-qr-transfer-support-implementation-plan.md
+    - frontend/src/components/PasswordModal.tsx
+    - frontend/src/components/SearchAdvancedFilterPanel.tsx
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/SearchUnifiedFilterCard.tsx
+    - frontend/src/components/__tests__/PasswordModal.test.tsx
+    - frontend/src/components/__tests__/SearchAdvancedFilterPanel.test.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/__tests__/SearchUnifiedFilterCard.test.tsx
+    - frontend/src/components/home/SearchResultGridCard.tsx
+    - frontend/src/components/home/SearchResultListItem.tsx
+    - frontend/src/components/resource-detail/ResourceDetailActionPanel.tsx
+    - frontend/src/components/resource-detail/ResourceDetailLinksSection.tsx
+    - frontend/src/components/search-results/SearchResultsState.tsx
+    - frontend/src/components/search/SearchEmptyWorkbench.tsx
+    - frontend/src/components/search/searchLaunchpadPresets.ts
+    - frontend/src/components/search/searchLaunchpadTypes.ts
+    - frontend/src/components/trending/__tests__/HotMediaCard.test.tsx
+    - frontend/src/hooks/useSearchUrlSync.ts
+    - frontend/src/pages/HotPage.tsx
+    - frontend/src/pages/LoginPage.tsx
+    - frontend/src/pages/ResourceDetailPage.tsx
+    - frontend/src/pages/SearchPage.tsx
+    - frontend/src/pages/__tests__/HotPage.test.tsx
+    - frontend/src/pages/__tests__/ResourceDetailPage.test.tsx
+    - frontend/src/pages/__tests__/SearchPage.test.tsx
+    - frontend/src/services/__tests__/searchService.test.ts
+    - frontend/src/services/searchService.ts
+    - frontend/src/stores/__tests__/searchStore.test.ts
+    - frontend/src/stores/searchStore.ts
+    - frontend/src/types/api.ts
+    - frontend/src/types/resource.ts
+    - frontend/src/utils/__tests__/resourceDisplay.test.ts
+    - frontend/src/utils/resourceDisplay.ts
+    - frontend/src/utils/searchFilters.ts
+    - docs/readme_2606.md

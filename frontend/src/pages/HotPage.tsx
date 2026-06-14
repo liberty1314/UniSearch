@@ -317,6 +317,13 @@ const HotPage: React.FC = () => {
   const handleSearch = (item: HotRankingItem, action?: TrendingSearchAction) => {
     const searchAction = action || SearchService.buildTrendingSearchActions(item)[0];
     const keyword = searchAction?.keyword || item.title;
+    const filter =
+      searchAction?.key === "title_4k"
+        ? {
+            include: ["4K"],
+            exclude: ["预告", "枪版"],
+          }
+        : undefined;
 
     navigate(
       SearchService.buildSearchUrl({
@@ -329,6 +336,7 @@ const HotPage: React.FC = () => {
         concurrency: 5,
         refresh: false,
         ext: {},
+        filter,
       }),
       {
         state: {

@@ -30,7 +30,7 @@ let searchStoreState = {
     facets: {
       cloud_types: { quark: 1 },
       source_types: { plugin: 1 },
-      media_types: { movie: 1, anime: 1 },
+      media_types: { movie: 1, anime: 1 } as Record<string, number>,
       target_types: {},
       capabilities: {},
       action_types: {},
@@ -130,7 +130,7 @@ describe("SearchUnifiedFilterCard", () => {
         facets: {
           cloud_types: { quark: 1 },
           source_types: { plugin: 1 },
-          media_types: { movie: 1, anime: 1 },
+          media_types: { movie: 1, anime: 1 } as Record<string, number>,
           target_types: {},
           capabilities: {},
           action_types: {},
@@ -172,7 +172,28 @@ describe("SearchUnifiedFilterCard", () => {
     expect(screen.getByText("排除：枪版")).toBeInTheDocument();
   });
 
-  it("展开后展示关键词与媒体类型高级条件", () => {
+  it("不展示已生效的媒体类型和媒体类型分面", () => {
+    searchStoreState.searchParams.filter = {
+      mediaTypes: ["movie"],
+    };
+    searchStoreState.searchResults.facets.media_types = {} as Record<string, number>;
+
+    render(
+      <MemoryRouter>
+        <SearchUnifiedFilterCard />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("媒体：电影")).not.toBeInTheDocument();
+    expect(screen.queryByText("已启用 1 项")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /展开高级条件/ }));
+
+    expect(screen.queryByText("媒体类型")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /电影/ })).not.toBeInTheDocument();
+  });
+
+  it("展开后只展示关键词高级条件", () => {
     searchStoreState.searchParams.filter = {
       include: ["4k"],
     };
@@ -188,7 +209,7 @@ describe("SearchUnifiedFilterCard", () => {
     expect(screen.getByTestId("search-unified-filter-advanced")).toBeInTheDocument();
     expect(screen.getByText("包含关键词")).toBeInTheDocument();
     expect(screen.getByText("排除关键词")).toBeInTheDocument();
-    expect(screen.getByText("媒体类型")).toBeInTheDocument();
+    expect(screen.queryByText("媒体类型")).not.toBeInTheDocument();
     expect(screen.getByText("4k")).toBeInTheDocument();
     expect(screen.getByTestId("include-keyword-header").className).toContain("items-center");
     expect(screen.getByTestId("include-keyword-header").className).toContain("min-h-8");

@@ -5,19 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getCloudTypeInfo, getCloudTypePriority } from "@/utils/cloudTypeUtils";
 import type { ResourceLink } from "@/types/api";
-
-interface ResourceTarget {
-  url: string;
-  password: string;
-  cloudType: string;
-}
+import type { ResourceOpenTarget } from "@/utils/resourceDisplay";
 
 interface ResourceDetailLinksSectionProps {
   resourceTitle: string;
   links: ResourceLink[];
   primaryLinkUrl?: string | null;
   formatDetailTime: (value?: string) => string;
-  onOpenTarget: (target: ResourceTarget | null) => void;
+  onOpenTarget: (target: ResourceOpenTarget | null) => void;
   onCopyText: (value: string, successMessage: string) => void;
 }
 
@@ -149,6 +144,11 @@ const ResourceDetailLinksSection: React.FC<ResourceDetailLinksSectionProps> = ({
                                 当前主链接
                               </Badge>
                             ) : null}
+                            {item.link.access_mode === "scan_transfer" || item.link.scan_transfer ? (
+                              <Badge variant="secondary" className="rounded-full">
+                                需手机扫码
+                              </Badge>
+                            ) : null}
                             {item.link.datetime ? (
                               <Badge variant="secondary" className="rounded-full">
                                 {formatDetailTime(item.link.datetime)}
@@ -188,12 +188,18 @@ const ResourceDetailLinksSection: React.FC<ResourceDetailLinksSectionProps> = ({
                                 url: item.link.url,
                                 password: item.link.password || "",
                                 cloudType: item.link.type,
+                                accessMode:
+                                  item.link.access_mode ||
+                                  (item.link.scan_transfer ? "scan_transfer" : item.link.password ? "password_open" : "direct_open"),
+                                scanTransfer: item.link.scan_transfer,
                               })
                             }
                             className="rounded-full"
                           >
                             <ExternalLink className="mr-2 h-4 w-4" />
-                            打开资源
+                            {item.link.access_mode === "scan_transfer" || item.link.scan_transfer
+                              ? "扫码转存"
+                              : "打开资源"}
                           </Button>
                           <Button
                             type="button"

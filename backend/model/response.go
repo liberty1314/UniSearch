@@ -2,13 +2,30 @@ package model
 
 import "time"
 
+// ScanTransferInfo 描述需要在移动端扫码转存时的补充访问信息。
+type ScanTransferInfo struct {
+	Provider       string `json:"provider,omitempty" sonic:"provider,omitempty"`
+	QRCodeBase64   string `json:"qr_code_base64,omitempty" sonic:"qr_code_base64,omitempty"`
+	QRCodeImageURL string `json:"qr_code_image_url,omitempty" sonic:"qr_code_image_url,omitempty"`
+	QRCodeValue    string `json:"qr_code_value,omitempty" sonic:"qr_code_value,omitempty"`
+	MobileURL      string `json:"mobile_url,omitempty" sonic:"mobile_url,omitempty"`
+	TransferCode   string `json:"transfer_code,omitempty" sonic:"transfer_code,omitempty"`
+	Instruction    string `json:"instruction,omitempty" sonic:"instruction,omitempty"`
+	SourcePageURL  string `json:"source_page_url,omitempty" sonic:"source_page_url,omitempty"`
+	ExpiresHint    string `json:"expires_hint,omitempty" sonic:"expires_hint,omitempty"`
+	Refreshable    bool   `json:"refreshable,omitempty" sonic:"refreshable,omitempty"`
+	RefreshKey     string `json:"refresh_key,omitempty" sonic:"refresh_key,omitempty"`
+}
+
 // Link 网盘链接
 type Link struct {
-	Type      string    `json:"type" sonic:"type"`
-	URL       string    `json:"url" sonic:"url"`
-	Password  string    `json:"password" sonic:"password"`
-	Datetime  time.Time `json:"datetime,omitempty" sonic:"datetime,omitempty"`     // 链接更新时间（可选）
-	WorkTitle string    `json:"work_title,omitempty" sonic:"work_title,omitempty"` // 作品标题（用于区分同一消息中多个作品的链接）
+	Type         string            `json:"type" sonic:"type"`
+	URL          string            `json:"url" sonic:"url"`
+	Password     string            `json:"password" sonic:"password"`
+	AccessMode   string            `json:"access_mode,omitempty" sonic:"access_mode,omitempty"`
+	ScanTransfer *ScanTransferInfo `json:"scan_transfer,omitempty" sonic:"scan_transfer,omitempty"`
+	Datetime     time.Time         `json:"datetime,omitempty" sonic:"datetime,omitempty"`     // 链接更新时间（可选）
+	WorkTitle    string            `json:"work_title,omitempty" sonic:"work_title,omitempty"` // 作品标题（用于区分同一消息中多个作品的链接）
 }
 
 // SearchResult 搜索结果
@@ -44,12 +61,14 @@ type ResourceSource struct {
 
 // ResourceLink 描述资源对象内的单个可访问链接。
 type ResourceLink struct {
-	Type      string    `json:"type" sonic:"type"`
-	URL       string    `json:"url" sonic:"url"`
-	Password  string    `json:"password,omitempty" sonic:"password,omitempty"`
-	Title     string    `json:"title,omitempty" sonic:"title,omitempty"`
-	WorkTitle string    `json:"work_title,omitempty" sonic:"work_title,omitempty"`
-	Datetime  time.Time `json:"datetime,omitempty" sonic:"datetime,omitempty"`
+	Type         string            `json:"type" sonic:"type"`
+	URL          string            `json:"url" sonic:"url"`
+	Password     string            `json:"password,omitempty" sonic:"password,omitempty"`
+	AccessMode   string            `json:"access_mode,omitempty" sonic:"access_mode,omitempty"`
+	ScanTransfer *ScanTransferInfo `json:"scan_transfer,omitempty" sonic:"scan_transfer,omitempty"`
+	Title        string            `json:"title,omitempty" sonic:"title,omitempty"`
+	WorkTitle    string            `json:"work_title,omitempty" sonic:"work_title,omitempty"`
+	Datetime     time.Time         `json:"datetime,omitempty" sonic:"datetime,omitempty"`
 }
 
 // ResourceDetail 承载资源详情页和原始内容，避免卡片层直接依赖插件私有字段。

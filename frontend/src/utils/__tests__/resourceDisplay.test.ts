@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ResourceObject } from "@/types/api";
-import { resolveResourceDisplayTitle } from "../resourceDisplay";
+import {
+  resolveResourceActionTarget,
+  resolveResourceDisplayTitle,
+  resolveResourceOpenTarget,
+} from "../resourceDisplay";
 
 const makeResource = (title: string): ResourceObject => ({
   id: "resource-title-test",
@@ -50,5 +54,80 @@ describe("resolveResourceDisplayTitle", () => {
 
   it("falls back to the original title when cleanup would empty the result", () => {
     expect(resolveResourceDisplayTitle(makeResource("描述：只有说明文字"))).toBe("描述：只有说明文字");
+  });
+});
+
+describe("resource open target resolution", () => {
+  it("preserves scan transfer payload from primary link targets", () => {
+    const resource = {
+      ...makeResource("SeedHub 扫码资源"),
+      id: "seedhub-scan-1",
+      links: [
+        {
+          type: "quark",
+          url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+          access_mode: "scan_transfer" as const,
+          scan_transfer: {
+            qr_code_base64: "data:image/png;base64,abc123",
+            refreshable: true,
+            refresh_key: "seedhub:4259:quark:1",
+          },
+        },
+      ],
+    };
+
+    const target = resolveResourceOpenTarget({
+      resource,
+      primaryLink: resource.links[0],
+      cloudType: "quark",
+    });
+
+    expect(target).toMatchObject({
+      url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+      cloudType: "quark",
+      accessMode: "scan_transfer",
+      resourceId: "seedhub-scan-1",
+      scanTransfer: {
+        refresh_key: "seedhub:4259:quark:1",
+      },
+    });
+  });
+
+  it("preserves scan transfer payload from action targets", () => {
+    const resource = {
+      ...makeResource("SeedHub 扫码资源"),
+      id: "seedhub-scan-2",
+      links: [],
+    };
+
+    const target = resolveResourceActionTarget(
+      {
+        key: "link.quark.open",
+        label: "扫码转存",
+        type: "open_link",
+        payload: {
+          url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+          link_type: "quark",
+          access_mode: "scan_transfer",
+          scan_transfer: {
+            transfer_code: "ABCD1234",
+            refresh_key: "seedhub:4259:quark:2",
+          },
+        },
+      },
+      {
+        resource,
+        primaryLink: undefined,
+        cloudType: "quark",
+      },
+    );
+
+    expect(target).toMatchObject({
+      accessMode: "scan_transfer",
+      resourceId: "seedhub-scan-2",
+      scanTransfer: {
+        transfer_code: "ABCD1234",
+      },
+    });
   });
 });

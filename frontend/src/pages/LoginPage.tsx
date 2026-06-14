@@ -48,6 +48,7 @@ import {
 } from "@/components/auth/authEntryLayout";
 import { getErrorMessage, getErrorStatus } from "@/lib/error";
 import { cn } from "@/lib/utils";
+import type { SearchParams } from "@/types/api";
 
 interface RedirectLocationState {
   from?: {
@@ -56,6 +57,12 @@ interface RedirectLocationState {
   };
   pendingSearch?: {
     keyword?: string;
+    params?: Partial<SearchParams>;
+    fromTrending?: {
+      title?: string;
+      originalTitle?: string;
+      keyword?: string;
+    };
   };
 }
 
@@ -89,6 +96,7 @@ const LoginPage: React.FC = () => {
   const routeState = location.state as AuthTransitionState | null;
   const redirectState = location.state as RedirectLocationState | null;
   const pendingKeyword = redirectState?.pendingSearch?.keyword?.trim();
+  const pendingSearchParams = redirectState?.pendingSearch?.params;
   const authDirection = resolveAuthDirection(
     typeof routeState?.from === "string" ? routeState.from : undefined,
     location.pathname,
@@ -143,6 +151,8 @@ const LoginPage: React.FC = () => {
             state: {
               resumeSearch: {
                 keyword: nextKeyword,
+                params: pendingSearchParams,
+                fromTrending: redirectState?.pendingSearch?.fromTrending,
               },
             },
           });

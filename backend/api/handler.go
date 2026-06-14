@@ -33,9 +33,9 @@ func SearchHandler(c *gin.Context) {
 		return
 	}
 
-	// 执行搜索
-	result, err := searchService.Search(req.Keyword, req.Channels, req.Concurrency, req.ForceRefresh, req.ResultType, req.SourceType, req.Plugins, req.CloudTypes, req.Ext)
-
+	result, err := searchWithFilterRefreshFallback(req, func(forceRefresh bool) (model.SearchResponse, error) {
+		return searchService.Search(req.Keyword, req.Channels, req.Concurrency, forceRefresh, req.ResultType, req.SourceType, req.Plugins, req.CloudTypes, req.Ext)
+	})
 	if err != nil {
 		response := model.NewErrorResponse(500, "搜索失败: "+err.Error())
 		jsonData, _ := jsonutil.Marshal(response)
@@ -43,13 +43,31 @@ func SearchHandler(c *gin.Context) {
 		return
 	}
 
-	// 应用过滤器
-	if req.Filter != nil {
-		result = applyResultFilter(result, req.Filter, req.ResultType)
-	}
-
 	// 包装SearchResponse到标准响应格式中
 	response := model.NewSuccessResponse(result)
 	jsonData, _ := jsonutil.Marshal(response)
 	c.Data(http.StatusOK, "application/json", jsonData)
+}
+
+type searchResponseLoader func(forceRefresh bool) (model.SearchResponse, error)
+
+func searchWithFilterRefreshFallback(req model.SearchRequest, load searchResponseLoader) (model.SearchResponse, error) {
+	result, err := load(req.ForceRefresh)
+	if err != nil {
+		return model.SearchResponse{}, err
+	}
+	if req.Filter == nil || isResourceFilterEmpty(req.Filter) {
+		return result, nil
+	}
+
+	filtered := applyResultFilter(result, req.Filter, req.ResultType)
+	if req.ForceRefresh || filtered.Total > 0 {
+		return filtered, nil
+	}
+
+	refreshed, refreshErr := load(true)
+	if refreshErr != nil {
+		return filtered, nil
+	}
+	return applyResultFilter(refreshed, req.Filter, req.ResultType), nil
 }

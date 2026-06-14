@@ -17,9 +17,11 @@ import type { ResourceDetailRouteState } from "@/types/api";
 import { findRecentResourceSnapshot } from "@/lib/resourceSnapshot";
 import {
   isMagnetTarget,
+  isScanTransferTarget,
   normalizeExternalUrl,
   resolveResourceDisplayTitle,
   resolveResourceDisplaySize,
+  type ResourceOpenTarget,
   resolveResourceOpenTarget,
 } from "@/utils/resourceDisplay";
 
@@ -53,17 +55,7 @@ const ResourceDetailPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { searchResults } = useSearchStore();
-  const [passwordModal, setPasswordModal] = useState<{
-    isOpen: boolean;
-    password: string;
-    url: string;
-    cloudType: string;
-  }>({
-    isOpen: false,
-    password: "",
-    url: "",
-    cloudType: "",
-  });
+  const [passwordModalTarget, setPasswordModalTarget] = useState<ResourceOpenTarget | null>(null);
   const [enableResourceDetailPage, setEnableResourceDetailPage] = useState(true);
   const [settingsResolved, setSettingsResolved] = useState(false);
 
@@ -159,6 +151,8 @@ const ResourceDetailPage: React.FC = () => {
       cloudType: detailUrl.toLowerCase().startsWith("magnet:")
         ? "magnet"
         : resource?.target_type || resource?.links[0]?.type || "detail",
+      accessMode: "direct_open" as const,
+      resourceId: resource?.id,
     };
   }, [resource]);
 
@@ -201,18 +195,13 @@ const ResourceDetailPage: React.FC = () => {
   }, []);
 
   const handlePrimaryOpenTarget = useCallback(
-    (target: { url: string; password: string; cloudType: string } | null) => {
+    (target: ResourceOpenTarget | null) => {
       if (!target) {
         return;
       }
 
-      if (isMagnetTarget(target)) {
-        setPasswordModal({
-          isOpen: true,
-          password: target.password,
-          url: target.url,
-          cloudType: target.cloudType,
-        });
+      if (target.password || isMagnetTarget(target) || isScanTransferTarget(target)) {
+        setPasswordModalTarget(target);
         return;
       }
 
@@ -265,12 +254,7 @@ const ResourceDetailPage: React.FC = () => {
   }, [navigate, retrySearchKeyword]);
 
   const handlePasswordModalClose = useCallback(() => {
-    setPasswordModal({
-      isOpen: false,
-      password: "",
-      url: "",
-      cloudType: "",
-    });
+    setPasswordModalTarget(null);
   }, []);
 
   const handleCopyText = useCallback(async (value: string, successMessage: string) => {
@@ -429,11 +413,14 @@ const ResourceDetailPage: React.FC = () => {
       </div>
 
       <PasswordModal
-        isOpen={passwordModal.isOpen}
+        isOpen={Boolean(passwordModalTarget)}
         onClose={handlePasswordModalClose}
-        password={passwordModal.password}
-        url={passwordModal.url}
-        cloudType={passwordModal.cloudType}
+        password={passwordModalTarget?.password || ""}
+        url={passwordModalTarget?.url || ""}
+        cloudType={passwordModalTarget?.cloudType || ""}
+        resourceId={passwordModalTarget?.resourceId}
+        accessMode={passwordModalTarget?.accessMode}
+        scanTransfer={passwordModalTarget?.scanTransfer}
       />
     </PublicPageShell>
   );
