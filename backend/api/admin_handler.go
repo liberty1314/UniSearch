@@ -210,9 +210,7 @@ type SystemStatsResponse struct {
 // SystemConfigResponse 系统配置响应
 type SystemConfigResponse struct {
 	// 缓存配置
-	CachePath       string `json:"cache_path"`
-	CacheMaxSizeMB  int    `json:"cache_max_size_mb"`
-	CacheTTLMinutes int    `json:"cache_ttl_minutes"`
+	CachePath string `json:"cache_path"`
 
 	// 并发配置
 	DefaultConcurrency int `json:"default_concurrency"`
@@ -338,8 +336,6 @@ func GetSystemInfoHandler(searchService *service.SearchService, userService *ser
 		// 构建系统配置信息
 		systemConfig := SystemConfigResponse{
 			CachePath:                 config.AppConfig.CachePath,
-			CacheMaxSizeMB:            config.AppConfig.CacheMaxSizeMB,
-			CacheTTLMinutes:           config.AppConfig.CacheTTLMinutes,
 			DefaultConcurrency:        config.AppConfig.DefaultConcurrency,
 			ProxyURL:                  config.AppConfig.ProxyURL,
 			AsyncPluginEnabled:        config.AppConfig.AsyncPluginEnabled,

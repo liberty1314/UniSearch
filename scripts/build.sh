@@ -416,7 +416,6 @@ run_local_container_test() {
     local app_env_args=(
         -e TZ=Asia/Shanghai
         -e PORT=8888
-        -e CACHE_ENABLED=true
         -e CACHE_PATH=/app/cache
         -e ASYNC_PLUGIN_ENABLED=true
         -e API_KEY_ENABLED=false

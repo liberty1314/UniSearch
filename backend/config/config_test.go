@@ -6,6 +6,29 @@ import (
 	"testing"
 )
 
+func TestGetDefaultChannelsUsesFallbackWhenEnvMissing(t *testing.T) {
+	preserveEnv(t, "CHANNELS")
+	if err := os.Unsetenv("CHANNELS"); err != nil {
+		t.Fatalf("清理 CHANNELS 失败: %v", err)
+	}
+
+	got := getDefaultChannels()
+	expected := []string{"tgsearchers4"}
+	if !reflect.DeepEqual(got, expected) {
+		t.Fatalf("未设置 CHANNELS 时应回退到默认频道，实际为 %#v", got)
+	}
+}
+
+func TestGetDefaultChannelsDeduplicatesAndTrims(t *testing.T) {
+	t.Setenv("CHANNELS", " tg-a, tg-b ,, tg-a , tg-c ")
+
+	got := getDefaultChannels()
+	expected := []string{"tg-a", "tg-b", "tg-c"}
+	if !reflect.DeepEqual(got, expected) {
+		t.Fatalf("CHANNELS 应去重并清理空白，实际为 %#v", got)
+	}
+}
+
 func TestGetEnabledPluginsUsesDefaultListWhenEnvMissing(t *testing.T) {
 	preserveEnv(t, "ENABLED_PLUGINS")
 	if err := os.Unsetenv("ENABLED_PLUGINS"); err != nil {
@@ -38,7 +61,7 @@ func TestGetEnabledPluginsKeepsExplicitEmptyList(t *testing.T) {
 }
 
 func TestGetEnabledPluginsParsesConfiguredList(t *testing.T) {
-	t.Setenv("ENABLED_PLUGINS", " aikanzy, pansearch ,, sidhub ")
+	t.Setenv("ENABLED_PLUGINS", " aikanzy, pansearch ,, sidhub , pansearch ")
 
 	got := getEnabledPlugins()
 	expected := []string{"aikanzy", "pansearch", "sidhub"}
@@ -54,6 +77,31 @@ func TestDefaultEnabledPluginsReturnsCopy(t *testing.T) {
 	second := DefaultEnabledPlugins()
 	if second[0] == "changed" {
 		t.Fatalf("默认插件清单应返回副本，避免调用方修改全局默认值")
+	}
+}
+
+func TestGetDefaultConcurrencyDoesNotNeedPluginCountEnv(t *testing.T) {
+	preserveEnv(t, "CONCURRENCY")
+	preserveEnv(t, "CHANNELS")
+	preserveEnv(t, "ENABLED_PLUGINS")
+	preserveEnv(t, "PLUGIN_COUNT")
+	if err := os.Unsetenv("CONCURRENCY"); err != nil {
+		t.Fatalf("清理 CONCURRENCY 失败: %v", err)
+	}
+	if err := os.Setenv("CHANNELS", "tg-a,tg-b"); err != nil {
+		t.Fatalf("设置 CHANNELS 失败: %v", err)
+	}
+	if err := os.Setenv("ENABLED_PLUGINS", "pansearch,sidhub,huban"); err != nil {
+		t.Fatalf("设置 ENABLED_PLUGINS 失败: %v", err)
+	}
+	if err := os.Setenv("PLUGIN_COUNT", "999"); err != nil {
+		t.Fatalf("设置 PLUGIN_COUNT 失败: %v", err)
+	}
+
+	got := getDefaultConcurrency()
+	expected := 15 // 2 个频道 + 3 个插件 + 10
+	if got != expected {
+		t.Fatalf("默认并发应根据真实初始化配置推导，期望 %d，实际 %d", expected, got)
 	}
 }
 

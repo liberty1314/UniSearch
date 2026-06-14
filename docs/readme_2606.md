@@ -581,3 +581,22 @@
     - sidhub-search-response-148.json
     - test_urls.py
     - docs/readme_2606.md
+
+- [2026-06-14 14:47] refactor(config): 移除废弃的环境变量依赖并收敛缓存初始化逻辑
+  - Body: 移除了 `PLUGIN_COUNT`、`CACHE_MAX_SIZE`、`CACHE_TTL` 等无运行时价值的全局环境变量，并将默认并发计算逻辑变更为基于启用的插件数推导。统一缓存参数的获取入口，只保留全局缓存路径开关，同时在前后端相关服务和测试套件中清理了这些多余变量的依赖，使 `.env` 的配置语义更加清晰。
+  - Files:
+    - .env.example
+    - Dockerfile
+    - README.md
+    - backend/api/admin_handler.go
+    - backend/cmd/bootstrap/server.go
+    - backend/config/config.go
+    - backend/config/config_env.go
+    - backend/config/config_test.go
+    - backend/plugin/weibo/weibo.go
+    - backend/service/system_settings_service.go
+    - docs/2026-06-14-env-config-governance-development-plan.md
+    - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
+    - frontend/src/types/api.ts
+    - scripts/build.sh
+    - docs/readme_2606.md

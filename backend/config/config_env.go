@@ -12,13 +12,36 @@ import (
 // 本文件集中通用运行参数、缓存（已废弃）、压缩、GC、插件、异步与 HTTP 服务器
 // 相关的环境变量读取函数，以及频道/并发的运行时更新器。
 
+func parseTrimmedUniqueEnvList(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+
+	parts := strings.Split(raw, ",")
+	items := make([]string, 0, len(parts))
+	seen := make(map[string]struct{}, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue
+		}
+		if _, exists := seen[trimmed]; exists {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		items = append(items, trimmed)
+	}
+
+	return items
+}
+
 // 从环境变量获取默认频道列表，如果未设置则使用默认值
 func getDefaultChannels() []string {
-	channelsEnv := os.Getenv("CHANNELS")
-	if channelsEnv == "" {
+	channels := parseTrimmedUniqueEnvList(os.Getenv("CHANNELS"))
+	if len(channels) == 0 {
 		return []string{"tgsearchers4"}
 	}
-	return strings.Split(channelsEnv, ",")
+	return channels
 }
 
 // UpdateChannels 运行时更新频道列表（由 TGChannelService 调用）
@@ -41,24 +64,9 @@ func getDefaultConcurrency() int {
 		}
 	}
 
-	// 环境变量未设置或无效，使用基于环境变量的简单计算
-	// 计算频道数
+	// 环境变量未设置或无效时，根据初始化配置推导默认并发。
 	channelCount := len(getDefaultChannels())
-
-	// 估计插件数（从环境变量或默认值，实际在应用启动后会根据真实插件数调整）
-	pluginCountEnv := os.Getenv("PLUGIN_COUNT")
-	pluginCount := 0
-	if pluginCountEnv != "" {
-		count, err := strconv.Atoi(pluginCountEnv)
-		if err == nil && count > 0 {
-			pluginCount = count
-		}
-	}
-
-	// 如果没有指定插件数，使用当前默认插件清单数量。
-	if pluginCount == 0 {
-		pluginCount = len(defaultEnabledPlugins)
-	}
+	pluginCount := len(getEnabledPlugins())
 
 	// 计算并发数 = 频道数 + 插件数 + 10
 	concurrency := channelCount + pluginCount + 10
@@ -122,10 +130,8 @@ func getHTTPSProxyURL() string {
 	return os.Getenv("https_proxy")
 }
 
-// 本地缓存相关函数（已废弃，将在 Redis 迁移完成后移除）
-// Deprecated: 使用 Redis 缓存替代
-
-// 从环境变量获取是否启用缓存，如果未设置则默认启用
+// 搜索缓存总开关。当前真实缓存后端已迁移到 Redis，
+// 但仍保留环境变量作为全局兜底开关。
 func getCacheEnabled() bool {
 	enabled := os.Getenv("CACHE_ENABLED")
 	if enabled == "" {
@@ -134,7 +140,8 @@ func getCacheEnabled() bool {
 	return enabled != "false" && enabled != "0"
 }
 
-// 从环境变量获取缓存路径，如果未设置则使用默认路径
+// 从环境变量获取本地目录兜底路径。
+// 当前主要用于需要文件存储的兼容插件。
 func getCachePath() string {
 	path := os.Getenv("CACHE_PATH")
 	if path == "" {
@@ -146,32 +153,6 @@ func getCachePath() string {
 		return defaultPath
 	}
 	return path
-}
-
-// 从环境变量获取缓存最大大小(MB)，如果未设置则使用默认值
-func getCacheMaxSize() int {
-	sizeEnv := os.Getenv("CACHE_MAX_SIZE")
-	if sizeEnv == "" {
-		return 100 // 默认100MB
-	}
-	size, err := strconv.Atoi(sizeEnv)
-	if err != nil || size <= 0 {
-		return 100
-	}
-	return size
-}
-
-// 从环境变量获取缓存TTL(分钟)，如果未设置则使用默认值
-func getCacheTTL() int {
-	ttlEnv := os.Getenv("CACHE_TTL")
-	if ttlEnv == "" {
-		return 60 // 默认60分钟
-	}
-	ttl, err := strconv.Atoi(ttlEnv)
-	if err != nil || ttl <= 0 {
-		return 60
-	}
-	return ttl
 }
 
 // 从环境变量获取是否启用压缩，如果未设置则默认禁用
@@ -241,9 +222,9 @@ func getAsyncPluginEnabled() bool {
 }
 
 // 从环境变量获取启用的插件列表。
-// 返回默认清单表示未设置环境变量时使用当前部署策略。
-// 返回[]string{}表示设置为空（不启用任何插件）
-// 返回具体列表表示启用指定插件
+// 返回默认清单表示未设置环境变量时使用启动默认策略。
+// 返回[]string{}表示设置为空（显式禁用全部插件）。
+// 返回具体列表表示按名称覆盖默认注册集合。
 func getEnabledPlugins() []string {
 	plugins, exists := os.LookupEnv("ENABLED_PLUGINS")
 	if !exists {
@@ -251,19 +232,13 @@ func getEnabledPlugins() []string {
 	}
 
 	if plugins == "" {
-		// 设置为空字符串，也表示不启用任何插件
 		return []string{}
 	}
 
-	// 按逗号分割插件名
-	result := make([]string, 0)
-	for _, plugin := range strings.Split(plugins, ",") {
-		plugin = strings.TrimSpace(plugin)
-		if plugin != "" {
-			result = append(result, plugin)
-		}
+	result := parseTrimmedUniqueEnvList(plugins)
+	if len(result) == 0 {
+		return []string{}
 	}
-
 	return result
 }
 

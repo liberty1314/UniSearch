@@ -559,8 +559,6 @@ export interface SystemStats {
 export interface SystemConfig {
   // 缓存配置
   cache_path: string;
-  cache_max_size_mb: number;
-  cache_ttl_minutes: number;
 
   // 并发配置
   default_concurrency: number;

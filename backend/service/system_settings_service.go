@@ -458,8 +458,6 @@ func resolveDefaultCacheSettings() CacheSettings {
 
 	if config.AppConfig.RedisTTL > 0 {
 		defaults.SearchCacheTTLSeconds = int(config.AppConfig.RedisTTL / time.Second)
-	} else if config.AppConfig.CacheTTLMinutes > 0 {
-		defaults.SearchCacheTTLSeconds = config.AppConfig.CacheTTLMinutes * 60
 	}
 
 	if config.AppConfig.CacheWriteQueueSize > 0 {

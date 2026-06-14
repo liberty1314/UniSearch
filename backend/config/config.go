@@ -50,12 +50,9 @@ type Config struct {
 	UseProxy           bool
 	HTTPProxyURL       string
 	HTTPSProxyURL      string
-	// 本地缓存相关配置（已废弃，将在 Redis 迁移完成后移除）
-	// Deprecated: 使用 Redis 缓存替代
-	CacheEnabled    bool
-	CachePath       string
-	CacheMaxSizeMB  int
-	CacheTTLMinutes int
+	// 搜索缓存总开关与本地目录兜底配置
+	CacheEnabled bool
+	CachePath    string
 	// 压缩相关配置
 	EnableCompression bool
 	MinSizeToCompress int // 最小压缩大小（字节）
@@ -186,11 +183,9 @@ func Init() {
 		UseProxy:           proxyURL != "",
 		HTTPProxyURL:       getHTTPProxyURL(),
 		HTTPSProxyURL:      getHTTPSProxyURL(),
-		// 本地缓存相关配置（已废弃，从环境变量读取以保持向后兼容）
-		CacheEnabled:    getCacheEnabled(),
-		CachePath:       getCachePath(),
-		CacheMaxSizeMB:  getCacheMaxSize(),
-		CacheTTLMinutes: getCacheTTL(),
+		// 搜索缓存总开关与本地目录兜底配置
+		CacheEnabled: getCacheEnabled(),
+		CachePath:    getCachePath(),
 		// 压缩相关配置
 		EnableCompression: getEnableCompression(),
 		MinSizeToCompress: getMinSizeToCompress(),

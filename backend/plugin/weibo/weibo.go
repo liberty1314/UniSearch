@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"unisearch/config"
 	"unisearch/model"
 	"unisearch/plugin"
 	"unisearch/util/json"
@@ -448,9 +449,9 @@ func (p *WeiboPlugin) Initialize() error {
 	}
 
 	// 初始化存储目录路径
-	cachePath := os.Getenv("CACHE_PATH")
-	if cachePath == "" {
-		cachePath = "./cache"
+	cachePath := "./cache"
+	if config.AppConfig != nil && config.AppConfig.CachePath != "" {
+		cachePath = config.AppConfig.CachePath
 	}
 	StorageDir = filepath.Join(cachePath, "weibo_users")
 

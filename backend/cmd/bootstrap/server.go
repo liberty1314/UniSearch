@@ -187,10 +187,9 @@ func printServiceInfo(port string, pluginManager *plugin.PluginManager) {
 	}
 
 	if config.AppConfig.CacheEnabled {
-		fmt.Printf("缓存已启用: 路径=%s, 最大大小=%dMB, TTL=%d分钟\n",
+		fmt.Printf("缓存已启用: 本地兼容目录=%s, Redis 默认 TTL=%s\n",
 			config.AppConfig.CachePath,
-			config.AppConfig.CacheMaxSizeMB,
-			config.AppConfig.CacheTTLMinutes)
+			config.AppConfig.RedisTTL)
 	} else {
 		fmt.Println("缓存已禁用")
 	}

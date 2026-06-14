@@ -47,8 +47,6 @@ describe('SystemInfoView', () => {
             },
             config: {
               cache_path: '/tmp/cache',
-              cache_max_size_mb: 100,
-              cache_ttl_minutes: 30,
               default_concurrency: 3,
               proxy_url: '',
               async_plugin_enabled: false,
