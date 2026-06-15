@@ -654,3 +654,15 @@
     - frontend/src/utils/resourceDisplay.ts
     - frontend/src/utils/searchFilters.ts
     - docs/readme_2606.md
+
+[2026-06-15 14:48] feat(trending): 新增热榜卡片布局切换与展示优化
+  - Body: 为热榜页面补充双列/单列布局切换，并同步调整卡片、骨架屏和测试，提升内容浏览密度与交互一致性。
+  - Files:
+    - frontend/src/components/trending/HotMediaCard.tsx
+    - frontend/src/components/trending/HotMediaGrid.tsx
+    - frontend/src/components/trending/HotPageSkeleton.tsx
+    - frontend/src/components/trending/HotSectionSummary.tsx
+    - frontend/src/components/trending/__tests__/HotMediaCard.test.tsx
+    - frontend/src/pages/HotPage.tsx
+    - frontend/src/pages/__tests__/HotPage.test.tsx
+    - docs/readme_2606.md

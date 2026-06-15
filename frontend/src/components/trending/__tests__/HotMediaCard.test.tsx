@@ -36,6 +36,38 @@ describe("HotMediaCard", () => {
     expect(screen.queryByRole("button", { name: "搜合集" })).not.toBeInTheDocument();
   });
 
+  it("将热度放在左侧底部，并将时间与搜索按钮放在同一行", () => {
+    render(<HotMediaCard item={item} rank={1} category="movie" onSearch={vi.fn()} />);
+
+    const posterColumn = screen.getByTestId("hot-media-poster-column");
+    const popularityStack = screen.getByTestId("hot-media-popularity-stack");
+    const footer = screen.getByTestId("hot-media-footer");
+    const releaseDate = screen.getByTestId("hot-media-release-date");
+    const actionRow = screen.getByTestId("hot-media-action-row");
+
+    expect(posterColumn).toContainElement(popularityStack);
+    expect(posterColumn.className).toContain("sm:justify-between");
+    expect(popularityStack.className).toContain("h-8");
+    expect(popularityStack.className).toContain("items-center");
+    expect(within(popularityStack).getByText("热度 800")).toBeInTheDocument();
+    expect(within(popularityStack).queryByText(/上映\/首播/)).not.toBeInTheDocument();
+    expect(popularityStack.className).not.toContain("rounded");
+    expect(popularityStack.className).not.toContain("border");
+    expect(popularityStack.className).not.toContain("bg-");
+    expect(footer).toContainElement(releaseDate);
+    expect(footer).toContainElement(actionRow);
+    expect(footer.className).toContain("sm:mt-auto");
+    expect(releaseDate).toHaveTextContent("上映/首播：2023-08-30");
+    expect(within(actionRow).getByRole("button", { name: "搜索" })).toBeInTheDocument();
+    expect(within(actionRow).getByRole("button", { name: "搜原名" })).toBeInTheDocument();
+    expect(within(actionRow).getByRole("button", { name: "搜 4K" })).toBeInTheDocument();
+    expect(within(actionRow).getAllByRole("button").map((button) => button.textContent)).toEqual([
+      "搜索",
+      "搜原名",
+      "搜 4K",
+    ]);
+  });
+
   it("点击快捷搜索入口会返回对应搜索动作", () => {
     const onSearch = vi.fn();
 

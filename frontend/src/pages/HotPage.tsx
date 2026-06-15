@@ -8,6 +8,7 @@ import HotMediaGrid from "@/components/trending/HotMediaGrid";
 import { HotMediaGridSkeleton } from "@/components/trending/HotPageSkeleton";
 import HotPageErrorState from "@/components/trending/HotPageErrorState";
 import HotPageEmptyState from "@/components/trending/HotPageEmptyState";
+import type { HotMediaLayoutMode } from "@/components/trending/HotSectionSummary";
 import {
   buildHotPageMeta,
   resolvePrimarySection,
@@ -143,6 +144,7 @@ const HotPage: React.FC = () => {
   const [refreshing, setRefreshing] = React.useState(false);
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState("");
+  const [layoutMode, setLayoutMode] = React.useState<HotMediaLayoutMode>("double");
   const {
     mode,
     period,
@@ -396,7 +398,7 @@ const HotPage: React.FC = () => {
           onYearChange={(value) => startTransition(() => dispatchToolbar({ type: "setYear", value }))}
         />
 
-        {loading ? <HotMediaGridSkeleton count={6} showHeader /> : null}
+        {loading ? <HotMediaGridSkeleton count={6} showHeader layoutMode={layoutMode} /> : null}
 
         {!loading && errorMessage ? (
           <HotPageErrorState
@@ -410,7 +412,7 @@ const HotPage: React.FC = () => {
           <div className="space-y-8">
             {/* 筛选条件变更时用骨架屏替换内容，防止旧数据与新数据交替闪烁 */}
             {refreshing ? (
-              <HotMediaGridSkeleton count={6} showHeader />
+              <HotMediaGridSkeleton count={6} showHeader layoutMode={layoutMode} />
             ) : (
               renderSections
                 .filter((section) => section.items.length > 0)
@@ -423,6 +425,8 @@ const HotPage: React.FC = () => {
                       showSortControl={index === 0}
                       sortBy={sortBy}
                       onSortByChange={handleSortByChange}
+                      layoutMode={layoutMode}
+                      onLayoutModeChange={setLayoutMode}
                     />
                   </div>
                 ))

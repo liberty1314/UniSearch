@@ -1,4 +1,5 @@
 import React from "react";
+import type { HotMediaLayoutMode } from "@/components/trending/HotSectionSummary";
 
 const HotSkeletonBlock: React.FC<React.HTMLAttributes<HTMLDivElement> & {
   className: string;
@@ -33,13 +34,18 @@ const HotMediaCardSkeleton: React.FC<{ index: number }> = ({ index }) => (
     data-testid="hot-media-card-skeleton"
   >
     <div className="flex flex-col gap-4 sm:flex-row">
-      {/* 海报占位 */}
-      <ContentSkeletonBlock
-        className="h-40 w-full shrink-0 rounded-[1.4rem] sm:h-36 sm:w-28"
-        delay={`${index * 60}ms`}
-      />
+      {/* 海报与海报下方热度占位 */}
+      <div className="flex flex-col gap-3 sm:w-28 sm:shrink-0 sm:justify-between">
+        <ContentSkeletonBlock
+          className="h-40 w-full rounded-[1.4rem] sm:h-36"
+          delay={`${index * 60}ms`}
+        />
+        <div className="flex h-8 items-center">
+          <ContentSkeletonBlock className="h-3 w-16 rounded-full" delay={`${480 + index * 60}ms`} />
+        </div>
+      </div>
 
-      <div className="min-w-0 flex-1 space-y-3">
+      <div className="flex min-w-0 flex-1 flex-col space-y-3">
         {/* 排名 + 分类标签行 */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -67,13 +73,14 @@ const HotMediaCardSkeleton: React.FC<{ index: number }> = ({ index }) => (
           <ContentSkeletonBlock className="h-6 w-12 rounded-full" delay={`${440 + index * 60}ms`} />
         </div>
 
-        {/* 底部元信息 + 搜索按钮 */}
-        <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap gap-3">
-            <ContentSkeletonBlock className="h-3 w-28 rounded-full" delay={`${480 + index * 60}ms`} />
-            <ContentSkeletonBlock className="h-3 w-16 rounded-full" delay={`${520 + index * 60}ms`} />
+        {/* 底部时间与搜索行动区 */}
+        <div className="flex flex-col gap-3 pt-1 sm:mt-auto sm:flex-row sm:items-center sm:justify-between sm:pt-4">
+          <ContentSkeletonBlock className="h-3 w-32 rounded-full" delay={`${520 + index * 60}ms`} />
+          <div className="flex flex-wrap justify-start gap-2 sm:justify-end">
+            <ContentSkeletonBlock className="h-8 w-20 rounded-full" delay={`${560 + index * 60}ms`} />
+            <ContentSkeletonBlock className="h-8 w-16 rounded-full" delay={`${600 + index * 60}ms`} />
+            <ContentSkeletonBlock className="h-8 w-16 rounded-full" delay={`${640 + index * 60}ms`} />
           </div>
-          <ContentSkeletonBlock className="h-8 w-20 rounded-full" delay={`${560 + index * 60}ms`} />
         </div>
       </div>
     </div>
@@ -90,22 +97,30 @@ export const HotMediaGridSkeleton: React.FC<{
   count?: number;
   /** 是否显示 section 标题行骨架，默认 true */
   showHeader?: boolean;
-}> = ({ count = 6, showHeader = true }) => (
-  <section className="space-y-5" aria-label="热门榜单内容加载中" data-testid="hot-media-grid-skeleton">
-    {showHeader ? (
-      <div className="flex items-center justify-between gap-4">
-        <ContentSkeletonBlock className="h-7 w-32 rounded-full" />
-        <ContentSkeletonBlock className="h-10 w-10 rounded-full" delay="80ms" />
-      </div>
-    ) : null}
+  /** 列表布局模式，默认双列 */
+  layoutMode?: HotMediaLayoutMode;
+}> = ({ count = 6, showHeader = true, layoutMode = "double" }) => {
+  const gridClassName = layoutMode === "double"
+    ? "grid grid-cols-1 gap-4 lg:grid-cols-2"
+    : "grid grid-cols-1 gap-4";
 
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      {Array.from({ length: count }).map((_, idx) => (
-        <HotMediaCardSkeleton key={`media-skeleton-${idx}`} index={idx} />
-      ))}
-    </div>
-  </section>
-);
+  return (
+    <section className="space-y-5" aria-label="热门榜单内容加载中" data-testid="hot-media-grid-skeleton">
+      {showHeader ? (
+        <div className="flex items-center justify-between gap-4">
+          <ContentSkeletonBlock className="h-7 w-32 rounded-full" />
+          <ContentSkeletonBlock className="h-10 w-10 rounded-full" delay="80ms" />
+        </div>
+      ) : null}
+
+      <div className={gridClassName}>
+        {Array.from({ length: count }).map((_, idx) => (
+          <HotMediaCardSkeleton key={`media-skeleton-${idx}`} index={idx} />
+        ))}
+      </div>
+    </section>
+  );
+};
 
 const HotPageSkeleton: React.FC = () => {
   return (

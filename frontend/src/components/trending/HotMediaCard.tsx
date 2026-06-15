@@ -24,24 +24,32 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
   return (
     <Card className="group p-4 md:p-5" data-testid="hot-media-card">
       <div className="flex flex-col gap-4 sm:flex-row">
-        <div
-          className="relative h-40 w-full overflow-hidden rounded-[1.4rem] bg-slate-100 sm:h-36 sm:w-28 sm:shrink-0 dark:bg-slate-800"
-          data-testid="hot-media-poster"
-        >
-          {item.poster_url ? (
-            <img
-              src={item.poster_url}
-              alt={item.title}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.18),transparent_46%),linear-gradient(135deg,#e2e8f0,#cbd5e1)] text-sm font-medium text-slate-500 dark:bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.18),transparent_42%),linear-gradient(135deg,#0f172a,#1e293b)] dark:text-slate-300">
-              暂无海报
-            </div>
-          )}
+        <div className="flex flex-col gap-3 sm:w-28 sm:shrink-0 sm:justify-between" data-testid="hot-media-poster-column">
+          <div
+            className="relative h-40 w-full overflow-hidden rounded-[1.4rem] bg-slate-100 sm:h-36 dark:bg-slate-800"
+            data-testid="hot-media-poster"
+          >
+            {item.poster_url ? (
+              <img
+                src={item.poster_url}
+                alt={item.title}
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.18),transparent_46%),linear-gradient(135deg,#e2e8f0,#cbd5e1)] text-sm font-medium text-slate-500 dark:bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.18),transparent_42%),linear-gradient(135deg,#0f172a,#1e293b)] dark:text-slate-300">
+                暂无海报
+              </div>
+            )}
+          </div>
+          <div
+            className="flex h-8 items-center text-xs leading-5 text-slate-500 dark:text-slate-400"
+            data-testid="hot-media-popularity-stack"
+          >
+            <p>热度 {item.popularity.toFixed(0)}</p>
+          </div>
         </div>
 
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -81,22 +89,20 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
             ))}
           </div>
 
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-              <span>上映/首播：{item.release_date || "未知"}</span>
-              <span>热度 {item.popularity.toFixed(0)}</span>
-            </div>
-            <div className="flex flex-wrap justify-start gap-2 sm:justify-end">
-              {secondaryActions.map((action) => (
-                <button
-                  key={action.key}
-                  type="button"
-                  onClick={() => onSearch(item, action)}
-                  className="rounded-full border border-slate-200/75 bg-white/70 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:border-cyan-200 hover:bg-white hover:text-cyan-700 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-300 dark:hover:border-cyan-300/[0.24] dark:hover:bg-cyan-400/[0.08] dark:hover:text-cyan-200"
-                >
-                  {action.label}
-                </button>
-              ))}
+          <div
+            className="mt-4 flex flex-col gap-3 sm:mt-auto sm:flex-row sm:items-center sm:justify-between sm:pt-4"
+            data-testid="hot-media-footer"
+          >
+            <span
+              className="text-xs text-slate-500 dark:text-slate-400"
+              data-testid="hot-media-release-date"
+            >
+              上映/首播：{item.release_date || "未知"}
+            </span>
+            <div
+              className="flex flex-wrap justify-start gap-2 sm:justify-end"
+              data-testid="hot-media-action-row"
+            >
               <Button
                 type="button"
                 variant="outline"
@@ -107,6 +113,16 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
                 <Search className="mr-2 h-4 w-4" />
                 搜索
               </Button>
+              {secondaryActions.map((action) => (
+                <button
+                  key={action.key}
+                  type="button"
+                  onClick={() => onSearch(item, action)}
+                  className="inline-flex h-8 items-center justify-center rounded-full border border-slate-200/75 bg-white/70 px-3 text-xs font-medium text-slate-600 transition hover:border-cyan-200 hover:bg-white hover:text-cyan-700 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-300 dark:hover:border-cyan-300/[0.24] dark:hover:bg-cyan-400/[0.08] dark:hover:text-cyan-200"
+                >
+                  {action.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>

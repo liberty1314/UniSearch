@@ -283,6 +283,39 @@ describe("HotPage", () => {
     expect(screen.getByRole("button", { name: "每周" })).toBeInTheDocument();
   });
 
+  it("排序旁支持切换单列和双列布局", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse());
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
+
+    expect(screen.getByTestId("hot-layout-toggle")).toHaveTextContent("双列");
+    expect(screen.getAllByTestId("hot-media-grid").map((grid) => grid.getAttribute("data-layout-mode"))).toEqual([
+      "double",
+      "double",
+      "double",
+    ]);
+
+    fireEvent.click(screen.getByLabelText("切换为单列布局"));
+
+    expect(screen.getByTestId("hot-layout-toggle")).toHaveTextContent("单列");
+    expect(screen.getAllByTestId("hot-media-grid").map((grid) => grid.getAttribute("data-layout-mode"))).toEqual([
+      "single",
+      "single",
+      "single",
+    ]);
+    expect(getHotRankingsMock).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByLabelText("切换为双列布局"));
+
+    expect(screen.getByTestId("hot-layout-toggle")).toHaveTextContent("双列");
+    expect(screen.getAllByTestId("hot-media-grid").map((grid) => grid.getAttribute("data-layout-mode"))).toEqual([
+      "double",
+      "double",
+      "double",
+    ]);
+  });
+
   it("控制台标签按钮保持单行稳定布局", async () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 
