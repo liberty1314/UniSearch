@@ -229,13 +229,14 @@ describe("HotPage", () => {
   });
 
   it("趋势榜在切换排序后仍然允许切换分类", async () => {
+    const user = userEvent.setup();
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
     await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
-    fireEvent.click(screen.getByLabelText("打开排序菜单"));
-    fireEvent.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
+    await user.click(screen.getByLabelText("打开排序菜单"));
+    await user.click(await screen.findByText("按评分"));
 
     await waitFor(() => {
       expect(getHotRankingsMock).toHaveBeenLastCalledWith({
@@ -343,6 +344,7 @@ describe("HotPage", () => {
   });
 
   it("控制台移除摘要卡片并保留重置与移动调整入口", async () => {
+    const user = userEvent.setup();
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
@@ -361,8 +363,8 @@ describe("HotPage", () => {
       expect(screen.getByRole("button", { name: "电影" })).toHaveAttribute("aria-pressed", "true");
     });
 
-    fireEvent.click(screen.getByLabelText("打开排序菜单"));
-    fireEvent.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
+    await user.click(screen.getByLabelText("打开排序菜单"));
+    await user.click(await screen.findByText("按评分"));
 
     await waitFor(() => {
       expect(getHotRankingsMock).toHaveBeenLastCalledWith({
@@ -396,6 +398,7 @@ describe("HotPage", () => {
   });
 
   it("热门榜单单分类支持按时间和评分排序", async () => {
+    const user = userEvent.setup();
     getHotRankingsMock
       .mockResolvedValueOnce(createResponse())
       .mockResolvedValueOnce(
@@ -489,9 +492,8 @@ describe("HotPage", () => {
       });
     });
 
-    fireEvent.click(screen.getByLabelText("打开排序菜单"));
-
-    fireEvent.click(await screen.findByRole("menuitemradio", { name: "按时间" }));
+    await user.click(screen.getByLabelText("打开排序菜单"));
+    await user.click(await screen.findByText("按时间"));
 
     await waitFor(() => {
       expect(getHotRankingsMock).toHaveBeenLastCalledWith({
@@ -508,8 +510,8 @@ describe("HotPage", () => {
       });
     });
 
-    fireEvent.click(screen.getByLabelText("打开排序菜单"));
-    fireEvent.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
+    await user.click(screen.getByLabelText("打开排序菜单"));
+    await user.click(await screen.findByText("按评分"));
 
     await waitFor(() => {
       expect(getHotRankingsMock).toHaveBeenLastCalledWith({
@@ -528,13 +530,14 @@ describe("HotPage", () => {
   });
 
   it("趋势榜和聚合分类也支持排序切换", async () => {
+    const user = userEvent.setup();
     getHotRankingsMock.mockResolvedValue(createResponse());
 
     renderHotPage();
     await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
-    fireEvent.click(screen.getByLabelText("打开排序菜单"));
-    fireEvent.click(await screen.findByRole("menuitemradio", { name: "按时间" }));
+    await user.click(screen.getByLabelText("打开排序菜单"));
+    await user.click(await screen.findByText("按时间"));
 
     await waitFor(() => {
       expect(getHotRankingsMock).toHaveBeenLastCalledWith({
@@ -568,8 +571,8 @@ describe("HotPage", () => {
       });
     });
 
-    fireEvent.click(screen.getByLabelText("打开排序菜单"));
-    fireEvent.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
+    await user.click(screen.getByLabelText("打开排序菜单"));
+    await user.click(await screen.findByText("按评分"));
 
     await waitFor(() => {
       expect(getHotRankingsMock).toHaveBeenLastCalledWith({
@@ -597,7 +600,7 @@ describe("HotPage", () => {
     await user.click(screen.getByRole("button", { name: "热门榜" }));
     await user.click(screen.getByRole("button", { name: "电影" }));
     await user.click(await screen.findByLabelText("打开排序菜单"));
-    await user.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
+    await user.click(await screen.findByText("按评分"));
     fireEvent.change(screen.getByLabelText("指定日期"), { target: { value: "2026-03-23" } });
 
     await waitFor(() => {

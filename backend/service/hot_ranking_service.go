@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -65,6 +66,7 @@ func (s *HotRankingService) GetHotRankings(ctx context.Context, query model.HotR
 			return model.HotRankingResponse{}, err
 		}
 		if hit {
+			cached = sortHotRankingResponse(cached, query.SortBy)
 			return adaptHotRankingResponsePageSize(cached, query.PageSize), nil
 		}
 	}
@@ -544,6 +546,7 @@ func resolveHotRankingSortLabel(sortBy model.HotRankingSortBy) string {
 }
 
 func buildHotRankingResponse(query model.HotRankingQuery, category model.HotRankingCategory, items []model.HotRankingItem) model.HotRankingResponse {
+	sortedItems := sortHotRankingItems(items, query.SortBy)
 	sectionTitle := map[model.HotRankingCategory]string{
 		model.HotRankingCategoryMovie: "热门电影",
 		model.HotRankingCategoryTV:    "热门电视剧",
@@ -557,8 +560,8 @@ func buildHotRankingResponse(query model.HotRankingQuery, category model.HotRank
 	}[category]
 
 	var spotlight *model.HotRankingItem
-	if len(items) > 0 {
-		highlight := items[0]
+	if len(sortedItems) > 0 {
+		highlight := sortedItems[0]
 		spotlight = &highlight
 	}
 
@@ -580,7 +583,7 @@ func buildHotRankingResponse(query model.HotRankingQuery, category model.HotRank
 		TimeLabel: resolveTimeLabel(query),
 		Page:      query.Page,
 		PageSize:  query.PageSize,
-		HasMore:   len(items) >= query.PageSize,
+		HasMore:   len(sortedItems) >= query.PageSize,
 		NextPage:  query.Page + 1,
 		UpdatedAt: time.Now().UTC(),
 		Source:    "tmdb",
@@ -591,10 +594,55 @@ func buildHotRankingResponse(query model.HotRankingQuery, category model.HotRank
 				Title:       sectionTitle,
 				Description: description,
 				Spotlight:   spotlight,
-				Items:       limitHotRankingItems(items, query.PageSize),
+				Items:       limitHotRankingItems(sortedItems, query.PageSize),
 			},
 		},
 	}
+}
+
+func sortHotRankingItems(items []model.HotRankingItem, sortBy model.HotRankingSortBy) []model.HotRankingItem {
+	sortedItems := append([]model.HotRankingItem(nil), items...)
+	sort.SliceStable(sortedItems, func(i, j int) bool {
+		left := sortedItems[i]
+		right := sortedItems[j]
+
+		switch sortBy {
+		case model.HotRankingSortByReleaseDate:
+			return isHotRankingDateAfter(left.ReleaseDate, right.ReleaseDate)
+		case model.HotRankingSortByVoteAverage:
+			return left.VoteAverage > right.VoteAverage
+		default:
+			return left.Popularity > right.Popularity
+		}
+	})
+	return sortedItems
+}
+
+func sortHotRankingResponse(response model.HotRankingResponse, sortBy model.HotRankingSortBy) model.HotRankingResponse {
+	sortedResponse := response
+	sortedResponse.Sections = make([]model.HotRankingSection, 0, len(response.Sections))
+	for _, section := range response.Sections {
+		nextSection := section
+		nextSection.Items = sortHotRankingItems(section.Items, sortBy)
+		if len(nextSection.Items) > 0 {
+			highlight := nextSection.Items[0]
+			nextSection.Spotlight = &highlight
+		} else {
+			nextSection.Spotlight = nil
+		}
+		sortedResponse.Sections = append(sortedResponse.Sections, nextSection)
+	}
+	return sortedResponse
+}
+
+func isHotRankingDateAfter(left string, right string) bool {
+	if left == "" {
+		return false
+	}
+	if right == "" {
+		return true
+	}
+	return left > right
 }
 
 func buildAggregateHotRankingResponse(query model.HotRankingQuery, sections []model.HotRankingSection) model.HotRankingResponse {

@@ -1,5 +1,14 @@
 import React from "react";
 import { ArrowUpDown, Columns2, LayoutList } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioIndicator,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import type { HotRankingSection, HotRankingSortBy } from "@/types/hotRanking";
 
 export type HotMediaLayoutMode = "single" | "double";
@@ -13,6 +22,17 @@ interface HotSectionSummaryProps {
   onLayoutModeChange?: (value: HotMediaLayoutMode) => void;
 }
 
+const DEFAULT_SORT_BY: HotRankingSortBy = "popularity.desc";
+
+const SORT_OPTIONS: Array<{ value: HotRankingSortBy; label: string }> = [
+  { value: "popularity.desc", label: "按热度" },
+  { value: "primary_release_date.desc", label: "按时间" },
+  { value: "vote_average.desc", label: "按评分" },
+];
+
+const isHotRankingSortBy = (value: string): value is HotRankingSortBy =>
+  SORT_OPTIONS.some((option) => option.value === value);
+
 const HotSectionSummary: React.FC<HotSectionSummaryProps> = ({
   section,
   showSortControl = false,
@@ -22,16 +42,20 @@ const HotSectionSummary: React.FC<HotSectionSummaryProps> = ({
   onLayoutModeChange,
 }) => {
   const [menuOpen, setMenuOpen] = React.useState(false);
-
-  const options: Array<{ value: HotRankingSortBy; label: string }> = [
-    { value: "popularity.desc", label: "按热度" },
-    { value: "primary_release_date.desc", label: "按时间" },
-    { value: "vote_average.desc", label: "按评分" },
-  ];
-
-  const currentSortLabel = options.find((opt) => opt.value === sortBy)?.label ?? "排序";
+  const resolvedSortBy = isHotRankingSortBy(sortBy) ? sortBy : DEFAULT_SORT_BY;
+  const currentSortLabel = SORT_OPTIONS.find((opt) => opt.value === resolvedSortBy)?.label ?? "排序";
   const nextLayoutMode: HotMediaLayoutMode = layoutMode === "double" ? "single" : "double";
   const LayoutIcon = layoutMode === "double" ? Columns2 : LayoutList;
+
+  const handleSortChange = (value: string) => {
+    if (!isHotRankingSortBy(value) || value === resolvedSortBy) {
+      setMenuOpen(false);
+      return;
+    }
+
+    onSortByChange?.(value);
+    setMenuOpen(false);
+  };
 
   return (
     <div className="flex items-center justify-between gap-4">
@@ -41,53 +65,84 @@ const HotSectionSummary: React.FC<HotSectionSummaryProps> = ({
 
       {showSortControl ? (
         <div className="flex shrink-0 items-center gap-2">
-          <div className="relative">
-            <button
-              type="button"
-              aria-label="打开排序菜单"
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((current) => !current)}
-              className={[
-                "group flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium shadow-sm backdrop-blur-sm transition-all",
-                menuOpen 
-                  ? "border-slate-300 bg-slate-100 text-slate-800 dark:border-cyan-300/[0.18] dark:bg-slate-950/[0.62] dark:text-slate-100"
-                  : "border-slate-200/60 bg-slate-50/50 text-slate-500 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700 hover:shadow dark:border-cyan-300/[0.10] dark:bg-slate-950/[0.46] dark:text-slate-300 dark:hover:border-cyan-300/[0.22] dark:hover:bg-cyan-400/[0.08] dark:hover:text-slate-100"
-              ].join(" ")}
-            >
-              <ArrowUpDown className="h-3.5 w-3.5 transition-transform duration-300 group-hover:scale-110" />
-              <span>{currentSortLabel}</span>
-            </button>
-
-            {menuOpen ? (
-              <div
-                className="absolute right-0 top-14 z-20 w-36 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_18px_40px_rgba(15,23,42,0.12)] dark:border-cyan-300/[0.14] dark:bg-slate-950/95"
-                role="menu"
+          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="打开排序菜单"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                className={cn(
+                  "group flex h-9 items-center gap-2 rounded-full border px-3.5 text-xs font-medium shadow-[0_8px_24px_rgba(15,23,42,0.06)] ring-1 ring-white/70 backdrop-blur-xl backdrop-saturate-150 transition-all duration-300",
+                  menuOpen
+                    ? "border-slate-300/80 bg-white/75 text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.12)] dark:border-cyan-300/[0.20] dark:bg-slate-950/[0.68] dark:text-slate-50"
+                    : "border-slate-200/70 bg-white/58 text-slate-600 hover:border-slate-300/80 hover:bg-white/78 hover:text-slate-900 dark:border-cyan-300/[0.10] dark:bg-slate-950/[0.46] dark:text-slate-300 dark:hover:border-cyan-300/[0.24] dark:hover:bg-cyan-400/[0.08] dark:hover:text-slate-100",
+                )}
               >
-                {options.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={sortBy === option.value}
-                    onClick={() => {
-                      onSortByChange?.(option.value);
-                      setMenuOpen(false);
-                    }}
-                    className={[
-                      "flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm transition",
-                      sortBy === option.value
-                        ? "bg-slate-900 text-white dark:bg-cyan-500 dark:text-slate-950"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white",
-                    ].join(" ")}
-                  >
-                    <span>{option.label}</span>
-                    {sortBy === option.value ? <span className="text-[11px]">当前</span> : null}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
+                <ArrowUpDown
+                  className={cn(
+                    "h-3.5 w-3.5 transition duration-300 group-hover:scale-110",
+                    menuOpen && "scale-110 text-cyan-600 dark:text-cyan-300",
+                  )}
+                />
+                <span>{currentSortLabel}</span>
+              </button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent
+              align="end"
+              side="bottom"
+              className="w-44 p-2"
+            >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:via-slate-500/40"
+              />
+              <DropdownMenuRadioGroup value={resolvedSortBy} onValueChange={handleSortChange}>
+                {SORT_OPTIONS.map((option) => {
+                  const isCurrent = resolvedSortBy === option.value;
+
+                  return (
+                    <DropdownMenuRadioItem
+                      key={option.value}
+                      value={option.value}
+                      aria-label={option.label}
+                      onSelect={(event) => {
+                        if (!isCurrent) {
+                          return;
+                        }
+
+                        event.preventDefault();
+                        setMenuOpen(false);
+                      }}
+                      className={cn(
+                        "justify-between gap-3 px-4",
+                        isCurrent
+                          ? "bg-slate-950 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] dark:bg-cyan-300 dark:text-slate-950"
+                          : "hover:bg-white/72 hover:text-slate-950 dark:hover:bg-white/8 dark:hover:text-white",
+                      )}
+                    >
+                      <span>{option.label}</span>
+                      <span className="flex items-center gap-2">
+                        {isCurrent ? (
+                          <span className="rounded-full bg-white/12 px-2 py-0.5 text-[11px] font-semibold text-white/88 dark:bg-slate-950/12 dark:text-slate-900">
+                            当前
+                          </span>
+                        ) : null}
+                        <DropdownMenuRadioIndicator
+                          checkedClassName={cn(
+                            isCurrent
+                              ? "text-white dark:text-slate-950"
+                              : "text-slate-400 dark:text-slate-500",
+                          )}
+                        />
+                      </span>
+                    </DropdownMenuRadioItem>
+                  );
+                })}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {onLayoutModeChange ? (
             <button

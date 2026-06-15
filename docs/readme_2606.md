@@ -666,3 +666,19 @@
     - frontend/src/pages/HotPage.tsx
     - frontend/src/pages/__tests__/HotPage.test.tsx
     - docs/readme_2606.md
+
+- [2026-06-15 21:59] feat(hot-ranking): 支持热门榜单按时间、评分及热度排序
+  - Body: 实现热门榜单多维度排序功能，支持按时间、评分及热度切换排序。前端新增排序菜单控件，重构了内容卡片的热度与评分展示方式。
+  - Files:
+    - backend/service/hot_ranking_service.go
+    - backend/service/hot_ranking_service_test.go
+    - frontend/package.json
+    - frontend/pnpm-lock.yaml
+    - frontend/src/components/trending/HotMediaCard.tsx
+    - frontend/src/components/trending/HotSectionSummary.tsx
+    - frontend/src/components/trending/__tests__/HotMediaCard.test.tsx
+    - frontend/src/components/trending/__tests__/HotSectionSummary.test.tsx
+    - frontend/src/components/ui/dropdown-menu.tsx
+    - frontend/src/pages/__tests__/HotPage.test.tsx
+    - frontend/vite.config.ts
+    - docs/readme_2606.md

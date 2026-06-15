@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, Star } from "lucide-react";
+import { Flame, Search, Star } from "lucide-react";
 import type { HotRankingItem } from "@/types/hotRanking";
 import type { HotRankingCategory } from "@/types/hotRanking";
 import { getHotCategoryLabel } from "@/components/trending/hotRankingPresentation";
@@ -24,7 +24,7 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
   return (
     <Card className="group p-4 md:p-5" data-testid="hot-media-card">
       <div className="flex flex-col gap-4 sm:flex-row">
-        <div className="flex flex-col gap-3 sm:w-28 sm:shrink-0 sm:justify-between" data-testid="hot-media-poster-column">
+        <div className="flex flex-col gap-3 sm:w-28 sm:shrink-0" data-testid="hot-media-poster-column">
           <div
             className="relative h-40 w-full overflow-hidden rounded-[1.4rem] bg-slate-100 sm:h-36 dark:bg-slate-800"
             data-testid="hot-media-poster"
@@ -40,12 +40,6 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
                 暂无海报
               </div>
             )}
-          </div>
-          <div
-            className="flex h-8 items-center text-xs leading-5 text-slate-500 dark:text-slate-400"
-            data-testid="hot-media-popularity-stack"
-          >
-            <p>热度 {item.popularity.toFixed(0)}</p>
           </div>
         </div>
 
@@ -68,9 +62,22 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
               </p>
             </div>
 
-            <div className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
-              <Star className="h-3.5 w-3.5" />
-              {item.vote_average.toFixed(1)}
+            {/* 评分与热度并排展示，热度用橙色与评分的琥珀色形成区分 */}
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2" data-testid="hot-media-badge-group">
+              <div
+                className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-600 dark:bg-orange-500/15 dark:text-orange-300"
+                data-testid="hot-media-popularity-stack"
+              >
+                <Flame className="h-3.5 w-3.5" />
+                {item.popularity.toFixed(0)}
+              </div>
+              <div
+                className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                data-testid="hot-media-rating-stack"
+              >
+                <Star className="h-3.5 w-3.5" />
+                {item.vote_average.toFixed(1)}
+              </div>
             </div>
           </div>
 

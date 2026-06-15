@@ -29,31 +29,43 @@ describe("HotMediaCard", () => {
     expect(within(screen.getByTestId("hot-media-poster")).queryByText("#1")).not.toBeInTheDocument();
     expect(screen.getByText("排名 #1")).toBeInTheDocument();
     expect(screen.getByText("电影")).toBeInTheDocument();
-    expect(screen.getByText("热度 800")).toBeInTheDocument();
+    expect(within(screen.getByTestId("hot-media-popularity-stack")).getByText("800")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "搜索" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "搜原名" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "搜 4K" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "搜合集" })).not.toBeInTheDocument();
   });
 
-  it("将热度放在左侧底部，并将时间与搜索按钮放在同一行", () => {
+  it("将热度与评分并排展示在标题右侧，时间与搜索按钮同行", () => {
     render(<HotMediaCard item={item} rank={1} category="movie" onSearch={vi.fn()} />);
 
     const posterColumn = screen.getByTestId("hot-media-poster-column");
+    const badgeGroup = screen.getByTestId("hot-media-badge-group");
     const popularityStack = screen.getByTestId("hot-media-popularity-stack");
+    const ratingStack = screen.getByTestId("hot-media-rating-stack");
     const footer = screen.getByTestId("hot-media-footer");
     const releaseDate = screen.getByTestId("hot-media-release-date");
     const actionRow = screen.getByTestId("hot-media-action-row");
 
-    expect(posterColumn).toContainElement(popularityStack);
-    expect(posterColumn.className).toContain("sm:justify-between");
-    expect(popularityStack.className).toContain("h-8");
-    expect(popularityStack.className).toContain("items-center");
-    expect(within(popularityStack).getByText("热度 800")).toBeInTheDocument();
+    // 海报列底部不再承载热度块
+    expect(posterColumn).not.toContainElement(popularityStack);
+    expect(posterColumn.className).not.toContain("sm:justify-between");
+
+    // 热度与评分同处一个徽章组容器，互为兄弟节点
+    expect(badgeGroup).toContainElement(popularityStack);
+    expect(badgeGroup).toContainElement(ratingStack);
+    expect(popularityStack.parentElement).toBe(badgeGroup);
+    expect(ratingStack.parentElement).toBe(badgeGroup);
+
+    // 热度改为橙色火焰胶囊，仅显示数字、去掉"热度"文字
+    expect(within(popularityStack).getByText("800")).toBeInTheDocument();
+    expect(within(popularityStack).queryByText(/热度/)).not.toBeInTheDocument();
     expect(within(popularityStack).queryByText(/上映\/首播/)).not.toBeInTheDocument();
-    expect(popularityStack.className).not.toContain("rounded");
-    expect(popularityStack.className).not.toContain("border");
-    expect(popularityStack.className).not.toContain("bg-");
+    expect(popularityStack.className).toContain("rounded-full");
+    expect(popularityStack.className).toContain("bg-orange");
+    expect(popularityStack.className).toContain("text-orange");
+
+    // footer 布局保持不变
     expect(footer).toContainElement(releaseDate);
     expect(footer).toContainElement(actionRow);
     expect(footer.className).toContain("sm:mt-auto");

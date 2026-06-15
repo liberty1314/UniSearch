@@ -12,6 +12,13 @@ export default defineConfig(() => {
     test: {
       globals: true,
       environment: "jsdom",
+      // 确保 vitest 解析 React 的 development 构建，否则 @testing-library/react
+      // 的 act(...) 会在 production 构建下报错。
+      server: {
+        deps: {
+          inline: [/^react/, /^react-dom/],
+        },
+      },
       setupFiles: "./src/test/setup.ts",
       testTimeout: 15000,
       hookTimeout: 15000,

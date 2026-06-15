@@ -136,6 +136,71 @@ func TestHotRankingServiceUsesTrendingForDailyMovie(t *testing.T) {
 	}
 }
 
+func TestHotRankingServiceSortsTrendingMoviesByDefaultPopularity(t *testing.T) {
+	tmdb := &fakeTMDBService{
+		movieGenres: map[int]string{18: "剧情"},
+		trendingMovies: []TMDBMovieResult{
+			{
+				ID:            1,
+				Title:         "迈克尔·杰克逊：巨星之路",
+				OriginalTitle: "Michael",
+				Popularity:    522,
+				VoteAverage:   8.6,
+				ReleaseDate:   "2026-04-22",
+				GenreIDs:      []int{18},
+			},
+			{
+				ID:            2,
+				Title:         "揭秘日",
+				OriginalTitle: "Disclosure Day",
+				Popularity:    365,
+				VoteAverage:   7.0,
+				ReleaseDate:   "2026-06-10",
+				GenreIDs:      []int{18},
+			},
+			{
+				ID:            3,
+				Title:         "痴迷",
+				OriginalTitle: "Obsession",
+				Popularity:    796,
+				VoteAverage:   7.9,
+				ReleaseDate:   "2026-05-13",
+				GenreIDs:      []int{18},
+			},
+		},
+	}
+	service := NewHotRankingService(tmdb, &fakeHotRankingCache{})
+
+	response, err := service.GetHotRankings(context.Background(), model.HotRankingQuery{
+		Mode:     model.HotRankingModeTrend,
+		Period:   model.HotRankingPeriodDay,
+		Category: model.HotRankingCategoryMovie,
+		Page:     1,
+		PageSize: 100,
+	})
+	if err != nil {
+		t.Fatalf("期望没有错误，实际得到 %v", err)
+	}
+
+	if len(response.Sections) != 1 {
+		t.Fatalf("期望返回 1 个分区，实际为 %d", len(response.Sections))
+	}
+	items := response.Sections[0].Items
+	if len(items) != 3 {
+		t.Fatalf("期望返回 3 条榜单，实际为 %d", len(items))
+	}
+
+	if items[0].TMDBID != 3 || items[0].Popularity != 796 {
+		t.Fatalf("期望热度最高的条目排第一，实际第一项为 id=%d popularity=%.0f", items[0].TMDBID, items[0].Popularity)
+	}
+	if items[1].TMDBID != 1 || items[2].TMDBID != 2 {
+		t.Fatalf("期望按热度降序排列，实际顺序为 [%d,%d,%d]", items[0].TMDBID, items[1].TMDBID, items[2].TMDBID)
+	}
+	if response.Sections[0].Spotlight == nil || response.Sections[0].Spotlight.TMDBID != 3 {
+		t.Fatalf("期望焦点内容同步使用热度最高条目，实际为 %+v", response.Sections[0].Spotlight)
+	}
+}
+
 func TestHotRankingServiceUsesDiscoverForYearAnime(t *testing.T) {
 	tmdb := &fakeTMDBService{
 		tvGenres: map[int]string{16: "动画", 18: "剧情"},
@@ -356,6 +421,52 @@ func TestHotRankingServiceReturnsCachedValueWithoutCallingTMDB(t *testing.T) {
 
 	if response.UpdatedAt != now {
 		t.Fatalf("expected cached updated time, got %v", response.UpdatedAt)
+	}
+}
+
+func TestHotRankingServiceSortsCachedValueByDefaultPopularity(t *testing.T) {
+	SetGlobalCacheSettingsService(nil)
+	cache := &fakeHotRankingCache{
+		loadResult: true,
+		loadValue: model.HotRankingResponse{
+			Mode:     model.HotRankingModeTrend,
+			Period:   model.HotRankingPeriodDay,
+			Page:     1,
+			PageSize: 50,
+			Source:   "tmdb",
+			Sections: []model.HotRankingSection{
+				{
+					Category: model.HotRankingCategoryMovie,
+					Items: []model.HotRankingItem{
+						{TMDBID: 1, Title: "低热度", Popularity: 100},
+						{TMDBID: 2, Title: "高热度", Popularity: 900},
+					},
+				},
+			},
+		},
+	}
+	service := NewHotRankingService(&fakeTMDBService{}, cache)
+
+	response, err := service.GetHotRankings(context.Background(), model.HotRankingQuery{
+		Mode:     model.HotRankingModeTrend,
+		Period:   model.HotRankingPeriodDay,
+		Category: model.HotRankingCategoryMovie,
+		Page:     1,
+		PageSize: 20,
+	})
+	if err != nil {
+		t.Fatalf("期望没有错误，实际得到 %v", err)
+	}
+
+	items := response.Sections[0].Items
+	if len(items) != 2 {
+		t.Fatalf("期望缓存返回 2 条榜单，实际为 %d", len(items))
+	}
+	if items[0].TMDBID != 2 {
+		t.Fatalf("期望缓存命中时仍按热度降序返回，实际第一项为 %d", items[0].TMDBID)
+	}
+	if response.Sections[0].Spotlight == nil || response.Sections[0].Spotlight.TMDBID != 2 {
+		t.Fatalf("期望缓存命中时焦点内容同步为热度最高项，实际为 %+v", response.Sections[0].Spotlight)
 	}
 }
 
