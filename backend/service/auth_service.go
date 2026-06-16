@@ -98,23 +98,16 @@ func (s *AuthService) Register(username, password string) (*model.User, error) {
 	if username == "" {
 		return nil, newAuthValidationError("用户名不能为空")
 	}
-	if strings.TrimSpace(password) == "" {
-		return nil, newAuthValidationError("密码不能为空")
-	}
-
 	minU := config.AppConfig.AuthUsernameMinLength
 	maxU := config.AppConfig.AuthUsernameMaxLength
-	minP := config.AppConfig.AuthPasswordMinLength
-	maxP := config.AppConfig.AuthPasswordMaxLength
 
 	// 验证用户名长度
 	if len(username) < minU || len(username) > maxU {
 		return nil, newAuthValidationError(fmt.Sprintf("用户名长度必须在%d-%d字符之间", minU, maxU))
 	}
 
-	// 验证密码长度
-	if len(password) < minP || len(password) > maxP {
-		return nil, newAuthValidationError(fmt.Sprintf("密码长度必须在%d-%d字符之间", minP, maxP))
+	if err := ValidateNewPassword(password); err != nil {
+		return nil, err
 	}
 
 	// 检查用户名是否已存在。

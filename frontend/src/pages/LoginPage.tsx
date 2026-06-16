@@ -49,6 +49,12 @@ import {
 import { getErrorMessage, getErrorStatus } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import type { SearchParams } from "@/types/api";
+import { DEFAULT_AUTH_POLICY, resolveAuthPolicy } from "@/lib/authPolicy";
+import {
+  getPasswordPolicyHelperText,
+  hasPasswordWhitespace,
+  removePasswordWhitespace,
+} from "@/components/account/passwordValidation";
 
 interface RedirectLocationState {
   from?: {
@@ -83,6 +89,7 @@ const LoginPage: React.FC = () => {
   // System Settings
   const [enableUserSignup, setEnableUserSignup] = useState<boolean>(true);
   const [isLoadingSettings, setIsLoadingSettings] = useState<boolean>(true);
+  const [authPolicy, setAuthPolicy] = useState(DEFAULT_AUTH_POLICY);
 
   // Form State
   const [username, setUsername] = useState("");
@@ -109,6 +116,7 @@ const LoginPage: React.FC = () => {
       try {
         const settings = await SystemSettingsService.getSettings();
         setEnableUserSignup(settings.enable_user_signup);
+        setAuthPolicy(resolveAuthPolicy(settings));
       } catch (error) {
         console.error("Failed to load settings:", error);
       } finally {
@@ -176,6 +184,15 @@ const LoginPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const normalizePasswordInput = (value: string) => {
+    if (!hasPasswordWhitespace(value)) {
+      return value;
+    }
+
+    toast.error("密码不能包含空格");
+    return removePasswordWhitespace(value);
   };
 
   return (
@@ -267,8 +284,9 @@ const LoginPage: React.FC = () => {
                   autoComplete="current-password"
                   placeholder="请输入密码"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => setPassword(normalizePasswordInput(e.target.value))}
                   disabled={isLoading}
+                  helperText={getPasswordPolicyHelperText(authPolicy)}
                   endAdornment={
                     <button
                       type="button"

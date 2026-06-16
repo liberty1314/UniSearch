@@ -16,6 +16,9 @@ import { SystemSettingsService } from '@/services/systemSettingsService';
 import type { UserInfo } from '../../types/api';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import {
+  getPasswordPolicyHelperText,
+  hasPasswordWhitespace,
+  removePasswordWhitespace,
   validateAccountPassword,
   validateAccountPasswordConfirmation,
 } from '@/components/account/passwordValidation';
@@ -86,7 +89,13 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
 
   // 处理新密码输入
   const handleNewPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+    const rawValue = e.target.value;
+    const value = hasPasswordWhitespace(rawValue)
+      ? removePasswordWhitespace(rawValue)
+      : rawValue;
+    if (value !== rawValue) {
+      toast.error('密码不能包含空格');
+    }
     setNewPassword(value);
     
     // 实时验证
@@ -108,7 +117,13 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
 
   // 处理确认密码输入
   const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+    const rawValue = e.target.value;
+    const value = hasPasswordWhitespace(rawValue)
+      ? removePasswordWhitespace(rawValue)
+      : rawValue;
+    if (value !== rawValue) {
+      toast.error('密码不能包含空格');
+    }
     setConfirmPassword(value);
     
     // 实时验证
@@ -207,7 +222,7 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
                 <p className="text-sm text-destructive">{errors.newPassword}</p>
               )}
               <p className="text-xs text-muted-foreground">
-                {`密码长度应在 ${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength} 个字符之间，首尾空格会计入密码内容`}
+                {getPasswordPolicyHelperText(authPolicy)}
               </p>
             </div>
 

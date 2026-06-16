@@ -3,8 +3,22 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CreateUserDialog } from '@/components/admin/CreateUserDialog';
 
-const { getSettingsMock } = vi.hoisted(() => ({
+const { createUserMock, getSettingsMock } = vi.hoisted(() => ({
+  createUserMock: vi.fn(),
   getSettingsMock: vi.fn(),
+}));
+
+vi.mock('sonner', () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}));
+
+vi.mock('@/services/userService', () => ({
+  UserService: {
+    createUser: createUserMock,
+  },
 }));
 
 vi.mock('@/services/systemSettingsService', () => ({
@@ -15,6 +29,8 @@ vi.mock('@/services/systemSettingsService', () => ({
 
 describe('CreateUserDialog', () => {
   beforeEach(() => {
+    createUserMock.mockReset();
+    createUserMock.mockResolvedValue({ restored: false });
     getSettingsMock.mockResolvedValue({
       auth_username_min_length: 5,
       auth_username_max_length: 18,
@@ -66,6 +82,26 @@ describe('CreateUserDialog', () => {
     );
 
     expect(await screen.findByText('用户名长度为 5-18 字符')).toBeInTheDocument();
-    expect(screen.getByText('密码长度为 8-20 字符，首尾空格会计入密码内容')).toBeInTheDocument();
+    expect(screen.getByText('密码长度需在 8-20 个字符之间')).toBeInTheDocument();
+  });
+
+  it('removes whitespace before creating a user password', async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+
+    render(
+      <CreateUserDialog
+        open
+        onOpenChange={() => {}}
+        onSuccess={onSuccess}
+      />
+    );
+
+    await user.type(screen.getByLabelText('用户名'), 'neo-user');
+    await user.type(screen.getByLabelText('密码'), 'secret 1234');
+    await user.type(screen.getByLabelText('确认密码'), 'secret1234');
+    await user.click(screen.getByRole('button', { name: '创建用户' }));
+
+    expect(createUserMock).toHaveBeenCalledWith('neo-user', 'secret1234', 'user', false);
   });
 });

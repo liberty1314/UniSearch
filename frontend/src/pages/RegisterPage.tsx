@@ -36,6 +36,11 @@ import {
   type AuthTransitionState,
 } from "@/components/auth/authRouteMotion";
 import {
+  getPasswordPolicyHelperText,
+  hasPasswordWhitespace,
+  removePasswordWhitespace,
+} from "@/components/account/passwordValidation";
+import {
   AUTH_ENTRY_CARD_BASE_CLASS,
   AUTH_ENTRY_CARD_CONTENT_CLASS,
   AUTH_ENTRY_CARD_DESCRIPTION_CLASS,
@@ -78,14 +83,14 @@ const getPasswordStrengthHelperText = (
   },
 ) => {
   if (!password) {
-    return `密码长度需在 ${policy.passwordMinLength}-${policy.passwordMaxLength} 个字符之间，首尾空格会计入密码内容`;
+    return getPasswordPolicyHelperText(policy);
   }
 
   const passwordStrength = calcPasswordStrength(password);
   const strengthLabel =
     passwordStrength > 0 ? STRENGTH_LABELS[passwordStrength] : "太短";
 
-  return `密码强度：${strengthLabel}，首尾空格会计入密码内容`;
+  return `密码强度：${strengthLabel}`;
 };
 
 const RegisterPage: React.FC = () => {
@@ -107,6 +112,15 @@ const RegisterPage: React.FC = () => {
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [authPolicy, setAuthPolicy] = useState(DEFAULT_AUTH_POLICY);
+
+  const normalizePasswordInput = (value: string) => {
+    if (!hasPasswordWhitespace(value)) {
+      return value;
+    }
+
+    toast.error("密码不能包含空格");
+    return removePasswordWhitespace(value);
+  };
 
   // Animation State
   const particles = useAuthParticles();
@@ -181,6 +195,11 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
+    if (hasPasswordWhitespace(password) || hasPasswordWhitespace(confirmPassword)) {
+      toast.error("密码不能包含空格");
+      return;
+    }
+
     if (
       username.trim().length < authPolicy.usernameMinLength ||
       username.trim().length > authPolicy.usernameMaxLength
@@ -245,6 +264,8 @@ const RegisterPage: React.FC = () => {
     ? undefined
     : !password.trim()
       ? "请输入密码"
+      : hasPasswordWhitespace(password)
+        ? "密码不能包含空格"
       : password.length < authPolicy.passwordMinLength ||
           password.length > authPolicy.passwordMaxLength
         ? `密码长度必须在${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength}字符之间`
@@ -254,6 +275,8 @@ const RegisterPage: React.FC = () => {
     ? undefined
     : !confirmPassword.trim()
       ? "请再次输入密码"
+      : hasPasswordWhitespace(confirmPassword)
+        ? "密码不能包含空格"
       : password !== confirmPassword
         ? "两次输入的密码不一致"
         : undefined;
@@ -390,7 +413,7 @@ const RegisterPage: React.FC = () => {
                     autoComplete="new-password"
                     placeholder={`${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength}个字符`}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => setPassword(normalizePasswordInput(e.target.value))}
                     error={passwordError}
                     disabled={isLoading}
                     helperText={
@@ -425,7 +448,7 @@ const RegisterPage: React.FC = () => {
                   autoComplete="new-password"
                   placeholder="请再次输入密码"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => setConfirmPassword(normalizePasswordInput(e.target.value))}
                   error={confirmPasswordError}
                   disabled={isLoading}
                   endAdornment={

@@ -315,7 +315,7 @@ func TestGetCurrentUserReturnsCurrentMonthLoginSummary(t *testing.T) {
 	today := now.Format("2006-01-02")
 	expectedDays := map[string]bool{
 		monthDay: true,
-		today:   true,
+		today:    true,
 	}
 	if response.Data.MonthlyLoginDayCount != len(expectedDays) {
 		t.Fatalf("expected %d current month login days, got %d (%v)", len(expectedDays), response.Data.MonthlyLoginDayCount, response.Data.MonthlyLoginDays)
@@ -801,5 +801,34 @@ func TestChangePasswordUsesConfiguredAuthPolicy(t *testing.T) {
 	}
 	if !bytes.Contains(recorder.Body.Bytes(), []byte("密码长度必须在8-64字符之间")) {
 		t.Fatalf("expected dynamic password policy message, got %s", recorder.Body.String())
+	}
+}
+
+func TestChangePasswordRejectsWhitespaceInNewPassword(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := newAccountFlowTestDB(t)
+	user := createAccountFlowUser(t, db, "alice", "password123")
+	router := newAccountFlowRouter(t, db)
+
+	payload, err := json.Marshal(map[string]string{
+		"current_password": "password123",
+		"new_password":     "new password 456",
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/user/change-password", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+issueJWT(t, user))
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if !bytes.Contains(recorder.Body.Bytes(), []byte("密码不能包含空格")) {
+		t.Fatalf("expected password whitespace message, got %s", recorder.Body.String())
 	}
 }

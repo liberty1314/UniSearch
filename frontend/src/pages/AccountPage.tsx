@@ -16,6 +16,9 @@ import type {
   AccountSection,
 } from '@/components/account/accountTypes';
 import {
+  getPasswordPolicyHelperText,
+  hasPasswordWhitespace,
+  removePasswordWhitespace,
   validateAccountPassword,
   validateAccountPasswordConfirmation,
 } from '@/components/account/passwordValidation';
@@ -99,6 +102,15 @@ const AccountPage: React.FC = () => {
     toast.success('偏好设置已保存');
   };
 
+  const normalizePasswordInput = (value: string) => {
+    if (!hasPasswordWhitespace(value)) {
+      return value;
+    }
+
+    toast.error('密码不能包含空格');
+    return removePasswordWhitespace(value);
+  };
+
   const handleChangePassword = async () => {
     if (!currentPassword.trim()) {
       toast.error('请输入当前密码');
@@ -143,7 +155,7 @@ const AccountPage: React.FC = () => {
     }
   };
 
-  const passwordPolicyText = `密码长度需控制在 ${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength} 个字符之间，首尾空格会计入密码内容`;
+  const passwordPolicyText = getPasswordPolicyHelperText(authPolicy);
 
   return (
     <PublicPageShell contentClassName="container mx-auto px-4 py-8 pb-16 pt-24">
@@ -215,9 +227,9 @@ const AccountPage: React.FC = () => {
                     isSaving={isSaving}
                     canSubmit={canSubmitPassword}
                     isUsingDefaultPolicy={isUsingDefaultPolicy}
-                    onCurrentPasswordChange={setCurrentPassword}
-                    onNewPasswordChange={setNewPassword}
-                    onConfirmPasswordChange={setConfirmPassword}
+                    onCurrentPasswordChange={(value) => setCurrentPassword(normalizePasswordInput(value))}
+                    onNewPasswordChange={(value) => setNewPassword(normalizePasswordInput(value))}
+                    onConfirmPasswordChange={(value) => setConfirmPassword(normalizePasswordInput(value))}
                     onSubmit={handleChangePassword}
                   />
                 </motion.div>

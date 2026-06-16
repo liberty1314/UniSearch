@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
@@ -16,6 +16,13 @@ import { cn } from '@/lib/utils';
 import { useAuthParticles } from '@/components/auth/useAuthParticles';
 import { resolveAuthDirection, type AuthTransitionState } from '@/components/auth/authRouteMotion';
 import { getErrorMessage, getErrorStatus } from '@/lib/error';
+import { DEFAULT_AUTH_POLICY, resolveAuthPolicy } from '@/lib/authPolicy';
+import { SystemSettingsService } from '@/services/systemSettingsService';
+import {
+    getPasswordPolicyHelperText,
+    hasPasswordWhitespace,
+    removePasswordWhitespace,
+} from '@/components/account/passwordValidation';
 
 /**
  * 管理员登录页面组件
@@ -34,11 +41,34 @@ const AdminLogin: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false); // 新增：记住我
     const [isAdminLoading, setIsAdminLoading] = useState(false);
+    const [authPolicy, setAuthPolicy] = useState(DEFAULT_AUTH_POLICY);
 
     // 动态效果状态
     const particles = useAuthParticles();
     const routeState = location.state as AuthTransitionState | null;
     const authDirection = resolveAuthDirection(routeState?.from, location.pathname, routeState);
+
+    useEffect(() => {
+        const loadAuthPolicy = async () => {
+            try {
+                const settings = await SystemSettingsService.getSettings();
+                setAuthPolicy(resolveAuthPolicy(settings));
+            } catch {
+                setAuthPolicy(DEFAULT_AUTH_POLICY);
+            }
+        };
+
+        void loadAuthPolicy();
+    }, []);
+
+    const normalizePasswordInput = (value: string) => {
+        if (!hasPasswordWhitespace(value)) {
+            return value;
+        }
+
+        toast.error('密码不能包含空格');
+        return removePasswordWhitespace(value);
+    };
 
     /**
      * 处理管理员登录（用户名+密码）
@@ -150,8 +180,9 @@ const AdminLogin: React.FC = () => {
                                         autoComplete="current-password"
                                         placeholder="请输入管理员密码"
                                         value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
+                                        onChange={(e) => setPassword(normalizePasswordInput(e.target.value))}
                                         disabled={isAdminLoading}
+                                        helperText={getPasswordPolicyHelperText(authPolicy)}
                                         endAdornment={(
                                             <button
                                                 type="button"

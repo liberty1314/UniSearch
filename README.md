@@ -428,8 +428,8 @@ bash scripts/local.sh
 | `AUTH_TOKEN_EXPIRY` | JWT 有效期（小时） | `24` |
 | `AUTH_USERNAME_MIN_LENGTH` | 用户名最小长度 | `3` |
 | `AUTH_USERNAME_MAX_LENGTH` | 用户名最大长度 | `32` |
-| `AUTH_PASSWORD_MIN_LENGTH` | 密码最小长度 | `6` |
-| `AUTH_PASSWORD_MAX_LENGTH` | 密码最大长度 | `64` |
+| `AUTH_PASSWORD_MIN_LENGTH` | 密码最小长度，新设置的密码不能包含空白字符 | `6` |
+| `AUTH_PASSWORD_MAX_LENGTH` | 密码最大长度，新设置的密码不能包含空白字符 | `64` |
 
 ### Redis（可选）
 

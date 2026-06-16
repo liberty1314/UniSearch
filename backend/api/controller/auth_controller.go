@@ -91,8 +91,6 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 
 	minU := config.AppConfig.AuthUsernameMinLength
 	maxU := config.AppConfig.AuthUsernameMaxLength
-	minP := config.AppConfig.AuthPasswordMinLength
-	maxP := config.AppConfig.AuthPasswordMaxLength
 
 	if req.Username == "" {
 		c.JSON(400, LoginResponse{
@@ -103,29 +101,24 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 		return
 	}
 
-	if strings.TrimSpace(req.Password) == "" {
+	if err := service.ValidateNewPassword(req.Password); err != nil {
+		var validationErr *service.AuthValidationError
+		message := err.Error()
+		if errors.As(err, &validationErr) {
+			message = validationErr.Error()
+		}
 		c.JSON(400, LoginResponse{
 			Code:    400,
-			Message: "密码不能为空",
+			Message: message,
 			Data:    nil,
 		})
 		return
 	}
 
-	// 额外验证：确保去除空白后仍然满足长度要求
 	if len(req.Username) < minU || len(req.Username) > maxU {
 		c.JSON(400, LoginResponse{
 			Code:    400,
 			Message: fmt.Sprintf("用户名长度必须在%d-%d字符之间", minU, maxU),
-			Data:    nil,
-		})
-		return
-	}
-
-	if len(req.Password) < minP || len(req.Password) > maxP {
-		c.JSON(400, LoginResponse{
-			Code:    400,
-			Message: fmt.Sprintf("密码长度必须在%d-%d字符之间", minP, maxP),
 			Data:    nil,
 		})
 		return

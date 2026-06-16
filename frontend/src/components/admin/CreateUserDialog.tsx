@@ -33,6 +33,12 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import {
+    getPasswordPolicyHelperText,
+    hasPasswordWhitespace,
+    removePasswordWhitespace,
+    validateAccountPassword,
+} from '@/components/account/passwordValidation';
 
 /**
  * 创建用户对话框组件属性
@@ -128,16 +134,13 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
         }
 
         // 验证密码
-        if (!password) {
-            toast.error('请输入密码');
-            return false;
-        }
-
-        if (
-            password.length < authPolicy.passwordMinLength ||
-            password.length > authPolicy.passwordMaxLength
-        ) {
-            toast.error(`密码长度必须在 ${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength} 字符之间`);
+        const passwordError = validateAccountPassword(password, {
+            required: true,
+            minLength: authPolicy.passwordMinLength,
+            maxLength: authPolicy.passwordMaxLength,
+        });
+        if (passwordError) {
+            toast.error(passwordError === '请输入新密码' ? '请输入密码' : passwordError);
             return false;
         }
 
@@ -159,6 +162,15 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
         }
 
         return true;
+    };
+
+    const normalizePasswordInput = (value: string) => {
+        if (!hasPasswordWhitespace(value)) {
+            return value;
+        }
+
+        toast.error('密码不能包含空格');
+        return removePasswordWhitespace(value);
     };
 
     /**
@@ -291,11 +303,11 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
                             type={showPassword ? 'text' : 'password'}
                             placeholder={`请输入密码（${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength} 字符）`}
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            onChange={(e) => setPassword(normalizePasswordInput(e.target.value))}
                             onKeyDown={handleKeyDown}
                             disabled={isLoading}
                             autoComplete="new-password"
-                            helperText={`密码长度为 ${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength} 字符，首尾空格会计入密码内容`}
+                            helperText={getPasswordPolicyHelperText(authPolicy)}
                             endAdornment={renderPasswordToggle(showPassword, () => setShowPassword((prev) => !prev), '密码')}
                             required
                         />
@@ -307,7 +319,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
                             type={showConfirmPassword ? 'text' : 'password'}
                             placeholder="请再次输入密码"
                             value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            onChange={(e) => setConfirmPassword(normalizePasswordInput(e.target.value))}
                             onKeyDown={handleKeyDown}
                             disabled={isLoading}
                             autoComplete="new-password"

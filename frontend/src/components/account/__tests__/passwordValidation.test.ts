@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  hasPasswordWhitespace,
+  removePasswordWhitespace,
   validateAccountPassword,
   validateAccountPasswordConfirmation,
 } from '@/components/account/passwordValidation';
@@ -15,6 +17,18 @@ describe('account password validation', () => {
 
   it('rejects passwords longer than 64 characters', () => {
     expect(validateAccountPassword('a'.repeat(65), { required: true })).toBe('密码长度不能超过 64 个字符');
+  });
+
+  it('rejects passwords that contain whitespace characters', () => {
+    expect(validateAccountPassword('secret 123', { required: true })).toBe('密码不能包含空格');
+    expect(validateAccountPassword('secret\t123', { required: true })).toBe('密码不能包含空格');
+    expect(validateAccountPassword('secret　123', { required: true })).toBe('密码不能包含空格');
+  });
+
+  it('detects and removes password whitespace for input normalization', () => {
+    expect(hasPasswordWhitespace('secret 123')).toBe(true);
+    expect(hasPasswordWhitespace('secret123')).toBe(false);
+    expect(removePasswordWhitespace(' secret\t123　')).toBe('secret123');
   });
 
   it('rejects a confirmation value that does not match', () => {

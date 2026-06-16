@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,6 +26,53 @@ func newUserServiceTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("auto migrate test db: %v", err)
 	}
 	return db
+}
+
+func TestUserServiceRejectsWhitespaceInNewPasswords(t *testing.T) {
+	cases := []struct {
+		name string
+		run  func(t *testing.T) error
+	}{
+		{
+			name: "创建用户",
+			run: func(t *testing.T) error {
+				db := newUserServiceTestDB(t)
+				service := NewUserService(db)
+				_, _, err := service.CreateUser("neo", "secret 123", "user", false)
+				return err
+			},
+		},
+		{
+			name: "重置密码",
+			run: func(t *testing.T) error {
+				db := newUserServiceTestDB(t)
+				service := NewUserService(db)
+				user := createUserServiceTestUser(t, db, "reset-user", true, nil)
+				return service.ResetPassword(user.ID, "secret 123")
+			},
+		},
+		{
+			name: "修改密码",
+			run: func(t *testing.T) error {
+				db := newUserServiceTestDB(t)
+				service := NewUserService(db)
+				user := createUserServiceTestUser(t, db, "change-user", true, nil)
+				return service.ChangePassword(user.ID, "password123", "secret 123")
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.run(t)
+			if err == nil {
+				t.Fatal("expected password whitespace to be rejected")
+			}
+			if !strings.Contains(err.Error(), "密码不能包含空格") {
+				t.Fatalf("expected whitespace validation message, got %v", err)
+			}
+		})
+	}
 }
 
 func createUserServiceTestUser(t *testing.T, db *gorm.DB, username string, enabled bool, lastLoginAt *time.Time) model.User {

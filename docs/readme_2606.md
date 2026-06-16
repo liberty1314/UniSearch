@@ -748,3 +748,71 @@
     - frontend/src/stores/searchStore.ts
     - frontend/src/types/api.ts
     - docs/readme_2606.md
+
+- [2026-06-16 18:45] fix(auth): 禁止新密码包含空白字符
+  - Body: 统一注册、个人中心修改密码、管理员创建用户和管理员重置密码的新密码规则，前端输入与粘贴时会过滤空白字符并更新提示文案，后端服务层新增统一校验以拒绝包含空格、Tab、换行或全角空格的新密码。登录入口保持精确密码比对，不过滤历史密码输入。
+  - Files:
+    - README.md
+    - .env.example
+    - backend/api/account_auth_flow_test.go
+    - backend/api/controller/auth_controller.go
+    - backend/service/auth_service.go
+    - backend/service/auth_service_test.go
+    - backend/service/password_policy.go
+    - backend/service/user_service.go
+    - backend/service/user_service_test.go
+    - frontend/src/components/account/passwordValidation.ts
+    - frontend/src/components/account/__tests__/passwordValidation.test.ts
+    - frontend/src/components/admin/CreateUserDialog.tsx
+    - frontend/src/components/admin/ResetPasswordDialog.tsx
+    - frontend/src/components/admin/__tests__/CreateUserDialog.test.tsx
+    - frontend/src/components/admin/__tests__/ResetPasswordDialog.test.tsx
+    - frontend/src/pages/AccountPage.tsx
+    - frontend/src/pages/RegisterPage.tsx
+    - frontend/src/pages/__tests__/AccountPage.test.tsx
+    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
+    - docs/readme_2606.md
+
+- [2026-06-16 22:50] fix(auth): 统一所有密码输入框空格规则与显示切换
+  - Body: 将用户登录、管理员登录、注册、个人中心修改密码、管理员创建用户和重置密码的密码输入框统一接入“密码长度需在 X-Y 个字符之间，不能包含空格”的提示与空白字符过滤。个人中心修改密码表单新增当前密码、新密码、确认新密码的显示/隐藏密码图标。
+  - Files:
+    - frontend/src/components/account/AccountSecurityPanel.tsx
+    - frontend/src/components/account/passwordValidation.ts
+    - frontend/src/components/admin/CreateUserDialog.tsx
+    - frontend/src/components/admin/ResetPasswordDialog.tsx
+    - frontend/src/components/admin/__tests__/CreateUserDialog.test.tsx
+    - frontend/src/components/admin/__tests__/ResetPasswordDialog.test.tsx
+    - frontend/src/pages/AccountPage.tsx
+    - frontend/src/pages/AdminLogin.tsx
+    - frontend/src/pages/LoginPage.tsx
+    - frontend/src/pages/RegisterPage.tsx
+    - frontend/src/pages/__tests__/AccountPage.test.tsx
+    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
+    - docs/readme_2606.md
+
+- [2026-06-16 23:02] feat(auth): 新增密码禁空策略并支持表单自动剔除空白符
+  - Body: 强化了账号密码的输入校验策略，后端新增创建与修改密码时禁止包含空格的强制限制（旧版历史密码验证不受影响）。前端同步增加密码输入去空格与验证提示，并在注册与登录提交前自动清理输入中的无意识空白字符，同时补充了完整的单元测试覆盖。
+  - Files:
+    - .env.example
+    - README.md
+    - backend/api/account_auth_flow_test.go
+    - backend/api/controller/auth_controller.go
+    - backend/service/auth_service.go
+    - backend/service/auth_service_test.go
+    - backend/service/password_policy.go
+    - backend/service/user_service.go
+    - backend/service/user_service_test.go
+    - frontend/src/components/account/AccountSecurityPanel.tsx
+    - frontend/src/components/account/__tests__/passwordValidation.test.ts
+    - frontend/src/components/account/passwordValidation.ts
+    - frontend/src/components/admin/CreateUserDialog.tsx
+    - frontend/src/components/admin/ResetPasswordDialog.tsx
+    - frontend/src/components/admin/__tests__/CreateUserDialog.test.tsx
+    - frontend/src/components/admin/__tests__/ResetPasswordDialog.test.tsx
+    - frontend/src/pages/AccountPage.tsx
+    - frontend/src/pages/AdminLogin.tsx
+    - frontend/src/pages/LoginPage.tsx
+    - frontend/src/pages/RegisterPage.tsx
+    - frontend/src/pages/__tests__/AccountPage.test.tsx
+    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
+    - docs/readme_2606.md

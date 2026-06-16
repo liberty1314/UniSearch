@@ -38,20 +38,27 @@ func newAuthServiceTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func TestRegisterPreservesPasswordWhitespace(t *testing.T) {
+func TestRegisterRejectsPasswordWhitespace(t *testing.T) {
 	newAuthServiceTestDB(t)
 	authService := NewAuthService()
 
-	_, err := authService.Register("neo", " secret123 ")
-	if err != nil {
-		t.Fatalf("expected register to succeed, got %v", err)
+	passwords := []string{
+		" secret123",
+		"secret 123",
+		"secret123 ",
+		"secret\t123",
+		"secret　123",
 	}
 
-	if _, _, _, err := authService.Login("neo", " secret123 "); err != nil {
-		t.Fatalf("expected exact password with whitespace to succeed, got %v", err)
-	}
-
-	if _, _, _, err := authService.Login("neo", "secret123"); err == nil {
-		t.Fatal("expected trimmed password to fail when registered password contains whitespace")
+	for index, password := range passwords {
+		t.Run(password, func(t *testing.T) {
+			_, err := authService.Register(fmt.Sprintf("neo%d", index), password)
+			if err == nil {
+				t.Fatal("expected register to reject password whitespace")
+			}
+			if err.Error() != "密码不能包含空格" {
+				t.Fatalf("expected whitespace validation message, got %v", err)
+			}
+		})
 	}
 }

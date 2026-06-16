@@ -174,21 +174,9 @@ func (s *UserService) validateUsername(username string) error {
 	return nil
 }
 
-// validatePassword 验证密码
+// validatePassword 验证新设置的密码
 func (s *UserService) validatePassword(password string) error {
-	minLength := config.AppConfig.AuthPasswordMinLength
-	maxLength := config.AppConfig.AuthPasswordMaxLength
-	if minLength == 0 {
-		minLength = 6
-	}
-	if maxLength == 0 {
-		maxLength = 64
-	}
-
-	if len(password) < minLength || len(password) > maxLength {
-		return newAuthValidationError(fmt.Sprintf("密码长度必须在%d-%d字符之间", minLength, maxLength))
-	}
-	return nil
+	return ValidateNewPassword(password)
 }
 
 // validateRole 验证角色

@@ -428,7 +428,7 @@ describe('Auth entry pages', () => {
     expect(registerMock).not.toHaveBeenCalled();
   });
 
-  it('explains that password whitespace is treated as part of the password', async () => {
+  it('explains that password cannot contain spaces', async () => {
     render(
       <MemoryRouter initialEntries={['/register']}>
         <RegisterPage />
@@ -437,7 +437,86 @@ describe('Auth entry pages', () => {
 
     await screen.findByText('创建账户');
 
-    expect(screen.getByText('密码长度需在 6-64 个字符之间，首尾空格会计入密码内容')).toBeInTheDocument();
+    expect(screen.getByText('密码长度需在 6-64 个字符之间')).toBeInTheDocument();
+  });
+
+  it('removes whitespace from the user login password before submit', async () => {
+    userLoginMock.mockResolvedValue({
+      access_token: 'token',
+      refresh_token: 'refresh',
+      username: 'neo',
+    });
+
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('欢迎回来');
+
+    await user.type(screen.getByLabelText('用户名'), 'neo');
+    await user.type(screen.getByLabelText('密码'), 'mat rix');
+    await user.click(screen.getByRole('button', { name: '登录' }));
+
+    await waitFor(() => {
+      expect(userLoginMock).toHaveBeenCalledWith('neo', 'matrix', false);
+    });
+  });
+
+  it('removes whitespace from the admin login password before submit', async () => {
+    adminLoginWithRememberMock.mockResolvedValue({
+      access_token: 'token',
+      refresh_token: 'refresh',
+      username: 'admin',
+    });
+
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/admin/login']}>
+        <AdminLogin />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('管理员登录');
+
+    await user.type(screen.getByLabelText('用户名'), 'admin');
+    await user.type(screen.getByLabelText('管理员密码'), 'sec ret');
+    await user.click(screen.getByRole('button', { name: '登录后台' }));
+
+    await waitFor(() => {
+      expect(adminLoginWithRememberMock).toHaveBeenCalledWith('admin', 'secret', false);
+    });
+  });
+
+  it('removes whitespace from register password fields before submit', async () => {
+    registerMock.mockResolvedValue({
+      access_token: 'token',
+      refresh_token: 'refresh',
+      username: 'trinity',
+    });
+
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/register']}>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('创建账户');
+
+    await user.type(screen.getByLabelText('用户名'), 'trinity');
+    await user.type(screen.getByLabelText(/^密码$/), 'secret 123');
+    await user.type(screen.getByLabelText('确认密码'), 'secret123');
+    await user.click(screen.getByRole('button', { name: '立即注册' }));
+
+    await waitFor(() => {
+      expect(registerMock).toHaveBeenCalledWith('trinity', 'secret123');
+    });
   });
 
   it('submits the admin login form only once when enter is pressed in the password field', async () => {
@@ -468,7 +547,7 @@ describe('Auth entry pages', () => {
   });
 
   it('keeps the register shell visible while waiting for system settings', () => {
-    getSettingsMock.mockImplementation(() => new Promise(() => {}));
+    getSettingsMock.mockImplementation(() => new Promise(() => { }));
 
     render(
       <MemoryRouter initialEntries={['/register']}>

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Fingerprint, LockKeyhole } from 'lucide-react';
+import React, { useState } from 'react';
+import { Eye, EyeOff, Fingerprint, LockKeyhole } from 'lucide-react';
 import AccountSectionHero from '@/components/account/AccountSectionHero';
 import {
   ACCOUNT_PANEL_SURFACE_CLASSES,
@@ -39,6 +39,36 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
   onConfirmPasswordChange,
   onSubmit,
 }) => {
+  const [visibleFields, setVisibleFields] = useState({
+    current: false,
+    next: false,
+    confirm: false,
+  });
+
+  const renderPasswordToggle = (
+    field: keyof typeof visibleFields,
+    visibleLabel: string
+  ) => {
+    const isVisible = visibleFields[field];
+
+    return (
+      <button
+        type="button"
+        onClick={() =>
+          setVisibleFields((prev) => ({
+            ...prev,
+            [field]: !prev[field],
+          }))
+        }
+        disabled={isSaving}
+        aria-label={isVisible ? `隐藏${visibleLabel}` : `显示${visibleLabel}`}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+      >
+        {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    );
+  };
+
   return (
     <section className="space-y-6">
       <AccountSectionHero eyebrow="ACCOUNT SECURITY" title="安全设置" badgeLabel="密码维护" />
@@ -55,13 +85,15 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
             <AppleInput
               id="current-password"
               label="当前密码"
-              type="password"
+              type={visibleFields.current ? 'text' : 'password'}
               value={currentPassword}
               onChange={(event) => onCurrentPasswordChange(event.target.value)}
               disabled={isSaving}
               placeholder="请输入当前密码"
               autoComplete="current-password"
+              helperText={passwordPolicyText}
               startAdornment={<LockKeyhole className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />}
+              endAdornment={renderPasswordToggle('current', '当前密码')}
               className="h-12 rounded-xl border-[0.5px] border-slate-300 bg-white shadow-sm hover:border-slate-400 focus:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all dark:border-slate-600 dark:bg-slate-900"
               containerClassName="space-y-1.5"
             />
@@ -69,7 +101,7 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
             <AppleInput
               id="new-password"
               label="新密码"
-              type="password"
+              type={visibleFields.next ? 'text' : 'password'}
               value={newPassword}
               onChange={(event) => onNewPasswordChange(event.target.value)}
               disabled={isSaving}
@@ -78,6 +110,7 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
               error={passwordError}
               helperText={passwordPolicyText}
               startAdornment={<Fingerprint className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />}
+              endAdornment={renderPasswordToggle('next', '新密码')}
               className="h-12 rounded-xl border-[0.5px] border-slate-300 bg-white shadow-sm hover:border-slate-400 focus:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all dark:border-slate-600 dark:bg-slate-900"
               containerClassName="space-y-1.5"
             />
@@ -85,14 +118,16 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
             <AppleInput
               id="confirm-password"
               label="确认新密码"
-              type="password"
+              type={visibleFields.confirm ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(event) => onConfirmPasswordChange(event.target.value)}
               disabled={isSaving}
               placeholder="再次输入新密码"
               autoComplete="new-password"
               error={confirmError}
+              helperText={passwordPolicyText}
               startAdornment={<Fingerprint className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />}
+              endAdornment={renderPasswordToggle('confirm', '确认新密码')}
               className="h-12 rounded-xl border-[0.5px] border-slate-300 bg-white shadow-sm hover:border-slate-400 focus:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all dark:border-slate-600 dark:bg-slate-900"
               containerClassName="space-y-1.5"
             />

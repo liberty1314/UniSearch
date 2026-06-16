@@ -158,7 +158,7 @@ describe('AccountPage', () => {
     expect(screen.getByText('安全设置')).toBeInTheDocument();
     expect(screen.getByText('ACCOUNT SECURITY')).toBeInTheDocument();
     expect(screen.getByText('密码更新建议')).toBeInTheDocument();
-    expect(screen.getAllByText('密码长度需控制在 8-20 个字符之间，首尾空格会计入密码内容').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('密码长度需在 8-20 个字符之间').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('当前密码')).toBeInTheDocument();
     expect(screen.queryByText('安全提示')).not.toBeInTheDocument();
   });
@@ -247,6 +247,61 @@ describe('AccountPage', () => {
 
     expect(postMock).not.toHaveBeenCalled();
     expect(toastErrorMock).toHaveBeenCalledWith('密码长度至少为 8 个字符');
+  });
+
+  it('removes whitespace from all password fields before changing password', async () => {
+    const user = userEvent.setup();
+
+    postMock.mockResolvedValueOnce({});
+
+    renderAccountPage();
+
+    await screen.findByRole('button', { name: /账号安全/ });
+    await user.click(screen.getByRole('button', { name: /账号安全/ }));
+    await user.type(screen.getByLabelText('当前密码'), 'old password');
+    await user.type(screen.getByLabelText('新密码'), 'new password 123');
+    await user.type(screen.getByLabelText('确认新密码'), 'newpassword123');
+    await user.click(screen.getByRole('button', { name: '更新密码' }));
+
+    await waitFor(() => {
+      expect(postMock).toHaveBeenCalledWith('/user/change-password', {
+        current_password: 'oldpassword',
+        new_password: 'newpassword123',
+      });
+    });
+  });
+
+  it('toggles visibility for every account password input', async () => {
+    const user = userEvent.setup();
+
+    renderAccountPage();
+
+    await screen.findByRole('button', { name: /账号安全/ });
+    await user.click(screen.getByRole('button', { name: /账号安全/ }));
+
+    const currentPasswordInput = screen.getByLabelText('当前密码') as HTMLInputElement;
+    const newPasswordInput = screen.getByLabelText('新密码') as HTMLInputElement;
+    const confirmPasswordInput = screen.getByLabelText('确认新密码') as HTMLInputElement;
+
+    expect(currentPasswordInput.type).toBe('password');
+    expect(newPasswordInput.type).toBe('password');
+    expect(confirmPasswordInput.type).toBe('password');
+
+    await user.click(screen.getByRole('button', { name: '显示当前密码' }));
+    await user.click(screen.getByRole('button', { name: '显示新密码' }));
+    await user.click(screen.getByRole('button', { name: '显示确认新密码' }));
+
+    expect(currentPasswordInput.type).toBe('text');
+    expect(newPasswordInput.type).toBe('text');
+    expect(confirmPasswordInput.type).toBe('text');
+
+    await user.click(screen.getByRole('button', { name: '隐藏当前密码' }));
+    await user.click(screen.getByRole('button', { name: '隐藏新密码' }));
+    await user.click(screen.getByRole('button', { name: '隐藏确认新密码' }));
+
+    expect(currentPasswordInput.type).toBe('password');
+    expect(newPasswordInput.type).toBe('password');
+    expect(confirmPasswordInput.type).toBe('password');
   });
 
   it('submits password changes and clears the form on success', async () => {
