@@ -9,6 +9,7 @@ import {
   writeJsonStorage,
 } from "@/lib/safeStorage";
 import { writeRecentResourceSnapshots } from "@/lib/resourceSnapshot";
+import { readAccountSearchDefaults } from "@/lib/accountPreferences";
 import {
   createSearchRequestId,
   invalidateSearchRequests,
@@ -79,17 +80,17 @@ interface SearchState {
 /**
  * 默认搜索参数
  */
-const defaultSearchParams: SearchParams = {
+const buildDefaultSearchParams = (): SearchParams => ({
   keyword: "",
   source: "all",
-  resultType: "merge",
-  cloudTypes: [],
+  resultType: readAccountSearchDefaults().resultType || "merge",
+  cloudTypes: [...(readAccountSearchDefaults().cloudTypes || [])],
   channels: [],
   plugins: [],
   concurrency: 5,
   refresh: false,
   ext: {},
-};
+});
 
 const sortStringValues = <T extends string>(values?: T[]) =>
   [...(values || [])].sort((left, right) => left.localeCompare(right, "zh-CN"));
@@ -172,7 +173,7 @@ export const useSearchStore = create<SearchState>()(
   devtools(
     (set, get) => ({
       // 初始状态
-      searchParams: defaultSearchParams,
+      searchParams: buildDefaultSearchParams(),
       searchResults: null,
       isLoading: false,
       isRefreshing: false,
@@ -441,7 +442,7 @@ export const useSearchStore = create<SearchState>()(
       reset: () => {
         invalidateSearchRequests();
         set((state) => ({
-          searchParams: defaultSearchParams,
+          searchParams: buildDefaultSearchParams(),
           searchResults: null,
           isLoading: false,
           isRefreshing: false,

@@ -34,7 +34,6 @@ type RegisterRequest struct {
 	Password string `json:"password" binding:"required"` // 密码
 }
 
-
 // LoginRequest 用户登录请求结构（支持记住我）
 type LoginRequest struct {
 	Username          string `json:"username" binding:"required"` // 用户名
@@ -56,6 +55,18 @@ type LoginData struct {
 	ExpiresAt    int64   `json:"expires_at"`              // Token 过期时间（Unix 时间戳）
 	RefreshToken *string `json:"refresh_token,omitempty"` // 刷新令牌（仅在 remember_me=true 时返回）
 	Username     string  `json:"username"`                // 用户名
+}
+
+type CurrentUserData struct {
+	ID                   uint       `json:"id"`
+	Username             string     `json:"username"`
+	Role                 string     `json:"role"`
+	IsEnabled            bool       `json:"is_enabled"`
+	LastLoginAt          *time.Time `json:"last_login_at"`
+	MonthlyLoginDays     []string   `json:"monthly_login_days"`
+	MonthlyLoginDayCount int        `json:"monthly_login_day_count"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
 }
 
 // Register 处理用户注册请求
@@ -227,6 +238,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 
 	ctrl.handleDatabaseUserLogin(c, req)
 }
+
 // handleDatabaseUserLogin 处理数据库用户登录
 func (ctrl *AuthController) handleDatabaseUserLogin(c *gin.Context, req LoginRequest) {
 	// 调用服务层进行登录
@@ -453,10 +465,31 @@ func (ctrl *AuthController) GetCurrentUser(c *gin.Context) {
 		return
 	}
 
+	monthlyLoginDays, monthlyLoginDayCount, err := ctrl.authService.GetCurrentMonthLoginDays(uid)
+	if err != nil {
+		log.Printf("✗ 查询当前用户月登录统计失败: %v", err)
+		c.JSON(500, gin.H{
+			"code":    500,
+			"message": "服务暂时不可用",
+			"data":    nil,
+		})
+		return
+	}
+
 	// 返回用户信息
 	c.JSON(200, gin.H{
 		"code":    200,
 		"message": "获取成功",
-		"data":    user,
+		"data": CurrentUserData{
+			ID:                   user.ID,
+			Username:             user.Username,
+			Role:                 user.Role,
+			IsEnabled:            user.IsEnabled,
+			LastLoginAt:          user.LastLoginAt,
+			MonthlyLoginDays:     monthlyLoginDays,
+			MonthlyLoginDayCount: monthlyLoginDayCount,
+			CreatedAt:            user.CreatedAt,
+			UpdatedAt:            user.UpdatedAt,
+		},
 	})
 }

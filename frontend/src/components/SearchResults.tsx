@@ -31,14 +31,13 @@ import {
 import { removeActiveFilterChip } from "@/utils/searchFilters";
 import { SearchService } from "@/services/searchService";
 import { readJsonStorage, writeJsonStorage } from "@/lib/safeStorage";
+import { SEARCH_RESULTS_VIEW_MODE_KEY } from "@/lib/accountPreferences";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface SearchResultsProps {
   className?: string;
 }
-
-const SEARCH_RESULTS_VIEW_MODE_KEY = "unisearch_search_results_view_mode";
 
 const isSearchResultsViewMode = (
   value: unknown,

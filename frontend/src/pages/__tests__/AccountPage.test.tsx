@@ -5,12 +5,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HelmetProvider } from 'react-helmet-async';
 import AccountPage from '@/pages/AccountPage';
 
-const { getMock, postMock, getSettingsMock, toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
+const { getMock, postMock, getSettingsMock, toastErrorMock, toastSuccessMock, logoutMock } = vi.hoisted(() => ({
   getMock: vi.fn(),
   postMock: vi.fn(),
   getSettingsMock: vi.fn(),
   toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
+  logoutMock: vi.fn(),
 }));
 
 vi.mock('sonner', () => ({
@@ -76,6 +77,8 @@ vi.mock('@/services/systemSettingsService', () => ({
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: () => ({
     username: 'cached-user',
+    refreshToken: 'refresh-token',
+    logout: logoutMock,
   }),
 }));
 
@@ -92,6 +95,8 @@ describe('AccountPage', () => {
     );
 
   beforeEach(() => {
+    localStorage.clear();
+    document.documentElement.classList.remove('dark');
     getMock.mockReset();
     postMock.mockReset();
     toastErrorMock.mockReset();
@@ -105,6 +110,8 @@ describe('AccountPage', () => {
       is_enabled: true,
       last_login_at: '2026-04-05T08:00:00.000Z',
       created_at: '2026-03-01T08:00:00.000Z',
+      monthly_login_days: ['2026-04-01', '2026-04-05'],
+      monthly_login_day_count: 2,
     });
     getSettingsMock.mockResolvedValue({
       auth_password_min_length: 8,
@@ -112,25 +119,39 @@ describe('AccountPage', () => {
     });
   });
 
-  it('renders account workspace navigation and toggles between overview and security modules', async () => {
+  it('renders account workspace navigation and toggles between overview, preferences and security modules', async () => {
     const user = userEvent.setup();
 
     const { container } = renderAccountPage();
 
     expect(await screen.findByText('欢迎回来，alice')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /账号概览/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^修改密码$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /偏好设置/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /账号安全/ })).toBeInTheDocument();
     expect(screen.getByText('账号工作台')).toBeInTheDocument();
     expect(screen.getByText('ACCOUNT OVERVIEW')).toBeInTheDocument();
+    expect(screen.getByText('账号状态')).toBeInTheDocument();
+    expect(screen.getByText('本月活跃')).toBeInTheDocument();
+    expect(screen.getByText('已登录 2 天')).toBeInTheDocument();
     expect(screen.getByText('身份说明')).toBeInTheDocument();
     expect(screen.getByText('活跃状态')).toBeInTheDocument();
     expect(screen.getByText('快捷动作')).toBeInTheDocument();
     expect(screen.getByText('安全提示')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '立即修改密码' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^修改密码$/ })).toHaveClass('dark:hover:bg-cyan-400/[0.08]');
+    expect(screen.queryByText(/API Key/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('搜索活动')).not.toBeInTheDocument();
+    expect(screen.queryByText('搜索历史')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /账号安全/ })).toHaveClass('dark:hover:bg-cyan-400/[0.08]');
     expect(container.innerHTML).toContain('dark:bg-slate-950/[0.82]');
 
     expect(screen.queryByLabelText('当前密码')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /偏好设置/ }));
+
+    expect(screen.getByText('PREFERENCES')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: '主题偏好' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: '默认结果视图' })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: '公告提醒' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '立即修改密码' }));
 
@@ -142,14 +163,58 @@ describe('AccountPage', () => {
     expect(screen.queryByText('安全提示')).not.toBeInTheDocument();
   });
 
-  it('shows a toast when profile loading fails', async () => {
-    getMock.mockRejectedValueOnce(new Error('boom'));
+  it('shows an inline error state and retries when profile loading fails', async () => {
+    const user = userEvent.setup();
+    getMock
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce({
+        id: 2,
+        username: 'retry-user',
+        role: 'user',
+        is_enabled: true,
+        last_login_at: null,
+        created_at: '2026-03-01T08:00:00.000Z',
+        monthly_login_days: [],
+        monthly_login_day_count: 0,
+      });
 
     renderAccountPage();
 
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith('加载个人中心失败');
     });
+    expect(screen.getByText('个人资料暂时无法同步')).toBeInTheDocument();
+    expect(screen.getByText('仍可调整本地偏好，或稍后重新加载账号资料。')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '重新加载' }));
+
+    expect(await screen.findByText('欢迎回来，retry-user')).toBeInTheDocument();
+    expect(getMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('persists local account preferences without showing search activity controls', async () => {
+    const user = userEvent.setup();
+
+    renderAccountPage();
+
+    await screen.findByText('欢迎回来，alice');
+    await user.click(screen.getByRole('button', { name: /偏好设置/ }));
+    await user.click(screen.getByRole('button', { name: '深色' }));
+    await user.click(screen.getByRole('button', { name: '列表视图' }));
+    await user.click(screen.getByLabelText('阿里云盘'));
+    await user.click(screen.getByRole('switch', { name: '公告提醒' }));
+    await user.click(screen.getByRole('button', { name: '保存偏好' }));
+
+    expect(toastSuccessMock).toHaveBeenCalledWith('偏好设置已保存');
+    expect(localStorage.getItem('unisearch_account_preferences')).toContain('"theme":"dark"');
+    expect(localStorage.getItem('unisearch_account_preferences')).toContain('"resultView":"list"');
+    expect(localStorage.getItem('unisearch_account_preferences')).toContain('"defaultCloudTypes":["aliyun"]');
+    expect(localStorage.getItem('theme')).toBe('dark');
+    expect(document.documentElement).toHaveClass('dark');
+    expect(localStorage.getItem('unisearch_search_results_view_mode')).toBe(JSON.stringify('list'));
+    expect(localStorage.getItem('unisearch_account_search_defaults')).toContain('"cloudTypes":["aliyun"]');
+    expect(screen.queryByText('最近有效搜索')).not.toBeInTheDocument();
+    expect(screen.queryByText('最近资源')).not.toBeInTheDocument();
   });
 
   it('blocks password submission when confirmation does not match', async () => {
@@ -157,8 +222,8 @@ describe('AccountPage', () => {
 
     renderAccountPage();
 
-    await screen.findByRole('button', { name: /^修改密码$/ });
-    await user.click(screen.getByRole('button', { name: /^修改密码$/ }));
+    await screen.findByRole('button', { name: /账号安全/ });
+    await user.click(screen.getByRole('button', { name: /账号安全/ }));
     await user.type(screen.getByLabelText('当前密码'), 'old-password');
     await user.type(screen.getByLabelText('新密码'), 'new-password');
     await user.type(screen.getByLabelText('确认新密码'), 'different-password');
@@ -173,8 +238,8 @@ describe('AccountPage', () => {
 
     renderAccountPage();
 
-    await screen.findByRole('button', { name: /^修改密码$/ });
-    await user.click(screen.getByRole('button', { name: /^修改密码$/ }));
+    await screen.findByRole('button', { name: /账号安全/ });
+    await user.click(screen.getByRole('button', { name: /账号安全/ }));
     await user.type(screen.getByLabelText('当前密码'), 'old-password');
     await user.type(screen.getByLabelText('新密码'), 'short77');
     await user.type(screen.getByLabelText('确认新密码'), 'short77');
@@ -191,16 +256,19 @@ describe('AccountPage', () => {
 
     renderAccountPage();
 
-    await screen.findByRole('button', { name: /^修改密码$/ });
-    await user.click(screen.getByRole('button', { name: /^修改密码$/ }));
+    await screen.findByRole('button', { name: /账号安全/ });
+    await user.click(screen.getByRole('button', { name: /账号安全/ }));
 
     const currentPasswordInput = screen.getByLabelText('当前密码') as HTMLInputElement;
     const newPasswordInput = screen.getByLabelText('新密码') as HTMLInputElement;
     const confirmPasswordInput = screen.getByLabelText('确认新密码') as HTMLInputElement;
 
+    expect(screen.getByRole('button', { name: '更新密码' })).toBeDisabled();
+
     await user.type(currentPasswordInput, 'old-password');
     await user.type(newPasswordInput, 'new-password');
     await user.type(confirmPasswordInput, 'new-password');
+    expect(screen.getByRole('button', { name: '更新密码' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: '更新密码' }));
 
     await waitFor(() => {
@@ -210,7 +278,7 @@ describe('AccountPage', () => {
       });
     });
 
-    expect(toastSuccessMock).toHaveBeenCalledWith('密码修改成功');
+    expect(toastSuccessMock).toHaveBeenCalledWith('密码修改成功，下次登录请使用新密码');
     expect(currentPasswordInput.value).toBe('');
     expect(newPasswordInput.value).toBe('');
     expect(confirmPasswordInput.value).toBe('');

@@ -81,4 +81,28 @@ describe('AnnouncementProvider', () => {
 
     expect(await screen.findByRole('dialog', { name: '首页公告' })).toBeInTheDocument();
   });
+
+  it('个人中心关闭公告提醒后不加载也不弹出公告', async () => {
+    localStorage.setItem(
+      'unisearch_account_preferences',
+      JSON.stringify({
+        theme: 'system',
+        resultView: 'merge',
+        defaultCloudTypes: [],
+        announcementReminder: false,
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AnnouncementProvider />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(getAnnouncementFeatureEnabledMock).not.toHaveBeenCalled();
+      expect(getActiveAnnouncementsMock).not.toHaveBeenCalled();
+    });
+    expect(screen.queryByRole('dialog', { name: '首页公告' })).not.toBeInTheDocument();
+  });
 });

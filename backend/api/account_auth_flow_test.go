@@ -275,6 +275,58 @@ func TestAuthenticatedUserRequestRecordsDailyActivityStat(t *testing.T) {
 	}
 }
 
+func TestGetCurrentUserReturnsCurrentMonthLoginSummary(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := newAccountFlowTestDB(t)
+	user := createAccountFlowUser(t, db, "alice", "password123")
+	router := newAccountFlowRouter(t, db)
+
+	now := time.Now()
+	monthDay := time.Date(now.Year(), now.Month(), 2, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+	previousMonthDay := time.Date(now.Year(), now.Month()-1, 2, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+	if err := db.Create(&model.UserLoginDailyStat{UserID: user.ID, LoginDate: monthDay, LoginCount: 1}).Error; err != nil {
+		t.Fatalf("create current month login stat: %v", err)
+	}
+	if err := db.Create(&model.UserLoginDailyStat{UserID: user.ID, LoginDate: previousMonthDay, LoginCount: 1}).Error; err != nil {
+		t.Fatalf("create previous month login stat: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/user/me", nil)
+	req.Header.Set("Authorization", "Bearer "+issueJWT(t, user))
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	var response struct {
+		Code int `json:"code"`
+		Data struct {
+			MonthlyLoginDays     []string `json:"monthly_login_days"`
+			MonthlyLoginDayCount int      `json:"monthly_login_day_count"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	today := now.Format("2006-01-02")
+	expectedDays := map[string]bool{
+		monthDay: true,
+		today:   true,
+	}
+	if response.Data.MonthlyLoginDayCount != len(expectedDays) {
+		t.Fatalf("expected %d current month login days, got %d (%v)", len(expectedDays), response.Data.MonthlyLoginDayCount, response.Data.MonthlyLoginDays)
+	}
+	for _, day := range response.Data.MonthlyLoginDays {
+		if !expectedDays[day] {
+			t.Fatalf("unexpected login day %s in response: %v", day, response.Data.MonthlyLoginDays)
+		}
+	}
+}
+
 func TestAuthenticatedUserRequestDoesNotIncrementExistingDailyStat(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := newAccountFlowTestDB(t)

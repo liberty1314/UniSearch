@@ -168,6 +168,7 @@ const renderSearchPage = (
 
 describe("SearchPage", () => {
   beforeEach(() => {
+    localStorage.clear();
     performSearchMock.mockReset();
     setSearchParamsMock.mockReset();
     clearResultsMock.mockReset();
@@ -222,6 +223,40 @@ describe("SearchPage", () => {
         cloudTypes: ["quark"],
       }),
       { preserveResults: false }
+    );
+  });
+
+  it("uses account default cloud filters when the search URL has no explicit type filter", async () => {
+    localStorage.setItem(
+      "unisearch_account_preferences",
+      JSON.stringify({
+        theme: "system",
+        resultView: "merge",
+        defaultCloudTypes: ["aliyun", "quark"],
+        announcementReminder: true,
+      }),
+    );
+    searchStoreState.searchParams.keyword = "电影";
+
+    renderSearchPage("/search?q=%E7%94%B5%E5%BD%B1");
+
+    await waitFor(() => {
+      expect(setSearchParamsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          keyword: "电影",
+          cloudTypes: ["aliyun", "quark"],
+        }),
+      );
+    });
+
+    expect(performSearchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keyword: "电影",
+        source: "all",
+        resultType: "merge",
+        cloudTypes: ["aliyun", "quark"],
+      }),
+      { preserveResults: false },
     );
   });
 

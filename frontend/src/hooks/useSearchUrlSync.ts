@@ -4,6 +4,7 @@ import { SearchService } from "@/services/searchService";
 import { useAuthStore } from "@/stores/authStore";
 import { useSearchStore } from "@/stores/searchStore";
 import type { SearchParams } from "@/types/api";
+import { readAccountSearchDefaults } from "@/lib/accountPreferences";
 
 const SEARCH_REVALIDATE_INTERVAL_MS = 10_000;
 
@@ -14,8 +15,8 @@ const buildResumeSearchParams = (
 ): SearchParams => ({
   keyword,
   source: params?.source || fallbackSearchParams.source || "all",
-  resultType: params?.resultType || fallbackSearchParams.resultType || "merge",
-  cloudTypes: [...(params?.cloudTypes || [])],
+  resultType: params?.resultType || fallbackSearchParams.resultType || readAccountSearchDefaults().resultType || "merge",
+  cloudTypes: [...(params?.cloudTypes || fallbackSearchParams.cloudTypes || readAccountSearchDefaults().cloudTypes || [])],
   channels: [...(params?.channels || [])],
   plugins: [...(params?.plugins || [])],
   concurrency: params?.concurrency || fallbackSearchParams.concurrency || 5,
@@ -102,8 +103,8 @@ export function useSearchUrlSync(): void {
     const nextParams = {
       keyword,
       source: parsedParams.source || "all",
-      resultType: parsedParams.resultType || "merge",
-      cloudTypes: parsedParams.cloudTypes || [],
+      resultType: parsedParams.resultType || readAccountSearchDefaults().resultType || "merge",
+      cloudTypes: parsedParams.cloudTypes ?? readAccountSearchDefaults().cloudTypes,
       channels: parsedParams.channels || [],
       plugins: parsedParams.plugins || [],
       concurrency: searchParams.concurrency || 5,

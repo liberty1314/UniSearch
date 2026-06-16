@@ -1,5 +1,6 @@
 import React from 'react';
 import { Fingerprint, LockKeyhole } from 'lucide-react';
+import AccountSectionHero from '@/components/account/AccountSectionHero';
 import {
   ACCOUNT_PANEL_SURFACE_CLASSES,
   ACCOUNT_PANEL_SURFACE_HOVER_CLASSES,
@@ -15,6 +16,8 @@ interface AccountSecurityPanelProps {
   passwordError?: string;
   confirmError?: string;
   isSaving: boolean;
+  canSubmit: boolean;
+  isUsingDefaultPolicy?: boolean;
   onCurrentPasswordChange: (value: string) => void;
   onNewPasswordChange: (value: string) => void;
   onConfirmPasswordChange: (value: string) => void;
@@ -29,6 +32,8 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
   passwordError,
   confirmError,
   isSaving,
+  canSubmit,
+  isUsingDefaultPolicy = false,
   onCurrentPasswordChange,
   onNewPasswordChange,
   onConfirmPasswordChange,
@@ -36,19 +41,7 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
 }) => {
   return (
     <section className="space-y-6">
-      <div className={`${ACCOUNT_PANEL_SURFACE_CLASSES} ${ACCOUNT_PANEL_SURFACE_HOVER_CLASSES} p-6 sm:p-7`}>
-        <div className="relative flex flex-col gap-2">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.28em] text-slate-400 dark:text-slate-300">
-            ACCOUNT SECURITY
-          </p>
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-800 dark:text-white">
-            安全设置
-          </h2>
-          <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">
-            更新登录密码，并确保当前账户的基础访问凭证保持最新状态。
-          </p>
-        </div>
-      </div>
+      <AccountSectionHero eyebrow="ACCOUNT SECURITY" title="安全设置" badgeLabel="密码维护" />
 
       <div className={`${ACCOUNT_PANEL_SURFACE_CLASSES} ${ACCOUNT_PANEL_SURFACE_HOVER_CLASSES} p-6 sm:p-7`}>
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
@@ -65,6 +58,7 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
               type="password"
               value={currentPassword}
               onChange={(event) => onCurrentPasswordChange(event.target.value)}
+              disabled={isSaving}
               placeholder="请输入当前密码"
               autoComplete="current-password"
               startAdornment={<LockKeyhole className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />}
@@ -78,6 +72,7 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
               type="password"
               value={newPassword}
               onChange={(event) => onNewPasswordChange(event.target.value)}
+              disabled={isSaving}
               placeholder="请输入新密码"
               autoComplete="new-password"
               error={passwordError}
@@ -93,6 +88,7 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
               type="password"
               value={confirmPassword}
               onChange={(event) => onConfirmPasswordChange(event.target.value)}
+              disabled={isSaving}
               placeholder="再次输入新密码"
               autoComplete="new-password"
               error={confirmError}
@@ -102,9 +98,15 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
             />
 
             <div className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-end">
+              {isUsingDefaultPolicy ? (
+                <p className="text-sm text-amber-600 dark:text-amber-300">
+                  当前使用默认密码规则。
+                </p>
+              ) : null}
               <Button
                 type="submit"
                 loading={isSaving}
+                disabled={!canSubmit || isSaving}
                 className="h-11 rounded-[8px] bg-[#0071e3] px-6 text-[17px] font-normal text-white shadow-none hover:bg-[#0077ED] active:bg-[#ededf2] active:text-[#1d1d1f]"
               >
                 {isSaving ? '保存中...' : '更新密码'}

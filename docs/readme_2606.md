@@ -710,3 +710,41 @@
     - frontend/src/services/__tests__/hotRankingService.test.ts
     - frontend/src/services/hotRankingService.ts
     - docs/readme_2606.md
+
+- [2026-06-16 18:21] feat(account): 重构个人中心工作台并新增本地偏好设置
+  - Body: 将原有个人中心重设计为账号概览、偏好设置和账号安全三个独立模块。新增个人中心资料加载错误状态及重试机制，添加了纯前端实现的偏好设置能力。优化了修改密码的动态校验逻辑与体验提示，并在导航与布局上实现了新的信息架构，同时新增了相关的重设计方案。
+  - Files:
+    - PRODUCT.md
+    - README.md
+    - backend/api/account_auth_flow_test.go
+    - backend/api/controller/auth_controller.go
+    - backend/service/auth_service.go
+    - docs/个人中心重设计开发计划.md
+    - docs/个人中心重设计方案.md
+    - frontend/src/App.tsx
+    - frontend/src/components/AnnouncementProvider.tsx
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/__tests__/AnnouncementProvider.test.tsx
+    - frontend/src/components/account/AccountErrorState.tsx
+    - frontend/src/components/account/AccountOverviewHighlights.tsx
+    - frontend/src/components/account/AccountOverviewPanel.tsx
+    - frontend/src/components/account/AccountPreferencesPanel.tsx
+    - frontend/src/components/account/AccountSecurityPanel.tsx
+    - frontend/src/components/account/AccountWorkspaceShell.tsx
+    - frontend/src/components/account/accountPreferences.ts
+    - frontend/src/components/account/accountTypes.ts
+    - frontend/src/components/trending/HotSectionSummary.tsx
+    - frontend/src/components/trending/HotToolbar.tsx
+    - frontend/src/components/trending/__tests__/HotToolbar.test.tsx
+    - frontend/src/components/ui/apple-switch.tsx
+    - frontend/src/hooks/useSearchBoxController.ts
+    - frontend/src/hooks/useSearchUrlSync.ts
+    - frontend/src/lib/accountPreferences.ts
+    - frontend/src/pages/AccountPage.tsx
+    - frontend/src/pages/HotPage.tsx
+    - frontend/src/pages/SearchPage.tsx
+    - frontend/src/pages/__tests__/AccountPage.test.tsx
+    - frontend/src/pages/__tests__/SearchPage.test.tsx
+    - frontend/src/stores/searchStore.ts
+    - frontend/src/types/api.ts
+    - docs/readme_2606.md

@@ -18,7 +18,6 @@ interface HotToolbarProps {
   period: HotRankingPeriod;
   category: HotRankingCategory;
   sortBy: HotRankingSortBy;
-  note?: string;
   date: string;
   weekStart: string;
   month: string;
@@ -38,7 +37,6 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
   mode,
   period,
   category,
-  note,
   date,
   weekStart,
   month,
@@ -61,21 +59,14 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
     if (mode === "trend") {
       return (
         <div className="rounded-[1.2rem] border border-cyan-100 bg-cyan-50/70 px-4 py-3 text-sm leading-6 text-cyan-700 dark:border-cyan-400/15 dark:bg-cyan-500/10 dark:text-cyan-200">
-          {note || (period === "day" ? "当前显示每日趋势榜。" : "当前显示每周趋势榜。")}
+          {period === "day" ? "当前显示每日趋势榜。" : "当前显示每周趋势榜。"}
         </div>
       );
     }
 
-    const helperText = note ? (
-      <div className="rounded-[1.2rem] border border-cyan-100 bg-cyan-50/70 px-4 py-3 text-sm leading-6 text-cyan-700 dark:border-cyan-400/15 dark:bg-cyan-500/10 dark:text-cyan-200">
-        {note}
-      </div>
-    ) : null;
-
     if (period === "day") {
       return (
         <div className="space-y-3">
-          {helperText}
           <label className="space-y-2">
             <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
               指定日期
@@ -96,7 +87,6 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
     if (period === "week") {
       return (
         <div className="space-y-3">
-          {helperText}
           <label className="space-y-2">
             <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
               周起始日
@@ -117,7 +107,6 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
     if (period === "month") {
       return (
         <div className="space-y-3">
-          {helperText}
           <label className="space-y-2">
             <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
               指定月份
@@ -137,7 +126,6 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
 
     return (
       <div className="space-y-3">
-        {helperText}
         <label className="space-y-2">
           <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
             指定年份

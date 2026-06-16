@@ -37,6 +37,7 @@ const AccountOverviewHighlights: React.FC<AccountOverviewHighlightsProps> = ({
   cachedUsername,
   isLoadingProfile,
 }) => {
+  const monthlyLoginDayCount = profile?.monthly_login_day_count ?? profile?.monthly_login_days?.length ?? 0;
   const cards = [
     {
       key: 'username',
@@ -48,16 +49,16 @@ const AccountOverviewHighlights: React.FC<AccountOverviewHighlightsProps> = ({
     },
     {
       key: 'role',
-      label: '角色',
+      label: '账号状态',
       value: getAccountRoleLabel(profile?.role),
       Icon: ShieldCheck,
       iconClass: 'text-emerald-500/80 dark:text-emerald-400/80',
       accentClass: 'group-hover:text-emerald-600 dark:group-hover:text-emerald-300',
     },
     {
-      key: 'last_login_at',
-      label: '最近登录',
-      value: isLoadingProfile ? '加载中...' : formatDate(profile?.last_login_at),
+      key: 'monthly_login_days',
+      label: '本月活跃',
+      value: isLoadingProfile ? '加载中...' : `已登录 ${monthlyLoginDayCount} 天`,
       Icon: Clock3,
       iconClass: 'text-amber-500/80 dark:text-amber-400/80',
       accentClass: 'group-hover:text-amber-600 dark:group-hover:text-amber-300',

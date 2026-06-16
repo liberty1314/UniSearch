@@ -13,6 +13,7 @@ import { hotRankingService } from "@/services/hotRankingService";
 import type { StatefulButtonHandle } from "@/components/ui/stateful-button";
 import type { HotRankingItem } from "@/types/hotRanking";
 import { getErrorCode, getErrorMessage } from "@/lib/error";
+import { readAccountSearchDefaults } from "@/lib/accountPreferences";
 
 const HOME_QUICK_KEYWORD_LIMIT = 4;
 const HOME_HOT_KEYWORDS_CACHE_TTL = 5 * 60 * 1000;
@@ -65,12 +66,32 @@ const buildHomeSearchTransitionState = () => ({
   resetScroll: true,
 });
 
-const createResetSearchScope = () => ({
-  cloudTypes: [],
-  channels: [],
-  plugins: [],
-  filter: undefined,
-});
+const createResetSearchScope = () => {
+  const defaults = readAccountSearchDefaults();
+
+  return {
+    ...(defaults.resultType && defaults.resultType !== "merge"
+      ? { resultType: defaults.resultType }
+      : {}),
+    cloudTypes: [...(defaults.cloudTypes || [])],
+    channels: [],
+    plugins: [],
+    filter: undefined,
+  };
+};
+
+const createActiveAccountSearchDefaults = () => {
+  const defaults = readAccountSearchDefaults();
+
+  return {
+    ...(defaults.resultType && defaults.resultType !== "merge"
+      ? { resultType: defaults.resultType }
+      : {}),
+    ...(defaults.cloudTypes && defaults.cloudTypes.length > 0
+      ? { cloudTypes: defaults.cloudTypes }
+      : {}),
+  };
+};
 
 const pickHomeHotKeywords = (items: HotRankingItem[] = []) =>
   items
@@ -335,14 +356,14 @@ export function useSearchBoxController({
     const resetScope = shouldResetSearchScope ? createResetSearchScope() : null;
     const nextParams = resetScope
       ? { ...searchParams, keyword, ...resetScope }
-      : { ...searchParams, keyword };
+      : { ...searchParams, ...createActiveAccountSearchDefaults(), keyword };
     const nextUrl = SearchService.buildSearchUrl(nextParams);
     const currentUrl = `${location.pathname}${location.search}`;
 
     setSearchParams(
       resetScope
         ? { keyword, ...resetScope }
-        : { keyword },
+        : { keyword, ...createActiveAccountSearchDefaults() },
     );
 
     if (!isSearchPage) {
@@ -382,6 +403,7 @@ export function useSearchBoxController({
     if (!isAuthenticated || searchAccessStatus === "anonymous") {
       const nextUrl = SearchService.buildSearchUrl({
         ...searchParams,
+        ...createActiveAccountSearchDefaults(),
         keyword,
       });
       toast.warning("搜索前请先登录", { duration: 3000 });

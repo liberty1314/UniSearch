@@ -147,7 +147,7 @@ export interface AdminLoginRequest {
 export interface AdminLoginResponse {
   token: string;
   expires_at: number;
-  username?: string; // 可选字段，用于 API Key 登录
+  username?: string; // 可选字段，用于后台兼容响应
 }
 
 /**
@@ -208,9 +208,9 @@ export interface LoginWithRememberResponse {
 }
 
 /**
- * 用户 API Key 信息响应（数据部分）
+ * 遗留 API Key 信息响应（数据部分）
  * 
- * 此类型定义了获取用户 API Key 信息接口返回的业务数据结构。
+ * 此类型仅保留给历史后台接口和迁移评估使用，不作为个人中心用户能力继续暴露。
  * 实际 API 返回格式为 `ApiResponse<APIKeyInfoResponse>`，即：
  * ```json
  * {
@@ -237,8 +237,8 @@ export interface LoginWithRememberResponse {
  * @property {boolean} is_valid - API Key 是否有效（未过期且未被禁用）
  * 
  * @see ApiResponse - 通用 API 响应结构
- * @see AuthService.getUserApiKeyInfo - 使用此类型的获取 API Key 信息方法
- * @see AuthService.unbindApiKey - 解绑 API Key 的方法
+ * @see AuthService.getUserApiKeyInfo - 遗留接口，待后续评估下线
+ * @see AuthService.unbindApiKey - 遗留接口，待后续评估下线
  */
 export interface APIKeyInfoResponse {
   api_key: string;
@@ -303,7 +303,7 @@ export interface RevokeRefreshTokenRequest {
 }
 
 /**
- * API Key 信息
+ * API Key 信息（遗留后台能力，待评估下线）
  */
 export interface APIKeyInfo {
   id: number;

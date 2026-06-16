@@ -296,6 +296,32 @@ func (s *AuthService) MarkUserActiveByUserID(userID uint) error {
 	return nil
 }
 
+// GetCurrentMonthLoginDays 查询单个用户本月登录日期摘要。
+func (s *AuthService) GetCurrentMonthLoginDays(userID uint) ([]string, int, error) {
+	if userID == 0 {
+		return nil, 0, errors.New("用户ID不能为空")
+	}
+
+	now := time.Now()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+	nextMonthStart := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+
+	var stats []model.UserLoginDailyStat
+	if err := s.db.
+		Where("user_id = ? AND login_date >= ? AND login_date < ?", userID, monthStart, nextMonthStart).
+		Order("login_date ASC").
+		Find(&stats).Error; err != nil {
+		return nil, 0, fmt.Errorf("查询当前用户月登录统计失败: %w", err)
+	}
+
+	loginDays := make([]string, 0, len(stats))
+	for _, stat := range stats {
+		loginDays = append(loginDays, stat.LoginDate)
+	}
+
+	return loginDays, len(loginDays), nil
+}
+
 // ValidateToken 验证 JWT Token
 // 参数：
 //   - tokenString: JWT Token 字符串

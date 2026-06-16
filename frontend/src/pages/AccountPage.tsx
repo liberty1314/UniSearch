@@ -1,10 +1,20 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import AccountErrorState from '@/components/account/AccountErrorState';
 import AccountOverviewPanel from '@/components/account/AccountOverviewPanel';
+import AccountPreferencesPanel from '@/components/account/AccountPreferencesPanel';
 import AccountSecurityPanel from '@/components/account/AccountSecurityPanel';
 import AccountWorkspaceShell from '@/components/account/AccountWorkspaceShell';
-import type { AccountProfile, AccountSection } from '@/components/account/accountTypes';
+import {
+  readAccountPreferences,
+  writeAccountPreferences,
+} from '@/components/account/accountPreferences';
+import type {
+  AccountPreferences,
+  AccountProfile,
+  AccountSection,
+} from '@/components/account/accountTypes';
 import {
   validateAccountPassword,
   validateAccountPasswordConfirmation,
@@ -22,34 +32,43 @@ const AccountPage: React.FC = () => {
   const [profile, setProfile] = useState<AccountProfile | null>(null);
   const [activeSection, setActiveSection] = useState<AccountSection>('overview');
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [preferences, setPreferences] = useState<AccountPreferences>(() => readAccountPreferences());
   const [isSaving, setIsSaving] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [authPolicy, setAuthPolicy] = useState(DEFAULT_AUTH_POLICY);
+  const [isUsingDefaultPolicy, setIsUsingDefaultPolicy] = useState(false);
+
+  const loadProfile = useCallback(async () => {
+    setIsLoadingProfile(true);
+    setProfileError(null);
+    try {
+      const data = await apiClient.get<AccountProfile>('/user/me');
+      setProfile(data);
+    } catch (error) {
+      const message = getErrorMessage(error, '加载个人中心失败');
+      setProfileError(message);
+      toast.error(message);
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const data = await apiClient.get<AccountProfile>('/user/me');
-        setProfile(data);
-      } catch (error) {
-        toast.error(getErrorMessage(error, '加载个人中心失败'));
-      } finally {
-        setIsLoadingProfile(false);
-      }
-    };
-
     void loadProfile();
-  }, []);
+  }, [loadProfile]);
 
   useEffect(() => {
     const loadAuthPolicy = async () => {
       try {
         const settings = await SystemSettingsService.getSettings();
         setAuthPolicy(resolveAuthPolicy(settings));
+        setIsUsingDefaultPolicy(false);
       } catch {
         setAuthPolicy(DEFAULT_AUTH_POLICY);
+        setIsUsingDefaultPolicy(true);
       }
     };
 
@@ -70,6 +89,15 @@ const AccountPage: React.FC = () => {
     () => validateAccountPasswordConfirmation(confirmPassword, newPassword, { required: false }),
     [confirmPassword, newPassword]
   );
+
+  const canSubmitPassword = useMemo(() => {
+    return Boolean(currentPassword.trim() && newPassword && confirmPassword);
+  }, [confirmPassword, currentPassword, newPassword]);
+
+  const handleSavePreferences = () => {
+    writeAccountPreferences(preferences);
+    toast.success('偏好设置已保存');
+  };
 
   const handleChangePassword = async () => {
     if (!currentPassword.trim()) {
@@ -104,7 +132,7 @@ const AccountPage: React.FC = () => {
         current_password: currentPassword,
         new_password: newPassword,
       });
-      toast.success('密码修改成功');
+      toast.success('密码修改成功，下次登录请使用新密码');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -133,6 +161,11 @@ const AccountPage: React.FC = () => {
             cachedUsername={cachedUsername}
             isLoadingProfile={isLoadingProfile}
           >
+            {profileError ? (
+              <div className="mb-6">
+                <AccountErrorState isRetrying={isLoadingProfile} onRetry={loadProfile} />
+              </div>
+            ) : null}
             <AnimatePresence mode="wait">
               {activeSection === 'overview' ? (
                 <motion.div
@@ -146,6 +179,21 @@ const AccountPage: React.FC = () => {
                     profile={profile}
                     cachedUsername={cachedUsername}
                     isLoadingProfile={isLoadingProfile}
+                    onOpenSecurity={() => setActiveSection('security')}
+                  />
+                </motion.div>
+              ) : activeSection === 'preferences' ? (
+                <motion.div
+                  key="preferences"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <AccountPreferencesPanel
+                    preferences={preferences}
+                    onPreferencesChange={setPreferences}
+                    onSave={handleSavePreferences}
                     onOpenSecurity={() => setActiveSection('security')}
                   />
                 </motion.div>
@@ -165,6 +213,8 @@ const AccountPage: React.FC = () => {
                     passwordError={passwordError}
                     confirmError={confirmError}
                     isSaving={isSaving}
+                    canSubmit={canSubmitPassword}
+                    isUsingDefaultPolicy={isUsingDefaultPolicy}
                     onCurrentPasswordChange={setCurrentPassword}
                     onNewPasswordChange={setNewPassword}
                     onConfirmPasswordChange={setConfirmPassword}

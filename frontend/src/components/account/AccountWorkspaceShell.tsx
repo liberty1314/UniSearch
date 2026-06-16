@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Fingerprint, LayoutDashboard, ShieldCheck } from 'lucide-react';
+import { Fingerprint, LayoutDashboard, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import AccountHeroBanner from '@/components/account/AccountHeroBanner';
@@ -31,8 +31,13 @@ const navItems: Array<{
       Icon: LayoutDashboard,
     },
     {
+      id: 'preferences',
+      label: '偏好设置',
+      Icon: SlidersHorizontal,
+    },
+    {
       id: 'security',
-      label: '修改密码',
+      label: '账号安全',
       Icon: ShieldCheck,
     },
   ];

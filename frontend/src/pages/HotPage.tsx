@@ -383,7 +383,6 @@ const HotPage: React.FC = () => {
           period={period}
           category={category}
           sortBy={sortBy}
-          note={data?.note}
           date={dateFilter}
           weekStart={weekStartFilter}
           month={monthFilter}

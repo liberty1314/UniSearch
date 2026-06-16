@@ -1,11 +1,9 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
-export interface AppleSwitchProps {
+export interface AppleSwitchProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
-  disabled?: boolean;
-  className?: string;
 }
 
 export const AppleSwitch: React.FC<AppleSwitchProps> = ({
@@ -13,9 +11,12 @@ export const AppleSwitch: React.FC<AppleSwitchProps> = ({
   onCheckedChange,
   disabled = false,
   className,
+  children,
+  ...buttonProps
 }) => {
   return (
     <button
+      {...buttonProps}
       type="button"
       role="switch"
       aria-checked={checked}
@@ -34,7 +35,7 @@ export const AppleSwitch: React.FC<AppleSwitchProps> = ({
         className
       )}
     >
-      <span className="sr-only">Toggle</span>
+      {children ?? <span className="sr-only">切换开关</span>}
       <span
         className={cn(
           'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',

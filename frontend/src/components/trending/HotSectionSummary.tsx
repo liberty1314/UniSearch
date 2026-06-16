@@ -4,7 +4,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
-  DropdownMenuRadioIndicator,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -107,36 +106,23 @@ const HotSectionSummary: React.FC<HotSectionSummaryProps> = ({
                       key={option.value}
                       value={option.value}
                       aria-label={option.label}
-                      onSelect={(event) => {
-                        if (!isCurrent) {
-                          return;
-                        }
-
-                        event.preventDefault();
-                        setMenuOpen(false);
-                      }}
                       className={cn(
-                        "justify-between gap-3 px-4",
+                        "relative justify-start gap-3 pl-5",
+                        // 悬浮/键盘高亮态：青色填充，覆盖基础组件的 focus:bg-white/70
+                        "transition-colors duration-200 focus-visible:bg-cyan-50/80 focus-visible:text-slate-900 data-[highlighted]:bg-cyan-50/80 data-[highlighted]:text-slate-900 dark:focus-visible:bg-cyan-400/10 dark:focus-visible:text-slate-50 dark:data-[highlighted]:bg-cyan-400/10 dark:data-[highlighted]:text-slate-50",
                         isCurrent
-                          ? "bg-slate-950 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] dark:bg-cyan-300 dark:text-slate-950"
-                          : "hover:bg-white/72 hover:text-slate-950 dark:hover:bg-white/8 dark:hover:text-white",
+                          ? "bg-cyan-100/90 font-semibold text-cyan-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] dark:bg-cyan-400/[0.16] dark:text-cyan-50 dark:shadow-none"
+                          : "text-slate-700 dark:text-slate-300",
                       )}
                     >
-                      <span className="whitespace-nowrap">{option.label}</span>
-                      <span className="flex items-center gap-2">
-                        {isCurrent ? (
-                          <span className="rounded-full bg-white/12 px-2 py-0.5 text-[11px] font-semibold text-white/88 dark:bg-slate-950/12 dark:text-slate-900">
-                            当前
-                          </span>
-                        ) : null}
-                        <DropdownMenuRadioIndicator
-                          checkedClassName={cn(
-                            isCurrent
-                              ? "text-white dark:text-slate-950"
-                              : "text-slate-400 dark:text-slate-500",
-                          )}
+                      {/* 选中项左侧指示条：唯一选中标识 */}
+                      {isCurrent ? (
+                        <span
+                          aria-hidden="true"
+                          className="absolute left-1.5 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-cyan-500 dark:bg-cyan-300"
                         />
-                      </span>
+                      ) : null}
+                      <span className="whitespace-nowrap">{option.label}</span>
                     </DropdownMenuRadioItem>
                   );
                 })}

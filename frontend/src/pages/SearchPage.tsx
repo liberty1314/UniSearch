@@ -21,6 +21,7 @@ import { SearchService } from "@/services/searchService";
 import { useSearchAccessStatus } from "@/stores/searchAccessStore";
 import { useSearchStore } from "@/stores/searchStore";
 import type { SearchParams } from "@/types/api";
+import { readAccountSearchDefaults } from "@/lib/accountPreferences";
 
 const buildRouteSnapshotFromUrl = (url: string) => {
   const parsedUrl = new URL(url, window.location.origin);
@@ -37,8 +38,8 @@ const buildPresetSearchParams = (
 ): SearchParams => ({
   keyword: presetParams.keyword.trim(),
   source: presetParams.source || "all",
-  resultType: presetParams.resultType || "merge",
-  cloudTypes: [...(presetParams.cloudTypes || [])],
+  resultType: presetParams.resultType || readAccountSearchDefaults().resultType || "merge",
+  cloudTypes: [...(presetParams.cloudTypes ?? readAccountSearchDefaults().cloudTypes ?? [])],
   channels: [...(presetParams.channels || [])],
   plugins: [...(presetParams.plugins || [])],
   concurrency: presetParams.concurrency || currentSearchParams.concurrency || 5,
