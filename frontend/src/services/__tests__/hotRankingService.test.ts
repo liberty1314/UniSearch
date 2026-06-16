@@ -62,4 +62,41 @@ describe("hotRankingService", () => {
 
     await expect(hotRankingService.getHotRankings()).rejects.toBe(apiError);
   });
+
+  it("normalizes nullable section arrays from api response", async () => {
+    getMock.mockResolvedValue({
+      mode: "popular",
+      period: "day",
+      page: 1,
+      page_size: 50,
+      has_more: false,
+      updated_at: "2026-05-23T12:00:00Z",
+      source: "tmdb",
+      sections: [
+        {
+          category: "movie",
+          title: "热门电影",
+          description: "测试",
+          spotlight: null,
+          items: null,
+        },
+      ],
+    });
+
+    const response = await hotRankingService.getHotRankings({
+      mode: "popular",
+      period: "day",
+      category: "movie",
+    });
+
+    expect(response.sections).toEqual([
+      {
+        category: "movie",
+        title: "热门电影",
+        description: "测试",
+        spotlight: undefined,
+        items: [],
+      },
+    ]);
+  });
 });

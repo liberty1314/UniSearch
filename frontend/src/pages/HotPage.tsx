@@ -14,7 +14,7 @@ import {
   resolvePrimarySection,
   resolveSecondarySections,
 } from "@/components/trending/hotRankingPresentation";
-import { hotRankingService } from "@/services/hotRankingService";
+import { hotRankingService, normalizeHotRankingResponse } from "@/services/hotRankingService";
 import { SearchService, type TrendingSearchAction } from "@/services/searchService";
 import type {
   HotRankingCategory,
@@ -186,9 +186,9 @@ const HotPage: React.FC = () => {
     setErrorMessage("");
 
     try {
-      const response = await hotRankingService.getHotRankings(
+      const response = normalizeHotRankingResponse(await hotRankingService.getHotRankings(
         buildQuery(state, 1),
-      );
+      ));
       if (latestRequestIdRef.current !== requestId) {
         return;
       }
@@ -298,9 +298,9 @@ const HotPage: React.FC = () => {
 
     setLoadingMore(true);
     try {
-      const nextResponse = await hotRankingService.getHotRankings(
+      const nextResponse = normalizeHotRankingResponse(await hotRankingService.getHotRankings(
         buildQuery(toolbarState, data.next_page),
-      );
+      ));
       setData((current) => appendSections(current, nextResponse));
     } catch (error) {
       const message =
@@ -383,6 +383,7 @@ const HotPage: React.FC = () => {
           period={period}
           category={category}
           sortBy={sortBy}
+          note={data?.note}
           date={dateFilter}
           weekStart={weekStartFilter}
           month={monthFilter}

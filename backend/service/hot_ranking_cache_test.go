@@ -28,7 +28,7 @@ func TestHotRankingCacheKeyIncludesModePeriodCategorySortTimeLanguageAndRegion(t
 		Page:      1,
 		PageSize:  100,
 	})
-	expected := "hot-ranking:v2:popular:week:anime:vote_average.desc:2026-05-18:zh-CN:CN"
+	expected := "hot-ranking:v3:popular:week:anime:vote_average.desc:2026-05-18:zh-CN:CN"
 	if key != expected {
 		t.Fatalf("expected %q, got %q", expected, key)
 	}

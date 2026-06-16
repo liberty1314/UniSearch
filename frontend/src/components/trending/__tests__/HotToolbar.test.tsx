@@ -11,6 +11,7 @@ const baseProps = {
   weekStart: "2026-05-25",
   month: "2026-05",
   year: "2026",
+  note: undefined,
   onModeChange: vi.fn(),
   onPeriodChange: vi.fn(),
   onCategoryChange: vi.fn(),
@@ -70,5 +71,18 @@ describe("HotToolbar", () => {
 
     expect(filterGrid.className).toContain("minmax(18rem,1.2fr)");
     expect(filterGrid.className).toContain("minmax(21rem,1.45fr)");
+  });
+
+  it("优先展示后端返回的榜单说明文案", () => {
+    render(
+      <HotToolbar
+        {...baseProps}
+        mode="popular"
+        period="day"
+        note="当前展示近 180 天内按加权评分排序的热门榜单。"
+      />,
+    );
+
+    expect(screen.getByText("当前展示近 180 天内按加权评分排序的热门榜单。")).toBeInTheDocument();
   });
 });

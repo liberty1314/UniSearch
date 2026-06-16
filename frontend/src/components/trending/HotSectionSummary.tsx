@@ -27,7 +27,7 @@ const DEFAULT_SORT_BY: HotRankingSortBy = "popularity.desc";
 const SORT_OPTIONS: Array<{ value: HotRankingSortBy; label: string }> = [
   { value: "popularity.desc", label: "按热度" },
   { value: "primary_release_date.desc", label: "按时间" },
-  { value: "vote_average.desc", label: "按评分" },
+  { value: "vote_average.desc", label: "近期高分" },
 ];
 
 const isHotRankingSortBy = (value: string): value is HotRankingSortBy =>
@@ -85,14 +85,14 @@ const HotSectionSummary: React.FC<HotSectionSummaryProps> = ({
                     menuOpen && "scale-110 text-cyan-600 dark:text-cyan-300",
                   )}
                 />
-                <span>{currentSortLabel}</span>
+                <span className="whitespace-nowrap">{currentSortLabel}</span>
               </button>
             </DropdownMenuTrigger>
 
             <DropdownMenuContent
               align="end"
               side="bottom"
-              className="w-44 p-2"
+              className="w-48 p-2"
             >
               <div
                 aria-hidden="true"
@@ -122,7 +122,7 @@ const HotSectionSummary: React.FC<HotSectionSummaryProps> = ({
                           : "hover:bg-white/72 hover:text-slate-950 dark:hover:bg-white/8 dark:hover:text-white",
                       )}
                     >
-                      <span>{option.label}</span>
+                      <span className="whitespace-nowrap">{option.label}</span>
                       <span className="flex items-center gap-2">
                         {isCurrent ? (
                           <span className="rounded-full bg-white/12 px-2 py-0.5 text-[11px] font-semibold text-white/88 dark:bg-slate-950/12 dark:text-slate-900">

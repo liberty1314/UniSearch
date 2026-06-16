@@ -682,3 +682,31 @@
     - frontend/src/pages/__tests__/HotPage.test.tsx
     - frontend/vite.config.ts
     - docs/readme_2606.md
+
+- [2026-06-16 09:45] feat(hot-ranking): 优化高分榜单排序策略并增强容错处理
+  - Body: 将热榜的评分排序逻辑由原始评分升级为贝叶斯加权评分，并在后端发现 API 中增加过滤条件以提高榜单质量。前端同步将“按评分”文案优化为“近期高分”，同时增加对空类型数组的兜底处理以避免潜在的渲染崩溃。此外清理了过期及已完成的开发计划文档。
+  - Files:
+    - backend/service/hot_ranking_cache.go
+    - backend/service/hot_ranking_cache_test.go
+    - backend/service/hot_ranking_preloader.go
+    - backend/service/hot_ranking_service.go
+    - backend/service/hot_ranking_service_test.go
+    - docs/2026-06-13-account-center-optimization-development-plan.md
+    - docs/2026-06-13-auth-login-register-optimization-development-plan.md
+    - docs/2026-06-13-auth-token-storage-migration-stage1.md
+    - docs/2026-06-13-cache-configuration-development-plan.md
+    - docs/2026-06-13-hot-ranking-and-search-cache-plan.md
+    - docs/2026-06-14-env-config-governance-development-plan.md
+    - docs/2026-06-14-search-launchpad-optimization-development-plan.md
+    - docs/2026-06-14-seedhub-parser-scenario-matrix-development-plan.md
+    - docs/2026-06-14-seedhub-qr-transfer-support-development-plan.md
+    - docs/2026-06-14-seedhub-qr-transfer-support-implementation-plan.md
+    - frontend/src/components/trending/HotSectionSummary.tsx
+    - frontend/src/components/trending/HotToolbar.tsx
+    - frontend/src/components/trending/__tests__/HotSectionSummary.test.tsx
+    - frontend/src/components/trending/__tests__/HotToolbar.test.tsx
+    - frontend/src/pages/HotPage.tsx
+    - frontend/src/pages/__tests__/HotPage.test.tsx
+    - frontend/src/services/__tests__/hotRankingService.test.ts
+    - frontend/src/services/hotRankingService.ts
+    - docs/readme_2606.md

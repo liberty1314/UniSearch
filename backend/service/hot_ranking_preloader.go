@@ -89,7 +89,7 @@ func (p *HotRankingPreloader) WarmAll(ctx context.Context) HotRankingPreloadResu
 	}
 
 	if p.cache != nil {
-		_ = p.cache.ClearByPrefix(ctx, "hot-ranking:v2")
+		_ = p.cache.ClearByPrefix(ctx, "hot-ranking:v3")
 	}
 
 	taskCh := make(chan model.HotRankingQuery)

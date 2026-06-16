@@ -1,10 +1,12 @@
 import { apiClient } from "@/lib/api";
 import type {
   HotRankingCategory,
+  HotRankingItem,
   HotRankingMode,
   HotRankingPeriod,
   HotRankingQuery,
   HotRankingResponse,
+  HotRankingSection,
   HotRankingSortBy,
 } from "@/types/hotRanking";
 
@@ -14,6 +16,29 @@ const DEFAULT_CATEGORY: HotRankingCategory = "all";
 const DEFAULT_SORT_BY: HotRankingSortBy = "popularity.desc";
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 100;
+
+function normalizeHotRankingItem(item: HotRankingItem): HotRankingItem {
+  return {
+    ...item,
+    genre_names: Array.isArray(item.genre_names) ? item.genre_names : [],
+    origin_countries: Array.isArray(item.origin_countries) ? item.origin_countries : [],
+  };
+}
+
+function normalizeHotRankingSection(section: HotRankingSection): HotRankingSection {
+  return {
+    ...section,
+    spotlight: section.spotlight ? normalizeHotRankingItem(section.spotlight) : undefined,
+    items: Array.isArray(section.items) ? section.items.map(normalizeHotRankingItem) : [],
+  };
+}
+
+export function normalizeHotRankingResponse(response: HotRankingResponse): HotRankingResponse {
+  return {
+    ...response,
+    sections: Array.isArray(response.sections) ? response.sections.map(normalizeHotRankingSection) : [],
+  };
+}
 
 class HotRankingService {
   async getHotRankings(query: HotRankingQuery = {}): Promise<HotRankingResponse> {
@@ -35,7 +60,8 @@ class HotRankingService {
     if (query.month) searchParams.set("month", query.month);
     if (query.year) searchParams.set("year", query.year);
 
-    return apiClient.get<HotRankingResponse>(`/hot?${searchParams.toString()}`);
+    const response = await apiClient.get<HotRankingResponse>(`/hot?${searchParams.toString()}`);
+    return normalizeHotRankingResponse(response);
   }
 }
 

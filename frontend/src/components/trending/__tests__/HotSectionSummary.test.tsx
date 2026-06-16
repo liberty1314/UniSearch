@@ -27,10 +27,10 @@ describe("HotSectionSummary", () => {
     );
 
     await user.click(screen.getByLabelText("打开排序菜单"));
-    await user.click(await screen.findByRole("menuitemradio", { name: "按评分" }));
+    await user.click(await screen.findByRole("menuitemradio", { name: "近期高分" }));
 
     expect(onSortByChange).toHaveBeenCalledWith("vote_average.desc");
-    expect(screen.queryByRole("menuitemradio", { name: "按评分" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitemradio", { name: "近期高分" })).not.toBeInTheDocument();
   });
 
   it("点击当前排序项不会重复触发回调", async () => {
@@ -63,6 +63,18 @@ describe("HotSectionSummary", () => {
     );
 
     expect(screen.getByRole("button", { name: "打开排序菜单" })).toHaveTextContent("按热度");
+  });
+
+  it("评分排序会显示近期高分文案", () => {
+    render(
+      <HotSectionSummary
+        section={section}
+        showSortControl
+        sortBy="vote_average.desc"
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "打开排序菜单" })).toHaveTextContent("近期高分");
   });
 
   it("保留布局切换按钮", async () => {

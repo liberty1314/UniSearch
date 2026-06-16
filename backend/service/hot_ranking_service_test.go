@@ -245,7 +245,7 @@ func TestHotRankingServiceUsesDiscoverForYearAnime(t *testing.T) {
 	}
 }
 
-func TestHotRankingServicePopularDayOnlyLimitsReleaseDateUpperBound(t *testing.T) {
+func TestHotRankingServiceUsesRecent180DayWindowForDailyScoreSort(t *testing.T) {
 	tmdb := &fakeTMDBService{
 		movieGenres: map[int]string{28: "动作"},
 		discoverMovies: []TMDBMovieResult{
@@ -271,6 +271,7 @@ func TestHotRankingServicePopularDayOnlyLimitsReleaseDateUpperBound(t *testing.T
 		Mode:     model.HotRankingModePopular,
 		Period:   model.HotRankingPeriodDay,
 		Category: model.HotRankingCategoryMovie,
+		SortBy:   model.HotRankingSortByVoteAverage,
 		Date:     "2026-05-24",
 		Page:     1,
 		PageSize: 100,
@@ -279,11 +280,20 @@ func TestHotRankingServicePopularDayOnlyLimitsReleaseDateUpperBound(t *testing.T
 		t.Fatalf("expected nil error, got %v", err)
 	}
 
-	if tmdb.lastMovieDiscover.PrimaryReleaseGTE != "" {
-		t.Fatalf("expected no lower release date bound, got %q", tmdb.lastMovieDiscover.PrimaryReleaseGTE)
+	endDate, err := time.Parse("2006-01-02", "2026-05-24")
+	if err != nil {
+		t.Fatalf("parse end date: %v", err)
+	}
+	expectedStart := endDate.AddDate(0, 0, -179).Format("2006-01-02")
+
+	if tmdb.lastMovieDiscover.PrimaryReleaseGTE != expectedStart {
+		t.Fatalf("expected lower release date bound %q, got %q", expectedStart, tmdb.lastMovieDiscover.PrimaryReleaseGTE)
 	}
 	if tmdb.lastMovieDiscover.PrimaryReleaseLTE != "2026-05-24" {
 		t.Fatalf("expected upper release date bound to today, got %q", tmdb.lastMovieDiscover.PrimaryReleaseLTE)
+	}
+	if tmdb.lastMovieDiscover.VoteCountGTE != 300 {
+		t.Fatalf("expected movie score sort vote threshold 300, got %d", tmdb.lastMovieDiscover.VoteCountGTE)
 	}
 }
 
@@ -324,6 +334,59 @@ func TestHotRankingServiceUsesCustomSortForPopularSingleCategory(t *testing.T) {
 
 	if tmdb.lastMovieDiscover.SortBy != string(model.HotRankingSortByVoteAverage) {
 		t.Fatalf("expected discover sort to be vote_average.desc, got %q", tmdb.lastMovieDiscover.SortBy)
+	}
+}
+
+func TestHotRankingServiceUsesRecent365DayWindowForWeeklyAnimeScoreSort(t *testing.T) {
+	tmdb := &fakeTMDBService{
+		tvGenres: map[int]string{16: "动画", 18: "剧情"},
+		discoverTV: []TMDBTVResult{
+			{
+				ID:            11,
+				Name:          "示例动漫",
+				OriginalName:  "Example Anime",
+				Overview:      "test",
+				PosterPath:    "/poster.jpg",
+				BackdropPath:  "/backdrop.jpg",
+				VoteAverage:   8.9,
+				VoteCount:     880,
+				Popularity:    400,
+				FirstAirDate:  "2026-03-11",
+				GenreIDs:      []int{16, 18},
+				OriginCountry: []string{"JP"},
+			},
+		},
+	}
+
+	service := NewHotRankingService(tmdb, &fakeHotRankingCache{})
+
+	_, err := service.GetHotRankings(context.Background(), model.HotRankingQuery{
+		Mode:      model.HotRankingModeTrend,
+		Period:    model.HotRankingPeriodWeek,
+		Category:  model.HotRankingCategoryAnime,
+		SortBy:    model.HotRankingSortByVoteAverage,
+		WeekStart: "2026-05-18",
+		Page:      1,
+		PageSize:  100,
+	})
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+
+	weekEnd, err := time.Parse("2006-01-02", "2026-05-24")
+	if err != nil {
+		t.Fatalf("parse week end: %v", err)
+	}
+	expectedStart := weekEnd.AddDate(0, 0, -364).Format("2006-01-02")
+
+	if tmdb.lastTVDiscover.FirstAirDateGTE != expectedStart {
+		t.Fatalf("expected weekly score lower bound %q, got %q", expectedStart, tmdb.lastTVDiscover.FirstAirDateGTE)
+	}
+	if tmdb.lastTVDiscover.FirstAirDateLTE != "2026-05-24" {
+		t.Fatalf("expected weekly score upper bound %q, got %q", "2026-05-24", tmdb.lastTVDiscover.FirstAirDateLTE)
+	}
+	if tmdb.lastTVDiscover.VoteCountGTE != 200 {
+		t.Fatalf("expected anime weekly vote threshold 200, got %d", tmdb.lastTVDiscover.VoteCountGTE)
 	}
 }
 
@@ -374,12 +437,118 @@ func TestHotRankingServiceUsesDiscoverForTrendWhenCustomSortSelected(t *testing.
 	}
 
 	expectedDayUpperBound := time.Now().UTC().Format("2006-01-02")
+	expectedDayLowerBound := time.Now().UTC().AddDate(0, 0, -179).Format("2006-01-02")
 	if tmdb.lastMovieDiscover.PrimaryReleaseLTE != expectedDayUpperBound {
 		t.Fatalf("expected trend daily custom sort to use day upper bound, got %q", tmdb.lastMovieDiscover.PrimaryReleaseLTE)
 	}
+	if tmdb.lastMovieDiscover.PrimaryReleaseGTE != expectedDayLowerBound {
+		t.Fatalf("expected trend daily custom sort to use 180-day lower bound, got %q", tmdb.lastMovieDiscover.PrimaryReleaseGTE)
+	}
+	if tmdb.lastMovieDiscover.VoteCountGTE != 300 {
+		t.Fatalf("expected trend daily movie vote threshold 300, got %d", tmdb.lastMovieDiscover.VoteCountGTE)
+	}
 
-	if response.Note != "当前展示趋势时间范围内按评分排序的热门榜单。" {
+	if response.Note != "当前展示近 180 天内按加权评分排序的热门榜单。" {
 		t.Fatalf("expected custom trend note, got %q", response.Note)
+	}
+}
+
+func TestHotRankingServiceUsesWeightedRatingInsteadOfRawVoteAverage(t *testing.T) {
+	tmdb := &fakeTMDBService{
+		movieGenres: map[int]string{18: "剧情"},
+		discoverMovies: []TMDBMovieResult{
+			{
+				ID:            1,
+				Title:         "小样本高分片",
+				OriginalTitle: "Small Vote Darling",
+				Overview:      "test",
+				PosterPath:    "/poster-a.jpg",
+				BackdropPath:  "/backdrop-a.jpg",
+				VoteAverage:   9.5,
+				VoteCount:     320,
+				Popularity:    200,
+				ReleaseDate:   "2026-04-18",
+				GenreIDs:      []int{18},
+			},
+			{
+				ID:            2,
+				Title:         "大众高分片",
+				OriginalTitle: "Consensus Hit",
+				Overview:      "test",
+				PosterPath:    "/poster-b.jpg",
+				BackdropPath:  "/backdrop-b.jpg",
+				VoteAverage:   9.2,
+				VoteCount:     5000,
+				Popularity:    800,
+				ReleaseDate:   "2026-04-10",
+				GenreIDs:      []int{18},
+			},
+			{
+				ID:            3,
+				Title:         "普通片一",
+				OriginalTitle: "Regular One",
+				Overview:      "test",
+				PosterPath:    "/poster-c.jpg",
+				BackdropPath:  "/backdrop-c.jpg",
+				VoteAverage:   7.0,
+				VoteCount:     420,
+				Popularity:    300,
+				ReleaseDate:   "2026-03-10",
+				GenreIDs:      []int{18},
+			},
+			{
+				ID:            4,
+				Title:         "普通片二",
+				OriginalTitle: "Regular Two",
+				Overview:      "test",
+				PosterPath:    "/poster-d.jpg",
+				BackdropPath:  "/backdrop-d.jpg",
+				VoteAverage:   7.1,
+				VoteCount:     410,
+				Popularity:    280,
+				ReleaseDate:   "2026-02-10",
+				GenreIDs:      []int{18},
+			},
+			{
+				ID:            5,
+				Title:         "普通片三",
+				OriginalTitle: "Regular Three",
+				Overview:      "test",
+				PosterPath:    "/poster-e.jpg",
+				BackdropPath:  "/backdrop-e.jpg",
+				VoteAverage:   7.2,
+				VoteCount:     405,
+				Popularity:    260,
+				ReleaseDate:   "2026-01-10",
+				GenreIDs:      []int{18},
+			},
+		},
+	}
+
+	service := NewHotRankingService(tmdb, &fakeHotRankingCache{})
+
+	response, err := service.GetHotRankings(context.Background(), model.HotRankingQuery{
+		Mode:     model.HotRankingModePopular,
+		Period:   model.HotRankingPeriodDay,
+		Category: model.HotRankingCategoryMovie,
+		SortBy:   model.HotRankingSortByVoteAverage,
+		Date:     "2026-05-24",
+		Page:     1,
+		PageSize: 20,
+	})
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+
+	items := response.Sections[0].Items
+	if len(items) != 5 {
+		t.Fatalf("expected 5 items, got %d", len(items))
+	}
+	if items[0].TMDBID != 2 {
+		t.Fatalf("expected weighted score item to rank first, got id=%d", items[0].TMDBID)
+	}
+	if response.Sections[0].Spotlight == nil || response.Sections[0].Spotlight.TMDBID != 2 {
+		t.Fatalf("expected spotlight to follow weighted score winner, got %+v", response.Sections[0].Spotlight)
 	}
 }
 
@@ -467,6 +636,57 @@ func TestHotRankingServiceSortsCachedValueByDefaultPopularity(t *testing.T) {
 	}
 	if response.Sections[0].Spotlight == nil || response.Sections[0].Spotlight.TMDBID != 2 {
 		t.Fatalf("期望缓存命中时焦点内容同步为热度最高项，实际为 %+v", response.Sections[0].Spotlight)
+	}
+}
+
+func TestHotRankingServiceReordersCachedScoreSortByWeightedRating(t *testing.T) {
+	SetGlobalCacheSettingsService(nil)
+	cache := &fakeHotRankingCache{
+		loadResult: true,
+		loadValue: model.HotRankingResponse{
+			Mode:     model.HotRankingModePopular,
+			Period:   model.HotRankingPeriodDay,
+			Page:     1,
+			PageSize: 50,
+			Source:   "tmdb",
+			Sections: []model.HotRankingSection{
+				{
+					Category: model.HotRankingCategoryMovie,
+					Items: []model.HotRankingItem{
+						{TMDBID: 1, Title: "小样本高分片", VoteAverage: 9.5, VoteCount: 320, ReleaseDate: "2026-04-18"},
+						{TMDBID: 2, Title: "大众高分片", VoteAverage: 9.2, VoteCount: 5000, ReleaseDate: "2026-04-10"},
+						{TMDBID: 3, Title: "普通片一", VoteAverage: 7.0, VoteCount: 420, ReleaseDate: "2026-03-10"},
+						{TMDBID: 4, Title: "普通片二", VoteAverage: 7.1, VoteCount: 410, ReleaseDate: "2026-02-10"},
+						{TMDBID: 5, Title: "普通片三", VoteAverage: 7.2, VoteCount: 405, ReleaseDate: "2026-01-10"},
+					},
+				},
+			},
+		},
+	}
+	service := NewHotRankingService(&fakeTMDBService{}, cache)
+
+	response, err := service.GetHotRankings(context.Background(), model.HotRankingQuery{
+		Mode:     model.HotRankingModePopular,
+		Period:   model.HotRankingPeriodDay,
+		Category: model.HotRankingCategoryMovie,
+		SortBy:   model.HotRankingSortByVoteAverage,
+		Date:     "2026-05-24",
+		Page:     1,
+		PageSize: 20,
+	})
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+
+	items := response.Sections[0].Items
+	if len(items) != 5 {
+		t.Fatalf("expected cached response to keep 5 items, got %d", len(items))
+	}
+	if items[0].TMDBID != 2 {
+		t.Fatalf("expected cached score sort to reorder by weighted score, got id=%d", items[0].TMDBID)
+	}
+	if response.Sections[0].Spotlight == nil || response.Sections[0].Spotlight.TMDBID != 2 {
+		t.Fatalf("expected cached spotlight to match weighted score winner, got %+v", response.Sections[0].Spotlight)
 	}
 }
 

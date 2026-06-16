@@ -66,7 +66,7 @@ func (s *HotRankingService) GetHotRankings(ctx context.Context, query model.HotR
 			return model.HotRankingResponse{}, err
 		}
 		if hit {
-			cached = sortHotRankingResponse(cached, query.SortBy)
+			cached = sortHotRankingResponse(cached, query)
 			return adaptHotRankingResponsePageSize(cached, query.PageSize), nil
 		}
 	}
@@ -130,7 +130,7 @@ func (s *HotRankingService) ClearCache(_ *SystemSettingsService) error {
 		return nil
 	}
 
-	err := s.cache.ClearByPrefix(context.Background(), "hot-ranking:v2")
+	err := s.cache.ClearByPrefix(context.Background(), "hot-ranking:v3")
 	if err == nil {
 		s.MarkCacheCleared()
 	}
@@ -357,7 +357,7 @@ func (s *HotRankingService) fetchPopularMovieRankings(ctx context.Context, query
 		return model.HotRankingResponse{}, err
 	}
 
-	params := buildMovieDiscoverParams(query)
+	params := buildMovieDiscoverParams(query, model.HotRankingCategoryMovie)
 	rawItems, err := s.fetchDiscoverMoviePages(ctx, params, query.PageSize)
 	if err != nil {
 		return model.HotRankingResponse{}, err
@@ -377,7 +377,7 @@ func (s *HotRankingService) fetchPopularTVRankings(ctx context.Context, query mo
 		return model.HotRankingResponse{}, err
 	}
 
-	rawItems, err := s.fetchDiscoverTVPages(ctx, buildTVDiscoverParams(query, nil), query.PageSize)
+	rawItems, err := s.fetchDiscoverTVPages(ctx, buildTVDiscoverParams(query, model.HotRankingCategoryTV, nil), query.PageSize)
 	if err != nil {
 		return model.HotRankingResponse{}, err
 	}
@@ -396,7 +396,7 @@ func (s *HotRankingService) fetchPopularAnimeRankings(ctx context.Context, query
 		return model.HotRankingResponse{}, err
 	}
 
-	rawItems, err := s.fetchDiscoverTVPages(ctx, buildTVDiscoverParams(query, []int{16}), query.PageSize)
+	rawItems, err := s.fetchDiscoverTVPages(ctx, buildTVDiscoverParams(query, model.HotRankingCategoryAnime, []int{16}), query.PageSize)
 	if err != nil {
 		return model.HotRankingResponse{}, err
 	}
@@ -474,18 +474,27 @@ func (s *HotRankingService) fetchDiscoverTVPages(ctx context.Context, params TMD
 	return items, nil
 }
 
-func buildMovieDiscoverParams(query model.HotRankingQuery) TMDBDiscoverMovieParams {
+func buildMovieDiscoverParams(query model.HotRankingQuery, category model.HotRankingCategory) TMDBDiscoverMovieParams {
 	params := TMDBDiscoverMovieParams{
 		SortBy:       resolveDiscoverSortBy(query),
-		VoteCountGTE: 50,
+		VoteCountGTE: resolveDiscoverVoteThreshold(query, category),
 		Page:         query.Page,
 	}
 
 	switch query.Period {
 	case model.HotRankingPeriodDay:
+		if window, ok := resolveScoreSortWindow(query); ok {
+			params.PrimaryReleaseGTE = window.StartDate
+			params.PrimaryReleaseLTE = window.EndDate
+			break
+		}
 		params.PrimaryReleaseLTE = query.Date
 	case model.HotRankingPeriodWeek:
 		start, end := resolveWeekRange(query.WeekStart)
+		if window, ok := resolveScoreSortWindow(query); ok {
+			start = window.StartDate
+			end = window.EndDate
+		}
 		params.PrimaryReleaseGTE = start
 		params.PrimaryReleaseLTE = end
 	case model.HotRankingPeriodMonth:
@@ -498,19 +507,28 @@ func buildMovieDiscoverParams(query model.HotRankingQuery) TMDBDiscoverMoviePara
 	return params
 }
 
-func buildTVDiscoverParams(query model.HotRankingQuery, genres []int) TMDBDiscoverTVParams {
+func buildTVDiscoverParams(query model.HotRankingQuery, category model.HotRankingCategory, genres []int) TMDBDiscoverTVParams {
 	params := TMDBDiscoverTVParams{
 		SortBy:       resolveDiscoverSortBy(query),
-		VoteCountGTE: 50,
+		VoteCountGTE: resolveDiscoverVoteThreshold(query, category),
 		WithGenres:   genres,
 		Page:         query.Page,
 	}
 
 	switch query.Period {
 	case model.HotRankingPeriodDay:
+		if window, ok := resolveScoreSortWindow(query); ok {
+			params.FirstAirDateGTE = window.StartDate
+			params.FirstAirDateLTE = window.EndDate
+			break
+		}
 		params.FirstAirDateLTE = query.Date
 	case model.HotRankingPeriodWeek:
 		start, end := resolveWeekRange(query.WeekStart)
+		if window, ok := resolveScoreSortWindow(query); ok {
+			start = window.StartDate
+			end = window.EndDate
+		}
 		params.FirstAirDateGTE = start
 		params.FirstAirDateLTE = end
 	case model.HotRankingPeriodMonth:
@@ -534,6 +552,10 @@ func shouldUseDiscoverForTrend(query model.HotRankingQuery) bool {
 	return query.Mode == model.HotRankingModeTrend && query.SortBy != model.HotRankingSortByPopularity
 }
 
+func isScoreSort(sortBy model.HotRankingSortBy) bool {
+	return sortBy == model.HotRankingSortByVoteAverage
+}
+
 func resolveHotRankingSortLabel(sortBy model.HotRankingSortBy) string {
 	switch sortBy {
 	case model.HotRankingSortByReleaseDate:
@@ -545,8 +567,107 @@ func resolveHotRankingSortLabel(sortBy model.HotRankingSortBy) string {
 	}
 }
 
+type hotRankingScoreWindow struct {
+	StartDate string
+	EndDate   string
+}
+
+func resolveScoreSortWindow(query model.HotRankingQuery) (hotRankingScoreWindow, bool) {
+	if !isScoreSort(query.SortBy) {
+		return hotRankingScoreWindow{}, false
+	}
+
+	switch query.Period {
+	case model.HotRankingPeriodDay:
+		end, err := time.Parse("2006-01-02", query.Date)
+		if err != nil {
+			return hotRankingScoreWindow{}, false
+		}
+		return hotRankingScoreWindow{
+			StartDate: end.AddDate(0, 0, -179).Format("2006-01-02"),
+			EndDate:   end.Format("2006-01-02"),
+		}, true
+	case model.HotRankingPeriodWeek:
+		_, endValue := resolveWeekRange(query.WeekStart)
+		end, err := time.Parse("2006-01-02", endValue)
+		if err != nil {
+			return hotRankingScoreWindow{}, false
+		}
+		return hotRankingScoreWindow{
+			StartDate: end.AddDate(0, 0, -364).Format("2006-01-02"),
+			EndDate:   end.Format("2006-01-02"),
+		}, true
+	default:
+		return hotRankingScoreWindow{}, false
+	}
+}
+
+func resolveDiscoverVoteThreshold(query model.HotRankingQuery, category model.HotRankingCategory) int {
+	if !isScoreSort(query.SortBy) {
+		return 50
+	}
+
+	switch query.Period {
+	case model.HotRankingPeriodDay, model.HotRankingPeriodWeek:
+		if category == model.HotRankingCategoryMovie {
+			return 300
+		}
+		return 200
+	case model.HotRankingPeriodMonth:
+		if category == model.HotRankingCategoryMovie {
+			return 200
+		}
+		return 150
+	case model.HotRankingPeriodYear:
+		if category == model.HotRankingCategoryMovie {
+			return 150
+		}
+		return 120
+	default:
+		return 50
+	}
+}
+
+func resolveScoreSortWindowLabel(query model.HotRankingQuery) string {
+	if !isScoreSort(query.SortBy) {
+		return ""
+	}
+
+	switch query.Period {
+	case model.HotRankingPeriodDay:
+		return "近 180 天内"
+	case model.HotRankingPeriodWeek:
+		return "近 365 天内"
+	case model.HotRankingPeriodMonth:
+		return "当前自然月内"
+	case model.HotRankingPeriodYear:
+		return "当前自然年内"
+	default:
+		return ""
+	}
+}
+
+func resolveHotRankingNote(query model.HotRankingQuery) string {
+	if isScoreSort(query.SortBy) {
+		windowLabel := resolveScoreSortWindowLabel(query)
+		if windowLabel == "" {
+			return "当前展示按加权评分排序的热门榜单。"
+		}
+		return fmt.Sprintf("当前展示%s按加权评分排序的热门榜单。", windowLabel)
+	}
+
+	if query.Mode == model.HotRankingModeTrend {
+		if shouldUseDiscoverForTrend(query) {
+			return fmt.Sprintf("当前展示趋势时间范围内按%s排序的热门榜单。", resolveHotRankingSortLabel(query.SortBy))
+		}
+		return "当前展示每日或每周趋势榜单。"
+	}
+
+	return fmt.Sprintf("当前展示按%s排序的热门榜单。", resolveHotRankingSortLabel(query.SortBy))
+}
+
 func buildHotRankingResponse(query model.HotRankingQuery, category model.HotRankingCategory, items []model.HotRankingItem) model.HotRankingResponse {
-	sortedItems := sortHotRankingItems(items, query.SortBy)
+	sortedItems := sortHotRankingItems(items, query, category)
 	sectionTitle := map[model.HotRankingCategory]string{
 		model.HotRankingCategoryMovie: "热门电影",
 		model.HotRankingCategoryTV:    "热门电视剧",
@@ -565,17 +686,6 @@ func buildHotRankingResponse(query model.HotRankingQuery, category model.HotRank
 		spotlight = &highlight
 	}
 
-	note := "数据来自 TMDB 热门榜。"
-	if query.Mode == model.HotRankingModeTrend {
-		if shouldUseDiscoverForTrend(query) {
-			note = fmt.Sprintf("当前展示趋势时间范围内按%s排序的热门榜单。", resolveHotRankingSortLabel(query.SortBy))
-		} else {
-			note = "当前展示每日或每周趋势榜单。"
-		}
-	} else {
-		note = fmt.Sprintf("当前展示按%s排序的热门榜单。", resolveHotRankingSortLabel(query.SortBy))
-	}
-
 	return model.HotRankingResponse{
 		Mode:      query.Mode,
 		Period:    query.Period,
@@ -587,7 +697,7 @@ func buildHotRankingResponse(query model.HotRankingQuery, category model.HotRank
 		NextPage:  query.Page + 1,
 		UpdatedAt: time.Now().UTC(),
 		Source:    "tmdb",
-		Note:      note,
+		Note:      resolveHotRankingNote(query),
 		Sections: []model.HotRankingSection{
 			{
 				Category:    category,
@@ -600,17 +710,37 @@ func buildHotRankingResponse(query model.HotRankingQuery, category model.HotRank
 	}
 }
 
-func sortHotRankingItems(items []model.HotRankingItem, sortBy model.HotRankingSortBy) []model.HotRankingItem {
+func sortHotRankingItems(items []model.HotRankingItem, query model.HotRankingQuery, category model.HotRankingCategory) []model.HotRankingItem {
 	sortedItems := append([]model.HotRankingItem(nil), items...)
+	if isScoreSort(query.SortBy) {
+		average := calculateHotRankingAverageVote(sortedItems)
+		minVotes := float64(resolveDiscoverVoteThreshold(query, category))
+		sort.SliceStable(sortedItems, func(i, j int) bool {
+			left := sortedItems[i]
+			right := sortedItems[j]
+			leftScore := calculateWeightedRating(left, average, minVotes)
+			rightScore := calculateWeightedRating(right, average, minVotes)
+			if leftScore != rightScore {
+				return leftScore > rightScore
+			}
+			if left.VoteCount != right.VoteCount {
+				return left.VoteCount > right.VoteCount
+			}
+			if left.ReleaseDate != right.ReleaseDate {
+				return isHotRankingDateAfter(left.ReleaseDate, right.ReleaseDate)
+			}
+			return left.Popularity > right.Popularity
+		})
+		return sortedItems
+	}
+
 	sort.SliceStable(sortedItems, func(i, j int) bool {
 		left := sortedItems[i]
 		right := sortedItems[j]
 
-		switch sortBy {
+		switch query.SortBy {
 		case model.HotRankingSortByReleaseDate:
 			return isHotRankingDateAfter(left.ReleaseDate, right.ReleaseDate)
-		case model.HotRankingSortByVoteAverage:
-			return left.VoteAverage > right.VoteAverage
 		default:
 			return left.Popularity > right.Popularity
 		}
@@ -618,12 +748,32 @@ func sortHotRankingItems(items []model.HotRankingItem, sortBy model.HotRankingSo
 	return sortedItems
 }
 
-func sortHotRankingResponse(response model.HotRankingResponse, sortBy model.HotRankingSortBy) model.HotRankingResponse {
+func calculateHotRankingAverageVote(items []model.HotRankingItem) float64 {
+	if len(items) == 0 {
+		return 0
+	}
+
+	total := 0.0
+	for _, item := range items {
+		total += item.VoteAverage
+	}
+	return total / float64(len(items))
+}
+
+func calculateWeightedRating(item model.HotRankingItem, averageVote float64, minVotes float64) float64 {
+	votes := float64(item.VoteCount)
+	if votes <= 0 {
+		return averageVote
+	}
+	return (votes/(votes+minVotes))*item.VoteAverage + (minVotes/(votes+minVotes))*averageVote
+}
+
+func sortHotRankingResponse(response model.HotRankingResponse, query model.HotRankingQuery) model.HotRankingResponse {
 	sortedResponse := response
 	sortedResponse.Sections = make([]model.HotRankingSection, 0, len(response.Sections))
 	for _, section := range response.Sections {
 		nextSection := section
-		nextSection.Items = sortHotRankingItems(section.Items, sortBy)
+		nextSection.Items = sortHotRankingItems(section.Items, query, section.Category)
 		if len(nextSection.Items) > 0 {
 			highlight := nextSection.Items[0]
 			nextSection.Spotlight = &highlight
@@ -632,6 +782,7 @@ func sortHotRankingResponse(response model.HotRankingResponse, sortBy model.HotR
 		}
 		sortedResponse.Sections = append(sortedResponse.Sections, nextSection)
 	}
+	sortedResponse.Note = resolveHotRankingNote(query)
 	return sortedResponse
 }
 
@@ -646,17 +797,6 @@ func isHotRankingDateAfter(left string, right string) bool {
 }
 
 func buildAggregateHotRankingResponse(query model.HotRankingQuery, sections []model.HotRankingSection) model.HotRankingResponse {
-	note := "数据来自 TMDB 热门榜。"
-	if query.Mode == model.HotRankingModeTrend {
-		if shouldUseDiscoverForTrend(query) {
-			note = fmt.Sprintf("当前展示趋势时间范围内按%s排序的热门榜单。", resolveHotRankingSortLabel(query.SortBy))
-		} else {
-			note = "当前展示每日或每周趋势榜单。"
-		}
-	} else {
-		note = fmt.Sprintf("当前展示按%s排序的热门榜单。", resolveHotRankingSortLabel(query.SortBy))
-	}
-
 	return model.HotRankingResponse{
 		Mode:      query.Mode,
 		Period:    query.Period,
@@ -668,7 +808,7 @@ func buildAggregateHotRankingResponse(query model.HotRankingQuery, sections []mo
 		NextPage:  query.Page + 1,
 		UpdatedAt: time.Now().UTC(),
 		Source:    "tmdb",
-		Note:      note,
+		Note:      resolveHotRankingNote(query),
 		Sections:  sections,
 	}
 }

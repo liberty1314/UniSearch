@@ -18,6 +18,16 @@ vi.mock("@/services/hotRankingService", () => ({
   hotRankingService: {
     getHotRankings: getHotRankingsMock,
   },
+  normalizeHotRankingResponse: (response: HotRankingResponse) => ({
+    ...response,
+    sections: Array.isArray(response.sections)
+      ? response.sections.map((section) => ({
+          ...section,
+          spotlight: section.spotlight ?? undefined,
+          items: Array.isArray(section.items) ? section.items : [],
+        }))
+      : [],
+  }),
 }));
 
 vi.mock("@/services/searchService", () => ({
@@ -236,7 +246,7 @@ describe("HotPage", () => {
     await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
 
     await user.click(screen.getByLabelText("打开排序菜单"));
-    await user.click(await screen.findByText("按评分"));
+    await user.click(await screen.findByText("近期高分"));
 
     await waitFor(() => {
       expect(getHotRankingsMock).toHaveBeenLastCalledWith({
@@ -364,7 +374,7 @@ describe("HotPage", () => {
     });
 
     await user.click(screen.getByLabelText("打开排序菜单"));
-    await user.click(await screen.findByText("按评分"));
+    await user.click(await screen.findByText("近期高分"));
 
     await waitFor(() => {
       expect(getHotRankingsMock).toHaveBeenLastCalledWith({
@@ -445,7 +455,7 @@ describe("HotPage", () => {
             {
               category: "movie",
               title: "热门电影",
-              description: "按评分排序的电影内容。",
+              description: "按近期高分排序的电影内容。",
               spotlight: createItem(15, "高分电影", "movie", "movie"),
               items: [
                 createItem(15, "高分电影", "movie", "movie"),
@@ -511,7 +521,7 @@ describe("HotPage", () => {
     });
 
     await user.click(screen.getByLabelText("打开排序菜单"));
-    await user.click(await screen.findByText("按评分"));
+    await user.click(await screen.findByText("近期高分"));
 
     await waitFor(() => {
       expect(getHotRankingsMock).toHaveBeenLastCalledWith({
@@ -572,7 +582,7 @@ describe("HotPage", () => {
     });
 
     await user.click(screen.getByLabelText("打开排序菜单"));
-    await user.click(await screen.findByText("按评分"));
+    await user.click(await screen.findByText("近期高分"));
 
     await waitFor(() => {
       expect(getHotRankingsMock).toHaveBeenLastCalledWith({
@@ -590,6 +600,66 @@ describe("HotPage", () => {
     });
   });
 
+  it("点击近期高分后即使分区 items 为 null 也不会崩溃", async () => {
+    const user = userEvent.setup();
+    getHotRankingsMock
+      .mockResolvedValueOnce(createResponse())
+      .mockResolvedValueOnce({
+        ...createResponse({
+          mode: "trend",
+          period: "day",
+          note: "当前展示近 180 天内按加权评分排序的热门榜单。",
+        }),
+        sections: [
+          {
+            category: "movie",
+            title: "热门电影",
+            description: "近期高分电影",
+            spotlight: null,
+            items: null,
+          },
+          {
+            category: "tv",
+            title: "热门电视剧",
+            description: "近期高分电视剧",
+            spotlight: createItem(21, "高分剧集", "tv", "tv"),
+            items: [createItem(21, "高分剧集", "tv", "tv")],
+          },
+          {
+            category: "anime",
+            title: "热门动漫",
+            description: "近期高分动漫",
+            spotlight: createItem(22, "高分动漫", "anime", "tv"),
+            items: [createItem(22, "高分动漫", "anime", "tv")],
+          },
+        ],
+      } as unknown as HotRankingResponse);
+
+    renderHotPage();
+    await screen.findByRole("heading", { level: 3, name: "沙丘 2" });
+
+    await user.click(screen.getByLabelText("打开排序菜单"));
+    await user.click(await screen.findByText("近期高分"));
+
+    await waitFor(() => {
+      expect(getHotRankingsMock).toHaveBeenLastCalledWith({
+        mode: "trend",
+        period: "day",
+        category: "all",
+        sort_by: "vote_average.desc",
+        date: undefined,
+        week_start: undefined,
+        month: undefined,
+        year: undefined,
+        page: 1,
+        page_size: 50,
+      });
+    });
+
+    expect(screen.queryByText("页面出现了意外错误")).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 3, name: "高分剧集" })).toBeInTheDocument();
+  });
+
   it("点击重置筛选会恢复默认状态并重新请求默认榜单", async () => {
     const user = userEvent.setup();
     getHotRankingsMock.mockResolvedValue(createResponse());
@@ -600,7 +670,7 @@ describe("HotPage", () => {
     await user.click(screen.getByRole("button", { name: "热门榜" }));
     await user.click(screen.getByRole("button", { name: "电影" }));
     await user.click(await screen.findByLabelText("打开排序菜单"));
-    await user.click(await screen.findByText("按评分"));
+    await user.click(await screen.findByText("近期高分"));
     fireEvent.change(screen.getByLabelText("指定日期"), { target: { value: "2026-03-23" } });
 
     await waitFor(() => {

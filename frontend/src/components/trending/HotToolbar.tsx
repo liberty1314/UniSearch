@@ -18,6 +18,7 @@ interface HotToolbarProps {
   period: HotRankingPeriod;
   category: HotRankingCategory;
   sortBy: HotRankingSortBy;
+  note?: string;
   date: string;
   weekStart: string;
   month: string;
@@ -37,6 +38,7 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
   mode,
   period,
   category,
+  note,
   date,
   weekStart,
   month,
@@ -59,81 +61,99 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
     if (mode === "trend") {
       return (
         <div className="rounded-[1.2rem] border border-cyan-100 bg-cyan-50/70 px-4 py-3 text-sm leading-6 text-cyan-700 dark:border-cyan-400/15 dark:bg-cyan-500/10 dark:text-cyan-200">
-          {period === "day" ? "当前显示每日趋势榜。" : "当前显示每周趋势榜。"}
+          {note || (period === "day" ? "当前显示每日趋势榜。" : "当前显示每周趋势榜。")}
         </div>
       );
     }
 
+    const helperText = note ? (
+      <div className="rounded-[1.2rem] border border-cyan-100 bg-cyan-50/70 px-4 py-3 text-sm leading-6 text-cyan-700 dark:border-cyan-400/15 dark:bg-cyan-500/10 dark:text-cyan-200">
+        {note}
+      </div>
+    ) : null;
+
     if (period === "day") {
       return (
-        <label className="space-y-2">
-          <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-            指定日期
-          </span>
-          <Input
-            type="date"
-            value={date}
-            onChange={(event) => onDateChange(event.target.value)}
-            aria-label="指定日期"
-            reserveMessageSpace={false}
-            className="h-10 rounded-[1rem] py-0 text-sm"
-          />
-        </label>
+        <div className="space-y-3">
+          {helperText}
+          <label className="space-y-2">
+            <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+              指定日期
+            </span>
+            <Input
+              type="date"
+              value={date}
+              onChange={(event) => onDateChange(event.target.value)}
+              aria-label="指定日期"
+              reserveMessageSpace={false}
+              className="h-10 rounded-[1rem] py-0 text-sm"
+            />
+          </label>
+        </div>
       );
     }
 
     if (period === "week") {
       return (
-        <label className="space-y-2">
-          <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-            周起始日
-          </span>
-          <Input
-            type="date"
-            value={weekStart}
-            onChange={(event) => onWeekStartChange(event.target.value)}
-            aria-label="周起始日"
-            reserveMessageSpace={false}
-            className="h-10 rounded-[1rem] py-0 text-sm"
-          />
-        </label>
+        <div className="space-y-3">
+          {helperText}
+          <label className="space-y-2">
+            <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+              周起始日
+            </span>
+            <Input
+              type="date"
+              value={weekStart}
+              onChange={(event) => onWeekStartChange(event.target.value)}
+              aria-label="周起始日"
+              reserveMessageSpace={false}
+              className="h-10 rounded-[1rem] py-0 text-sm"
+            />
+          </label>
+        </div>
       );
     }
 
     if (period === "month") {
       return (
-        <label className="space-y-2">
-          <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-            指定月份
-          </span>
-          <Input
-            type="month"
-            value={month}
-            onChange={(event) => onMonthChange(event.target.value)}
-            aria-label="指定月份"
-            reserveMessageSpace={false}
-            className="h-10 rounded-[1rem] py-0 text-sm"
-          />
-        </label>
+        <div className="space-y-3">
+          {helperText}
+          <label className="space-y-2">
+            <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+              指定月份
+            </span>
+            <Input
+              type="month"
+              value={month}
+              onChange={(event) => onMonthChange(event.target.value)}
+              aria-label="指定月份"
+              reserveMessageSpace={false}
+              className="h-10 rounded-[1rem] py-0 text-sm"
+            />
+          </label>
+        </div>
       );
     }
 
     return (
-      <label className="space-y-2">
-        <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-          指定年份
-        </span>
-        <Input
-          type="number"
-          min="2000"
-          max="2099"
-          value={year}
-          onChange={(event) => onYearChange(event.target.value)}
-          aria-label="指定年份"
-          reserveMessageSpace={false}
-          className="h-10 rounded-[1rem] py-0 text-sm"
-        />
-      </label>
+      <div className="space-y-3">
+        {helperText}
+        <label className="space-y-2">
+          <span className="block px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+            指定年份
+          </span>
+          <Input
+            type="number"
+            min="2000"
+            max="2099"
+            value={year}
+            onChange={(event) => onYearChange(event.target.value)}
+            aria-label="指定年份"
+            reserveMessageSpace={false}
+            className="h-10 rounded-[1rem] py-0 text-sm"
+          />
+        </label>
+      </div>
     );
   };
 

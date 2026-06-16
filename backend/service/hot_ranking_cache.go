@@ -86,7 +86,7 @@ func buildHotRankingCacheKey(query model.HotRankingQuery) string {
 		sortBy = string(query.SortBy)
 	}
 	return fmt.Sprintf(
-		"hot-ranking:v2:%s:%s:%s:%s:%s:%s:%s",
+		"hot-ranking:v3:%s:%s:%s:%s:%s:%s:%s",
 		query.Mode,
 		query.Period,
 		query.Category,
