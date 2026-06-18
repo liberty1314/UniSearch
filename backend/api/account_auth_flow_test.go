@@ -758,6 +758,16 @@ func TestChangePasswordAllowsCurrentUserToUpdatePassword(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
 	}
+	var response map[string]interface{}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unmarshal change password response: %v", err)
+	}
+	if response["code"] != float64(200) || response["message"] != "密码修改成功" {
+		t.Fatalf("expected standard success response, got %s", recorder.Body.String())
+	}
+	if _, exists := response["data"]; !exists {
+		t.Fatalf("expected response to include data field, got %s", recorder.Body.String())
+	}
 
 	authService := service.NewAuthService()
 	if _, _, _, err := authService.Login("alice", "new-password-456"); err != nil {

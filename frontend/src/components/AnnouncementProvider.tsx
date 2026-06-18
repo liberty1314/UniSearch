@@ -60,10 +60,16 @@ export const AnnouncementProvider: React.FC = () => {
    * 验证需求: 5.1, 13.2
    */
   useEffect(() => {
-    if (isAuthenticated) {
+    const isHomePage = location.pathname === '/';
+
+    if (isAuthenticated && isHomePage) {
       void Promise.allSettled([loadFeatureStatus(), loadActiveAnnouncements()]);
+      return;
     }
-  }, [isAuthenticated, loadActiveAnnouncements, loadFeatureStatus]);
+
+    setIsOpen(false);
+    setCurrentAnnouncement(null);
+  }, [isAuthenticated, loadActiveAnnouncements, loadFeatureStatus, location.pathname]);
 
   /**
    * 当有未读公告且功能已启用时，显示第一个

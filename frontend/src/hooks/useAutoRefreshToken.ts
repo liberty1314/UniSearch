@@ -67,8 +67,12 @@ export function useAutoRefreshToken() {
             console.log('✅ Token 自动刷新成功');
         } catch (error) {
             console.error('❌ 自动刷新令牌失败:', error);
-            // 刷新失败，清除认证状态（Refresh Token 可能已过期）
+            // 刷新失败时刷新令牌已不可用，主动离开受保护页面，避免停留在空白过渡态。
             logout();
+            const currentPath = window.location.pathname;
+            if (!currentPath.includes('/login') && !currentPath.startsWith('/auth')) {
+                window.location.replace('/login');
+            }
         } finally {
             isRefreshingRef.current = false;
         }

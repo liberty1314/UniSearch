@@ -61,4 +61,22 @@ describe('announcementStore', () => {
     expect(useAnnouncementStore.getState().error).toBe('网络繁忙');
     expect(useAnnouncementStore.getState().isAnnouncementsLoading).toBe(false);
   });
+
+  it('未登录状态加载公告返回 401 时静默回退为空列表', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    getActiveAnnouncementsMock.mockRejectedValue({
+      code: 401,
+      message: '未授权：需要 JWT 令牌',
+      response: { status: 401 },
+    });
+
+    await useAnnouncementStore.getState().loadActiveAnnouncements();
+
+    expect(useAnnouncementStore.getState().activeAnnouncements).toEqual([]);
+    expect(useAnnouncementStore.getState().error).toBeNull();
+    expect(useAnnouncementStore.getState().isAnnouncementsLoading).toBe(false);
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
 });

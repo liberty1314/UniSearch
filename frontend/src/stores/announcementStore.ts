@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { Announcement, AnnouncementReadStatus } from '@/types/api';
 import { AnnouncementService } from '@/services/announcementService';
-import { getErrorMessage } from '@/lib/error';
+import { getErrorMessage, getErrorStatus } from '@/lib/error';
 import { readJsonStorage, writeJsonStorage } from '@/lib/safeStorage';
 
 /**
@@ -93,6 +93,14 @@ export const useAnnouncementStore = create<AnnouncementState>()(
             isAnnouncementsLoading: false,
           });
         } catch (error) {
+          if (getErrorStatus(error) === 401) {
+            set({
+              activeAnnouncements: [],
+              isAnnouncementsLoading: false,
+            });
+            return;
+          }
+
           console.error('加载有效公告失败:', error);
           set({
             error: getErrorMessage(error, '加载公告失败'),

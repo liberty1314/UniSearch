@@ -105,4 +105,17 @@ describe('AnnouncementProvider', () => {
     });
     expect(await screen.findByRole('dialog', { name: '首页公告' })).toBeInTheDocument();
   });
+
+  it('非首页不会加载用户公告，避免登录页和个人中心边界产生认证请求', async () => {
+    render(
+      <MemoryRouter initialEntries={['/account']}>
+        <AnnouncementProvider />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(getAnnouncementFeatureEnabledMock).not.toHaveBeenCalled();
+      expect(getActiveAnnouncementsMock).not.toHaveBeenCalled();
+    });
+  });
 });

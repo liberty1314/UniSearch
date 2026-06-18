@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import AccountErrorState from '@/components/account/AccountErrorState';
@@ -31,7 +31,7 @@ import { SystemSettingsService } from '@/services/systemSettingsService';
 import { useAuthStore } from '@/stores/authStore';
 
 const AccountPage: React.FC = () => {
-  const { username: cachedUsername } = useAuthStore();
+  const { username: cachedUsername, isAuthenticated, logout } = useAuthStore();
   const [profile, setProfile] = useState<AccountProfile | null>(null);
   const [activeSection, setActiveSection] = useState<AccountSection>('overview');
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
@@ -43,8 +43,14 @@ const AccountPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [authPolicy, setAuthPolicy] = useState(DEFAULT_AUTH_POLICY);
   const [isUsingDefaultPolicy, setIsUsingDefaultPolicy] = useState(false);
+  const suppressProfileRequestsRef = useRef(false);
 
   const loadProfile = useCallback(async () => {
+    if (!isAuthenticated || suppressProfileRequestsRef.current) {
+      setIsLoadingProfile(false);
+      return;
+    }
+
     setIsLoadingProfile(true);
     setProfileError(null);
     try {
@@ -57,7 +63,7 @@ const AccountPage: React.FC = () => {
     } finally {
       setIsLoadingProfile(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     void loadProfile();
@@ -140,6 +146,7 @@ const AccountPage: React.FC = () => {
     setIsSaving(true);
 
     try {
+      suppressProfileRequestsRef.current = true;
       await apiClient.post('/user/change-password', {
         current_password: currentPassword,
         new_password: newPassword,
@@ -148,7 +155,10 @@ const AccountPage: React.FC = () => {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      logout();
+      window.location.replace('/login');
     } catch (error) {
+      suppressProfileRequestsRef.current = false;
       toast.error(getErrorMessage(error, '修改密码失败'));
     } finally {
       setIsSaving(false);

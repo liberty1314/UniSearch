@@ -457,7 +457,11 @@ func ChangePasswordHandler(userService *service.UserService) gin.HandlerFunc {
 			return
 		}
 
-		respondSuccess(c, SuccessResponse{Message: "密码修改成功"})
+		c.JSON(http.StatusOK, gin.H{
+			"code":    200,
+			"message": "密码修改成功",
+			"data":    nil,
+		})
 	}
 }
 

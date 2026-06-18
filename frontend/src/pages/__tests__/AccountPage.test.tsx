@@ -5,13 +5,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HelmetProvider } from 'react-helmet-async';
 import AccountPage from '@/pages/AccountPage';
 
-const { getMock, postMock, getSettingsMock, toastErrorMock, toastSuccessMock, logoutMock } = vi.hoisted(() => ({
+const { getMock, postMock, getSettingsMock, toastErrorMock, toastSuccessMock, logoutMock, locationReplaceMock } = vi.hoisted(() => ({
   getMock: vi.fn(),
   postMock: vi.fn(),
   getSettingsMock: vi.fn(),
   toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   logoutMock: vi.fn(),
+  locationReplaceMock: vi.fn(),
 }));
 
 vi.mock('sonner', () => ({
@@ -82,6 +83,7 @@ vi.mock('@/services/systemSettingsService', () => ({
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: () => ({
     username: 'cached-user',
+    isAuthenticated: true,
     refreshToken: 'refresh-token',
     logout: logoutMock,
   }),
@@ -124,6 +126,15 @@ describe('AccountPage', () => {
     toastErrorMock.mockReset();
     toastSuccessMock.mockReset();
     getSettingsMock.mockReset();
+    logoutMock.mockReset();
+    locationReplaceMock.mockReset();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...window.location,
+        replace: locationReplaceMock,
+      },
+    });
 
     getMock.mockResolvedValue({
       id: 1,
@@ -374,5 +385,7 @@ describe('AccountPage', () => {
     expect(currentPasswordInput.value).toBe('');
     expect(newPasswordInput.value).toBe('');
     expect(confirmPasswordInput.value).toBe('');
+    expect(logoutMock).toHaveBeenCalledTimes(1);
+    expect(locationReplaceMock).toHaveBeenCalledWith('/login');
   });
 });

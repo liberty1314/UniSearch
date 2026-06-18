@@ -930,3 +930,18 @@
     - frontend/src/routes/AppRoutes.tsx
     - frontend/src/routes/__tests__/AppRoutes.test.tsx
     - docs/readme_2606.md
+
+- [2026-06-19 02:27] fix(auth): 优化 Token 过期回退及修改密码后的强制重登录体验
+  - Body: 完善了前端身份验证失效时的状态恢复机制，自动刷新 Token 失败后将主动重定向至登录页以阻断空白残存。在个人中心修改密码成功后强制触发本地登出并跳转重新登录。优化了拦截器层面触发未授权错误时的接口静默熔断表现，避免未登录加载公共页时控制台大量抛红，并同步阻断了失效凭证发起的空资料轮询。
+  - Files:
+    - backend/api/account_auth_flow_test.go
+    - backend/api/user_handler.go
+    - frontend/src/components/AnnouncementProvider.tsx
+    - frontend/src/components/__tests__/AnnouncementProvider.test.tsx
+    - frontend/src/hooks/__tests__/useAutoRefreshToken.test.tsx
+    - frontend/src/hooks/useAutoRefreshToken.ts
+    - frontend/src/pages/AccountPage.tsx
+    - frontend/src/pages/__tests__/AccountPage.test.tsx
+    - frontend/src/stores/__tests__/announcementStore.test.ts
+    - frontend/src/stores/announcementStore.ts
+    - docs/readme_2606.md
