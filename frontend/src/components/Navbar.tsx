@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, ArrowRight, User, LogOut, LayoutDashboard, Flame, House, Search } from 'lucide-react';
+import { Menu, ArrowRight, User, LogOut, LayoutDashboard, Flame, House, Search, type LucideIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { MobileMenu } from '@/components/MobileMenu';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
+import { TubelightNavbar } from '@/components/ui/tubelight-navbar';
 import { useAuthStore } from '@/stores/authStore';
 import { useAnnouncementStore } from '@/stores/announcementStore';
 import { useAdminStore } from '@/stores/adminStore';
@@ -82,7 +83,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
     setIsUserMenuOpen(false);
   };
 
-  const navItems: Array<{ path: string; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+  const navItems: Array<{ path: string; label: string; icon: LucideIcon }> = [
     {
       path: '/',
       label: '首页',
@@ -99,6 +100,16 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
       icon: Flame,
     },
   ];
+  const activeNavPath = navItems.find((item) => {
+    const isSearchRoute = item.path === '/search' && location.pathname.startsWith('/search');
+    return item.path === '/' ? location.pathname === '/' : isSearchRoute || location.pathname === item.path;
+  })?.path ?? '/';
+  const tubelightNavItems = navItems.map((item) => ({
+    name: item.label,
+    url: item.path,
+    icon: item.icon,
+  }));
+
   return (
     <>
       <motion.nav
@@ -133,32 +144,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
 
           {/* Desktop Primary Navigation */}
           <div className="hidden md:flex items-center justify-center">
-            <nav
-              aria-label="主导航"
-              className="flex items-center gap-1 rounded-full border border-white/60 bg-white/55 px-2 py-1.5 shadow-[0_12px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/25"
-            >
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isSearchRoute = item.path === '/search' && location.pathname.startsWith('/search');
-                const isActive = item.path === '/' ? location.pathname === '/' : isSearchRoute || location.pathname === item.path;
-
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={cn(
-                      'flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200',
-                      isActive
-                        ? 'bg-cyan-50 text-cyan-700 shadow-[0_10px_24px_rgba(34,211,238,0.14)] dark:bg-cyan-500/10 dark:text-cyan-200'
-                        : `text-gray-700 hover:bg-gray-100/80 dark:text-gray-200 dark:hover:bg-white/10 ${BLUE_CYAN_HOVER_TEXT}`,
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
+            <TubelightNavbar items={tubelightNavItems} activeUrl={activeNavPath} />
           </div>
 
           {/* Right Actions */}

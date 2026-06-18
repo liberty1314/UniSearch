@@ -108,6 +108,16 @@ describe('Navbar', () => {
     expect(screen.getByRole('link', { name: '热门榜单' })).toHaveAttribute('href', '/trending');
   });
 
+  it('当前桌面导航项会标记为当前页面', () => {
+    render(
+      <MemoryRouter initialEntries={['/trending']}>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('link', { name: '热门榜单' })).toHaveAttribute('aria-current', 'page');
+  });
+
   it('移动菜单按钮具有明确名称', () => {
     render(
       <MemoryRouter>

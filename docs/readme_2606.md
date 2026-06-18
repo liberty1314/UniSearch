@@ -894,3 +894,11 @@
     - frontend/src/services/__tests__/systemSettingsService.test.ts
     - frontend/src/services/systemSettingsService.ts
     - docs/readme_2606.md
+
+- [2026-06-18 20:10] feat(frontend): 引入 tubelight 动态发光导航栏组件
+  - Body: 将原有顶部桌面主导航重构为抽离的 TubelightNavbar 组件，新增了基于 Framer Motion 的平滑过渡灯管动效。在用户切换导航路由时，提供高亮光效与模糊辉光反馈，增强了导航状态的可视化表现，同时提升了组件的可复用性。
+  - Files:
+    - frontend/src/components/Navbar.tsx
+    - frontend/src/components/__tests__/Navbar.test.tsx
+    - frontend/src/components/ui/tubelight-navbar.tsx
+    - docs/readme_2606.md
