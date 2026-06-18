@@ -829,3 +829,16 @@
     - frontend/src/components/magicui/cool-mode.tsx
     - frontend/src/pages/__tests__/AccountPage.test.tsx
     - docs/readme_2606.md
+
+- [2026-06-18 10:01] refactor(frontend): 移除本地偏好中的全局公告开关并清理过期文档
+  - Body: 由于全局公告不再支持本地手动静默，从前端的个人偏好设置模块和关联的状态管理中彻底移除了“公告提醒”选项。移除了相关的组件渲染逻辑和存储状态，修正了关联单元测试，同时一并删除了已完成使命的旧版个人中心重设计方案文档。
+  - Files:
+    - docs/个人中心重设计开发计划.md
+    - docs/个人中心重设计方案.md
+    - frontend/src/components/AnnouncementProvider.tsx
+    - frontend/src/components/__tests__/AnnouncementProvider.test.tsx
+    - frontend/src/components/account/AccountPreferencesPanel.tsx
+    - frontend/src/lib/accountPreferences.ts
+    - frontend/src/pages/__tests__/AccountPage.test.tsx
+    - frontend/src/pages/__tests__/SearchPage.test.tsx
+    - docs/readme_2606.md

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Cloud, Palette, Rows3 } from 'lucide-react';
+import { Cloud, Palette, Rows3 } from 'lucide-react';
 import AccountSectionHero from '@/components/account/AccountSectionHero';
 import type {
   AccountPreferences,
@@ -11,7 +11,6 @@ import {
   ACCOUNT_PANEL_SURFACE_HOVER_CLASSES,
 } from '@/components/account/accountDesign';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
-import { AppleSwitch } from '@/components/ui/apple-switch';
 import { Button } from '@/components/ui/button';
 import CloudTypeChipGroup from '@/components/CloudTypeChipGroup';
 
@@ -86,21 +85,6 @@ const AccountPreferencesPanel: React.FC<AccountPreferencesPanelProps> = ({
               data-testid="preferences-cloud-chips"
             />
           </fieldset>
-
-          <div className="flex flex-col gap-3 rounded-[1rem] border border-slate-200/70 bg-white/55 p-4 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.46] sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Bell className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />
-                <h3 className="text-[17px] font-semibold text-slate-800 dark:text-white">公告提醒</h3>
-              </div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">保留系统公告提醒，避免错过重要变更。</p>
-            </div>
-            <AppleSwitch
-              checked={preferences.announcementReminder}
-              onCheckedChange={(announcementReminder) => updatePreferences({ announcementReminder })}
-              aria-label="公告提醒"
-            />
-          </div>
 
           <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="outline" className="h-11 rounded-[8px]" onClick={onOpenSecurity}>

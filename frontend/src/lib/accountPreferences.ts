@@ -12,7 +12,6 @@ export interface AccountPreferences {
   theme: AccountThemePreference;
   resultView: AccountResultViewPreference;
   defaultCloudTypes: CloudTypeValue[];
-  announcementReminder: boolean;
 }
 
 export type AccountSearchDefaults = Pick<SearchParams, 'cloudTypes' | 'resultType'>;
@@ -25,7 +24,6 @@ export const DEFAULT_ACCOUNT_PREFERENCES: AccountPreferences = {
   theme: 'system',
   resultView: 'merge',
   defaultCloudTypes: [],
-  announcementReminder: true,
 };
 
 const CLOUD_TYPE_LABEL_TO_VALUE: Record<string, CloudTypeValue> = {
@@ -98,9 +96,6 @@ const normalizeAccountPreferences = (value: unknown): AccountPreferences => {
     defaultCloudTypes: Array.isArray(snapshot.defaultCloudTypes)
       ? normalizeAccountCloudTypes(snapshot.defaultCloudTypes)
       : DEFAULT_ACCOUNT_PREFERENCES.defaultCloudTypes,
-    announcementReminder: typeof snapshot.announcementReminder === 'boolean'
-      ? snapshot.announcementReminder
-      : DEFAULT_ACCOUNT_PREFERENCES.announcementReminder,
   };
 };
 

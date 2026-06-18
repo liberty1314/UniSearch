@@ -156,7 +156,8 @@ describe('AccountPage', () => {
     expect(screen.getByText('PREFERENCES')).toBeInTheDocument();
     expect(screen.getByRole('group', { name: '主题偏好' })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: '默认结果视图' })).toBeInTheDocument();
-    expect(screen.getByRole('switch', { name: '公告提醒' })).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: '公告提醒' })).not.toBeInTheDocument();
+    expect(screen.queryByText('公告提醒')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '立即修改密码' }));
 
@@ -210,13 +211,13 @@ describe('AccountPage', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '阿里云盘（已选中，单击取消，双击仅看此源）' })).toBeInTheDocument();
     });
-    await user.click(screen.getByRole('switch', { name: '公告提醒' }));
     await user.click(screen.getByRole('button', { name: '保存偏好' }));
 
     expect(toastSuccessMock).toHaveBeenCalledWith('偏好设置已保存');
     expect(localStorage.getItem('unisearch_account_preferences')).toContain('"theme":"dark"');
     expect(localStorage.getItem('unisearch_account_preferences')).toContain('"resultView":"list"');
     expect(localStorage.getItem('unisearch_account_preferences')).toContain('"defaultCloudTypes":["aliyun"]');
+    expect(localStorage.getItem('unisearch_account_preferences')).not.toContain('announcementReminder');
     expect(localStorage.getItem('theme')).toBe('dark');
     expect(document.documentElement).toHaveClass('dark');
     expect(localStorage.getItem('unisearch_search_results_view_mode')).toBe(JSON.stringify('list'));

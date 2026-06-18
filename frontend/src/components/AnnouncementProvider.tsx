@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom';
 import { AnnouncementDialog } from './AnnouncementDialog';
 import { useAnnouncementStore } from '@/stores/announcementStore';
 import { useAuthStore } from '@/stores/authStore';
-import { readAccountPreferences } from '@/lib/accountPreferences';
 import type { Announcement } from '@/types/api';
 
 /**
@@ -49,7 +48,6 @@ export const AnnouncementProvider: React.FC = () => {
 
   const { isAuthenticated } = useAuthStore();
   const location = useLocation();
-  const announcementReminderEnabled = readAccountPreferences().announcementReminder;
 
   const [currentAnnouncement, setCurrentAnnouncement] = useState<Announcement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -62,10 +60,10 @@ export const AnnouncementProvider: React.FC = () => {
    * 验证需求: 5.1, 13.2
    */
   useEffect(() => {
-    if (isAuthenticated && announcementReminderEnabled) {
+    if (isAuthenticated) {
       void Promise.allSettled([loadFeatureStatus(), loadActiveAnnouncements()]);
     }
-  }, [announcementReminderEnabled, isAuthenticated, loadActiveAnnouncements, loadFeatureStatus]);
+  }, [isAuthenticated, loadActiveAnnouncements, loadFeatureStatus]);
 
   /**
    * 当有未读公告且功能已启用时，显示第一个
@@ -85,7 +83,6 @@ export const AnnouncementProvider: React.FC = () => {
     
     if (
       isAuthenticated &&
-      announcementReminderEnabled &&
       featureEnabled &&
       !isFeatureLoading &&
       !isAnnouncementsLoading &&
@@ -109,7 +106,7 @@ export const AnnouncementProvider: React.FC = () => {
       setIsOpen(false);
       setCurrentAnnouncement(null);
     }
-  }, [announcementReminderEnabled, isAuthenticated, featureEnabled, isFeatureLoading, isAnnouncementsLoading, location.pathname, currentAnnouncement, getUnreadAnnouncements, isDismissing, dismissedIds]);
+  }, [isAuthenticated, featureEnabled, isFeatureLoading, isAnnouncementsLoading, location.pathname, currentAnnouncement, getUnreadAnnouncements, isDismissing, dismissedIds]);
 
   /**
    * 处理公告关闭

@@ -233,7 +233,6 @@ describe("SearchPage", () => {
         theme: "system",
         resultView: "merge",
         defaultCloudTypes: ["aliyun", "quark"],
-        announcementReminder: true,
       }),
     );
     searchStoreState.searchParams.keyword = "电影";

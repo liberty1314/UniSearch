@@ -82,7 +82,7 @@ describe('AnnouncementProvider', () => {
     expect(await screen.findByRole('dialog', { name: '首页公告' })).toBeInTheDocument();
   });
 
-  it('个人中心关闭公告提醒后不加载也不弹出公告', async () => {
+  it('忽略历史公告提醒关闭偏好并继续加载弹出公告', async () => {
     localStorage.setItem(
       'unisearch_account_preferences',
       JSON.stringify({
@@ -100,9 +100,9 @@ describe('AnnouncementProvider', () => {
     );
 
     await waitFor(() => {
-      expect(getAnnouncementFeatureEnabledMock).not.toHaveBeenCalled();
-      expect(getActiveAnnouncementsMock).not.toHaveBeenCalled();
+      expect(getAnnouncementFeatureEnabledMock).toHaveBeenCalled();
+      expect(getActiveAnnouncementsMock).toHaveBeenCalled();
     });
-    expect(screen.queryByRole('dialog', { name: '首页公告' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: '首页公告' })).toBeInTheDocument();
   });
 });
