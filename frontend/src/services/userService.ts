@@ -2,6 +2,7 @@ import { apiClient } from '../lib/api';
 import type {
   ListUsersRequest,
   ListUsersResponse,
+  AdminUserStats,
   UserInfo,
   CreateUserRequest,
   CreateUserResponse,
@@ -41,6 +42,14 @@ export class UserService {
     }
 
     const response = await apiClient.get<ListUsersResponse>('/admin/users', { params });
+    return response;
+  }
+
+  /**
+   * 获取用户管理统计摘要
+   */
+  static async getUserStats(): Promise<AdminUserStats> {
+    const response = await apiClient.get<AdminUserStats>('/admin/users/stats');
     return response;
   }
 

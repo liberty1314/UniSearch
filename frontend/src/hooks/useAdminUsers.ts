@@ -16,6 +16,20 @@ const USER_ROLE_FILTER_OPTIONS = [
   { label: "普通用户", value: "user", color: "#3b82f6" },
 ];
 
+const EMPTY_USER_STATS = {
+  total: 0,
+  monthNew: 0,
+  sevenDayActive: 0,
+  inactive30Day: 0,
+};
+
+function areUserStatsEqual(left: typeof EMPTY_USER_STATS, right: typeof EMPTY_USER_STATS) {
+  return left.total === right.total &&
+    left.monthNew === right.monthNew &&
+    left.sevenDayActive === right.sevenDayActive &&
+    left.inactive30Day === right.inactive30Day;
+}
+
 export function useAdminUsers() {
   const { isAdmin, logout } = useAuthStore();
   const [users, setUsers] = useState<UserInfo[]>([]);
@@ -29,6 +43,7 @@ export function useAdminUsers() {
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [activeDialog, setActiveDialog] = useState<AdminDialogType | null>(null);
+  const [userStats, setUserStats] = useState(EMPTY_USER_STATS);
   const [userToEdit, setUserToEdit] = useState<UserInfo | null>(null);
   const [userToResetPassword, setUserToResetPassword] = useState<UserInfo | null>(null);
   const [userToDelete, setUserToDelete] = useState<number | null>(null);
@@ -60,6 +75,21 @@ export function useAdminUsers() {
     }
     toast.error(`${message}：未知错误`);
   }, [logout]);
+
+  const loadUserStats = useCallback(async () => {
+    try {
+      const stats = await UserService.getUserStats();
+      const nextStats = {
+        total: stats.total_users,
+        monthNew: stats.month_new_users,
+        sevenDayActive: stats.seven_day_active_users,
+        inactive30Day: stats.inactive_30_day_users,
+      };
+      setUserStats((prev) => (areUserStatsEqual(prev, nextStats) ? prev : nextStats));
+    } catch (error: unknown) {
+      handleAdminError("加载用户统计失败", error);
+    }
+  }, [handleAdminError]);
 
   const loadUsers = useCallback(async (page?: number) => {
     setIsLoadingUsers(true);
@@ -94,6 +124,12 @@ export function useAdminUsers() {
     }
   }, [currentPage, isAdmin, loadUsers, userActiveSearchKeyword, userRoleFilter]);
 
+  useEffect(() => {
+    if (isAdmin) {
+      void loadUserStats();
+    }
+  }, [isAdmin, loadUserStats]);
+
   const handleSelectUser = useCallback((userId: number, checked: boolean) => {
     setSelectedUsers((prev) => {
       const next = new Set(prev);
@@ -114,6 +150,7 @@ export function useAdminUsers() {
       await UserService.deleteUser(userToDelete);
       toast.success("用户已删除");
       void loadUsers();
+      void loadUserStats();
       setSelectedUsers((prev) => {
         const next = new Set(prev);
         next.delete(userToDelete);
@@ -125,7 +162,7 @@ export function useAdminUsers() {
     } finally {
       setIsDeletingUser(false);
     }
-  }, [handleAdminError, loadUsers, userToDelete]);
+  }, [handleAdminError, loadUsers, loadUserStats, userToDelete]);
 
   const handleToggleStatus = useCallback(async (userId: number, isEnabled: boolean) => {
     try {
@@ -160,13 +197,8 @@ export function useAdminUsers() {
   }, [users]);
 
   const getUserStats = useCallback(() => {
-    return {
-      total: totalUsers,
-      active: users.filter((u) => u.is_enabled).length,
-      disabled: users.filter((u) => !u.is_enabled).length,
-      admins: users.filter((u) => u.role === "admin").length,
-    };
-  }, [totalUsers, users]);
+    return userStats;
+  }, [userStats]);
 
   return {
     users,
@@ -219,6 +251,7 @@ export function useAdminUsers() {
     handleClearUserSelection: () => setSelectedUsers(new Set()),
     handleUserOperationSuccess: () => {
       void loadUsers();
+      void loadUserStats();
       setSelectedUsers(new Set());
       closeDialog();
     },

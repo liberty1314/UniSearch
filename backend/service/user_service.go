@@ -36,6 +36,14 @@ type UserListResult struct {
 	TotalPages            int               `json:"total_pages"`
 }
 
+// UserStatsResult 用户管理统计摘要。
+type UserStatsResult struct {
+	TotalUsers          int64 `json:"total_users"`
+	MonthNewUsers       int64 `json:"month_new_users"`
+	SevenDayActiveUsers int64 `json:"seven_day_active_users"`
+	Inactive30DayUsers  int64 `json:"inactive_30_day_users"`
+}
+
 // BatchOperationResult 批量操作结果
 type BatchOperationResult struct {
 	SuccessCount int                   `json:"success_count"`
@@ -101,6 +109,88 @@ func (s *UserService) ListUsers(page, pageSize int, keyword, role string) (*User
 		PageSize:              pageSize,
 		TotalPages:            totalPages,
 	}, nil
+}
+
+// GetUserStats 获取用户管理页全局统计，不受列表分页和筛选影响。
+func (s *UserService) GetUserStats() (*UserStatsResult, error) {
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	sevenDayStart := today.AddDate(0, 0, -6)
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	inactiveCutoff := now.AddDate(0, 0, -30)
+
+	totalUsers, err := s.countRegularUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	monthNewUsers, err := s.countMonthNewRegularUsers(monthStart)
+	if err != nil {
+		return nil, err
+	}
+
+	sevenDayActiveUsers, err := s.countDistinctRegularActiveUsersByLoginDate(sevenDayStart, today.AddDate(0, 0, 1))
+	if err != nil {
+		return nil, err
+	}
+
+	inactive30DayUsers, err := s.countInactiveRegularUsers(inactiveCutoff)
+	if err != nil {
+		return nil, err
+	}
+
+	return &UserStatsResult{
+		TotalUsers:          totalUsers,
+		MonthNewUsers:       monthNewUsers,
+		SevenDayActiveUsers: sevenDayActiveUsers,
+		Inactive30DayUsers:  inactive30DayUsers,
+	}, nil
+}
+
+func (s *UserService) regularUserQuery() *gorm.DB {
+	return s.db.Model(&model.User{}).Where("role != ?", "admin")
+}
+
+func (s *UserService) countRegularUsers() (int64, error) {
+	var count int64
+	if err := s.regularUserQuery().Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("统计用户总数失败: %w", err)
+	}
+	return count, nil
+}
+
+func (s *UserService) countMonthNewRegularUsers(monthStart time.Time) (int64, error) {
+	var count int64
+	if err := s.regularUserQuery().Where("created_at >= ?", monthStart).Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("统计本月新增用户数失败: %w", err)
+	}
+	return count, nil
+}
+
+func (s *UserService) countDistinctRegularActiveUsersByLoginDate(start time.Time, end time.Time) (int64, error) {
+	var count int64
+	startDate := start.Format("2006-01-02")
+	endDate := end.Format("2006-01-02")
+
+	if err := s.db.Model(&model.UserLoginDailyStat{}).
+		Joins("JOIN users ON users.id = user_login_daily_stats.user_id AND users.deleted_at IS NULL AND users.role != ?", "admin").
+		Where("user_login_daily_stats.login_date >= ? AND user_login_daily_stats.login_date < ?", startDate, endDate).
+		Distinct("user_login_daily_stats.user_id").
+		Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("统计活跃用户数失败: %w", err)
+	}
+
+	return count, nil
+}
+
+func (s *UserService) countInactiveRegularUsers(cutoff time.Time) (int64, error) {
+	var count int64
+	if err := s.regularUserQuery().
+		Where("last_login_at IS NULL OR last_login_at < ?", cutoff).
+		Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("统计沉默用户数失败: %w", err)
+	}
+	return count, nil
 }
 
 func (s *UserService) listCurrentMonthLoginDays(users []model.User) (map[uint][]string, map[uint]int, error) {

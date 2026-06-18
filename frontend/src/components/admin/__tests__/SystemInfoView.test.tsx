@@ -139,6 +139,12 @@ describe('SystemInfoView', () => {
     const { container } = render(<SystemInfoView />);
 
     await screen.findByText('Telegram 频道摘要');
+    expect(screen.getByText('可用插件')).toBeInTheDocument();
+    expect(screen.getByText('今日活跃用户')).toBeInTheDocument();
+    expect(screen.getByText('本月活跃用户')).toBeInTheDocument();
+    expect(screen.queryByText('活跃插件')).not.toBeInTheDocument();
+    expect(screen.queryByText('今日活跃')).not.toBeInTheDocument();
+    expect(screen.queryByText('月活跃')).not.toBeInTheDocument();
     expect(screen.getByText('插件状态摘要')).toBeInTheDocument();
     expect(screen.getByText(/异常包含启用与禁用频道/)).toBeInTheDocument();
     expect(screen.getAllByText('点击进入管理页')).toHaveLength(2);

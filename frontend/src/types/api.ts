@@ -692,6 +692,16 @@ export interface ListUsersResponse {
 }
 
 /**
+ * 用户管理统计响应
+ */
+export interface AdminUserStats {
+  total_users: number;
+  month_new_users: number;
+  seven_day_active_users: number;
+  inactive_30_day_users: number;
+}
+
+/**
  * 创建用户请求
  */
 export interface CreateUserRequest {

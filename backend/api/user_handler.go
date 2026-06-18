@@ -33,6 +33,14 @@ type ListUsersResponse struct {
 	TotalPages int        `json:"total_pages"`
 }
 
+// UserStatsResponse 用户管理统计响应
+type UserStatsResponse struct {
+	TotalUsers          int64 `json:"total_users"`
+	MonthNewUsers       int64 `json:"month_new_users"`
+	SevenDayActiveUsers int64 `json:"seven_day_active_users"`
+	Inactive30DayUsers  int64 `json:"inactive_30_day_users"`
+}
+
 // UserInfo 用户信息
 type UserInfo struct {
 	ID                   uint       `json:"id"`
@@ -216,6 +224,29 @@ func ListUsersHandler(userService *service.UserService) gin.HandlerFunc {
 		}
 
 		respondSuccess(c, response)
+	}
+}
+
+// GetUserStatsHandler 获取用户管理页全局统计。
+func GetUserStatsHandler(userService *service.UserService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if userService == nil {
+			respondError(c, http.StatusInternalServerError, "用户服务未初始化", "USER_SERVICE_NOT_INITIALIZED")
+			return
+		}
+
+		stats, err := userService.GetUserStats()
+		if err != nil {
+			respondError(c, http.StatusInternalServerError, "查询用户统计失败", "INTERNAL_SERVER_ERROR")
+			return
+		}
+
+		respondSuccess(c, UserStatsResponse{
+			TotalUsers:          stats.TotalUsers,
+			MonthNewUsers:       stats.MonthNewUsers,
+			SevenDayActiveUsers: stats.SevenDayActiveUsers,
+			Inactive30DayUsers:  stats.Inactive30DayUsers,
+		})
 	}
 }
 

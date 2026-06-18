@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAdminUsers } from '../useAdminUsers';
 
 const listUsersMock = vi.fn();
+const getUserStatsMock = vi.fn();
+const logoutMock = vi.fn();
 
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: () => ({
     isAdmin: true,
-    logout: vi.fn(),
+    logout: logoutMock,
     username: 'admin',
   }),
 }));
@@ -15,6 +17,7 @@ vi.mock('@/stores/authStore', () => ({
 vi.mock('@/services/userService', () => ({
   UserService: {
     listUsers: (...args: unknown[]) => listUsersMock(...args),
+    getUserStats: (...args: unknown[]) => getUserStatsMock(...args),
     deleteUser: vi.fn(),
     setUserStatus: vi.fn(),
     batchDeleteUsers: vi.fn(),
@@ -32,6 +35,13 @@ vi.mock('sonner', () => ({
 describe('useAdminUsers', () => {
   beforeEach(() => {
     listUsersMock.mockReset();
+    getUserStatsMock.mockReset();
+    getUserStatsMock.mockResolvedValue({
+      total_users: 12,
+      month_new_users: 4,
+      seven_day_active_users: 7,
+      inactive_30_day_users: 2,
+    });
     listUsersMock.mockImplementation(async (_page?: number, pageSize?: number) => ({
       users: Array.from({ length: pageSize || 10 }, (_, index) => ({
         id: index + 1,
@@ -71,5 +81,30 @@ describe('useAdminUsers', () => {
     await waitFor(() => {
       expect(listUsersMock).toHaveBeenLastCalledWith(1, 50, undefined, undefined);
     });
+  });
+
+  it('使用独立统计接口生成用户管理卡片数据，分页切换不改变统计口径', async () => {
+    const { result } = renderHook(() => useAdminUsers());
+
+    await waitFor(() => {
+      expect(getUserStatsMock).toHaveBeenCalledTimes(1);
+    });
+
+    expect(result.current.getUserStats()).toEqual({
+      total: 12,
+      monthNew: 4,
+      sevenDayActive: 7,
+      inactive30Day: 2,
+    });
+
+    act(() => {
+      result.current.handlePageChange(2);
+    });
+
+    await waitFor(() => {
+      expect(listUsersMock).toHaveBeenLastCalledWith(2, 10, undefined, undefined);
+    });
+    expect(getUserStatsMock).toHaveBeenCalledTimes(1);
+    expect(result.current.getUserStats().total).toBe(12);
   });
 });

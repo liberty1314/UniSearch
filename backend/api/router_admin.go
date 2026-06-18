@@ -10,6 +10,7 @@ func registerAdminRoutes(api *gin.RouterGroup, deps RouterDeps) {
 		users := admin.Group("/users")
 		{
 			users.GET("", ListUsersHandler(deps.UserService))
+			users.GET("/stats", GetUserStatsHandler(deps.UserService))
 			users.GET("/:id", GetUserHandler(deps.UserService))
 			users.POST("", CreateUserHandler(deps.UserService))
 			users.PUT("/:id", UpdateUserHandler(deps.UserService))

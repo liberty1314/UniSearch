@@ -77,6 +77,11 @@ func TestUserServiceRejectsWhitespaceInNewPasswords(t *testing.T) {
 
 func createUserServiceTestUser(t *testing.T, db *gorm.DB, username string, enabled bool, lastLoginAt *time.Time) model.User {
 	t.Helper()
+	return createUserServiceTestUserWithRole(t, db, username, "user", enabled, lastLoginAt)
+}
+
+func createUserServiceTestUserWithRole(t *testing.T, db *gorm.DB, username string, role string, enabled bool, lastLoginAt *time.Time) model.User {
+	t.Helper()
 
 	passwordHash, err := util.HashPassword("password123")
 	if err != nil {
@@ -86,7 +91,7 @@ func createUserServiceTestUser(t *testing.T, db *gorm.DB, username string, enabl
 	user := model.User{
 		Username:     username,
 		PasswordHash: passwordHash,
-		Role:         "user",
+		Role:         role,
 		IsEnabled:    enabled,
 		LastLoginAt:  lastLoginAt,
 	}
@@ -140,5 +145,74 @@ func TestListUsersReturnsMonthlyLoginDaysAndDisabledUsersLast(t *testing.T) {
 	}
 	if len(result.MonthlyLoginDays[neverLoginUser.ID]) != 0 {
 		t.Fatalf("expected empty monthly days for never login user, got %#v", result.MonthlyLoginDays[neverLoginUser.ID])
+	}
+}
+
+func TestGetUserStatsReturnsActivityAndSilenceSummary(t *testing.T) {
+	db := newUserServiceTestDB(t)
+	now := time.Now()
+	sixDaysAgo := now.AddDate(0, 0, -6).Format("2006-01-02")
+	eightDaysAgo := now.AddDate(0, 0, -8).Format("2006-01-02")
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	recentLogin := now.AddDate(0, 0, -1)
+	silentLogin := now.AddDate(0, 0, -31)
+	previousMonthCreatedAt := monthStart.AddDate(0, 0, -1)
+
+	weekUser := createUserServiceTestUser(t, db, "week-user", true, &recentLogin)
+	silentUser := createUserServiceTestUser(t, db, "silent-user", true, &silentLogin)
+	createUserServiceTestUser(t, db, "never-login-stats", true, nil)
+	oldUser := createUserServiceTestUser(t, db, "old-user", true, &recentLogin)
+	if err := db.Model(&oldUser).Update("created_at", previousMonthCreatedAt).Error; err != nil {
+		t.Fatalf("move old user created_at: %v", err)
+	}
+	adminUser := createUserServiceTestUserWithRole(t, db, "admin-stats", "admin", true, &recentLogin)
+	deletedUser := createUserServiceTestUser(t, db, "deleted-user", true, &recentLogin)
+	if err := db.Delete(&deletedUser).Error; err != nil {
+		t.Fatalf("soft delete user: %v", err)
+	}
+
+	statsRows := []model.UserLoginDailyStat{
+		{UserID: weekUser.ID, LoginDate: sixDaysAgo, LoginCount: 1},
+		{UserID: oldUser.ID, LoginDate: sixDaysAgo, LoginCount: 1},
+		{UserID: silentUser.ID, LoginDate: eightDaysAgo, LoginCount: 1},
+		{UserID: adminUser.ID, LoginDate: sixDaysAgo, LoginCount: 1},
+		{UserID: deletedUser.ID, LoginDate: sixDaysAgo, LoginCount: 1},
+	}
+	if err := db.Create(&statsRows).Error; err != nil {
+		t.Fatalf("create login stats: %v", err)
+	}
+
+	stats, err := NewUserService(db).GetUserStats()
+	if err != nil {
+		t.Fatalf("get user stats: %v", err)
+	}
+
+	if stats.TotalUsers != 4 {
+		t.Fatalf("expected total users to exclude admins and soft deleted rows, got %d", stats.TotalUsers)
+	}
+	if stats.MonthNewUsers != 3 {
+		t.Fatalf("expected month new users to exclude admins and previous-month users, got %d", stats.MonthNewUsers)
+	}
+	if stats.SevenDayActiveUsers != 2 {
+		t.Fatalf("expected seven day active users to exclude admins and soft deleted rows, got %d", stats.SevenDayActiveUsers)
+	}
+	if stats.Inactive30DayUsers != 2 {
+		t.Fatalf("expected silent and never-login users to be inactive, got %d", stats.Inactive30DayUsers)
+	}
+}
+
+func TestGetUserStatsReturnsZeroWithoutUsers(t *testing.T) {
+	db := newUserServiceTestDB(t)
+
+	stats, err := NewUserService(db).GetUserStats()
+	if err != nil {
+		t.Fatalf("get empty user stats: %v", err)
+	}
+
+	if stats.TotalUsers != 0 ||
+		stats.MonthNewUsers != 0 ||
+		stats.SevenDayActiveUsers != 0 ||
+		stats.Inactive30DayUsers != 0 {
+		t.Fatalf("expected all stats to be zero, got %#v", stats)
 	}
 }

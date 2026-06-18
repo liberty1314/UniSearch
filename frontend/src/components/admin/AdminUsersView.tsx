@@ -109,10 +109,10 @@ const AdminUsersView: React.FC = () => {
         {/* Stats row using shared AdminMetricCard for consistency */}
         <motion.div variants={itemVariants}>
           <AdminMetricGrid>
-            <AdminMetricCard label="总用户数" value={userStats.total} hint="系统全部注册用户" />
-            <AdminMetricCard label="活跃用户" value={userStats.active} hint="当前可正常登录使用" />
-            <AdminMetricCard label="禁用用户" value={userStats.disabled} hint="已被禁止访问系统" />
-            <AdminMetricCard label="管理员数量" value={userStats.admins} hint="拥有后台管理权限" />
+            <AdminMetricCard label="总用户数量" value={userStats.total} hint="系统全部注册用户" />
+            <AdminMetricCard label="本月新增" value={userStats.monthNew} hint="本月新注册用户" />
+            <AdminMetricCard label="近 7 日活跃" value={userStats.sevenDayActive} hint="最近一周有使用记录" />
+            <AdminMetricCard label="30 日沉默" value={userStats.inactive30Day} hint="超过 30 天未使用" />
           </AdminMetricGrid>
         </motion.div>
 

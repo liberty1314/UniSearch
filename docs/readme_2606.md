@@ -842,3 +842,22 @@
     - frontend/src/pages/__tests__/AccountPage.test.tsx
     - frontend/src/pages/__tests__/SearchPage.test.tsx
     - docs/readme_2606.md
+
+- [2026-06-18 16:28] feat(admin): 独立管理员系统用户统计与活跃数据展示接口
+  - Body: 新增了独立的 /admin/users/stats 接口以获取全量用户的总数、本月新增、近7日活跃与30日沉默数据。前端同步将用户管理工作台的统计数据源从依赖当前页面切片计算，重构为独立挂载展示，同时避免了分页对统计口径的污染，并补充了相关的统计测试用例。
+  - Files:
+    - backend/api/admin_routes_test.go
+    - backend/api/router_admin.go
+    - backend/api/user_handler.go
+    - backend/service/user_service.go
+    - backend/service/user_service_test.go
+    - frontend/src/components/admin/AdminUsersView.tsx
+    - frontend/src/components/admin/SystemInfoView.tsx
+    - frontend/src/components/admin/__tests__/AdminUsersView.test.tsx
+    - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
+    - frontend/src/hooks/__tests__/useAdminUsers.test.tsx
+    - frontend/src/hooks/useAdminUsers.ts
+    - frontend/src/services/__tests__/userService.test.ts
+    - frontend/src/services/userService.ts
+    - frontend/src/types/api.ts
+    - docs/readme_2606.md

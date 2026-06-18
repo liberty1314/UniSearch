@@ -303,7 +303,7 @@ export const SystemInfoView: React.FC = () => {
           index={0}
         />
         <StatsCard
-          title="活跃插件"
+          title="可用插件"
           value={systemInfo.stats.active_plugin_count}
           icon={CheckCircle2}
           color="emerald"
@@ -324,14 +324,14 @@ export const SystemInfoView: React.FC = () => {
           index={3}
         />
         <StatsCard
-          title="今日活跃"
+          title="今日活跃用户"
           value={systemInfo.stats.dau}
           icon={Users}
           color="emerald"
           index={4}
         />
         <StatsCard
-          title="月活跃"
+          title="本月活跃用户"
           value={systemInfo.stats.mau}
           icon={TrendingUp}
           color="purple"
