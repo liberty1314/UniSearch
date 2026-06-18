@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"golang.org/x/net/proxy"
@@ -15,6 +16,7 @@ import (
 
 // 全局HTTP客户端
 var httpClient *http.Client
+var httpClientMu sync.RWMutex
 
 // InitHTTPClient 初始化HTTP客户端
 func InitHTTPClient() {
@@ -65,17 +67,33 @@ func InitHTTPClient() {
 	}
 
 	// 创建客户端
+	httpClientMu.Lock()
+	defer httpClientMu.Unlock()
 	httpClient = &http.Client{
 		Transport: transport,
 		Timeout:   time.Duration(60) * time.Second,
 	}
 }
 
+// ReloadHTTPClient 按当前运行配置重建全局 HTTP 客户端。
+func ReloadHTTPClient() {
+	InitHTTPClient()
+}
+
 // GetHTTPClient 获取HTTP客户端
 func GetHTTPClient() *http.Client {
+	httpClientMu.RLock()
+	client := httpClient
+	httpClientMu.RUnlock()
+	if client != nil {
+		return client
+	}
+
 	if httpClient == nil {
 		InitHTTPClient()
 	}
+	httpClientMu.RLock()
+	defer httpClientMu.RUnlock()
 	return httpClient
 }
 

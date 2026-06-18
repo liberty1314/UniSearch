@@ -144,4 +144,51 @@ describe('SystemSettingsService TMDB admin api', () => {
     expect(deleteMock).toHaveBeenCalledWith('/admin/system-settings/cache/hot-ranking');
     expect(result.message).toBe('热门榜单缓存已清理');
   });
+
+  it('获取运行配置', async () => {
+    getMock.mockResolvedValue({
+      default_concurrency: 50,
+      http_max_conns: 1000,
+      async_plugin_enabled: true,
+      async_response_timeout: 4,
+      async_max_background_workers: 20,
+      async_max_background_tasks: 100,
+      proxy_enabled: false,
+      proxy_url: '',
+      config_source: 'database',
+      restart_required_fields: ['http_max_conns'],
+    });
+
+    const result = await SystemSettingsService.getRuntimeSettings('token');
+
+    expect(getMock).toHaveBeenCalledWith('/admin/system-settings/runtime');
+    expect(result.default_concurrency).toBe(50);
+    expect(result.restart_required_fields).toEqual(['http_max_conns']);
+  });
+
+  it('更新运行配置', async () => {
+    putMock.mockResolvedValue({
+      default_concurrency: 60,
+      http_max_conns: 1000,
+      async_plugin_enabled: true,
+      async_response_timeout: 5,
+      async_max_background_workers: 30,
+      async_max_background_tasks: 150,
+      proxy_enabled: true,
+      proxy_url: 'http://127.0.0.1:8080',
+      config_source: 'database',
+      restart_required_fields: ['http_max_conns'],
+    });
+
+    const result = await SystemSettingsService.updateRuntimeSettings('token', {
+      default_concurrency: 60,
+      async_response_timeout: 5,
+    });
+
+    expect(putMock).toHaveBeenCalledWith('/admin/system-settings/runtime', {
+      default_concurrency: 60,
+      async_response_timeout: 5,
+    });
+    expect(result.default_concurrency).toBe(60);
+  });
 });

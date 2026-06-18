@@ -3,12 +3,14 @@ package service
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 	"unisearch/config"
 	"unisearch/model"
+	"unisearch/util"
 
 	"gorm.io/gorm"
 )
@@ -34,6 +36,17 @@ type CacheSettings struct {
 	HotRankingCacheTTLSeconds       int    `json:"hot_ranking_cache_ttl_seconds"`
 	HotRankingPreloadConcurrency    int    `json:"hot_ranking_preload_concurrency"`
 	HotRankingPreloadTimeoutSeconds int    `json:"hot_ranking_preload_timeout_seconds"`
+}
+
+type RuntimeSettings struct {
+	DefaultConcurrency        int    `json:"default_concurrency"`
+	HTTPMaxConns              int    `json:"http_max_conns"`
+	AsyncPluginEnabled        bool   `json:"async_plugin_enabled"`
+	AsyncResponseTimeout      int    `json:"async_response_timeout"`
+	AsyncMaxBackgroundWorkers int    `json:"async_max_background_workers"`
+	AsyncMaxBackgroundTasks   int    `json:"async_max_background_tasks"`
+	ProxyEnabled              bool   `json:"proxy_enabled"`
+	ProxyURL                  string `json:"proxy_url"`
 }
 
 type CacheSettingOption struct {
@@ -66,29 +79,55 @@ type CacheSettingsUpdateInput struct {
 	HotRankingPreloadTimeoutSeconds *int
 }
 
+type RuntimeSettingsUpdateInput struct {
+	DefaultConcurrency        *int
+	HTTPMaxConns              *int
+	AsyncPluginEnabled        *bool
+	AsyncResponseTimeout      *int
+	AsyncMaxBackgroundWorkers *int
+	AsyncMaxBackgroundTasks   *int
+	ProxyEnabled              *bool
+	ProxyURL                  *string
+}
+
 const (
-	minSearchCacheTTLSeconds               = 60
-	maxSearchCacheTTLSeconds               = 86400
-	minCacheWriteQueueSize                 = 1
-	maxCacheWriteQueueSize                 = 10000
-	minCacheWriteWorkers                   = 1
-	maxCacheWriteWorkers                   = 64
-	minHotRankingPreloadLimit              = 1
-	maxHotRankingPreloadLimit              = 100
-	minHotRankingCacheTTLSeconds           = 300
-	maxHotRankingCacheTTLSeconds           = 604800
-	minHotRankingPreloadConcurrency        = 1
-	maxHotRankingPreloadConcurrency        = 16
-	minHotRankingPreloadTimeoutSeconds     = 5
-	maxHotRankingPreloadTimeoutSeconds     = 300
-	defaultSearchCacheTTLSeconds           = 3600
-	defaultCacheWriteQueueSize             = 256
-	defaultCacheWriteWorkers               = 4
-	defaultHotRankingPreloadTime           = "00:00"
-	defaultHotRankingPreloadLimit          = 50
-	defaultHotRankingCacheTTLSeconds       = 86400
-	defaultHotRankingPreloadConcurrency    = 2
-	defaultHotRankingPreloadTimeoutSeconds = 30
+	minSearchCacheTTLSeconds                = 60
+	maxSearchCacheTTLSeconds                = 86400
+	minCacheWriteQueueSize                  = 1
+	maxCacheWriteQueueSize                  = 10000
+	minCacheWriteWorkers                    = 1
+	maxCacheWriteWorkers                    = 64
+	minHotRankingPreloadLimit               = 1
+	maxHotRankingPreloadLimit               = 100
+	minHotRankingCacheTTLSeconds            = 300
+	maxHotRankingCacheTTLSeconds            = 604800
+	minHotRankingPreloadConcurrency         = 1
+	maxHotRankingPreloadConcurrency         = 16
+	minHotRankingPreloadTimeoutSeconds      = 5
+	maxHotRankingPreloadTimeoutSeconds      = 300
+	defaultSearchCacheTTLSeconds            = 3600
+	defaultCacheWriteQueueSize              = 256
+	defaultCacheWriteWorkers                = 4
+	defaultHotRankingPreloadTime            = "00:00"
+	defaultHotRankingPreloadLimit           = 50
+	defaultHotRankingCacheTTLSeconds        = 86400
+	defaultHotRankingPreloadConcurrency     = 2
+	defaultHotRankingPreloadTimeoutSeconds  = 30
+	minRuntimeDefaultConcurrency            = 1
+	maxRuntimeDefaultConcurrency            = 500
+	minRuntimeHTTPMaxConns                  = 1
+	maxRuntimeHTTPMaxConns                  = 100000
+	minRuntimeAsyncResponseTimeout          = 1
+	maxRuntimeAsyncResponseTimeout          = 120
+	minRuntimeAsyncMaxBackgroundWorkers     = 1
+	maxRuntimeAsyncMaxBackgroundWorkers     = 1000
+	minRuntimeAsyncMaxBackgroundTasks       = 1
+	maxRuntimeAsyncMaxBackgroundTasks       = 100000
+	defaultRuntimeDefaultConcurrency        = 50
+	defaultRuntimeHTTPMaxConns              = 1000
+	defaultRuntimeAsyncResponseTimeout      = 4
+	defaultRuntimeAsyncMaxBackgroundWorkers = 20
+	defaultRuntimeAsyncMaxBackgroundTasks   = 100
 )
 
 // SystemSettingsService 系统设置服务
@@ -136,26 +175,35 @@ func (s *SystemSettingsService) GetSettings() (*model.SystemSettings, error) {
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			cacheDefaults := resolveDefaultCacheSettings()
+			runtimeDefaults := resolveDefaultRuntimeSettings()
 			// 如果不存在，创建默认设置
 			settings = model.SystemSettings{
-				EnableUserAuth:                  true,  // 默认启用用户登录注册
-				EnableUserLogin:                 true,  // 默认启用用户登录
-				EnableUserSignup:                true,  // 默认启用用户注册
-				AnnouncementEnabled:             false, // 默认禁用公告功能（需求 13.5）
-				EnableResourceDetailPage:        false, // 默认关闭资源详情页
-				PublicSiteURL:                   "",
-				DefaultCopyFormatTemplate:       "",
-				CacheEnabled:                    cacheDefaults.CacheEnabled,
-				SearchCacheTTLSeconds:           cacheDefaults.SearchCacheTTLSeconds,
-				CacheWriteQueueSize:             cacheDefaults.CacheWriteQueueSize,
-				CacheWriteWorkers:               cacheDefaults.CacheWriteWorkers,
-				HotRankingCacheEnabled:          cacheDefaults.HotRankingCacheEnabled,
-				HotRankingPreloadEnabled:        cacheDefaults.HotRankingPreloadEnabled,
-				HotRankingPreloadTime:           cacheDefaults.HotRankingPreloadTime,
-				HotRankingPreloadLimit:          cacheDefaults.HotRankingPreloadLimit,
-				HotRankingCacheTTLSeconds:       cacheDefaults.HotRankingCacheTTLSeconds,
-				HotRankingPreloadConcurrency:    cacheDefaults.HotRankingPreloadConcurrency,
-				HotRankingPreloadTimeoutSeconds: cacheDefaults.HotRankingPreloadTimeoutSeconds,
+				EnableUserAuth:                   true,  // 默认启用用户登录注册
+				EnableUserLogin:                  true,  // 默认启用用户登录
+				EnableUserSignup:                 true,  // 默认启用用户注册
+				AnnouncementEnabled:              false, // 默认禁用公告功能（需求 13.5）
+				EnableResourceDetailPage:         false, // 默认关闭资源详情页
+				PublicSiteURL:                    "",
+				DefaultCopyFormatTemplate:        "",
+				CacheEnabled:                     cacheDefaults.CacheEnabled,
+				SearchCacheTTLSeconds:            cacheDefaults.SearchCacheTTLSeconds,
+				CacheWriteQueueSize:              cacheDefaults.CacheWriteQueueSize,
+				CacheWriteWorkers:                cacheDefaults.CacheWriteWorkers,
+				HotRankingCacheEnabled:           cacheDefaults.HotRankingCacheEnabled,
+				HotRankingPreloadEnabled:         cacheDefaults.HotRankingPreloadEnabled,
+				HotRankingPreloadTime:            cacheDefaults.HotRankingPreloadTime,
+				HotRankingPreloadLimit:           cacheDefaults.HotRankingPreloadLimit,
+				HotRankingCacheTTLSeconds:        cacheDefaults.HotRankingCacheTTLSeconds,
+				HotRankingPreloadConcurrency:     cacheDefaults.HotRankingPreloadConcurrency,
+				HotRankingPreloadTimeoutSeconds:  cacheDefaults.HotRankingPreloadTimeoutSeconds,
+				RuntimeDefaultConcurrency:        runtimeDefaults.DefaultConcurrency,
+				RuntimeHTTPMaxConns:              runtimeDefaults.HTTPMaxConns,
+				RuntimeAsyncPluginEnabled:        runtimeDefaults.AsyncPluginEnabled,
+				RuntimeAsyncResponseTimeout:      runtimeDefaults.AsyncResponseTimeout,
+				RuntimeAsyncMaxBackgroundWorkers: runtimeDefaults.AsyncMaxBackgroundWorkers,
+				RuntimeAsyncMaxBackgroundTasks:   runtimeDefaults.AsyncMaxBackgroundTasks,
+				RuntimeProxyEnabled:              runtimeDefaults.ProxyEnabled,
+				RuntimeProxyURL:                  runtimeDefaults.ProxyURL,
 			}
 			if err := s.db.Create(&settings).Error; err != nil {
 				return nil, err
@@ -262,6 +310,93 @@ func (s *SystemSettingsService) UpdateCacheSettings(input CacheSettingsUpdateInp
 	}
 
 	return buildCacheSettings(settings), nil
+}
+
+func (s *SystemSettingsService) GetRuntimeSettings() (*RuntimeSettings, error) {
+	settings, err := s.GetSettings()
+	if err != nil {
+		return nil, err
+	}
+
+	return buildRuntimeSettings(settings), nil
+}
+
+func (s *SystemSettingsService) UpdateRuntimeSettings(input RuntimeSettingsUpdateInput) (*RuntimeSettings, error) {
+	settings, err := s.GetSettings()
+	if err != nil {
+		return nil, err
+	}
+
+	current := buildRuntimeSettings(settings)
+	next := *current
+	if input.DefaultConcurrency != nil {
+		next.DefaultConcurrency = *input.DefaultConcurrency
+	}
+	if input.HTTPMaxConns != nil {
+		next.HTTPMaxConns = *input.HTTPMaxConns
+	}
+	if input.AsyncPluginEnabled != nil {
+		next.AsyncPluginEnabled = *input.AsyncPluginEnabled
+	}
+	if input.AsyncResponseTimeout != nil {
+		next.AsyncResponseTimeout = *input.AsyncResponseTimeout
+	}
+	if input.AsyncMaxBackgroundWorkers != nil {
+		next.AsyncMaxBackgroundWorkers = *input.AsyncMaxBackgroundWorkers
+	}
+	if input.AsyncMaxBackgroundTasks != nil {
+		next.AsyncMaxBackgroundTasks = *input.AsyncMaxBackgroundTasks
+	}
+	if input.ProxyEnabled != nil {
+		next.ProxyEnabled = *input.ProxyEnabled
+	}
+	if input.ProxyURL != nil {
+		next.ProxyURL = normalizeRuntimeProxyURL(*input.ProxyURL)
+	}
+	if strings.TrimSpace(next.ProxyURL) == "" {
+		next.ProxyEnabled = false
+	}
+
+	if err := validateRuntimeSettings(next); err != nil {
+		return nil, err
+	}
+
+	settings.RuntimeDefaultConcurrency = next.DefaultConcurrency
+	settings.RuntimeHTTPMaxConns = next.HTTPMaxConns
+	settings.RuntimeAsyncPluginEnabled = next.AsyncPluginEnabled
+	settings.RuntimeAsyncResponseTimeout = next.AsyncResponseTimeout
+	settings.RuntimeAsyncMaxBackgroundWorkers = next.AsyncMaxBackgroundWorkers
+	settings.RuntimeAsyncMaxBackgroundTasks = next.AsyncMaxBackgroundTasks
+	settings.RuntimeProxyEnabled = next.ProxyEnabled
+	settings.RuntimeProxyURL = next.ProxyURL
+
+	if err := s.db.Save(settings).Error; err != nil {
+		return nil, err
+	}
+
+	s.ApplyRuntimeSettings(&next)
+	util.ReloadHTTPClient()
+
+	return &next, nil
+}
+
+func (s *SystemSettingsService) ApplyRuntimeSettings(settings *RuntimeSettings) {
+	if settings == nil {
+		return
+	}
+	if config.AppConfig == nil {
+		config.AppConfig = &config.Config{}
+	}
+
+	config.AppConfig.DefaultConcurrency = settings.DefaultConcurrency
+	config.AppConfig.HTTPMaxConns = settings.HTTPMaxConns
+	config.AppConfig.AsyncPluginEnabled = settings.AsyncPluginEnabled
+	config.AppConfig.AsyncResponseTimeout = settings.AsyncResponseTimeout
+	config.AppConfig.AsyncResponseTimeoutDur = time.Duration(settings.AsyncResponseTimeout) * time.Second
+	config.AppConfig.AsyncMaxBackgroundWorkers = settings.AsyncMaxBackgroundWorkers
+	config.AppConfig.AsyncMaxBackgroundTasks = settings.AsyncMaxBackgroundTasks
+	config.AppConfig.UseProxy = settings.ProxyEnabled && strings.TrimSpace(settings.ProxyURL) != ""
+	config.AppConfig.ProxyURL = strings.TrimSpace(settings.ProxyURL)
 }
 
 // GetAnnouncementEnabled 获取公告功能启用状态
@@ -433,6 +568,41 @@ func buildCacheSettings(settings *model.SystemSettings) *CacheSettings {
 	}
 }
 
+func buildRuntimeSettings(settings *model.SystemSettings) *RuntimeSettings {
+	defaults := resolveDefaultRuntimeSettings()
+	runtimeSettings := &RuntimeSettings{
+		DefaultConcurrency:        settings.RuntimeDefaultConcurrency,
+		HTTPMaxConns:              settings.RuntimeHTTPMaxConns,
+		AsyncPluginEnabled:        settings.RuntimeAsyncPluginEnabled,
+		AsyncResponseTimeout:      settings.RuntimeAsyncResponseTimeout,
+		AsyncMaxBackgroundWorkers: settings.RuntimeAsyncMaxBackgroundWorkers,
+		AsyncMaxBackgroundTasks:   settings.RuntimeAsyncMaxBackgroundTasks,
+		ProxyEnabled:              settings.RuntimeProxyEnabled,
+		ProxyURL:                  strings.TrimSpace(settings.RuntimeProxyURL),
+	}
+
+	if runtimeSettings.DefaultConcurrency <= 0 {
+		runtimeSettings.DefaultConcurrency = defaults.DefaultConcurrency
+	}
+	if runtimeSettings.HTTPMaxConns <= 0 {
+		runtimeSettings.HTTPMaxConns = defaults.HTTPMaxConns
+	}
+	if runtimeSettings.AsyncResponseTimeout <= 0 {
+		runtimeSettings.AsyncResponseTimeout = defaults.AsyncResponseTimeout
+	}
+	if runtimeSettings.AsyncMaxBackgroundWorkers <= 0 {
+		runtimeSettings.AsyncMaxBackgroundWorkers = defaults.AsyncMaxBackgroundWorkers
+	}
+	if runtimeSettings.AsyncMaxBackgroundTasks <= 0 {
+		runtimeSettings.AsyncMaxBackgroundTasks = defaults.AsyncMaxBackgroundTasks
+	}
+	if runtimeSettings.ProxyURL == "" {
+		runtimeSettings.ProxyEnabled = false
+	}
+
+	return runtimeSettings
+}
+
 func resolveDefaultCacheSettings() CacheSettings {
 	defaults := CacheSettings{
 		CacheEnabled:                    true,
@@ -482,6 +652,44 @@ func resolveDefaultCacheSettings() CacheSettings {
 	return defaults
 }
 
+func resolveDefaultRuntimeSettings() RuntimeSettings {
+	defaults := RuntimeSettings{
+		DefaultConcurrency:        defaultRuntimeDefaultConcurrency,
+		HTTPMaxConns:              defaultRuntimeHTTPMaxConns,
+		AsyncPluginEnabled:        true,
+		AsyncResponseTimeout:      defaultRuntimeAsyncResponseTimeout,
+		AsyncMaxBackgroundWorkers: defaultRuntimeAsyncMaxBackgroundWorkers,
+		AsyncMaxBackgroundTasks:   defaultRuntimeAsyncMaxBackgroundTasks,
+		ProxyEnabled:              false,
+		ProxyURL:                  "",
+	}
+
+	if config.AppConfig == nil {
+		return defaults
+	}
+
+	if config.AppConfig.DefaultConcurrency > 0 {
+		defaults.DefaultConcurrency = config.AppConfig.DefaultConcurrency
+	}
+	if config.AppConfig.HTTPMaxConns > 0 {
+		defaults.HTTPMaxConns = config.AppConfig.HTTPMaxConns
+	}
+	defaults.AsyncPluginEnabled = config.AppConfig.AsyncPluginEnabled
+	if config.AppConfig.AsyncResponseTimeout > 0 {
+		defaults.AsyncResponseTimeout = config.AppConfig.AsyncResponseTimeout
+	}
+	if config.AppConfig.AsyncMaxBackgroundWorkers > 0 {
+		defaults.AsyncMaxBackgroundWorkers = config.AppConfig.AsyncMaxBackgroundWorkers
+	}
+	if config.AppConfig.AsyncMaxBackgroundTasks > 0 {
+		defaults.AsyncMaxBackgroundTasks = config.AppConfig.AsyncMaxBackgroundTasks
+	}
+	defaults.ProxyURL = strings.TrimSpace(config.AppConfig.ProxyURL)
+	defaults.ProxyEnabled = config.AppConfig.UseProxy && defaults.ProxyURL != ""
+
+	return defaults
+}
+
 func validateCacheSettingsInput(input CacheSettingsUpdateInput) error {
 	if input.SearchCacheTTLSeconds != nil {
 		if err := validateCacheSettingRange("search_cache_ttl_seconds", *input.SearchCacheTTLSeconds, minSearchCacheTTLSeconds, maxSearchCacheTTLSeconds); err != nil {
@@ -525,6 +733,51 @@ func validateCacheSettingsInput(input CacheSettingsUpdateInput) error {
 	}
 
 	return nil
+}
+
+func validateRuntimeSettings(settings RuntimeSettings) error {
+	if err := validateCacheSettingRange("default_concurrency", settings.DefaultConcurrency, minRuntimeDefaultConcurrency, maxRuntimeDefaultConcurrency); err != nil {
+		return err
+	}
+	if err := validateCacheSettingRange("http_max_conns", settings.HTTPMaxConns, minRuntimeHTTPMaxConns, maxRuntimeHTTPMaxConns); err != nil {
+		return err
+	}
+	if err := validateCacheSettingRange("async_response_timeout", settings.AsyncResponseTimeout, minRuntimeAsyncResponseTimeout, maxRuntimeAsyncResponseTimeout); err != nil {
+		return err
+	}
+	if err := validateCacheSettingRange("async_max_background_workers", settings.AsyncMaxBackgroundWorkers, minRuntimeAsyncMaxBackgroundWorkers, maxRuntimeAsyncMaxBackgroundWorkers); err != nil {
+		return err
+	}
+	if err := validateCacheSettingRange("async_max_background_tasks", settings.AsyncMaxBackgroundTasks, minRuntimeAsyncMaxBackgroundTasks, maxRuntimeAsyncMaxBackgroundTasks); err != nil {
+		return err
+	}
+	if settings.AsyncMaxBackgroundTasks < settings.AsyncMaxBackgroundWorkers {
+		return errors.New("最大任务数不能小于最大工作者数量")
+	}
+	if strings.TrimSpace(settings.ProxyURL) != "" {
+		if _, err := parseRuntimeProxyURL(settings.ProxyURL); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func normalizeRuntimeProxyURL(value string) string {
+	return strings.TrimSpace(value)
+}
+
+func parseRuntimeProxyURL(value string) (*url.URL, error) {
+	parsed, err := url.Parse(strings.TrimSpace(value))
+	if err != nil {
+		return nil, fmt.Errorf("代理地址格式无效: %w", err)
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" && parsed.Scheme != "socks5" {
+		return nil, errors.New("代理地址只支持 http、https 或 socks5")
+	}
+	if parsed.Host == "" {
+		return nil, errors.New("代理地址必须包含主机")
+	}
+	return parsed, nil
 }
 
 func validateCacheSettingRange(name string, value int, minValue int, maxValue int) error {

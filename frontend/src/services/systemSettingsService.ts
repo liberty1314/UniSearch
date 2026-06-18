@@ -72,6 +72,21 @@ export interface CacheSettingsResponse {
     last_preload_status?: string;
 }
 
+export interface RuntimeSettingsResponse {
+    default_concurrency: number;
+    http_max_conns: number;
+    async_plugin_enabled: boolean;
+    async_response_timeout: number;
+    async_max_background_workers: number;
+    async_max_background_tasks: number;
+    proxy_enabled: boolean;
+    proxy_url: string;
+    config_source: 'database';
+    restart_required_fields: string[];
+}
+
+export type RuntimeSettingsUpdatePayload = Partial<Omit<RuntimeSettingsResponse, 'config_source' | 'restart_required_fields'>>;
+
 export interface CachePreloadResponse {
     message: string;
     result: {
@@ -181,6 +196,19 @@ export class SystemSettingsService {
     ): Promise<CacheSettingsResponse> {
         void unusedToken;
         return apiClient.put<CacheSettingsResponse>('/admin/system-settings/cache', payload);
+    }
+
+    static async getRuntimeSettings(unusedToken: string): Promise<RuntimeSettingsResponse> {
+        void unusedToken;
+        return apiClient.get<RuntimeSettingsResponse>('/admin/system-settings/runtime');
+    }
+
+    static async updateRuntimeSettings(
+        unusedToken: string,
+        payload: RuntimeSettingsUpdatePayload
+    ): Promise<RuntimeSettingsResponse> {
+        void unusedToken;
+        return apiClient.put<RuntimeSettingsResponse>('/admin/system-settings/runtime', payload);
     }
 
     static async triggerHotRankingPreload(unusedToken: string): Promise<CachePreloadResponse> {

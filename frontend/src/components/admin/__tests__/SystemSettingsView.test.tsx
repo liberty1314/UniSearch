@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SystemSettingsView } from '../SystemSettingsView';
-import type { CacheSettingsResponse } from '@/services/systemSettingsService';
+import type { CacheSettingsResponse, RuntimeSettingsResponse } from '@/services/systemSettingsService';
 
 const createCacheSettings = (
   overrides: Partial<CacheSettingsResponse> = {},
@@ -24,6 +24,22 @@ const createCacheSettings = (
   ...overrides,
 });
 
+const createRuntimeSettings = (
+  overrides: Partial<RuntimeSettingsResponse> = {},
+): RuntimeSettingsResponse => ({
+  default_concurrency: 50,
+  http_max_conns: 1000,
+  async_plugin_enabled: true,
+  async_response_timeout: 4,
+  async_max_background_workers: 20,
+  async_max_background_tasks: 100,
+  proxy_enabled: false,
+  proxy_url: '',
+  config_source: 'database',
+  restart_required_fields: ['http_max_conns'],
+  ...overrides,
+});
+
 const controllerState = {
   enableUserAuth: true,
   enableUserLogin: true,
@@ -33,10 +49,12 @@ const controllerState = {
   tmdbReadAccessToken: '',
   tmdbCurrentTokenPreview: 'tmdb-token-preview',
   cacheSettings: createCacheSettings(),
+  runtimeSettings: createRuntimeSettings(),
   isLoading: false,
   isSaving: null,
   isSavingTMDB: false,
   isSavingCache: false,
+  isSavingRuntime: false,
   isTriggeringHotPreload: false,
   isClearingHotCache: false,
 };
@@ -45,6 +63,7 @@ const actions = {
   setPublicSiteUrl: vi.fn(),
   setTMDBReadAccessToken: vi.fn(),
   updateCacheField: vi.fn(),
+  updateRuntimeField: vi.fn(),
   handleToggleAuth: vi.fn(),
   handleToggleLogin: vi.fn(),
   handleToggleSignup: vi.fn(),
@@ -52,6 +71,7 @@ const actions = {
   handleSaveDisplayConfig: vi.fn(),
   handleSaveTMDBConfig: vi.fn(),
   handleSaveCacheSettings: vi.fn(),
+  handleSaveRuntimeSettings: vi.fn(),
   handleTriggerHotRankingPreload: vi.fn(),
   handleClearHotRankingCache: vi.fn(),
 };
@@ -70,6 +90,7 @@ actions.setTMDBReadAccessToken.mockImplementation((value: string) => {
 describe('SystemSettingsView TMDB section', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.history.replaceState({}, '', '/admin?view=system_settings');
     controllerState.tmdbReadAccessToken = '';
     controllerState.tmdbCurrentTokenPreview = 'tmdb-token-preview';
     controllerState.isSavingTMDB = false;
@@ -77,21 +98,69 @@ describe('SystemSettingsView TMDB section', () => {
       controllerState.tmdbReadAccessToken = value;
     });
     controllerState.cacheSettings = createCacheSettings();
+    controllerState.runtimeSettings = createRuntimeSettings();
   });
 
-  it('展示单输入框令牌配置并允许查看当前令牌', () => {
+  it('展示分组导航并默认显示账号与访问', () => {
     render(<SystemSettingsView />);
 
-    expect(screen.getByText('Redis 缓存策略')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '保存缓存配置' })).toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: '系统设置分组' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '账号与访问' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '搜索体验' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '运行配置' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '缓存与预热' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '外部服务' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '站点展示' })).toBeInTheDocument();
+    expect(screen.getByText('启用用户功能')).toBeInTheDocument();
+    expect(screen.queryByText('Redis 缓存策略')).not.toBeInTheDocument();
+  });
+
+  it('点击运行配置后展示并发、异步插件和代理配置', async () => {
+    const user = userEvent.setup();
+    render(<SystemSettingsView />);
+
+    await user.click(screen.getByRole('tab', { name: '运行配置' }));
+
+    expect(screen.getByText('并发配置')).toBeInTheDocument();
+    expect(screen.getByText('异步插件配置')).toBeInTheDocument();
+    expect(screen.getByText('代理配置')).toBeInTheDocument();
+    expect(screen.getByLabelText('默认并发数')).toHaveValue(50);
+    expect(screen.getByLabelText('最大连接数')).toHaveValue(1000);
+    expect(screen.getByLabelText('响应超时')).toHaveValue(4);
+    expect(screen.getByLabelText('最大工作者')).toHaveValue(20);
+    expect(screen.getByLabelText('最大任务')).toHaveValue(100);
+    expect(screen.getByLabelText('代理地址')).toBeDisabled();
+    expect(screen.getByRole('button', { name: '保存运行配置' })).toBeInTheDocument();
+  });
+
+  it('展示单输入框令牌配置并允许查看当前令牌', async () => {
+    const user = userEvent.setup();
+    render(<SystemSettingsView />);
+
+    await user.click(screen.getByRole('tab', { name: '外部服务' }));
+
+    expect(screen.queryByText('Redis 缓存策略')).not.toBeInTheDocument();
     expect(screen.getByText('TMDB Read Access Token')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '查看 TMDB 令牌' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '保存 TMDB 令牌' })).toBeDisabled();
   });
 
+  it('点击缓存与预热后仍能显示并保存缓存配置', async () => {
+    const user = userEvent.setup();
+    render(<SystemSettingsView />);
+
+    await user.click(screen.getByRole('tab', { name: '缓存与预热' }));
+
+    expect(screen.getByText('Redis 缓存策略')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '保存缓存配置' })).toBeInTheDocument();
+    expect(screen.queryByText('TMDB Read Access Token')).not.toBeInTheDocument();
+  });
+
   it('支持在单输入框中查看并编辑令牌', async () => {
     const user = userEvent.setup();
     render(<SystemSettingsView />);
+
+    await user.click(screen.getByRole('tab', { name: '外部服务' }));
 
     const input = screen.getByPlaceholderText('请输入 TMDB Read Access Token');
     expect(input).toHaveAttribute('type', 'password');
@@ -108,8 +177,11 @@ describe('SystemSettingsView TMDB section', () => {
     expect(actions.setTMDBReadAccessToken).toHaveBeenLastCalledWith('n');
   });
 
-  it('会以默认值下拉框展示缓存配置', () => {
+  it('会以默认值下拉框展示缓存配置', async () => {
+    const user = userEvent.setup();
     render(<SystemSettingsView />);
+
+    await user.click(screen.getByRole('tab', { name: '缓存与预热' }));
 
     expect(screen.getByRole('combobox', { name: '搜索缓存 TTL（秒）' })).toHaveTextContent('1 小时（默认）');
     expect(screen.getByRole('combobox', { name: '写队列长度' })).toHaveTextContent('256（默认）');
@@ -125,6 +197,8 @@ describe('SystemSettingsView TMDB section', () => {
     const user = userEvent.setup();
     render(<SystemSettingsView />);
 
+    await user.click(screen.getByRole('tab', { name: '缓存与预热' }));
+
     await user.click(screen.getByRole('combobox', { name: '搜索缓存 TTL（秒）' }));
     const ttlListbox = await screen.findByRole('listbox');
     await user.click(within(ttlListbox).getByRole('option', { name: '2 小时' }));
@@ -137,7 +211,8 @@ describe('SystemSettingsView TMDB section', () => {
     expect(actions.updateCacheField).toHaveBeenCalledWith('hot_ranking_preload_time', '06:00');
   });
 
-  it('优先展示后端返回的缓存下拉项', () => {
+  it('优先展示后端返回的缓存下拉项', async () => {
+    const user = userEvent.setup();
     controllerState.cacheSettings = createCacheSettings({
       search_cache_ttl_seconds: 5400,
       cache_setting_options: {
@@ -153,6 +228,8 @@ describe('SystemSettingsView TMDB section', () => {
     });
 
     render(<SystemSettingsView />);
+
+    await user.click(screen.getByRole('tab', { name: '缓存与预热' }));
 
     expect(screen.getByRole('combobox', { name: '搜索缓存 TTL（秒）' })).toHaveTextContent('90 分钟（默认）');
   });

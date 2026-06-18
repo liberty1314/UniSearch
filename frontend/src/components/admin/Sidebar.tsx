@@ -9,7 +9,6 @@ import {
     ADMIN_GENTLE_SPRING,
     ADMIN_PANEL_SURFACE_CLASSES,
     ADMIN_PANEL_SURFACE_HOVER_CLASSES,
-    ADMIN_SUBTLE_RAIL_CLASSES,
 } from '@/components/admin/adminDesign';
 
 interface NavItem {
@@ -164,20 +163,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
 
                         {renderNavList('desktop')}
 
-                        <div className="px-4 pb-4">
-                            <div className={cn(
-                                'rounded-[1.35rem] px-4 py-3 text-xs leading-5',
-                                ADMIN_SUBTLE_RAIL_CLASSES,
-                                'text-slate-500 dark:text-slate-300'
-                            )}>
-                                <p className="font-medium text-slate-700 dark:text-slate-200">
-                                    UniSearch 管理工作区
-                                </p>
-                                <p className="mt-1">
-                                    与个人中心共享同一套玻璃表面与交互节奏
-                                </p>
-                            </div>
-                        </div>
                     </motion.div>
                 </div>
 

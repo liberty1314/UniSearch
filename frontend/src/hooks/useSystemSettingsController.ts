@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { SystemSettingsService, type CacheSettingsResponse } from '@/services/systemSettingsService';
+import { SystemSettingsService, type CacheSettingsResponse, type RuntimeSettingsResponse } from '@/services/systemSettingsService';
 import { useAuthStore } from '@/stores/authStore';
 import { getErrorDataError, getErrorMessage } from '@/lib/error';
 import { resolvePublicSiteUrl } from '@/lib/publicSiteConfig';
@@ -8,6 +8,19 @@ import { DEFAULT_CACHE_SETTINGS, normalizeCacheSettings } from '@/lib/systemSett
 
 export type SavingState = 'auth' | 'login' | 'signup' | 'resource_detail' | 'display' | null;
 export type TMDBConfigSource = 'secret_manager' | 'env_fallback' | 'unconfigured';
+
+export const DEFAULT_RUNTIME_SETTINGS: RuntimeSettingsResponse = {
+  default_concurrency: 50,
+  http_max_conns: 1000,
+  async_plugin_enabled: true,
+  async_response_timeout: 4,
+  async_max_background_workers: 20,
+  async_max_background_tasks: 100,
+  proxy_enabled: false,
+  proxy_url: '',
+  config_source: 'database',
+  restart_required_fields: ['http_max_conns'],
+};
 
 export const useSystemSettingsController = () => {
   const { token } = useAuthStore();
@@ -21,11 +34,13 @@ export const useSystemSettingsController = () => {
   const [tmdbReadAccessToken, setTMDBReadAccessToken] = useState<string>('');
   const [tmdbCurrentTokenPreview, setTMDBCurrentTokenPreview] = useState<string>('');
   const [cacheSettings, setCacheSettings] = useState<CacheSettingsResponse>(DEFAULT_CACHE_SETTINGS);
+  const [runtimeSettings, setRuntimeSettings] = useState<RuntimeSettingsResponse>(DEFAULT_RUNTIME_SETTINGS);
   
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<SavingState>(null);
   const [isSavingTMDB, setIsSavingTMDB] = useState<boolean>(false);
   const [isSavingCache, setIsSavingCache] = useState<boolean>(false);
+  const [isSavingRuntime, setIsSavingRuntime] = useState<boolean>(false);
   const [isTriggeringHotPreload, setIsTriggeringHotPreload] = useState<boolean>(false);
   const [isClearingHotCache, setIsClearingHotCache] = useState<boolean>(false);
   
@@ -63,6 +78,12 @@ export const useSystemSettingsController = () => {
 
       const latestCacheSettings = await SystemSettingsService.getCacheSettings(token);
       setCacheSettings(normalizeCacheSettings(latestCacheSettings));
+
+      const latestRuntimeSettings = await SystemSettingsService.getRuntimeSettings(token);
+      setRuntimeSettings({
+        ...DEFAULT_RUNTIME_SETTINGS,
+        ...latestRuntimeSettings,
+      });
     } catch (error) {
       console.error('加载系统设置失败:', error);
       toast.error('加载系统设置失败：' + (getErrorDataError(error) || getErrorMessage(error)));
@@ -215,6 +236,13 @@ export const useSystemSettingsController = () => {
     }));
   }, []);
 
+  const updateRuntimeField = useCallback(<K extends keyof RuntimeSettingsResponse>(field: K, value: RuntimeSettingsResponse[K]) => {
+    setRuntimeSettings((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  }, []);
+
   const reloadCacheSettings = useCallback(async () => {
     if (!token) return;
 
@@ -248,6 +276,45 @@ export const useSystemSettingsController = () => {
       void reloadCacheSettings();
     } finally {
       setIsSavingCache(false);
+    }
+  };
+
+  const reloadRuntimeSettings = useCallback(async () => {
+    if (!token) return;
+
+    const latest = await SystemSettingsService.getRuntimeSettings(token);
+    setRuntimeSettings({
+      ...DEFAULT_RUNTIME_SETTINGS,
+      ...latest,
+    });
+  }, [token]);
+
+  const handleSaveRuntimeSettings = async () => {
+    if (!token) return;
+
+    setIsSavingRuntime(true);
+    try {
+      const nextSettings = await SystemSettingsService.updateRuntimeSettings(token, {
+        default_concurrency: runtimeSettings.default_concurrency,
+        http_max_conns: runtimeSettings.http_max_conns,
+        async_plugin_enabled: runtimeSettings.async_plugin_enabled,
+        async_response_timeout: runtimeSettings.async_response_timeout,
+        async_max_background_workers: runtimeSettings.async_max_background_workers,
+        async_max_background_tasks: runtimeSettings.async_max_background_tasks,
+        proxy_enabled: runtimeSettings.proxy_enabled,
+        proxy_url: runtimeSettings.proxy_url,
+      });
+      setRuntimeSettings({
+        ...DEFAULT_RUNTIME_SETTINGS,
+        ...nextSettings,
+      });
+      toast.success('运行配置已更新');
+    } catch (error) {
+      console.error('保存运行配置失败:', error);
+      toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
+      void reloadRuntimeSettings();
+    } finally {
+      setIsSavingRuntime(false);
     }
   };
 
@@ -293,10 +360,12 @@ export const useSystemSettingsController = () => {
       tmdbReadAccessToken,
       tmdbCurrentTokenPreview,
       cacheSettings,
+      runtimeSettings,
       isLoading,
       isSaving,
       isSavingTMDB,
       isSavingCache,
+      isSavingRuntime,
       isTriggeringHotPreload,
       isClearingHotCache,
     },
@@ -304,6 +373,7 @@ export const useSystemSettingsController = () => {
       setPublicSiteUrl,
       setTMDBReadAccessToken,
       updateCacheField,
+      updateRuntimeField,
       handleToggleAuth,
       handleToggleLogin,
       handleToggleSignup,
@@ -311,6 +381,7 @@ export const useSystemSettingsController = () => {
       handleSaveDisplayConfig,
       handleSaveTMDBConfig,
       handleSaveCacheSettings,
+      handleSaveRuntimeSettings,
       handleTriggerHotRankingPreload,
       handleClearHotRankingCache,
     }

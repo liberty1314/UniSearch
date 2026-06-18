@@ -1,6 +1,7 @@
 package service
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -89,6 +90,158 @@ func TestSystemSettingsServiceGetSettingsCreatesDefaults(t *testing.T) {
 
 	if settings.HotRankingCacheTTLSeconds != 43200 {
 		t.Fatalf("expected hot_ranking_cache_ttl_seconds to use env default 43200, got %d", settings.HotRankingCacheTTLSeconds)
+	}
+}
+
+func TestSystemSettingsServiceGetRuntimeSettingsUsesConfigDefaults(t *testing.T) {
+	oldConfig := config.AppConfig
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	config.AppConfig = &config.Config{
+		DefaultConcurrency:        42,
+		HTTPMaxConns:              1200,
+		AsyncPluginEnabled:        true,
+		AsyncResponseTimeout:      6,
+		AsyncResponseTimeoutDur:   6 * time.Second,
+		AsyncMaxBackgroundWorkers: 24,
+		AsyncMaxBackgroundTasks:   240,
+		ProxyURL:                  "socks5://127.0.0.1:7890",
+		UseProxy:                  true,
+	}
+
+	service := NewSystemSettingsService(newSystemSettingsTestDB(t))
+	runtimeSettings, err := service.GetRuntimeSettings()
+	if err != nil {
+		t.Fatalf("GetRuntimeSettings returned error: %v", err)
+	}
+
+	if runtimeSettings.DefaultConcurrency != 42 {
+		t.Fatalf("expected default concurrency 42, got %d", runtimeSettings.DefaultConcurrency)
+	}
+	if runtimeSettings.HTTPMaxConns != 1200 {
+		t.Fatalf("expected http max conns 1200, got %d", runtimeSettings.HTTPMaxConns)
+	}
+	if !runtimeSettings.AsyncPluginEnabled {
+		t.Fatalf("expected async plugin enabled default from app config")
+	}
+	if runtimeSettings.AsyncResponseTimeout != 6 {
+		t.Fatalf("expected async response timeout 6, got %d", runtimeSettings.AsyncResponseTimeout)
+	}
+	if runtimeSettings.AsyncMaxBackgroundWorkers != 24 || runtimeSettings.AsyncMaxBackgroundTasks != 240 {
+		t.Fatalf("expected async defaults workers=24 tasks=240, got %+v", runtimeSettings)
+	}
+	if !runtimeSettings.ProxyEnabled || runtimeSettings.ProxyURL != "socks5://127.0.0.1:7890" {
+		t.Fatalf("expected proxy defaults from app config, got %+v", runtimeSettings)
+	}
+}
+
+func TestSystemSettingsServiceUpdateRuntimeSettingsPreservesExistingFields(t *testing.T) {
+	service := NewSystemSettingsService(newSystemSettingsTestDB(t))
+
+	defaultConcurrency := 60
+	proxyEnabled := true
+	proxyURL := "https://proxy.example.com:8443"
+	initial, err := service.UpdateRuntimeSettings(RuntimeSettingsUpdateInput{
+		DefaultConcurrency: &defaultConcurrency,
+		ProxyEnabled:       &proxyEnabled,
+		ProxyURL:           &proxyURL,
+	})
+	if err != nil {
+		t.Fatalf("initial UpdateRuntimeSettings returned error: %v", err)
+	}
+	if initial.DefaultConcurrency != 60 || !initial.ProxyEnabled || initial.ProxyURL != proxyURL {
+		t.Fatalf("expected initial runtime settings to be saved, got %+v", initial)
+	}
+
+	workers := 32
+	updated, err := service.UpdateRuntimeSettings(RuntimeSettingsUpdateInput{
+		AsyncMaxBackgroundWorkers: &workers,
+	})
+	if err != nil {
+		t.Fatalf("partial UpdateRuntimeSettings returned error: %v", err)
+	}
+
+	if updated.DefaultConcurrency != 60 {
+		t.Fatalf("expected default concurrency to be preserved, got %d", updated.DefaultConcurrency)
+	}
+	if !updated.ProxyEnabled || updated.ProxyURL != proxyURL {
+		t.Fatalf("expected proxy fields to be preserved, got %+v", updated)
+	}
+	if updated.AsyncMaxBackgroundWorkers != 32 {
+		t.Fatalf("expected workers to be updated, got %d", updated.AsyncMaxBackgroundWorkers)
+	}
+}
+
+func TestSystemSettingsServiceUpdateRuntimeSettingsRejectsInvalidValues(t *testing.T) {
+	service := NewSystemSettingsService(newSystemSettingsTestDB(t))
+
+	defaultConcurrency := 0
+	if _, err := service.UpdateRuntimeSettings(RuntimeSettingsUpdateInput{
+		DefaultConcurrency: &defaultConcurrency,
+	}); err == nil {
+		t.Fatal("expected invalid default concurrency to be rejected")
+	}
+
+	workers := 20
+	tasks := 10
+	_, err := service.UpdateRuntimeSettings(RuntimeSettingsUpdateInput{
+		AsyncMaxBackgroundWorkers: &workers,
+		AsyncMaxBackgroundTasks:   &tasks,
+	})
+	if err == nil {
+		t.Fatal("expected max tasks smaller than workers to be rejected")
+	}
+	if !strings.Contains(err.Error(), "最大任务数不能小于最大工作者数量") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	proxyURL := "ftp://127.0.0.1:21"
+	if _, err := service.UpdateRuntimeSettings(RuntimeSettingsUpdateInput{
+		ProxyURL: &proxyURL,
+	}); err == nil {
+		t.Fatal("expected invalid proxy url to be rejected")
+	}
+}
+
+func TestSystemSettingsServiceApplyRuntimeSettingsUpdatesAppConfig(t *testing.T) {
+	oldConfig := config.AppConfig
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	config.AppConfig = &config.Config{}
+	service := NewSystemSettingsService(newSystemSettingsTestDB(t))
+
+	service.ApplyRuntimeSettings(&RuntimeSettings{
+		DefaultConcurrency:        70,
+		HTTPMaxConns:              2000,
+		AsyncPluginEnabled:        true,
+		AsyncResponseTimeout:      8,
+		AsyncMaxBackgroundWorkers: 40,
+		AsyncMaxBackgroundTasks:   400,
+		ProxyEnabled:              true,
+		ProxyURL:                  "http://127.0.0.1:8080",
+	})
+
+	if config.AppConfig.DefaultConcurrency != 70 {
+		t.Fatalf("expected app config default concurrency 70, got %d", config.AppConfig.DefaultConcurrency)
+	}
+	if config.AppConfig.HTTPMaxConns != 2000 {
+		t.Fatalf("expected app config http max conns 2000, got %d", config.AppConfig.HTTPMaxConns)
+	}
+	if !config.AppConfig.AsyncPluginEnabled {
+		t.Fatal("expected app config async plugin enabled")
+	}
+	if config.AppConfig.AsyncResponseTimeout != 8 || config.AppConfig.AsyncResponseTimeoutDur != 8*time.Second {
+		t.Fatalf("expected async timeout to be updated, got %d / %s", config.AppConfig.AsyncResponseTimeout, config.AppConfig.AsyncResponseTimeoutDur)
+	}
+	if config.AppConfig.AsyncMaxBackgroundWorkers != 40 || config.AppConfig.AsyncMaxBackgroundTasks != 400 {
+		t.Fatalf("expected async worker settings to be updated, got %+v", config.AppConfig)
+	}
+	if !config.AppConfig.UseProxy || config.AppConfig.ProxyURL != "http://127.0.0.1:8080" {
+		t.Fatalf("expected proxy config to be updated, got use=%v url=%q", config.AppConfig.UseProxy, config.AppConfig.ProxyURL)
 	}
 }
 

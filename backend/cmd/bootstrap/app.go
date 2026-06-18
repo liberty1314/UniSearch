@@ -65,6 +65,12 @@ func Initialize() (*App, error) {
 	fmt.Println("User 服务已启动（用户管理功能已启用）")
 
 	systemSettingsService := service.NewSystemSettingsService(database.GetDB())
+	if runtimeSettings, err := systemSettingsService.GetRuntimeSettings(); err != nil {
+		log.Printf("⚠️  读取运行配置失败，将继续使用启动配置: %v", err)
+	} else {
+		systemSettingsService.ApplyRuntimeSettings(runtimeSettings)
+		util.ReloadHTTPClient()
+	}
 	service.SetGlobalCacheSettingsService(systemSettingsService)
 	fmt.Println("SystemSettings 服务已启动（系统设置功能已启用）")
 

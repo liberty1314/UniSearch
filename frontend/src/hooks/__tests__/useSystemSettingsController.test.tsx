@@ -5,7 +5,9 @@ import { useSystemSettingsController } from '../useSystemSettingsController';
 const getSettingsAdminMock = vi.fn();
 const getTMDBSettingsMock = vi.fn();
 const getCacheSettingsMock = vi.fn();
+const getRuntimeSettingsMock = vi.fn();
 const updateTMDBSettingsMock = vi.fn();
+const updateRuntimeSettingsMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 
@@ -18,7 +20,9 @@ vi.mock('@/services/systemSettingsService', () => ({
     getSettingsAdmin: (...args: unknown[]) => getSettingsAdminMock(...args),
     getTMDBSettings: (...args: unknown[]) => getTMDBSettingsMock(...args),
     getCacheSettings: (...args: unknown[]) => getCacheSettingsMock(...args),
+    getRuntimeSettings: (...args: unknown[]) => getRuntimeSettingsMock(...args),
     updateTMDBSettings: (...args: unknown[]) => updateTMDBSettingsMock(...args),
+    updateRuntimeSettings: (...args: unknown[]) => updateRuntimeSettingsMock(...args),
     updateSettings: vi.fn(),
   },
 }));
@@ -62,6 +66,18 @@ describe('useSystemSettingsController TMDB config', () => {
       config_source: 'database',
       redis_connected: true,
     });
+    getRuntimeSettingsMock.mockResolvedValue({
+      default_concurrency: 50,
+      http_max_conns: 1000,
+      async_plugin_enabled: true,
+      async_response_timeout: 4,
+      async_max_background_workers: 20,
+      async_max_background_tasks: 100,
+      proxy_enabled: false,
+      proxy_url: '',
+      config_source: 'database',
+      restart_required_fields: ['http_max_conns'],
+    });
   });
 
   it('加载时会同步 TMDB 配置状态', async () => {
@@ -70,6 +86,56 @@ describe('useSystemSettingsController TMDB config', () => {
     await waitFor(() => {
       expect(result.current.state.tmdbCurrentTokenPreview).toBe('existing-token');
     });
+  });
+
+  it('加载时会同步运行配置状态', async () => {
+    const { result } = renderHook(() => useSystemSettingsController());
+
+    await waitFor(() => {
+      expect(result.current.state.isLoading).toBe(false);
+    });
+
+    expect(getRuntimeSettingsMock).toHaveBeenCalledWith('test-token');
+    expect(result.current.state.runtimeSettings.default_concurrency).toBe(50);
+    expect(result.current.state.runtimeSettings.restart_required_fields).toEqual(['http_max_conns']);
+  });
+
+  it('会更新并保存运行配置', async () => {
+    updateRuntimeSettingsMock.mockResolvedValue({
+      default_concurrency: 60,
+      http_max_conns: 1000,
+      async_plugin_enabled: true,
+      async_response_timeout: 5,
+      async_max_background_workers: 30,
+      async_max_background_tasks: 150,
+      proxy_enabled: true,
+      proxy_url: 'http://127.0.0.1:8080',
+      config_source: 'database',
+      restart_required_fields: ['http_max_conns'],
+    });
+
+    const { result } = renderHook(() => useSystemSettingsController());
+
+    await waitFor(() => {
+      expect(result.current.state.isLoading).toBe(false);
+    });
+
+    act(() => {
+      result.current.actions.updateRuntimeField('default_concurrency', 60);
+      result.current.actions.updateRuntimeField('async_response_timeout', 5);
+    });
+
+    await act(async () => {
+      await result.current.actions.handleSaveRuntimeSettings();
+    });
+
+    expect(updateRuntimeSettingsMock).toHaveBeenCalledWith('test-token', expect.objectContaining({
+      default_concurrency: 60,
+      async_response_timeout: 5,
+    }));
+    expect(result.current.state.runtimeSettings.default_concurrency).toBe(60);
+    expect(result.current.state.runtimeSettings.proxy_url).toBe('http://127.0.0.1:8080');
+    expect(toastSuccessMock).toHaveBeenCalledWith('运行配置已更新');
   });
 
   it('保存成功后会清空输入框并刷新状态', async () => {

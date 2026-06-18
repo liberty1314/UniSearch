@@ -162,6 +162,10 @@ describe('SystemInfoView', () => {
     expect(screen.getByText('搜索缓存 TTL:')).toBeInTheDocument();
     expect(screen.getByText('3600 秒')).toBeInTheDocument();
     expect(screen.getByText('任务 56 / 成功 56 / 失败 0')).toBeInTheDocument();
+    expect(screen.getByText('并发配置')).toBeInTheDocument();
+    expect(screen.getByText('代理配置')).toBeInTheDocument();
+    expect(screen.getByText('异步插件配置')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '前往运行配置设置' })).toBeInTheDocument();
     expect(container.innerHTML).toContain('dark:border-cyan-300/[0.14]');
     expect(container.innerHTML).toContain('dark:bg-slate-950/[0.48]');
 
@@ -170,5 +174,8 @@ describe('SystemInfoView', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '进入插件中心管理页' }));
     expect(navigateMock).toHaveBeenNthCalledWith(2, '/admin?view=plugin_management');
+
+    fireEvent.click(screen.getByRole('button', { name: '前往运行配置设置' }));
+    expect(navigateMock).toHaveBeenNthCalledWith(3, '/admin?view=system_settings&section=runtime');
   });
 });

@@ -37,6 +37,8 @@ func registerAdminRoutes(api *gin.RouterGroup, deps RouterDeps) {
 		admin.PUT("/system-settings/cache", UpdateCacheSettingsHandler)
 		admin.POST("/system-settings/cache/hot-ranking/preload", TriggerHotRankingPreloadHandler)
 		admin.DELETE("/system-settings/cache/hot-ranking", ClearHotRankingCacheHandler)
+		admin.GET("/system-settings/runtime", GetRuntimeSettingsHandler)
+		admin.PUT("/system-settings/runtime", UpdateRuntimeSettingsHandler)
 		admin.GET("/system-settings/tmdb", GetTMDBAdminSettingsHandler)
 		admin.PUT("/system-settings/tmdb", UpdateTMDBAdminSettingsHandler)
 

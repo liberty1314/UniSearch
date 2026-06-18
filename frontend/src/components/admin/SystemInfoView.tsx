@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { StatsCard } from './StatsCard';
 import {
@@ -264,6 +265,10 @@ export const SystemInfoView: React.FC = () => {
     };
   }, [navigate]);
 
+  const handleOpenRuntimeSettings = useCallback(() => {
+    navigate(`${buildAdminUrl('system_settings')}&section=runtime`);
+  }, [navigate]);
+
   if (isLoading) {
     return (
       <div className="text-center py-12">
@@ -443,13 +448,28 @@ export const SystemInfoView: React.FC = () => {
 
       <Card className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden')}>
         <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-cyan-300/[0.08] dark:bg-slate-950/[0.38]">
-          <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-            <Server className="w-5 h-5 text-blue-600 dark:text-cyan-300" />
-            系统配置
-          </CardTitle>
-          <CardDescription className="text-slate-500 dark:text-slate-400">
-            查看当前系统的运行配置参数
-          </CardDescription>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
+                <Server className="w-5 h-5 text-blue-600 dark:text-cyan-300" />
+                系统配置
+              </CardTitle>
+              <CardDescription className="text-slate-500 dark:text-slate-400">
+                查看当前系统的运行配置参数
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              aria-label="前往运行配置设置"
+              onClick={handleOpenRuntimeSettings}
+              className="self-start"
+            >
+              前往设置
+              <ArrowUpRight className="ml-2 h-3.5 w-3.5" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

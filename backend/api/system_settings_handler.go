@@ -303,6 +303,75 @@ func UpdateCacheSettingsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+func GetRuntimeSettingsHandler(c *gin.Context) {
+	if systemSettingsService == nil {
+		writeRuntimeAdminError(c, http.StatusInternalServerError, "系统设置服务未初始化")
+		return
+	}
+
+	settings, err := systemSettingsService.GetRuntimeSettings()
+	if err != nil {
+		writeRuntimeAdminError(c, http.StatusInternalServerError, "获取运行配置失败："+err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, buildRuntimeSettingsResponse(settings))
+}
+
+func UpdateRuntimeSettingsHandler(c *gin.Context) {
+	if systemSettingsService == nil {
+		writeRuntimeAdminError(c, http.StatusInternalServerError, "系统设置服务未初始化")
+		return
+	}
+
+	var req struct {
+		DefaultConcurrency        *int    `json:"default_concurrency"`
+		HTTPMaxConns              *int    `json:"http_max_conns"`
+		AsyncPluginEnabled        *bool   `json:"async_plugin_enabled"`
+		AsyncResponseTimeout      *int    `json:"async_response_timeout"`
+		AsyncMaxBackgroundWorkers *int    `json:"async_max_background_workers"`
+		AsyncMaxBackgroundTasks   *int    `json:"async_max_background_tasks"`
+		ProxyEnabled              *bool   `json:"proxy_enabled"`
+		ProxyURL                  *string `json:"proxy_url"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		writeRuntimeAdminError(c, http.StatusBadRequest, "请求参数错误："+err.Error())
+		return
+	}
+
+	if req.DefaultConcurrency == nil &&
+		req.HTTPMaxConns == nil &&
+		req.AsyncPluginEnabled == nil &&
+		req.AsyncResponseTimeout == nil &&
+		req.AsyncMaxBackgroundWorkers == nil &&
+		req.AsyncMaxBackgroundTasks == nil &&
+		req.ProxyEnabled == nil &&
+		req.ProxyURL == nil {
+		writeRuntimeAdminError(c, http.StatusBadRequest, "请求参数错误：至少需要提供一个运行配置字段")
+		return
+	}
+
+	settings, err := systemSettingsService.UpdateRuntimeSettings(service.RuntimeSettingsUpdateInput{
+		DefaultConcurrency:        req.DefaultConcurrency,
+		HTTPMaxConns:              req.HTTPMaxConns,
+		AsyncPluginEnabled:        req.AsyncPluginEnabled,
+		AsyncResponseTimeout:      req.AsyncResponseTimeout,
+		AsyncMaxBackgroundWorkers: req.AsyncMaxBackgroundWorkers,
+		AsyncMaxBackgroundTasks:   req.AsyncMaxBackgroundTasks,
+		ProxyEnabled:              req.ProxyEnabled,
+		ProxyURL:                  req.ProxyURL,
+	})
+	if err != nil {
+		writeRuntimeAdminError(c, http.StatusBadRequest, "更新运行配置失败："+err.Error())
+		return
+	}
+
+	response := buildRuntimeSettingsResponse(settings)
+	response["message"] = "运行配置已更新"
+	c.JSON(http.StatusOK, response)
+}
+
 func TriggerHotRankingPreloadHandler(c *gin.Context) {
 	if systemSettingsService == nil {
 		writeCacheAdminError(c, http.StatusInternalServerError, "系统设置服务未初始化")
@@ -381,7 +450,28 @@ func buildCacheSettingsResponse(settings *service.CacheSettings) gin.H {
 	return response
 }
 
+func buildRuntimeSettingsResponse(settings *service.RuntimeSettings) gin.H {
+	return gin.H{
+		"default_concurrency":          settings.DefaultConcurrency,
+		"http_max_conns":               settings.HTTPMaxConns,
+		"async_plugin_enabled":         settings.AsyncPluginEnabled,
+		"async_response_timeout":       settings.AsyncResponseTimeout,
+		"async_max_background_workers": settings.AsyncMaxBackgroundWorkers,
+		"async_max_background_tasks":   settings.AsyncMaxBackgroundTasks,
+		"proxy_enabled":                settings.ProxyEnabled,
+		"proxy_url":                    settings.ProxyURL,
+		"config_source":                "database",
+		"restart_required_fields":      []string{"http_max_conns"},
+	}
+}
+
 func writeCacheAdminError(c *gin.Context, statusCode int, message string) {
+	c.JSON(statusCode, gin.H{
+		"error": message,
+	})
+}
+
+func writeRuntimeAdminError(c *gin.Context, statusCode int, message string) {
 	c.JSON(statusCode, gin.H{
 		"error": message,
 	})

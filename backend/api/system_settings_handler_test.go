@@ -438,6 +438,141 @@ func TestUpdateCacheSettingsHandlerRejectsEmptyPayload(t *testing.T) {
 	}
 }
 
+func TestGetRuntimeSettingsHandlerReturnsRuntimeConfig(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+	config.AppConfig = &config.Config{
+		DefaultConcurrency:        55,
+		HTTPMaxConns:              1500,
+		AsyncPluginEnabled:        true,
+		AsyncResponseTimeout:      7,
+		AsyncMaxBackgroundWorkers: 35,
+		AsyncMaxBackgroundTasks:   350,
+		ProxyURL:                  "socks5://127.0.0.1:7890",
+		UseProxy:                  true,
+	}
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodGet, "/api/admin/system-settings/runtime", nil)
+
+	GetRuntimeSettingsHandler(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response["default_concurrency"] != float64(55) {
+		t.Fatalf("expected default concurrency 55, got %v", response["default_concurrency"])
+	}
+	if response["http_max_conns"] != float64(1500) {
+		t.Fatalf("expected http max conns 1500, got %v", response["http_max_conns"])
+	}
+	if response["async_response_timeout"] != float64(7) {
+		t.Fatalf("expected async timeout 7, got %v", response["async_response_timeout"])
+	}
+	if response["proxy_enabled"] != true || response["proxy_url"] != "socks5://127.0.0.1:7890" {
+		t.Fatalf("expected proxy fields from runtime settings, got %v", response)
+	}
+	if response["config_source"] != "database" {
+		t.Fatalf("expected config_source database, got %v", response["config_source"])
+	}
+	fields, ok := response["restart_required_fields"].([]any)
+	if !ok || len(fields) != 1 || fields[0] != "http_max_conns" {
+		t.Fatalf("expected restart_required_fields to include http_max_conns, got %v", response["restart_required_fields"])
+	}
+}
+
+func TestUpdateRuntimeSettingsHandlerPersistsRuntimeConfig(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+	config.AppConfig = &config.Config{}
+
+	body := bytes.NewBufferString(`{
+		"default_concurrency":60,
+		"http_max_conns":2000,
+		"async_plugin_enabled":true,
+		"async_response_timeout":5,
+		"async_max_background_workers":30,
+		"async_max_background_tasks":150,
+		"proxy_enabled":true,
+		"proxy_url":"http://127.0.0.1:8080"
+	}`)
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodPut, "/api/admin/system-settings/runtime", body)
+	context.Request.Header.Set("Content-Type", "application/json")
+
+	UpdateRuntimeSettingsHandler(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response["message"] != "运行配置已更新" {
+		t.Fatalf("expected success message, got %v", response["message"])
+	}
+	if response["default_concurrency"] != float64(60) {
+		t.Fatalf("expected default_concurrency 60, got %v", response["default_concurrency"])
+	}
+	if response["proxy_enabled"] != true || response["proxy_url"] != "http://127.0.0.1:8080" {
+		t.Fatalf("expected proxy fields to be persisted, got %v", response)
+	}
+	if config.AppConfig.DefaultConcurrency != 60 || config.AppConfig.ProxyURL != "http://127.0.0.1:8080" {
+		t.Fatalf("expected runtime config to apply to app config, got %+v", config.AppConfig)
+	}
+}
+
+func TestUpdateRuntimeSettingsHandlerRejectsEmptyPayload(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodPut, "/api/admin/system-settings/runtime", bytes.NewBufferString(`{}`))
+	context.Request.Header.Set("Content-Type", "application/json")
+
+	UpdateRuntimeSettingsHandler(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestUpdateRuntimeSettingsHandlerRejectsInvalidPayload(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+
+	body := bytes.NewBufferString(`{
+		"async_max_background_workers":20,
+		"async_max_background_tasks":10
+	}`)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodPut, "/api/admin/system-settings/runtime", body)
+	context.Request.Header.Set("Content-Type", "application/json")
+
+	UpdateRuntimeSettingsHandler(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), "最大任务数不能小于最大工作者数量") {
+		t.Fatalf("expected invalid runtime settings message, got %s", recorder.Body.String())
+	}
+}
+
 func TestTriggerHotRankingPreloadHandlerRunsWarmTask(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	SetSystemSettingsService(newSystemSettingsHandlerService(t))

@@ -861,3 +861,36 @@
     - frontend/src/services/userService.ts
     - frontend/src/types/api.ts
     - docs/readme_2606.md
+
+- [2026-06-18 19:39] refactor(admin): 拆分重构管理员系统设置面板布局与交互
+  - Body: 将原先单页平铺的系统设置面板按场景重构为账号准入、搜索体验、运行参数、缓存预热和外部服务等多个独立模块。新增了左侧导航与锚点布局，优化了长表单下的浏览与保存体验，同时后端同步扩展了部分细粒度配置项的读写支持。在侧边栏移除了冗余的工作区底部说明。
+  - Files:
+    - backend/api/router_admin.go
+    - backend/api/system_settings_handler.go
+    - backend/api/system_settings_handler_test.go
+    - backend/cmd/bootstrap/app.go
+    - backend/model/system_settings.go
+    - backend/service/system_settings_service.go
+    - backend/service/system_settings_service_test.go
+    - backend/util/http_util.go
+    - frontend/src/components/admin/Sidebar.tsx
+    - frontend/src/components/admin/SystemInfoView.tsx
+    - frontend/src/components/admin/SystemSettingsView.tsx
+    - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
+    - frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx
+    - frontend/src/components/admin/system-settings/AccountAccessSettingsPanel.tsx
+    - frontend/src/components/admin/system-settings/CacheSettingsPanel.tsx
+    - frontend/src/components/admin/system-settings/ExternalServicesSettingsPanel.tsx
+    - frontend/src/components/admin/system-settings/RuntimeSettingsPanel.tsx
+    - frontend/src/components/admin/system-settings/SearchExperienceSettingsPanel.tsx
+    - frontend/src/components/admin/system-settings/SiteDisplaySettingsPanel.tsx
+    - frontend/src/components/admin/system-settings/SystemSettingsLayout.tsx
+    - frontend/src/components/admin/system-settings/SystemSettingsSectionNav.tsx
+    - frontend/src/components/admin/system-settings/panelStyles.ts
+    - frontend/src/components/admin/system-settings/types.ts
+    - frontend/src/components/ui/tabs-6.tsx
+    - frontend/src/hooks/__tests__/useSystemSettingsController.test.tsx
+    - frontend/src/hooks/useSystemSettingsController.ts
+    - frontend/src/services/__tests__/systemSettingsService.test.ts
+    - frontend/src/services/systemSettingsService.ts
+    - docs/readme_2606.md
