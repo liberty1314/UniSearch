@@ -3,8 +3,10 @@ import { AlertTriangle, ArrowRight, Clock3, ShieldCheck, Sparkles } from 'lucide
 import type { AccountProfile } from '@/components/account/accountTypes';
 import { getAccountRoleLabel } from '@/components/account/accountTypes';
 import {
+  ACCOUNT_ACTION_ICON_CLASSES,
   ACCOUNT_PANEL_SURFACE_CLASSES,
   ACCOUNT_PANEL_SURFACE_HOVER_CLASSES,
+  ACCOUNT_PRIMARY_ACTION_BUTTON_CLASSES,
 } from '@/components/account/accountDesign';
 import { Button } from '@/components/ui/button';
 
@@ -75,10 +77,10 @@ const AccountOverviewShowcase: React.FC<AccountOverviewShowcaseProps> = ({
           <Button
             type="button"
             onClick={onOpenSecurity}
-            className="group h-12 rounded-full bg-[#0071e3] px-6 text-[15px] font-semibold tracking-wide text-white shadow-[0_4px_14px_rgba(0,113,227,0.3)] transition-all hover:bg-[#0077ED] hover:shadow-[0_6px_20px_rgba(0,113,227,0.4)] hover:-translate-y-0.5"
+            className={ACCOUNT_PRIMARY_ACTION_BUTTON_CLASSES}
           >
             立即修改密码
-            <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" strokeWidth={2.5} />
+            <ArrowRight className={ACCOUNT_ACTION_ICON_CLASSES} strokeWidth={2.5} />
           </Button>
         </div>
       </div>

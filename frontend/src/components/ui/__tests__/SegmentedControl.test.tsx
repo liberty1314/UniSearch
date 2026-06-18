@@ -44,5 +44,29 @@ describe('SegmentedControl', () => {
     );
 
     expect(screen.getByTestId('category-segmented-control').className).toContain('flex-nowrap');
+    expect(screen.getByTestId('category-segmented-control').className).toContain('rounded-[1rem]');
+  });
+
+  it('支持 21st 分段按钮风格的胶囊变体', () => {
+    render(
+      <SegmentedControl
+        ariaLabel="主题偏好"
+        value="system"
+        onChange={vi.fn()}
+        options={[
+          { value: 'system', label: '跟随系统' },
+          { value: 'light', label: '浅色' },
+          { value: 'dark', label: '深色' },
+        ]}
+        testId="account-theme-segmented-control"
+        variant="pill"
+      />,
+    );
+
+    expect(screen.getByTestId('account-theme-segmented-control').className).toContain('rounded-[1.35rem]');
+    expect(screen.getByTestId('account-theme-segmented-control').className).toContain('shadow-[0_10px_24px_rgba(15,23,42,0.08)]');
+    expect(screen.getByRole('button', { name: '跟随系统' }).className).toContain('rounded-[1rem]');
+    expect(screen.getByRole('button', { name: '跟随系统' }).className).toContain('bg-[#2554e8]');
+    expect(screen.getByRole('button', { name: '浅色' }).className).toContain('hover:bg-blue-50/80');
   });
 });

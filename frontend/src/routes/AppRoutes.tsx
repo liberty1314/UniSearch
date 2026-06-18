@@ -32,8 +32,8 @@ import { shouldUseLazyRouteFallback } from '@/routes/appRouteUtils';
 
 
 
-const RouteFallback: React.FC = () => (
-  <div className="flex min-h-[40vh] items-center justify-center px-6">
+export const RouteFallback: React.FC = () => (
+  <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-6">
     <div className="flex flex-col items-center gap-4 rounded-[1.8rem] border border-white/60 bg-white/75 px-8 py-7 text-center shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/55">
       <div className="h-10 w-10 animate-spin rounded-full border-2 border-slate-200 border-t-cyan-500 dark:border-slate-700 dark:border-t-cyan-400" />
       <div className="space-y-1">

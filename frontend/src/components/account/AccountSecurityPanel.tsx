@@ -4,6 +4,7 @@ import AccountSectionHero from '@/components/account/AccountSectionHero';
 import {
   ACCOUNT_PANEL_SURFACE_CLASSES,
   ACCOUNT_PANEL_SURFACE_HOVER_CLASSES,
+  ACCOUNT_PRIMARY_ACTION_BUTTON_CLASSES,
 } from '@/components/account/accountDesign';
 import { AppleInput } from '@/components/ui/AppleInput';
 import { Button } from '@/components/ui/button';
@@ -142,7 +143,7 @@ const AccountSecurityPanel: React.FC<AccountSecurityPanelProps> = ({
                 type="submit"
                 loading={isSaving}
                 disabled={!canSubmit || isSaving}
-                className="h-11 rounded-[8px] bg-[#0071e3] px-6 text-[17px] font-normal text-white shadow-none hover:bg-[#0077ED] active:bg-[#ededf2] active:text-[#1d1d1f]"
+                className={ACCOUNT_PRIMARY_ACTION_BUTTON_CLASSES}
               >
                 {isSaving ? '保存中...' : '更新密码'}
               </Button>

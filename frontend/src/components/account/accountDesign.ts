@@ -18,3 +18,12 @@ export const ACCOUNT_PANEL_SURFACE_HOVER_CLASSES = GLASS_PANEL_SURFACE_HOVER_CLA
 export const ACCOUNT_PANEL_EYEBROW_CLASSES = GLASS_PANEL_EYEBROW_CLASSES;
 export const ACCOUNT_PANEL_TITLE_CLASSES = GLASS_PANEL_TITLE_CLASSES;
 export const ACCOUNT_PANEL_BADGE_CLASSES = GLASS_PANEL_BADGE_CLASSES;
+
+export const ACCOUNT_PRIMARY_ACTION_BUTTON_CLASSES =
+  'group h-12 rounded-full border border-blue-600 bg-[#0071e3] px-7 text-[15px] font-semibold tracking-wide text-white shadow-[0_12px_28px_rgba(0,113,227,0.28)] transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-500 hover:bg-[#0077ED] hover:shadow-[0_16px_36px_rgba(0,113,227,0.36)] active:translate-y-0 active:scale-[0.98] active:bg-[#0068d1] dark:border-blue-400 dark:bg-blue-500 dark:hover:bg-blue-400';
+
+export const ACCOUNT_SECONDARY_ACTION_BUTTON_CLASSES =
+  'group h-11 rounded-full border border-blue-200 bg-blue-50/80 px-6 text-[15px] font-semibold tracking-wide text-blue-700 shadow-[0_10px_24px_rgba(0,113,227,0.12)] transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-100 hover:text-blue-800 hover:shadow-[0_14px_30px_rgba(0,113,227,0.18)] active:translate-y-0 active:scale-[0.98] dark:border-cyan-300/30 dark:bg-cyan-400/10 dark:text-cyan-100 dark:hover:border-cyan-300/45 dark:hover:bg-cyan-400/15';
+
+export const ACCOUNT_ACTION_ICON_CLASSES =
+  'ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1';

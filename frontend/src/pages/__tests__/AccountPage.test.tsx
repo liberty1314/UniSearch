@@ -91,6 +91,23 @@ vi.mock('@/lib/error', () => ({
   getErrorMessage: (_error: unknown, fallback?: string) => fallback ?? '请求失败',
 }));
 
+const expectPrimaryAccountActionButton = (button: HTMLElement) => {
+  expect(button.className).toContain('rounded-full');
+  expect(button.className).toContain('bg-[#0071e3]');
+  expect(button.className).toContain('shadow-[0_12px_28px_rgba(0,113,227,0.28)]');
+  expect(button.className).toContain('hover:-translate-y-0.5');
+  expect(button.className).toContain('active:scale-[0.98]');
+};
+
+const expectSecondaryAccountActionButton = (button: HTMLElement) => {
+  expect(button.className).toContain('rounded-full');
+  expect(button.className).toContain('border-blue-200');
+  expect(button.className).toContain('bg-blue-50/80');
+  expect(button.className).toContain('text-blue-700');
+  expect(button.className).toContain('hover:-translate-y-0.5');
+  expect(button.className).toContain('active:scale-[0.98]');
+};
+
 describe('AccountPage', () => {
   const renderAccountPage = () =>
     render(
@@ -142,11 +159,16 @@ describe('AccountPage', () => {
     expect(screen.getByText('活跃状态')).toBeInTheDocument();
     expect(screen.getByText('快捷动作')).toBeInTheDocument();
     expect(screen.getByText('安全提示')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '立即修改密码' })).toBeInTheDocument();
+    const overviewPasswordButton = screen.getByRole('button', { name: '立即修改密码' });
+    expect(overviewPasswordButton).toBeInTheDocument();
+    expectPrimaryAccountActionButton(overviewPasswordButton);
+    expect(overviewPasswordButton.querySelector('svg')?.className.baseVal).toContain('group-hover:translate-x-1');
     expect(screen.queryByText(/API Key/i)).not.toBeInTheDocument();
     expect(screen.queryByText('搜索活动')).not.toBeInTheDocument();
     expect(screen.queryByText('搜索历史')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /账号安全/ })).toHaveClass('dark:hover:bg-cyan-400/[0.08]');
+    const securityNavButton = screen.getByRole('button', { name: /账号安全/ });
+    expect(securityNavButton).toHaveClass('dark:hover:bg-cyan-400/[0.08]');
+    expect(securityNavButton.className).not.toContain('shadow-[0_12px_28px_rgba(0,113,227,0.28)]');
     expect(container.innerHTML).toContain('dark:bg-slate-950/[0.82]');
 
     expect(screen.queryByLabelText('当前密码')).not.toBeInTheDocument();
@@ -158,14 +180,19 @@ describe('AccountPage', () => {
     expect(screen.getByRole('group', { name: '默认结果视图' })).toBeInTheDocument();
     expect(screen.queryByRole('switch', { name: '公告提醒' })).not.toBeInTheDocument();
     expect(screen.queryByText('公告提醒')).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: '立即修改密码' }));
+    expect(screen.getByRole('group', { name: '主题偏好' }).className).toContain('rounded-[1.35rem]');
+    expect(screen.getByRole('group', { name: '默认结果视图' }).className).toContain('rounded-[1.35rem]');
+    expect(screen.getByRole('button', { name: '跟随系统' }).className).toContain('bg-[#2554e8]');
+    expect(screen.getByRole('button', { name: '聚合视图' }).className).toContain('bg-[#2554e8]');
+    expectPrimaryAccountActionButton(screen.getByRole('button', { name: '保存偏好' }));
+    await user.click(screen.getByRole('button', { name: /账号安全/ }));
 
     expect(screen.getByText('安全设置')).toBeInTheDocument();
     expect(screen.getByText('ACCOUNT SECURITY')).toBeInTheDocument();
     expect(screen.getByText('密码更新建议')).toBeInTheDocument();
     expect(screen.getAllByText('密码长度需在 8-20 个字符之间').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('当前密码')).toBeInTheDocument();
+    expectPrimaryAccountActionButton(screen.getByRole('button', { name: '更新密码' }));
     expect(screen.queryByText('安全提示')).not.toBeInTheDocument();
   });
 
@@ -191,6 +218,7 @@ describe('AccountPage', () => {
     });
     expect(screen.getByText('个人资料暂时无法同步')).toBeInTheDocument();
     expect(screen.getByText('仍可调整本地偏好，或稍后重新加载账号资料。')).toBeInTheDocument();
+    expectSecondaryAccountActionButton(screen.getByRole('button', { name: '重新加载' }));
 
     await user.click(screen.getByRole('button', { name: '重新加载' }));
 

@@ -3,6 +3,7 @@ import { RefreshCw } from 'lucide-react';
 import {
   ACCOUNT_PANEL_SURFACE_CLASSES,
   ACCOUNT_PANEL_SURFACE_HOVER_CLASSES,
+  ACCOUNT_SECONDARY_ACTION_BUTTON_CLASSES,
 } from '@/components/account/accountDesign';
 import { Button } from '@/components/ui/button';
 
@@ -24,10 +25,9 @@ const AccountErrorState: React.FC<AccountErrorStateProps> = ({ isRetrying, onRet
       </div>
       <Button
         type="button"
-        variant="outline"
         loading={isRetrying}
         onClick={onRetry}
-        className="h-10 rounded-[8px]"
+        className={ACCOUNT_SECONDARY_ACTION_BUTTON_CLASSES}
       >
         <RefreshCw className="mr-2 h-4 w-4" />
         重新加载

@@ -915,3 +915,18 @@
     - frontend/src/pages/Admin.tsx
     - frontend/src/pages/Home.tsx
     - docs/readme_2606.md
+
+- [2026-06-19 00:37] style(frontend): 优化个人中心按钮样式并统一骨架屏布局高度
+  - Body: 升级了个人中心模块的主按钮视觉样式，应用了统一定义的蓝底高阴影设计与动态缩放交互效果。扩展了分段控制器（SegmentedControl）以支持深色模式下具有强发光和圆角反馈的 pill 变体。此外修复了全局懒加载路由占位符（RouteFallback）的高度坍塌问题，使其在页面加载中能稳定居中对齐，并补充了样式断言测试。
+  - Files:
+    - frontend/src/components/account/AccountErrorState.tsx
+    - frontend/src/components/account/AccountOverviewShowcase.tsx
+    - frontend/src/components/account/AccountPreferencesPanel.tsx
+    - frontend/src/components/account/AccountSecurityPanel.tsx
+    - frontend/src/components/account/accountDesign.ts
+    - frontend/src/components/ui/SegmentedControl.tsx
+    - frontend/src/components/ui/__tests__/SegmentedControl.test.tsx
+    - frontend/src/pages/__tests__/AccountPage.test.tsx
+    - frontend/src/routes/AppRoutes.tsx
+    - frontend/src/routes/__tests__/AppRoutes.test.tsx
+    - docs/readme_2606.md

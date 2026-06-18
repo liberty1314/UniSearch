@@ -9,6 +9,7 @@ import type {
 import {
   ACCOUNT_PANEL_SURFACE_CLASSES,
   ACCOUNT_PANEL_SURFACE_HOVER_CLASSES,
+  ACCOUNT_PRIMARY_ACTION_BUTTON_CLASSES,
 } from '@/components/account/accountDesign';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,6 @@ const AccountPreferencesPanel: React.FC<AccountPreferencesPanelProps> = ({
   preferences,
   onPreferencesChange,
   onSave,
-  onOpenSecurity,
 }) => {
   const updatePreferences = (nextPreferences: Partial<AccountPreferences>) => {
     onPreferencesChange({
@@ -49,6 +49,7 @@ const AccountPreferencesPanel: React.FC<AccountPreferencesPanelProps> = ({
               ariaLabel="主题偏好"
               value={preferences.theme}
               onChange={(theme) => updatePreferences({ theme })}
+              variant="pill"
               options={[
                 { value: 'system', label: '跟随系统' },
                 { value: 'light', label: '浅色' },
@@ -66,6 +67,7 @@ const AccountPreferencesPanel: React.FC<AccountPreferencesPanelProps> = ({
               ariaLabel="默认结果视图"
               value={preferences.resultView}
               onChange={(resultView) => updatePreferences({ resultView })}
+              variant="pill"
               options={[
                 { value: 'merge', label: '聚合视图' },
                 { value: 'list', label: '列表视图' },
@@ -87,10 +89,7 @@ const AccountPreferencesPanel: React.FC<AccountPreferencesPanelProps> = ({
           </fieldset>
 
           <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
-            <Button type="button" variant="outline" className="h-11 rounded-[8px]" onClick={onOpenSecurity}>
-              立即修改密码
-            </Button>
-            <Button type="button" className="h-11 rounded-[8px] bg-[#0071e3] px-6 text-white" onClick={onSave}>
+            <Button type="button" className={ACCOUNT_PRIMARY_ACTION_BUTTON_CLASSES} onClick={onSave}>
               保存偏好
             </Button>
           </div>

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import AppRoutes from '@/routes/AppRoutes';
+import AppRoutes, { RouteFallback } from '@/routes/AppRoutes';
 import { shouldUseLazyRouteFallback } from '@/routes/appRouteUtils';
 
 vi.mock('@/components/Navbar', () => ({
@@ -89,6 +89,17 @@ describe('AppRoutes', () => {
     expect(shouldUseLazyRouteFallback('/trending')).toBe(true);
     expect(shouldUseLazyRouteFallback('/resource/resource-1')).toBe(true);
     expect(shouldUseLazyRouteFallback('/login')).toBe(true);
+  });
+
+  it('keeps the lazy route loading card centered in the viewport', () => {
+    const { container } = render(<RouteFallback />);
+    const wrapper = container.firstElementChild;
+
+    expect(wrapper).toHaveClass('min-h-[calc(100vh-4rem)]');
+    expect(wrapper).toHaveClass('items-center');
+    expect(wrapper).toHaveClass('justify-center');
+    expect(wrapper?.className).not.toContain('min-h-[40vh]');
+    expect(screen.getByText('正在整理页面内容')).toBeInTheDocument();
   });
 
   it('renders the cinematic footer only on the home page', async () => {
