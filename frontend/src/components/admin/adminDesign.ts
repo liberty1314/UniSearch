@@ -6,10 +6,10 @@ import {
 import { ADMIN_COMPACT_SURFACE_CLASSES, ADMIN_DENSITY } from '@/components/admin/adminDensity';
 
 export const ADMIN_PAGE_SHELL_CLASSES =
-  'relative min-h-[calc(100vh-4rem)] overflow-hidden bg-[#f5f5f7] text-slate-900 dark:bg-[#000000] dark:text-white';
+  'relative min-h-[calc(100vh-4rem)] overflow-hidden bg-white text-slate-900 dark:bg-[linear-gradient(180deg,#020617_0%,#071827_48%,#020617_100%)] dark:text-white';
 
 export const ADMIN_PAGE_BACKDROP_CLASSES =
-  'pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(8,145,178,0.08),transparent_28%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.08),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.06),transparent_26%)]';
+  'pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_8%,rgba(14,165,233,0.06),transparent_26%)] dark:bg-[radial-gradient(circle_at_18%_10%,rgba(37,99,235,0.20),transparent_30%),radial-gradient(circle_at_78%_14%,rgba(34,211,238,0.14),transparent_28%),linear-gradient(rgba(34,211,238,0.055)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.055)_1px,transparent_1px)] dark:bg-[length:auto,auto,48px_48px,48px_48px]';
 
 export const ADMIN_CONTENT_WRAPPER_CLASSES =
   'relative mx-auto flex w-full max-w-[1720px] gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8';
@@ -29,7 +29,7 @@ export const ADMIN_SECTION_ICON_CLASSES =
 export const ADMIN_PANEL_SURFACE_CLASSES =
   `${ADMIN_COMPACT_SURFACE_CLASSES} ${ADMIN_DENSITY.cardRadius} ${ADMIN_DENSITY.cardShadow}`;
 export const ADMIN_PANEL_SURFACE_HOVER_CLASSES =
-  'hover:border-cyan-200/70 hover:bg-white/78 dark:hover:border-cyan-300/[0.26] dark:hover:bg-slate-950/[0.72]';
+  'hover:border-cyan-200/70 hover:bg-white hover:shadow-[0_16px_40px_rgba(15,23,42,0.08)] dark:hover:border-cyan-300/[0.28] dark:hover:bg-slate-900/[0.66] dark:hover:shadow-[0_20px_52px_rgba(8,47,73,0.32)]';
 export const ADMIN_PANEL_EYEBROW_CLASSES = ACCOUNT_PANEL_EYEBROW_CLASSES;
 export const ADMIN_PANEL_TITLE_CLASSES = ACCOUNT_PANEL_TITLE_CLASSES;
 export const ADMIN_PANEL_BADGE_CLASSES = ACCOUNT_PANEL_BADGE_CLASSES;

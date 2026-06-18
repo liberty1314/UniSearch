@@ -43,7 +43,7 @@ describe('Sidebar', () => {
 
     expect(screen.getAllByText('系统监控')[0].closest('button')).toHaveClass('dark:text-cyan-300');
     expect(screen.getAllByText('Telegram 频道')[0].closest('button')).toHaveClass('dark:hover:bg-cyan-400/[0.08]');
-    expect(container.innerHTML).toContain('dark:bg-slate-950/[0.82]');
+    expect(container.innerHTML).toContain('dark:bg-[linear-gradient(135deg,rgba(8,47,73,0.66),rgba(2,6,23,0.82))]');
     expect(container.innerHTML).toContain('dark:border-cyan-300/[0.18]');
   });
 });

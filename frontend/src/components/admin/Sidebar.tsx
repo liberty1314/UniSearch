@@ -47,7 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
 
     const renderNavList = (layoutPrefix: 'desktop' | 'mobile') => (
         <nav aria-label="后台模块导航" className="flex-1 overflow-y-auto px-3 pb-3 pt-2">
-            <ul className="space-y-2">
+            <ul className="space-y-1.5">
                 {navItems.map((item) => {
                     const isActive = currentView === item.id;
 
@@ -56,7 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
                             {isActive && (
                                 <motion.div
                                     layoutId={`${layoutPrefix}-admin-sidebar-active`}
-                                    className="absolute inset-0 rounded-[1.4rem] border-[0.5px] border-slate-200/60 bg-white/70 shadow-[0_8px_24px_rgba(0,0,0,0.08)] dark:border-cyan-300/[0.18] dark:bg-slate-950/[0.82] dark:shadow-[0_14px_30px_rgba(2,6,23,0.34)]"
+                                    className="absolute inset-0 rounded-[1.25rem] border-[0.5px] border-cyan-200/80 bg-[linear-gradient(135deg,rgba(236,254,255,0.92),rgba(255,255,255,0.76))] shadow-[0_14px_34px_rgba(14,165,233,0.12)] dark:border-cyan-300/[0.18] dark:bg-[linear-gradient(135deg,rgba(8,47,73,0.66),rgba(2,6,23,0.82))] dark:shadow-[0_14px_30px_rgba(2,6,23,0.34)]"
                                     transition={ADMIN_GENTLE_SPRING}
                                 />
                             )}
@@ -69,17 +69,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
                                 whileHover={isActive ? undefined : { x: 3 }}
                                 transition={ADMIN_GENTLE_SPRING}
                                 className={cn(
-                                    'relative z-10 flex w-full items-center gap-3 rounded-[1.4rem] border border-transparent px-4 py-4 text-left shadow-none transition-colors duration-300',
+                                    'relative z-10 flex w-full items-center gap-3 rounded-[1.25rem] border border-transparent px-3.5 py-3.5 text-left shadow-none transition-colors duration-300',
                                     isActive
                                         ? 'text-blue-600 dark:text-cyan-300'
-                                        : 'text-slate-600 hover:bg-slate-100/50 dark:text-slate-300 dark:hover:bg-cyan-400/[0.08]'
+                                        : 'text-slate-600 hover:bg-white/48 hover:text-cyan-700 dark:text-slate-300 dark:hover:bg-cyan-400/[0.08] dark:hover:text-cyan-200'
                                 )}
                             >
                                 <span className="relative flex h-9 w-9 shrink-0 items-center justify-center">
                                     {isActive ? (
                                         <motion.div
                                             layoutId={`${layoutPrefix}-admin-sidebar-icon`}
-                                            className="absolute inset-0 rounded-2xl border-[0.5px] border-slate-200/70 bg-white shadow-[0_4px_16px_rgba(37,99,235,0.14)] dark:border-cyan-300/[0.18] dark:bg-slate-950/[0.86] dark:shadow-[0_8px_18px_rgba(34,211,238,0.10)]"
+                                            className="absolute inset-0 rounded-2xl border-[0.5px] border-cyan-200/80 bg-white shadow-[0_10px_24px_rgba(14,165,233,0.14)] dark:border-cyan-300/[0.18] dark:bg-slate-950/[0.86] dark:shadow-[0_8px_18px_rgba(34,211,238,0.10)]"
                                             transition={ADMIN_GENTLE_SPRING}
                                         />
                                     ) : (
@@ -139,16 +139,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
                             ADMIN_PANEL_SURFACE_HOVER_CLASSES
                         )}
                     >
-                        <div className="flex items-center gap-3 px-5 pb-4 pt-5">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 shadow-sm backdrop-blur-xl dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48]">
+                        <div className="relative flex items-center gap-3 px-5 pb-4 pt-5">
+                            <div className="pointer-events-none absolute right-6 top-4 h-20 w-20 rounded-full bg-cyan-300/15 blur-2xl" />
+                            <div className="relative flex h-12 w-12 items-center justify-center rounded-[1.25rem] border-[0.5px] border-cyan-100/80 bg-white/60 shadow-[0_14px_30px_rgba(14,165,233,0.10)] backdrop-blur-xl dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48]">
                                 <img
                                     src="/Uni.png?v=20250908"
                                     alt="UniSearch Logo"
                                     className="h-9 w-9 object-contain"
                                 />
                             </div>
-                            <div className="min-w-0">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500/80 dark:text-slate-300/80">
+                            <div className="relative min-w-0">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-cyan-700/70 dark:text-cyan-200/80">
                                     Admin Workspace
                                 </p>
                                 <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-800 dark:text-white">

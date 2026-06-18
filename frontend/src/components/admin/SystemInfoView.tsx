@@ -138,6 +138,34 @@ const fetchCacheSettingsSummary = async (token: string): Promise<CacheSettingsSu
   return (await response.json()) as CacheSettingsSummary;
 };
 
+const summaryMetricClasses = {
+  neutral:
+    'border-slate-200/65 bg-white/58 text-slate-700 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.48] dark:text-slate-200',
+  success:
+    'border-emerald-200/70 bg-emerald-50/72 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-950/24 dark:text-emerald-300',
+  danger:
+    'border-rose-200/70 bg-rose-50/70 text-rose-700 dark:border-rose-400/20 dark:bg-rose-950/24 dark:text-rose-300',
+} as const;
+
+type SummaryMetricTone = keyof typeof summaryMetricClasses;
+
+const renderSummaryMetric = (
+  label: string,
+  value: number,
+  tone: SummaryMetricTone = 'neutral',
+) => (
+  <div
+    className={cn(
+      'relative overflow-hidden rounded-[1.15rem] border px-4 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.045)] backdrop-blur-xl',
+      summaryMetricClasses[tone],
+    )}
+  >
+    <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-white/10" />
+    <p className="text-xs font-medium opacity-80">{label}</p>
+    <p className="mt-1 text-2xl font-semibold tracking-tight">{value}</p>
+  </div>
+);
+
 /**
  * 系统监控视图组件
  *
@@ -353,11 +381,13 @@ export const SystemInfoView: React.FC = () => {
         aria-label="进入 Telegram 频道管理页"
         {...createCardNavigationProps('channel_management')}
       >
-        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-cyan-300/[0.08] dark:bg-slate-950/[0.38]">
+        <CardHeader className="border-b border-slate-200/50 bg-[linear-gradient(135deg,rgba(236,254,255,0.66),rgba(255,255,255,0.34))] backdrop-blur-md dark:border-cyan-300/[0.08] dark:bg-[linear-gradient(135deg,rgba(8,47,73,0.38),rgba(2,6,23,0.38))]">
           <div className="flex items-center justify-between gap-2">
             <div>
               <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-                <Radio className="w-5 h-5 text-blue-600 dark:text-cyan-300" />
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-100/80 bg-cyan-50/80 text-cyan-700 shadow-sm dark:border-cyan-300/[0.16] dark:bg-cyan-950/30 dark:text-cyan-200">
+                  <Radio className="w-4 h-4" />
+                </span>
                 Telegram 频道摘要
                 <Badge variant="outline" className="ml-1 text-xs">
                   {channelSummary.total}
@@ -367,7 +397,7 @@ export const SystemInfoView: React.FC = () => {
                 系统监控仅保留摘要，点击进入完整管理页
               </CardDescription>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 shadow-sm dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:text-slate-200">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-cyan-700 shadow-sm dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:text-cyan-200">
               点击进入管理页
               <ArrowUpRight className="h-3.5 w-3.5" />
             </div>
@@ -375,22 +405,10 @@ export const SystemInfoView: React.FC = () => {
         </CardHeader>
         <CardContent className="p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.48]">
-              <p className="text-xs text-slate-500 dark:text-slate-400">总频道（数据库）</p>
-              <p className="text-xl font-semibold text-slate-800 dark:text-slate-100">{channelSummary.total}</p>
-            </div>
-            <div className="rounded-xl border border-emerald-100 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-900/20 px-4 py-3">
-              <p className="text-xs text-emerald-700 dark:text-emerald-300">已启用</p>
-              <p className="text-xl font-semibold text-emerald-700 dark:text-emerald-300">{channelSummary.enabled}</p>
-            </div>
-            <div className="rounded-xl border border-red-100 dark:border-red-900 bg-red-50/70 dark:bg-red-900/20 px-4 py-3">
-              <p className="text-xs text-red-700 dark:text-red-300">异常</p>
-              <p className="text-xl font-semibold text-red-700 dark:text-red-300">{channelSummary.error}</p>
-            </div>
-            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.48]">
-              <p className="text-xs text-slate-500 dark:text-slate-400">已禁用</p>
-              <p className="text-xl font-semibold text-slate-700 dark:text-slate-200">{channelSummary.disabled}</p>
-            </div>
+            {renderSummaryMetric('总频道（数据库）', channelSummary.total)}
+            {renderSummaryMetric('已启用', channelSummary.enabled, 'success')}
+            {renderSummaryMetric('异常', channelSummary.error, 'danger')}
+            {renderSummaryMetric('已禁用', channelSummary.disabled)}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             口径说明：总频道来自数据库，启用/禁用根据频道开关状态统计，异常包含启用与禁用频道。
@@ -407,18 +425,20 @@ export const SystemInfoView: React.FC = () => {
         aria-label="进入插件中心管理页"
         {...createCardNavigationProps('plugin_management')}
       >
-        <CardHeader className="border-b border-slate-200/50 bg-white/20 backdrop-blur-md dark:border-cyan-300/[0.08] dark:bg-slate-950/[0.38]">
+        <CardHeader className="border-b border-slate-200/50 bg-[linear-gradient(135deg,rgba(236,254,255,0.66),rgba(255,255,255,0.34))] backdrop-blur-md dark:border-cyan-300/[0.08] dark:bg-[linear-gradient(135deg,rgba(8,47,73,0.38),rgba(2,6,23,0.38))]">
           <div className="flex items-center justify-between gap-2">
             <div>
               <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
-                <Activity className="w-5 h-5 text-blue-600 dark:text-cyan-300" />
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-100/80 bg-cyan-50/80 text-cyan-700 shadow-sm dark:border-cyan-300/[0.16] dark:bg-cyan-950/30 dark:text-cyan-200">
+                  <Activity className="w-4 h-4" />
+                </span>
                 插件状态摘要
               </CardTitle>
               <CardDescription className="text-slate-500 dark:text-slate-400">
                 系统监控仅保留摘要，点击进入完整管理页
               </CardDescription>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 shadow-sm dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:text-slate-200">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-cyan-700 shadow-sm dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:text-cyan-200">
               点击进入管理页
               <ArrowUpRight className="h-3.5 w-3.5" />
             </div>
@@ -426,22 +446,10 @@ export const SystemInfoView: React.FC = () => {
         </CardHeader>
         <CardContent className="p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.48]">
-              <p className="text-xs text-slate-500 dark:text-slate-400">总插件</p>
-              <p className="text-xl font-semibold text-slate-800 dark:text-slate-100">{pluginSummary.total}</p>
-            </div>
-            <div className="rounded-xl border border-emerald-100 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-900/20 px-4 py-3">
-              <p className="text-xs text-emerald-700 dark:text-emerald-300">活跃</p>
-              <p className="text-xl font-semibold text-emerald-700 dark:text-emerald-300">{pluginSummary.active}</p>
-            </div>
-            <div className="rounded-xl border border-red-100 dark:border-red-900 bg-red-50/70 dark:bg-red-900/20 px-4 py-3">
-              <p className="text-xs text-red-700 dark:text-red-300">异常</p>
-              <p className="text-xl font-semibold text-red-700 dark:text-red-300">{pluginSummary.error}</p>
-            </div>
-            <div className="rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.48]">
-              <p className="text-xs text-slate-500 dark:text-slate-400">不活跃</p>
-              <p className="text-xl font-semibold text-slate-700 dark:text-slate-200">{pluginSummary.inactive}</p>
-            </div>
+            {renderSummaryMetric('总插件', pluginSummary.total)}
+            {renderSummaryMetric('活跃', pluginSummary.active, 'success')}
+            {renderSummaryMetric('异常', pluginSummary.error, 'danger')}
+            {renderSummaryMetric('不活跃', pluginSummary.inactive)}
           </div>
         </CardContent>
       </Card>

@@ -24,14 +24,23 @@ const usageSteps = [
   {
     title: "输入明确关键词",
     description: "优先输入资源名、课程名、软件名或主演名，减少无效搜索结果。",
+    badgeGradient: "from-blue-600 via-sky-500 to-cyan-400",
+    halo: "bg-cyan-400/16",
+    accent: "group-hover:text-cyan-600 dark:group-hover:text-cyan-200",
   },
   {
     title: "优先使用分类入口",
     description: "不确定怎么搜时，先从热门分类和示例关键词快速进入结果页。",
+    badgeGradient: "from-emerald-500 via-teal-500 to-cyan-400",
+    halo: "bg-emerald-400/14",
+    accent: "group-hover:text-teal-600 dark:group-hover:text-teal-200",
   },
   {
     title: "进入详情页判断资源",
     description: "在详情页集中查看链接类型、提取信息与资源说明，再决定打开目标。",
+    badgeGradient: "from-violet-500 via-blue-500 to-sky-400",
+    halo: "bg-blue-400/14",
+    accent: "group-hover:text-blue-600 dark:group-hover:text-blue-200",
   },
 ] as const;
 
@@ -268,17 +277,35 @@ const Home: React.FC = () => {
                 {usageSteps.map((step, index) => (
                   <div
                     key={step.title}
-                    className="glass-panel relative overflow-hidden p-6 text-left"
+                    className="glass-card-premium group relative overflow-hidden p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-cyan-200/70 hover:shadow-[0_24px_54px_rgba(14,165,233,0.14)] dark:hover:border-cyan-300/20 dark:hover:shadow-[0_26px_58px_rgba(8,47,73,0.34)] md:p-7"
                   >
-                    <div className="mb-5 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-700 text-sm font-semibold text-white shadow-sm dark:bg-blue-500">
-                      {index + 1}
+                    <div
+                      aria-hidden="true"
+                      className={`pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full ${step.halo} blur-3xl transition-transform duration-500 group-hover:scale-125`}
+                    />
+                    <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/50 to-transparent dark:via-cyan-200/20" />
+
+                    <div className="relative z-10 mb-6 flex items-center justify-between gap-4">
+                      <div
+                        className={`inline-flex h-12 w-12 items-center justify-center rounded-[1.15rem] bg-gradient-to-br ${step.badgeGradient} text-base font-bold text-white shadow-[0_16px_32px_rgba(14,165,233,0.22)] ring-1 ring-white/70 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:rotate-3 dark:ring-white/15`}
+                      >
+                        {index + 1}
+                      </div>
+                      <span className="rounded-full border border-slate-200/70 bg-white/65 px-3 py-1 text-xs font-semibold text-slate-500 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300">
+                        Step {index + 1}
+                      </span>
                     </div>
-                    <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+
+                    <h3
+                      className={`relative z-10 text-lg font-semibold tracking-tight text-slate-900 transition-colors duration-300 dark:text-slate-50 ${step.accent}`}
+                    >
                       {step.title}
                     </h3>
-                    <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300/85">
+                    <p className="relative z-10 mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300/85">
                       {step.description}
                     </p>
+
+                    <div className="pointer-events-none absolute inset-x-7 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-300/45 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-cyan-300/25" />
                   </div>
                 ))}
               </div>

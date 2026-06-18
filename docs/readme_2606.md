@@ -902,3 +902,16 @@
     - frontend/src/components/__tests__/Navbar.test.tsx
     - frontend/src/components/ui/tubelight-navbar.tsx
     - docs/readme_2606.md
+
+- [2026-06-18 21:38] style(frontend): 优化管理员页面与首页向导视觉设计
+  - Body: 升级了管理员界面各个卡片模块的阴影和边框圆角，统一与个人中心的玻璃质感设计语言，调整了 Admin Shell 的深色背景渐变层。同时重构了首页功能介绍步骤卡片的视觉表现，添加了带有渐变徽标与环绕光效的高级互动样式（glass-card-premium）。
+  - Files:
+    - frontend/src/components/admin/Sidebar.tsx
+    - frontend/src/components/admin/StatsCard.tsx
+    - frontend/src/components/admin/SystemInfoView.tsx
+    - frontend/src/components/admin/__tests__/Sidebar.test.tsx
+    - frontend/src/components/admin/adminDensity.ts
+    - frontend/src/components/admin/adminDesign.ts
+    - frontend/src/pages/Admin.tsx
+    - frontend/src/pages/Home.tsx
+    - docs/readme_2606.md

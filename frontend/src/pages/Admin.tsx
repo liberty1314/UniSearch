@@ -19,7 +19,7 @@ const Admin: React.FC = () => {
   const { currentView, setCurrentView } = useAdminPageController();
 
   return (
-    <div className="obsidian-shell bg-white dark:bg-black">
+    <div className="obsidian-shell bg-white dark:bg-slate-950">
       <div className={cn(ADMIN_PAGE_SHELL_CLASSES, "fixed inset-0 top-16 overflow-hidden")}>
         <div className={ADMIN_PAGE_BACKDROP_CLASSES} />
 
