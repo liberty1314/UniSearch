@@ -61,10 +61,6 @@ vi.mock("@/stores/searchStore", () => ({
   }),
 }));
 
-vi.mock("@/components/magicui/cool-mode", () => ({
-  CoolMode: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-
 vi.mock("framer-motion", () => ({
   motion: {
     section: ({

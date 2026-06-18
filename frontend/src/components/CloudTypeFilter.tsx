@@ -1,89 +1,14 @@
-import React, { useCallback, useEffect, memo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { IoCheckmarkCircle, IoEllipseOutline } from "react-icons/io5";
 import { useLocation, useNavigate } from "react-router-dom";
 import { type CloudTypeValue } from "@/types/api";
 import { useSearchStore } from "@/stores/searchStore";
 import { cn } from "@/lib/utils";
-import { CoolMode } from "@/components/magicui/cool-mode";
-import {
-  platformThemes,
-  platformThemeTypes,
-  type PlatformTheme,
-} from "@/components/home/platformThemes";
+import { platformThemeTypes } from "@/components/home/platformThemes";
+import CloudTypeChipGroup from "@/components/CloudTypeChipGroup";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { SearchService } from "@/services/searchService";
-
-// --- Sub-components ---
-
-interface CloudTypeTagProps {
-  config: PlatformTheme;
-  isSelected: boolean;
-  onToggle: (type: CloudTypeValue) => void;
-  onSelectOnly: (type: CloudTypeValue) => void;
-}
-
-const CLICK_DELAY_MS = 220;
-
-const CloudTypeTag = memo(
-  ({ config, isSelected, onToggle, onSelectOnly }: CloudTypeTagProps) => {
-    const clickTimerRef = useRef<number | null>(null);
-
-    const clearClickTimer = () => {
-      if (clickTimerRef.current) {
-        window.clearTimeout(clickTimerRef.current);
-        clickTimerRef.current = null;
-      }
-    };
-
-    useEffect(() => {
-      return () => {
-        clearClickTimer();
-      };
-    }, []);
-
-    const handleClick = () => {
-      clearClickTimer();
-      clickTimerRef.current = window.setTimeout(() => {
-        onToggle(config.type);
-        clickTimerRef.current = null;
-      }, CLICK_DELAY_MS);
-    };
-
-    const handleDoubleClick = () => {
-      clearClickTimer();
-      onSelectOnly(config.type);
-    };
-
-    return (
-      <CoolMode
-        options={{ particleCount: 12, speedHorz: 5, speedUp: 15 }}
-        triggerMode="mouse"
-      >
-        <motion.button
-          layout
-          onClick={handleClick}
-          onDoubleClick={handleDoubleClick}
-          whileHover={{ scale: 1.05, y: -2 }}
-          whileTap={{ scale: 0.95 }}
-          aria-pressed={isSelected}
-          aria-label={`${config.name}${isSelected ? "（已选中，单击取消，双击仅看此源）" : "（未选中，单击选择，双击仅看此源）"}`}
-          className={cn(
-            "relative flex items-center px-5 py-2.5 rounded-[1rem] text-[13.5px] font-semibold transition-colors transition-shadow duration-300 border box-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2",
-            isSelected
-              ? `bg-gradient-to-br ${config.color} text-white border-transparent ${config.shadow} shadow-[0_8px_20px_rgba(14,165,233,0.2)] dark:shadow-none ring-[0.5px] ring-white/50 dark:ring-white/10`
-              : "bg-white/40 dark:bg-slate-800/40 text-slate-600 dark:text-slate-300 border-[0.5px] border-slate-200/50 dark:border-white/10 hover:bg-white/60 dark:hover:bg-slate-700/40 shadow-sm backdrop-blur-md hover:shadow-md",
-          )}
-        >
-          {/* 文本内容 */}
-          <span>{config.name}</span>
-        </motion.button>
-      </CoolMode>
-    );
-  },
-);
-
-CloudTypeTag.displayName = "CloudTypeTag";
 
 // --- Main Component ---
 
@@ -95,7 +20,6 @@ const CloudTypeFilter: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const cloudTypeConfigs = platformThemes;
   const allTypes = platformThemeTypes;
   const buildRequestedCloudTypes = useCallback((types: CloudTypeValue[]) => (
     types.length === allTypes.length ? [] : types
@@ -187,31 +111,20 @@ const CloudTypeFilter: React.FC = () => {
     selectedTypes.length === 0 ? allTypes : selectedTypes;
   const isAllSelected = selectedTypes.length === 0;
 
-  const handleTypeToggle = (type: CloudTypeValue) => {
-    const currentTypes = effectiveSelectedTypes;
-    let newTypes: CloudTypeValue[];
-
-    if (currentTypes.includes(type)) {
-      if (currentTypes.length === 1) {
-        return;
-      }
-      newTypes = currentTypes.filter((t) => t !== type);
-    } else {
-      newTypes = [...currentTypes, type];
-    }
-
-    const requestedTypes = buildRequestedCloudTypes(newTypes);
-    setSelectedTypes(requestedTypes);
-    setSearchParams({ cloudTypes: requestedTypes });
-  };
-
-  const handleSelectOnly = (type: CloudTypeValue) => {
-    if (selectedTypes.length === 1 && selectedTypes[0] === type) {
+  // CloudTypeChipGroup 内部封装了单击切换与双击仅看此源，这里仅需更新选中集合。
+  // 两个守卫：避免清空全部、选中集无变化时跳过（双击唯一已选项不应重复触发搜索）。
+  const handleSelectionChange = (next: CloudTypeValue[]) => {
+    if (next.length === 0) {
       return;
     }
-
-    setSelectedTypes([type]);
-    setSearchParams({ cloudTypes: [type] });
+    const nextSnapshot = next.slice().sort().join(",");
+    const currentSnapshot = effectiveSelectedTypes.slice().sort().join(",");
+    if (nextSnapshot === currentSnapshot) {
+      return;
+    }
+    const requestedTypes = buildRequestedCloudTypes(next);
+    setSelectedTypes(requestedTypes);
+    setSearchParams({ cloudTypes: requestedTypes });
   };
 
   const handleSelectAll = () => {
@@ -222,9 +135,6 @@ const CloudTypeFilter: React.FC = () => {
     setSelectedTypes(allTypes);
     setSearchParams({ cloudTypes: [] });
   };
-
-  const isTypeSelected = (type: CloudTypeValue) =>
-    effectiveSelectedTypes.includes(type);
 
   return (
     <motion.div
@@ -274,6 +184,7 @@ const CloudTypeFilter: React.FC = () => {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.96 }}
+              type="button"
               onClick={handleSelectAll}
               aria-pressed={isAllSelected}
               aria-label={
@@ -300,29 +211,14 @@ const CloudTypeFilter: React.FC = () => {
           </div>
 
           {/* 筛选标签网格 (6, 5 对称排布) */}
-          <div className="relative z-10 flex w-full flex-col items-center gap-3">
-            <div className="flex w-full flex-wrap justify-center gap-3">
-              {cloudTypeConfigs.slice(0, 6).map((config) => (
-                <CloudTypeTag
-                  key={config.type}
-                  config={config}
-                  isSelected={isTypeSelected(config.type)}
-                  onToggle={handleTypeToggle}
-                  onSelectOnly={handleSelectOnly}
-                />
-              ))}
-            </div>
-            <div className="flex w-full flex-wrap justify-center gap-3">
-              {cloudTypeConfigs.slice(6).map((config) => (
-                <CloudTypeTag
-                  key={config.type}
-                  config={config}
-                  isSelected={isTypeSelected(config.type)}
-                  onToggle={handleTypeToggle}
-                  onSelectOnly={handleSelectOnly}
-                />
-              ))}
-            </div>
+          <div className="relative z-10">
+            <CloudTypeChipGroup
+              selected={effectiveSelectedTypes}
+              onChange={handleSelectionChange}
+              selectOnlyEnabled
+              splitIndex={6}
+              data-testid="cloud-type-chip-group"
+            />
           </div>
         </div>
       </div>

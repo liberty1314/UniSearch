@@ -816,3 +816,16 @@
     - frontend/src/pages/__tests__/AccountPage.test.tsx
     - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
     - docs/readme_2606.md
+
+- [2026-06-18 09:53] feat(frontend): 重构云盘筛选组件并支持单双击快捷交互
+  - Body: 抽离独立的 CloudTypeChipGroup 组件以复用云盘来源筛选逻辑。新增了单击切换状态、双击独占选中的快捷操作，并优化了无障碍标签与键盘焦点反馈。同时清理了无用的 magicui/cool-mode 动画组件及测试中过期的交互断言。
+  - Files:
+    - docs/readme_2605.md
+    - frontend/src/components/CloudTypeChipGroup.tsx
+    - frontend/src/components/CloudTypeFilter.tsx
+    - frontend/src/components/__tests__/CloudTypeFilter.test.tsx
+    - frontend/src/components/__tests__/SearchUnifiedFilterCard.test.tsx
+    - frontend/src/components/account/AccountPreferencesPanel.tsx
+    - frontend/src/components/magicui/cool-mode.tsx
+    - frontend/src/pages/__tests__/AccountPage.test.tsx
+    - docs/readme_2606.md

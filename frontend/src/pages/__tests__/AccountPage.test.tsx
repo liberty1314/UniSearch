@@ -34,6 +34,11 @@ vi.mock('framer-motion', () => ({
       void initial; void animate; void exit; void transition; void whileHover; void whileTap; void layout; void layoutId;
       return <section {...rest}>{children}</section>;
     },
+    button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>) => {
+      const { initial, animate, exit, transition, whileHover, whileTap, layout, layoutId, ...rest } = props;
+      void initial; void animate; void exit; void transition; void whileHover; void whileTap; void layout; void layoutId;
+      return <button {...rest}>{children}</button>;
+    },
   },
 }));
 
@@ -201,7 +206,10 @@ describe('AccountPage', () => {
     await user.click(screen.getByRole('button', { name: /偏好设置/ }));
     await user.click(screen.getByRole('button', { name: '深色' }));
     await user.click(screen.getByRole('button', { name: '列表视图' }));
-    await user.click(screen.getByLabelText('阿里云盘'));
+    await user.click(screen.getByRole('button', { name: '阿里云盘（未选中，单击选择，双击仅看此源）' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '阿里云盘（已选中，单击取消，双击仅看此源）' })).toBeInTheDocument();
+    });
     await user.click(screen.getByRole('switch', { name: '公告提醒' }));
     await user.click(screen.getByRole('button', { name: '保存偏好' }));
 

@@ -47,48 +47,6 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-vi.mock("@/components/magicui/cool-mode", () => ({
-  CoolMode: ({
-    children,
-    triggerMode,
-  }: {
-    children: React.ReactNode;
-    triggerMode?: string;
-  }) => (
-    <div data-testid="cool-mode" data-trigger-mode={triggerMode}>
-      {children}
-    </div>
-  ),
-}));
-
-vi.mock("framer-motion", () => ({
-  motion: {
-    div: ({
-      children,
-      ...props
-    }: React.HTMLAttributes<HTMLDivElement> & { layout?: boolean }) => {
-      const domProps = { ...props };
-      delete domProps.layout;
-      return <div {...domProps}>{children}</div>;
-    },
-    button: ({
-      children,
-      ...props
-    }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-      whileHover?: unknown;
-      whileTap?: unknown;
-      layout?: boolean;
-    }) => {
-      const domProps = { ...props };
-      delete domProps.whileHover;
-      delete domProps.whileTap;
-      delete domProps.layout;
-      return <button {...domProps}>{children}</button>;
-    },
-  },
-  LayoutGroup: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-
 vi.mock("@/stores/searchStore", () => ({
   useSearchStore: () => ({
     searchParams: searchParamsState,
@@ -151,12 +109,6 @@ describe("CloudTypeFilter", () => {
     expect(
       screen.getByText("单击多选，双击仅看此源"),
     ).toBeInTheDocument();
-    expect(
-      screen.getAllByTestId("cool-mode").every((node) =>
-        node.getAttribute("data-trigger-mode") === "mouse",
-      ),
-    ).toBe(true);
-
     const hasOuterHaloLayer = Array.from(
       container.querySelectorAll("div"),
     ).some(

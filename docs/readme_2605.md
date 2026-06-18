@@ -167,7 +167,6 @@
   - `docs/superpowers/specs/2026-04-23-account-page-redesign-design.md`
   - `frontend/src/components/CloudTypeFilter.tsx`
   - `frontend/src/components/__tests__/CloudTypeFilter.test.tsx`
-  - `frontend/src/components/magicui/cool-mode.tsx`
 
 ## [2026-05-17 02:00:19] feat(plugin): 引入插件目录与统一资源结果模型
 - **Body**: 新增插件目录、清单与校验能力，统一后端搜索结果与插件元数据结构，并同步重构前端插件管理与资源展示页面。
@@ -742,7 +741,6 @@
   - `frontend/src/components/__tests__/SearchResults.test.tsx`
   - `frontend/src/components/__tests__/SearchUnifiedFilterCard.test.tsx`
   - `frontend/src/components/home/SearchResultsToolbar.tsx`
-  - `frontend/src/components/magicui/cool-mode.tsx`
   - `frontend/src/components/search-filters/SourceFocusMenu.tsx`
   - `frontend/src/components/search-filters/__tests__/SourceFocusMenu.test.tsx`
   - `frontend/src/components/search-filters/__tests__/sourceFocusMenu.test.ts`
