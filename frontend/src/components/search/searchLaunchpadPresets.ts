@@ -1,6 +1,7 @@
 import type { SearchParams } from "@/types/api";
 import { SearchService } from "@/services/searchService";
 import { getCloudTypeInfo } from "@/utils/cloudTypeUtils";
+import { resolveHotRankingAvailability } from "@/utils/hotRankingAvailability";
 import type { HotRankingItem } from "@/types/hotRanking";
 import type {
   SearchLaunchPreset,
@@ -189,7 +190,7 @@ export const searchLaunchTemplateGroups: SearchLaunchTemplateGroup[] = [
 export const buildTrendingLaunchEntries = (
   items: HotRankingItem[],
 ): SearchLaunchTrendingEntry[] =>
-  items.map((item) => {
+  items.filter((item) => resolveHotRankingAvailability(item).search_available).map((item) => {
     const actions = SearchService.buildTrendingSearchActions(item);
     const presets = actions.map((action) => ({
       ...createPreset(

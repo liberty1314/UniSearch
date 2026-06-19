@@ -93,6 +93,54 @@ describe("HotMediaCard", () => {
     }));
   });
 
+  it("未上映条目禁用站内搜索并展示提示", () => {
+    const onSearch = vi.fn();
+    const upcomingItem: HotRankingItem = {
+      ...item,
+      title: "蜘蛛侠：崭新之日",
+      release_date: "2026-07-29",
+      availability_status: "upcoming",
+      search_available: false,
+      days_until_release: 40,
+      search_hint: "预计 2026-07-29 上映，当前站内资源可能不可用",
+    };
+
+    render(<HotMediaCard item={upcomingItem} rank={15} category="movie" onSearch={onSearch} />);
+
+    const button = screen.getByRole("button", { name: "未上映" });
+    const releaseDate = screen.getByTestId("hot-media-release-date");
+    expect(button).toBeDisabled();
+    expect(releaseDate).toHaveTextContent("预计 2026-07-29 上映，当前站内资源可能不可用");
+    expect(screen.queryByText("上映/首播：2026-07-29")).not.toBeInTheDocument();
+    expect(screen.getAllByText("预计 2026-07-29 上映，当前站内资源可能不可用")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "搜原名" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "搜 4K" })).not.toBeInTheDocument();
+
+    fireEvent.click(button);
+    expect(onSearch).not.toHaveBeenCalled();
+  });
+
+  it("即使旧响应错误标记为可搜索，未来上映日期仍会禁用搜索", () => {
+    const onSearch = vi.fn();
+    const inconsistentItem: HotRankingItem = {
+      ...item,
+      title: "蜘蛛侠：崭新之日",
+      release_date: "2026-07-29",
+      availability_status: "released",
+      search_available: true,
+      search_hint: "",
+    };
+
+    render(<HotMediaCard item={inconsistentItem} rank={15} category="movie" onSearch={onSearch} />);
+
+    const releaseDate = screen.getByTestId("hot-media-release-date");
+    expect(screen.getByRole("button", { name: "未上映" })).toBeDisabled();
+    expect(releaseDate).toHaveTextContent("预计 2026-07-29 上映，当前站内资源可能不可用");
+    expect(screen.queryByText("上映/首播：2026-07-29")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "搜原名" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "搜 4K" })).not.toBeInTheDocument();
+  });
+
   it("在类型数组为空值时也能稳定渲染", () => {
     const itemWithNullGenres = {
       ...item,

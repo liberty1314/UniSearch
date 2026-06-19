@@ -945,3 +945,23 @@
     - frontend/src/stores/__tests__/announcementStore.test.ts
     - frontend/src/stores/announcementStore.ts
     - docs/readme_2606.md
+
+- [2026-06-19 09:22] feat(trending): 热门榜单支持未上映资源的状态拦截与提示
+  - Body: 新增了针对热门榜单影视资源的上映状态解析与搜索可用性拦截。现在对于 release_date 为未来日期的影视项目（如未上映电影），榜单卡片会自动置灰搜索入口并显示具体上映倒计时，同时在快捷启动栏展示“暂不可用”的悬浮提示，从而减少用户搜索无效资源的挫败感。
+  - Files:
+    - backend/model/hot_ranking.go
+    - backend/service/hot_ranking_mapper.go
+    - backend/service/hot_ranking_mapper_test.go
+    - backend/service/hot_ranking_service.go
+    - backend/service/hot_ranking_service_test.go
+    - frontend/src/components/search/__tests__/searchLaunchpadPresets.test.ts
+    - frontend/src/components/search/searchLaunchpadPresets.ts
+    - frontend/src/components/trending/HotMediaCard.tsx
+    - frontend/src/components/trending/__tests__/HotMediaCard.test.tsx
+    - frontend/src/pages/HotPage.tsx
+    - frontend/src/pages/__tests__/HotPage.test.tsx
+    - frontend/src/services/__tests__/hotRankingService.test.ts
+    - frontend/src/services/hotRankingService.ts
+    - frontend/src/types/hotRanking.ts
+    - frontend/src/utils/hotRankingAvailability.ts
+    - docs/readme_2606.md

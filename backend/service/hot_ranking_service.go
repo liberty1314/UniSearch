@@ -66,6 +66,7 @@ func (s *HotRankingService) GetHotRankings(ctx context.Context, query model.HotR
 			return model.HotRankingResponse{}, err
 		}
 		if hit {
+			cached = refreshHotRankingResponseAvailability(cached)
 			cached = sortHotRankingResponse(cached, query)
 			return adaptHotRankingResponsePageSize(cached, query.PageSize), nil
 		}
@@ -485,10 +486,10 @@ func buildMovieDiscoverParams(query model.HotRankingQuery, category model.HotRan
 	case model.HotRankingPeriodDay:
 		if window, ok := resolveScoreSortWindow(query); ok {
 			params.PrimaryReleaseGTE = window.StartDate
-			params.PrimaryReleaseLTE = window.EndDate
+			params.PrimaryReleaseLTE = clampHotRankingEndDateToToday(window.EndDate)
 			break
 		}
-		params.PrimaryReleaseLTE = query.Date
+		params.PrimaryReleaseLTE = clampHotRankingEndDateToToday(query.Date)
 	case model.HotRankingPeriodWeek:
 		start, end := resolveWeekRange(query.WeekStart)
 		if window, ok := resolveScoreSortWindow(query); ok {
@@ -496,13 +497,15 @@ func buildMovieDiscoverParams(query model.HotRankingQuery, category model.HotRan
 			end = window.EndDate
 		}
 		params.PrimaryReleaseGTE = start
-		params.PrimaryReleaseLTE = end
+		params.PrimaryReleaseLTE = clampHotRankingEndDateToToday(end)
 	case model.HotRankingPeriodMonth:
 		start, end := resolveMonthRange(query.Month)
 		params.PrimaryReleaseGTE = start
-		params.PrimaryReleaseLTE = end
+		params.PrimaryReleaseLTE = clampHotRankingEndDateToToday(end)
 	case model.HotRankingPeriodYear:
-		params.PrimaryReleaseYear = resolveYear(query.Year)
+		start, end := resolveYearRange(query.Year)
+		params.PrimaryReleaseGTE = start
+		params.PrimaryReleaseLTE = clampHotRankingEndDateToToday(end)
 	}
 	return params
 }
@@ -519,10 +522,10 @@ func buildTVDiscoverParams(query model.HotRankingQuery, category model.HotRankin
 	case model.HotRankingPeriodDay:
 		if window, ok := resolveScoreSortWindow(query); ok {
 			params.FirstAirDateGTE = window.StartDate
-			params.FirstAirDateLTE = window.EndDate
+			params.FirstAirDateLTE = clampHotRankingEndDateToToday(window.EndDate)
 			break
 		}
-		params.FirstAirDateLTE = query.Date
+		params.FirstAirDateLTE = clampHotRankingEndDateToToday(query.Date)
 	case model.HotRankingPeriodWeek:
 		start, end := resolveWeekRange(query.WeekStart)
 		if window, ok := resolveScoreSortWindow(query); ok {
@@ -530,13 +533,15 @@ func buildTVDiscoverParams(query model.HotRankingQuery, category model.HotRankin
 			end = window.EndDate
 		}
 		params.FirstAirDateGTE = start
-		params.FirstAirDateLTE = end
+		params.FirstAirDateLTE = clampHotRankingEndDateToToday(end)
 	case model.HotRankingPeriodMonth:
 		start, end := resolveMonthRange(query.Month)
 		params.FirstAirDateGTE = start
-		params.FirstAirDateLTE = end
+		params.FirstAirDateLTE = clampHotRankingEndDateToToday(end)
 	case model.HotRankingPeriodYear:
-		params.FirstAirDateYear = resolveYear(query.Year)
+		start, end := resolveYearRange(query.Year)
+		params.FirstAirDateGTE = start
+		params.FirstAirDateLTE = clampHotRankingEndDateToToday(end)
 	}
 	return params
 }
@@ -914,6 +919,24 @@ func adaptHotRankingResponsePageSize(response model.HotRankingResponse, pageSize
 	return adapted
 }
 
+func refreshHotRankingResponseAvailability(response model.HotRankingResponse) model.HotRankingResponse {
+	refreshed := response
+	refreshed.Sections = make([]model.HotRankingSection, 0, len(response.Sections))
+	for _, section := range response.Sections {
+		nextSection := section
+		if section.Spotlight != nil {
+			spotlight := annotateHotRankingItemAvailability(*section.Spotlight)
+			nextSection.Spotlight = &spotlight
+		}
+		nextSection.Items = make([]model.HotRankingItem, 0, len(section.Items))
+		for _, item := range section.Items {
+			nextSection.Items = append(nextSection.Items, annotateHotRankingItemAvailability(item))
+		}
+		refreshed.Sections = append(refreshed.Sections, nextSection)
+	}
+	return refreshed
+}
+
 func resolveDefaultModeByPeriod(period model.HotRankingPeriod) model.HotRankingMode {
 	if period == model.HotRankingPeriodMonth || period == model.HotRankingPeriodYear {
 		return model.HotRankingModePopular
@@ -978,6 +1001,26 @@ func resolveYear(yearValue string) int {
 		return time.Now().UTC().Year()
 	}
 	return parsed.Year()
+}
+
+func resolveYearRange(yearValue string) (string, string) {
+	year := resolveYear(yearValue)
+	return fmt.Sprintf("%04d-01-01", year), fmt.Sprintf("%04d-12-31", year)
+}
+
+func clampHotRankingEndDateToToday(value string) string {
+	end, err := time.Parse("2006-01-02", value)
+	if err != nil {
+		return value
+	}
+
+	now := hotRankingNow().UTC()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, time.UTC)
+	if endDate.After(today) {
+		return today.Format("2006-01-02")
+	}
+	return endDate.Format("2006-01-02")
 }
 
 func resolveTimeKey(query model.HotRankingQuery) string {

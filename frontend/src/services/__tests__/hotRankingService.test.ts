@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { hotRankingService } from "@/services/hotRankingService";
+import { hotRankingService, normalizeHotRankingResponse } from "@/services/hotRankingService";
 
 const { getMock } = vi.hoisted(() => ({
   getMock: vi.fn(),
@@ -98,5 +98,96 @@ describe("hotRankingService", () => {
         items: [],
       },
     ]);
+  });
+
+  it("归一化旧榜单响应时会补齐默认可搜索状态", () => {
+    const response = normalizeHotRankingResponse({
+      mode: "trend",
+      period: "day",
+      page: 1,
+      page_size: 50,
+      has_more: false,
+      updated_at: "2026-05-23T12:00:00Z",
+      source: "tmdb",
+      sections: [
+        {
+          category: "movie",
+          title: "热门电影",
+          description: "测试",
+          items: [
+            {
+              id: 1,
+              tmdb_id: 1,
+              media_type: "movie",
+              ranking_category: "movie",
+              title: "旧缓存影片",
+              original_title: "Legacy Movie",
+              overview: "测试",
+              poster_url: "",
+              backdrop_url: "",
+              vote_average: 0,
+              vote_count: 0,
+              popularity: 1,
+              release_date: "2026-05-01",
+              genre_names: null,
+              tmdb_url: "",
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(response.sections[0].items[0]).toMatchObject({
+      availability_status: "released",
+      search_available: true,
+      search_hint: "",
+    });
+  });
+
+  it("归一化时会用未来上映日期覆盖错误的可搜索状态", () => {
+    const response = normalizeHotRankingResponse({
+      mode: "trend",
+      period: "day",
+      page: 1,
+      page_size: 50,
+      has_more: false,
+      updated_at: "2026-06-19T12:00:00Z",
+      source: "tmdb",
+      sections: [
+        {
+          category: "movie",
+          title: "热门电影",
+          description: "测试",
+          items: [
+            {
+              id: 2,
+              tmdb_id: 2,
+              media_type: "movie",
+              ranking_category: "movie",
+              title: "蜘蛛侠：崭新之日",
+              original_title: "Spider-Man: Brand New Day",
+              overview: "测试",
+              poster_url: "",
+              backdrop_url: "",
+              vote_average: 0,
+              vote_count: 0,
+              popularity: 77,
+              release_date: "2026-07-29",
+              availability_status: "released",
+              search_available: true,
+              search_hint: "",
+              genre_names: null,
+              tmdb_url: "",
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(response.sections[0].items[0]).toMatchObject({
+      availability_status: "upcoming",
+      search_available: false,
+      search_hint: "预计 2026-07-29 上映，当前站内资源可能不可用",
+    });
   });
 });

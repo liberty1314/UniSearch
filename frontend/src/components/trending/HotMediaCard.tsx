@@ -6,6 +6,7 @@ import { getHotCategoryLabel } from "@/components/trending/hotRankingPresentatio
 import { SearchService, type TrendingSearchAction } from "@/services/searchService";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { resolveHotRankingAvailability } from "@/utils/hotRankingAvailability";
 
 interface HotMediaCardProps {
   item: HotRankingItem;
@@ -15,11 +16,14 @@ interface HotMediaCardProps {
 }
 
 const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSearch }) => {
-  const searchActions = SearchService.buildTrendingSearchActions(item);
+  const availability = resolveHotRankingAvailability(item);
+  const isSearchAvailable = availability.search_available;
+  const searchActions = isSearchAvailable ? SearchService.buildTrendingSearchActions(item) : [];
   const primaryAction = searchActions.find((action) => action.isPrimary) || searchActions[0];
   const secondaryActions = searchActions.filter((action) => !action.isPrimary);
   // 真实接口历史数据中可能返回 null，这里统一归一化避免页面渲染崩溃。
   const genreNames = Array.isArray(item.genre_names) ? item.genre_names : [];
+  const searchHint = availability.search_hint.trim();
 
   return (
     <Card className="group p-4 md:p-5" data-testid="hot-media-card">
@@ -104,7 +108,7 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
               className="text-xs text-slate-500 dark:text-slate-400"
               data-testid="hot-media-release-date"
             >
-              上映/首播：{item.release_date || "未知"}
+              {isSearchAvailable ? `上映/首播：${item.release_date || "未知"}` : searchHint}
             </span>
             <div
               className="flex flex-wrap justify-start gap-2 sm:justify-end"
@@ -114,13 +118,19 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => onSearch(item, primaryAction)}
+                disabled={!isSearchAvailable}
+                onClick={() => {
+                  if (!isSearchAvailable) {
+                    return;
+                  }
+                  onSearch(item, primaryAction);
+                }}
                 className="rounded-full"
               >
                 <Search className="mr-2 h-4 w-4" />
-                搜索
+                {isSearchAvailable ? "搜索" : "未上映"}
               </Button>
-              {secondaryActions.map((action) => (
+              {isSearchAvailable ? secondaryActions.map((action) => (
                 <button
                   key={action.key}
                   type="button"
@@ -129,7 +139,7 @@ const HotMediaCard: React.FC<HotMediaCardProps> = ({ item, rank, category, onSea
                 >
                   {action.label}
                 </button>
-              ))}
+              )) : null}
             </div>
           </div>
         </div>

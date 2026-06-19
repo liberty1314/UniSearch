@@ -337,6 +337,139 @@ func TestHotRankingServiceUsesCustomSortForPopularSingleCategory(t *testing.T) {
 	}
 }
 
+func TestHotRankingServiceClampsCurrentYearDiscoverToToday(t *testing.T) {
+	oldNow := hotRankingNow
+	hotRankingNow = func() time.Time {
+		return time.Date(2026, 6, 19, 10, 0, 0, 0, time.UTC)
+	}
+	defer func() {
+		hotRankingNow = oldNow
+	}()
+
+	tmdb := &fakeTMDBService{
+		movieGenres: map[int]string{28: "动作"},
+		discoverMovies: []TMDBMovieResult{
+			{
+				ID:          1,
+				Title:       "当前年影片",
+				ReleaseDate: "2026-06-01",
+				GenreIDs:    []int{28},
+			},
+		},
+	}
+	service := NewHotRankingService(tmdb, &fakeHotRankingCache{})
+
+	_, err := service.GetHotRankings(context.Background(), model.HotRankingQuery{
+		Mode:     model.HotRankingModePopular,
+		Period:   model.HotRankingPeriodYear,
+		Category: model.HotRankingCategoryMovie,
+		Year:     "2026",
+		Page:     1,
+		PageSize: 100,
+	})
+	if err != nil {
+		t.Fatalf("期望没有错误，实际得到 %v", err)
+	}
+
+	if tmdb.lastMovieDiscover.PrimaryReleaseYear != 0 {
+		t.Fatalf("当前年不应使用整年查询，实际 primary_release_year=%d", tmdb.lastMovieDiscover.PrimaryReleaseYear)
+	}
+	if tmdb.lastMovieDiscover.PrimaryReleaseGTE != "2026-01-01" {
+		t.Fatalf("期望当前年开始日期为 2026-01-01，实际为 %q", tmdb.lastMovieDiscover.PrimaryReleaseGTE)
+	}
+	if tmdb.lastMovieDiscover.PrimaryReleaseLTE != "2026-06-19" {
+		t.Fatalf("期望当前年结束日期钳制到今天，实际为 %q", tmdb.lastMovieDiscover.PrimaryReleaseLTE)
+	}
+}
+
+func TestHotRankingDiscoverParamsClampCurrentWeekAndMonthToToday(t *testing.T) {
+	oldNow := hotRankingNow
+	hotRankingNow = func() time.Time {
+		return time.Date(2026, 6, 19, 10, 0, 0, 0, time.UTC)
+	}
+	defer func() {
+		hotRankingNow = oldNow
+	}()
+
+	movieParams := buildMovieDiscoverParams(model.HotRankingQuery{
+		Mode:     model.HotRankingModePopular,
+		Period:   model.HotRankingPeriodMonth,
+		Category: model.HotRankingCategoryMovie,
+		Month:    "2026-06",
+		Page:     1,
+		PageSize: 50,
+	}, model.HotRankingCategoryMovie)
+	if movieParams.PrimaryReleaseGTE != "2026-06-01" || movieParams.PrimaryReleaseLTE != "2026-06-19" {
+		t.Fatalf("当前月电影日期范围应钳制到今天，实际为 %q - %q", movieParams.PrimaryReleaseGTE, movieParams.PrimaryReleaseLTE)
+	}
+
+	tvParams := buildTVDiscoverParams(model.HotRankingQuery{
+		Mode:      model.HotRankingModePopular,
+		Period:    model.HotRankingPeriodWeek,
+		Category:  model.HotRankingCategoryTV,
+		WeekStart: "2026-06-15",
+		Page:      1,
+		PageSize:  50,
+	}, model.HotRankingCategoryTV, nil)
+	if tvParams.FirstAirDateGTE != "2026-06-15" || tvParams.FirstAirDateLTE != "2026-06-19" {
+		t.Fatalf("当前周剧集日期范围应钳制到今天，实际为 %q - %q", tvParams.FirstAirDateGTE, tvParams.FirstAirDateLTE)
+	}
+}
+
+func TestHotRankingServiceReannotatesCachedAvailability(t *testing.T) {
+	oldNow := hotRankingNow
+	hotRankingNow = func() time.Time {
+		return time.Date(2026, 7, 30, 10, 0, 0, 0, time.UTC)
+	}
+	defer func() {
+		hotRankingNow = oldNow
+	}()
+
+	cache := &fakeHotRankingCache{
+		loadResult: true,
+		loadValue: model.HotRankingResponse{
+			Mode:     model.HotRankingModeTrend,
+			Period:   model.HotRankingPeriodDay,
+			Page:     1,
+			PageSize: defaultHotRankingPreloadLimit,
+			Source:   "tmdb",
+			Sections: []model.HotRankingSection{
+				{
+					Category: model.HotRankingCategoryMovie,
+					Items: []model.HotRankingItem{
+						{
+							ID:              8,
+							TMDBID:          8,
+							MediaType:       "movie",
+							RankingCategory: model.HotRankingCategoryMovie,
+							Title:           "蜘蛛侠：崭新之日",
+							ReleaseDate:     "2026-07-29",
+							Popularity:      100,
+						},
+					},
+				},
+			},
+		},
+	}
+	service := NewHotRankingService(&fakeTMDBService{}, cache)
+
+	response, err := service.GetHotRankings(context.Background(), model.HotRankingQuery{
+		Mode:     model.HotRankingModeTrend,
+		Period:   model.HotRankingPeriodDay,
+		Category: model.HotRankingCategoryMovie,
+		Page:     1,
+		PageSize: defaultHotRankingPreloadLimit,
+	})
+	if err != nil {
+		t.Fatalf("期望没有错误，实际得到 %v", err)
+	}
+
+	item := response.Sections[0].Items[0]
+	if item.AvailabilityStatus != "released" || !item.SearchAvailable {
+		t.Fatalf("缓存命中后应按当前日期重新标注为可搜索，实际 status=%q available=%v", item.AvailabilityStatus, item.SearchAvailable)
+	}
+}
+
 func TestHotRankingServiceUsesRecent365DayWindowForWeeklyAnimeScoreSort(t *testing.T) {
 	tmdb := &fakeTMDBService{
 		tvGenres: map[int]string{16: "动画", 18: "剧情"},

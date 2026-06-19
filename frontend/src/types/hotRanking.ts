@@ -2,6 +2,7 @@ export type HotRankingMode = "trend" | "popular";
 export type HotRankingPeriod = "day" | "week" | "month" | "year";
 export type HotRankingCategory = "all" | "movie" | "tv" | "anime";
 export type HotRankingSortBy = "popularity.desc" | "primary_release_date.desc" | "vote_average.desc";
+export type HotRankingAvailabilityStatus = "released" | "upcoming" | "unknown";
 
 export interface HotRankingItem {
   id: number;
@@ -17,6 +18,10 @@ export interface HotRankingItem {
   vote_count: number;
   popularity: number;
   release_date: string;
+  availability_status?: HotRankingAvailabilityStatus;
+  search_available?: boolean;
+  days_until_release?: number;
+  search_hint?: string;
   genre_names: string[] | null;
   region?: string;
   origin_countries?: string[] | null;

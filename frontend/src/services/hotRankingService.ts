@@ -9,6 +9,7 @@ import type {
   HotRankingSection,
   HotRankingSortBy,
 } from "@/types/hotRanking";
+import { resolveHotRankingAvailability } from "@/utils/hotRankingAvailability";
 
 const DEFAULT_MODE: HotRankingMode = "trend";
 const DEFAULT_PERIOD: HotRankingPeriod = "day";
@@ -18,8 +19,13 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 100;
 
 function normalizeHotRankingItem(item: HotRankingItem): HotRankingItem {
+  const availability = resolveHotRankingAvailability(item);
   return {
     ...item,
+    availability_status: availability.availability_status,
+    search_available: availability.search_available,
+    days_until_release: availability.days_until_release,
+    search_hint: availability.search_hint,
     genre_names: Array.isArray(item.genre_names) ? item.genre_names : [],
     origin_countries: Array.isArray(item.origin_countries) ? item.origin_countries : [],
   };

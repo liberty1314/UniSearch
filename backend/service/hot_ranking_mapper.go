@@ -3,13 +3,18 @@ package service
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"unisearch/config"
 	"unisearch/model"
 )
 
+var hotRankingNow = func() time.Time {
+	return time.Now().UTC()
+}
+
 func mapMovieResultToHotRankingItem(item TMDBMovieResult, category model.HotRankingCategory, genres map[int]string) model.HotRankingItem {
-	return model.HotRankingItem{
+	return annotateHotRankingItemAvailability(model.HotRankingItem{
 		ID:              item.ID,
 		TMDBID:          item.ID,
 		MediaType:       "movie",
@@ -25,11 +30,11 @@ func mapMovieResultToHotRankingItem(item TMDBMovieResult, category model.HotRank
 		ReleaseDate:     item.ReleaseDate,
 		GenreNames:      resolveGenreNames(item.GenreIDs, genres),
 		TMDBURL:         fmt.Sprintf("https://www.themoviedb.org/movie/%d", item.ID),
-	}
+	})
 }
 
 func mapTVResultToHotRankingItem(item TMDBTVResult, category model.HotRankingCategory, genres map[int]string) model.HotRankingItem {
-	return model.HotRankingItem{
+	return annotateHotRankingItemAvailability(model.HotRankingItem{
 		ID:              item.ID,
 		TMDBID:          item.ID,
 		MediaType:       "tv",
@@ -46,7 +51,41 @@ func mapTVResultToHotRankingItem(item TMDBTVResult, category model.HotRankingCat
 		GenreNames:      resolveGenreNames(item.GenreIDs, genres),
 		OriginCountries: item.OriginCountry,
 		TMDBURL:         fmt.Sprintf("https://www.themoviedb.org/tv/%d", item.ID),
+	})
+}
+
+func annotateHotRankingItemAvailability(item model.HotRankingItem) model.HotRankingItem {
+	item.AvailabilityStatus = "unknown"
+	item.SearchAvailable = true
+	item.DaysUntilRelease = 0
+	item.SearchHint = "上映时间未知，搜索结果可能不准确"
+
+	releaseDate := strings.TrimSpace(item.ReleaseDate)
+	if releaseDate == "" {
+		return item
 	}
+
+	parsedReleaseDate, err := time.Parse("2006-01-02", releaseDate)
+	if err != nil {
+		return item
+	}
+
+	now := hotRankingNow().UTC()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	releaseDay := time.Date(parsedReleaseDate.Year(), parsedReleaseDate.Month(), parsedReleaseDate.Day(), 0, 0, 0, 0, time.UTC)
+	if releaseDay.After(today) {
+		item.AvailabilityStatus = "upcoming"
+		item.SearchAvailable = false
+		item.DaysUntilRelease = int(releaseDay.Sub(today).Hours() / 24)
+		item.SearchHint = fmt.Sprintf("预计 %s 上映，当前站内资源可能不可用", releaseDate)
+		return item
+	}
+
+	item.AvailabilityStatus = "released"
+	item.SearchAvailable = true
+	item.DaysUntilRelease = 0
+	item.SearchHint = ""
+	return item
 }
 
 func resolveGenreNames(genreIDs []int, genres map[int]string) []string {

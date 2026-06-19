@@ -39,23 +39,27 @@ const (
 )
 
 type HotRankingItem struct {
-	ID              int                `json:"id" sonic:"id"`
-	TMDBID          int                `json:"tmdb_id" sonic:"tmdb_id"`
-	MediaType       string             `json:"media_type" sonic:"media_type"`
-	RankingCategory HotRankingCategory `json:"ranking_category" sonic:"ranking_category"`
-	Title           string             `json:"title" sonic:"title"`
-	OriginalTitle   string             `json:"original_title" sonic:"original_title"`
-	Overview        string             `json:"overview" sonic:"overview"`
-	PosterURL       string             `json:"poster_url" sonic:"poster_url"`
-	BackdropURL     string             `json:"backdrop_url" sonic:"backdrop_url"`
-	VoteAverage     float64            `json:"vote_average" sonic:"vote_average"`
-	VoteCount       int                `json:"vote_count" sonic:"vote_count"`
-	Popularity      float64            `json:"popularity" sonic:"popularity"`
-	ReleaseDate     string             `json:"release_date" sonic:"release_date"`
-	GenreNames      []string           `json:"genre_names" sonic:"genre_names"`
-	Region          string             `json:"region,omitempty" sonic:"region,omitempty"`
-	OriginCountries []string           `json:"origin_countries,omitempty" sonic:"origin_countries,omitempty"`
-	TMDBURL         string             `json:"tmdb_url" sonic:"tmdb_url"`
+	ID                 int                `json:"id" sonic:"id"`
+	TMDBID             int                `json:"tmdb_id" sonic:"tmdb_id"`
+	MediaType          string             `json:"media_type" sonic:"media_type"`
+	RankingCategory    HotRankingCategory `json:"ranking_category" sonic:"ranking_category"`
+	Title              string             `json:"title" sonic:"title"`
+	OriginalTitle      string             `json:"original_title" sonic:"original_title"`
+	Overview           string             `json:"overview" sonic:"overview"`
+	PosterURL          string             `json:"poster_url" sonic:"poster_url"`
+	BackdropURL        string             `json:"backdrop_url" sonic:"backdrop_url"`
+	VoteAverage        float64            `json:"vote_average" sonic:"vote_average"`
+	VoteCount          int                `json:"vote_count" sonic:"vote_count"`
+	Popularity         float64            `json:"popularity" sonic:"popularity"`
+	ReleaseDate        string             `json:"release_date" sonic:"release_date"`
+	AvailabilityStatus string             `json:"availability_status" sonic:"availability_status"`
+	SearchAvailable    bool               `json:"search_available" sonic:"search_available"`
+	DaysUntilRelease   int                `json:"days_until_release,omitempty" sonic:"days_until_release,omitempty"`
+	SearchHint         string             `json:"search_hint,omitempty" sonic:"search_hint,omitempty"`
+	GenreNames         []string           `json:"genre_names" sonic:"genre_names"`
+	Region             string             `json:"region,omitempty" sonic:"region,omitempty"`
+	OriginCountries    []string           `json:"origin_countries,omitempty" sonic:"origin_countries,omitempty"`
+	TMDBURL            string             `json:"tmdb_url" sonic:"tmdb_url"`
 }
 
 type HotRankingSection struct {

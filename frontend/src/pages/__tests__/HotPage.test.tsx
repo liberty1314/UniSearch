@@ -859,6 +859,46 @@ describe("HotPage", () => {
     );
   });
 
+  it("未上映榜单条目不会跳转到搜索页", async () => {
+    getHotRankingsMock.mockResolvedValue(createResponse({
+      sections: [
+        {
+          category: "movie",
+          title: "热门电影",
+          description: "按热门趋势整理的电影热门内容。",
+          spotlight: {
+            ...createItem(15, "蜘蛛侠：崭新之日", "movie", "movie"),
+            release_date: "2026-07-29",
+            availability_status: "upcoming",
+            search_available: false,
+            days_until_release: 40,
+            search_hint: "预计 2026-07-29 上映，当前站内资源可能不可用",
+          },
+          items: [
+            {
+              ...createItem(15, "蜘蛛侠：崭新之日", "movie", "movie"),
+              release_date: "2026-07-29",
+              availability_status: "upcoming",
+              search_available: false,
+              days_until_release: 40,
+              search_hint: "预计 2026-07-29 上映，当前站内资源可能不可用",
+            },
+          ],
+        },
+      ],
+    }));
+
+    renderHotPage();
+
+    await screen.findByRole("heading", { level: 3, name: "蜘蛛侠：崭新之日" });
+    const button = screen.getByRole("button", { name: "未上映" });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+
+    expect(screen.queryByTestId("location-probe")).not.toBeInTheDocument();
+    expect(buildSearchUrlMock).not.toHaveBeenCalled();
+  });
+
   it("点击榜单卡片快捷搜索入口会使用更明确的搜索线索", async () => {
     getHotRankingsMock.mockResolvedValue(createResponse());
 

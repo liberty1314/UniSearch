@@ -16,6 +16,7 @@ import {
 } from "@/components/trending/hotRankingPresentation";
 import { hotRankingService, normalizeHotRankingResponse } from "@/services/hotRankingService";
 import { SearchService, type TrendingSearchAction } from "@/services/searchService";
+import { resolveHotRankingAvailability } from "@/utils/hotRankingAvailability";
 import type {
   HotRankingCategory,
   HotRankingItem,
@@ -317,6 +318,10 @@ const HotPage: React.FC = () => {
   };
 
   const handleSearch = (item: HotRankingItem, action?: TrendingSearchAction) => {
+    if (!resolveHotRankingAvailability(item).search_available) {
+      return;
+    }
+
     const searchAction = action || SearchService.buildTrendingSearchActions(item)[0];
     const keyword = searchAction?.keyword || item.title;
     const filter =
