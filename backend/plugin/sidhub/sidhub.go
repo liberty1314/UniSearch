@@ -2,6 +2,7 @@ package sidhub
 
 import (
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"hash/fnv"
 	"io"
@@ -46,6 +47,7 @@ var (
 	quarkResolvedRegex  = regexp.MustCompile(`https?://pan\.quark\.cn/s/[0-9A-Za-z]+`)
 	httpURLRegex        = regexp.MustCompile(`https?://[^\s"'<>]+`)
 	base64ImageRegex    = regexp.MustCompile(`data:image/[^;]+;base64,[A-Za-z0-9+/=]+`)
+	panLinkRegex        = regexp.MustCompile(`(?i)var\s+panLink\s*=\s*["']([^"']+)["']`)
 	transferCodeRegex   = regexp.MustCompile(`(?:转存|提取|访问|分享)?(?:口令|密码|验证码|提取码|访问码)\s*[:：]?\s*([A-Za-z0-9]{4,})`)
 	spaceCollapseRegex  = regexp.MustCompile(`\s+`)
 	groupCountRegex     = regexp.MustCompile(`[（(]\d+[）)]`)
@@ -175,7 +177,18 @@ func (p *SidHubAsyncPlugin) Search(keyword string, ext map[string]interface{}) (
 
 // SearchWithResult 执行搜索并返回带状态的结果。
 func (p *SidHubAsyncPlugin) SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error) {
-	return p.AsyncSearchWithResult(keyword, p.doSearch, p.MainCacheKey, ext)
+	results, err := p.doSearch(p.GetClient(), keyword, ext)
+	if err != nil {
+		return model.PluginSearchResult{}, err
+	}
+
+	return model.PluginSearchResult{
+		Results:   results,
+		IsFinal:   true,
+		Timestamp: time.Now(),
+		Source:    p.Name(),
+		Message:   "搜索完成",
+	}, nil
 }
 
 func (p *SidHubAsyncPlugin) doSearch(client *http.Client, keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
@@ -277,11 +290,38 @@ func (p *SidHubAsyncPlugin) fetchURL(targetURL string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("读取 %s 响应失败: %w", targetURL, err)
 	}
+	body, err = decodeSidHubHTTPBody(body, resp.Header.Get("Content-Encoding"))
+	if err != nil {
+		return nil, fmt.Errorf("解压 %s 响应失败: %w", targetURL, err)
+	}
 	if isCloudflareChallenge(body) {
 		return nil, fmt.Errorf("请求 %s 仍返回 Cloudflare 挑战页", targetURL)
 	}
 
 	return body, nil
+}
+
+func decodeSidHubHTTPBody(body []byte, contentEncoding string) ([]byte, error) {
+	encoding := strings.ToLower(strings.TrimSpace(contentEncoding))
+	if encoding != "gzip" && !hasGzipMagicHeader(body) {
+		return body, nil
+	}
+
+	reader, err := gzip.NewReader(bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+
+	decoded, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	return decoded, nil
+}
+
+func hasGzipMagicHeader(body []byte) bool {
+	return len(body) >= 2 && body[0] == 0x1f && body[1] == 0x8b
 }
 
 // RefreshScanTransfer 重新抓取当前扫码转存页并返回最新载荷。
@@ -357,6 +397,16 @@ func shouldResolveSeedHubLinkStart(link model.Link) bool {
 func resolveLinkStartLink(original model.Link, body []byte, movieID string, entryIndex int) (model.Link, bool, error) {
 	resolvedLink := cloneSidHubLink(original)
 
+	scanTransfer, detected, err := extractScanTransferInfo(body, original.URL, original.Type, movieID, entryIndex)
+	if err != nil {
+		return original, false, err
+	}
+	if detected {
+		resolvedLink.AccessMode = "scan_transfer"
+		resolvedLink.ScanTransfer = scanTransfer
+		return resolvedLink, true, nil
+	}
+
 	if directURL := extractDirectResourceURLFromLinkStart(body, original.Type); directURL != "" {
 		resolvedLink.URL = directURL
 		if directType := determineDirectLinkType(directURL); directType != "" {
@@ -368,17 +418,7 @@ func resolveLinkStartLink(original model.Link, body []byte, movieID string, entr
 		return resolvedLink, true, nil
 	}
 
-	scanTransfer, detected, err := extractScanTransferInfo(body, original.URL, original.Type, movieID, entryIndex)
-	if err != nil {
-		return original, false, err
-	}
-	if !detected {
-		return original, false, nil
-	}
-
-	resolvedLink.AccessMode = "scan_transfer"
-	resolvedLink.ScanTransfer = scanTransfer
-	return resolvedLink, true, nil
+	return original, false, nil
 }
 
 func extractDirectResourceURLFromLinkStart(body []byte, expectedType string) string {
@@ -431,10 +471,15 @@ func extractScanTransferInfo(body []byte, sourcePageURL string, linkType string,
 		return nil, false, err
 	}
 
+	bodyText := string(body)
+	qrCodeValue := extractScanTransferQRCodeValue(doc)
+	if qrCodeValue == "" {
+		qrCodeValue = extractScanTransferPanLink(bodyText)
+	}
+	doc.Find("script, style").Remove()
 	pageText := cleanText(doc.Text())
 	qrCodeBase64 := base64ImageRegex.FindString(string(body))
 	qrCodeImageURL := extractScanTransferQRCodeImage(doc)
-	qrCodeValue := extractScanTransferQRCodeValue(doc)
 	mobileURL := extractScanTransferMobileURL(doc)
 	transferCode := extractScanTransferCode(pageText)
 	instruction := extractScanTransferInstruction(pageText)
@@ -520,6 +565,14 @@ func extractScanTransferQRCodeValue(doc *goquery.Document) string {
 		}
 	}
 	return ""
+}
+
+func extractScanTransferPanLink(body string) string {
+	matches := panLinkRegex.FindStringSubmatch(body)
+	if len(matches) < 2 {
+		return ""
+	}
+	return strings.TrimSpace(matches[1])
 }
 
 func extractScanTransferMobileURL(doc *goquery.Document) string {
@@ -652,12 +705,12 @@ func parseSearchCards(reader io.Reader, baseURL string, limit int) ([]sidHubMovi
 			return true
 		}
 
-		title := cleanText(attrOrText(selection, "title"))
+		container := searchCardContainer(selection)
+		title := resolveSidHubSearchCardTitle(selection, container)
 		if title == "" {
 			return true
 		}
 
-		container := searchCardContainer(selection)
 		containerText := cleanText(container.Text())
 		content := buildMovieContent(containerText)
 
@@ -675,6 +728,57 @@ func parseSearchCards(reader io.Reader, baseURL string, limit int) ([]sidHubMovi
 	})
 
 	return cards, nil
+}
+
+func resolveSidHubSearchCardTitle(selection *goquery.Selection, container *goquery.Selection) string {
+	candidates := make([]string, 0, 8)
+	candidates = append(candidates, selection.AttrOr("title", ""))
+
+	selection.Find("img").EachWithBreak(func(_ int, image *goquery.Selection) bool {
+		for _, attr := range []string{"alt", "title", "aria-label"} {
+			if value := cleanText(image.AttrOr(attr, "")); value != "" {
+				candidates = append(candidates, value)
+				return false
+			}
+		}
+		return true
+	})
+
+	candidates = append(candidates, selection.Text())
+	if container != nil && container.Length() > 0 {
+		container.Find(".movie-title, .title, h1, h2, h3, strong, figcaption, [aria-label], [title]").EachWithBreak(func(_ int, node *goquery.Selection) bool {
+			for _, attr := range []string{"title", "aria-label"} {
+				if value := cleanText(node.AttrOr(attr, "")); value != "" {
+					candidates = append(candidates, value)
+					return false
+				}
+			}
+			if value := cleanText(node.Text()); value != "" {
+				candidates = append(candidates, value)
+				return false
+			}
+			return true
+		})
+	}
+
+	for _, candidate := range candidates {
+		title := cleanText(candidate)
+		if isUsefulSidHubSearchCardTitle(title) {
+			return title
+		}
+	}
+	return ""
+}
+
+func isUsefulSidHubSearchCardTitle(title string) bool {
+	title = cleanText(title)
+	if title == "" || isLowSignalSidHubEntryTitle(title) {
+		return false
+	}
+	if movieInfoRegex.MatchString(title) {
+		return false
+	}
+	return len([]rune(title)) >= 2
 }
 
 func parseDetailLinks(reader io.Reader, baseURL string, movieTitle string) ([]model.Link, error) {
@@ -1473,6 +1577,9 @@ func absoluteURL(baseURL string, rawURL string) string {
 	if err != nil {
 		return ""
 	}
+	if !normalizeSidHubURLQuery(parsedURL) {
+		return ""
+	}
 	if parsedURL.IsAbs() {
 		return parsedURL.String()
 	}
@@ -1482,6 +1589,18 @@ func absoluteURL(baseURL string, rawURL string) string {
 		return ""
 	}
 	return parsedBaseURL.ResolveReference(parsedURL).String()
+}
+
+func normalizeSidHubURLQuery(parsedURL *url.URL) bool {
+	if parsedURL.RawQuery == "" {
+		return true
+	}
+	values, err := url.ParseQuery(parsedURL.RawQuery)
+	if err != nil {
+		return false
+	}
+	parsedURL.RawQuery = values.Encode()
+	return true
 }
 
 func extractPassword(linkURL string) string {

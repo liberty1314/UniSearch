@@ -507,7 +507,7 @@ func resourceMatchesKeyword(result model.SearchResult, lowerKeyword string, link
 				return true
 			}
 		}
-		return false
+		return scanTransferMatchesKeyword(result, lowerKeyword)
 	}
 
 	fields := collectSearchableFields(result, linkTitleMap)
@@ -532,6 +532,43 @@ func resourceMatchesKeyword(result model.SearchResult, lowerKeyword string, link
 	return true
 }
 
+func scanTransferMatchesKeyword(result model.SearchResult, lowerKeyword string) bool {
+	for _, link := range result.Links {
+		fields := make([]string, 0, 10)
+		appendField := func(value string) {
+			normalized := strings.ToLower(cleanTitle(value))
+			if normalized != "" {
+				fields = append(fields, normalized)
+			}
+		}
+		appendField(link.AccessMode)
+		appendScanTransferSearchFields(appendField, link.ScanTransfer)
+
+		for _, field := range fields {
+			if strings.Contains(field, lowerKeyword) {
+				return true
+			}
+		}
+
+		keywordTerms := splitKeywordTerms(lowerKeyword)
+		if len(keywordTerms) <= 1 {
+			continue
+		}
+		combined := strings.Join(fields, " ")
+		matchedAllTerms := true
+		for _, term := range keywordTerms {
+			if !strings.Contains(combined, term) {
+				matchedAllTerms = false
+				break
+			}
+		}
+		if matchedAllTerms {
+			return true
+		}
+	}
+	return false
+}
+
 func collectSearchableFields(result model.SearchResult, linkTitleMap map[string]string) []string {
 	fields := make([]string, 0, 4+len(result.Links)+len(linkTitleMap))
 
@@ -547,7 +584,12 @@ func collectSearchableFields(result model.SearchResult, linkTitleMap map[string]
 	appendField(result.DetailURL)
 
 	for _, link := range result.Links {
+		appendField(link.Type)
+		appendField(link.URL)
+		appendField(link.Password)
+		appendField(link.AccessMode)
 		appendField(link.WorkTitle)
+		appendScanTransferSearchFields(appendField, link.ScanTransfer)
 	}
 	for _, title := range linkTitleMap {
 		appendField(title)
@@ -592,11 +634,31 @@ func collectResourceSearchableFields(resource model.ResourceObject) []string {
 	appendField(resource.Detail.URL)
 
 	for _, link := range resource.Links {
+		appendField(link.Type)
+		appendField(link.URL)
+		appendField(link.Password)
+		appendField(link.AccessMode)
 		appendField(link.Title)
 		appendField(link.WorkTitle)
+		appendScanTransferSearchFields(appendField, link.ScanTransfer)
 	}
 
 	return fields
+}
+
+func appendScanTransferSearchFields(appendField func(string), scanTransfer *model.ScanTransferInfo) {
+	if scanTransfer == nil {
+		return
+	}
+	appendField(scanTransfer.Provider)
+	appendField(scanTransfer.QRCodeImageURL)
+	appendField(scanTransfer.QRCodeValue)
+	appendField(scanTransfer.MobileURL)
+	appendField(scanTransfer.TransferCode)
+	appendField(scanTransfer.Instruction)
+	appendField(scanTransfer.SourcePageURL)
+	appendField(scanTransfer.ExpiresHint)
+	appendField(scanTransfer.RefreshKey)
 }
 
 func splitKeywordTerms(lowerKeyword string) []string {

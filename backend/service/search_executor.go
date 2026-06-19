@@ -90,7 +90,12 @@ func newPluginSearchExecutor(pluginSelector PluginSelector, searchCache SearchCa
 type pluginTaskResult struct {
 	name    string
 	results []model.SearchResult
+	isFinal bool
 	err     error
+}
+
+type pluginSearchWithResult interface {
+	SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error)
 }
 
 func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRefresh bool, concurrency int, ext map[string]interface{}) (allResults []model.SearchResult, warnings []model.SearchSourceWarning, err error) {
@@ -139,6 +144,21 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 			currentPlugin.SetMainCacheKey(cacheKey)
 			currentPlugin.SetCurrentKeyword(keyword)
 
+			if searcher, ok := currentPlugin.(pluginSearchWithResult); ok {
+				result, searchErr := searcher.SearchWithResult(keyword, ext)
+				if searchErr != nil {
+					return pluginTaskResult{
+						name: currentPlugin.Name(),
+						err:  searchErr,
+					}
+				}
+				return pluginTaskResult{
+					name:    currentPlugin.Name(),
+					results: result.GetResults(),
+					isFinal: result.IsFinal,
+				}
+			}
+
 			results, searchErr := currentPlugin.Search(keyword, ext)
 			if searchErr != nil {
 				return pluginTaskResult{
@@ -149,6 +169,7 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 			return pluginTaskResult{
 				name:    currentPlugin.Name(),
 				results: results,
+				isFinal: true,
 			}
 		})
 	}
@@ -169,6 +190,7 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 		})
 	}
 
+	allPluginResultsFinal := true
 	for _, result := range results {
 		if result == nil {
 			continue
@@ -181,6 +203,9 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 			})
 			continue
 		}
+		if !taskResult.isFinal {
+			allPluginResultsFinal = false
+		}
 		for _, pluginResult := range taskResult.results {
 			if len(pluginResult.Links) > 0 {
 				allResults = append(allResults, pluginResult)
@@ -188,7 +213,9 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 		}
 	}
 
-	e.searchCache.Store("plugin", cacheKey, keyword, allResults)
+	if allPluginResultsFinal {
+		e.searchCache.Store("plugin", cacheKey, keyword, allResults)
+	}
 	return allResults, warnings, nil
 }
 

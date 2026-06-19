@@ -274,6 +274,10 @@ export class SearchService {
       searchParams.set('plugins', params.plugins.join(','));
     }
 
+    if (params.refresh) {
+      searchParams.set('refresh', 'true');
+    }
+
     const filterFieldMap: Array<[keyof FilterConfig, string]> = [
       ['include', 'include'],
       ['exclude', 'exclude'],
@@ -331,6 +335,10 @@ export class SearchService {
     const plugins = searchParams.get('plugins');
     if (plugins) {
       params.plugins = plugins.split(',').filter(Boolean);
+    }
+
+    if (searchParams.get('refresh') === 'true') {
+      params.refresh = true;
     }
 
     const filterFieldMap: Array<[keyof FilterConfig, string]> = [

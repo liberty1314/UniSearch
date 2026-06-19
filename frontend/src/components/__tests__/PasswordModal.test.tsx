@@ -142,6 +142,12 @@ describe('PasswordModal', () => {
       'src',
       'data:image/png;base64,abc123',
     );
+    expect(screen.queryByLabelText('原始链接')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '打开原始链接' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '打开链接' })).toHaveAttribute(
+      'href',
+      'https://www.seedhub.cc/link_start/?redirect_to=quark_scan',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: '重新获取二维码' }));
 
@@ -160,6 +166,39 @@ describe('PasswordModal', () => {
       ),
     );
     expect(screen.getByDisplayValue('NEW1234')).toBeInTheDocument();
+  });
+
+  it('uses qr_code_value to render a qr image when no qr image url is returned', () => {
+    render(
+      <PasswordModal
+        isOpen
+        onClose={vi.fn()}
+        password=""
+        url="https://sidhub.cc/link_start/?redirect_to=pan_id_626957"
+        cloudType={CloudType.QUARK}
+        resourceId="seedhub-scan-1"
+        accessMode="scan_transfer"
+        scanTransfer={{
+          qr_code_value: 'https://pan.quark.cn/s/46300ad81d60',
+          instruction: '这是一段很长的上游说明，不应该直接显示在二维码上方。',
+          refreshable: true,
+          refresh_key: 'seedhub:135689:quark:10',
+        }}
+      />
+    );
+
+    expect(screen.getByText('使用手机网盘 App 扫码转存。')).toBeInTheDocument();
+    expect(screen.queryByText('这是一段很长的上游说明，不应该直接显示在二维码上方。')).not.toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '扫码转存二维码' })).toBeInTheDocument();
+    expect(screen.queryByText('当前资源暂未返回二维码图片，可继续使用下方口令或手机深链完成转存。')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('https://pan.quark.cn/s/46300ad81d60')).toBeInTheDocument();
+    expect(screen.queryByLabelText('原始链接')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '打开原始链接' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '打开转存页面' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '打开链接' })).toHaveAttribute(
+      'href',
+      'https://pan.quark.cn/s/46300ad81d60',
+    );
   });
 
   it('shows an inline toast message when refreshing the qr code fails', async () => {

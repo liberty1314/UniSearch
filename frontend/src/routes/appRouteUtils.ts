@@ -1,2 +1,1 @@
-export const shouldUseLazyRouteFallback = (path: string) =>
-  path !== "/";
+export const shouldUseLazyRouteFallback = () => true;

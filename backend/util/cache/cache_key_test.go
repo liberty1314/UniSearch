@@ -17,6 +17,17 @@ func TestGeneratePluginCacheKeyIncludesSchemaVersion(t *testing.T) {
 	}
 }
 
+func TestGeneratePluginCacheKeyInvalidatesV2SearchResultCache(t *testing.T) {
+	pluginsHash := getPluginsHash([]string{"sidhub"})
+	v2Hash := sha256.Sum256([]byte("v2:铁拳教育:" + pluginsHash + ":default"))
+	v2Key := fmt.Sprintf("plugin:search:%x", v2Hash)
+
+	key := GeneratePluginCacheKey("铁拳教育", []string{"sidhub"}, nil)
+	if key == v2Key {
+		t.Fatal("期望扫码转存解析修复后插件搜索缓存键避开 v2 旧结果")
+	}
+}
+
 func TestGeneratePluginCacheKeyKeepsPluginOrderStable(t *testing.T) {
 	left := GeneratePluginCacheKey("你的名字", []string{"sidhub", "nyaa"}, nil)
 	right := GeneratePluginCacheKey("你的名字", []string{"nyaa", "sidhub"}, nil)

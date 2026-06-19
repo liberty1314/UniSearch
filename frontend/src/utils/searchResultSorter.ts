@@ -1,13 +1,19 @@
 import type { ResourceObject } from "@/types/api";
 import { getCloudTypePriority, type ResultItem } from "./cloudTypeUtils";
 
-type SortableResultItem = ResultItem & { priority: number; matchRank: number };
+type SortableResultItem = ResultItem & {
+  priority: number;
+  matchRank: number;
+  accessRank: number;
+};
 
 function resolvePrimaryLink(resource: ResourceObject) {
   if (!resource.links || resource.links.length === 0) {
     return undefined;
   }
-  return resource.links[0];
+  return resource.links.find((link) =>
+    link.access_mode === "scan_transfer" || Boolean(link.scan_transfer),
+  ) || resource.links[0];
 }
 
 function resolvePublishedAt(resource: ResourceObject, fallbackLinkType: string) {
@@ -88,6 +94,13 @@ function resolveResourceMatchRank(resource: ResourceObject, keyword: string): nu
   return 4;
 }
 
+function resolveResourceAccessRank(resource: ResourceObject): number {
+  const hasScanTransfer = resource.links.some((link) =>
+    link.access_mode === "scan_transfer" || Boolean(link.scan_transfer),
+  );
+  return hasScanTransfer ? 0 : 1;
+}
+
 export const sortResources = (
   resources: ResourceObject[] | undefined | null,
   keyword = "",
@@ -108,12 +121,16 @@ export const sortResources = (
       datetime: resolvePublishedAt(resource, cloudType),
       priority: getCloudTypePriority(cloudType),
       matchRank: resolveResourceMatchRank(resource, keyword),
+      accessRank: resolveResourceAccessRank(resource),
     };
   });
 
   return items.sort((a, b) => {
     if (a.matchRank !== b.matchRank) {
       return a.matchRank - b.matchRank;
+    }
+    if (a.accessRank !== b.accessRank) {
+      return a.accessRank - b.accessRank;
     }
     const timeDiff = b.datetime - a.datetime;
     if (Math.abs(timeDiff) > 1000) {

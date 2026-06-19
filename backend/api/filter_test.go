@@ -226,3 +226,40 @@ func TestApplyResultFilterMatchesSeedHubQualityTermsAcrossResourceFields(t *test
 		}
 	}
 }
+
+func TestApplyResultFilterMatchesScanTransferFields(t *testing.T) {
+	response := model.SearchResponse{
+		Total: 1,
+		Resources: []model.ResourceObject{
+			{
+				ID:         "sidhub-scan-transfer",
+				Title:      "【铁拳教育】【WEB-4K】【内嵌中字】【极限画质】",
+				Source:     model.ResourceSource{Type: "plugin", Name: "SeedHub"},
+				MediaType:  "movie",
+				TargetType: "share",
+				Links: []model.ResourceLink{
+					{
+						Type:       "quark",
+						URL:        "https://www.seedhub.cc/link_start/?redirect_to=pan_id_626957",
+						AccessMode: "scan_transfer",
+						ScanTransfer: &model.ScanTransferInfo{
+							Provider:      "quark",
+							TransferCode:  "ABCD1234",
+							Instruction:   "网盘链接容易被吞，请使用手机扫码转存",
+							SourcePageURL: "https://www.seedhub.cc/link_start/?redirect_to=pan_id_626957",
+							RefreshKey:    "seedhub:626957:quark:1",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	filtered := applyResultFilter(response, &model.FilterConfig{
+		Include: []string{"扫码"},
+	}, "merge")
+
+	if filtered.Total != 1 || len(filtered.Resources) != 1 {
+		t.Fatalf("期望高级过滤能命中扫码转存字段，实际为 %#v", filtered.Resources)
+	}
+}

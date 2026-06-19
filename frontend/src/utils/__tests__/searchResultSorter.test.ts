@@ -92,4 +92,64 @@ describe("sortResources", () => {
     expect(result[0].cloudType).toBe("detail");
     expect(result[0].primaryLink).toBeUndefined();
   });
+
+  it("uses scan transfer links as the primary card action when mixed with normal links", () => {
+    const result = sortResources([
+      makeResource("mixed-links", "2026-06-19T00:00:00.000Z", CloudType.QUARK, {
+        title: "铁拳教育 WEB-4K",
+        links: [
+          {
+            type: CloudType.QUARK,
+            url: "https://pan.quark.cn/s/normal",
+            title: "普通夸克链接",
+          },
+          {
+            type: CloudType.QUARK,
+            url: "https://www.seedhub.cc/link_start/?redirect_to=pan_id_626957",
+            title: "扫码转存链接",
+            access_mode: "scan_transfer",
+            scan_transfer: {
+              instruction: "请使用手机扫码转存",
+              transfer_code: "ABCD1234",
+            },
+          },
+        ],
+      }),
+    ]);
+
+    expect(result[0].primaryLink?.access_mode).toBe("scan_transfer");
+    expect(result[0].primaryLink?.url).toContain("link_start");
+    expect(result[0].cloudType).toBe(CloudType.QUARK);
+  });
+
+  it("keeps scan transfer resources visible before regular links with the same match rank", () => {
+    const result = sortResources(
+      [
+        makeResource("regular-newer", "2026-06-19T00:00:00.000Z", CloudType.QUARK, {
+          title: "铁拳教育 4K 高码普通链接",
+        }),
+        makeResource("scan-older", "2026-06-10T00:00:00.000Z", CloudType.QUARK, {
+          title: "铁拳教育 WEB-4K 扫码链接",
+          links: [
+            {
+              type: CloudType.QUARK,
+              url: "https://www.seedhub.cc/link_start/?redirect_to=pan_id_626957",
+              title: "铁拳教育 WEB-4K",
+              access_mode: "scan_transfer",
+              scan_transfer: {
+                qr_code_value: "https://pan.quark.cn/s/46300ad81d60",
+              },
+            },
+          ],
+        }),
+      ],
+      "铁拳教育",
+    );
+
+    expect(result.map((item) => item.resource.id)).toEqual([
+      "scan-older",
+      "regular-newer",
+    ]);
+    expect(result[0].primaryLink?.access_mode).toBe("scan_transfer");
+  });
 });

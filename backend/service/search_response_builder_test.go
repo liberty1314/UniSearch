@@ -361,6 +361,41 @@ func TestSearchResponseBuilderPreservesScanTransferProtocol(t *testing.T) {
 	}
 }
 
+func TestSearchResponseBuilderMatchesScanTransferFields(t *testing.T) {
+	builder := newSearchResponseBuilder()
+	response := builder.Build([]model.SearchResult{
+		{
+			UniqueID:       "sidhub-626957-quark-scan",
+			Title:          "【铁拳教育】【WEB-4K】【内嵌中字】【极限画质】",
+			SourcePluginID: "sidhub",
+			SourceType:     "plugin",
+			SourceName:     "SeedHub",
+			Links: []model.Link{
+				{
+					Type:       "quark",
+					URL:        "https://www.seedhub.cc/link_start/?redirect_to=pan_id_626957",
+					AccessMode: "scan_transfer",
+					ScanTransfer: &model.ScanTransferInfo{
+						Provider:      "quark",
+						TransferCode:  "ABCD1234",
+						Instruction:   "网盘链接容易被吞，请使用手机扫码转存",
+						SourcePageURL: "https://www.seedhub.cc/link_start/?redirect_to=pan_id_626957",
+						Refreshable:   true,
+						RefreshKey:    "seedhub:626957:quark:1",
+					},
+				},
+			},
+		},
+	}, NormalizedSearchRequest{Keyword: "扫码", ResultType: "results"})
+
+	if response.Total != 1 || len(response.Resources) != 1 {
+		t.Fatalf("期望扫码转存字段可参与关键词搜索，实际为 %#v", response)
+	}
+	if response.Resources[0].Links[0].AccessMode != "scan_transfer" {
+		t.Fatalf("期望保留扫码访问模式，实际为 %#v", response.Resources[0].Links)
+	}
+}
+
 func TestSearchResponseBuilderKeepsResourceWithoutLinks(t *testing.T) {
 	builder := newSearchResponseBuilder()
 	response := builder.Build([]model.SearchResult{

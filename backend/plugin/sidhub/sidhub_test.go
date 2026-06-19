@@ -1,15 +1,20 @@
 package sidhub
 
 import (
+	"bytes"
+	"compress/gzip"
 	"errors"
 	"fmt"
+	"net/url"
 	"reflect"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 
+	"unisearch/config"
 	"unisearch/model"
 	"unisearch/plugin"
 	"unisearch/plugin/testutil"
@@ -293,6 +298,34 @@ func TestParseSearchCardsSupportsGenericMovieContainers(t *testing.T) {
 	}
 }
 
+func TestParseSearchCardsUsesImageAltAndContainerTitleFallback(t *testing.T) {
+	// 覆盖 SeedHub 新卡片结构：影片链接可能只包裹封面，标题位于图片 alt 或容器标题节点。
+	html := `
+<section class="grid">
+  <article class="movie-card">
+    <a class="poster-link" href="/movies/626957/">
+      <img alt="【铁拳教育】【WEB-4K】【内嵌中字】【极限画质】" src="/poster-tiequan.jpg" />
+    </a>
+    <h2 class="movie-title">铁拳教育</h2>
+    <p>2026 / 电影 / 中国大陆 / 汉语普通话</p>
+  </article>
+</section>`
+
+	cards, err := parseSearchCards(strings.NewReader(html), "https://www.seedhub.cc", 10)
+	if err != nil {
+		t.Fatalf("解析封面式搜索卡片失败: %v", err)
+	}
+	if len(cards) != 1 {
+		t.Fatalf("期望解析 1 个封面式搜索卡片，实际为 %#v", cards)
+	}
+	if cards[0].Title != "【铁拳教育】【WEB-4K】【内嵌中字】【极限画质】" {
+		t.Fatalf("期望从图片 alt 提取资源标题，实际为 %#v", cards[0])
+	}
+	if cards[0].ID != "626957" || cards[0].CoverURL != "https://www.seedhub.cc/poster-tiequan.jpg" {
+		t.Fatalf("期望保留影片 ID 和封面，实际为 %#v", cards[0])
+	}
+}
+
 func TestParseDetailLinks(t *testing.T) {
 	// 覆盖矩阵：D5、T1。
 	html := `
@@ -316,9 +349,7 @@ func TestParseDetailLinks(t *testing.T) {
 	if links[0].Type != "quark" || links[0].WorkTitle != "怪奇物语" {
 		t.Fatalf("期望首个链接为夸克且带作品标题，实际为 %#v", links[0])
 	}
-	if links[0].URL != "https://sidhub.cc/link_start/?redirect_to=pan_id_10&movie_title=%E6%80%AA%E5%A5%87%E7%89%A9%E8%AF%AD" {
-		t.Fatalf("期望 SidHub 跳转地址被转为绝对地址，实际为 %q", links[0].URL)
-	}
+	assertSidHubLinkStartURL(t, links[0].URL, "https", "sidhub.cc", "pan_id_10", "怪奇物语")
 	if links[1].Type != "baidu" {
 		t.Fatalf("期望第二个链接为百度，实际为 %#v", links[1])
 	}
@@ -505,18 +536,42 @@ func TestParseDetailLinkEntriesSupportsAttributeResourceURLs(t *testing.T) {
 	}
 
 	expectedURLs := []string{
-		"https://www.seedhub.cc/link_start/?redirect_to=quark_data_url&movie_title=%E5%A4%A7%E6%BF%9B",
+		"",
 		"https://pan.quark.cn/s/clipboard123",
 		"https://pan.quark.cn/s/input123",
 	}
 	for index, expectedURL := range expectedURLs {
 		entry := entries[index]
-		if entry.Link.Type != "quark" || entry.Link.URL != expectedURL {
+		if entry.Link.Type != "quark" {
+			t.Fatalf("第 %d 条资源类型或 URL 不符合预期，实际为 %#v", index+1, entry)
+		}
+		if index == 0 {
+			assertSidHubLinkStartURL(t, entry.Link.URL, "https", "www.seedhub.cc", "quark_data_url", "大濛")
+		} else if entry.Link.URL != expectedURL {
 			t.Fatalf("第 %d 条资源类型或 URL 不符合预期，实际为 %#v", index+1, entry)
 		}
 		if entry.Title == "" {
 			t.Fatalf("第 %d 条资源应保留可展示标题，实际为 %#v", index+1, entry)
 		}
+	}
+}
+
+func assertSidHubLinkStartURL(t *testing.T, actualURL string, expectedScheme string, expectedHost string, expectedRedirectTo string, expectedMovieTitle string) {
+	t.Helper()
+
+	parsedURL, err := url.Parse(actualURL)
+	if err != nil {
+		t.Fatalf("期望 SidHub 跳转地址可解析，实际为 %q: %v", actualURL, err)
+	}
+	if parsedURL.Scheme != expectedScheme || parsedURL.Host != expectedHost || parsedURL.Path != linkStartPathPrefix {
+		t.Fatalf("期望 SidHub 跳转地址被转为绝对地址，实际为 %q", actualURL)
+	}
+	query := parsedURL.Query()
+	if query.Get("redirect_to") != expectedRedirectTo || query.Get("movie_title") != expectedMovieTitle {
+		t.Fatalf("期望 SidHub 跳转参数完整，实际为 %q", actualURL)
+	}
+	if strings.Contains(actualURL, expectedMovieTitle) {
+		t.Fatalf("期望 SidHub 跳转中文参数被编码，实际为 %q", actualURL)
 	}
 }
 
@@ -769,6 +824,42 @@ func TestResolveLinkStartLinkDetectsScanTransfer(t *testing.T) {
 	}
 }
 
+func TestResolveLinkStartLinkPrefersScanTransferWhenDirectURLAlsoExists(t *testing.T) {
+	original := model.Link{
+		Type:      "quark",
+		URL:       "https://www.seedhub.cc/link_start/?redirect_to=quark_scan_with_direct",
+		WorkTitle: "铁拳教育",
+	}
+	body := []byte(`
+<html>
+  <body>
+    <p>请使用手机扫码转存，网盘链接容易被吞。</p>
+    <script>var panLink = "https://pan.quark.cn/s/46300ad81d60";</script>
+    <a href="https://pan.quark.cn/s/46300ad81d60">备用直链</a>
+  </body>
+</html>`)
+
+	resolved, handled, err := resolveLinkStartLink(original, body, "135689", 10)
+	if err != nil {
+		t.Fatalf("解析混合扫码页失败: %v", err)
+	}
+	if !handled {
+		t.Fatal("期望混合扫码页被识别")
+	}
+	if resolved.URL != original.URL {
+		t.Fatalf("期望扫码页保留原始 link_start 地址，实际为 %q", resolved.URL)
+	}
+	if resolved.AccessMode != "scan_transfer" || resolved.ScanTransfer == nil {
+		t.Fatalf("期望优先展示扫码转存载荷，实际为 %#v", resolved)
+	}
+	if resolved.ScanTransfer.QRCodeValue != "https://pan.quark.cn/s/46300ad81d60" {
+		t.Fatalf("期望从 panLink 脚本变量提取二维码值，实际为 %#v", resolved.ScanTransfer)
+	}
+	if !strings.Contains(resolved.ScanTransfer.Instruction, "手机扫码转存") {
+		t.Fatalf("期望保留扫码提示，实际为 %#v", resolved.ScanTransfer)
+	}
+}
+
 func TestResolveLinkStartLinkKeepsFallbackScanTransferPayload(t *testing.T) {
 	original := model.Link{
 		Type:      "quark",
@@ -833,6 +924,34 @@ func TestFetchURLRejectsCloudflareChallengeFromInjectedFetcher(t *testing.T) {
 	}
 }
 
+func TestDecodeSidHubHTTPBodyHandlesGzipPayload(t *testing.T) {
+	original := []byte(`<html><a href="/movies/626957/">铁拳教育</a></html>`)
+	var buffer bytes.Buffer
+	writer := gzip.NewWriter(&buffer)
+	if _, err := writer.Write(original); err != nil {
+		t.Fatalf("写入 gzip 测试载荷失败: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("关闭 gzip 测试载荷失败: %v", err)
+	}
+
+	decodedByHeader, err := decodeSidHubHTTPBody(buffer.Bytes(), "gzip")
+	if err != nil {
+		t.Fatalf("按响应头解压 gzip 失败: %v", err)
+	}
+	if string(decodedByHeader) != string(original) {
+		t.Fatalf("按响应头解压结果不一致，实际为 %q", decodedByHeader)
+	}
+
+	decodedByMagic, err := decodeSidHubHTTPBody(buffer.Bytes(), "")
+	if err != nil {
+		t.Fatalf("按 gzip 魔数解压失败: %v", err)
+	}
+	if string(decodedByMagic) != string(original) {
+		t.Fatalf("按 gzip 魔数解压结果不一致，实际为 %q", decodedByMagic)
+	}
+}
+
 func TestSidHubDoSearchBuildsScanTransferResult(t *testing.T) {
 	searchCache = sync.Map{}
 	p := NewSidHubPlugin()
@@ -881,6 +1000,69 @@ func TestSidHubDoSearchBuildsScanTransferResult(t *testing.T) {
 	}
 	if link.ScanTransfer.RefreshKey != "seedhub:4259:quark:1" {
 		t.Fatalf("期望结果携带稳定刷新键，实际为 %#v", link.ScanTransfer)
+	}
+}
+
+func TestSidHubSearchWithResultWaitsForScanTransferPayload(t *testing.T) {
+	searchCache = sync.Map{}
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{
+		AsyncResponseTimeoutDur: time.Millisecond,
+	}
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	p := NewSidHubPlugin()
+
+	searchURL := "https://www.seedhub.cc/s/%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97/"
+	detailURL := "https://www.seedhub.cc/movies/4259/"
+	linkStartURL := "https://www.seedhub.cc/link_start/?redirect_to=quark_scan"
+	fixtures := map[string]string{
+		searchURL: `
+<article>
+  <a title="你的名字。 君の名は。" class="image" href="/movies/4259/">
+    <img src="/poster.jpg" />
+  </a>
+  <p>2016 / 动漫 / 日本 / 日语</p>
+  <span>类型:爱情/动画/剧情</span>
+</article>`,
+		detailURL: `
+<section id="downloads">
+  <div class="quark-list">
+    <ul>
+      <li><a href="/link_start/?redirect_to=quark_scan" title="夸克扫码资源">夸克扫码资源</a></li>
+    </ul>
+  </div>
+</section>`,
+		linkStartURL: sidHubScanTransferFixture,
+	}
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		time.Sleep(5 * time.Millisecond)
+		body, ok := fixtures[targetURL]
+		if !ok {
+			return nil, errors.New("未注册的测试地址")
+		}
+		return []byte(body), nil
+	})
+
+	result, err := p.SearchWithResult("你的名字", map[string]interface{}{"sidhub_base_url": "https://www.seedhub.cc"})
+	if err != nil {
+		t.Fatalf("搜索扫码转存资源失败: %v", err)
+	}
+	if !result.IsFinal {
+		t.Fatalf("SeedHub 搜索不应被通用异步首包标记为非最终结果，实际为 %#v", result)
+	}
+	if len(result.Results) != 1 || len(result.Results[0].Links) != 1 {
+		t.Fatalf("期望同步返回 1 条扫码资源，实际为 %#v", result.Results)
+	}
+
+	link := result.Results[0].Links[0]
+	if link.AccessMode != "scan_transfer" || link.ScanTransfer == nil {
+		t.Fatalf("期望返回扫码转存载荷，实际为 %#v", link)
+	}
+	if link.ScanTransfer.RefreshKey != "seedhub:4259:quark:1" {
+		t.Fatalf("期望保留稳定刷新键，实际为 %#v", link.ScanTransfer)
 	}
 }
 
@@ -967,6 +1149,10 @@ func TestSidHubHelpersCoverEdgeCases(t *testing.T) {
 
 	if absoluteURL("https://sidhub.cc", "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567") == "" {
 		t.Fatal("期望磁力链接保持可用")
+	}
+	encodedLinkStartURL := absoluteURL("https://sidhub.cc", "/link_start/?redirect_to=pan_id_626957&movie_title=【铁拳教育】【WEB-4K】 更新于 昨天")
+	if !strings.Contains(encodedLinkStartURL, "movie_title=%E3%80%90%E9%93%81%E6%8B%B3%E6%95%99%E8%82%B2%E3%80%91") {
+		t.Fatalf("期望 link_start 中文参数被编码，实际为 %q", encodedLinkStartURL)
 	}
 	if absoluteURL("://bad", "%zz") != "" {
 		t.Fatal("期望非法 URL 返回空")

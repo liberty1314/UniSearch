@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { IoOpenOutline } from "react-icons/io5";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Copy,
   LockKeyhole,
@@ -78,8 +79,12 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
   const effectiveScanTransfer = currentScanTransfer;
   const qrCodePreview =
     effectiveScanTransfer?.qr_code_base64 || effectiveScanTransfer?.qr_code_image_url || "";
+  const qrCodeValue = effectiveScanTransfer?.qr_code_value?.trim() || "";
   const mobileUrl = effectiveScanTransfer?.mobile_url?.trim() || "";
   const transferCode = effectiveScanTransfer?.transfer_code?.trim() || "";
+  const openUrl = scanTransferMode && qrCodeValue
+    ? normalizeExternalUrl(qrCodeValue)
+    : finalUrl;
 
   const dialogTitle = useMemo(() => {
     if (scanTransferMode) {
@@ -90,15 +95,15 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
 
   const dialogDescription = useMemo(() => {
     if (scanTransferMode) {
-      return effectiveScanTransfer?.instruction?.trim() || "请使用手机完成扫码转存。";
+      return "使用手机网盘 App 扫码转存。";
     }
     return magnetMode
       ? "该资源为磁力链接，可直接复制或打开。"
       : "该资源需要访问码才能访问";
-  }, [effectiveScanTransfer?.instruction, magnetMode, scanTransferMode]);
+  }, [magnetMode, scanTransferMode]);
 
   const handleInvalidOpen = () => {
-    toast.error(magnetMode ? "磁力链接为空" : "链接地址为空");
+    toast.error(scanTransferMode ? "转存页面地址为空" : magnetMode ? "磁力链接为空" : "链接地址为空");
   };
 
   const handleRefreshScanTransfer = async () => {
@@ -164,7 +169,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
                 {cloudInfo.name}
               </span>
             </DialogTitle>
-            <DialogDescription className="text-sm">
+            <DialogDescription className="line-clamp-1 text-sm">
               {dialogDescription}
             </DialogDescription>
           </div>
@@ -181,6 +186,20 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
                       alt="扫码转存二维码"
                       className="h-56 w-56 rounded-2xl border border-slate-200/70 bg-white object-contain p-3 shadow-sm dark:border-white/10 dark:bg-slate-950/60"
                     />
+                  </div>
+                ) : qrCodeValue ? (
+                  <div className="flex justify-center">
+                    <div className="rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm dark:border-white/10">
+                      <QRCodeSVG
+                        value={qrCodeValue}
+                        size={224}
+                        level="M"
+                        marginSize={3}
+                        role="img"
+                        aria-label="扫码转存二维码"
+                        className="h-56 w-56"
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-300/80 bg-white/85 px-5 py-6 text-center dark:border-white/10 dark:bg-slate-950/50">
@@ -248,39 +267,41 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
             </div>
           ) : null}
 
-          <div className="space-y-1">
-            <AppleInput
-              label={scanTransferMode ? "原始链接" : magnetMode ? "磁力链接" : "链接地址"}
-              value={url}
-              readOnly
-              className="text-sm text-slate-600 dark:text-slate-300 truncate pr-12 bg-transparent shadow-none border-slate-200 dark:border-slate-700 focus:bg-transparent"
-              endAdornment={
-                <button
-                  onClick={() =>
-                    void copyText(
-                      url,
-                      scanTransferMode ? "原始链接已复制" : magnetMode ? "磁力链接已复制" : "链接已复制",
-                    )
-                  }
-                  className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 focus:outline-none"
-                  title={scanTransferMode ? "复制原始链接" : magnetMode ? "复制磁力链接" : "复制链接"}
-                >
-                  <Copy className="h-[18px] w-[18px]" />
-                </button>
-              }
-            />
-          </div>
+          {!scanTransferMode ? (
+            <div className="space-y-1">
+              <AppleInput
+                label={magnetMode ? "磁力链接" : "链接地址"}
+                value={url}
+                readOnly
+                className="text-sm text-slate-600 dark:text-slate-300 truncate pr-12 bg-transparent shadow-none border-slate-200 dark:border-slate-700 focus:bg-transparent"
+                endAdornment={
+                  <button
+                    onClick={() =>
+                      void copyText(
+                        url,
+                        magnetMode ? "磁力链接已复制" : "链接已复制",
+                      )
+                    }
+                    className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 focus:outline-none"
+                    title={magnetMode ? "复制磁力链接" : "复制链接"}
+                  >
+                    <Copy className="h-[18px] w-[18px]" />
+                  </button>
+                }
+              />
+            </div>
+          ) : null}
 
-          {effectiveScanTransfer?.qr_code_value ? (
+          {qrCodeValue ? (
             <AppleInput
               label="二维码内容"
-              value={effectiveScanTransfer.qr_code_value}
+              value={qrCodeValue}
               readOnly
               className="text-sm text-slate-600 dark:text-slate-300 truncate pr-12 bg-transparent shadow-none border-slate-200 dark:border-slate-700 focus:bg-transparent"
               endAdornment={
                 <button
                   onClick={() =>
-                    void copyText(effectiveScanTransfer.qr_code_value || "", "二维码内容已复制")
+                    void copyText(qrCodeValue, "二维码内容已复制")
                   }
                   className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 focus:outline-none"
                   title="复制二维码内容"
@@ -316,16 +337,16 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
                   打开手机深链
                 </a>
               </Button>
-            ) : finalUrl ? (
+            ) : openUrl ? (
               <Button asChild variant="primary" size="md" fullWidth className="rounded-xl">
                 <a
-                  href={finalUrl}
+                  href={openUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={onClose}
                 >
                   <IoOpenOutline className="h-[18px] w-[18px]" />
-                  {scanTransferMode ? "打开原始链接" : magnetMode ? "打开磁力" : "打开链接"}
+                  {magnetMode ? "打开磁力" : "打开链接"}
                 </a>
               </Button>
             ) : (
@@ -338,7 +359,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
                 onClick={handleInvalidOpen}
               >
                 <IoOpenOutline className="h-[18px] w-[18px]" />
-                {scanTransferMode ? "打开原始链接" : magnetMode ? "打开磁力" : "打开链接"}
+                {magnetMode ? "打开磁力" : "打开链接"}
               </Button>
             )}
           </div>

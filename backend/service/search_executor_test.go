@@ -82,6 +82,54 @@ func TestPluginSearchExecutorUsesPluginSearchDirectly(t *testing.T) {
 	}
 }
 
+func TestPluginSearchExecutorDoesNotStorePartialPluginResults(t *testing.T) {
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{
+		CacheEnabled:              true,
+		DefaultConcurrency:        2,
+		AsyncMaxBackgroundWorkers: 2,
+		PluginTimeout:             200 * time.Millisecond,
+	}
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	finalPlugin := &pluginResultStateProbe{
+		name:    "final-plugin",
+		isFinal: true,
+	}
+	partialPlugin := &pluginResultStateProbe{
+		name:    "partial-plugin",
+		isFinal: false,
+	}
+
+	pm := plugin.NewPluginManager()
+	pm.RegisterPlugin(finalPlugin)
+	pm.RegisterPlugin(partialPlugin)
+
+	backend := &fakeCacheBackend{}
+	searchCache := &redisSearchCache{
+		cache:   backend,
+		metrics: newSearchMetricsRecorder(),
+	}
+	selector := newPluginSelector(pm, nil)
+	executor := newPluginSearchExecutor(selector, searchCache, newSearchMetricsRecorder())
+
+	results, warnings, err := executor.Search("铁拳教育", nil, true, 2, nil)
+	if err != nil {
+		t.Fatalf("unexpected search error: %v", err)
+	}
+	if len(warnings) != 0 {
+		t.Fatalf("expected no warnings, got %#v", warnings)
+	}
+	if len(results) != 2 {
+		t.Fatalf("expected both immediate plugin results to be returned, got %d", len(results))
+	}
+	if backend.Calls() != 0 {
+		t.Fatalf("非最终插件结果不应写入主搜索缓存，实际写入 %d 次", backend.Calls())
+	}
+}
+
 func TestPluginSearchExecutorIsolatesRequestStatePerPlugin(t *testing.T) {
 	oldConfig := config.AppConfig
 	config.AppConfig = &config.Config{
@@ -214,5 +262,63 @@ func (p *requestStateProbePlugin) Search(keyword string, _ map[string]interface{
 }
 
 func (p *requestStateProbePlugin) SkipServiceFilter() bool {
+	return false
+}
+
+type pluginResultStateProbe struct {
+	name    string
+	isFinal bool
+}
+
+func (p *pluginResultStateProbe) Name() string {
+	return p.name
+}
+
+func (p *pluginResultStateProbe) Priority() int {
+	return 1
+}
+
+func (p *pluginResultStateProbe) AsyncSearch(
+	keyword string,
+	_ func(*http.Client, string, map[string]interface{}) ([]model.SearchResult, error),
+	_ string,
+	_ map[string]interface{},
+) ([]model.SearchResult, error) {
+	return p.Search(keyword, nil)
+}
+
+func (p *pluginResultStateProbe) SetMainCacheKey(_ string) {}
+
+func (p *pluginResultStateProbe) SetCurrentKeyword(_ string) {}
+
+func (p *pluginResultStateProbe) Search(keyword string, _ map[string]interface{}) ([]model.SearchResult, error) {
+	return []model.SearchResult{
+		{
+			UniqueID: fmt.Sprintf("%s-%s", p.name, keyword),
+			Title:    p.name,
+			Links: []model.Link{
+				{
+					Type: "mock",
+					URL:  "https://example.com/" + p.name,
+				},
+			},
+		},
+	}, nil
+}
+
+func (p *pluginResultStateProbe) SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error) {
+	results, err := p.Search(keyword, ext)
+	if err != nil {
+		return model.PluginSearchResult{}, err
+	}
+	return model.PluginSearchResult{
+		Results:   results,
+		IsFinal:   p.isFinal,
+		Timestamp: time.Now(),
+		Source:    p.name,
+	}, nil
+}
+
+func (p *pluginResultStateProbe) SkipServiceFilter() bool {
 	return false
 }

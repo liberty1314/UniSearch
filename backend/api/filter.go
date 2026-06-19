@@ -67,9 +67,27 @@ func buildResourceFilterText(resource model.ResourceObject) string {
 	}
 	parts = append(parts, resource.Tags...)
 	for _, link := range resource.Links {
-		parts = append(parts, link.Type, link.URL, link.Title, link.WorkTitle)
+		parts = append(parts, link.Type, link.URL, link.Password, link.AccessMode, link.Title, link.WorkTitle)
+		parts = appendScanTransferFilterText(parts, link.ScanTransfer)
 	}
 	return strings.Join(parts, " ")
+}
+
+func appendScanTransferFilterText(parts []string, scanTransfer *model.ScanTransferInfo) []string {
+	if scanTransfer == nil {
+		return parts
+	}
+	return append(parts,
+		scanTransfer.Provider,
+		scanTransfer.QRCodeImageURL,
+		scanTransfer.QRCodeValue,
+		scanTransfer.MobileURL,
+		scanTransfer.TransferCode,
+		scanTransfer.Instruction,
+		scanTransfer.SourcePageURL,
+		scanTransfer.ExpiresHint,
+		scanTransfer.RefreshKey,
+	)
 }
 
 // matchFilter 检查文本是否匹配关键词过滤条件。

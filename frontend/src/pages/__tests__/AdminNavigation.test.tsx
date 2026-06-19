@@ -95,7 +95,7 @@ describe('Admin 导航集成', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('PluginManagementView')).toBeInTheDocument();
+    expect(await screen.findByText('PluginManagementView')).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/admin?view=plugin_management');
 
     await user.click(screen.getAllByRole('button', { name: 'Telegram 频道' })[0]);
@@ -103,7 +103,7 @@ describe('Admin 导航集成', () => {
     await waitFor(() => {
       expect(screen.getByTestId('location')).toHaveTextContent('/admin?view=channel_management');
     });
-    expect(screen.getByText('ChannelManagementView')).toBeInTheDocument();
+    expect(await screen.findByText('ChannelManagementView')).toBeInTheDocument();
     expect(screen.queryByText('PluginManagementView')).not.toBeInTheDocument();
   });
 });

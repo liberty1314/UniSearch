@@ -4,8 +4,6 @@ import { Toaster } from 'sonner';
 import Navbar from '@/components/Navbar';
 import { AnnouncementProvider } from '@/components/AnnouncementProvider';
 import SiteFooter from '@/components/SiteFooter';
-import PageTransition from '@/components/PageTransition';
-import { CinematicFooter } from '@/components/ui/motion-footer';
 import NotFoundPage from '@/components/ui/page-not-found';
 import ScrollToTop from './ScrollToTop';
 import { isAuthRoute } from '@/components/auth/authRouteMotion';
@@ -16,7 +14,13 @@ import {
   ProtectedRoute,
 } from './RouteGuards';
 
-import Home from '@/pages/Home';
+const PageTransition = lazy(() => import('@/components/PageTransition'));
+const CinematicFooter = lazy(() =>
+  import('@/components/ui/motion-footer').then((module) => ({
+    default: module.CinematicFooter,
+  }))
+);
+const Home = lazy(() => import('@/pages/Home'));
 const SearchPage = lazy(() => import('@/pages/SearchPage'));
 const HotPage = lazy(() => import('@/pages/HotPage'));
 const ResourceDetailPage = lazy(() => import('@/pages/ResourceDetailPage'));
@@ -52,8 +56,8 @@ const renderLazyRoute = (element: React.ReactNode) => (
   <Suspense fallback={<RouteFallback />}>{element}</Suspense>
 );
 
-const renderRouteElement = (path: string, element: React.ReactNode) =>
-  shouldUseLazyRouteFallback(path) ? renderLazyRoute(element) : element;
+const renderRouteElement = (element: React.ReactNode) =>
+  shouldUseLazyRouteFallback() ? renderLazyRoute(element) : element;
 
 const AppRoutes: React.FC = () => {
   const { pathname } = useLocation();
@@ -75,6 +79,70 @@ const AppRoutes: React.FC = () => {
       ? 'bg-gray-50'
       : 'bg-white';
 
+  const routes = (
+    <Routes>
+      <Route
+        path="/"
+        element={renderRouteElement(<Home />)}
+      />
+      <Route
+        path="/search"
+        element={renderRouteElement(<SearchPage />)}
+      />
+      <Route
+        path="/trending"
+        element={renderRouteElement(<HotPage />)}
+      />
+      <Route
+        path="/resource/:resourceId"
+        element={renderRouteElement(<ResourceDetailPage />)}
+      />
+      <Route
+        path="/login"
+        element={renderRouteElement(
+          <GuestRoute>
+            <LoginPage />
+          </GuestRoute>
+        )}
+      />
+      <Route
+        path="/register"
+        element={renderRouteElement(
+          <GuestRoute>
+            <RegisterPage />
+          </GuestRoute>
+        )}
+      />
+      <Route
+        path="/account"
+        element={renderRouteElement(
+          <ProtectedRoute>
+            <AccountPage />
+          </ProtectedRoute>
+        )}
+      />
+      <Route path="/disclaimer" element={renderRouteElement(<DisclaimerPage />)} />
+      <Route path="/auth" element={<Navigate to="/login" replace />} />
+      <Route
+        path="/admin/login"
+        element={renderRouteElement(
+          <AdminGuestRoute>
+            <AdminLogin />
+          </AdminGuestRoute>
+        )}
+      />
+      <Route
+        path="/admin"
+        element={renderRouteElement(
+          <AdminRoute>
+            <Admin />
+          </AdminRoute>
+        )}
+      />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  );
+
   return (
     <div className={`${appShellClassName} obsidian-shell transition-colors duration-200`}>
       <ScrollToTop />
@@ -82,72 +150,16 @@ const AppRoutes: React.FC = () => {
       <AnnouncementProvider />
 
       <main className="relative min-h-screen">
-        <PageTransition>
-          <Routes>
-            <Route
-              path="/"
-              element={renderRouteElement('/', <Home />)}
-            />
-            <Route
-              path="/search"
-              element={renderRouteElement('/search', <SearchPage />)}
-            />
-            <Route
-              path="/trending"
-              element={renderRouteElement('/trending', <HotPage />)}
-            />
-            <Route
-              path="/resource/:resourceId"
-              element={renderRouteElement('/resource/:resourceId', <ResourceDetailPage />)}
-            />
-            <Route
-              path="/login"
-              element={renderRouteElement('/login',
-                <GuestRoute>
-                  <LoginPage />
-                </GuestRoute>
-              )}
-            />
-            <Route
-              path="/register"
-              element={renderRouteElement('/register',
-                <GuestRoute>
-                  <RegisterPage />
-                </GuestRoute>
-              )}
-            />
-            <Route
-              path="/account"
-              element={renderRouteElement('/account',
-                <ProtectedRoute>
-                  <AccountPage />
-                </ProtectedRoute>
-              )}
-            />
-            <Route path="/disclaimer" element={renderRouteElement('/disclaimer', <DisclaimerPage />)} />
-            <Route path="/auth" element={<Navigate to="/login" replace />} />
-            <Route
-              path="/admin/login"
-              element={renderRouteElement('/admin/login',
-                <AdminGuestRoute>
-                  <AdminLogin />
-                </AdminGuestRoute>
-              )}
-            />
-            <Route
-              path="/admin"
-              element={renderRouteElement('/admin',
-                <AdminRoute>
-                  <Admin />
-                </AdminRoute>
-              )}
-            />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </PageTransition>
+        <Suspense fallback={<RouteFallback />}>
+          <PageTransition>{routes}</PageTransition>
+        </Suspense>
       </main>
 
-      {showCinematicFooter ? <CinematicFooter /> : showSiteFooter && <SiteFooter />}
+      {showCinematicFooter ? (
+        <Suspense fallback={<SiteFooter />}>
+          <CinematicFooter />
+        </Suspense>
+      ) : showSiteFooter && <SiteFooter />}
       <Toaster {...TOAST_CONFIG} />
     </div>
   );

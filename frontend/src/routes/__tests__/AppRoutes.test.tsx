@@ -83,12 +83,8 @@ const renderRoutesAt = (path: string) =>
   );
 
 describe('AppRoutes', () => {
-  it('keeps only the home route out of the suspense fallback path', () => {
-    expect(shouldUseLazyRouteFallback('/')).toBe(false);
-    expect(shouldUseLazyRouteFallback('/search')).toBe(true);
-    expect(shouldUseLazyRouteFallback('/trending')).toBe(true);
-    expect(shouldUseLazyRouteFallback('/resource/resource-1')).toBe(true);
-    expect(shouldUseLazyRouteFallback('/login')).toBe(true);
+  it('uses the suspense fallback path for every page route', () => {
+    expect(shouldUseLazyRouteFallback()).toBe(true);
   });
 
   it('keeps the lazy route loading card centered in the viewport', () => {

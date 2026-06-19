@@ -20,7 +20,7 @@ const buildResumeSearchParams = (
   channels: [...(params?.channels || [])],
   plugins: [...(params?.plugins || [])],
   concurrency: params?.concurrency || fallbackSearchParams.concurrency || 5,
-  refresh: false,
+  refresh: params?.refresh || false,
   ext: params?.ext ? { ...params.ext } : fallbackSearchParams.ext || {},
   filter: params?.filter,
 });
@@ -108,7 +108,7 @@ export function useSearchUrlSync(): void {
       channels: parsedParams.channels || [],
       plugins: parsedParams.plugins || [],
       concurrency: searchParams.concurrency || 5,
-      refresh: false,
+      refresh: parsedParams.refresh || false,
       ext: searchParams.ext || {},
       filter: parsedParams.filter,
     };
@@ -120,6 +120,7 @@ export function useSearchUrlSync(): void {
       cloudTypes: parsedParams.cloudTypes,
       channels: parsedParams.channels,
       plugins: parsedParams.plugins,
+      refresh: parsedParams.refresh,
       filter: parsedParams.filter,
     });
 
@@ -195,7 +196,7 @@ export function useSearchUrlSync(): void {
           channels: parsedParams.channels || [],
           plugins: parsedParams.plugins || [],
           concurrency: searchParams.concurrency || 5,
-          refresh: false,
+          refresh: parsedParams.refresh || false,
           ext: searchParams.ext || {},
           filter: parsedParams.filter,
         },

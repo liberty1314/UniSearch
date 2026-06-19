@@ -965,3 +965,54 @@
     - frontend/src/types/hotRanking.ts
     - frontend/src/utils/hotRankingAvailability.ts
     - docs/readme_2606.md
+
+- [2026-06-19 11:50] refactor(optimization): 补齐核心插件测试并拆分前端懒加载边界
+  - Body: 为微博、SuSu、Muou、The Pirate Bay、新剧坊补充不触网的插件契约、清单和解析测试。前端路由统一进入懒加载路径，并将页面过渡、首页动效 Footer 和管理后台工作区拆出主入口。新增兼容路径下线清单，明确旧 API Key、旧缓存键、Deprecated 中间件、历史 refresh token、API 类型兼容导出口和插件 Search 兼容方法的删除条件与验证命令。
+  - Files:
+    - backend/plugin/weibo/weibo_test.go
+    - backend/plugin/susu/susu_test.go
+    - backend/plugin/muou/muou_test.go
+    - backend/plugin/thepiratebay/thepiratebay_test.go
+    - backend/plugin/xinjuc/xinjuc_test.go
+    - frontend/src/routes/AppRoutes.tsx
+    - frontend/src/routes/appRouteUtils.ts
+    - frontend/src/routes/__tests__/AppRoutes.test.tsx
+    - frontend/src/pages/Admin.tsx
+    - docs/compat-deprecation-checklist.md
+    - docs/readme_2606.md
+
+- [2026-06-19 20:04] feat(search): 引入基于 Sidhub 的扫码转存能力与全量插件测试用例覆盖
+  - Body: 完成了对 Sidhub 扫码转存协议（scan_transfer）的全链路支持，包含后端解析映射、缓存穿透标识（refresh=true）与前端优先级展现（将扫码链接自动提权为卡片首选操作），同时完善了相关字段的全局过滤支持。此外，补全了项目中所有未受测插件的核心单元测试，并新增了向后兼容性弃用清单以规范技术债下线流程。
+  - Files:
+    - backend/api/filter.go
+    - backend/api/filter_test.go
+    - backend/plugin/muou/muou_test.go
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - backend/plugin/susu/susu_test.go
+    - backend/plugin/thepiratebay/thepiratebay_test.go
+    - backend/plugin/weibo/weibo_test.go
+    - backend/plugin/xinjuc/xinjuc_test.go
+    - backend/service/search_executor.go
+    - backend/service/search_executor_test.go
+    - backend/service/search_response_builder.go
+    - backend/service/search_response_builder_test.go
+    - backend/util/cache/cache_key.go
+    - backend/util/cache/cache_key_test.go
+    - docs/compat-deprecation-checklist.md
+    - docs/readme_2606.md
+    - frontend/package.json
+    - frontend/pnpm-lock.yaml
+    - frontend/src/components/PasswordModal.tsx
+    - frontend/src/components/__tests__/PasswordModal.test.tsx
+    - frontend/src/hooks/useSearchUrlSync.ts
+    - frontend/src/pages/Admin.tsx
+    - frontend/src/pages/__tests__/Admin.test.tsx
+    - frontend/src/pages/__tests__/AdminNavigation.test.tsx
+    - frontend/src/routes/AppRoutes.tsx
+    - frontend/src/routes/__tests__/AppRoutes.test.tsx
+    - frontend/src/routes/appRouteUtils.ts
+    - frontend/src/services/__tests__/searchService.test.ts
+    - frontend/src/services/searchService.ts
+    - frontend/src/utils/__tests__/searchResultSorter.test.ts
+    - frontend/src/utils/searchResultSorter.ts

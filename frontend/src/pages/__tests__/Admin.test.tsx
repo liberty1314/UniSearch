@@ -96,28 +96,28 @@ describe('Admin', () => {
     expect(container.firstChild).toHaveClass('obsidian-shell');
   });
 
-  it('在用户管理视图通过共享 ConfirmDialog 入口渲染确认框', () => {
+  it('在用户管理视图通过共享 ConfirmDialog 入口渲染确认框', async () => {
     render(<Admin />);
 
+    expect(await screen.findByText('确认删除用户')).toBeInTheDocument();
     expect(screen.getAllByTestId('confirm-dialog')).toHaveLength(1);
-    expect(screen.getByText('确认删除用户')).toBeInTheDocument();
   });
 
-  it('在频道管理视图渲染独立页面', () => {
+  it('在频道管理视图渲染独立页面', async () => {
     currentViewState.value = 'channel_management';
 
     render(<Admin />);
 
-    expect(screen.getByText('ChannelManagementView')).toBeInTheDocument();
+    expect(await screen.findByText('ChannelManagementView')).toBeInTheDocument();
     expect(screen.queryByText('AdminUsersView')).not.toBeInTheDocument();
   });
 
-  it('在插件管理视图渲染独立页面', () => {
+  it('在插件管理视图渲染独立页面', async () => {
     currentViewState.value = 'plugin_management';
 
     render(<Admin />);
 
-    expect(screen.getByText('PluginManagementView')).toBeInTheDocument();
+    expect(await screen.findByText('PluginManagementView')).toBeInTheDocument();
     expect(screen.queryByText('AdminUsersView')).not.toBeInTheDocument();
   });
 });

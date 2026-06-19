@@ -104,6 +104,7 @@ describe('SearchService', () => {
       cloudTypes: ['quark', 'baidu'],
       channels: ['影视'],
       plugins: ['pansearch'],
+      refresh: true,
       filter: {
         include: ['4K', '剧场版'],
         exclude: ['枪版'],
@@ -116,6 +117,7 @@ describe('SearchService', () => {
     expect(url).toContain('include=4K%2C%E5%89%A7%E5%9C%BA%E7%89%88');
     expect(url).toContain('exclude=%E6%9E%AA%E7%89%88');
     expect(url).toContain('mediaTypes=movie%2Canime');
+    expect(url).toContain('refresh=true');
     expect(url).not.toContain('targetTypes=');
     expect(url).not.toContain('capabilities=');
     expect(url).not.toContain('actionTypes=');
@@ -126,6 +128,7 @@ describe('SearchService', () => {
       cloudTypes: ['quark', 'baidu'],
       channels: ['影视'],
       plugins: ['pansearch'],
+      refresh: true,
       filter: {
         include: ['4K', '剧场版'],
         exclude: ['枪版'],

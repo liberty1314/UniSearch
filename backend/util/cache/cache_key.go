@@ -27,7 +27,7 @@ var (
 )
 
 // searchResultCacheSchemaVersion 用于隔离搜索结果结构变更前后的缓存。
-const searchResultCacheSchemaVersion = "v2"
+const searchResultCacheSchemaVersion = "v6"
 
 var searchResultExtWhitelist = []string{
 	"sidhub_base_url",
