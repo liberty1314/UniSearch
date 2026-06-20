@@ -21,7 +21,12 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
-import type { SystemInfoResponse, TGChannel, ListTGChannelsResponse } from '@/types/api';
+import type {
+  SystemInfoResponse,
+  TGChannel,
+  ListTGChannelsResponse,
+  SearchObservabilitySnapshot,
+} from '@/types/api';
 import { toast } from 'sonner';
 import {
   ADMIN_PANEL_SURFACE_CLASSES,
@@ -138,6 +143,20 @@ const fetchCacheSettingsSummary = async (token: string): Promise<CacheSettingsSu
   return (await response.json()) as CacheSettingsSummary;
 };
 
+const fetchSearchObservability = async (token: string): Promise<SearchObservabilitySnapshot | null> => {
+  const response = await fetch('/api/admin/search-observability', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('获取搜索观测信息失败');
+  }
+
+  return (await response.json()) as SearchObservabilitySnapshot;
+};
+
 const summaryMetricClasses = {
   neutral:
     'border-slate-200/65 bg-white/58 text-slate-700 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.48] dark:text-slate-200',
@@ -186,6 +205,7 @@ export const SystemInfoView: React.FC = () => {
     error: 0,
   });
   const [cacheSettings, setCacheSettings] = useState<CacheSettingsSummary | null>(null);
+  const [searchObservability, setSearchObservability] = useState<SearchObservabilitySnapshot | null>(null);
   const isMountedRef = useRef(false);
 
   useEffect(() => {
@@ -217,13 +237,20 @@ export const SystemInfoView: React.FC = () => {
     }
 
     try {
-      const [data, cacheConfig] = await Promise.all([
+      const [data, cacheConfig, searchMetrics] = await Promise.all([
         fetchSystemInfoSingleFlight(token, force),
         token ? fetchCacheSettingsSummary(token) : Promise.resolve(null),
+        token
+          ? fetchSearchObservability(token).catch((error: unknown) => {
+              console.warn('获取搜索观测信息失败，系统信息页继续使用基础摘要:', error);
+              return null;
+            })
+          : Promise.resolve(null),
       ]);
       if (isMountedRef.current) {
         setSystemInfo(data);
         setCacheSettings(cacheConfig);
+        setSearchObservability(searchMetrics);
 
         if (data) {
           const enabledFromConfig = data.config.channels.length;
@@ -276,6 +303,31 @@ export const SystemInfoView: React.FC = () => {
       inactive,
     };
   }, [systemInfo?.plugins]);
+
+  const searchHealthSummary = useMemo(() => {
+    const metrics = searchObservability;
+    const searchCount = metrics
+      ? Object.values(metrics.search_count || {}).reduce((sum, value) => sum + value, 0)
+      : 0;
+    const durationValues = metrics ? Object.values(metrics.average_duration_ms || {}) : [];
+    const averageDuration = durationValues.length > 0
+      ? Math.round(durationValues.reduce((sum, value) => sum + value, 0) / durationValues.length)
+      : 0;
+    const hitRates = metrics ? Object.values(metrics.cache_hit_rate || {}) : [];
+    const cacheHitRate = hitRates.length > 0
+      ? Math.round((hitRates.reduce((sum, value) => sum + value, 0) / hitRates.length) * 100)
+      : 0;
+
+    return {
+      searchCount,
+      averageDuration,
+      cacheHitRate,
+      timeoutCount: metrics?.timeout_count ?? 0,
+      warningCount: metrics?.warning_count ?? 0,
+      topKeywords: metrics?.top_keywords ?? [],
+      recentErrors: metrics?.recent_errors ?? [],
+    };
+  }, [searchObservability]);
 
   const createCardNavigationProps = useCallback((targetView: 'channel_management' | 'plugin_management') => {
     const targetUrl = buildAdminUrl(targetView);
@@ -450,6 +502,71 @@ export const SystemInfoView: React.FC = () => {
             {renderSummaryMetric('活跃', pluginSummary.active, 'success')}
             {renderSummaryMetric('异常', pluginSummary.error, 'danger')}
             {renderSummaryMetric('不活跃', pluginSummary.inactive)}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_PANEL_SURFACE_HOVER_CLASSES, 'overflow-hidden')}>
+        <CardHeader className="border-b border-slate-200/50 bg-[linear-gradient(135deg,rgba(236,254,255,0.66),rgba(255,255,255,0.34))] backdrop-blur-md dark:border-cyan-300/[0.08] dark:bg-[linear-gradient(135deg,rgba(8,47,73,0.38),rgba(2,6,23,0.38))]">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-white">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-100/80 bg-cyan-50/80 text-cyan-700 shadow-sm dark:border-cyan-300/[0.16] dark:bg-cyan-950/30 dark:text-cyan-200">
+                  <Zap className="w-4 h-4" />
+                </span>
+                搜索健康摘要
+              </CardTitle>
+              <CardDescription className="text-slate-500 dark:text-slate-400">
+                最近搜索耗时、缓存命中和异常来源统计
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void loadSystemInfo(true, true)}
+              className="rounded-full"
+            >
+              <RefreshCw className="mr-2 h-3.5 w-3.5" />
+              刷新
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            {renderSummaryMetric('最近搜索数', searchHealthSummary.searchCount)}
+            {renderSummaryMetric('平均耗时 ms', searchHealthSummary.averageDuration)}
+            {renderSummaryMetric('缓存命中率 %', searchHealthSummary.cacheHitRate, searchHealthSummary.cacheHitRate > 0 ? 'success' : 'neutral')}
+            {renderSummaryMetric('插件超时', searchHealthSummary.timeoutCount, searchHealthSummary.timeoutCount > 0 ? 'danger' : 'neutral')}
+            {renderSummaryMetric('Warning', searchHealthSummary.warningCount, searchHealthSummary.warningCount > 0 ? 'danger' : 'neutral')}
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-[1.15rem] border border-slate-200/70 bg-slate-50/70 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.40]">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Top 关键词</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {searchHealthSummary.topKeywords.length > 0 ? searchHealthSummary.topKeywords.slice(0, 8).map((item) => (
+                  <Badge key={item.keyword} variant="outline">
+                    {item.keyword} · {item.count}
+                  </Badge>
+                )) : (
+                  <span className="text-sm text-slate-500 dark:text-slate-400">暂无关键词记录</span>
+                )}
+              </div>
+            </div>
+            <div className="rounded-[1.15rem] border border-slate-200/70 bg-slate-50/70 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.40]">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">最近异常</p>
+              <div className="mt-3 space-y-2">
+                {searchHealthSummary.recentErrors.length > 0 ? searchHealthSummary.recentErrors.slice(0, 3).map((item, index) => (
+                  <div key={`${item.scope}-${item.keyword}-${index}`} className="rounded-xl border border-rose-200/60 bg-white/70 px-3 py-2 text-xs text-rose-700 dark:border-rose-300/20 dark:bg-white/[0.04] dark:text-rose-200">
+                    <span className="font-medium">{item.scope}</span>
+                    {item.keyword ? <span> · {item.keyword}</span> : null}
+                    <span>：{item.message}</span>
+                  </div>
+                )) : (
+                  <span className="text-sm text-slate-500 dark:text-slate-400">暂无异常记录</span>
+                )}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -1,13 +1,20 @@
 import React from "react";
 import { SearchResultsToolbar } from "@/components/home/SearchResultsToolbar";
 import type { ActiveFilterChip } from "@/utils/searchFilters";
+import type { SearchSourceWarning } from "@/types/api";
 
 type ViewMode = "list" | "grid";
+type ProgressiveStatus = "idle" | "running" | "complete" | "fallback" | "error";
 
 interface SearchResultsHeaderProps {
   totalCount: number;
   viewMode: ViewMode;
   isRefreshing: boolean;
+  progressiveStatus: ProgressiveStatus;
+  completedSources: number;
+  totalSources: number;
+  receivedBatches: number;
+  sourceWarnings?: SearchSourceWarning[];
   activeFilterChips: ActiveFilterChip[];
   onViewModeChange: (mode: ViewMode) => void;
   onRemoveFilterChip: (chipId: string) => void;
@@ -18,6 +25,11 @@ const SearchResultsHeader: React.FC<SearchResultsHeaderProps> = ({
   totalCount,
   viewMode,
   isRefreshing,
+  progressiveStatus,
+  completedSources,
+  totalSources,
+  receivedBatches,
+  sourceWarnings,
   activeFilterChips,
   onViewModeChange,
   onRemoveFilterChip,
@@ -30,6 +42,11 @@ const SearchResultsHeader: React.FC<SearchResultsHeaderProps> = ({
         viewMode={viewMode}
         onViewModeChange={onViewModeChange}
         isRefreshing={isRefreshing}
+        progressiveStatus={progressiveStatus}
+        completedSources={completedSources}
+        totalSources={totalSources}
+        receivedBatches={receivedBatches}
+        sourceWarnings={sourceWarnings}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={onRemoveFilterChip}
         onClearFilters={onClearFilters}

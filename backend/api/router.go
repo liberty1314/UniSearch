@@ -39,6 +39,9 @@ func SetupRouter(deps RouterDeps) *gin.Engine {
 	registerAdminRoutes(apiGroup, deps)
 	registerHealthRoutes(apiGroup, deps)
 	registerPluginWebRoutes(r, deps)
+	if deps.SearchService != nil {
+		deps.SearchService.SetPluginHealthService(deps.PluginHealthService)
+	}
 
 	return r
 }
@@ -50,6 +53,7 @@ func registerPublicRoutes(api *gin.RouterGroup, deps RouterDeps) {
 	api.POST("/system-settings/announcement-enabled", JWTMiddleware(), AdminMiddleware(), SetAnnouncementFeatureEnabledHandler(deps.SystemSettingsService))
 	api.POST("/search", SearchJWTMiddleware(), SearchHandler)
 	api.GET("/search", SearchJWTMiddleware(), SearchHandler)
+	api.POST("/search/progressive", SearchJWTMiddleware(), SearchProgressiveHandler(deps.SearchService))
 	api.POST("/resources/scan-transfer/refresh", SearchJWTMiddleware(), RefreshScanTransferHandler)
 }
 

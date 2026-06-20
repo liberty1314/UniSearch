@@ -174,7 +174,14 @@ func ExecuteBatchWithTimeout(tasks []Task, maxWorkers int, timeout time.Duration
 	return results
 }
 
-// ExecuteBatchWithTimeoutDetailed 批量执行任务并返回结果与超时元信息
+// ExecuteBatchWithTimeoutDetailed 批量执行任务并返回结果与超时元信息。
+//
+// 契约说明：
+//   - results 只包含超时前已经完成并成功写入结果队列的任务结果。
+//   - submittedTasks 表示实际提交到工作池的任务数量，调用方可据此生成部分失败提示。
+//   - timedOut 表示批处理是否因为上下文超时或取消而提前返回。
+//   - 超时路径不会调用 Close 等待工作者退出；这是为了避免外部插件或网络任务忽略取消信号时，
+//     搜索接口被阻塞到任务自然结束。工作者会在任务返回后观察到上下文取消并自行退出。
 func ExecuteBatchWithTimeoutDetailed(tasks []Task, maxWorkers int, timeout time.Duration) ([]interface{}, int, bool) {
 	if len(tasks) == 0 {
 		return []interface{}{}, 0, false
@@ -195,7 +202,6 @@ func ExecuteBatchWithTimeoutDetailed(tasks []Task, maxWorkers int, timeout time.
 
 	// 创建工作池
 	pool := NewWorkerPoolWithContext(ctx, maxWorkers)
-	defer pool.Close()
 
 	submittedTasks := 0
 
@@ -213,5 +219,9 @@ func ExecuteBatchWithTimeoutDetailed(tasks []Task, maxWorkers int, timeout time.
 
 	// 获取所有结果，GetResults方法会处理超时情况
 	results := pool.GetResults(submittedTasks)
-	return results, submittedTasks, ctx.Err() != nil
+	timedOut := ctx.Err() != nil
+	if !timedOut {
+		pool.Close()
+	}
+	return results, submittedTasks, timedOut
 }

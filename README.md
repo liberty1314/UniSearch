@@ -80,7 +80,26 @@ scripts/tests/frontend-focused.sh
 scripts/tests/local-quality.sh
 ```
 
-发布候选验证会在完整质量检查之外，追加 Docker 镜像 smoke、临时 MySQL/Redis 迁移验证和 Playwright E2E：
+`local-quality.sh` 默认不访问真实外部搜索源。若本轮修改涉及搜索聚合、插件超时、登录态搜索或发布前自检，可以显式开启真实搜索 smoke：
+
+```bash
+UNISEARCH_REAL_SEARCH_SMOKE=1 scripts/tests/local-quality.sh
+```
+
+真实搜索 smoke 会注册一次性 `codexqa_*` 用户，携带登录 token 调用本地 `/api/search`，默认验证 `铁拳教育 + sidhub` 插件搜索在 25 秒上限内完成。它要求本地后端、数据库和外部插件站点均可访问；若安装了 `mysql` 客户端，脚本会在结束时清理测试用户。
+
+验证分层矩阵：
+
+| 入口 | 默认是否触网 | 用途 | 前置条件 |
+| --- | --- | --- | --- |
+| `scripts/tests/local-quality.sh` | 否 | 高频本地质量检查，覆盖后端、前端、构建和单元测试 | Go、pnpm、前端依赖已安装 |
+| `UNISEARCH_REAL_SEARCH_SMOKE=1 scripts/tests/local-quality.sh` | 是 | 在本地质量检查后追加真实登录态搜索 smoke | 本地后端、数据库、外部插件站点可访问 |
+| `scripts/tests/real-search-smoke.sh` | 是 | 单独验证 `/api/search` 真实链路不会卡死 | 本地后端监听 `UNISEARCH_API_BASE_URL`，数据库可写 |
+| `scripts/tests/release-candidate.sh` | 是 | 发布候选门禁，先跑 mock E2E，再跑真实搜索 smoke、Docker 和集成环境检查 | 本地 Docker、数据库配置、外部插件站点可访问 |
+| `cd frontend && pnpm run frontend:e2e:mock` | 否 | 前端 mock E2E，验证登录、搜索、后台等关键交互 | 可监听 Vite 端口 |
+| `cd frontend && UNISEARCH_REAL_E2E=1 pnpm run frontend:e2e:real` | 是 | 真实后端 E2E，验证登录态搜索、结果展示和 warning 可见性 | 本地后端、数据库、外部插件站点可访问 |
+
+发布候选验证会在完整质量检查之外，追加 mock E2E、真实搜索 smoke、可选真实后端 E2E、Docker 镜像 smoke 和临时 MySQL/Redis 迁移验证：
 
 ```bash
 scripts/tests/release-candidate.sh
@@ -92,11 +111,21 @@ scripts/tests/release-candidate.sh
 # 验证 Docker 镜像内主程序和迁移程序可执行
 scripts/tests/docker-smoke.sh
 
+# 验证真实登录态搜索链路，可通过 UNISEARCH_API_BASE_URL、UNISEARCH_SMOKE_KEYWORD、
+# UNISEARCH_SMOKE_PLUGINS、UNISEARCH_SMOKE_TIMEOUT 覆盖默认值
+scripts/tests/real-search-smoke.sh
+
+# 清理 codexqa_* 测试用户、登录统计和刷新令牌
+scripts/tests/cleanup-test-data.sh
+
 # 启动临时 MySQL/Redis 并执行迁移
 scripts/tests/integration-env.sh
 
-# 运行前端端到端测试
-cd frontend && pnpm exec playwright test
+# 运行前端 mock 端到端测试
+cd frontend && pnpm run frontend:e2e:mock
+
+# 显式运行真实后端 E2E
+cd frontend && UNISEARCH_REAL_E2E=1 pnpm run frontend:e2e:real
 ```
 
 任一脚本失败时先保留失败输出，优先单独重跑对应聚焦命令确认是否为稳定失败；稳定失败必须修复后再继续提交。

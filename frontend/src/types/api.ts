@@ -13,6 +13,8 @@ export type {
   SearchParams,
   SearchRequest,
   SearchResponse,
+  SearchProgressiveEvent,
+  SearchProgressiveEventType,
   SearchResult,
   SearchSourceWarning,
 } from '@/types/search';
@@ -590,6 +592,31 @@ export interface SystemInfoResponse {
   plugins: PluginInfo[];
   stats: SystemStats;
   config: SystemConfig;
+}
+
+export interface SearchKeywordStat {
+  keyword: string;
+  count: number;
+}
+
+export interface SearchMetricError {
+  scope: string;
+  keyword: string;
+  message: string;
+}
+
+export interface SearchObservabilitySnapshot {
+  search_count: Record<string, number>;
+  search_error_count: Record<string, number>;
+  cache_hit_count: Record<string, number>;
+  cache_miss_count: Record<string, number>;
+  cache_hit_rate: Record<string, number>;
+  average_duration_ms: Record<string, number>;
+  result_buckets: Record<string, number>;
+  timeout_count: number;
+  warning_count: number;
+  recent_errors: SearchMetricError[];
+  top_keywords: SearchKeywordStat[];
 }
 
 // ============ TG 频道管理相关类型 ============

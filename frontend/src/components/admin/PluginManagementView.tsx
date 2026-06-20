@@ -44,6 +44,23 @@ const PLUGIN_STATUS_OPTIONS = [
   { value: 'error', label: '异常' },
 ] as const;
 
+const healthSourceText = (source?: string) => {
+  if (source === 'manual_test') return '手动测试';
+  if (source === 'search_failure') return '搜索失败';
+  if (source === 'timeout') return '搜索超时';
+  if (source === 'batch_test') return '批量测试';
+  if (source === 'system') return '系统检查';
+  return source || '暂无来源';
+};
+
+const formatHealthTime = (value?: string) => {
+  if (!value) return '暂无检查时间';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
 export const PluginManagementView: React.FC = () => {
   const { token } = useAuthStore();
   const controller = usePluginManageController({
@@ -58,7 +75,7 @@ export const PluginManagementView: React.FC = () => {
   const metrics = useMemo(() => {
     const installedCount = controller.localPlugins.filter((plugin) => plugin.installed || plugin.is_local).length;
     const enabledCount = controller.localPlugins.filter((plugin) => plugin.is_enabled && (plugin.installed || plugin.is_local)).length;
-    const issueCount = controller.localPlugins.filter((plugin) => plugin.status === 'error').length;
+    const issueCount = controller.localPlugins.filter((plugin) => resolvePluginStatus(plugin) === 'error').length;
 
     return {
       installedCount,
@@ -74,6 +91,10 @@ export const PluginManagementView: React.FC = () => {
   } = controller;
   const activePlugin = controller.activeDetailPlugin;
   const drawerOpen = Boolean(activePlugin);
+  const abnormalPlugins = useMemo(
+    () => controller.localPlugins.filter((plugin) => plugin.is_enabled && resolvePluginStatus(plugin) === 'error'),
+    [controller.localPlugins],
+  );
 
   useEffect(() => {
     if (pagedItems.length === 0) {
@@ -97,6 +118,15 @@ export const PluginManagementView: React.FC = () => {
 
   const closeDrawer = () => {
     controller.setDetailPluginName(null);
+  };
+
+  const handleTestAbnormalPlugins = async () => {
+    if (abnormalPlugins.length === 0) {
+      return;
+    }
+    for (const plugin of abnormalPlugins) {
+      await controller.handleTestPlugin(plugin);
+    }
   };
 
   const renderPluginCardActions = (plugin: PluginInfo) => {
@@ -158,6 +188,16 @@ export const PluginManagementView: React.FC = () => {
                 >
                   <Activity className="mr-1 h-4 w-4" />
                   快速测试
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void handleTestAbnormalPlugins()}
+                  disabled={abnormalPlugins.length === 0 || controller.isOperationBusy}
+                  className="rounded-full"
+                >
+                  <Zap className="mr-1 h-4 w-4" />
+                  仅测试异常插件
                 </Button>
               </>
             )}
@@ -339,10 +379,21 @@ export const PluginManagementView: React.FC = () => {
                             </div>
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-slate-500 dark:text-slate-400">健康</span>
-                              <span className="font-medium text-slate-700 dark:text-slate-200">
-                                {plugin.health ? (plugin.health.is_healthy ? '正常' : '异常') : '未测试'}
+                              <span className="text-right font-medium text-slate-700 dark:text-slate-200">
+                                {plugin.health ? `${plugin.health.is_healthy ? '正常' : '异常'} · ${healthSourceText(plugin.health.check_source)}` : '未测试'}
                               </span>
                             </div>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-slate-500 dark:text-slate-400">最近检查</span>
+                              <span className="text-right text-slate-600 dark:text-slate-300">
+                                {formatHealthTime(plugin.health?.last_checked_at)}
+                              </span>
+                            </div>
+                            {plugin.health?.last_error ? (
+                              <p className="line-clamp-2 rounded-xl border border-rose-200/60 bg-rose-50/70 px-3 py-2 text-xs text-rose-700 dark:border-rose-300/20 dark:bg-rose-400/10 dark:text-rose-200">
+                                {plugin.health.last_error}
+                              </p>
+                            ) : null}
                           </div>
 
                           <div className="mt-auto flex flex-wrap gap-2">
@@ -405,7 +456,13 @@ export const PluginManagementView: React.FC = () => {
                     <p className="mt-2 font-medium text-slate-900 dark:text-white">
                       {activePlugin.health ? (activePlugin.health.is_healthy ? '正常' : '异常') : '未测试'}
                     </p>
-                    <p className="mt-1 text-slate-500 dark:text-slate-400">{activePlugin.health?.last_error || '暂无错误信息'}</p>
+                    <p className="mt-1 text-slate-500 dark:text-slate-400">
+                      来源：{healthSourceText(activePlugin.health?.check_source)}
+                    </p>
+                    <p className="mt-1 text-slate-500 dark:text-slate-400">
+                      最近检查：{formatHealthTime(activePlugin.health?.last_checked_at)}
+                    </p>
+                    <p className="mt-1 break-words text-slate-500 dark:text-slate-400">{activePlugin.health?.last_error || '暂无错误信息'}</p>
                   </div>
                 </div>
                 <div className="space-y-2">

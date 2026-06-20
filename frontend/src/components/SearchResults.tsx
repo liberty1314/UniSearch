@@ -62,6 +62,10 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     performSearch,
     displayedCount,
     setSearchParams,
+    progressiveStatus,
+    completedSources,
+    totalSources,
+    receivedBatches,
   } = useSearchStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -315,6 +319,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
         isRefreshing={isRefreshing}
+        progressiveStatus={progressiveStatus}
+        completedSources={completedSources}
+        totalSources={totalSources}
+        receivedBatches={receivedBatches}
+        sourceWarnings={searchResults?.warnings}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveFilterChip}
         onClearFilters={hasAnyActiveFilters ? handleClearAllFilters : undefined}

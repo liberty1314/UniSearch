@@ -1016,3 +1016,43 @@
     - frontend/src/services/searchService.ts
     - frontend/src/utils/__tests__/searchResultSorter.test.ts
     - frontend/src/utils/searchResultSorter.ts
+
+- [2026-06-20 13:09] feat(search): 新增渐进式搜索功能、搜索可观测性指标及相关自动化测试
+  - Body: 1. 后端新增渐进式搜索服务及相关接口，支持搜索指标聚合与展示。2. 前端新增搜索结果工具栏，接入渐进式搜索 API 与状态管理。3. 新增并集成 real-search-smoke 与 E2E 测试链路，完善本地环境测试与数据清理脚本。
+  - Files:
+    - README.md
+    - backend/api/router.go
+    - backend/api/router_admin.go
+    - backend/api/search_progressive_handler.go
+    - backend/model/search_progressive.go
+    - backend/service/search_executor.go
+    - backend/service/search_executor_test.go
+    - backend/service/search_metrics.go
+    - backend/service/search_progressive.go
+    - backend/service/search_progressive_test.go
+    - backend/service/search_service.go
+    - backend/util/pool/worker_pool.go
+    - backend/util/pool/worker_pool_test.go
+    - docs/search-observability.md
+    - frontend/e2e/real-backend.spec.ts
+    - frontend/e2e/test-helpers.ts
+    - frontend/package.json
+    - frontend/playwright.config.ts
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/admin/PluginManagementView.tsx
+    - frontend/src/components/admin/SystemInfoView.tsx
+    - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
+    - frontend/src/components/admin/pluginManageDialogShared.ts
+    - frontend/src/components/home/SearchResultsToolbar.tsx
+    - frontend/src/components/search-results/SearchResultsHeader.tsx
+    - frontend/src/services/searchService.ts
+    - frontend/src/stores/__tests__/searchStore.test.ts
+    - frontend/src/stores/searchStore.ts
+    - frontend/src/types/api.ts
+    - frontend/src/types/search.ts
+    - scripts/local.sh
+    - scripts/tests/cleanup-test-data.sh
+    - scripts/tests/local-quality.sh
+    - scripts/tests/real-search-smoke.sh
+    - scripts/tests/release-candidate.sh
+    - docs/readme_2606.md

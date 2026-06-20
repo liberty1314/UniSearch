@@ -11,6 +11,10 @@
     "preview": "vite preview",
     "check": "tsc -b --noEmit",
     "e2e": "playwright test",
+    "e2e:mock": "playwright test --project=chromium --project=mobile",
+    "e2e:real": "UNISEARCH_REAL_E2E=1 playwright test --project=real-backend",
+    "frontend:e2e:mock": "playwright test --project=chromium --project=mobile",
+    "frontend:e2e:real": "UNISEARCH_REAL_E2E=1 playwright test --project=real-backend",
     "test": "vitest"
   },
   "dependencies": {

@@ -26,6 +26,8 @@ type SearchService struct {
 	tgExecutor         TGSearchExecutor
 	pluginExecutor     PluginSearchExecutor
 	metrics            *SearchMetricsRecorder
+	pluginLocks        sync.Map
+	pluginHealth       *PluginHealthService
 }
 
 // NewSearchService 创建搜索服务实例
@@ -49,8 +51,15 @@ func NewSearchService(pluginManager *plugin.PluginManager, redisCache *cache.Red
 		searchCache:        newSearchCache(redisCache, metrics),
 	}
 	service.tgExecutor = newTGSearchExecutor(service.searchCache, service.metrics, service.searchChannel)
-	service.pluginExecutor = newPluginSearchExecutor(service.pluginSelector, service.searchCache, service.metrics)
+	service.pluginExecutor = newPluginSearchExecutor(service.pluginSelector, service.searchCache, service.metrics, &service.pluginLocks, service.pluginHealth)
 	return service
+}
+
+func (s *SearchService) SetPluginHealthService(pluginHealthService *PluginHealthService) {
+	s.pluginHealth = pluginHealthService
+	if s.pluginSelector != nil && s.searchCache != nil && s.metrics != nil {
+		s.pluginExecutor = newPluginSearchExecutor(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth)
+	}
 }
 
 // Search 执行搜索
@@ -65,7 +74,7 @@ func (s *SearchService) Search(keyword string, channels []string, concurrency in
 		s.tgExecutor = newTGSearchExecutor(s.searchCache, s.metrics, s.searchChannel)
 	}
 	if s.pluginExecutor == nil {
-		s.pluginExecutor = newPluginSearchExecutor(s.pluginSelector, s.searchCache, s.metrics)
+		s.pluginExecutor = newPluginSearchExecutor(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth)
 	}
 
 	normalized := s.normalizer.Normalize(keyword, channels, concurrency, forceRefresh, resultType, sourceType, plugins, cloudTypes, ext)
@@ -113,6 +122,7 @@ func (s *SearchService) Search(keyword string, channels []string, concurrency in
 	allResults := s.resultMerger.Merge(tgResults, pluginResults)
 	response := s.responseBuilder.Build(allResults, normalized)
 	response.Warnings = pluginWarnings
+	s.metrics.RecordWarning(len(pluginWarnings))
 	s.metrics.RecordSearch("all", normalized.Keyword, time.Since(startedAt), response.Total, nil)
 	return response, nil
 }
@@ -168,9 +178,16 @@ func (s *SearchService) searchTG(keyword string, channels []string, forceRefresh
 // searchPlugins 搜索插件
 func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRefresh bool, concurrency int, ext map[string]interface{}) (allResults []model.SearchResult, warnings []model.SearchSourceWarning, err error) {
 	if s.pluginExecutor == nil {
-		s.pluginExecutor = newPluginSearchExecutor(s.pluginSelector, s.searchCache, s.metrics)
+		s.pluginExecutor = newPluginSearchExecutor(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth)
 	}
 	return s.pluginExecutor.Search(keyword, plugins, forceRefresh, concurrency, ext)
+}
+
+func (s *SearchService) ObservabilitySnapshot() model.SearchObservabilitySnapshot {
+	if s == nil || s.metrics == nil {
+		return model.SearchObservabilitySnapshot{}
+	}
+	return s.metrics.Snapshot()
 }
 
 // GetPluginManager 获取插件管理器

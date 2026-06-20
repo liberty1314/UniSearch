@@ -62,7 +62,7 @@ func TestPluginSearchExecutorUsesPluginSearchDirectly(t *testing.T) {
 	pm.RegisterPlugin(mockPlugin)
 
 	selector := newPluginSelector(pm, nil)
-	executor := newPluginSearchExecutor(selector, newSearchCache(nil, newSearchMetricsRecorder()), newSearchMetricsRecorder())
+	executor := newPluginSearchExecutor(selector, newSearchCache(nil, newSearchMetricsRecorder()), newSearchMetricsRecorder(), nil, nil)
 
 	results, warnings, err := executor.Search("仙逆", nil, true, 1, nil)
 	if err != nil {
@@ -113,7 +113,7 @@ func TestPluginSearchExecutorDoesNotStorePartialPluginResults(t *testing.T) {
 		metrics: newSearchMetricsRecorder(),
 	}
 	selector := newPluginSelector(pm, nil)
-	executor := newPluginSearchExecutor(selector, searchCache, newSearchMetricsRecorder())
+	executor := newPluginSearchExecutor(selector, searchCache, newSearchMetricsRecorder(), nil, nil)
 
 	results, warnings, err := executor.Search("铁拳教育", nil, true, 2, nil)
 	if err != nil {
@@ -147,7 +147,7 @@ func TestPluginSearchExecutorIsolatesRequestStatePerPlugin(t *testing.T) {
 	pm.RegisterPlugin(statefulPlugin)
 
 	selector := newPluginSelector(pm, nil)
-	executor := newPluginSearchExecutor(selector, newSearchCache(nil, newSearchMetricsRecorder()), newSearchMetricsRecorder())
+	executor := newPluginSearchExecutor(selector, newSearchCache(nil, newSearchMetricsRecorder()), newSearchMetricsRecorder(), nil, nil)
 
 	type searchOutcome struct {
 		keyword string

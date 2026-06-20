@@ -121,3 +121,19 @@ export interface SearchResponse {
   facets: ResourceFacets;
   warnings?: SearchSourceWarning[];
 }
+
+export type SearchProgressiveEventType = 'started' | 'batch' | 'warning' | 'complete' | 'error';
+
+export interface SearchProgressiveEvent {
+  type: SearchProgressiveEventType;
+  keyword?: string;
+  source?: string;
+  message?: string;
+  resources?: ResourceObject[];
+  warnings?: SearchSourceWarning[];
+  completed_sources?: number;
+  total_sources?: number;
+  received_batches?: number;
+  is_final?: boolean;
+  response?: SearchResponse;
+}

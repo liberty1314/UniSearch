@@ -3,9 +3,11 @@ import type { SearchResponse } from "@/types/api";
 import type { RecentEffectiveSearch } from "@/components/search/searchLaunchpadTypes";
 
 const searchMock = vi.fn();
+const searchProgressiveMock = vi.fn();
 
 vi.mock("@/services/searchService", () => ({
   SearchService: {
+    searchProgressive: (...args: unknown[]) => searchProgressiveMock(...args),
     search: (...args: unknown[]) => searchMock(...args),
     validateSearchParams: () => ({ valid: true }),
     getChannels: vi.fn(),
@@ -43,6 +45,8 @@ describe("searchStore", () => {
   beforeEach(async () => {
     localStorage.clear();
     searchMock.mockReset();
+    searchProgressiveMock.mockReset();
+    searchProgressiveMock.mockImplementation((...args: unknown[]) => searchMock(...args));
     const { useSearchStore } = await import("@/stores/searchStore");
     const { resetSearchRequestGuard } = await import("@/stores/searchRequestGuard");
     resetSearchRequestGuard();
@@ -193,6 +197,51 @@ describe("searchStore", () => {
       keyword: "沙丘 2 4K",
       total: 1,
     });
+  });
+
+  it("渐进式首批结果返回后会立即展示并更新来源进度", async () => {
+    const { useSearchStore } = await import("@/stores/searchStore");
+
+    searchProgressiveMock.mockImplementationOnce(async (_params, handlers) => {
+      handlers.onEvent({
+        type: "started",
+        completed_sources: 0,
+        total_sources: 2,
+        received_batches: 0,
+      });
+      handlers.onEvent({
+        type: "batch",
+        resources: buildSearchResults("首批结果").resources,
+        warnings: [],
+        completed_sources: 1,
+        total_sources: 2,
+        received_batches: 1,
+      });
+      expect(useSearchStore.getState().searchResults?.resources[0]?.title).toBe("首批结果");
+      return buildSearchResults("最终结果");
+    });
+
+    await useSearchStore.getState().performSearch({ keyword: "首批" });
+
+    const state = useSearchStore.getState();
+    expect(state.progressiveStatus).toBe("complete");
+    expect(state.completedSources).toBe(1);
+    expect(state.totalSources).toBe(2);
+    expect(state.receivedBatches).toBe(1);
+    expect(state.searchResults?.resources[0]?.title).toBe("最终结果");
+  });
+
+  it("渐进式搜索失败时会回退普通搜索", async () => {
+    const { useSearchStore } = await import("@/stores/searchStore");
+
+    searchProgressiveMock.mockRejectedValueOnce(new Error("流式失败"));
+    searchMock.mockResolvedValueOnce(buildSearchResults("回退结果"));
+
+    await useSearchStore.getState().performSearch({ keyword: "回退" });
+
+    expect(searchMock).toHaveBeenCalled();
+    expect(useSearchStore.getState().progressiveStatus).toBe("fallback");
+    expect(useSearchStore.getState().searchResults?.resources[0]?.title).toBe("回退结果");
   });
 
   it("支持删除单条最近有效搜索并同步本地存储", async () => {

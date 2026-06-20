@@ -6,6 +6,7 @@ export const PAGE_SIZE = 10;
 
 export const resolvePluginStatus = (plugin: PluginInfo): PluginInfo['status'] => {
   if (plugin.status === 'error') return 'error';
+  if (plugin.health && !plugin.health.is_healthy) return 'error';
   if (!plugin.is_enabled) return 'inactive';
   return plugin.plugin_type === 'custom' ? 'custom' : 'active';
 };

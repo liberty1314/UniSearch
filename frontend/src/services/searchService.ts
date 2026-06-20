@@ -1,6 +1,7 @@
 import { apiClient } from '@/lib/api';
 import type {
   SearchParams,
+  SearchProgressiveEvent,
   SearchRequest,
   SearchResponse,
   HealthResponse,
@@ -11,6 +12,7 @@ import type {
 } from '@/types/api';
 import type { HotRankingItem } from '@/types/hotRanking';
 import { normalizeFilterConfig } from '@/utils/searchFilters';
+import { useAuthStore } from '@/stores/authStore';
 
 const HEALTH_CACHE_TTL_MS = 5000;
 let healthCache:
@@ -28,6 +30,10 @@ export interface TrendingSearchAction {
   isPrimary: boolean;
 }
 
+interface ProgressiveSearchHandlers {
+  onEvent?: (event: SearchProgressiveEvent) => void;
+}
+
 /**
  * 搜索服务类
  */
@@ -38,6 +44,93 @@ export class SearchService {
    * @returns 搜索结果
    */
   static async search(params: SearchParams): Promise<SearchResponse> {
+    const cleanedData = this.buildSearchRequestPayload(params);
+
+    try {
+      const response = await apiClient.post<SearchResponse>('/search', cleanedData);
+
+      if (response) {
+        return response;
+      } else {
+        throw new Error('搜索失败');
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      throw error;
+    }
+  }
+
+  static async searchProgressive(
+    params: SearchParams,
+    handlers: ProgressiveSearchHandlers = {},
+  ): Promise<SearchResponse> {
+    const cleanedData = this.buildSearchRequestPayload(params);
+    const token = useAuthStore.getState().token;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/x-ndjson',
+    };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch('/api/search/progressive', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(cleanedData),
+    });
+
+    if (!response.ok) {
+      throw {
+        code: response.status,
+        message: await response.text() || '渐进式搜索失败',
+      };
+    }
+    if (!response.body) {
+      throw new Error('浏览器不支持渐进式响应读取');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalResponse: SearchResponse | null = null;
+
+    const handleLine = (line: string) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        return;
+      }
+      const event = JSON.parse(trimmed) as SearchProgressiveEvent;
+      handlers.onEvent?.(event);
+      if (event.type === 'error') {
+        throw new Error(event.message || '渐进式搜索失败');
+      }
+      if (event.type === 'complete' && event.response) {
+        finalResponse = event.response;
+      }
+    };
+
+    while (true) {
+      const { value, done } = await reader.read();
+      buffer += decoder.decode(value, { stream: !done });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        handleLine(line);
+      }
+      if (done) {
+        break;
+      }
+    }
+    handleLine(buffer);
+
+    if (!finalResponse) {
+      throw new Error('渐进式搜索未返回最终结果');
+    }
+    return finalResponse;
+  }
+
+  private static buildSearchRequestPayload(params: SearchParams): Record<string, unknown> {
     const normalizedFilter = normalizeFilterConfig(params.filter);
 
     // 转换前端参数为后端API格式
@@ -64,18 +157,7 @@ export class SearchService {
       })
     );
 
-    try {
-      const response = await apiClient.post<SearchResponse>('/search', cleanedData);
-
-      if (response) {
-        return response;
-      } else {
-        throw new Error('搜索失败');
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-      throw error;
-    }
+    return cleanedData;
   }
 
   /**

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import type { SearchParams, SearchResponse } from "@/types/api";
+import type { SearchParams, SearchProgressiveEvent, SearchResponse } from "@/types/api";
 import { SearchService } from "@/services/searchService";
 import { getErrorCode, getErrorMessage } from "@/lib/error";
 import {
@@ -39,6 +39,10 @@ interface SearchState {
   // 加载状态
   isLoading: boolean;
   isRefreshing: boolean;
+  progressiveStatus: "idle" | "running" | "complete" | "fallback" | "error";
+  completedSources: number;
+  totalSources: number;
+  receivedBatches: number;
 
   // 错误信息
   error: string | null;
@@ -166,6 +170,22 @@ const buildRecentEffectiveSearch = (
   params: normalizeSearchParams(params),
 });
 
+const emptyFacets = {
+  cloud_types: {},
+  source_types: {},
+  media_types: {},
+  target_types: {},
+  capabilities: {},
+  action_types: {},
+};
+
+const buildPartialSearchResponse = (event: SearchProgressiveEvent): SearchResponse => ({
+  total: event.resources?.length ?? 0,
+  resources: event.resources || [],
+  facets: emptyFacets,
+  warnings: event.warnings,
+});
+
 /**
  * 搜索状态管理
  */
@@ -177,6 +197,10 @@ export const useSearchStore = create<SearchState>()(
       searchResults: null,
       isLoading: false,
       isRefreshing: false,
+      progressiveStatus: "idle",
+      completedSources: 0,
+      totalSources: 0,
+      receivedBatches: 0,
       error: null,
       lastCompletedSearchParams: null,
       searchHistory: readJsonStorage<string[]>(
@@ -222,6 +246,10 @@ export const useSearchStore = create<SearchState>()(
         set({
           isLoading: !preserveResults,
           isRefreshing: preserveResults,
+          progressiveStatus: "running",
+          completedSources: 0,
+          totalSources: 0,
+          receivedBatches: 0,
           error: null,
           searchResults: preserveResults ? state.searchResults : null,
           searchParams: finalParams,
@@ -229,25 +257,19 @@ export const useSearchStore = create<SearchState>()(
           hasMore: false,
         });
 
-        try {
-          const results = await SearchService.search(finalParams);
-
-          if (!isLatestSearchRequest(requestId)) {
-            return;
-          }
-
+        const commitCompletedSearch = (results: SearchResponse, status: SearchState["progressiveStatus"]) => {
           const totalCount = results.resources?.length ?? 0;
 
           set({
             searchResults: results,
             isLoading: false,
             isRefreshing: false,
+            progressiveStatus: status,
             lastCompletedSearchParams: normalizeSearchParams(finalParams),
-            hasMore: totalCount > state.pageSize, // 判断是否有更多数据
+            hasMore: totalCount > state.pageSize,
           });
           writeRecentResourceSnapshots(results.resources, finalParams.keyword);
 
-          // 添加到搜索历史
           if (finalParams.keyword) {
             get().addToHistory(finalParams.keyword);
           }
@@ -270,6 +292,46 @@ export const useSearchStore = create<SearchState>()(
             });
             writeRecentEffectiveSearches(nextRecentSearches);
           }
+        };
+
+        try {
+          const results = await SearchService.searchProgressive(finalParams, {
+            onEvent: (event) => {
+              if (!isLatestSearchRequest(requestId)) {
+                return;
+              }
+              if (event.type === "started") {
+                set({
+                  progressiveStatus: "running",
+                  completedSources: event.completed_sources || 0,
+                  totalSources: event.total_sources || 0,
+                  receivedBatches: event.received_batches || 0,
+                });
+              }
+              if (event.type === "batch" || event.type === "warning") {
+                const partial = buildPartialSearchResponse(event);
+                set({
+                  searchResults:
+                    partial.resources.length > 0 || partial.warnings?.length
+                      ? partial
+                      : get().searchResults,
+                  isLoading: partial.resources.length > 0 ? false : get().isLoading,
+                  isRefreshing: true,
+                  progressiveStatus: "running",
+                  completedSources: event.completed_sources || 0,
+                  totalSources: event.total_sources || 0,
+                  receivedBatches: event.received_batches || 0,
+                  hasMore: partial.resources.length > state.pageSize,
+                });
+              }
+            },
+          });
+
+          if (!isLatestSearchRequest(requestId)) {
+            return;
+          }
+
+          commitCompletedSearch(results, "complete");
         } catch (error) {
           if (!isLatestSearchRequest(requestId)) {
             return;
@@ -282,18 +344,32 @@ export const useSearchStore = create<SearchState>()(
               error: getErrorMessage(error, "搜索失败"),
               isLoading: false,
               isRefreshing: false,
+              progressiveStatus: "error",
               searchResults: preserveResults ? state.searchResults : null,
             });
             // 抛出错误，让调用方处理跳转逻辑
             throw error;
           }
 
-          set({
-            error: getErrorMessage(error, "搜索失败"),
-            isLoading: false,
-            isRefreshing: false,
-            searchResults: preserveResults ? state.searchResults : null,
-          });
+          try {
+            set({ progressiveStatus: "fallback" });
+            const fallbackResults = await SearchService.search(finalParams);
+            if (!isLatestSearchRequest(requestId)) {
+              return;
+            }
+            commitCompletedSearch(fallbackResults, "fallback");
+          } catch (fallbackError) {
+            if (!isLatestSearchRequest(requestId)) {
+              return;
+            }
+            set({
+              error: getErrorMessage(fallbackError, getErrorMessage(error, "搜索失败")),
+              isLoading: false,
+              isRefreshing: false,
+              progressiveStatus: "error",
+              searchResults: preserveResults ? state.searchResults : null,
+            });
+          }
         }
       },
 
@@ -321,6 +397,10 @@ export const useSearchStore = create<SearchState>()(
             error: null,
             isLoading: false,
             isRefreshing: false,
+            progressiveStatus: "idle",
+            completedSources: 0,
+            totalSources: 0,
+            receivedBatches: 0,
             lastCompletedSearchParams: null,
             displayedCount: state.pageSize,
             hasMore: false,
@@ -446,6 +526,10 @@ export const useSearchStore = create<SearchState>()(
           searchResults: null,
           isLoading: false,
           isRefreshing: false,
+          progressiveStatus: "idle",
+          completedSources: 0,
+          totalSources: 0,
+          receivedBatches: 0,
           error: null,
           lastCompletedSearchParams: null,
           displayedCount: state.pageSize,

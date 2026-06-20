@@ -126,6 +126,43 @@ describe('SystemInfoView', () => {
         };
       }
 
+      if (url === '/api/admin/search-observability') {
+        return {
+          ok: true,
+          json: async () => ({
+            search_count: {
+              all: 3,
+              progressive: 2,
+            },
+            search_error_count: {},
+            cache_hit_count: {
+              plugin: 2,
+            },
+            cache_miss_count: {
+              plugin: 2,
+            },
+            cache_hit_rate: {
+              plugin: 0.5,
+            },
+            average_duration_ms: {
+              all: 1200,
+              progressive: 800,
+            },
+            result_buckets: {
+              '1-10': 5,
+            },
+            timeout_count: 1,
+            warning_count: 2,
+            recent_errors: [
+              { scope: 'plugin', keyword: '测试', message: '插件搜索超时' },
+            ],
+            top_keywords: [
+              { keyword: '流浪地球', count: 3 },
+            ],
+          }),
+        };
+      }
+
       return {
         ok: false,
         json: async () => ({}),
@@ -146,6 +183,9 @@ describe('SystemInfoView', () => {
     expect(screen.queryByText('今日活跃')).not.toBeInTheDocument();
     expect(screen.queryByText('月活跃')).not.toBeInTheDocument();
     expect(screen.getByText('插件状态摘要')).toBeInTheDocument();
+    expect(screen.getByText('搜索健康摘要')).toBeInTheDocument();
+    expect(screen.getByText('流浪地球 · 3')).toBeInTheDocument();
+    expect(screen.getByText(/插件搜索超时/)).toBeInTheDocument();
     expect(screen.getByText(/异常包含启用与禁用频道/)).toBeInTheDocument();
     expect(screen.getAllByText('点击进入管理页')).toHaveLength(2);
 

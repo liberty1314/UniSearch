@@ -48,6 +48,30 @@ log_warning() { echo -e "${YELLOW}[⚠]${NC} $1"; }
 log_error() { echo -e "${RED}[✗]${NC} $1"; }
 log_step() { echo -e "${CYAN}[->]${NC} $1"; }
 
+# 输出最近日志，启动失败时直接给出定位线索。
+show_recent_log() {
+    local file=$1
+    local name=$2
+    local lines=${3:-80}
+
+    if [ ! -f "$file" ]; then
+        log_warning "$name 日志文件不存在: $file"
+        return 0
+    fi
+
+    echo
+    echo -e "${YELLOW}========== $name 最近 ${lines} 行日志 ==========${NC}"
+    tail -n "$lines" "$file" || true
+    echo -e "${YELLOW}========== $name 日志结束 ==========${NC}"
+    echo
+}
+
+# 检查 HTTP 健康接口是否可访问。
+check_http_health() {
+    local url=$1
+    curl -s --max-time 3 --fail "$url" >/dev/null 2>&1
+}
+
 # 打印横幅
 print_banner() {
     echo -e "${CYAN}"
@@ -293,10 +317,10 @@ do_start() {
         fi
     else
         log_error "后端启动失败，请检查日志: $BACKEND_LOG"
+        show_recent_log "$BACKEND_LOG" "后端服务"
         exit 1
     fi
 
-    # 9. 启动前端
     # 9. 启动前端
     log_step "启动前端服务..."
     cd frontend
@@ -322,6 +346,7 @@ do_start() {
             log_info "请手动检查: http://localhost:$FRONTEND_PORT_LOCAL"
         else
             log_error "前端启动失败，请检查日志: $FRONTEND_LOG"
+            show_recent_log "$FRONTEND_LOG" "前端服务"
             # 尝试清理后端
             kill $BACKEND_PID 2>/dev/null
             exit 1
@@ -389,29 +414,99 @@ do_restart() {
 # 核心功能：Status
 # ==============================================================================
 
+print_service_status() {
+    local name=$1
+    local port=$2
+    local url=$3
+    local pid_file=$4
+    local health_url=${5:-}
+
+    local port_listening=false
+    local pid_value=""
+    local pid_alive=false
+    local pid_invalid=false
+
+    if check_port "$port"; then
+        port_listening=true
+    fi
+
+    if [ -f "$pid_file" ]; then
+        local raw_pid
+        raw_pid=$(cat "$pid_file")
+        pid_value=$(printf "%s" "$raw_pid" | tr -dc '0-9')
+        if [ -z "$pid_value" ] || [ "$pid_value" != "$raw_pid" ]; then
+            pid_invalid=true
+        elif check_process "$pid_value"; then
+            pid_alive=true
+        fi
+    fi
+
+    if [ "$port_listening" = true ]; then
+        if [ "$pid_invalid" = true ]; then
+            echo -e "   ${YELLOW}●${NC} $name: ${YELLOW}端口监听，但 PID 文件无效${NC} ($url)"
+            echo -e "     PID 文件: $pid_file"
+            echo -e "     建议: ${BLUE}./scripts/local.sh restart${NC}"
+            return 0
+        fi
+
+        if [ -n "$pid_value" ] && [ "$pid_alive" = false ]; then
+            echo -e "   ${YELLOW}●${NC} $name: ${YELLOW}端口监听，但 PID 陈旧${NC} ($url)"
+            echo -e "     PID 文件: $pid_file -> $pid_value（进程不存在）"
+            echo -e "     建议: ${BLUE}./scripts/local.sh restart${NC}"
+            return 0
+        fi
+
+        if [ -z "$pid_value" ]; then
+            echo -e "   ${YELLOW}●${NC} $name: ${YELLOW}端口监听，但缺少 PID 文件${NC} ($url)"
+            echo -e "     建议: ${BLUE}./scripts/local.sh restart${NC}"
+            return 0
+        fi
+
+        if [ -n "$health_url" ]; then
+            if check_http_health "$health_url"; then
+                echo -e "   ${GREEN}●${NC} $name: ${GREEN}运行中${NC} ($url)"
+            else
+                echo -e "   ${YELLOW}●${NC} $name: ${YELLOW}端口监听，但健康检查失败${NC} ($url)"
+                echo -e "     健康接口: $health_url"
+                echo -e "     建议: ${BLUE}./scripts/local.sh logs${NC}"
+            fi
+        else
+            echo -e "   ${GREEN}●${NC} $name: ${GREEN}运行中${NC} ($url)"
+        fi
+
+        echo -e "     PID: $pid_value"
+        return 0
+    fi
+
+    if [ -n "$pid_value" ] && [ "$pid_alive" = true ]; then
+        echo -e "   ${YELLOW}●${NC} $name: ${YELLOW}进程存在，但端口未监听${NC} ($url)"
+        echo -e "     PID: $pid_value"
+        echo -e "     建议: ${BLUE}./scripts/local.sh restart${NC}"
+        return 0
+    fi
+
+    if [ "$pid_invalid" = true ]; then
+        echo -e "   ${RED}●${NC} $name: ${RED}未运行${NC}"
+        echo -e "     PID 文件无效: $pid_file"
+        echo -e "     建议: ${BLUE}./scripts/local.sh restart${NC}"
+        return 0
+    fi
+
+    if [ -n "$pid_value" ]; then
+        echo -e "   ${RED}●${NC} $name: ${RED}未运行${NC}"
+        echo -e "     PID 文件陈旧: $pid_file -> $pid_value"
+        echo -e "     建议: ${BLUE}./scripts/local.sh restart${NC}"
+    else
+        echo -e "   ${RED}●${NC} $name: ${RED}未运行${NC}"
+    fi
+}
+
 do_status() {
     echo
     echo -e "${CYAN}📡 服务状态:${NC}"
     
-    # 后端状态
-    if check_port $BACKEND_PORT; then
-        echo -e "   ${GREEN}●${NC} 后端服务: ${GREEN}运行中${NC} (http://localhost:$BACKEND_PORT)"
-        if [ -f "$BACKEND_PID_FILE" ]; then
-            echo -e "     PID: $(cat $BACKEND_PID_FILE)"
-        fi
-    else
-        echo -e "   ${RED}●${NC} 后端服务: ${RED}未运行${NC}"
-    fi
-
-    # 前端状态
-    if check_port $FRONTEND_PORT_LOCAL; then
-        echo -e "   ${GREEN}●${NC} 前端服务: ${GREEN}运行中${NC} (http://localhost:$FRONTEND_PORT_LOCAL)"
-        if [ -f "$FRONTEND_PID_FILE" ]; then
-            echo -e "     PID: $(cat $FRONTEND_PID_FILE)"
-        fi
-    else
-        echo -e "   ${RED}●${NC} 前端服务: ${RED}未运行${NC}"
-    fi
+    print_service_status "后端服务" "$BACKEND_PORT" "http://localhost:$BACKEND_PORT" "$BACKEND_PID_FILE" "http://localhost:$BACKEND_PORT/api/health"
+    print_service_status "前端服务" "$FRONTEND_PORT_LOCAL" "http://localhost:$FRONTEND_PORT_LOCAL" "$FRONTEND_PID_FILE"
 
     echo
     echo -e "${CYAN}💡 常用命令:${NC}"

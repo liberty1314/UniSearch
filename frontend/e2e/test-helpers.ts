@@ -71,6 +71,40 @@ const createSearchResponse = (keyword: string) =>
     warnings: [],
   });
 
+const createProgressiveSearchBody = (keyword: string) => {
+  const response = createSearchResponse(keyword).data;
+  return [
+    {
+      type: 'started',
+      keyword,
+      completed_sources: 0,
+      total_sources: 1,
+      received_batches: 0,
+    },
+    {
+      type: 'batch',
+      keyword,
+      resources: response.resources,
+      warnings: response.warnings,
+      completed_sources: 1,
+      total_sources: 1,
+      received_batches: 1,
+      is_final: true,
+    },
+    {
+      type: 'complete',
+      keyword,
+      resources: response.resources,
+      warnings: response.warnings,
+      completed_sources: 1,
+      total_sources: 1,
+      received_batches: 1,
+      is_final: true,
+      response,
+    },
+  ].map((event) => JSON.stringify(event)).join('\n') + '\n';
+};
+
 const hotRankingResponse = apiEnvelope({
   mode: 'trend',
   period: 'day',
@@ -160,6 +194,14 @@ export async function mockPublicApis(page: Page) {
   });
   await page.route('**/api/hot?**', async (route) => {
     await route.fulfill({ json: hotRankingResponse });
+  });
+  await page.route('**/api/search/progressive', async (route) => {
+    const body = route.request().postDataJSON() as { kw?: string } | undefined;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/x-ndjson; charset=utf-8',
+      body: createProgressiveSearchBody(body?.kw || '测试'),
+    });
   });
   await page.route('**/api/search', async (route) => {
     const body = route.request().postDataJSON() as { kw?: string } | undefined;

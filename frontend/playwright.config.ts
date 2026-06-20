@@ -1,5 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const realE2EEnabled = process.env.UNISEARCH_REAL_E2E === '1';
+const frontendBaseURL = process.env.UNISEARCH_FRONTEND_BASE_URL || 'http://127.0.0.1:5173';
+const frontendURL = new URL(frontendBaseURL);
+const frontendHost = frontendURL.hostname || '127.0.0.1';
+const frontendPort = frontendURL.port || '5173';
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 30_000,
@@ -11,7 +17,7 @@ export default defineConfig({
   workers: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://127.0.0.1:5173',
+    baseURL: frontendBaseURL,
     trace: 'retain-on-failure',
     screenshot: {
       mode: 'only-on-failure',
@@ -21,16 +27,25 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      testIgnore: /real-backend\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'mobile',
+      testIgnore: /real-backend\.spec\.ts/,
       use: { ...devices['Pixel 7'] },
     },
+    ...(realE2EEnabled ? [
+      {
+        name: 'real-backend',
+        testMatch: /real-backend\.spec\.ts/,
+        use: { ...devices['Desktop Chrome'] },
+      },
+    ] : []),
   ],
   webServer: {
-    command: 'pnpm dev --host 127.0.0.1 --strictPort',
-    url: 'http://127.0.0.1:5173',
+    command: `pnpm dev --host ${frontendHost} --port ${frontendPort} --strictPort`,
+    url: frontendBaseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
   },

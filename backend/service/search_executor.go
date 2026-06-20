@@ -73,17 +73,23 @@ func (e *tgSearchExecutor) Search(keyword string, channels []string, forceRefres
 }
 
 type pluginSearchExecutor struct {
-	pluginSelector PluginSelector
-	searchCache    SearchCache
-	metrics        *SearchMetricsRecorder
-	pluginLocks    sync.Map
+	pluginSelector      PluginSelector
+	searchCache         SearchCache
+	metrics             *SearchMetricsRecorder
+	pluginLocks         *sync.Map
+	pluginHealthService *PluginHealthService
 }
 
-func newPluginSearchExecutor(pluginSelector PluginSelector, searchCache SearchCache, metrics *SearchMetricsRecorder) PluginSearchExecutor {
+func newPluginSearchExecutor(pluginSelector PluginSelector, searchCache SearchCache, metrics *SearchMetricsRecorder, pluginLocks *sync.Map, pluginHealthService *PluginHealthService) PluginSearchExecutor {
+	if pluginLocks == nil {
+		pluginLocks = &sync.Map{}
+	}
 	return &pluginSearchExecutor{
-		pluginSelector: pluginSelector,
-		searchCache:    searchCache,
-		metrics:        metrics,
+		pluginSelector:      pluginSelector,
+		searchCache:         searchCache,
+		metrics:             metrics,
+		pluginLocks:         pluginLocks,
+		pluginHealthService: pluginHealthService,
 	}
 }
 
@@ -180,6 +186,7 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 			Source:  "plugin",
 			Message: "部分搜索源响应超时，已返回其他来源结果",
 		})
+		e.metrics.RecordTimeout("plugin", keyword, "部分搜索源响应超时")
 		logSearchEvent("plugin_timeout", map[string]interface{}{
 			"keyword":         keyword,
 			"submitted_tasks": submittedTasks,
@@ -191,18 +198,22 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 	}
 
 	allPluginResultsFinal := true
+	completedPluginNames := make(map[string]struct{}, len(results))
 	for _, result := range results {
 		if result == nil {
 			continue
 		}
 		taskResult := result.(pluginTaskResult)
+		completedPluginNames[taskResult.name] = struct{}{}
 		if taskResult.err != nil {
 			warnings = append(warnings, model.SearchSourceWarning{
 				Source:  taskResult.name,
 				Message: "该搜索源暂时不可用，已返回其他来源结果",
 			})
+			e.recordPluginHealth(taskResult.name, false, taskResult.err.Error(), "search_failure")
 			continue
 		}
+		e.recordPluginHealth(taskResult.name, true, "", "search_failure")
 		if !taskResult.isFinal {
 			allPluginResultsFinal = false
 		}
@@ -216,12 +227,32 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 	if allPluginResultsFinal {
 		e.searchCache.Store("plugin", cacheKey, keyword, allResults)
 	}
+	if timedOut {
+		for _, currentPlugin := range availablePlugins {
+			if _, ok := completedPluginNames[currentPlugin.Name()]; !ok {
+				e.recordPluginHealth(currentPlugin.Name(), false, "插件搜索超时", "timeout")
+			}
+		}
+	}
 	return allResults, warnings, nil
 }
 
 func (e *pluginSearchExecutor) lockForPlugin(name string) *sync.Mutex {
 	lock, _ := e.pluginLocks.LoadOrStore(name, &sync.Mutex{})
 	return lock.(*sync.Mutex)
+}
+
+func (e *pluginSearchExecutor) recordPluginHealth(pluginName string, healthy bool, message string, source string) {
+	if e.pluginHealthService == nil {
+		return
+	}
+	if err := e.pluginHealthService.RecordResult(pluginName, healthy, message, source); err != nil {
+		logSearchEvent("plugin_health_record_failed", map[string]interface{}{
+			"plugin": pluginName,
+			"source": source,
+			"error":  err.Error(),
+		})
+	}
 }
 
 func calculatePluginWorkerCount(concurrency int, pluginCount int) int {
