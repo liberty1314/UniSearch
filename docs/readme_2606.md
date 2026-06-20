@@ -1094,3 +1094,12 @@
     - docs/readme_2604.md
     - docs/readme_2605.md
     - docs/readme_2606.md
+
+- [2026-06-20 20:36] ui(search): 隐藏普通用户的部分搜索源异常警告
+  - Body: 从搜索结果的工具栏和头部组件中移除了 sourceWarnings 属性下传，不再向普通用户展示“部分结果暂不可用”的异常警告标签，避免因个别不稳定搜索源引起的过度提示干扰正常搜索体验。同时更新了相应的组件测试。
+  - Files:
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/home/SearchResultsToolbar.tsx
+    - frontend/src/components/search-results/SearchResultsHeader.tsx
+    - docs/readme_2606.md

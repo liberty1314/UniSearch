@@ -317,7 +317,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         onViewModeChange={handleViewModeChange}
         isRefreshing={isRefreshing}
         progressiveStatus={progressiveStatus}
-        sourceWarnings={searchResults?.warnings}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveFilterChip}
         onClearFilters={hasAnyActiveFilters ? handleClearAllFilters : undefined}

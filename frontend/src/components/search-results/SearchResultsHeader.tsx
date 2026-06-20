@@ -1,7 +1,6 @@
 import React from "react";
 import { SearchResultsToolbar } from "@/components/home/SearchResultsToolbar";
 import type { ActiveFilterChip } from "@/utils/searchFilters";
-import type { SearchSourceWarning } from "@/types/search";
 
 type ViewMode = "list" | "grid";
 type ProgressiveStatus = "idle" | "running" | "complete" | "fallback" | "error";
@@ -11,7 +10,6 @@ interface SearchResultsHeaderProps {
   viewMode: ViewMode;
   isRefreshing: boolean;
   progressiveStatus: ProgressiveStatus;
-  sourceWarnings?: SearchSourceWarning[];
   activeFilterChips: ActiveFilterChip[];
   onViewModeChange: (mode: ViewMode) => void;
   onRemoveFilterChip: (chipId: string) => void;
@@ -23,7 +21,6 @@ const SearchResultsHeader: React.FC<SearchResultsHeaderProps> = ({
   viewMode,
   isRefreshing,
   progressiveStatus,
-  sourceWarnings,
   activeFilterChips,
   onViewModeChange,
   onRemoveFilterChip,
@@ -37,7 +34,6 @@ const SearchResultsHeader: React.FC<SearchResultsHeaderProps> = ({
         onViewModeChange={onViewModeChange}
         isRefreshing={isRefreshing}
         progressiveStatus={progressiveStatus}
-        sourceWarnings={sourceWarnings}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={onRemoveFilterChip}
         onClearFilters={onClearFilters}

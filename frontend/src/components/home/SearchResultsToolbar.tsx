@@ -1,7 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Grid2X2, List } from "lucide-react";
-import type { SearchSourceWarning } from "@/types/search";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,8 +18,6 @@ interface SearchResultsToolbarProps {
   isRefreshing?: boolean;
   /** 渐进式搜索状态 */
   progressiveStatus?: ProgressiveStatus;
-  /** 搜索源 warning 摘要 */
-  sourceWarnings?: SearchSourceWarning[];
   /** 已启用高级筛选摘要 */
   activeFilterChips?: Array<{ id: string; label: string }>;
   /** 删除单个筛选条件 */
@@ -45,14 +42,12 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
       onViewModeChange,
       isRefreshing = false,
       progressiveStatus = "idle",
-      sourceWarnings = [],
       activeFilterChips = [],
       onRemoveFilterChip,
       onClearFilters,
     }) => {
     const handleToggle = () =>
       onViewModeChange(viewMode === "grid" ? "list" : "grid");
-    const hasWarnings = sourceWarnings.length > 0;
 
       return (
         <motion.div
@@ -81,11 +76,6 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
                   {progressiveStatus === "fallback" && (
                     <span className="rounded-full border border-amber-200/70 bg-amber-50/80 px-2.5 py-1 text-[12px] font-medium text-amber-700 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-200">
                       已回退普通搜索
-                    </span>
-                  )}
-                  {hasWarnings && (
-                    <span className="rounded-full border border-amber-200/70 bg-amber-50/80 px-2.5 py-1 text-[12px] font-medium text-amber-700 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-200">
-                      部分结果暂不可用
                     </span>
                   )}
                 </div>

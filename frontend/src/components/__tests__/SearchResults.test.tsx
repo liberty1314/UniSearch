@@ -628,7 +628,7 @@ describe("SearchResults", () => {
     expect(screen.queryByText(/已接收/)).not.toBeInTheDocument();
   });
 
-  it("结果 warning 不向普通用户展示来源名和来源数量", async () => {
+  it("结果 warning 不向普通用户展示提示、来源名和来源数量", async () => {
     searchStoreState = {
       ...searchStoreState,
       searchResults: {
@@ -644,7 +644,8 @@ describe("SearchResults", () => {
 
     renderSearchResults();
 
-    expect(await screen.findByText("部分结果暂不可用")).toBeInTheDocument();
+    expect(await screen.findByTestId("search-result-grid-card")).toBeInTheDocument();
+    expect(screen.queryByText("部分结果暂不可用")).not.toBeInTheDocument();
     expect(screen.queryByText(/部分来源/)).not.toBeInTheDocument();
     expect(screen.queryByText("failed-plugin")).not.toBeInTheDocument();
     expect(screen.queryByText(/该搜索源暂时不可用/)).not.toBeInTheDocument();
