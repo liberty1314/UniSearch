@@ -195,7 +195,7 @@ export function SearchEmptyWorkbench({
               </div>
             ) : (
               <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                热榜暂时没有返回可用条目，下面仍然可以直接用精准模板开始搜索。
+                热榜暂时没有返回可用条目，下面的精准模板仍可作为手动搜索参考。
               </p>
             )}
           </div>
@@ -210,7 +210,7 @@ export function SearchEmptyWorkbench({
                   精准模板
                 </p>
                 <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                  每个模板都带了更明确的搜索意图，点击后会把关键词和筛选条件一起带入。
+                  每个模板都展示更明确的搜索意图，可作为手动输入关键词和筛选条件的参考。
                 </p>
               </div>
             </div>
@@ -237,15 +237,12 @@ export function SearchEmptyWorkbench({
 
                     <div className="mt-3 flex flex-wrap gap-2">
                       {group.keywords.map((preset) => (
-                        <button
+                        <span
                           key={preset.id}
-                          type="button"
-                          onClick={() => onPresetSearch(preset)}
-                          className="inline-flex items-center rounded-full border border-slate-200/75 bg-white/80 px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-cyan-400/40 dark:hover:text-cyan-200"
-                          aria-label={`按模板搜索 ${preset.label}`}
+                          className="inline-flex cursor-default items-center rounded-full border border-slate-200/75 bg-white/80 px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-cyan-400/40 dark:hover:text-cyan-200"
                         >
                           {preset.label}
-                        </button>
+                        </span>
                       ))}
                     </div>
                   </div>

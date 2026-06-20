@@ -66,8 +66,10 @@ describe('TrendingCategories', () => {
     expect(screen.getByText('学习资料')).toBeInTheDocument();
     expect(screen.getAllByTestId('trending-category-badge')).toHaveLength(4);
     expect(screen.getAllByTestId('trending-category-chip').length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: '快捷搜索 4K' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '快捷搜索 AI' })).toBeInTheDocument();
+    expect(screen.getByText('4K')).toBeInTheDocument();
+    expect(screen.getByText('AI')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '快捷搜索 4K' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '快捷搜索 AI' })).not.toBeInTheDocument();
     expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(6);
     expect(screen.queryByText('热门搜索')).not.toBeInTheDocument();
     expect(screen.queryByText('热门标签')).not.toBeInTheDocument();

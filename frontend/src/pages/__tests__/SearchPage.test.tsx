@@ -370,7 +370,8 @@ describe("SearchPage", () => {
     });
     expect(screen.getByText("沙丘 2")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "搜 4K 沙丘 2" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "按模板搜索 电影 4K" })).toBeInTheDocument();
+    expect(screen.getByText("电影 4K")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "按模板搜索 电影 4K" })).not.toBeInTheDocument();
   });
 
   it("从热门榜单进入时展示来源提示", () => {
@@ -395,55 +396,28 @@ describe("SearchPage", () => {
     expect(screen.getByText("来自热门榜单：沙丘 2")).toBeInTheDocument();
   });
 
-  it("点击精准模板会携带完整筛选条件发起搜索并同步地址", async () => {
+  it("精准模板仅展示为参考标签，不会触发搜索或同步地址", async () => {
     renderSearchPage("/search");
 
     await waitFor(() => {
       expect(screen.getByText("精准模板")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "按模板搜索 电影 4K" }));
+    setSearchParamsMock.mockClear();
+    performSearchMock.mockClear();
 
-    await waitFor(() => {
-      expect(setSearchParamsMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          keyword: "电影 4K",
-          cloudTypes: ["quark", "aliyun"],
-          channels: [],
-          plugins: [],
-          filter: {
-            include: ["4K"],
-            exclude: ["预告", "枪版"],
-          },
-        }),
-      );
-    });
-    await waitFor(() => {
-      expect(performSearchMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          keyword: "电影 4K",
-          cloudTypes: ["quark", "aliyun"],
-          channels: [],
-          plugins: [],
-          filter: {
-            include: ["4K"],
-            exclude: ["预告", "枪版"],
-          },
-        }),
-        { preserveResults: false },
-      );
-    });
+    fireEvent.click(screen.getByText("电影 4K"));
+
+    expect(setSearchParamsMock).not.toHaveBeenCalled();
+    expect(performSearchMock).not.toHaveBeenCalled();
     expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
-    expect(screen.getByTestId("location-probe")).toHaveTextContent('"search":"?q=%E7%94%B5%E5%BD%B1+4K');
-    expect(screen.getByTestId("location-probe")).toHaveTextContent('include=4K');
-    await waitFor(() => {
-      expect(screen.getByTestId("location-probe")).not.toHaveTextContent("forceSkeleton");
-    });
+    expect(screen.getByTestId("location-probe")).toHaveTextContent('"search":""');
+    expect(screen.getByTestId("location-probe")).not.toHaveTextContent("forceSkeleton");
     expect(screen.getByTestId("location-probe")).not.toHaveTextContent("skipSearchSync");
     expect(screen.getByTestId("location-probe")).not.toHaveTextContent("mediaTypes=");
   });
 
-  it("匿名点击精准模板会进入登录并保留完整搜索意图", async () => {
+  it("匿名查看精准模板时点击标签不会进入登录或保留搜索意图", async () => {
     searchAccessStatus = "anonymous";
 
     renderSearchPage("/search");
@@ -452,13 +426,15 @@ describe("SearchPage", () => {
       expect(screen.getByText("精准模板")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "按模板搜索 电影 4K" }));
+    performSearchMock.mockClear();
+
+    fireEvent.click(screen.getByText("电影 4K"));
 
     expect(performSearchMock).not.toHaveBeenCalled();
-    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/login"');
-    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pendingSearch":{"keyword":"电影 4K"');
-    expect(screen.getByTestId("location-probe")).toHaveTextContent('"cloudTypes":["quark","aliyun"]');
-    expect(screen.getByTestId("location-probe")).toHaveTextContent('"include":["4K"]');
+    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
+    expect(screen.getByTestId("location-probe")).not.toHaveTextContent('"pendingSearch"');
+    expect(screen.getByTestId("location-probe")).not.toHaveTextContent('"cloudTypes":["quark","aliyun"]');
+    expect(screen.getByTestId("location-probe")).not.toHaveTextContent('"include":["4K"]');
     expect(screen.getByTestId("location-probe")).not.toHaveTextContent('"mediaTypes"');
   });
 

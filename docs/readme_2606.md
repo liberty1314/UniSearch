@@ -1075,3 +1075,12 @@
     - frontend/src/routes/AppRoutes.tsx
     - frontend/src/routes/__tests__/AppRoutes.test.tsx
     - docs/readme_2606.md
+
+- [2026-06-20 16:41] refactor(search): 将首页和搜索空状态的预设关键词改为静态展示标签
+  - Body: 取消首页趋势分类与搜索空白台中的关键词快捷点击搜索能力，将按钮降级为纯文本展示的静态参考标签，避免无意识点击跳出当前浏览上下文，同时更新了相应的组件测试与搜索页级测试断言。
+  - Files:
+    - frontend/src/components/home/TrendingCategories.tsx
+    - frontend/src/components/home/__tests__/TrendingCategories.test.tsx
+    - frontend/src/components/search/SearchEmptyWorkbench.tsx
+    - frontend/src/pages/__tests__/SearchPage.test.tsx
+    - docs/readme_2606.md
