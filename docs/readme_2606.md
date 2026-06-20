@@ -1068,3 +1068,10 @@
     - frontend/src/hooks/useSearchUrlSync.ts
     - frontend/src/pages/__tests__/SearchPage.test.tsx
     - docs/readme_2606.md
+
+- [2026-06-20 16:04] feat(trending): 新增热榜页面的结构化懒加载骨架屏
+  - Body: 为热榜路由懒加载配置了专属的结构化骨架屏，在加载时能够保留页面主体布局，避免了通用的全屏居中等待态带来的视觉跳跃。同时更新了 AppRoutes 并补充了对应的测试。
+  - Files:
+    - frontend/src/routes/AppRoutes.tsx
+    - frontend/src/routes/__tests__/AppRoutes.test.tsx
+    - docs/readme_2606.md

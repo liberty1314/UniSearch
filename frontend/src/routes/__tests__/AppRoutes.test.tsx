@@ -87,7 +87,7 @@ describe('AppRoutes', () => {
     expect(shouldUseLazyRouteFallback()).toBe(true);
   });
 
-  it('keeps the lazy route loading card centered in the viewport', () => {
+  it('keeps the generic lazy route loading state compact for non-specialized pages', () => {
     const { container } = render(<RouteFallback />);
     const wrapper = container.firstElementChild;
 
@@ -96,6 +96,16 @@ describe('AppRoutes', () => {
     expect(wrapper).toHaveClass('justify-center');
     expect(wrapper?.className).not.toContain('min-h-[40vh]');
     expect(screen.getByText('正在整理页面内容')).toBeInTheDocument();
+  });
+
+  it('renders a structure-preserving hot ranking skeleton for the trending route', () => {
+    render(<RouteFallback pathname="/trending" />);
+
+    expect(screen.getByRole('status', { name: '热门榜单加载中' })).toBeInTheDocument();
+    expect(screen.getByText('正在加载热门榜单')).toBeInTheDocument();
+    expect(screen.getByText('热榜控制台')).toBeInTheDocument();
+    expect(screen.getAllByTestId('route-hot-card-skeleton')).toHaveLength(6);
+    expect(screen.queryByText('正在整理页面内容')).not.toBeInTheDocument();
   });
 
   it('renders the cinematic footer only on the home page', async () => {
