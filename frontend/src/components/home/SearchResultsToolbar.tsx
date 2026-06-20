@@ -19,12 +19,6 @@ interface SearchResultsToolbarProps {
   isRefreshing?: boolean;
   /** 渐进式搜索状态 */
   progressiveStatus?: ProgressiveStatus;
-  /** 已完成来源数 */
-  completedSources?: number;
-  /** 总来源数 */
-  totalSources?: number;
-  /** 已接收批次数 */
-  receivedBatches?: number;
   /** 搜索源 warning 摘要 */
   sourceWarnings?: SearchSourceWarning[];
   /** 已启用高级筛选摘要 */
@@ -51,18 +45,13 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
       onViewModeChange,
       isRefreshing = false,
       progressiveStatus = "idle",
-      completedSources = 0,
-      totalSources = 0,
-      receivedBatches = 0,
       sourceWarnings = [],
       activeFilterChips = [],
       onRemoveFilterChip,
       onClearFilters,
     }) => {
-    const [warningsOpen, setWarningsOpen] = React.useState(false);
     const handleToggle = () =>
       onViewModeChange(viewMode === "grid" ? "list" : "grid");
-    const isProgressiveRunning = progressiveStatus === "running" && totalSources > 0;
     const hasWarnings = sourceWarnings.length > 0;
 
       return (
@@ -86,12 +75,7 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
                   <span>个结果</span>
                   {isRefreshing && (
                     <span className="text-[13px] text-cyan-600 dark:text-cyan-400">
-                      刷新中
-                    </span>
-                  )}
-                  {isProgressiveRunning && (
-                    <span className="rounded-full border border-cyan-200/70 bg-cyan-50/80 px-2.5 py-1 text-[12px] font-medium text-cyan-700 dark:border-cyan-300/20 dark:bg-cyan-400/10 dark:text-cyan-200">
-                      仍在搜索 {completedSources}/{totalSources} 个来源
+                      加载中
                     </span>
                   )}
                   {progressiveStatus === "fallback" && (
@@ -99,45 +83,12 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
                       已回退普通搜索
                     </span>
                   )}
-                  {receivedBatches > 0 && isProgressiveRunning && (
-                    <span className="text-[12px] text-slate-500 dark:text-slate-400">
-                      已接收 {receivedBatches} 批
+                  {hasWarnings && (
+                    <span className="rounded-full border border-amber-200/70 bg-amber-50/80 px-2.5 py-1 text-[12px] font-medium text-amber-700 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-200">
+                      部分结果暂不可用
                     </span>
                   )}
-                  {hasWarnings && (
-                    <button
-                      type="button"
-                      onClick={() => setWarningsOpen((open) => !open)}
-                      className="rounded-full border border-amber-200/70 bg-amber-50/80 px-2.5 py-1 text-[12px] font-medium text-amber-700 transition hover:bg-amber-100 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-200 dark:hover:bg-amber-400/15"
-                    >
-                      部分来源异常/超时 {sourceWarnings.length}
-                    </button>
-                  )}
                 </div>
-                <AnimatePresence initial={false}>
-                  {hasWarnings && warningsOpen ? (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="flex max-w-3xl flex-wrap gap-2 pt-1 text-xs text-amber-700 dark:text-amber-200">
-                        {sourceWarnings.slice(0, 4).map((warning, index) => (
-                          <span
-                            key={`${warning.source}-${index}`}
-                            className="rounded-full border border-amber-200/70 bg-white/70 px-2.5 py-1 dark:border-amber-300/20 dark:bg-white/[0.04]"
-                          >
-                            {warning.source || "未知来源"}：{warning.message || "暂不可用"}
-                          </span>
-                        ))}
-                        {sourceWarnings.length > 4 ? (
-                          <span className="px-2.5 py-1">另有 {sourceWarnings.length - 4} 条</span>
-                        ) : null}
-                      </div>
-                    </motion.div>
-                  ) : null}
-                </AnimatePresence>
               </div>
 
               {activeFilterChips.length > 0 ? (

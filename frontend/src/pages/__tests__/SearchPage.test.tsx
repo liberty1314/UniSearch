@@ -436,7 +436,9 @@ describe("SearchPage", () => {
     expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
     expect(screen.getByTestId("location-probe")).toHaveTextContent('"search":"?q=%E7%94%B5%E5%BD%B1+4K');
     expect(screen.getByTestId("location-probe")).toHaveTextContent('include=4K');
-    expect(screen.getByTestId("location-probe")).toHaveTextContent('"forceSkeleton":true');
+    await waitFor(() => {
+      expect(screen.getByTestId("location-probe")).not.toHaveTextContent("forceSkeleton");
+    });
     expect(screen.getByTestId("location-probe")).not.toHaveTextContent("skipSearchSync");
     expect(screen.getByTestId("location-probe")).not.toHaveTextContent("mediaTypes=");
   });
@@ -522,7 +524,9 @@ describe("SearchPage", () => {
       );
     });
     expect(screen.getByTestId("location-probe")).toHaveTextContent('"search":"?q=%E6%B2%99%E4%B8%98+2&include=4K');
-    expect(screen.getByTestId("location-probe")).toHaveTextContent('"forceSkeleton":true');
+    await waitFor(() => {
+      expect(screen.getByTestId("location-probe")).not.toHaveTextContent("forceSkeleton");
+    });
     expect(screen.getByTestId("location-probe")).not.toHaveTextContent("skipSearchSync");
     expect(screen.getByTestId("location-probe")).not.toHaveTextContent("mediaTypes=");
   });

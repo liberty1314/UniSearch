@@ -1056,3 +1056,15 @@
     - scripts/tests/real-search-smoke.sh
     - scripts/tests/release-candidate.sh
     - docs/readme_2606.md
+
+- [2026-06-20 13:57] fix(search): 优化搜索参数同步与焦点刷新逻辑并清理冗余进度属性
+  - Body: 消费并清除 location state 中的 forceSkeleton 以避免重复触发强制骨架屏，同时优化窗口重新聚焦时的搜索结果刷新逻辑。另外清理了搜索结果组件链路上冗余的渐进式加载进度属性。
+  - Files:
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/home/SearchResultsToolbar.tsx
+    - frontend/src/components/search-results/SearchResultsHeader.tsx
+    - frontend/src/hooks/__tests__/useSearchUrlSync.test.tsx
+    - frontend/src/hooks/useSearchUrlSync.ts
+    - frontend/src/pages/__tests__/SearchPage.test.tsx
+    - docs/readme_2606.md

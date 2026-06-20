@@ -11,9 +11,6 @@ interface SearchResultsHeaderProps {
   viewMode: ViewMode;
   isRefreshing: boolean;
   progressiveStatus: ProgressiveStatus;
-  completedSources: number;
-  totalSources: number;
-  receivedBatches: number;
   sourceWarnings?: SearchSourceWarning[];
   activeFilterChips: ActiveFilterChip[];
   onViewModeChange: (mode: ViewMode) => void;
@@ -26,9 +23,6 @@ const SearchResultsHeader: React.FC<SearchResultsHeaderProps> = ({
   viewMode,
   isRefreshing,
   progressiveStatus,
-  completedSources,
-  totalSources,
-  receivedBatches,
   sourceWarnings,
   activeFilterChips,
   onViewModeChange,
@@ -43,9 +37,6 @@ const SearchResultsHeader: React.FC<SearchResultsHeaderProps> = ({
         onViewModeChange={onViewModeChange}
         isRefreshing={isRefreshing}
         progressiveStatus={progressiveStatus}
-        completedSources={completedSources}
-        totalSources={totalSources}
-        receivedBatches={receivedBatches}
         sourceWarnings={sourceWarnings}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={onRemoveFilterChip}

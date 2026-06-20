@@ -22,6 +22,10 @@ type SearchStoreState = {
   performSearch: ReturnType<typeof vi.fn>;
   setSearchParams: ReturnType<typeof vi.fn>;
   displayedCount: number;
+  progressiveStatus: "idle" | "running" | "complete" | "fallback" | "error";
+  completedSources: number;
+  totalSources: number;
+  receivedBatches: number;
 };
 
 let searchStoreState: SearchStoreState = {
@@ -81,6 +85,10 @@ let searchStoreState: SearchStoreState = {
   performSearch: vi.fn(),
   setSearchParams: vi.fn(),
   displayedCount: 48,
+  progressiveStatus: "idle",
+  completedSources: 0,
+  totalSources: 0,
+  receivedBatches: 0,
 };
 let enableResourceDetailPage = true;
 
@@ -243,6 +251,10 @@ describe("SearchResults", () => {
       performSearch: vi.fn(),
       setSearchParams: vi.fn(),
       displayedCount: 48,
+      progressiveStatus: "idle",
+      completedSources: 0,
+      totalSources: 0,
+      receivedBatches: 0,
     };
     enableResourceDetailPage = true;
 
@@ -594,8 +606,48 @@ describe("SearchResults", () => {
 
     renderSearchResults();
 
-    expect(await screen.findByText("刷新中")).toBeInTheDocument();
+    expect(await screen.findByText("加载中")).toBeInTheDocument();
     expect(screen.getByTestId("search-result-grid-card")).toBeInTheDocument();
+  });
+
+  it("搜索进行中不向普通用户展示来源进度和批次数", async () => {
+    searchStoreState = {
+      ...searchStoreState,
+      isRefreshing: true,
+      progressiveStatus: "running",
+      completedSources: 14,
+      totalSources: 23,
+      receivedBatches: 14,
+    };
+
+    renderSearchResults();
+
+    expect(await screen.findByText("加载中")).toBeInTheDocument();
+    expect(screen.queryByText(/仍在搜索/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/个来源/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/已接收/)).not.toBeInTheDocument();
+  });
+
+  it("结果 warning 不向普通用户展示来源名和来源数量", async () => {
+    searchStoreState = {
+      ...searchStoreState,
+      searchResults: {
+        ...searchStoreState.searchResults,
+        warnings: [
+          {
+            source: "failed-plugin",
+            message: "该搜索源暂时不可用，已返回其他来源结果",
+          },
+        ],
+      },
+    };
+
+    renderSearchResults();
+
+    expect(await screen.findByText("部分结果暂不可用")).toBeInTheDocument();
+    expect(screen.queryByText(/部分来源/)).not.toBeInTheDocument();
+    expect(screen.queryByText("failed-plugin")).not.toBeInTheDocument();
+    expect(screen.queryByText(/该搜索源暂时不可用/)).not.toBeInTheDocument();
   });
 
   it("keeps the rendered result count bounded for a 1000 item response", async () => {

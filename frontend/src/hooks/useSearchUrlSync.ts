@@ -154,6 +154,14 @@ export function useSearchUrlSync(): void {
     void performSearch(nextParams, {
       preserveResults: forceSkeleton ? false : Boolean(searchResults) && lastCompletedSearchParams?.keyword === nextParams.keyword,
     });
+    if (forceSkeleton && location.state) {
+      const nextState = { ...(location.state as Record<string, unknown>) };
+      delete nextState.forceSkeleton;
+      navigate(`${location.pathname}${location.search}${location.hash}`, {
+        replace: true,
+        state: Object.keys(nextState).length > 0 ? nextState : undefined,
+      });
+    }
   }, [
     clearResults,
     lastCompletedSearchParams?.keyword,
@@ -183,6 +191,13 @@ export function useSearchUrlSync(): void {
       const parsedParams = SearchService.parseSearchUrl(location.search);
       const keyword = parsedParams.keyword?.trim();
       if (!keyword) {
+        return;
+      }
+
+      const hasCompletedVisibleResults =
+        Boolean(searchResults) && lastCompletedSearchParams?.keyword === keyword;
+      if (!parsedParams.refresh && hasCompletedVisibleResults) {
+        lastFocusRevalidateAtRef.current = now;
         return;
       }
 

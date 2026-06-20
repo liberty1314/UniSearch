@@ -31,6 +31,7 @@ const {
       filter: undefined,
     },
     searchResults: null as null | { resources: Array<{ id: string }> },
+    lastCompletedSearchParams: null as null | Record<string, unknown>,
   },
 }));
 
@@ -98,6 +99,7 @@ describe("useSearchUrlSync", () => {
       filter: undefined,
     };
     searchStoreState.searchResults = null;
+    searchStoreState.lastCompletedSearchParams = null;
   });
 
   it("/search?q=测试 会调用 performSearch", async () => {
@@ -132,6 +134,55 @@ describe("useSearchUrlSync", () => {
         '"state":null',
       );
     });
+  });
+
+  it("state.forceSkeleton 只触发一次强制骨架屏搜索并会被消费", async () => {
+    let forceRerender: (() => void) | undefined;
+
+    const RerenderProbe = () => {
+      const [, setRenderTick] = React.useState(0);
+      forceRerender = () => setRenderTick((tick) => tick + 1);
+      return <HookProbe />;
+    };
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: "/search",
+            search: "?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97",
+            state: { forceSkeleton: true },
+          },
+        ]}
+      >
+        <Routes>
+          <Route path="/search" element={<RerenderProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(performSearchMock).toHaveBeenCalledWith(
+        expect.objectContaining({ keyword: "你的名字" }),
+        { preserveResults: false },
+      );
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("location-probe")).toHaveTextContent('"state":null');
+    });
+
+    performSearchMock.mockClear();
+    setSearchParamsMock.mockClear();
+    searchStoreState.searchResults = {
+      resources: [{ id: "resource-1" }],
+    };
+
+    await act(async () => {
+      forceRerender?.();
+    });
+
+    expect(setSearchParamsMock).not.toHaveBeenCalled();
+    expect(performSearchMock).not.toHaveBeenCalled();
   });
 
   it("同一 URL 因结果刷新重渲染时不会重复回写搜索参数", async () => {
@@ -169,9 +220,14 @@ describe("useSearchUrlSync", () => {
     expect(performSearchMock).not.toHaveBeenCalled();
   });
 
-  it("窗口重新聚焦时按当前 URL 重新校验搜索结果", async () => {
+  it("已有完成结果且未强制刷新时，窗口重新聚焦不会再次刷新", async () => {
     searchStoreState.searchResults = {
       resources: [{ id: "old-resource" }],
+    };
+    searchStoreState.lastCompletedSearchParams = {
+      ...searchStoreState.searchParams,
+      keyword: "你的名字",
+      cloudTypes: ["xunlei"],
     };
     renderHookProbe("/search?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97&types=xunlei");
 
@@ -181,7 +237,40 @@ describe("useSearchUrlSync", () => {
           keyword: "你的名字",
           cloudTypes: ["xunlei"],
         }),
-        { preserveResults: false },
+        { preserveResults: true },
+      );
+    });
+
+    performSearchMock.mockClear();
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 11_000);
+
+    fireEvent.focus(window);
+
+    expect(performSearchMock).not.toHaveBeenCalled();
+
+    nowSpy.mockRestore();
+  });
+
+  it("URL 明确 refresh=true 时窗口重新聚焦会重新校验搜索结果", async () => {
+    searchStoreState.searchResults = {
+      resources: [{ id: "old-resource" }],
+    };
+    searchStoreState.lastCompletedSearchParams = {
+      ...searchStoreState.searchParams,
+      keyword: "你的名字",
+      cloudTypes: ["xunlei"],
+      refresh: true,
+    };
+    renderHookProbe("/search?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97&types=xunlei&refresh=true");
+
+    await waitFor(() => {
+      expect(performSearchMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          keyword: "你的名字",
+          cloudTypes: ["xunlei"],
+          refresh: true,
+        }),
+        { preserveResults: true },
       );
     });
 
@@ -195,8 +284,9 @@ describe("useSearchUrlSync", () => {
         expect.objectContaining({
           keyword: "你的名字",
           cloudTypes: ["xunlei"],
+          refresh: true,
         }),
-        { preserveResults: false },
+        { preserveResults: true },
       );
     });
 
