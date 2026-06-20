@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { UserService } from "@/services/userService";
 import { useAuthStore } from "@/stores/authStore";
-import type { UserInfo } from "@/types/api";
+import type { UserInfo } from "@/types/user";
 
 export type AdminDialogType =
   | "create-user"

@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ApplePagination } from './ApplePagination';
-import type { TGChannel } from '@/types/api';
+import type { TGChannel } from "@/types/channel";
 import { toast } from 'sonner';
 import { compareChannels } from './adminListSort';
 import {

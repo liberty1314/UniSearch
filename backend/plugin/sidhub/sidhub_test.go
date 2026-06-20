@@ -696,12 +696,12 @@ func TestSidHubPublicSearchMethodsHandleEmptyKeyword(t *testing.T) {
 		t.Fatalf("期望空关键词返回最终空结果，实际为 %#v", result)
 	}
 
-	results, err := p.Search("   ", nil)
+	repeatedResult, err := p.SearchWithResult("   ", nil)
 	if err != nil {
-		t.Fatalf("空关键词 Search 不应失败: %v", err)
+		t.Fatalf("空关键词重复 SearchWithResult 不应失败: %v", err)
 	}
-	if len(results) != 0 {
-		t.Fatalf("期望空关键词 Search 返回空结果，实际为 %#v", results)
+	if len(repeatedResult.Results) != 0 {
+		t.Fatalf("期望空关键词重复 SearchWithResult 返回空结果，实际为 %#v", repeatedResult.Results)
 	}
 }
 

@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
-import type { UserInfo } from '@/types/api';
+import type { UserInfo } from "@/types/user";
 
 const authState = {
   username: 'admin',

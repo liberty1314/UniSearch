@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { PluginInfo } from '@/types/api';
+import type { PluginInfo } from "@/types/plugin";
 
 export type UsePluginManageDialogStateResult = {
   detailPluginName: string | null;

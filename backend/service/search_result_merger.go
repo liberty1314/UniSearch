@@ -6,14 +6,10 @@ import (
 	"unisearch/model"
 )
 
-type ResultMerger interface {
-	Merge(existing []model.SearchResult, newResults []model.SearchResult) []model.SearchResult
-}
-
 type searchResultMerger struct{}
 
-func newResultMerger() ResultMerger {
-	return searchResultMerger{}
+func newResultMerger() *searchResultMerger {
+	return &searchResultMerger{}
 }
 
 func (searchResultMerger) Merge(existing []model.SearchResult, newResults []model.SearchResult) []model.SearchResult {

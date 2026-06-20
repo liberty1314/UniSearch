@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import ResourceDetailPage from "@/pages/ResourceDetailPage";
-import type { ResourceObject } from "@/types/api";
+import type { ResourceObject } from "@/types/resource";
 
 const resourceFixture: ResourceObject = {
   id: "resource-1",

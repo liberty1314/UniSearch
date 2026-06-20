@@ -1,10 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import {
-  IoChevronForwardOutline,
-  IoKeyOutline,
-  IoTimeOutline,
-} from "react-icons/io5";
+import { ChevronRight, Clock3, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   getCloudTypeInfo,
@@ -114,7 +110,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
                 {cloudInfo.name}
               </span>
               <span className="flex items-center gap-1">
-                <IoTimeOutline className="w-3.5 h-3.5" />
+                <Clock3 className="w-3.5 h-3.5" />
                 {formatResultTime(datetime)}
               </span>
               {sizeLabel ? (
@@ -128,7 +124,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
           <div className="flex flex-wrap items-center justify-end gap-2">
             {hasPassword && (
               <div className="flex-shrink-0 px-2.5 py-1 bg-green-50 dark:bg-emerald-400/[0.08] text-green-600 dark:text-emerald-200 text-xs font-medium rounded-full border border-green-200/50 dark:border-emerald-300/16 flex items-center gap-1">
-                <IoKeyOutline className="w-3.5 h-3.5" />
+                <KeyRound className="w-3.5 h-3.5" />
                 <span>有码</span>
               </div>
             )}
@@ -147,7 +143,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
                 className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
               >
                 详情
-                <IoChevronForwardOutline className="h-3.5 w-3.5" />
+                <ChevronRight className="h-3.5 w-3.5" />
               </button>
             ) : null}
           </div>

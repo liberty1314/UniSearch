@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Bell } from 'lucide-react';
-import type { Announcement } from '@/types/api';
+import type { Announcement } from "@/types/announcement";
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';

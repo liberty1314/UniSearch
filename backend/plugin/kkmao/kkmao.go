@@ -74,14 +74,6 @@ func NewKkMaoPlugin() *KkMaoPlugin {
 }
 
 // Search 兼容方法
-func (p *KkMaoPlugin) Search(keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
-	result, err := p.SearchWithResult(keyword, ext)
-	if err != nil {
-		return nil, err
-	}
-	return result.Results, nil
-}
-
 // SearchWithResult 主搜索实现
 func (p *KkMaoPlugin) SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error) {
 	return p.AsyncSearchWithResult(keyword, p.searchImpl, p.MainCacheKey, ext)

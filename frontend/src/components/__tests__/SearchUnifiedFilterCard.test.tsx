@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import SearchUnifiedFilterCard from "@/components/SearchUnifiedFilterCard";
 import { SearchService } from "@/services/searchService";
-import { CloudType } from "@/types/api";
+import { CloudType } from "@/types/search";
 
 const { performSearchMock, setSearchParamsMock, navigateMock } = vi.hoisted(() => ({
   performSearchMock: vi.fn(),

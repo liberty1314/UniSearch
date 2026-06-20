@@ -1,4 +1,4 @@
-import type { TGChannel } from '@/types/api';
+import type { TGChannel } from "@/types/channel";
 
 export type ChannelTestStatus = 'idle' | 'testing' | 'success' | 'error';
 

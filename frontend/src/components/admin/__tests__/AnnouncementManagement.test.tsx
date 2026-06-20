@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnnouncementManagement } from '../AnnouncementManagement';
-import type { Announcement } from '@/types/api';
+import type { Announcement } from "@/types/announcement";
 import type { AnnouncementLifecycleStatus } from '@/lib/announcement';
 
 const now = new Date('2026-05-21T12:00:00Z');

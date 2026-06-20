@@ -34,20 +34,26 @@ func (m *mockAccountSearchPlugin) AsyncSearch(
 	_ string,
 	_ map[string]interface{},
 ) ([]model.SearchResult, error) {
-	return m.Search(keyword, nil)
+	result, err := m.SearchWithResult(keyword, nil)
+	if err != nil {
+		return nil, err
+	}
+	return result.GetResults(), nil
 }
 func (m *mockAccountSearchPlugin) SetMainCacheKey(_ string)   {}
 func (m *mockAccountSearchPlugin) SetCurrentKeyword(_ string) {}
 func (m *mockAccountSearchPlugin) SkipServiceFilter() bool    { return false }
-func (m *mockAccountSearchPlugin) Search(keyword string, _ map[string]interface{}) ([]model.SearchResult, error) {
-	return []model.SearchResult{
-		{
+func (m *mockAccountSearchPlugin) SearchWithResult(keyword string, _ map[string]interface{}) (model.PluginSearchResult, error) {
+	return model.PluginSearchResult{
+		Results: []model.SearchResult{{
 			UniqueID: "mock-" + keyword,
 			Title:    "mock " + keyword,
 			Links: []model.Link{
 				{Type: "mock", URL: "https://example.com/" + keyword},
 			},
-		},
+		}},
+		IsFinal: true,
+		Source:  m.name,
 	}, nil
 }
 

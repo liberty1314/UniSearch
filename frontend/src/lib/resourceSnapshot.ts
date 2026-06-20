@@ -1,4 +1,4 @@
-import type { ResourceObject } from "@/types/api";
+import type { ResourceObject } from "@/types/resource";
 import { readJsonStorage, writeJsonStorage } from "@/lib/safeStorage";
 
 export const RECENT_RESOURCE_SNAPSHOTS_STORAGE_KEY =

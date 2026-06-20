@@ -14,7 +14,7 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react';
-import type { TGChannel } from '@/types/api';
+import type { TGChannel } from "@/types/channel";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';

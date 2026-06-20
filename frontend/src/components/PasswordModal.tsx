@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { IoOpenOutline } from "react-icons/io5";
 import { QRCodeSVG } from "qrcode.react";
 import {
   Copy,
+  ExternalLink,
   LockKeyhole,
   QrCode,
   RefreshCw,
@@ -20,10 +20,7 @@ import { AppleInput } from "@/components/ui/AppleInput";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SearchService } from "@/services/searchService";
-import type {
-  ResourceAccessMode,
-  ScanTransferInfo,
-} from "@/types/api";
+import type { ResourceAccessMode, ScanTransferInfo } from "@/types/resource";
 import { getCloudTypeInfo } from "@/utils/cloudTypeUtils";
 import {
   isMagnetUrl,
@@ -345,7 +342,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
                   rel="noopener noreferrer"
                   onClick={onClose}
                 >
-                  <IoOpenOutline className="h-[18px] w-[18px]" />
+                  <ExternalLink className="h-[18px] w-[18px]" />
                   {magnetMode ? "打开磁力" : "打开链接"}
                 </a>
               </Button>
@@ -358,7 +355,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
                 className="rounded-xl"
                 onClick={handleInvalidOpen}
               >
-                <IoOpenOutline className="h-[18px] w-[18px]" />
+                <ExternalLink className="h-[18px] w-[18px]" />
                 {magnetMode ? "打开磁力" : "打开链接"}
               </Button>
             )}

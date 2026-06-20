@@ -124,7 +124,8 @@ func runPluginKeyword(p plugin.AsyncSearchPlugin, keyword string, timeout time.D
 	}, 1)
 
 	go func() {
-		results, err := p.Search(keyword, nil)
+		result, err := p.SearchWithResult(keyword, nil)
+		results := result.GetResults()
 		done <- struct {
 			results []model.SearchResult
 			err     error

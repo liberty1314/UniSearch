@@ -38,8 +38,8 @@ func newPluginCenterTestPlugin(name string) *pluginCenterTestPlugin {
 	return &pluginCenterTestPlugin{BaseAsyncPlugin: base}
 }
 
-func (p *pluginCenterTestPlugin) Search(_ string, _ map[string]interface{}) ([]model.SearchResult, error) {
-	return nil, nil
+func (p *pluginCenterTestPlugin) SearchWithResult(_ string, _ map[string]interface{}) (model.PluginSearchResult, error) {
+	return model.PluginSearchResult{IsFinal: true, Source: p.Name()}, nil
 }
 
 func newPluginCenterTestRouter() *gin.Engine {

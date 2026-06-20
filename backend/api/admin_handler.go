@@ -642,7 +642,7 @@ func TestPluginHandler(searchService *service.SearchService, pluginHealthService
 		// 如果在内置插件中找到，执行测试搜索
 		if found {
 			testQuery := "test"
-			results, err := targetPlugin.Search(testQuery, nil)
+			result, err := targetPlugin.SearchWithResult(testQuery, nil)
 
 			if err != nil {
 				if pluginHealthService != nil {
@@ -657,6 +657,7 @@ func TestPluginHandler(searchService *service.SearchService, pluginHealthService
 				})
 				return
 			}
+			results := result.GetResults()
 
 			if pluginHealthService != nil {
 				if recordErr := pluginHealthService.RecordResult(pluginName, true, "", "manual_test"); recordErr != nil {

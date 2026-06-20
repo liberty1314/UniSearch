@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, ArrowRight, User, LogOut, LayoutDashboard, Flame, House, Search, type LucideIcon } from 'lucide-react';
+import { Bell, Menu, ArrowRight, User, LogOut, LayoutDashboard, Flame, House, Search, type LucideIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { MobileMenu } from '@/components/MobileMenu';
@@ -12,7 +12,6 @@ import { useAdminStore } from '@/stores/adminStore';
 import { AnnouncementPanel } from './AnnouncementPanel';
 import { AuthService } from '@/services/authService';
 import { toast } from 'sonner';
-import { IoNotificationsOutline } from 'react-icons/io5';
 import {
   BLUE_CYAN_HOVER_SURFACE,
   BLUE_CYAN_HOVER_TEXT,
@@ -159,7 +158,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                 )}
                 aria-label="通知中心"
               >
-                <IoNotificationsOutline className="w-5 h-5" />
+                <Bell className="w-5 h-5" />
                 {unreadAnnouncements.length > 0 && (
                   <span className="absolute top-1.5 right-1.5 flex items-center justify-center min-w-[8px] h-[8px] rounded-full bg-red-500 shadow-lg animate-pulse" />
                 )}

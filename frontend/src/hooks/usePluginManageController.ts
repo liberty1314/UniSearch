@@ -1,19 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import type {
-  AdminTagListResponse,
-  AdminTagOption,
-  AdminTagScope,
-  AdminDialogMode,
-  BatchPluginOperationResponse,
-  CreateAdminTagRequest,
-  CreateAdminTagResponse,
-  DeleteAdminTagResponse,
-  PluginCatalogResponse,
-  PluginInfo,
-  UpdateAdminTagRequest,
-  UpdateAdminTagResponse,
-} from '@/types/api';
+import type { AdminTagListResponse, AdminTagOption, AdminTagScope, AdminDialogMode, CreateAdminTagRequest, CreateAdminTagResponse, DeleteAdminTagResponse, UpdateAdminTagRequest, UpdateAdminTagResponse } from "@/types/admin";
+import type { BatchPluginOperationResponse, PluginCatalogResponse, PluginInfo } from "@/types/plugin";
 import { comparePlugins } from '@/components/admin/adminListSort';
 import {
   applyBatchEnabledState,

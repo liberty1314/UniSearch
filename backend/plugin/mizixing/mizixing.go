@@ -80,14 +80,6 @@ func NewMizixingPlugin() *MizixingPlugin {
 }
 
 // Search compatibility wrapper
-func (p *MizixingPlugin) Search(keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
-	result, err := p.SearchWithResult(keyword, ext)
-	if err != nil {
-		return nil, err
-	}
-	return result.Results, nil
-}
-
 // SearchWithResult entrypoint
 func (p *MizixingPlugin) SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error) {
 	return p.AsyncSearchWithResult(keyword, p.searchImpl, p.MainCacheKey, ext)

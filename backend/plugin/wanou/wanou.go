@@ -88,14 +88,6 @@ func NewWanouPlugin() *WanouAsyncPlugin {
 }
 
 // Search 同步搜索接口
-func (p *WanouAsyncPlugin) Search(keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
-	result, err := p.SearchWithResult(keyword, ext)
-	if err != nil {
-		return nil, err
-	}
-	return result.Results, nil
-}
-
 // SearchWithResult 带结果统计的搜索接口
 func (p *WanouAsyncPlugin) SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error) {
 	return p.AsyncSearchWithResult(keyword, p.searchImpl, p.MainCacheKey, ext)

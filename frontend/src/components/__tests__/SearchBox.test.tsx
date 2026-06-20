@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SearchBox } from "@/components/SearchBox";
 import { resetHomeHotKeywordsCacheForTests } from "@/components/searchBoxTestUtils";
-import type { SearchParams } from "@/types/api";
+import type { SearchParams } from "@/types/search";
 
 const baseHotRankingResponse = {
   mode: "trend" as const,

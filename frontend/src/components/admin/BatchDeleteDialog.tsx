@@ -11,7 +11,7 @@ import {
 } from '../ui/alert-dialog';
 import { toast } from 'sonner';
 import { UserService } from '../../services/userService';
-import type { UserInfo } from '../../types/api';
+import type { UserInfo } from "@/types/user";
 import { getErrorDataError } from '@/lib/error';
 import { Loader2, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';

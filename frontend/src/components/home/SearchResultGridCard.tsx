@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { IoChevronForwardOutline, IoKeyOutline, IoTimeOutline } from "react-icons/io5";
+import { ChevronRight, Clock3, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   getCloudTypeInfo,
@@ -120,7 +120,7 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
           {/* 元数据行（时间 + 大小） */}
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-slate-400 mb-4 px-1">
             <div className="flex items-center gap-1.5">
-              <IoTimeOutline className="w-3.5 h-3.5" />
+              <Clock3 className="w-3.5 h-3.5" />
               <span>{formatResultTime(datetime)}</span>
             </div>
             {sizeLabel ? (
@@ -155,7 +155,7 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
                   className="flex shrink-0 items-center gap-1 px-2 py-1 bg-green-50 dark:bg-emerald-400/[0.08] text-green-600 dark:text-emerald-200 text-xs font-medium rounded-full border border-green-200/50 dark:border-emerald-300/16"
                   title="需要访问码"
                 >
-                  <IoKeyOutline className="w-3 h-3" />
+                  <KeyRound className="w-3 h-3" />
                   <span>有码</span>
                 </div>
               )}
@@ -180,7 +180,7 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
                   className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
                 >
                   详情
-                  <IoChevronForwardOutline className="h-3.5 w-3.5" />
+                  <ChevronRight className="h-3.5 w-3.5" />
                 </button>
               </div>
             ) : null}

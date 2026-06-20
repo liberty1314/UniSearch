@@ -1,6 +1,6 @@
 import React from 'react';
 import { Loader2, Plus } from 'lucide-react';
-import type { AdminTagOption } from '@/types/api';
+import type { AdminTagOption } from "@/types/admin";
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {

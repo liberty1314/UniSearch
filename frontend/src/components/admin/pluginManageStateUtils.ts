@@ -1,4 +1,4 @@
-import type { PluginInfo } from '@/types/api';
+import type { PluginInfo } from "@/types/plugin";
 
 type PluginNameSet = Set<string>;
 

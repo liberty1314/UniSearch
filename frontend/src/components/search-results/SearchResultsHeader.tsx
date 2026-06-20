@@ -1,7 +1,7 @@
 import React from "react";
 import { SearchResultsToolbar } from "@/components/home/SearchResultsToolbar";
 import type { ActiveFilterChip } from "@/utils/searchFilters";
-import type { SearchSourceWarning } from "@/types/api";
+import type { SearchSourceWarning } from "@/types/search";
 
 type ViewMode = "list" | "grid";
 type ProgressiveStatus = "idle" | "running" | "complete" | "fallback" | "error";

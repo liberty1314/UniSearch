@@ -97,14 +97,6 @@ func NewJsNoteClubPlugin() *JsNoteClubPlugin {
 }
 
 // Search 兼容方法
-func (p *JsNoteClubPlugin) Search(keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
-	result, err := p.SearchWithResult(keyword, ext)
-	if err != nil {
-		return nil, err
-	}
-	return result.Results, nil
-}
-
 // SearchWithResult 扩展方法
 func (p *JsNoteClubPlugin) SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error) {
 	return p.AsyncSearchWithResult(keyword, p.searchImpl, p.MainCacheKey, ext)

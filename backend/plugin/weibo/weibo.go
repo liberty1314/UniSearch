@@ -479,14 +479,6 @@ func (p *WeiboPlugin) SkipServiceFilter() bool {
 	return true
 }
 
-func (p *WeiboPlugin) Search(keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
-	result, err := p.SearchWithResult(keyword, ext)
-	if err != nil {
-		return nil, err
-	}
-	return result.Results, nil
-}
-
 func (p *WeiboPlugin) SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error) {
 	if DebugLog {
 		fmt.Printf("[Weibo] ========== 开始搜索: %s ==========\n", keyword)

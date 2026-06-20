@@ -34,7 +34,7 @@ import {
   pluginStatusText,
   resolvePluginStatus,
 } from './pluginManageDialogShared';
-import type { PluginInfo } from '@/types/api';
+import type { PluginInfo } from "@/types/plugin";
 const EMPTY_PAGE_PLUGINS: PluginInfo[] = [];
 
 const PLUGIN_STATUS_OPTIONS = [

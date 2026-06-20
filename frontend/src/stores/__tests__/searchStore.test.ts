@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { SearchResponse } from "@/types/api";
+import type { SearchResponse } from "@/types/search";
 import type { RecentEffectiveSearch } from "@/components/search/searchLaunchpadTypes";
 
 const searchMock = vi.fn();

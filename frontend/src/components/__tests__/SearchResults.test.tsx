@@ -9,7 +9,7 @@ import {
   useParams,
 } from "react-router-dom";
 import SearchResults from "@/components/SearchResults";
-import type { SearchParams, SearchResponse } from "@/types/api";
+import type { SearchParams, SearchResponse } from "@/types/search";
 
 type SearchStoreState = {
   searchResults: SearchResponse | null;

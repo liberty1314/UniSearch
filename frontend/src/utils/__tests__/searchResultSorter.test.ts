@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { CloudType, type ResourceObject } from "@/types/api";
+import { CloudType } from "@/types/search";
+import type { ResourceObject } from "@/types/resource";
 import { sortResources } from "../searchResultSorter";
 
 const makeResource = (

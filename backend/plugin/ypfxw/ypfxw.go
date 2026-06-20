@@ -88,14 +88,6 @@ func NewYpfxwPlugin() *YpfxwPlugin {
 }
 
 // Search 兼容方法
-func (p *YpfxwPlugin) Search(keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
-	result, err := p.SearchWithResult(keyword, ext)
-	if err != nil {
-		return nil, err
-	}
-	return result.Results, nil
-}
-
 // SearchWithResult 主搜索入口
 func (p *YpfxwPlugin) SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error) {
 	return p.AsyncSearchWithResult(keyword, p.searchImpl, p.MainCacheKey, ext)

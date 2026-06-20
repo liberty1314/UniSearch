@@ -30,19 +30,7 @@
   - `cd backend && go test ./util/cache ./service`
   - `scripts/tests/backend-race.sh`
 
-## 3. Deprecated 中间件
-
-- **当前调用点**：`backend/api/middleware/deprecated.go`
-- **兼容内容**：`DeprecatedMiddleware` 为旧接口添加响应头并记录使用情况。
-- **替代路径**：直接删除旧路由，或在 README / 发布说明中提供迁移路径。
-- **删除条件**：
-  - `rg "DeprecatedMiddleware|X-Deprecated-API|x-deprecated-api" backend frontend` 确认无线上路由依赖。
-  - 前端 `frontend/src/lib/api.ts` 不再需要处理弃用响应头。
-- **验证命令**：
-  - `cd backend && go test ./api`
-  - `cd frontend && pnpm exec vitest run src/lib/__tests__/api.test.ts`
-
-## 4. 历史 refresh token 兜底
+## 3. 历史 refresh token 兜底
 
 - **当前调用点**：`backend/api/refresh_token_handler.go`
 - **兼容内容**：数据库登录失败后尝试配置文件用户，历史 refresh token 解密兜底。
@@ -55,7 +43,7 @@
   - `cd backend && go test ./api ./service`
   - `cd frontend && pnpm exec playwright test e2e/auth-resume-search.spec.ts`
 
-## 5. 前端 API 类型兼容导出口
+## 4. 前端 API 类型兼容导出口
 
 - **当前调用点**：`frontend/src/types/api.ts`
 - **兼容内容**：集中导出账号、后台、搜索、资源等多领域类型。
@@ -68,7 +56,7 @@
   - `cd frontend && pnpm exec tsc -b --noEmit`
   - `cd frontend && pnpm exec vitest run src/services src/components/admin`
 
-## 6. 插件 Search 兼容方法
+## 5. 插件 Search 兼容方法
 
 - **当前调用点**：`backend/plugin/plugin.go` 与各插件包 `Search` 方法。
 - **兼容内容**：`Search` 作为兼容方法内部调用异步搜索。
@@ -81,7 +69,7 @@
   - `cd backend && go test ./plugin/... ./service`
   - `scripts/tests/backend-race.sh`
 
-## 7. 废弃数据库表清理
+## 6. 废弃数据库表清理
 
 - **当前调用点**：`backend/database/migration.go`、`backend/cmd/migrate/main.go`
 - **兼容内容**：默认保留废弃表，显式 `-drop-deprecated` 才删除。

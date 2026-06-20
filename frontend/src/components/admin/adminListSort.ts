@@ -1,4 +1,5 @@
-import type { PluginInfo, TGChannel } from '@/types/api';
+import type { PluginInfo } from "@/types/plugin";
+import type { TGChannel } from "@/types/channel";
 
 export const getEffectivePluginStatus = (plugin: PluginInfo): PluginInfo['status'] => {
   if (!plugin.is_enabled) return 'inactive';

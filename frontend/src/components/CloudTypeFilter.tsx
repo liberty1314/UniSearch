@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { IoCheckmarkCircle, IoEllipseOutline } from "react-icons/io5";
+import { CheckCircle2, Circle } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { type CloudTypeValue } from "@/types/api";
+import type { CloudTypeValue } from "@/types/search";
 import { useSearchStore } from "@/stores/searchStore";
 import { cn } from "@/lib/utils";
 import { platformThemeTypes } from "@/components/home/platformThemes";
@@ -199,9 +199,9 @@ const CloudTypeFilter: React.FC = () => {
             >
               <div className="w-[18px] h-[18px] flex items-center justify-center">
                 {isAllSelected ? (
-                  <IoCheckmarkCircle className="w-[20px] h-[20px]" />
+                  <CheckCircle2 className="w-[20px] h-[20px]" />
                 ) : (
-                  <IoEllipseOutline className="w-[20px] h-[20px]" />
+                  <Circle className="w-[20px] h-[20px]" />
                 )}
               </div>
               <span className="min-w-[4em] text-center tracking-wide">

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { ResourceObject } from "@/types/api";
+import type { ResourceObject } from "@/types/resource";
 import {
   findRecentResourceSnapshot,
   RECENT_RESOURCE_SNAPSHOTS_STORAGE_KEY,

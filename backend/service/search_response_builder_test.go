@@ -34,8 +34,8 @@ func (p *responseBuilderTestPlugin) SetMainCacheKey(_ string) {}
 
 func (p *responseBuilderTestPlugin) SetCurrentKeyword(_ string) {}
 
-func (p *responseBuilderTestPlugin) Search(_ string, _ map[string]interface{}) ([]model.SearchResult, error) {
-	return nil, nil
+func (p *responseBuilderTestPlugin) SearchWithResult(_ string, _ map[string]interface{}) (model.PluginSearchResult, error) {
+	return model.PluginSearchResult{IsFinal: true, Source: p.Name()}, nil
 }
 
 func (p *responseBuilderTestPlugin) SkipServiceFilter() bool { return p.skipFilter }

@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { AppleSwitch } from '@/components/ui/apple-switch';
 import { useAnnouncementManagement } from '@/hooks/useAnnouncementManagement';
-import type { AnnouncementPriority } from '@/types/api';
+import type { AnnouncementPriority } from "@/types/announcement";
 import { cn } from '@/lib/utils';
 import {
   getAnnouncementLifecycleColor,

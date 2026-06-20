@@ -11,7 +11,7 @@ import {
   isFilterConfigEmpty,
   normalizeFilterConfig,
 } from "@/utils/searchFilters";
-import type { FilterConfig } from "@/types/api";
+import type { FilterConfig } from "@/types/search";
 
 type FilterArrayField = "include" | "exclude";
 

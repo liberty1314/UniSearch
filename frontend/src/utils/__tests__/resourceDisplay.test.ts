@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ResourceObject } from "@/types/api";
+import type { ResourceObject } from "@/types/resource";
 import {
   resolveResourceActionTarget,
   resolveResourceDisplayTitle,

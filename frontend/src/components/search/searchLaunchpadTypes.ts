@@ -1,4 +1,4 @@
-import type { SearchParams, CloudTypeValue } from "@/types/api";
+import type { SearchParams, CloudTypeValue } from "@/types/search";
 
 export type SearchLaunchPresetSource = "template" | "trending" | "recent";
 

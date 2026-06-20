@@ -96,8 +96,8 @@ UNISEARCH_REAL_SEARCH_SMOKE=1 scripts/tests/local-quality.sh
 | `UNISEARCH_REAL_SEARCH_SMOKE=1 scripts/tests/local-quality.sh` | 是 | 在本地质量检查后追加真实登录态搜索 smoke | 本地后端、数据库、外部插件站点可访问 |
 | `scripts/tests/real-search-smoke.sh` | 是 | 单独验证 `/api/search` 真实链路不会卡死 | 本地后端监听 `UNISEARCH_API_BASE_URL`，数据库可写 |
 | `scripts/tests/release-candidate.sh` | 是 | 发布候选门禁，先跑 mock E2E，再跑真实搜索 smoke、Docker 和集成环境检查 | 本地 Docker、数据库配置、外部插件站点可访问 |
-| `cd frontend && pnpm run frontend:e2e:mock` | 否 | 前端 mock E2E，验证登录、搜索、后台等关键交互 | 可监听 Vite 端口 |
-| `cd frontend && UNISEARCH_REAL_E2E=1 pnpm run frontend:e2e:real` | 是 | 真实后端 E2E，验证登录态搜索、结果展示和 warning 可见性 | 本地后端、数据库、外部插件站点可访问 |
+| `cd frontend && pnpm run e2e:mock` | 否 | 前端 mock E2E，验证登录、搜索、后台等关键交互 | 可监听 Vite 端口 |
+| `cd frontend && UNISEARCH_REAL_E2E=1 pnpm run e2e:real` | 是 | 真实后端 E2E，验证登录态搜索、结果展示和 warning 可见性 | 本地后端、数据库、外部插件站点可访问 |
 
 发布候选验证会在完整质量检查之外，追加 mock E2E、真实搜索 smoke、可选真实后端 E2E、Docker 镜像 smoke 和临时 MySQL/Redis 迁移验证：
 
@@ -122,10 +122,10 @@ scripts/tests/cleanup-test-data.sh
 scripts/tests/integration-env.sh
 
 # 运行前端 mock 端到端测试
-cd frontend && pnpm run frontend:e2e:mock
+cd frontend && pnpm run e2e:mock
 
 # 显式运行真实后端 E2E
-cd frontend && UNISEARCH_REAL_E2E=1 pnpm run frontend:e2e:real
+cd frontend && UNISEARCH_REAL_E2E=1 pnpm run e2e:real
 ```
 
 任一脚本失败时先保留失败输出，优先单独重跑对应聚焦命令确认是否为稳定失败；稳定失败必须修复后再继续提交。

@@ -1,5 +1,5 @@
 import React from "react";
-import { IoCloseOutline, IoTimeOutline } from "react-icons/io5";
+import { Clock3, X } from "lucide-react";
 import { toStyleVars } from "@/lib/styleVars";
 
 interface SearchHistoryPanelProps {
@@ -29,7 +29,7 @@ const SearchHistoryPanel: React.FC<SearchHistoryPanelProps> = ({
     >
       <div className="flex items-center gap-2 text-[13.5px] font-medium text-slate-500 dark:text-slate-400">
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900/[0.04] text-slate-500 dark:bg-white/[0.06] dark:text-slate-300">
-          <IoTimeOutline className="h-4 w-4" />
+          <Clock3 className="h-4 w-4" />
         </span>
         <span>最近搜索</span>
         <span className="ml-1 text-[12px] text-slate-400/80 dark:text-slate-500">
@@ -87,7 +87,7 @@ const SearchHistoryPanel: React.FC<SearchHistoryPanelProps> = ({
               className="absolute -right-1.5 -top-1.5 inline-flex h-[22px] w-[22px] items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-400 opacity-0 shadow-sm transition-all duration-200 group-hover/history:opacity-100 hover:scale-110 hover:border-red-100 hover:bg-red-50 hover:text-red-500 dark:border-white/[0.12] dark:bg-slate-800 dark:text-slate-400 dark:shadow-[0_4px_12px_rgba(0,0,0,0.5)] dark:hover:border-red-500/30 dark:hover:bg-red-500/20 dark:hover:text-red-300"
               aria-label={`删除历史记录 ${keyword}`}
             >
-              <IoCloseOutline className="h-3.5 w-3.5" />
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
         ))}

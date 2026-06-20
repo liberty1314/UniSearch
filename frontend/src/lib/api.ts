@@ -7,7 +7,7 @@ import type {
   AxiosRequestHeaders,
   InternalAxiosRequestConfig,
 } from 'axios';
-import type { ApiResponse } from '@/types/api';
+import type { ApiResponse } from "@/types/common";
 import { useAuthStore } from '@/stores/authStore';
 import { refreshAuthTokenSingleFlight } from '@/lib/authRefreshManager';
 
@@ -84,14 +84,6 @@ class ApiClient {
           'message' in response.data
         ) {
           const apiResponse = response.data as ApiResponse;
-
-          // 检查是否有弃用警告
-          if (response.headers['x-deprecated-api'] === 'true') {
-            const deprecationMessage = response.headers['x-deprecation-message'] || '此接口已弃用，请尽快迁移';
-            console.warn(
-              `[API Deprecated] ${response.config.method?.toUpperCase()} ${response.config.url} - ${deprecationMessage}`
-            );
-          }
 
           // 自动解包 data 字段，并保留 code 和 message 到 _meta 对象
           return {

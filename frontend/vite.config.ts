@@ -47,13 +47,11 @@ export default defineConfig(() => {
               "@radix-ui/react-slot",
               "@radix-ui/react-tabs",
             ],
-            "forms-vendor": ["react-hook-form", "@hookform/resolvers", "zod"],
             "ui-vendor": [
               "lucide-react",
               "sonner",
               "zustand",
               "axios",
-              "date-fns",
             ],
           },
         },

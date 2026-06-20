@@ -1,4 +1,4 @@
-import { CloudType, type CloudTypeValue } from "@/types/api";
+import { CloudType, type CloudTypeValue } from "@/types/search";
 import { CLOUD_TYPE_MAP } from "@/utils/cloudTypeUtils";
 
 // ─── 类型 ─────────────────────────────────────────────────────────────────────

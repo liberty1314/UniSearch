@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { PluginPreviewDialog } from '../PluginPreviewDialog';
-import type { PluginInfo } from '@/types/api';
+import type { PluginInfo } from "@/types/plugin";
 
 const buildPlugins = (): PluginInfo[] =>
   Array.from({ length: 14 }).map((_, index) => ({

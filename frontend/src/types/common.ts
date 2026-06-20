@@ -15,3 +15,12 @@ export interface HealthResponse {
   channels_count?: number;
   channels?: string[];
 }
+
+export interface SuccessResponse {
+  message: string;
+}
+
+export interface ErrorResponse {
+  error: string;
+  code: string;
+}

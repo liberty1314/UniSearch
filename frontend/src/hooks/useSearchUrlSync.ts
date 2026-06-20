@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { SearchService } from "@/services/searchService";
 import { useAuthStore } from "@/stores/authStore";
 import { useSearchStore } from "@/stores/searchStore";
-import type { SearchParams } from "@/types/api";
+import type { SearchParams } from "@/types/search";
 import { readAccountSearchDefaults } from "@/lib/accountPreferences";
 
 const SEARCH_REVALIDATE_INTERVAL_MS = 10_000;

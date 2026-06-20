@@ -13,7 +13,7 @@ import { useSearchStore } from "@/stores/searchStore";
 import { SystemSettingsService } from "@/services/systemSettingsService";
 import { SearchService } from "@/services/searchService";
 import { toast } from "sonner";
-import type { ResourceDetailRouteState } from "@/types/api";
+import type { ResourceDetailRouteState } from "@/types/resource";
 import { findRecentResourceSnapshot } from "@/lib/resourceSnapshot";
 import {
   isMagnetTarget,

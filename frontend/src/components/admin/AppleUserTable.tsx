@@ -4,9 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, KeyRound, Power, PowerOff, Shield, X } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
-import type { UserInfo } from '@/types/api';
+import type { UserInfo } from "@/types/user";
 import {
   ADMIN_HOVERABLE_BUTTON_CLASSES,
 } from '@/components/admin/adminDesign';
@@ -44,6 +42,37 @@ const USER_TABLE_GRID_TEMPLATE_COLUMNS_WITHOUT_SELECT = [
   'minmax(0,1.5fr)',
   'minmax(0,0.75fr)',
 ].join(' ');
+const RELATIVE_TIME_FORMATTER = new Intl.RelativeTimeFormat('zh-CN', {
+  numeric: 'auto',
+});
+
+const formatRelativeTime = (value: string) => {
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) {
+    return '未知时间';
+  }
+
+  const diffSeconds = Math.round((timestamp - Date.now()) / 1000);
+  const absoluteSeconds = Math.abs(diffSeconds);
+
+  if (absoluteSeconds < 60) {
+    return RELATIVE_TIME_FORMATTER.format(diffSeconds, 'second');
+  }
+  if (absoluteSeconds < 60 * 60) {
+    return RELATIVE_TIME_FORMATTER.format(Math.round(diffSeconds / 60), 'minute');
+  }
+  if (absoluteSeconds < 60 * 60 * 24) {
+    return RELATIVE_TIME_FORMATTER.format(Math.round(diffSeconds / (60 * 60)), 'hour');
+  }
+  if (absoluteSeconds < 60 * 60 * 24 * 30) {
+    return RELATIVE_TIME_FORMATTER.format(Math.round(diffSeconds / (60 * 60 * 24)), 'day');
+  }
+  if (absoluteSeconds < 60 * 60 * 24 * 365) {
+    return RELATIVE_TIME_FORMATTER.format(Math.round(diffSeconds / (60 * 60 * 24 * 30)), 'month');
+  }
+
+  return RELATIVE_TIME_FORMATTER.format(Math.round(diffSeconds / (60 * 60 * 24 * 365)), 'year');
+};
 
 /**
  * Apple 风格用户表格组件
@@ -241,10 +270,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
             {new Date(user.created_at).toLocaleDateString('zh-CN')}
           </span>
           <span className="text-xs text-gray-500 dark:text-slate-400">
-            {formatDistanceToNow(new Date(user.created_at), {
-              addSuffix: true,
-              locale: zhCN,
-            })}
+            {formatRelativeTime(user.created_at)}
           </span>
         </div>
       ),
@@ -260,10 +286,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
               {new Date(user.last_login_at).toLocaleDateString('zh-CN')}
             </span>
             <span className="text-xs text-gray-500 dark:text-slate-400">
-              {formatDistanceToNow(new Date(user.last_login_at), {
-                addSuffix: true,
-                locale: zhCN,
-              })}
+              {formatRelativeTime(user.last_login_at)}
             </span>
           </div>
         ) : (
@@ -326,7 +349,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
           <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-300">最后登录</p>
             <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">
-              {user.last_login_at ? formatDistanceToNow(new Date(user.last_login_at), { addSuffix: true, locale: zhCN }) : '从未登录'}
+              {user.last_login_at ? formatRelativeTime(user.last_login_at) : '从未登录'}
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
@@ -430,7 +453,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] uppercase tracking-wider opacity-70">最后登录</span>
-            <span>{user.last_login_at ? formatDistanceToNow(new Date(user.last_login_at), { addSuffix: true, locale: zhCN }) : '从未登录'}</span>
+            <span>{user.last_login_at ? formatRelativeTime(user.last_login_at) : '从未登录'}</span>
           </div>
         </div>
 

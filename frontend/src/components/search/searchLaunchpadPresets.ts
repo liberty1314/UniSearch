@@ -1,4 +1,4 @@
-import type { SearchParams } from "@/types/api";
+import type { SearchParams } from "@/types/search";
 import { SearchService } from "@/services/searchService";
 import { getCloudTypeInfo } from "@/utils/cloudTypeUtils";
 import { resolveHotRankingAvailability } from "@/utils/hotRankingAvailability";

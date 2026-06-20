@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, ChevronDown, CirclePlus, Loader2, PencilLine, Trash2, X } from 'lucide-react';
-import type { AdminTagOption, AdminTagScope } from '@/types/api';
+import type { AdminTagOption, AdminTagScope } from "@/types/admin";
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

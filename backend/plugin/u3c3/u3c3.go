@@ -38,17 +38,8 @@ func init() {
 	plugin.RegisterGlobalPlugin(p)
 }
 
-// Search 搜索接口实现
-func (p *U3c3Plugin) Search(keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
-	result, err := p.SearchWithResult(keyword, ext)
-	if err != nil {
-		return nil, err
-	}
-	return result.Results, nil
-}
-
 // SearchWithResult 搜索并返回详细结果
-func (p *U3c3Plugin) SearchWithResult(keyword string, ext map[string]interface{}) (*model.PluginSearchResult, error) {
+func (p *U3c3Plugin) SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error) {
 	if p.debugMode {
 		log.Printf("[U3C3] 开始搜索: %s", keyword)
 	}
@@ -59,7 +50,7 @@ func (p *U3c3Plugin) SearchWithResult(keyword string, ext map[string]interface{}
 		if p.debugMode {
 			log.Printf("[U3C3] 获取search2参数失败: %v", err)
 		}
-		return nil, fmt.Errorf("获取search2参数失败: %v", err)
+		return model.PluginSearchResult{}, fmt.Errorf("获取search2参数失败: %v", err)
 	}
 
 	// 第二步：执行搜索
@@ -68,7 +59,7 @@ func (p *U3c3Plugin) SearchWithResult(keyword string, ext map[string]interface{}
 		if p.debugMode {
 			log.Printf("[U3C3] 搜索失败: %v", err)
 		}
-		return nil, err
+		return model.PluginSearchResult{}, err
 	}
 
 	if p.debugMode {
@@ -78,7 +69,7 @@ func (p *U3c3Plugin) SearchWithResult(keyword string, ext map[string]interface{}
 	// 应用关键词过滤
 	filteredResults := plugin.FilterResultsByKeyword(results, keyword)
 
-	return &model.PluginSearchResult{
+	return model.PluginSearchResult{
 		Results:   filteredResults,
 		IsFinal:   true,
 		Timestamp: time.Now(),

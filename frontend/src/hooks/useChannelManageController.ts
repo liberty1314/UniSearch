@@ -1,19 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import type {
-  AdminTagListResponse,
-  AdminTagOption,
-  AdminTagScope,
-  AdminDialogMode,
-  BatchChannelOperationResponse,
-  CreateAdminTagRequest,
-  CreateAdminTagResponse,
-  DeleteAdminTagResponse,
-  ListTGChannelsResponse,
-  TGChannel,
-  UpdateAdminTagRequest,
-  UpdateAdminTagResponse,
-} from '@/types/api';
+import type { AdminTagListResponse, AdminTagOption, AdminTagScope, AdminDialogMode, CreateAdminTagRequest, CreateAdminTagResponse, DeleteAdminTagResponse, UpdateAdminTagRequest, UpdateAdminTagResponse } from "@/types/admin";
+import type { BatchChannelOperationResponse, ListTGChannelsResponse, TGChannel } from "@/types/channel";
 import { compareChannels } from '@/components/admin/adminListSort';
 import {
   applyBatchChannelEnabledState,

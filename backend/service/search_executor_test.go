@@ -219,7 +219,11 @@ func (p *requestStateProbePlugin) AsyncSearch(
 	_ string,
 	_ map[string]interface{},
 ) ([]model.SearchResult, error) {
-	return p.Search(keyword, nil)
+	result, err := p.SearchWithResult(keyword, nil)
+	if err != nil {
+		return nil, err
+	}
+	return result.GetResults(), nil
 }
 
 func (p *requestStateProbePlugin) SetMainCacheKey(key string) {
@@ -236,7 +240,7 @@ func (p *requestStateProbePlugin) SetCurrentKeyword(keyword string) {
 	p.currentKeyword = keyword
 }
 
-func (p *requestStateProbePlugin) Search(keyword string, _ map[string]interface{}) ([]model.SearchResult, error) {
+func (p *requestStateProbePlugin) SearchWithResult(keyword string, _ map[string]interface{}) (model.PluginSearchResult, error) {
 	if keyword == "alpha" {
 		time.Sleep(25 * time.Millisecond)
 	}
@@ -246,8 +250,8 @@ func (p *requestStateProbePlugin) Search(keyword string, _ map[string]interface{
 	observedCacheKey := p.mainCacheKey
 	p.mu.Unlock()
 
-	return []model.SearchResult{
-		{
+	return model.PluginSearchResult{
+		Results: []model.SearchResult{{
 			UniqueID: fmt.Sprintf("%s-%s", p.name, keyword),
 			Title:    observedKeyword,
 			Content:  observedCacheKey,
@@ -257,7 +261,9 @@ func (p *requestStateProbePlugin) Search(keyword string, _ map[string]interface{
 					URL:  "https://example.com/" + p.name,
 				},
 			},
-		},
+		}},
+		IsFinal: true,
+		Source:  p.name,
 	}, nil
 }
 
@@ -284,35 +290,27 @@ func (p *pluginResultStateProbe) AsyncSearch(
 	_ string,
 	_ map[string]interface{},
 ) ([]model.SearchResult, error) {
-	return p.Search(keyword, nil)
+	result, err := p.SearchWithResult(keyword, nil)
+	if err != nil {
+		return nil, err
+	}
+	return result.GetResults(), nil
 }
 
 func (p *pluginResultStateProbe) SetMainCacheKey(_ string) {}
 
 func (p *pluginResultStateProbe) SetCurrentKeyword(_ string) {}
 
-func (p *pluginResultStateProbe) Search(keyword string, _ map[string]interface{}) ([]model.SearchResult, error) {
-	return []model.SearchResult{
-		{
+func (p *pluginResultStateProbe) SearchWithResult(keyword string, _ map[string]interface{}) (model.PluginSearchResult, error) {
+	return model.PluginSearchResult{
+		Results: []model.SearchResult{{
 			UniqueID: fmt.Sprintf("%s-%s", p.name, keyword),
 			Title:    p.name,
-			Links: []model.Link{
-				{
-					Type: "mock",
-					URL:  "https://example.com/" + p.name,
-				},
-			},
-		},
-	}, nil
-}
-
-func (p *pluginResultStateProbe) SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error) {
-	results, err := p.Search(keyword, ext)
-	if err != nil {
-		return model.PluginSearchResult{}, err
-	}
-	return model.PluginSearchResult{
-		Results:   results,
+			Links: []model.Link{{
+				Type: "mock",
+				URL:  "https://example.com/" + p.name,
+			}},
+		}},
 		IsFinal:   p.isFinal,
 		Timestamp: time.Now(),
 		Source:    p.name,

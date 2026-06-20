@@ -10,13 +10,6 @@ import (
 	"unisearch/plugin"
 )
 
-type PluginSelector interface {
-	EnabledBuiltinPlugins() []plugin.AsyncSearchPlugin
-	NormalizeRequestedPlugins(sourceType string, plugins []string) []string
-	ResolvePlugins(plugins []string) []plugin.AsyncSearchPlugin
-	InvalidateCache()
-}
-
 type searchPluginSelector struct {
 	pluginManager      *plugin.PluginManager
 	pluginStateService *PluginStateService
@@ -27,7 +20,7 @@ type searchPluginSelector struct {
 	cacheReady         bool
 }
 
-func newPluginSelector(pluginManager *plugin.PluginManager, pluginStateService *PluginStateService) PluginSelector {
+func newPluginSelector(pluginManager *plugin.PluginManager, pluginStateService *PluginStateService) *searchPluginSelector {
 	return &searchPluginSelector{
 		pluginManager:      pluginManager,
 		pluginStateService: pluginStateService,

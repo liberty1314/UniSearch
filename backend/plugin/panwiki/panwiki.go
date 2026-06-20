@@ -85,14 +85,6 @@ func NewPanwikiPlugin() *PanwikiPlugin {
 }
 
 // Search 执行搜索并返回结果。
-func (p *PanwikiPlugin) Search(keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
-	result, err := p.SearchWithResult(keyword, ext)
-	if err != nil {
-		return nil, err
-	}
-	return result.Results, nil
-}
-
 // SearchWithResult 执行搜索并返回带状态的结果。
 func (p *PanwikiPlugin) SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error) {
 	return p.AsyncSearchWithResult(keyword, p.searchImpl, p.MainCacheKey, ext)

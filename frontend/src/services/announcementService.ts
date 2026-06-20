@@ -1,14 +1,5 @@
 import { apiClient } from '../lib/api';
-import type {
-  Announcement,
-  CreateAnnouncementRequest,
-  UpdateAnnouncementRequest,
-  ListAnnouncementsResponse,
-  ListAnnouncementsFilters,
-  SetAnnouncementStatusRequest,
-  AnnouncementFeatureEnabledResponse,
-  SetAnnouncementFeatureEnabledRequest,
-} from '../types/api';
+import type { Announcement, CreateAnnouncementRequest, UpdateAnnouncementRequest, ListAnnouncementsResponse, ListAnnouncementsFilters, SetAnnouncementStatusRequest, AnnouncementFeatureEnabledResponse, SetAnnouncementFeatureEnabledRequest } from "@/types/announcement";
 
 /**
  * 公告管理服务

@@ -2,7 +2,7 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { getCloudTypeInfo } from "@/utils/cloudTypeUtils";
 import { ImageIcon } from "lucide-react";
-import type { ResourceObject } from "@/types/api";
+import type { ResourceObject } from "@/types/resource";
 
 interface ResourceDetailHeroProps {
   resource: ResourceObject;

@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { IoAlertCircleOutline, IoSearchOutline } from "react-icons/io5";
+import { CircleAlert, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -46,7 +46,7 @@ const ErrorState: React.FC<{
         <div className="relative mb-6">
           <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-pink-500/10 rounded-full blur-xl" />
           <div className="relative text-red-500 bg-red-50/50 dark:bg-red-500/10 dark:border dark:border-red-500/10 rounded-full p-6 w-24 h-24 mx-auto flex items-center justify-center shadow-inner backdrop-blur-md">
-            <IoAlertCircleOutline className="w-12 h-12" />
+            <CircleAlert className="w-12 h-12" />
           </div>
         </div>
 
@@ -92,7 +92,7 @@ const NoResultsState: React.FC<{
         <div className="relative mb-8">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 rounded-full blur-xl dark:from-blue-500/10 dark:to-cyan-500/10" />
           <div className="relative text-slate-400 bg-white/50 dark:bg-white/[0.02] dark:border dark:border-white/[0.06] rounded-full p-8 w-28 h-28 mx-auto flex items-center justify-center shadow-inner backdrop-blur-md">
-            <IoSearchOutline className="w-14 h-14" />
+            <Search className="w-14 h-14" />
           </div>
         </div>
 
@@ -146,7 +146,7 @@ const NoKeywordState: React.FC<{ className?: string }> = ({ className }) => (
     <div className="relative inline-flex items-center justify-center mb-6 group">
       <div className="absolute inset-0 bg-blue-500/10 dark:bg-blue-400/10 rounded-3xl blur-2xl transition-all duration-700 group-hover:bg-blue-500/20 group-hover:scale-110" />
       <div className="relative w-20 h-20 rounded-[1.75rem] bg-white/60 dark:bg-white/[0.03] border border-white/60 dark:border-white/[0.08] shadow-[0_8px_32px_rgba(15,23,42,0.04)] dark:shadow-inner backdrop-blur-xl flex items-center justify-center">
-        <IoSearchOutline className="w-10 h-10 text-slate-400 dark:text-slate-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors duration-500" />
+        <Search className="w-10 h-10 text-slate-400 dark:text-slate-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors duration-500" />
       </div>
     </div>
     <div className="text-[20px] font-bold text-slate-800 dark:text-slate-200 mb-3 tracking-tight">
@@ -170,7 +170,7 @@ const FilteredResultsState: React.FC<{ onClearFilters?: () => void }> = ({
       <div className="relative mb-8">
         <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-500/10 to-cyan-500/10 blur-xl" />
         <div className="relative mx-auto flex h-28 w-28 items-center justify-center rounded-full border border-slate-200/70 bg-white/60 text-slate-500 shadow-inner backdrop-blur-md dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-slate-300">
-          <IoSearchOutline className="h-14 w-14" />
+          <Search className="h-14 w-14" />
         </div>
       </div>
 

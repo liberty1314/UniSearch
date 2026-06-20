@@ -50,14 +50,10 @@ var (
 	}
 )
 
-type SearchResponseBuilder interface {
-	Build(results []model.SearchResult, request NormalizedSearchRequest) model.SearchResponse
-}
-
 type searchResponseBuilder struct{}
 
-func newSearchResponseBuilder() SearchResponseBuilder {
-	return searchResponseBuilder{}
+func newSearchResponseBuilder() *searchResponseBuilder {
+	return &searchResponseBuilder{}
 }
 
 func (searchResponseBuilder) Build(results []model.SearchResult, request NormalizedSearchRequest) model.SearchResponse {

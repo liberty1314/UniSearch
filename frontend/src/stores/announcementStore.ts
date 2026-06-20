@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { Announcement, AnnouncementReadStatus } from '@/types/api';
+import type { Announcement, AnnouncementReadStatus } from "@/types/announcement";
 import { AnnouncementService } from '@/services/announcementService';
 import { getErrorMessage, getErrorStatus } from '@/lib/error';
 import { readJsonStorage, writeJsonStorage } from '@/lib/safeStorage';

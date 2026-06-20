@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import PasswordModal from '@/components/PasswordModal';
-import { CloudType } from '@/types/api';
+import { CloudType } from "@/types/search";
 import { SearchService } from '@/services/searchService';
 
 const { toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({

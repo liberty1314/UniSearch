@@ -73,14 +73,14 @@ func (e *tgSearchExecutor) Search(keyword string, channels []string, forceRefres
 }
 
 type pluginSearchExecutor struct {
-	pluginSelector      PluginSelector
+	pluginSelector      *searchPluginSelector
 	searchCache         SearchCache
 	metrics             *SearchMetricsRecorder
 	pluginLocks         *sync.Map
 	pluginHealthService *PluginHealthService
 }
 
-func newPluginSearchExecutor(pluginSelector PluginSelector, searchCache SearchCache, metrics *SearchMetricsRecorder, pluginLocks *sync.Map, pluginHealthService *PluginHealthService) PluginSearchExecutor {
+func newPluginSearchExecutor(pluginSelector *searchPluginSelector, searchCache SearchCache, metrics *SearchMetricsRecorder, pluginLocks *sync.Map, pluginHealthService *PluginHealthService) PluginSearchExecutor {
 	if pluginLocks == nil {
 		pluginLocks = &sync.Map{}
 	}
@@ -98,10 +98,6 @@ type pluginTaskResult struct {
 	results []model.SearchResult
 	isFinal bool
 	err     error
-}
-
-type pluginSearchWithResult interface {
-	SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error)
 }
 
 func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRefresh bool, concurrency int, ext map[string]interface{}) (allResults []model.SearchResult, warnings []model.SearchSourceWarning, err error) {
@@ -150,22 +146,7 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 			currentPlugin.SetMainCacheKey(cacheKey)
 			currentPlugin.SetCurrentKeyword(keyword)
 
-			if searcher, ok := currentPlugin.(pluginSearchWithResult); ok {
-				result, searchErr := searcher.SearchWithResult(keyword, ext)
-				if searchErr != nil {
-					return pluginTaskResult{
-						name: currentPlugin.Name(),
-						err:  searchErr,
-					}
-				}
-				return pluginTaskResult{
-					name:    currentPlugin.Name(),
-					results: result.GetResults(),
-					isFinal: result.IsFinal,
-				}
-			}
-
-			results, searchErr := currentPlugin.Search(keyword, ext)
+			result, searchErr := currentPlugin.SearchWithResult(keyword, ext)
 			if searchErr != nil {
 				return pluginTaskResult{
 					name: currentPlugin.Name(),
@@ -174,8 +155,8 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 			}
 			return pluginTaskResult{
 				name:    currentPlugin.Name(),
-				results: results,
-				isFinal: true,
+				results: result.GetResults(),
+				isFinal: result.IsFinal,
 			}
 		})
 	}

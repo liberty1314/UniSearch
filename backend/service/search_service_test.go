@@ -58,13 +58,13 @@ func (m *mockAsyncSearchPlugin) SetMainCacheKey(_ string) {}
 
 func (m *mockAsyncSearchPlugin) SetCurrentKeyword(_ string) {}
 
-func (m *mockAsyncSearchPlugin) Search(keyword string, _ map[string]interface{}) ([]model.SearchResult, error) {
+func (m *mockAsyncSearchPlugin) SearchWithResult(keyword string, _ map[string]interface{}) (model.PluginSearchResult, error) {
 	m.searchCalls.Add(1)
 	if m.err != nil {
-		return nil, m.err
+		return model.PluginSearchResult{}, m.err
 	}
-	return []model.SearchResult{
-		{
+	return model.PluginSearchResult{
+		Results: []model.SearchResult{{
 			UniqueID: fmt.Sprintf("%s-search-%s", m.name, keyword),
 			Title:    fmt.Sprintf("%s search result", m.name),
 			Links: []model.Link{
@@ -73,7 +73,9 @@ func (m *mockAsyncSearchPlugin) Search(keyword string, _ map[string]interface{})
 					URL:  "https://example.com/" + m.name,
 				},
 			},
-		},
+		}},
+		IsFinal: true,
+		Source:  m.name,
 	}, nil
 }
 

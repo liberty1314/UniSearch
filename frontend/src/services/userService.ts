@@ -1,19 +1,6 @@
 import { apiClient } from '../lib/api';
-import type {
-  ListUsersRequest,
-  ListUsersResponse,
-  AdminUserStats,
-  UserInfo,
-  CreateUserRequest,
-  CreateUserResponse,
-  UpdateUserRequest,
-  ResetPasswordRequest,
-  SetUserStatusRequest,
-  BatchDeleteUsersRequest,
-  BatchUpdateRoleRequest,
-  BatchUserOperationResult,
-  SuccessResponse,
-} from '../types/api';
+import type { SuccessResponse } from "@/types/common";
+import type { ListUsersRequest, ListUsersResponse, AdminUserStats, UserInfo, CreateUserRequest, CreateUserResponse, UpdateUserRequest, ResetPasswordRequest, SetUserStatusRequest, BatchDeleteUsersRequest, BatchUpdateRoleRequest, BatchUserOperationResult } from "@/types/user";
 
 /**
  * 用户管理服务

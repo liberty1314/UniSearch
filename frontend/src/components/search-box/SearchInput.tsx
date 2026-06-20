@@ -1,5 +1,5 @@
 import React from "react";
-import { IoCloseOutline } from "react-icons/io5";
+import { X } from "lucide-react";
 
 interface SearchInputProps {
   inputRef: React.RefObject<HTMLInputElement>;
@@ -102,7 +102,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
           className="absolute right-[84px] top-1/2 z-20 -translate-y-1/2 rounded-full p-2 text-slate-400 transition-all duration-300 hover:scale-110 hover:bg-slate-100 hover:text-slate-600 active:scale-95 sm:right-[120px] dark:text-slate-500 dark:hover:bg-white/[0.08] dark:hover:text-slate-200"
           aria-label="清空输入"
         >
-          <IoCloseOutline className="h-5 w-5" />
+          <X className="h-5 w-5" />
         </button>
       ) : null}
     </>

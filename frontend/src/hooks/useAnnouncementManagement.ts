@@ -1,13 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { AnnouncementService } from '@/services/announcementService';
-import type {
-  Announcement,
-  AnnouncementPriority,
-  AnnouncementLifecycleStatus,
-  CreateAnnouncementRequest,
-  UpdateAnnouncementRequest,
-} from '@/types/api';
+import type { Announcement, AnnouncementPriority, AnnouncementLifecycleStatus, CreateAnnouncementRequest, UpdateAnnouncementRequest } from "@/types/announcement";
 import { getErrorMessage } from '@/lib/error';
 
 export interface AnnouncementFormData {

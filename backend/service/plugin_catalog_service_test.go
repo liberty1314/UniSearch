@@ -35,8 +35,8 @@ func newCatalogTestPlugin(name string, priority int) *catalogTestPlugin {
 	return &catalogTestPlugin{BaseAsyncPlugin: base}
 }
 
-func (p *catalogTestPlugin) Search(_ string, _ map[string]interface{}) ([]model.SearchResult, error) {
-	return nil, nil
+func (p *catalogTestPlugin) SearchWithResult(_ string, _ map[string]interface{}) (model.PluginSearchResult, error) {
+	return model.PluginSearchResult{IsFinal: true, Source: p.Name()}, nil
 }
 
 func (p *catalogTestPlugin) AsyncSearch(
@@ -94,7 +94,6 @@ func TestPluginCatalogServiceIgnoresRemoteSource(t *testing.T) {
 
 func TestPluginCatalogServiceMarksMigratedPluginsAsBuiltin(t *testing.T) {
 	manager := plugin.NewPluginManager()
-
 
 	service := &PluginCatalogService{pluginManager: manager}
 

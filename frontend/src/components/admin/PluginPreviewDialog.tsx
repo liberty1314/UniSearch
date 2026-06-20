@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ApplePagination } from './ApplePagination';
-import type { PluginInfo } from '@/types/api';
+import type { PluginInfo } from "@/types/plugin";
 import { comparePlugins, getEffectivePluginStatus } from './adminListSort';
 import {
   UNIFIED_STATUS_FILTER_OPTIONS,

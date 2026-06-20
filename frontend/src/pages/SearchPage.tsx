@@ -20,7 +20,7 @@ import { hotRankingService } from "@/services/hotRankingService";
 import { SearchService } from "@/services/searchService";
 import { useSearchAccessStatus } from "@/stores/searchAccessStore";
 import { useSearchStore } from "@/stores/searchStore";
-import type { SearchParams } from "@/types/api";
+import type { SearchParams } from "@/types/search";
 import { readAccountSearchDefaults } from "@/lib/accountPreferences";
 
 const buildRouteSnapshotFromUrl = (url: string) => {

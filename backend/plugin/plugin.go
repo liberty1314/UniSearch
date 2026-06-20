@@ -33,8 +33,8 @@ type AsyncSearchPlugin interface {
 	// SetCurrentKeyword 设置当前搜索关键词（用于日志显示）
 	SetCurrentKeyword(keyword string)
 
-	// Search 兼容性方法（内部调用AsyncSearch）
-	Search(keyword string, ext map[string]interface{}) ([]model.SearchResult, error)
+	// SearchWithResult 搜索并返回标准插件结果
+	SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error)
 
 	// SkipServiceFilter 返回是否跳过Service层的关键词过滤
 	// 对于磁力搜索等需要宽泛结果的插件，应返回true

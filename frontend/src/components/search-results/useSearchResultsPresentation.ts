@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { SearchParams, SearchResponse } from "@/types/api";
+import type { SearchParams, SearchResponse } from "@/types/search";
 import type { ResultItem } from "@/utils/cloudTypeUtils";
 import { sortResources } from "@/utils/searchResultSorter";
 import { buildActiveFilterChips } from "@/utils/searchFilters";

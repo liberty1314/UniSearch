@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PluginManageDialog } from '../PluginManageDialog';
-import type { PluginInfo } from '@/types/api';
+import type { PluginInfo } from "@/types/plugin";
 
 vi.mock('framer-motion', () => ({
   motion: {

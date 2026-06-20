@@ -21,12 +21,8 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
-import type {
-  SystemInfoResponse,
-  TGChannel,
-  ListTGChannelsResponse,
-  SearchObservabilitySnapshot,
-} from '@/types/api';
+import type { SystemInfoResponse, SearchObservabilitySnapshot } from "@/types/system";
+import type { TGChannel, ListTGChannelsResponse } from "@/types/channel";
 import { toast } from 'sonner';
 import {
   ADMIN_PANEL_SURFACE_CLASSES,

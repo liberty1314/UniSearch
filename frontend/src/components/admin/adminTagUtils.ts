@@ -1,4 +1,4 @@
-import type { AdminTagOption } from '@/types/api';
+import type { AdminTagOption } from "@/types/admin";
 
 const compareTagName = (left: string, right: string): number =>
   left.localeCompare(right, 'zh-CN', { sensitivity: 'base' });

@@ -1,5 +1,5 @@
-import { CloudType } from "@/types/api";
-import type { ResourceLink, ResourceObject } from "@/types/api";
+import { CloudType } from "@/types/search";
+import type { ResourceLink, ResourceObject } from "@/types/resource";
 
 // ─── 共享类型 ────────────────────────────────────────────────────────────────
 

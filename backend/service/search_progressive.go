@@ -256,14 +256,11 @@ func (s *SearchService) searchSinglePlugin(currentPlugin plugin.AsyncSearchPlugi
 	currentPlugin.SetMainCacheKey(cacheKey)
 	currentPlugin.SetCurrentKeyword(keyword)
 
-	if searcher, ok := currentPlugin.(pluginSearchWithResult); ok {
-		result, err := searcher.SearchWithResult(keyword, ext)
-		if err != nil {
-			return nil, err
-		}
-		return result.GetResults(), nil
+	result, err := currentPlugin.SearchWithResult(keyword, ext)
+	if err != nil {
+		return nil, err
 	}
-	return currentPlugin.Search(keyword, ext)
+	return result.GetResults(), nil
 }
 
 func (s *SearchService) lockForPlugin(name string) *sync.Mutex {

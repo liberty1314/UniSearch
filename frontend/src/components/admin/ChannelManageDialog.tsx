@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { AdminDialogMode } from '@/types/api';
+import type { AdminDialogMode } from "@/types/admin";
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ChannelAddDialog } from './ChannelAddDialog';
 import {

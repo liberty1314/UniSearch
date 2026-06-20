@@ -1,13 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-    IoCloseOutline,
-    IoSettingsOutline,
-    IoLogOutOutline,
-    IoPersonCircleOutline,
-    IoLogInOutline
-} from 'react-icons/io5';
+import { CircleUserRound, LogIn, LogOut, Settings, X } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { AuthService } from '@/services/authService';
 import { toast } from 'sonner';
@@ -114,7 +108,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                                 onClick={onClose}
                                 className="p-2 -mr-2 text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
                             >
-                                <IoCloseOutline className="w-6 h-6" />
+                                <X className="w-6 h-6" />
                             </button>
                         </div>
 
@@ -124,7 +118,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                             {isAuthenticated ? (
                                 <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-slate-800/50 rounded-xl border border-white/20 dark:border-white/10">
                                     <div className="p-2 bg-white dark:bg-slate-700 rounded-full shadow-sm">
-                                        <IoPersonCircleOutline className="w-8 h-8 text-gray-400" />
+                                        <CircleUserRound className="w-8 h-8 text-gray-400" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="font-medium text-gray-900 dark:text-white truncate">
@@ -141,7 +135,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                                     onClick={onClose}
                                     className={`flex items-center justify-center gap-2 w-full p-3 ${BLUE_CYAN_GRADIENT} text-white rounded-xl font-medium shadow-[0_12px_30px_rgba(59,130,246,0.22)] hover:shadow-[0_18px_36px_rgba(6,182,212,0.24)] transition-all active:scale-95`}
                                 >
-                                    <IoLogInOutline className="w-5 h-5" />
+                                    <LogIn className="w-5 h-5" />
                                     登录 / 注册
                                 </Link>
                             )}
@@ -177,7 +171,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                                             onClick={onClose}
                                             className={`flex items-center gap-3 p-3 text-gray-600 dark:text-slate-400 ${BLUE_CYAN_HOVER_TEXT} hover:bg-gray-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors`}
                                         >
-                                            <IoSettingsOutline className="w-5 h-5" />
+                                            <Settings className="w-5 h-5" />
                                             <span className="font-medium">后台管理</span>
                                         </Link>
                                     ) : (
@@ -186,7 +180,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                                             onClick={onClose}
                                             className={`flex items-center gap-3 p-3 text-gray-600 dark:text-slate-400 ${BLUE_CYAN_HOVER_TEXT} hover:bg-gray-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors`}
                                         >
-                                            <IoPersonCircleOutline className="w-5 h-5" />
+                                            <CircleUserRound className="w-5 h-5" />
                                             <span className="font-medium">个人中心</span>
                                         </Link>
                                     )}
@@ -207,7 +201,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
                                     onClick={handleLogout}
                                     className="flex items-center justify-center gap-2 w-full p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl transition-colors font-medium border border-transparent hover:border-red-100 dark:hover:border-red-900/30"
                                 >
-                                    <IoLogOutOutline className="w-5 h-5" />
+                                    <LogOut className="w-5 h-5" />
                                     退出登录
                                 </button>
                             )}

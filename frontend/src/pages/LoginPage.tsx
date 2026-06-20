@@ -48,7 +48,7 @@ import {
 } from "@/components/auth/authEntryLayout";
 import { getErrorMessage, getErrorStatus } from "@/lib/error";
 import { cn } from "@/lib/utils";
-import type { SearchParams } from "@/types/api";
+import type { SearchParams } from "@/types/search";
 import { DEFAULT_AUTH_POLICY, resolveAuthPolicy } from "@/lib/authPolicy";
 import {
   getPasswordPolicyHelperText,

@@ -1,16 +1,5 @@
 import { apiClient } from '@/lib/api';
-import type {
-  AdminLoginRequest,
-  AdminLoginResponse,
-  LoginRequest,
-  LoginResponse,
-  LoginWithRememberRequest,
-  LoginWithRememberResponse,
-  RefreshTokenRequest,
-  RefreshTokenResponse,
-  RegisterRequest,
-  RevokeRefreshTokenRequest,
-} from '@/types/api';
+import type { AdminLoginRequest, AdminLoginResponse, LoginRequest, LoginResponse, LoginWithRememberRequest, LoginWithRememberResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest, RevokeRefreshTokenRequest } from "@/types/auth";
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 
 export class AuthService {

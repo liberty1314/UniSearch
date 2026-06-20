@@ -2,7 +2,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { SearchResultsSkeleton } from "@/components/SkeletonLoader";
 import { SearchResultsEmptyState } from "@/components/home/SearchResultsEmptyState";
-import type { SearchParams, SearchSourceWarning } from "@/types/api";
+import type { SearchParams, SearchSourceWarning } from "@/types/search";
 
 type ViewMode = "list" | "grid";
 

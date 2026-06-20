@@ -18,10 +18,10 @@ type SearchService struct {
 	pluginManager      *plugin.PluginManager
 	cache              *cache.RedisCache // Redis 缓存客户端
 	pluginStateService *PluginStateService
-	normalizer         SearchRequestNormalizer
-	pluginSelector     PluginSelector
-	resultMerger       ResultMerger
-	responseBuilder    SearchResponseBuilder
+	normalizer         *searchRequestNormalizer
+	pluginSelector     *searchPluginSelector
+	resultMerger       *searchResultMerger
+	responseBuilder    *searchResponseBuilder
 	searchCache        SearchCache
 	tgExecutor         TGSearchExecutor
 	pluginExecutor     PluginSearchExecutor

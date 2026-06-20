@@ -18,14 +18,10 @@ type NormalizedSearchRequest struct {
 	Ext          map[string]interface{}
 }
 
-type SearchRequestNormalizer interface {
-	Normalize(keyword string, channels []string, concurrency int, forceRefresh bool, resultType string, sourceType string, plugins []string, cloudTypes []string, ext map[string]interface{}) NormalizedSearchRequest
-}
-
 type searchRequestNormalizer struct{}
 
-func newSearchRequestNormalizer() SearchRequestNormalizer {
-	return searchRequestNormalizer{}
+func newSearchRequestNormalizer() *searchRequestNormalizer {
+	return &searchRequestNormalizer{}
 }
 
 func (searchRequestNormalizer) Normalize(keyword string, channels []string, concurrency int, forceRefresh bool, resultType string, sourceType string, plugins []string, cloudTypes []string, ext map[string]interface{}) NormalizedSearchRequest {

@@ -1,7 +1,6 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, Circle, SlidersHorizontal, X } from "lucide-react";
 import { motion } from "framer-motion";
-import { IoCheckmarkCircle, IoEllipseOutline } from "react-icons/io5";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +17,7 @@ import {
 } from "@/components/home/platformThemes";
 import { SearchService } from "@/services/searchService";
 import { useSearchStore } from "@/stores/searchStore";
-import type { CloudTypeValue, FilterConfig, SearchParams } from "@/types/api";
+import type { CloudTypeValue, FilterConfig, SearchParams } from "@/types/search";
 import {
   buildActiveFilterChips,
   cloneFilterConfig,
@@ -431,9 +430,9 @@ const SearchUnifiedFilterCard: React.FC = () => {
               className="rounded-[1rem] px-4 py-2 text-sm font-semibold"
             >
               {isAllSelected ? (
-                <IoCheckmarkCircle className="h-5 w-5" />
+                <CheckCircle2 className="h-5 w-5" />
               ) : (
-                <IoEllipseOutline className="h-5 w-5" />
+                <Circle className="h-5 w-5" />
               )}
               <span>{isAllSelected ? "全选状态" : "选择全部"}</span>
             </Button>

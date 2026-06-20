@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AxiosError } from 'axios';
-import type { ApiResponse } from '@/types/api';
+import type { ApiResponse } from "@/types/common";
 import { apiClient } from '@/lib/api';
 
 const callHandleError = (error: Partial<AxiosError<ApiResponse>>): string =>

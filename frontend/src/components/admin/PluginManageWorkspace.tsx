@@ -42,7 +42,7 @@ import {
   resolvePluginStatus,
   type TestStatus,
 } from './pluginManageDialogShared';
-import type { PluginInfo } from '@/types/api';
+import type { PluginInfo } from "@/types/plugin";
 
 export interface PluginManageWorkspaceViewModel {
   isOpen: boolean;

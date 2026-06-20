@@ -1,1086 +1,172 @@
-- [2026-06-01 23:26] feat(plugin): 迁入 pansou 插件并同步频道配置
-  - Body: 新增 9 个 pansou 插件及对应契约测试、健康检查与冒烟验证工具，并在后端入口完成注册。同步默认频道、启用插件配置、部署说明和更新方案，同时补充热门轮播缩略卡片序号移除测试。
+- [2026-06-20 18:47] refactor(types): 重构前端类型定义并清理后端废弃模块及历史日志
+  - Body: 将前端原本臃肿的 types/api.ts 按领域拆分为 admin, auth, user, system 等多个独立的类型文件，并同步更新了所有关联组件及 Hooks 的导入路径。同时清理了后端的废弃中间件、对象池模块，以及过期的历史月度开发日志文档。
   - Files:
-    - .env.example
     - README.md
-    - backend/main.go
-    - backend/plugin/duoduo/duoduo.go
-    - backend/plugin/duoduo/duoduo_test.go
-    - backend/plugin/duoduo/html结构分析.md
-    - backend/plugin/hdr4k/hdr4k.go
-    - backend/plugin/hdr4k/hdr4k_test.go
-    - backend/plugin/huban/html结构分析.md
+    - backend/api/account_auth_flow_test.go
+    - backend/api/admin_handler.go
+    - backend/api/middleware/deprecated.go
+    - backend/api/plugin_center_handler_test.go
+    - backend/plugin/aikanzy/aikanzy.go
+    - backend/plugin/alupan/alupan.go
+    - backend/plugin/clmao/clmao.go
+    - backend/plugin/daishudj/daishudj.go
+    - backend/plugin/dyyj/dyyj.go
+    - backend/plugin/erxiao/erxiao.go
+    - backend/plugin/feikuai/feikuai.go
     - backend/plugin/huban/huban.go
-    - backend/plugin/huban/huban_test.go
-    - backend/plugin/huban/json结构分析.md
-    - backend/plugin/jikepan/jikepan.go
-    - backend/plugin/jikepan/jikepan_test.go
-    - backend/plugin/pan666/pan666.go
-    - backend/plugin/pan666/pan666_test.go
+    - backend/plugin/hunhepan/hunhepan.go
+    - backend/plugin/javdb/javdb.go
+    - backend/plugin/jsnoteclub/jsnoteclub.go
+    - backend/plugin/jutoushe/jutoushe.go
+    - backend/plugin/kkmao/kkmao.go
+    - backend/plugin/kkv/kkv.go
+    - backend/plugin/labi/labi.go
+    - backend/plugin/lou1/lou1.go
+    - backend/plugin/manifest_test.go
+    - backend/plugin/meitizy/meitizy.go
+    - backend/plugin/mikuclub/mikuclub.go
+    - backend/plugin/mizixing/mizixing.go
+    - backend/plugin/muou/muou.go
+    - backend/plugin/nyaa/nyaa.go
+    - backend/plugin/ouge/ouge.go
+    - backend/plugin/pansearch/pansearch.go
+    - backend/plugin/panta/panta.go
     - backend/plugin/panwiki/panwiki.go
-    - backend/plugin/panwiki/panwiki_test.go
     - backend/plugin/panyq/panyq.go
-    - backend/plugin/panyq/panyq_test.go
-    - backend/plugin/qupansou/qupansou.go
-    - backend/plugin/qupansou/qupansou_test.go
-    - backend/plugin/zhizhen/zhizhen.go
-    - backend/plugin/zhizhen/zhizhen_test.go
-    - backend/service/search_cache.go
-    - backend/tools/pansou_health_check/main.go
-    - backend/tools/pansou_search_smoke/main.go
-    - backend/tools/validate_plugin_manifests.go
-    - docs/pansou插件频道更新开发计划.md
-    - docs/pansou插件频道更新方案.md
-    - frontend/src/components/trending/HotHeroCarousel.tsx
-    - frontend/src/components/trending/__tests__/HotHeroCarousel.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-05 22:45] chore(repo): 精简热门页骨架并清理旧文档
-  - Body: 调整热门页加载时的首屏骨架与媒体网格占位，避免完整列表骨架挤占首屏。删除已沉淀或过期的方案与设计文档，并更新页面测试约束加载布局。
-  - Files:
-    - docs/pansou插件频道更新开发计划.md
-    - docs/pansou插件频道更新方案.md
-    - docs/开发计划.md
-    - docs/插件开发指南.md
-    - docs/系统开发设计文档.md
-    - docs/设计规范.md
-    - frontend/src/components/trending/HotPageSkeleton.tsx
-    - frontend/src/pages/HotPage.tsx
-    - frontend/src/pages/__tests__/HotPage.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-06 14:34] feat(backend): 新增显式迁移并完善搜索链路验证
-  - Body: 抽离搜索请求解析并补齐缓存、执行器和 Redis 删除逻辑的并发测试，新增独立数据库迁移入口与本地质量脚本。前端同步拆分搜索结果展示逻辑，并缓存健康检查请求以减少重复调用。
-  - Footer: 破坏性变更: 主应用启动不再隐式执行数据库表结构迁移。Migration: 部署或模型变更后先执行 `go run ./cmd/migrate`，Docker 环境执行 `docker compose run --rm --entrypoint /app/backend/unisearch-migrate app`；确认备份后可追加 `-drop-deprecated` 清理废弃表。
-  - Files:
-    - .github/workflows/docker_ci.yml
-    - Dockerfile
-    - README.md
-    - backend/api/handler.go
-    - backend/api/search_request_parser.go
-    - backend/api/search_request_parser_test.go
-    - backend/cmd/bootstrap/app.go
-    - backend/cmd/bootstrap/server.go
-    - backend/cmd/migrate/main.go
-    - backend/database/migration.go
-    - backend/database/migration_test.go
-    - backend/service/hot_ranking_preloader_test.go
-    - backend/service/search_cache.go
-    - backend/service/search_cache_test.go
+    - backend/plugin/plugin.go
+    - backend/plugin/qingying/qingying.go
+    - backend/plugin/quark4k/quark4k.go
+    - backend/plugin/quarksoo/quarksoo.go
+    - backend/plugin/shandian/shandian.go
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - backend/plugin/susu/susu.go
+    - backend/plugin/thepiratebay/thepiratebay.go
+    - backend/plugin/u3c3/u3c3.go
+    - backend/plugin/wanou/wanou.go
+    - backend/plugin/weibo/weibo.go
+    - backend/plugin/xinjuc/xinjuc.go
+    - backend/plugin/yiove/yiove.go
+    - backend/plugin/ypfxw/ypfxw.go
+    - backend/plugin/zxzj/zxzj.go
+    - backend/service/plugin_catalog_service_test.go
     - backend/service/search_executor.go
     - backend/service/search_executor_test.go
+    - backend/service/search_plugin_selector.go
+    - backend/service/search_plugin_selector_test.go
+    - backend/service/search_progressive.go
+    - backend/service/search_progressive_test.go
+    - backend/service/search_request.go
+    - backend/service/search_response_builder.go
+    - backend/service/search_response_builder_test.go
+    - backend/service/search_result_merger.go
     - backend/service/search_service.go
-    - backend/util/cache/redis_cache.go
-    - backend/util/cache/redis_cache_test.go
-    - frontend/src/components/SearchResults.tsx
-    - frontend/src/components/__tests__/SearchResults.test.tsx
-    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
-    - frontend/src/components/search-results/useSearchResultsPresentation.ts
-    - frontend/src/routes/AppRoutes.tsx
-    - frontend/src/routes/__tests__/AppRoutes.test.tsx
-    - frontend/src/routes/appRouteUtils.ts
-    - frontend/src/services/__tests__/searchService.test.ts
-    - frontend/src/services/searchService.ts
-    - scripts/tests/backend-race.sh
-    - scripts/tests/frontend-focused.sh
-    - scripts/tests/local-quality.sh
+    - backend/service/search_service_test.go
+    - backend/tools/pansou_health_check/main.go
+    - backend/util/pool/object_pool.go
+    - docs/compat-deprecation-checklist.md
+    - docs/readme_2601.md
+    - docs/readme_2602.md
+    - docs/readme_2603.md
+    - docs/readme_2604.md
+    - docs/readme_2605.md
     - docs/readme_2606.md
-
-- [2026-06-06 18:12] feat(frontend): 完善搜索交互并调整热门页路由
-  - Body: 增强搜索框历史记录的键盘导航、选中提交和删除能力，支持搜索结果视图偏好持久化，并将高级筛选改为先暂存后应用。同步收敛首页、空搜索态、热门页和页脚的布局细节，补齐相关前端测试。
-  - Footer: 破坏性变更: 热门内容页路由由 `/hot` 调整为 `/trending`。Migration: 更新导航、文档、外部链接和测试断言中指向 `/hot` 的引用。
-  - Files:
-    - .gitignore
-    - README.md
+    - frontend/package.json
+    - frontend/pnpm-lock.yaml
+    - frontend/src/components/AnnouncementDialog.tsx
+    - frontend/src/components/AnnouncementPanel.tsx
+    - frontend/src/components/AnnouncementProvider.tsx
+    - frontend/src/components/CloudTypeChipGroup.tsx
+    - frontend/src/components/CloudTypeFilter.tsx
+    - frontend/src/components/LoadingState.tsx
+    - frontend/src/components/MobileMenu.tsx
     - frontend/src/components/Navbar.tsx
-    - frontend/src/components/SearchBox.tsx
-    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/PasswordModal.tsx
+    - frontend/src/components/SearchAdvancedFilterPanel.tsx
     - frontend/src/components/SearchUnifiedFilterCard.tsx
-    - frontend/src/components/__tests__/Navbar.test.tsx
+    - frontend/src/components/__tests__/CloudTypeFilter.test.tsx
+    - frontend/src/components/__tests__/PasswordModal.test.tsx
     - frontend/src/components/__tests__/SearchBox.test.tsx
     - frontend/src/components/__tests__/SearchResults.test.tsx
     - frontend/src/components/__tests__/SearchUnifiedFilterCard.test.tsx
-    - frontend/src/components/home/HomeSearchWorkbench.tsx
-    - frontend/src/components/home/TrendingCategories.tsx
-    - frontend/src/components/home/__tests__/TrendingCategories.test.tsx
-    - frontend/src/components/search-box/SearchBoxActions.tsx
-    - frontend/src/components/search-box/SearchHistoryPanel.tsx
-    - frontend/src/components/search-box/SearchInput.tsx
-    - frontend/src/components/search/SearchEmptyWorkbench.tsx
-    - frontend/src/components/trending/HotHeroCarousel.tsx
-    - frontend/src/components/trending/HotPageSkeleton.tsx
-    - frontend/src/components/ui/__tests__/motion-footer.test.tsx
-    - frontend/src/components/ui/motion-footer.tsx
-    - frontend/src/config/constants.ts
-    - frontend/src/hooks/useSearchBoxController.ts
-    - frontend/src/pages/Home.tsx
-    - frontend/src/pages/HotPage.tsx
-    - frontend/src/pages/__tests__/Home.test.tsx
-    - frontend/src/pages/__tests__/HotPage.test.tsx
-    - frontend/src/pages/__tests__/SearchPage.test.tsx
-    - frontend/src/routes/AppRoutes.tsx
-    - frontend/src/routes/__tests__/AppRoutes.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-07 21:21] feat(release): 新增发布候选验证与资源快照兜底
-  - Body: 新增发布候选、Docker smoke、临时集成环境和 Playwright E2E 验证入口，并补充产品定位文档。同步引入结构化日志与敏感字段脱敏，增加搜索资源快照缓存，让详情页在刷新或缺少路由状态时仍可恢复资源内容。
-  - Files:
-    - .gitignore
-    - .impeccable/live/config.json
-    - PRODUCT.md
-    - README.md
-    - backend/api/controller/apikey_controller.go
-    - backend/api/controller/user_apikey_controller.go
-    - backend/api/middleware.go
-    - backend/api/middleware/jwt_auth.go
-    - backend/api/router.go
-    - backend/database/json_migrator.go
-    - backend/plugin/http_helpers.go
-    - backend/service/search_cache.go
-    - backend/service/search_executor.go
-    - backend/service/search_metrics.go
-    - backend/util/logger/logger.go
-    - backend/util/logger/logger_test.go
-    - docs/2026-06-07-next-optimization-development-plan.md
-    - docs/2026-06-07-next-optimization-roadmap.md
-    - frontend/e2e/admin-plugin.spec.ts
-    - frontend/e2e/auth-resume-search.spec.ts
-    - frontend/e2e/home-search.spec.ts
-    - frontend/e2e/test-helpers.ts
-    - frontend/e2e/trending-search.spec.ts
-    - frontend/package.json
-    - frontend/playwright.config.ts
-    - frontend/pnpm-lock.yaml
-    - frontend/src/components/SearchBox.tsx
-    - frontend/src/components/SearchResults.tsx
-    - frontend/src/components/__tests__/SearchBox.test.tsx
-    - frontend/src/components/__tests__/SearchResults.test.tsx
-    - frontend/src/components/home/SearchResultsEmptyState.tsx
-    - frontend/src/components/resource-detail/ResourceDetailEmptyState.tsx
-    - frontend/src/components/search-box/SearchInput.tsx
-    - frontend/src/components/search-results/SearchResultsState.tsx
-    - frontend/src/components/trending/HotMediaCard.tsx
-    - frontend/src/components/trending/__tests__/HotMediaCard.test.tsx
-    - frontend/src/components/trending/__tests__/HotToolbar.test.tsx
-    - frontend/src/components/ui/SegmentedControl.tsx
-    - frontend/src/components/ui/button.tsx
-    - frontend/src/hooks/useSearchBoxController.ts
-    - frontend/src/index.css
-    - frontend/src/lib/__tests__/resourceSnapshot.test.ts
-    - frontend/src/lib/brandTheme.ts
-    - frontend/src/lib/resourceSnapshot.ts
-    - frontend/src/pages/Home.tsx
-    - frontend/src/pages/HotPage.tsx
-    - frontend/src/pages/LoginPage.tsx
-    - frontend/src/pages/ResourceDetailPage.tsx
-    - frontend/src/pages/SearchPage.tsx
-    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
-    - frontend/src/pages/__tests__/Home.test.tsx
-    - frontend/src/pages/__tests__/HotPage.test.tsx
-    - frontend/src/pages/__tests__/ResourceDetailPage.test.tsx
-    - frontend/src/pages/__tests__/SearchPage.test.tsx
-    - frontend/src/services/__tests__/searchService.test.ts
-    - frontend/src/services/searchService.ts
-    - frontend/src/stores/__tests__/searchStore.test.ts
-    - frontend/src/stores/searchStore.ts
-    - frontend/vite.config.ts
-    - scripts/tests/docker-smoke.sh
-    - scripts/tests/integration-env.sh
-    - scripts/tests/lib/docker-preflight.sh
-    - scripts/tests/release-candidate.sh
-    - docs/readme_2606.md
-
-- [2026-06-07 23:00] refactor(frontend): 精简资源详情页摘要布局
-  - Body: 移除资源详情页摘要上方的元信息条，让主体区域直接聚焦资源摘要与右侧操作面板。同步更新详情页测试，确认旧元信息条不再渲染。
-  - Files:
-    - frontend/src/pages/ResourceDetailPage.tsx
-    - frontend/src/pages/__tests__/ResourceDetailPage.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-08 00:03] fix(frontend): 修复清空搜索框后历史浮层回弹
-  - Body: 将搜索框聚焦与失焦逻辑收敛到控制器，并在清空输入时临时抑制最近搜索浮层重新打开。补充搜索页清空输入场景测试，确认历史浮层关闭且输入框仍保持焦点。
-  - Files:
-    - frontend/src/components/SearchBox.tsx
-    - frontend/src/components/__tests__/SearchBox.test.tsx
-    - frontend/src/hooks/useSearchBoxController.ts
-    - docs/readme_2606.md
-
-- [2026-06-09 00:08] feat(plugin): 新增 SidHub 搜索插件
-  - Body: 新增 SidHub/SeedHub 影视资源搜索插件，支持搜索页解析、详情页链接提取、夸克跳转解析、结果缓存与插件清单注册。同步默认启用插件列表、插件计数和部署说明。
-  - Files:
-    - .env.example
-    - README.md
-    - backend/main.go
-    - backend/plugin/sidhub/sidhub.go
-    - backend/plugin/sidhub/sidhub_test.go
-    - docs/readme_2606.md
-
-- [2026-06-09 00:11] feat(plugin-center): 改为内置插件中心并新增搜索源
-  - Body: 插件中心改为只管理源码注册的内置插件，移除自定义 URL 插件配置、导入、编辑和删除流程。新增看剧吧与 52API 搜索插件，并同步默认启用配置、管理后台与测试覆盖。
-  - Footer: 破坏性变更: 下线自定义 URL 插件配置和插件中心导入能力，新增插件必须通过 Go 源码插件注册；Migration: 移除 CUSTOM_PLUGINS_PATH 和旧 custom_plugins.json / plugin_market.default.json 配置，按需配置 PLUGIN_52API_KEY 后重启服务。
-  - Files:
-    - .env.example
-    - Dockerfile
-    - README.md
-    - backend/.env.example
-    - backend/api/admin_handler.go
-    - backend/api/admin_routes_test.go
-    - backend/api/plugin_center_handler_test.go
-    - backend/api/plugin_manifest_response_test.go
-    - backend/api/router_admin.go
-    - backend/config/custom_plugins.go
-    - backend/custom_plugins.json
-    - backend/main.go
-    - backend/plugin/api52/api52.go
-    - backend/plugin/api52/api52_test.go
-    - backend/plugin/kanjuba/kanjuba.go
-    - backend/plugin/kanjuba/kanjuba_test.go
-    - backend/plugin_market.default.json
-    - backend/service/admin_tag_service.go
-    - backend/service/admin_tag_service_test.go
-    - backend/service/plugin_catalog_service.go
-    - backend/service/plugin_catalog_service_test.go
-    - docs/2026-06-08-built-in-plugin-center-development-plan.md
-    - frontend/src/components/admin/AdminWorkspaceToolbar.tsx
-    - frontend/src/components/admin/PluginAddDialog.tsx
+    - frontend/src/components/admin/AdminTagMultiSelect.tsx
+    - frontend/src/components/admin/AnnouncementManagement.tsx
+    - frontend/src/components/admin/AppleUserTable.tsx
+    - frontend/src/components/admin/BatchDeleteDialog.tsx
+    - frontend/src/components/admin/BatchUpdateRoleDialog.tsx
+    - frontend/src/components/admin/ChannelAddDialog.tsx
+    - frontend/src/components/admin/ChannelManageDialog.tsx
+    - frontend/src/components/admin/ChannelManageWorkspace.tsx
+    - frontend/src/components/admin/ChannelPreviewDialog.tsx
+    - frontend/src/components/admin/EditUserDialog.tsx
     - frontend/src/components/admin/PluginManageDialog.tsx
     - frontend/src/components/admin/PluginManageWorkspace.tsx
     - frontend/src/components/admin/PluginManagementView.tsx
+    - frontend/src/components/admin/PluginPreviewDialog.tsx
+    - frontend/src/components/admin/ResetPasswordDialog.tsx
+    - frontend/src/components/admin/SystemInfoView.tsx
+    - frontend/src/components/admin/__tests__/AnnouncementManagement.test.tsx
+    - frontend/src/components/admin/__tests__/EditUserDialog.test.tsx
     - frontend/src/components/admin/__tests__/PluginManageDialog.test.tsx
-    - frontend/src/components/admin/__tests__/PluginManageWorkspace.test.tsx
-    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
+    - frontend/src/components/admin/__tests__/PluginPreviewDialog.test.tsx
+    - frontend/src/components/admin/adminListSort.ts
+    - frontend/src/components/admin/adminTagUtils.ts
+    - frontend/src/components/admin/channelManageDialogShared.ts
+    - frontend/src/components/admin/channelManageStateUtils.ts
     - frontend/src/components/admin/pluginManageDialogShared.ts
     - frontend/src/components/admin/pluginManageStateUtils.ts
-    - frontend/src/hooks/usePluginManageController.ts
-    - frontend/src/hooks/usePluginManageDialogState.ts
-    - frontend/src/types/api.ts
-    - docs/readme_2606.md
-
-- [2026-06-09 17:46] feat(sidhub): 展开详情资源为独立搜索结果
-  - Body: SidHub 详情页资源按磁力、百度、夸克、迅雷、UC 等分组解析，并为每条资源生成独立结果、元数据和下载能力。同步补充缓存键与前端搜索参数同步测试，保留一份真实响应样本用于排查。
-  - Files:
-    - backend/plugin/sidhub/sidhub.go
-    - backend/plugin/sidhub/sidhub_test.go
-    - backend/service/search_response_builder_test.go
-    - backend/util/cache/cache_key.go
-    - backend/util/cache/cache_key_test.go
-    - frontend/src/hooks/__tests__/useSearchUrlSync.test.tsx
-    - frontend/src/hooks/useSearchUrlSync.ts
-    - sidhub-search-response-148.json
-    - docs/readme_2606.md
-
-- [2026-06-12 21:51] fix(hot-ranking): 归一化热榜类型空值避免渲染崩溃
-  - Body: 热榜映射在缺少类型数据时改为返回空数组，前端热门卡片与高亮区也统一对 `null` 做兜底处理。补充后端与前端测试，覆盖空类型数组的渲染场景。
-  - Files:
-    - backend/service/hot_ranking_mapper.go
-    - backend/service/hot_ranking_mapper_test.go
-    - frontend/src/components/trending/HotHighlightGrid.tsx
-    - frontend/src/components/trending/HotMediaCard.tsx
-    - frontend/src/components/trending/__tests__/HotHighlightGrid.test.tsx
-    - frontend/src/components/trending/__tests__/HotMediaCard.test.tsx
-    - frontend/src/types/hotRanking.ts
-    - docs/readme_2606.md
-
-- [2026-06-12 22:13] ci(github-actions): 调整 Docker 构建工作流认证方式
-  - Body: Docker 构建工作流改用 `github.actor` 和 `GITHUB_TOKEN` 完成登录，减少对单独 Docker 凭据的依赖。保持现有镜像构建流程不变，只收敛认证来源。
-  - Files:
-    - .github/workflows/docker_ci.yml
-    - docs/readme_2606.md
-
-- [2026-06-12 23:06] fix(frontend): 增强首页夜间主题对比层级
-  - Body: 首页搜索框快捷词与信任条在夜间主题下补足更高对比度的背景、边框与文字色，避免浅色样式在深色背景中发虚。补充首页与搜索框测试，覆盖夜间主题胶囊样式。
-  - Files:
-    - frontend/src/components/SearchBox.tsx
-    - frontend/src/components/__tests__/SearchBox.test.tsx
-    - frontend/src/pages/Home.tsx
-    - frontend/src/pages/__tests__/Home.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-12 23:53] style(frontend): 优化多个前端组件在深色模式下的背景色与边框透明度样式
-  - Body: 统一调整了深色模式下页面的背景色、边框以及悬停状态的透明度，以提升整体视觉层次感。同时更新了关联页面的单元测试断言，确保渲染结果的一致性。
-  - Files:
-    - frontend/src/components/account/AccountHeroBanner.tsx
-    - frontend/src/components/account/AccountOverviewHighlights.tsx
-    - frontend/src/components/account/AccountOverviewPanel.tsx
-    - frontend/src/components/account/AccountSecurityPanel.tsx
-    - frontend/src/components/account/AccountWorkspaceShell.tsx
-    - frontend/src/components/account/accountDesign.ts
-    - frontend/src/components/admin/AdminDataTable.tsx
-    - frontend/src/components/admin/AdminSearchInput.tsx
-    - frontend/src/components/admin/AdminTagMultiSelect.tsx
-    - frontend/src/components/admin/AdminUsersView.tsx
-    - frontend/src/components/admin/AdminWorkspacePageFrame.tsx
-    - frontend/src/components/admin/AnnouncementManagement.tsx
-    - frontend/src/components/admin/ApplePagination.tsx
-    - frontend/src/components/admin/AppleUserTable.tsx
-    - frontend/src/components/admin/BatchActionsBar.tsx
-    - frontend/src/components/admin/ChannelManagementView.tsx
-    - frontend/src/components/admin/PluginManageWorkspace.tsx
-    - frontend/src/components/admin/PluginManagementView.tsx
-    - frontend/src/components/admin/Sidebar.tsx
-    - frontend/src/components/admin/StatsCard.tsx
-    - frontend/src/components/admin/SystemInfoView.tsx
-    - frontend/src/components/admin/SystemSettingsView.tsx
-    - frontend/src/components/admin/TableFilterDropdown.tsx
-    - frontend/src/components/admin/__tests__/ChannelManagementView.test.tsx
-    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
-    - frontend/src/components/admin/__tests__/Sidebar.test.tsx
-    - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
-    - frontend/src/components/admin/adminDensity.ts
-    - frontend/src/components/admin/adminDesign.ts
-    - frontend/src/components/admin/adminDropdown.ts
-    - frontend/src/components/trending/HotHero.tsx
-    - frontend/src/components/trending/HotHighlightGrid.tsx
-    - frontend/src/components/trending/HotMediaCard.tsx
-    - frontend/src/components/trending/HotSectionSummary.tsx
-    - frontend/src/components/trending/hotToolbarTabStyles.ts
-    - frontend/src/components/ui/SegmentedControl.tsx
-    - frontend/src/components/ui/button.tsx
-    - frontend/src/pages/DisclaimerPage.tsx
-    - frontend/src/pages/HotPage.tsx
-    - frontend/src/pages/__tests__/AccountPage.test.tsx
-    - frontend/src/pages/__tests__/DisclaimerPage.test.tsx
-    - frontend/src/pages/__tests__/HotPage.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-13 00:58] refactor(plugin): 移除失效的搜索插件并清理关联配置
-  - Body: 移除了 libvio, api52, pan666 等 15 个因站点失效或无法访问的搜索插件，并同步清理了这些插件的单元测试、相关注册配置以及异常频道环境变量。同时添加了 URL 可用性检测的临时测试脚本。
-  - Footer: 破坏性变更: 移除了 15 个内置搜索插件，对应搜索源将不再提供服务
-  - Files:
-    - .env.example
-    - backend/main.go
-    - backend/plugin/api52/api52.go
-    - backend/plugin/api52/api52_test.go
-    - backend/plugin/ash/ash.go
-    - backend/plugin/ash/html结构分析.md
-    - backend/plugin/cldi/cldi.go
-    - backend/plugin/cldi/html结构分析.md
-    - backend/plugin/djgou/djgou.go
-    - backend/plugin/duoduo/duoduo.go
-    - backend/plugin/duoduo/duoduo_test.go
-    - backend/plugin/duoduo/html结构分析.md
-    - backend/plugin/fox4k/fox4k.go
-    - backend/plugin/fox4k/fox4k_test.go
-    - backend/plugin/fox4k/html结构分析.md
-    - backend/plugin/hdr4k/hdr4k.go
-    - backend/plugin/hdr4k/hdr4k_test.go
-    - backend/plugin/jikepan/jikepan.go
-    - backend/plugin/jikepan/jikepan_test.go
-    - backend/plugin/kanjuba/kanjuba.go
-    - backend/plugin/kanjuba/kanjuba_test.go
-    - backend/plugin/libvio/html结构分析.md
-    - backend/plugin/libvio/libvio.go
-    - backend/plugin/libvio/libvio_test.go
-    - backend/plugin/pan666/pan666.go
-    - backend/plugin/pan666/pan666_test.go
-    - backend/plugin/qupansou/qupansou.go
-    - backend/plugin/qupansou/qupansou_test.go
-    - backend/plugin/test_results.txt
-    - backend/plugin/xuexizhinan/html结构分析.md
-    - backend/plugin/xuexizhinan/xuexizhinan.go
-    - backend/plugin/xuexizhinan/xuexizhinan_test.go
-    - backend/plugin/yuhuage/yuhuage.go
-    - backend/plugin/zhizhen/zhizhen.go
-    - backend/plugin/zhizhen/zhizhen_test.go
-    - backend/service/plugin_catalog_service_test.go
-    - backend/tools/pansou_health_check/main.go
-    - backend/tools/pansou_search_smoke/main.go
-    - backend/tools/validate_plugin_manifests.go
-    - scratch/djgou.html
-    - scratch/remove_imports.py
-    - scratch/test_djgou.py
-    - scratch/test_libvio.py
-    - scratch/test_urls.py
-    - scratch/update_channels.py
-    - test_urls.py
-    - docs/readme_2606.md
-
-- [2026-06-13 01:21] feat(auth): 优化注册流程支持用户名查重与自动登录
-  - Body: 重构了注册页面的交互流程，增加用户名的实时查重校验与防抖处理。注册成功后将通过返回的令牌实现自动登录。同时在后端支持通过环境变量自定义用户名与密码的长度限制，并新增了对应的查重接口。
-  - Files:
-    - backend/api/controller/auth_controller.go
-    - backend/api/middleware.go
-    - backend/api/router_auth.go
-    - backend/config/config.go
-    - backend/service/auth_service.go
-    - frontend/src/pages/RegisterPage.tsx
-    - frontend/src/services/authService.ts
-    - docs/readme_2606.md
-
-- [2026-06-13 01:28] style(frontend): 清理无用的导入与未使用的异常变量
-  - Body: 移除了 RegisterPage 中未使用的异常变量以及 authService 中多余的类型导入，修复相关的 lint 警告。
-  - Files:
-    - frontend/src/pages/RegisterPage.tsx
-    - frontend/src/services/authService.ts
-    - docs/readme_2606.md
-
-- [2026-06-13 06:08] feat(auth): 改进访问令牌存储机制并统一账户密码长度策略
-  - Body: 移除了前端本地存储中的短效访问令牌以提升安全性，认证态恢复改为依赖刷新令牌。同时在后端系统配置接口中透出用户与密码的长度限制，并使管理员页面与用户中心统一遵循该动态策略。
-  - Files:
-    - .env.example
-    - README.md
-    - backend/.env.example
-    - backend/api/account_auth_flow_test.go
-    - backend/api/admin_handler.go
-    - backend/api/controller/auth_controller.go
-    - backend/api/rate_limiter.go
-    - backend/api/refresh_token_handler.go
-    - backend/api/router_auth.go
-    - backend/api/system_settings_handler.go
-    - backend/api/system_settings_handler_test.go
-    - backend/api/user_handler.go
-    - backend/service/auth_errors.go
-    - backend/service/auth_service.go
-    - backend/service/auth_service_test.go
-    - backend/service/user_service.go
-    - docs/2026-06-07-next-optimization-development-plan.md
-    - docs/2026-06-07-next-optimization-roadmap.md
-    - docs/2026-06-08-built-in-plugin-center-development-plan.md
-    - docs/2026-06-13-account-center-optimization-development-plan.md
-    - docs/2026-06-13-auth-login-register-optimization-development-plan.md
-    - docs/2026-06-13-auth-token-storage-migration-stage1.md
-    - frontend/src/components/__tests__/MobileMenu.test.tsx
-    - frontend/src/components/__tests__/Navbar.test.tsx
-    - frontend/src/components/account/AccountSecurityPanel.tsx
-    - frontend/src/components/account/__tests__/passwordValidation.test.ts
-    - frontend/src/components/account/passwordValidation.ts
-    - frontend/src/components/admin/AdminTagMultiSelect.tsx
-    - frontend/src/components/admin/CreateUserDialog.tsx
-    - frontend/src/components/admin/EditUserDialog.tsx
-    - frontend/src/components/admin/ResetPasswordDialog.tsx
-    - frontend/src/components/admin/TableFilterDropdown.tsx
-    - frontend/src/components/admin/__tests__/CreateUserDialog.test.tsx
-    - frontend/src/components/admin/__tests__/EditUserDialog.test.tsx
-    - frontend/src/components/admin/__tests__/ResetPasswordDialog.test.tsx
-    - frontend/src/components/admin/adminDropdown.ts
-    - frontend/src/components/ui/select.tsx
-    - frontend/src/lib/authPolicy.ts
-    - frontend/src/pages/AccountPage.tsx
-    - frontend/src/pages/RegisterPage.tsx
-    - frontend/src/pages/__tests__/AccountPage.test.tsx
-    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
-    - frontend/src/services/__tests__/authService.test.ts
-    - frontend/src/services/systemSettingsService.ts
-    - frontend/src/stores/__tests__/authStore.test.ts
-    - frontend/src/stores/__tests__/searchAccessStore.test.ts
-    - frontend/src/stores/authStore.ts
-    - frontend/src/stores/searchAccessStore.ts
-    - frontend/src/types/api.ts
-    - docs/readme_2606.md
-
-- [2026-06-13 09:02] fix(search): 修复跨页面搜索跳转时骨架屏丢失与结果残留问题
-  - Body: 优化了从首页热榜等入口跳转搜索时的页面切换逻辑，通过注入强制刷新标记并在搜索控制器与 URL 同步 Hook 中正确处理 `preserveResults` 参数，解决了新搜索请求发出前残留旧搜索结果或不展示骨架屏的问题。
-  - Files:
-    - frontend/src/components/home/TrendingCategories.tsx
-    - frontend/src/hooks/useSearchBoxController.ts
-    - frontend/src/hooks/useSearchUrlSync.ts
-    - docs/readme_2606.md
-
-- [2026-06-13 09:33] fix(search): 修复参数同步测试并完善状态重置逻辑
-  - Body: 修复了引入 `preserveResults: false` 以及 `forceSkeleton` 后导致的搜索组件单元测试失败。同时微调了 Hook 中的同步与导航顺序，确保当状态跳过同步时能正确将请求参数同步到全局 Store，避免搜索状态丢失。
-  - Files:
-    - frontend/src/components/__tests__/SearchBox.test.tsx
-    - frontend/src/hooks/__tests__/useSearchUrlSync.test.tsx
-    - frontend/src/hooks/useSearchBoxController.ts
-    - frontend/src/hooks/useSearchUrlSync.ts
-    - docs/readme_2606.md
-
-- [2026-06-13 21:37] feat(admin): 完善缓存系统配置中心与热榜预热管理
-  - Body: 实现了包含搜索缓存与热榜缓存在内的系统配置界面化，将静态环境变量与硬编码参数重构为支持在线调整的运行时配置。在管理员系统设置页面新增缓存选项卡，支持预热并发、容量、TTL等配置，并允许手动触发全量热榜数据预热或清理操作。
-  - Files:
-    - .env.example
-    - README.md
-    - backend/api/hot_ranking_handler.go
-    - backend/api/router.go
-    - backend/api/router_admin.go
-    - backend/api/system_settings_handler.go
-    - backend/api/system_settings_handler_test.go
-    - backend/cmd/bootstrap/app.go
-    - backend/cmd/bootstrap/server.go
-    - backend/model/system_settings.go
-    - backend/service/cache_runtime_settings.go
-    - backend/service/hot_ranking_cache.go
-    - backend/service/hot_ranking_cache_test.go
-    - backend/service/hot_ranking_preloader.go
-    - backend/service/hot_ranking_preloader_test.go
-    - backend/service/hot_ranking_service.go
-    - backend/service/hot_ranking_service_test.go
-    - backend/service/search_cache.go
-    - backend/service/search_cache_test.go
-    - backend/service/search_executor.go
-    - backend/service/search_executor_test.go
-    - backend/service/system_settings_service.go
-    - backend/service/system_settings_service_test.go
-    - backend/util/cache/cache_key.go
-    - backend/util/cache/cache_key_test.go
-    - docs/2026-06-13-cache-configuration-development-plan.md
-    - docs/2026-06-13-hot-ranking-and-search-cache-plan.md
-    - frontend/src/components/admin/SystemInfoView.tsx
-    - frontend/src/components/admin/SystemSettingsView.tsx
-    - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
-    - frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx
-    - frontend/src/hooks/__tests__/useSystemSettingsController.test.tsx
-    - frontend/src/hooks/useSystemSettingsController.ts
-    - frontend/src/lib/api.ts
-    - frontend/src/lib/systemSettingsCacheOptions.ts
-    - frontend/src/pages/HotPage.tsx
-    - frontend/src/pages/__tests__/HotPage.test.tsx
-    - frontend/src/services/__tests__/hotRankingService.test.ts
-    - frontend/src/services/__tests__/systemSettingsService.test.ts
-    - frontend/src/services/systemSettingsService.ts
-    - docs/readme_2606.md
-
-- [2026-06-13 22:03] fix(admin): 修复缓存配置面板的关联测试及接口超时提示
-  - Body: 修复了前端缓存配置面板的接口传参类型与超时断言失败的问题。同步修复了后端因增加 `IsCacheEnabled` 接口而导致的 Mocks 测试编译错误，确保整个配置面板流程通过所有的单元测试验证。
-  - Files:
-    - backend/api/hot_ranking_handler_test.go
-    - backend/api/system_settings_handler_test.go
-    - backend/service/hot_ranking_preloader_test.go
-    - backend/service/hot_ranking_service_test.go
-    - frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx
-    - frontend/src/lib/__tests__/api.test.ts
-    - frontend/src/services/__tests__/systemSettingsService.test.ts
-    - docs/readme_2606.md
-
-- [2026-06-14 09:16] refactor(config): 收敛默认启用插件清单并补充配置读取的单元测试
-  - Body: 将默认启用的插件列表抽离为全局默认清单 `defaultEnabledPlugins`，统一了环境变量缺失时的加载策略和插件数量默认计算。增加了对应的配置解析单元测试，并在前端测试中提取了缓存设置的工厂函数以提升可维护性。
-  - Files:
-    - Dockerfile
-    - README.md
-    - backend/.env.example
-    - backend/config/config.go
-    - backend/config/config_test.go
-    - frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-14 11:25] chore(repo): 拆分核心服务单体文件并清理测试残留文件
-  - Body: 将庞大的后台配置与搜索服务文件按领域模型进行了拆分（如 `config_auth.go`、`search_scoring.go` 等），提升代码可读性与内聚度。清理了开发过程中残留的 `scratch/` 测试脚本及测试响应样本，同时更新了忽略规则与部署文档。
-  - Files:
-    - .env.example
-    - .gitignore
-    - .impeccable/live/config.json
-    - AGENTS.md
-    - DESIGN.md
-    - Dockerfile
-    - backend/config/config.go
-    - backend/config/config_auth.go
-    - backend/config/config_env.go
-    - backend/config/config_redis.go
-    - backend/config/config_tmdb.go
-    - backend/service/search_facets.go
-    - backend/service/search_response_builder.go
-    - backend/service/search_scoring.go
-    - backend/service/search_title_extract.go
-    - scratch/djgou.html
-    - scratch/remove_imports.py
-    - scratch/test_djgou.py
-    - scratch/test_libvio.py
-    - scratch/test_urls.py
-    - scratch/update_channels.py
-    - scripts/gen-production-secrets.sh
-    - sidhub-search-response-148.json
-    - test_urls.py
-    - docs/readme_2606.md
-
-- [2026-06-14 14:47] refactor(config): 移除废弃的环境变量依赖并收敛缓存初始化逻辑
-  - Body: 移除了 `PLUGIN_COUNT`、`CACHE_MAX_SIZE`、`CACHE_TTL` 等无运行时价值的全局环境变量，并将默认并发计算逻辑变更为基于启用的插件数推导。统一缓存参数的获取入口，只保留全局缓存路径开关，同时在前后端相关服务和测试套件中清理了这些多余变量的依赖，使 `.env` 的配置语义更加清晰。
-  - Files:
-    - .env.example
-    - Dockerfile
-    - README.md
-    - backend/api/admin_handler.go
-    - backend/cmd/bootstrap/server.go
-    - backend/config/config.go
-    - backend/config/config_env.go
-    - backend/config/config_test.go
-    - backend/plugin/weibo/weibo.go
-    - backend/service/system_settings_service.go
-    - docs/2026-06-14-env-config-governance-development-plan.md
-    - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
-    - frontend/src/types/api.ts
-    - scripts/build.sh
-    - docs/readme_2606.md
-
-- [2026-06-14 22:41] feat(search): 优化搜索启动台体验并新增 SeedHub 扫码转存支持
-  - Body: 引入静态化配置驱动的启动台预设词组，优化了首页和空白搜索状态下的搜索引导体验；重构了搜索过滤器面板为高级弹窗侧边栏。同时为 SeedHub 插件新增了扫码转存 API 与解析映射逻辑，支持前端动态刷新与展示失效/待扫描二维码状态，完善全场景异常状态处理。
-  - Files:
-    - backend/api/filter_test.go
-    - backend/api/handler.go
-    - backend/api/router.go
-    - backend/api/scan_transfer_handler.go
-    - backend/api/scan_transfer_handler_test.go
-    - backend/api/search_filter_refresh_test.go
-    - backend/model/response.go
-    - backend/plugin/sidhub/sidhub.go
-    - backend/plugin/sidhub/sidhub_test.go
-    - backend/service/search_response_builder.go
-    - backend/service/search_response_builder_test.go
-    - docs/2026-06-14-search-launchpad-optimization-development-plan.md
-    - docs/2026-06-14-seedhub-parser-scenario-matrix-development-plan.md
-    - docs/2026-06-14-seedhub-qr-transfer-support-development-plan.md
-    - docs/2026-06-14-seedhub-qr-transfer-support-implementation-plan.md
-    - frontend/src/components/PasswordModal.tsx
-    - frontend/src/components/SearchAdvancedFilterPanel.tsx
-    - frontend/src/components/SearchResults.tsx
-    - frontend/src/components/SearchUnifiedFilterCard.tsx
-    - frontend/src/components/__tests__/PasswordModal.test.tsx
-    - frontend/src/components/__tests__/SearchAdvancedFilterPanel.test.tsx
-    - frontend/src/components/__tests__/SearchResults.test.tsx
-    - frontend/src/components/__tests__/SearchUnifiedFilterCard.test.tsx
+    - frontend/src/components/admin/previewFilters.ts
     - frontend/src/components/home/SearchResultGridCard.tsx
     - frontend/src/components/home/SearchResultListItem.tsx
-    - frontend/src/components/resource-detail/ResourceDetailActionPanel.tsx
+    - frontend/src/components/home/SearchResultsEmptyState.tsx
+    - frontend/src/components/home/SearchResultsToolbar.tsx
+    - frontend/src/components/home/platformThemes.ts
+    - frontend/src/components/resource-detail/ResourceDetailHero.tsx
     - frontend/src/components/resource-detail/ResourceDetailLinksSection.tsx
+    - frontend/src/components/search-box/SearchHistoryPanel.tsx
+    - frontend/src/components/search-box/SearchInput.tsx
+    - frontend/src/components/search-results/SearchResultsHeader.tsx
     - frontend/src/components/search-results/SearchResultsState.tsx
-    - frontend/src/components/search/SearchEmptyWorkbench.tsx
+    - frontend/src/components/search-results/useSearchResultsPresentation.ts
     - frontend/src/components/search/searchLaunchpadPresets.ts
     - frontend/src/components/search/searchLaunchpadTypes.ts
-    - frontend/src/components/trending/__tests__/HotMediaCard.test.tsx
+    - frontend/src/hooks/useAdminUsers.ts
+    - frontend/src/hooks/useAnnouncementManagement.ts
+    - frontend/src/hooks/useChannelManageController.ts
+    - frontend/src/hooks/usePluginManageController.ts
+    - frontend/src/hooks/usePluginManageDialogState.ts
     - frontend/src/hooks/useSearchUrlSync.ts
-    - frontend/src/pages/HotPage.tsx
+    - frontend/src/lib/__tests__/api.test.ts
+    - frontend/src/lib/__tests__/resourceSnapshot.test.ts
+    - frontend/src/lib/accountPreferences.ts
+    - frontend/src/lib/api.ts
+    - frontend/src/lib/authRefreshManager.ts
+    - frontend/src/lib/resourceSnapshot.ts
     - frontend/src/pages/LoginPage.tsx
     - frontend/src/pages/ResourceDetailPage.tsx
     - frontend/src/pages/SearchPage.tsx
-    - frontend/src/pages/__tests__/HotPage.test.tsx
     - frontend/src/pages/__tests__/ResourceDetailPage.test.tsx
-    - frontend/src/pages/__tests__/SearchPage.test.tsx
-    - frontend/src/services/__tests__/searchService.test.ts
+    - frontend/src/services/announcementService.ts
+    - frontend/src/services/authService.ts
     - frontend/src/services/searchService.ts
+    - frontend/src/services/userService.ts
     - frontend/src/stores/__tests__/searchStore.test.ts
+    - frontend/src/stores/announcementStore.ts
     - frontend/src/stores/searchStore.ts
+    - frontend/src/types/admin.ts
+    - frontend/src/types/announcement.ts
     - frontend/src/types/api.ts
-    - frontend/src/types/resource.ts
+    - frontend/src/types/auth.ts
+    - frontend/src/types/channel.ts
+    - frontend/src/types/common.ts
+    - frontend/src/types/plugin.ts
+    - frontend/src/types/system.ts
+    - frontend/src/types/user.ts
     - frontend/src/utils/__tests__/resourceDisplay.test.ts
+    - frontend/src/utils/__tests__/searchResultSorter.test.ts
+    - frontend/src/utils/cloudTypeUtils.ts
     - frontend/src/utils/resourceDisplay.ts
     - frontend/src/utils/searchFilters.ts
-    - docs/readme_2606.md
-
-[2026-06-15 14:48] feat(trending): 新增热榜卡片布局切换与展示优化
-  - Body: 为热榜页面补充双列/单列布局切换，并同步调整卡片、骨架屏和测试，提升内容浏览密度与交互一致性。
-  - Files:
-    - frontend/src/components/trending/HotMediaCard.tsx
-    - frontend/src/components/trending/HotMediaGrid.tsx
-    - frontend/src/components/trending/HotPageSkeleton.tsx
-    - frontend/src/components/trending/HotSectionSummary.tsx
-    - frontend/src/components/trending/__tests__/HotMediaCard.test.tsx
-    - frontend/src/pages/HotPage.tsx
-    - frontend/src/pages/__tests__/HotPage.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-15 21:59] feat(hot-ranking): 支持热门榜单按时间、评分及热度排序
-  - Body: 实现热门榜单多维度排序功能，支持按时间、评分及热度切换排序。前端新增排序菜单控件，重构了内容卡片的热度与评分展示方式。
-  - Files:
-    - backend/service/hot_ranking_service.go
-    - backend/service/hot_ranking_service_test.go
-    - frontend/package.json
-    - frontend/pnpm-lock.yaml
-    - frontend/src/components/trending/HotMediaCard.tsx
-    - frontend/src/components/trending/HotSectionSummary.tsx
-    - frontend/src/components/trending/__tests__/HotMediaCard.test.tsx
-    - frontend/src/components/trending/__tests__/HotSectionSummary.test.tsx
-    - frontend/src/components/ui/dropdown-menu.tsx
-    - frontend/src/pages/__tests__/HotPage.test.tsx
-    - frontend/vite.config.ts
-    - docs/readme_2606.md
-
-- [2026-06-16 09:45] feat(hot-ranking): 优化高分榜单排序策略并增强容错处理
-  - Body: 将热榜的评分排序逻辑由原始评分升级为贝叶斯加权评分，并在后端发现 API 中增加过滤条件以提高榜单质量。前端同步将“按评分”文案优化为“近期高分”，同时增加对空类型数组的兜底处理以避免潜在的渲染崩溃。此外清理了过期及已完成的开发计划文档。
-  - Files:
-    - backend/service/hot_ranking_cache.go
-    - backend/service/hot_ranking_cache_test.go
-    - backend/service/hot_ranking_preloader.go
-    - backend/service/hot_ranking_service.go
-    - backend/service/hot_ranking_service_test.go
-    - docs/2026-06-13-account-center-optimization-development-plan.md
-    - docs/2026-06-13-auth-login-register-optimization-development-plan.md
-    - docs/2026-06-13-auth-token-storage-migration-stage1.md
-    - docs/2026-06-13-cache-configuration-development-plan.md
-    - docs/2026-06-13-hot-ranking-and-search-cache-plan.md
-    - docs/2026-06-14-env-config-governance-development-plan.md
-    - docs/2026-06-14-search-launchpad-optimization-development-plan.md
-    - docs/2026-06-14-seedhub-parser-scenario-matrix-development-plan.md
-    - docs/2026-06-14-seedhub-qr-transfer-support-development-plan.md
-    - docs/2026-06-14-seedhub-qr-transfer-support-implementation-plan.md
-    - frontend/src/components/trending/HotSectionSummary.tsx
-    - frontend/src/components/trending/HotToolbar.tsx
-    - frontend/src/components/trending/__tests__/HotSectionSummary.test.tsx
-    - frontend/src/components/trending/__tests__/HotToolbar.test.tsx
-    - frontend/src/pages/HotPage.tsx
-    - frontend/src/pages/__tests__/HotPage.test.tsx
-    - frontend/src/services/__tests__/hotRankingService.test.ts
-    - frontend/src/services/hotRankingService.ts
-    - docs/readme_2606.md
-
-- [2026-06-16 18:21] feat(account): 重构个人中心工作台并新增本地偏好设置
-  - Body: 将原有个人中心重设计为账号概览、偏好设置和账号安全三个独立模块。新增个人中心资料加载错误状态及重试机制，添加了纯前端实现的偏好设置能力。优化了修改密码的动态校验逻辑与体验提示，并在导航与布局上实现了新的信息架构，同时新增了相关的重设计方案。
-  - Files:
-    - PRODUCT.md
-    - README.md
-    - backend/api/account_auth_flow_test.go
-    - backend/api/controller/auth_controller.go
-    - backend/service/auth_service.go
-    - docs/个人中心重设计开发计划.md
-    - docs/个人中心重设计方案.md
-    - frontend/src/App.tsx
-    - frontend/src/components/AnnouncementProvider.tsx
-    - frontend/src/components/SearchResults.tsx
-    - frontend/src/components/__tests__/AnnouncementProvider.test.tsx
-    - frontend/src/components/account/AccountErrorState.tsx
-    - frontend/src/components/account/AccountOverviewHighlights.tsx
-    - frontend/src/components/account/AccountOverviewPanel.tsx
-    - frontend/src/components/account/AccountPreferencesPanel.tsx
-    - frontend/src/components/account/AccountSecurityPanel.tsx
-    - frontend/src/components/account/AccountWorkspaceShell.tsx
-    - frontend/src/components/account/accountPreferences.ts
-    - frontend/src/components/account/accountTypes.ts
-    - frontend/src/components/trending/HotSectionSummary.tsx
-    - frontend/src/components/trending/HotToolbar.tsx
-    - frontend/src/components/trending/__tests__/HotToolbar.test.tsx
-    - frontend/src/components/ui/apple-switch.tsx
-    - frontend/src/hooks/useSearchBoxController.ts
-    - frontend/src/hooks/useSearchUrlSync.ts
-    - frontend/src/lib/accountPreferences.ts
-    - frontend/src/pages/AccountPage.tsx
-    - frontend/src/pages/HotPage.tsx
-    - frontend/src/pages/SearchPage.tsx
-    - frontend/src/pages/__tests__/AccountPage.test.tsx
-    - frontend/src/pages/__tests__/SearchPage.test.tsx
-    - frontend/src/stores/searchStore.ts
-    - frontend/src/types/api.ts
-    - docs/readme_2606.md
-
-- [2026-06-16 18:45] fix(auth): 禁止新密码包含空白字符
-  - Body: 统一注册、个人中心修改密码、管理员创建用户和管理员重置密码的新密码规则，前端输入与粘贴时会过滤空白字符并更新提示文案，后端服务层新增统一校验以拒绝包含空格、Tab、换行或全角空格的新密码。登录入口保持精确密码比对，不过滤历史密码输入。
-  - Files:
-    - README.md
-    - .env.example
-    - backend/api/account_auth_flow_test.go
-    - backend/api/controller/auth_controller.go
-    - backend/service/auth_service.go
-    - backend/service/auth_service_test.go
-    - backend/service/password_policy.go
-    - backend/service/user_service.go
-    - backend/service/user_service_test.go
-    - frontend/src/components/account/passwordValidation.ts
-    - frontend/src/components/account/__tests__/passwordValidation.test.ts
-    - frontend/src/components/admin/CreateUserDialog.tsx
-    - frontend/src/components/admin/ResetPasswordDialog.tsx
-    - frontend/src/components/admin/__tests__/CreateUserDialog.test.tsx
-    - frontend/src/components/admin/__tests__/ResetPasswordDialog.test.tsx
-    - frontend/src/pages/AccountPage.tsx
-    - frontend/src/pages/RegisterPage.tsx
-    - frontend/src/pages/__tests__/AccountPage.test.tsx
-    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-16 22:50] fix(auth): 统一所有密码输入框空格规则与显示切换
-  - Body: 将用户登录、管理员登录、注册、个人中心修改密码、管理员创建用户和重置密码的密码输入框统一接入“密码长度需在 X-Y 个字符之间，不能包含空格”的提示与空白字符过滤。个人中心修改密码表单新增当前密码、新密码、确认新密码的显示/隐藏密码图标。
-  - Files:
-    - frontend/src/components/account/AccountSecurityPanel.tsx
-    - frontend/src/components/account/passwordValidation.ts
-    - frontend/src/components/admin/CreateUserDialog.tsx
-    - frontend/src/components/admin/ResetPasswordDialog.tsx
-    - frontend/src/components/admin/__tests__/CreateUserDialog.test.tsx
-    - frontend/src/components/admin/__tests__/ResetPasswordDialog.test.tsx
-    - frontend/src/pages/AccountPage.tsx
-    - frontend/src/pages/AdminLogin.tsx
-    - frontend/src/pages/LoginPage.tsx
-    - frontend/src/pages/RegisterPage.tsx
-    - frontend/src/pages/__tests__/AccountPage.test.tsx
-    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-16 23:02] feat(auth): 新增密码禁空策略并支持表单自动剔除空白符
-  - Body: 强化了账号密码的输入校验策略，后端新增创建与修改密码时禁止包含空格的强制限制（旧版历史密码验证不受影响）。前端同步增加密码输入去空格与验证提示，并在注册与登录提交前自动清理输入中的无意识空白字符，同时补充了完整的单元测试覆盖。
-  - Files:
-    - .env.example
-    - README.md
-    - backend/api/account_auth_flow_test.go
-    - backend/api/controller/auth_controller.go
-    - backend/service/auth_service.go
-    - backend/service/auth_service_test.go
-    - backend/service/password_policy.go
-    - backend/service/user_service.go
-    - backend/service/user_service_test.go
-    - frontend/src/components/account/AccountSecurityPanel.tsx
-    - frontend/src/components/account/__tests__/passwordValidation.test.ts
-    - frontend/src/components/account/passwordValidation.ts
-    - frontend/src/components/admin/CreateUserDialog.tsx
-    - frontend/src/components/admin/ResetPasswordDialog.tsx
-    - frontend/src/components/admin/__tests__/CreateUserDialog.test.tsx
-    - frontend/src/components/admin/__tests__/ResetPasswordDialog.test.tsx
-    - frontend/src/pages/AccountPage.tsx
-    - frontend/src/pages/AdminLogin.tsx
-    - frontend/src/pages/LoginPage.tsx
-    - frontend/src/pages/RegisterPage.tsx
-    - frontend/src/pages/__tests__/AccountPage.test.tsx
-    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-18 09:53] feat(frontend): 重构云盘筛选组件并支持单双击快捷交互
-  - Body: 抽离独立的 CloudTypeChipGroup 组件以复用云盘来源筛选逻辑。新增了单击切换状态、双击独占选中的快捷操作，并优化了无障碍标签与键盘焦点反馈。同时清理了无用的 magicui/cool-mode 动画组件及测试中过期的交互断言。
-  - Files:
-    - docs/readme_2605.md
-    - frontend/src/components/CloudTypeChipGroup.tsx
-    - frontend/src/components/CloudTypeFilter.tsx
-    - frontend/src/components/__tests__/CloudTypeFilter.test.tsx
-    - frontend/src/components/__tests__/SearchUnifiedFilterCard.test.tsx
-    - frontend/src/components/account/AccountPreferencesPanel.tsx
-    - frontend/src/components/magicui/cool-mode.tsx
-    - frontend/src/pages/__tests__/AccountPage.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-18 10:01] refactor(frontend): 移除本地偏好中的全局公告开关并清理过期文档
-  - Body: 由于全局公告不再支持本地手动静默，从前端的个人偏好设置模块和关联的状态管理中彻底移除了“公告提醒”选项。移除了相关的组件渲染逻辑和存储状态，修正了关联单元测试，同时一并删除了已完成使命的旧版个人中心重设计方案文档。
-  - Files:
-    - docs/个人中心重设计开发计划.md
-    - docs/个人中心重设计方案.md
-    - frontend/src/components/AnnouncementProvider.tsx
-    - frontend/src/components/__tests__/AnnouncementProvider.test.tsx
-    - frontend/src/components/account/AccountPreferencesPanel.tsx
-    - frontend/src/lib/accountPreferences.ts
-    - frontend/src/pages/__tests__/AccountPage.test.tsx
-    - frontend/src/pages/__tests__/SearchPage.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-18 16:28] feat(admin): 独立管理员系统用户统计与活跃数据展示接口
-  - Body: 新增了独立的 /admin/users/stats 接口以获取全量用户的总数、本月新增、近7日活跃与30日沉默数据。前端同步将用户管理工作台的统计数据源从依赖当前页面切片计算，重构为独立挂载展示，同时避免了分页对统计口径的污染，并补充了相关的统计测试用例。
-  - Files:
-    - backend/api/admin_routes_test.go
-    - backend/api/router_admin.go
-    - backend/api/user_handler.go
-    - backend/service/user_service.go
-    - backend/service/user_service_test.go
-    - frontend/src/components/admin/AdminUsersView.tsx
-    - frontend/src/components/admin/SystemInfoView.tsx
-    - frontend/src/components/admin/__tests__/AdminUsersView.test.tsx
-    - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
-    - frontend/src/hooks/__tests__/useAdminUsers.test.tsx
-    - frontend/src/hooks/useAdminUsers.ts
-    - frontend/src/services/__tests__/userService.test.ts
-    - frontend/src/services/userService.ts
-    - frontend/src/types/api.ts
-    - docs/readme_2606.md
-
-- [2026-06-18 19:39] refactor(admin): 拆分重构管理员系统设置面板布局与交互
-  - Body: 将原先单页平铺的系统设置面板按场景重构为账号准入、搜索体验、运行参数、缓存预热和外部服务等多个独立模块。新增了左侧导航与锚点布局，优化了长表单下的浏览与保存体验，同时后端同步扩展了部分细粒度配置项的读写支持。在侧边栏移除了冗余的工作区底部说明。
-  - Files:
-    - backend/api/router_admin.go
-    - backend/api/system_settings_handler.go
-    - backend/api/system_settings_handler_test.go
-    - backend/cmd/bootstrap/app.go
-    - backend/model/system_settings.go
-    - backend/service/system_settings_service.go
-    - backend/service/system_settings_service_test.go
-    - backend/util/http_util.go
-    - frontend/src/components/admin/Sidebar.tsx
-    - frontend/src/components/admin/SystemInfoView.tsx
-    - frontend/src/components/admin/SystemSettingsView.tsx
-    - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
-    - frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx
-    - frontend/src/components/admin/system-settings/AccountAccessSettingsPanel.tsx
-    - frontend/src/components/admin/system-settings/CacheSettingsPanel.tsx
-    - frontend/src/components/admin/system-settings/ExternalServicesSettingsPanel.tsx
-    - frontend/src/components/admin/system-settings/RuntimeSettingsPanel.tsx
-    - frontend/src/components/admin/system-settings/SearchExperienceSettingsPanel.tsx
-    - frontend/src/components/admin/system-settings/SiteDisplaySettingsPanel.tsx
-    - frontend/src/components/admin/system-settings/SystemSettingsLayout.tsx
-    - frontend/src/components/admin/system-settings/SystemSettingsSectionNav.tsx
-    - frontend/src/components/admin/system-settings/panelStyles.ts
-    - frontend/src/components/admin/system-settings/types.ts
-    - frontend/src/components/ui/tabs-6.tsx
-    - frontend/src/hooks/__tests__/useSystemSettingsController.test.tsx
-    - frontend/src/hooks/useSystemSettingsController.ts
-    - frontend/src/services/__tests__/systemSettingsService.test.ts
-    - frontend/src/services/systemSettingsService.ts
-    - docs/readme_2606.md
-
-- [2026-06-18 20:10] feat(frontend): 引入 tubelight 动态发光导航栏组件
-  - Body: 将原有顶部桌面主导航重构为抽离的 TubelightNavbar 组件，新增了基于 Framer Motion 的平滑过渡灯管动效。在用户切换导航路由时，提供高亮光效与模糊辉光反馈，增强了导航状态的可视化表现，同时提升了组件的可复用性。
-  - Files:
-    - frontend/src/components/Navbar.tsx
-    - frontend/src/components/__tests__/Navbar.test.tsx
-    - frontend/src/components/ui/tubelight-navbar.tsx
-    - docs/readme_2606.md
-
-- [2026-06-18 21:38] style(frontend): 优化管理员页面与首页向导视觉设计
-  - Body: 升级了管理员界面各个卡片模块的阴影和边框圆角，统一与个人中心的玻璃质感设计语言，调整了 Admin Shell 的深色背景渐变层。同时重构了首页功能介绍步骤卡片的视觉表现，添加了带有渐变徽标与环绕光效的高级互动样式（glass-card-premium）。
-  - Files:
-    - frontend/src/components/admin/Sidebar.tsx
-    - frontend/src/components/admin/StatsCard.tsx
-    - frontend/src/components/admin/SystemInfoView.tsx
-    - frontend/src/components/admin/__tests__/Sidebar.test.tsx
-    - frontend/src/components/admin/adminDensity.ts
-    - frontend/src/components/admin/adminDesign.ts
-    - frontend/src/pages/Admin.tsx
-    - frontend/src/pages/Home.tsx
-    - docs/readme_2606.md
-
-- [2026-06-19 00:37] style(frontend): 优化个人中心按钮样式并统一骨架屏布局高度
-  - Body: 升级了个人中心模块的主按钮视觉样式，应用了统一定义的蓝底高阴影设计与动态缩放交互效果。扩展了分段控制器（SegmentedControl）以支持深色模式下具有强发光和圆角反馈的 pill 变体。此外修复了全局懒加载路由占位符（RouteFallback）的高度坍塌问题，使其在页面加载中能稳定居中对齐，并补充了样式断言测试。
-  - Files:
-    - frontend/src/components/account/AccountErrorState.tsx
-    - frontend/src/components/account/AccountOverviewShowcase.tsx
-    - frontend/src/components/account/AccountPreferencesPanel.tsx
-    - frontend/src/components/account/AccountSecurityPanel.tsx
-    - frontend/src/components/account/accountDesign.ts
-    - frontend/src/components/ui/SegmentedControl.tsx
-    - frontend/src/components/ui/__tests__/SegmentedControl.test.tsx
-    - frontend/src/pages/__tests__/AccountPage.test.tsx
-    - frontend/src/routes/AppRoutes.tsx
-    - frontend/src/routes/__tests__/AppRoutes.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-19 02:27] fix(auth): 优化 Token 过期回退及修改密码后的强制重登录体验
-  - Body: 完善了前端身份验证失效时的状态恢复机制，自动刷新 Token 失败后将主动重定向至登录页以阻断空白残存。在个人中心修改密码成功后强制触发本地登出并跳转重新登录。优化了拦截器层面触发未授权错误时的接口静默熔断表现，避免未登录加载公共页时控制台大量抛红，并同步阻断了失效凭证发起的空资料轮询。
-  - Files:
-    - backend/api/account_auth_flow_test.go
-    - backend/api/user_handler.go
-    - frontend/src/components/AnnouncementProvider.tsx
-    - frontend/src/components/__tests__/AnnouncementProvider.test.tsx
-    - frontend/src/hooks/__tests__/useAutoRefreshToken.test.tsx
-    - frontend/src/hooks/useAutoRefreshToken.ts
-    - frontend/src/pages/AccountPage.tsx
-    - frontend/src/pages/__tests__/AccountPage.test.tsx
-    - frontend/src/stores/__tests__/announcementStore.test.ts
-    - frontend/src/stores/announcementStore.ts
-    - docs/readme_2606.md
-
-- [2026-06-19 09:22] feat(trending): 热门榜单支持未上映资源的状态拦截与提示
-  - Body: 新增了针对热门榜单影视资源的上映状态解析与搜索可用性拦截。现在对于 release_date 为未来日期的影视项目（如未上映电影），榜单卡片会自动置灰搜索入口并显示具体上映倒计时，同时在快捷启动栏展示“暂不可用”的悬浮提示，从而减少用户搜索无效资源的挫败感。
-  - Files:
-    - backend/model/hot_ranking.go
-    - backend/service/hot_ranking_mapper.go
-    - backend/service/hot_ranking_mapper_test.go
-    - backend/service/hot_ranking_service.go
-    - backend/service/hot_ranking_service_test.go
-    - frontend/src/components/search/__tests__/searchLaunchpadPresets.test.ts
-    - frontend/src/components/search/searchLaunchpadPresets.ts
-    - frontend/src/components/trending/HotMediaCard.tsx
-    - frontend/src/components/trending/__tests__/HotMediaCard.test.tsx
-    - frontend/src/pages/HotPage.tsx
-    - frontend/src/pages/__tests__/HotPage.test.tsx
-    - frontend/src/services/__tests__/hotRankingService.test.ts
-    - frontend/src/services/hotRankingService.ts
-    - frontend/src/types/hotRanking.ts
-    - frontend/src/utils/hotRankingAvailability.ts
-    - docs/readme_2606.md
-
-- [2026-06-19 11:50] refactor(optimization): 补齐核心插件测试并拆分前端懒加载边界
-  - Body: 为微博、SuSu、Muou、The Pirate Bay、新剧坊补充不触网的插件契约、清单和解析测试。前端路由统一进入懒加载路径，并将页面过渡、首页动效 Footer 和管理后台工作区拆出主入口。新增兼容路径下线清单，明确旧 API Key、旧缓存键、Deprecated 中间件、历史 refresh token、API 类型兼容导出口和插件 Search 兼容方法的删除条件与验证命令。
-  - Files:
-    - backend/plugin/weibo/weibo_test.go
-    - backend/plugin/susu/susu_test.go
-    - backend/plugin/muou/muou_test.go
-    - backend/plugin/thepiratebay/thepiratebay_test.go
-    - backend/plugin/xinjuc/xinjuc_test.go
-    - frontend/src/routes/AppRoutes.tsx
-    - frontend/src/routes/appRouteUtils.ts
-    - frontend/src/routes/__tests__/AppRoutes.test.tsx
-    - frontend/src/pages/Admin.tsx
-    - docs/compat-deprecation-checklist.md
-    - docs/readme_2606.md
-
-- [2026-06-19 20:04] feat(search): 引入基于 Sidhub 的扫码转存能力与全量插件测试用例覆盖
-  - Body: 完成了对 Sidhub 扫码转存协议（scan_transfer）的全链路支持，包含后端解析映射、缓存穿透标识（refresh=true）与前端优先级展现（将扫码链接自动提权为卡片首选操作），同时完善了相关字段的全局过滤支持。此外，补全了项目中所有未受测插件的核心单元测试，并新增了向后兼容性弃用清单以规范技术债下线流程。
-  - Files:
-    - backend/api/filter.go
-    - backend/api/filter_test.go
-    - backend/plugin/muou/muou_test.go
-    - backend/plugin/sidhub/sidhub.go
-    - backend/plugin/sidhub/sidhub_test.go
-    - backend/plugin/susu/susu_test.go
-    - backend/plugin/thepiratebay/thepiratebay_test.go
-    - backend/plugin/weibo/weibo_test.go
-    - backend/plugin/xinjuc/xinjuc_test.go
-    - backend/service/search_executor.go
-    - backend/service/search_executor_test.go
-    - backend/service/search_response_builder.go
-    - backend/service/search_response_builder_test.go
-    - backend/util/cache/cache_key.go
-    - backend/util/cache/cache_key_test.go
-    - docs/compat-deprecation-checklist.md
-    - docs/readme_2606.md
-    - frontend/package.json
-    - frontend/pnpm-lock.yaml
-    - frontend/src/components/PasswordModal.tsx
-    - frontend/src/components/__tests__/PasswordModal.test.tsx
-    - frontend/src/hooks/useSearchUrlSync.ts
-    - frontend/src/pages/Admin.tsx
-    - frontend/src/pages/__tests__/Admin.test.tsx
-    - frontend/src/pages/__tests__/AdminNavigation.test.tsx
-    - frontend/src/routes/AppRoutes.tsx
-    - frontend/src/routes/__tests__/AppRoutes.test.tsx
-    - frontend/src/routes/appRouteUtils.ts
-    - frontend/src/services/__tests__/searchService.test.ts
-    - frontend/src/services/searchService.ts
-    - frontend/src/utils/__tests__/searchResultSorter.test.ts
     - frontend/src/utils/searchResultSorter.ts
-
-- [2026-06-20 13:09] feat(search): 新增渐进式搜索功能、搜索可观测性指标及相关自动化测试
-  - Body: 1. 后端新增渐进式搜索服务及相关接口，支持搜索指标聚合与展示。2. 前端新增搜索结果工具栏，接入渐进式搜索 API 与状态管理。3. 新增并集成 real-search-smoke 与 E2E 测试链路，完善本地环境测试与数据清理脚本。
-  - Files:
-    - README.md
-    - backend/api/router.go
-    - backend/api/router_admin.go
-    - backend/api/search_progressive_handler.go
-    - backend/model/search_progressive.go
-    - backend/service/search_executor.go
-    - backend/service/search_executor_test.go
-    - backend/service/search_metrics.go
-    - backend/service/search_progressive.go
-    - backend/service/search_progressive_test.go
-    - backend/service/search_service.go
-    - backend/util/pool/worker_pool.go
-    - backend/util/pool/worker_pool_test.go
-    - docs/search-observability.md
-    - frontend/e2e/real-backend.spec.ts
-    - frontend/e2e/test-helpers.ts
-    - frontend/package.json
-    - frontend/playwright.config.ts
-    - frontend/src/components/SearchResults.tsx
-    - frontend/src/components/admin/PluginManagementView.tsx
-    - frontend/src/components/admin/SystemInfoView.tsx
-    - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
-    - frontend/src/components/admin/pluginManageDialogShared.ts
-    - frontend/src/components/home/SearchResultsToolbar.tsx
-    - frontend/src/components/search-results/SearchResultsHeader.tsx
-    - frontend/src/services/searchService.ts
-    - frontend/src/stores/__tests__/searchStore.test.ts
-    - frontend/src/stores/searchStore.ts
-    - frontend/src/types/api.ts
-    - frontend/src/types/search.ts
-    - scripts/local.sh
-    - scripts/tests/cleanup-test-data.sh
-    - scripts/tests/local-quality.sh
-    - scripts/tests/real-search-smoke.sh
+    - frontend/vite.config.ts
     - scripts/tests/release-candidate.sh
-    - docs/readme_2606.md
-
-- [2026-06-20 13:57] fix(search): 优化搜索参数同步与焦点刷新逻辑并清理冗余进度属性
-  - Body: 消费并清除 location state 中的 forceSkeleton 以避免重复触发强制骨架屏，同时优化窗口重新聚焦时的搜索结果刷新逻辑。另外清理了搜索结果组件链路上冗余的渐进式加载进度属性。
-  - Files:
-    - frontend/src/components/SearchResults.tsx
-    - frontend/src/components/__tests__/SearchResults.test.tsx
-    - frontend/src/components/home/SearchResultsToolbar.tsx
-    - frontend/src/components/search-results/SearchResultsHeader.tsx
-    - frontend/src/hooks/__tests__/useSearchUrlSync.test.tsx
-    - frontend/src/hooks/useSearchUrlSync.ts
-    - frontend/src/pages/__tests__/SearchPage.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-20 16:04] feat(trending): 新增热榜页面的结构化懒加载骨架屏
-  - Body: 为热榜路由懒加载配置了专属的结构化骨架屏，在加载时能够保留页面主体布局，避免了通用的全屏居中等待态带来的视觉跳跃。同时更新了 AppRoutes 并补充了对应的测试。
-  - Files:
-    - frontend/src/routes/AppRoutes.tsx
-    - frontend/src/routes/__tests__/AppRoutes.test.tsx
-    - docs/readme_2606.md
-
-- [2026-06-20 16:41] refactor(search): 将首页和搜索空状态的预设关键词改为静态展示标签
-  - Body: 取消首页趋势分类与搜索空白台中的关键词快捷点击搜索能力，将按钮降级为纯文本展示的静态参考标签，避免无意识点击跳出当前浏览上下文，同时更新了相应的组件测试与搜索页级测试断言。
-  - Files:
-    - frontend/src/components/home/TrendingCategories.tsx
-    - frontend/src/components/home/__tests__/TrendingCategories.test.tsx
-    - frontend/src/components/search/SearchEmptyWorkbench.tsx
-    - frontend/src/pages/__tests__/SearchPage.test.tsx
-    - docs/readme_2606.md

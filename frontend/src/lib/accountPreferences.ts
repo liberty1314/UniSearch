@@ -3,7 +3,7 @@ import {
   removeStorage,
   writeJsonStorage,
 } from '@/lib/safeStorage';
-import type { CloudTypeValue, SearchParams } from '@/types/api';
+import type { CloudTypeValue, SearchParams } from "@/types/search";
 
 export type AccountThemePreference = 'system' | 'light' | 'dark';
 export type AccountResultViewPreference = 'merge' | 'list';

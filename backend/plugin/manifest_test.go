@@ -44,8 +44,8 @@ func newManifestTestPlugin() *manifestTestPlugin {
 	return &manifestTestPlugin{BaseAsyncPlugin: base}
 }
 
-func (p *manifestTestPlugin) Search(_ string, _ map[string]interface{}) ([]model.SearchResult, error) {
-	return nil, nil
+func (p *manifestTestPlugin) SearchWithResult(_ string, _ map[string]interface{}) (model.PluginSearchResult, error) {
+	return model.PluginSearchResult{IsFinal: true, Source: p.Name()}, nil
 }
 
 func (p *manifestTestPlugin) AsyncSearch(
@@ -61,8 +61,8 @@ type fallbackManifestTestPlugin struct {
 	*BaseAsyncPlugin
 }
 
-func (p *fallbackManifestTestPlugin) Search(_ string, _ map[string]interface{}) ([]model.SearchResult, error) {
-	return nil, nil
+func (p *fallbackManifestTestPlugin) SearchWithResult(_ string, _ map[string]interface{}) (model.PluginSearchResult, error) {
+	return model.PluginSearchResult{IsFinal: true, Source: p.Name()}, nil
 }
 
 func (p *fallbackManifestTestPlugin) AsyncSearch(

@@ -26,21 +26,25 @@ func (p *progressiveTestPlugin) AsyncSearch(_ string, _ func(*http.Client, strin
 func (p *progressiveTestPlugin) SetMainCacheKey(_ string)   {}
 func (p *progressiveTestPlugin) SetCurrentKeyword(_ string) {}
 func (p *progressiveTestPlugin) SkipServiceFilter() bool    { return false }
-func (p *progressiveTestPlugin) Search(keyword string, _ map[string]interface{}) ([]model.SearchResult, error) {
+func (p *progressiveTestPlugin) SearchWithResult(keyword string, _ map[string]interface{}) (model.PluginSearchResult, error) {
 	if p.delay > 0 {
 		time.Sleep(p.delay)
 	}
 	if p.err != nil {
-		return nil, p.err
+		return model.PluginSearchResult{}, p.err
 	}
-	return []model.SearchResult{{
-		UniqueID: fmt.Sprintf("%s-%s", p.name, keyword),
-		Title:    keyword + " " + p.name + " result",
-		Links: []model.Link{{
-			Type: "mock",
-			URL:  "https://example.com/" + p.name,
+	return model.PluginSearchResult{
+		Results: []model.SearchResult{{
+			UniqueID: fmt.Sprintf("%s-%s", p.name, keyword),
+			Title:    keyword + " " + p.name + " result",
+			Links: []model.Link{{
+				Type: "mock",
+				URL:  "https://example.com/" + p.name,
+			}},
 		}},
-	}}, nil
+		IsFinal: true,
+		Source:  p.name,
+	}, nil
 }
 
 func TestSearchProgressiveEmitsStartedBatchAndComplete(t *testing.T) {

@@ -1,7 +1,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { IoGridOutline, IoListOutline } from "react-icons/io5";
-import type { SearchSourceWarning } from "@/types/api";
+import { Grid2X2, List } from "lucide-react";
+import type { SearchSourceWarning } from "@/types/search";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -135,7 +135,7 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
                     exit={{ opacity: 0, y: -15, scale: 0.8 }}
                     transition={{ duration: 0.2, ease: "circOut" }}
                   >
-                    <IoListOutline className="w-5 h-5 drop-shadow-sm" />
+                    <List className="w-5 h-5 drop-shadow-sm" />
                   </motion.div>
                 ) : (
                   <motion.div
@@ -145,7 +145,7 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
                     exit={{ opacity: 0, y: 15, scale: 0.8 }}
                     transition={{ duration: 0.2, ease: "circOut" }}
                   >
-                    <IoGridOutline className="w-5 h-5 drop-shadow-sm" />
+                    <Grid2X2 className="w-5 h-5 drop-shadow-sm" />
                   </motion.div>
                 )}
               </AnimatePresence>

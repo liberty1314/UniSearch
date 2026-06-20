@@ -1,5 +1,5 @@
 import React from 'react';
-import { IoReloadOutline, IoWifiOutline, IoAlertCircleOutline } from 'react-icons/io5';
+import { CircleAlert, RefreshCw, Wifi } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toStyleVars } from '@/lib/styleVars';
 import BubbleLoader from '@/components/BubbleLoader';
@@ -48,18 +48,18 @@ const LoadingState: React.FC<LoadingStateProps> = ({
       case 'network':
         return (
           <div className="relative">
-            <IoWifiOutline className={cn(currentSize.icon, 'text-blue-500')} />
+            <Wifi className={cn(currentSize.icon, 'text-blue-500')} />
             <div className="absolute -top-1 -right-1">
-              <IoReloadOutline className="w-3 h-3 text-blue-500 animate-spin" />
+              <RefreshCw className="w-3 h-3 text-blue-500 animate-spin" />
             </div>
           </div>
         );
       case 'error':
-        return <IoAlertCircleOutline className={cn(currentSize.icon, 'text-red-500')} />;
+        return <CircleAlert className={cn(currentSize.icon, 'text-red-500')} />;
       case 'inline':
-        return <IoReloadOutline className={cn(currentSize.icon, 'text-apple-blue animate-spin')} />;
+        return <RefreshCw className={cn(currentSize.icon, 'text-apple-blue animate-spin')} />;
       default:
-        return <IoReloadOutline className={cn(currentSize.icon, 'text-apple-blue animate-spin')} />;
+        return <RefreshCw className={cn(currentSize.icon, 'text-apple-blue animate-spin')} />;
     }
   };
 

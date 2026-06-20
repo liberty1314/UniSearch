@@ -1,4 +1,4 @@
-import type { ResourceObject } from "@/types/api";
+import type { ResourceObject } from "@/types/resource";
 import { getCloudTypePriority, type ResultItem } from "./cloudTypeUtils";
 
 type SortableResultItem = ResultItem & {

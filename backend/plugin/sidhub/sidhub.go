@@ -167,14 +167,6 @@ func (p *SidHubAsyncPlugin) SetFetcherForTest(fetcher func(string) ([]byte, erro
 }
 
 // Search 执行搜索并返回结果。
-func (p *SidHubAsyncPlugin) Search(keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
-	result, err := p.SearchWithResult(keyword, ext)
-	if err != nil {
-		return nil, err
-	}
-	return result.Results, nil
-}
-
 // SearchWithResult 执行搜索并返回带状态的结果。
 func (p *SidHubAsyncPlugin) SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error) {
 	results, err := p.doSearch(p.GetClient(), keyword, ext)

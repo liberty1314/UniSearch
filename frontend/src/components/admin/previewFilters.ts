@@ -1,4 +1,5 @@
-import type { PluginInfo, TGChannel } from '@/types/api';
+import type { PluginInfo } from "@/types/plugin";
+import type { TGChannel } from "@/types/channel";
 
 export type UnifiedStatusFilter = 'all' | 'enabled' | 'disabled' | 'error';
 

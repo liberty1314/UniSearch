@@ -1,6 +1,6 @@
 import React, { memo, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { type CloudTypeValue } from "@/types/api";
+import type { CloudTypeValue } from "@/types/search";
 import { cn } from "@/lib/utils";
 import {
   platformThemes,

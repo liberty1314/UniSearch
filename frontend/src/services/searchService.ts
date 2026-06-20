@@ -1,15 +1,7 @@
 import { apiClient } from '@/lib/api';
-import type {
-  SearchParams,
-  SearchProgressiveEvent,
-  SearchRequest,
-  SearchResponse,
-  HealthResponse,
-  CloudTypeValue,
-  FilterConfig,
-  ScanTransferRefreshRequest,
-  ScanTransferRefreshResponse,
-} from '@/types/api';
+import type { HealthResponse } from "@/types/common";
+import type { SearchParams, SearchProgressiveEvent, SearchRequest, SearchResponse, CloudTypeValue, FilterConfig } from "@/types/search";
+import type { ScanTransferRefreshRequest, ScanTransferRefreshResponse } from "@/types/resource";
 import type { HotRankingItem } from '@/types/hotRanking';
 import { normalizeFilterConfig } from '@/utils/searchFilters';
 import { useAuthStore } from '@/stores/authStore';

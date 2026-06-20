@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { RefreshTokenResponse } from '@/types/api';
+import type { RefreshTokenResponse } from "@/types/auth";
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 import { useAuthStore } from '@/stores/authStore';
 

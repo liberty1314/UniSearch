@@ -217,14 +217,6 @@ func (p *PantaAsyncPlugin) Priority() int {
 }
 
 // Search 执行搜索并返回结果（兼容性方法）
-func (p *PantaAsyncPlugin) Search(keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
-	result, err := p.SearchWithResult(keyword, ext)
-	if err != nil {
-		return nil, err
-	}
-	return result.Results, nil
-}
-
 // SearchWithResult 执行搜索并返回包含IsFinal标记的结果
 func (p *PantaAsyncPlugin) SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error) {
 	return p.AsyncSearchWithResult(keyword, p.doSearch, p.MainCacheKey, ext)

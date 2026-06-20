@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getCloudTypeInfo, getCloudTypePriority } from "@/utils/cloudTypeUtils";
-import type { ResourceLink } from "@/types/api";
+import type { ResourceLink } from "@/types/resource";
 import type { ResourceOpenTarget } from "@/utils/resourceDisplay";
 
 interface ResourceDetailLinksSectionProps {

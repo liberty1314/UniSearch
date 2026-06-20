@@ -1,11 +1,4 @@
-import type {
-  ResourceAccessMode,
-  ResourceAction,
-  ResourceDetailRouteState,
-  ResourceLink,
-  ResourceObject,
-  ScanTransferInfo,
-} from "@/types/api";
+import type { ResourceAccessMode, ResourceAction, ResourceDetailRouteState, ResourceLink, ResourceObject, ScanTransferInfo } from "@/types/resource";
 import type { ResultItem } from "@/utils/cloudTypeUtils";
 
 export interface ResourceOpenTarget {

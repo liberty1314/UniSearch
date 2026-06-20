@@ -1,4 +1,4 @@
-import type { FilterConfig } from "@/types/api";
+import type { FilterConfig } from "@/types/search";
 
 export interface ActiveFilterChip {
   id: string;

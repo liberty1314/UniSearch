@@ -9,7 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { AdminDialogMode, PluginInfo } from '@/types/api';
+import type { AdminDialogMode } from "@/types/admin";
+import type { PluginInfo } from "@/types/plugin";
 import {
   PluginManageWorkspace,
   type PluginManageWorkspaceViewModel,

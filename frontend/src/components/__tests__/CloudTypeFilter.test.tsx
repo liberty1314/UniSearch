@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CloudTypeFilter from "@/components/CloudTypeFilter";
-import { CloudType } from "@/types/api";
+import { CloudType } from "@/types/search";
 
 const { setSearchParamsMock, performSearchMock, navigateMock } = vi.hoisted(() => ({
   setSearchParamsMock: vi.fn(),

@@ -22,7 +22,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import type { UserInfo } from '@/types/api';
+import type { UserInfo } from "@/types/user";
 import { getErrorDataError, getErrorMessage, getErrorStatus } from '@/lib/error';
 
 /**

@@ -1,4 +1,4 @@
-import type { PluginInfo } from '@/types/api';
+import type { PluginInfo } from "@/types/plugin";
 
 export type TestStatus = 'idle' | 'testing' | 'success' | 'error';
 

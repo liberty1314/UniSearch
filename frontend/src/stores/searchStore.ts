@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import type { SearchParams, SearchProgressiveEvent, SearchResponse } from "@/types/api";
+import type { SearchParams, SearchProgressiveEvent, SearchResponse } from "@/types/search";
 import { SearchService } from "@/services/searchService";
 import { getErrorCode, getErrorMessage } from "@/lib/error";
 import {

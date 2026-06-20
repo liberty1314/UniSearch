@@ -67,7 +67,7 @@ func TestPluginSelectorCachesEnabledBuiltinPlugins(t *testing.T) {
 	pm.RegisterPlugin(&mockAsyncSearchPlugin{name: "kkmao"})
 
 	loadCalls := 0
-	selector := newPluginSelector(pm, nil).(*searchPluginSelector)
+	selector := newPluginSelector(pm, nil)
 	selector.pluginStateService = &PluginStateService{}
 	selector.statusLoader = func(pluginNames []string) (map[string]bool, error) {
 		loadCalls++
@@ -101,7 +101,7 @@ func TestPluginSelectorCacheExpiresAndInvalidates(t *testing.T) {
 	pm.RegisterPlugin(&mockAsyncSearchPlugin{name: "weibo"})
 
 	loadCalls := 0
-	selector := newPluginSelector(pm, nil).(*searchPluginSelector)
+	selector := newPluginSelector(pm, nil)
 	selector.pluginStateService = &PluginStateService{}
 	selector.statusLoader = func(pluginNames []string) (map[string]bool, error) {
 		loadCalls++

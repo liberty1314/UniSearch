@@ -13,7 +13,7 @@ import { Label } from '../ui/label';
 import { toast } from 'sonner';
 import { UserService } from '../../services/userService';
 import { SystemSettingsService } from '@/services/systemSettingsService';
-import type { UserInfo } from '../../types/api';
+import type { UserInfo } from "@/types/user";
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import {
   getPasswordPolicyHelperText,

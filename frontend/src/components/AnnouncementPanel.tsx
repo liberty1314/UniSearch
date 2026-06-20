@@ -4,7 +4,7 @@ import { X, Bell, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAnnouncementStore } from "@/stores/announcementStore";
 import { AnnouncementDialog } from "./AnnouncementDialog";
-import type { Announcement } from "@/types/api";
+import type { Announcement } from "@/types/announcement";
 import { getAnnouncementPreviewText } from "@/lib/announcement";
 
 /**
