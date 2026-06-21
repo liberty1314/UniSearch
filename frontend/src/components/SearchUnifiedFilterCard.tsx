@@ -222,6 +222,11 @@ const SearchUnifiedFilterCard: React.FC = () => {
     void performSearch(nextParams, { preserveResults: true });
   }, [performSearch, setSearchParams, syncSearchUrl]);
 
+  const applyCloudSearchParams = useCallback((nextParams: Partial<SearchParams>) => {
+    setSearchParams(nextParams);
+    syncSearchUrl(nextParams);
+  }, [setSearchParams, syncSearchUrl]);
+
   const handleTypeToggle = (type: CloudTypeValue) => {
     const currentTypes = effectiveSelectedTypes;
     let nextTypes: CloudTypeValue[];
@@ -235,7 +240,7 @@ const SearchUnifiedFilterCard: React.FC = () => {
       nextTypes = [...currentTypes, type];
     }
 
-    applySearchParams({
+    applyCloudSearchParams({
       cloudTypes: nextTypes.length === allTypes.length ? [] : nextTypes,
     });
   };
@@ -245,7 +250,7 @@ const SearchUnifiedFilterCard: React.FC = () => {
       return;
     }
 
-    applySearchParams({ cloudTypes: [type] });
+    applyCloudSearchParams({ cloudTypes: [type] });
   };
 
   const handleOpenSourceFocusMenu = useCallback((
@@ -274,7 +279,7 @@ const SearchUnifiedFilterCard: React.FC = () => {
       return;
     }
 
-    applySearchParams({ cloudTypes: [] });
+    applyCloudSearchParams({ cloudTypes: [] });
   };
 
   const addKeywordTags = (field: keyof FilterConfig) => {

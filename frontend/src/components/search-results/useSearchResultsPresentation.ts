@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { SearchParams, SearchResponse } from "@/types/search";
+import type { CloudTypeValue, SearchParams, SearchResponse } from "@/types/search";
 import type { ResultItem } from "@/utils/cloudTypeUtils";
 import { sortResources } from "@/utils/searchResultSorter";
 import { buildActiveFilterChips } from "@/utils/searchFilters";
@@ -18,8 +18,18 @@ export const useSearchResultsPresentation = ({
   displayedCount,
 }: UseSearchResultsPresentationParams) => {
   const allSortedResults = useMemo(
-    () => sortResources(searchResults?.resources, searchParams.keyword),
-    [searchParams.keyword, searchResults?.resources],
+    () => {
+      const sortedResults = sortResources(searchResults?.resources, searchParams.keyword);
+      const selectedCloudTypes = searchParams.cloudTypes || [];
+      if (selectedCloudTypes.length === 0) {
+        return sortedResults;
+      }
+
+      return sortedResults.filter((item) =>
+        selectedCloudTypes.includes(item.cloudType as CloudTypeValue),
+      );
+    },
+    [searchParams.cloudTypes, searchParams.keyword, searchResults?.resources],
   );
 
   const activeFilterChips = useMemo(

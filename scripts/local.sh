@@ -37,6 +37,8 @@ BACKEND_LOG="${LOG_DIR}/backend.log"
 FRONTEND_LOG="${LOG_DIR}/frontend.log"
 BACKEND_PID_FILE="${PID_DIR}/backend.pid"
 FRONTEND_PID_FILE="${PID_DIR}/frontend.pid"
+BACKEND_PORT_FILE="${PID_DIR}/backend.port"
+FRONTEND_PORT_FILE="${PID_DIR}/frontend.port"
 
 # ==============================================================================
 # 基础工具函数
@@ -103,6 +105,41 @@ check_port() {
         return 0  # 占用
     else
         return 1  # 空闲
+    fi
+}
+
+find_available_port() {
+    local port=$1
+
+    while [ "$port" -le 65535 ]; do
+        if ! check_port "$port"; then
+            echo "$port"
+            return 0
+        fi
+        port=$((port + 1))
+    done
+
+    return 1
+}
+
+read_runtime_port() {
+    local port_file=$1
+    local fallback_port=$2
+    local pid_file=$3
+    local runtime_port=""
+
+    if [ -f "$port_file" ] && [ -f "$pid_file" ]; then
+        local pid
+        pid=$(cat "$pid_file")
+        if check_process "$pid"; then
+            runtime_port=$(cat "$port_file")
+        fi
+    fi
+
+    if [[ "$runtime_port" =~ ^[0-9]+$ ]]; then
+        echo "$runtime_port"
+    else
+        echo "$fallback_port"
     fi
 }
 
@@ -277,21 +314,17 @@ do_start() {
     # 6. 目录准备
     mkdir -p "$LOG_DIR" "$PID_DIR" "backend/cache"
 
-    # 7. 冲突检查
-    local conflict=false
-    if check_port $BACKEND_PORT; then log_warning "端口 $BACKEND_PORT 被占用"; conflict=true; fi
-    if check_port $FRONTEND_PORT_LOCAL; then log_warning "端口 $FRONTEND_PORT_LOCAL 被占用"; conflict=true; fi
+    # 7. 选择可用端口
+    local actual_backend_port
+    local actual_frontend_port
+    actual_backend_port=$(find_available_port "$BACKEND_PORT") || { log_error "无法找到可用后端端口"; exit 1; }
+    actual_frontend_port=$(find_available_port "$FRONTEND_PORT_LOCAL") || { log_error "无法找到可用前端端口"; exit 1; }
 
-    if [ "$conflict" = true ]; then
-        read -p "发现端口冲突，是否先停止现有服务？[Y/n] " choice
-        choice=${choice:-Y}
-        if [[ "$choice" =~ ^[Yy]$ ]]; then
-            do_stop
-            sleep 2
-        else
-            log_error "无法启动，请先手动释放端口"
-            exit 1
-        fi
+    if [ "$actual_backend_port" != "$BACKEND_PORT" ]; then
+        log_warning "后端端口 $BACKEND_PORT 被占用，改用 $actual_backend_port"
+    fi
+    if [ "$actual_frontend_port" != "$FRONTEND_PORT_LOCAL" ]; then
+        log_warning "前端端口 $FRONTEND_PORT_LOCAL 被占用，改用 $actual_frontend_port"
     fi
 
     # 8. 启动后端
@@ -302,15 +335,16 @@ do_start() {
     
     log_info "运行 Go 后端（数据库: $DB_HOST:$DB_PORT/$DB_NAME）..."
     # 环境变量已经在前面加载，直接运行
-    nohup go run main.go > "../$BACKEND_LOG" 2>&1 &
+    PORT="$actual_backend_port" nohup go run main.go > "../$BACKEND_LOG" 2>&1 &
     BACKEND_PID=$!
     echo $BACKEND_PID > "../$BACKEND_PID_FILE"
+    echo "$actual_backend_port" > "../$BACKEND_PORT_FILE"
     cd ..
 
-    if wait_for_port $BACKEND_PORT "后端服务" 30; then
+    if wait_for_port "$actual_backend_port" "后端服务" 30; then
         # 健康检查
         sleep 1
-        if curl -s http://localhost:$BACKEND_PORT/api/health > /dev/null 2>&1; then
+        if curl -s "http://localhost:$actual_backend_port/api/health" > /dev/null 2>&1; then
             log_success "后端健康检查通过"
         else
             log_warning "后端健康检查未通过 (但这可能只是暂时的)"
@@ -327,23 +361,24 @@ do_start() {
     if [ ! -f "package.json" ]; then log_error "frontend/package.json 不存在"; exit 1; fi
     
     log_info "运行 Vite 开发服务器..."
-    nohup pnpm run dev > "../$FRONTEND_LOG" 2>&1 &
+    VITE_BACKEND_PROXY_TARGET="http://localhost:$actual_backend_port" nohup pnpm run dev -- --port "$actual_frontend_port" > "../$FRONTEND_LOG" 2>&1 &
     FRONTEND_PID=$!
     echo $FRONTEND_PID > "../$FRONTEND_PID_FILE"
+    echo "$actual_frontend_port" > "../$FRONTEND_PORT_FILE"
     cd ..
 
     # Vite 需要更多时间来编译和启动，增加等待时间
     log_info "等待 Vite 编译完成..."
     sleep 3
     
-    if wait_for_port $FRONTEND_PORT_LOCAL "前端服务" 45; then
+    if wait_for_port "$actual_frontend_port" "前端服务" 45; then
         log_success "前端服务已启动"
     else
         # 检查进程是否还在运行
         if check_process $FRONTEND_PID; then
             log_warning "前端进程正在运行，但端口检测超时"
             log_warning "这可能是正常的，Vite 可能需要更多时间启动"
-            log_info "请手动检查: http://localhost:$FRONTEND_PORT_LOCAL"
+            log_info "请手动检查: http://localhost:$actual_frontend_port"
         else
             log_error "前端启动失败，请检查日志: $FRONTEND_LOG"
             show_recent_log "$FRONTEND_LOG" "前端服务"
@@ -363,31 +398,37 @@ do_start() {
 
 do_stop() {
     log_step "正在停止服务..."
+    local backend_runtime_port
+    local frontend_runtime_port
+    backend_runtime_port=$(read_runtime_port "$BACKEND_PORT_FILE" "$BACKEND_PORT" "$BACKEND_PID_FILE")
+    frontend_runtime_port=$(read_runtime_port "$FRONTEND_PORT_FILE" "$FRONTEND_PORT_LOCAL" "$FRONTEND_PID_FILE")
 
     # 1. PID 文件停止
     if [ -f "$BACKEND_PID_FILE" ]; then
         local pid=$(cat "$BACKEND_PID_FILE")
         graceful_stop_process $pid "后端服务"
         rm -f "$BACKEND_PID_FILE"
+        rm -f "$BACKEND_PORT_FILE"
     fi
 
     if [ -f "$FRONTEND_PID_FILE" ]; then
         local pid=$(cat "$FRONTEND_PID_FILE")
         graceful_stop_process $pid "前端服务"
         rm -f "$FRONTEND_PID_FILE"
+        rm -f "$FRONTEND_PORT_FILE"
     fi
 
     # 2. 端口兜底清理 (防止 PID 文件丢失)
     # 后端
-    local bpids=$(lsof -ti:$BACKEND_PORT 2>/dev/null || true)
+    local bpids=$(lsof -ti:"$backend_runtime_port" 2>/dev/null || true)
     if [ -n "$bpids" ]; then
-        for p in $bpids; do graceful_stop_process $p "残留后端进程 (Port $BACKEND_PORT)"; done
+        for p in $bpids; do graceful_stop_process $p "残留后端进程 (Port $backend_runtime_port)"; done
     fi
 
     # 前端
-    local fpids=$(lsof -ti:$FRONTEND_PORT_LOCAL 2>/dev/null || true)
+    local fpids=$(lsof -ti:"$frontend_runtime_port" 2>/dev/null || true)
     if [ -n "$fpids" ]; then
-        for p in $fpids; do graceful_stop_process $p "残留前端进程 (Port $FRONTEND_PORT_LOCAL)"; done
+        for p in $fpids; do graceful_stop_process $p "残留前端进程 (Port $frontend_runtime_port)"; done
     fi
 
     log_success "所有服务已停止"
@@ -504,9 +545,14 @@ print_service_status() {
 do_status() {
     echo
     echo -e "${CYAN}📡 服务状态:${NC}"
+
+    local backend_runtime_port
+    local frontend_runtime_port
+    backend_runtime_port=$(read_runtime_port "$BACKEND_PORT_FILE" "$BACKEND_PORT" "$BACKEND_PID_FILE")
+    frontend_runtime_port=$(read_runtime_port "$FRONTEND_PORT_FILE" "$FRONTEND_PORT_LOCAL" "$FRONTEND_PID_FILE")
     
-    print_service_status "后端服务" "$BACKEND_PORT" "http://localhost:$BACKEND_PORT" "$BACKEND_PID_FILE" "http://localhost:$BACKEND_PORT/api/health"
-    print_service_status "前端服务" "$FRONTEND_PORT_LOCAL" "http://localhost:$FRONTEND_PORT_LOCAL" "$FRONTEND_PID_FILE"
+    print_service_status "后端服务" "$backend_runtime_port" "http://localhost:$backend_runtime_port" "$BACKEND_PID_FILE" "http://localhost:$backend_runtime_port/api/health"
+    print_service_status "前端服务" "$frontend_runtime_port" "http://localhost:$frontend_runtime_port" "$FRONTEND_PID_FILE"
 
     echo
     echo -e "${CYAN}💡 常用命令:${NC}"

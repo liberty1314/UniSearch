@@ -1,5 +1,5 @@
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import SearchUnifiedFilterCard from "@/components/SearchUnifiedFilterCard";
@@ -111,6 +111,7 @@ vi.mock("framer-motion", () => ({
 
 describe("SearchUnifiedFilterCard", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     performSearchMock.mockReset();
     setSearchParamsMock.mockReset();
     navigateMock.mockReset();
@@ -134,6 +135,10 @@ describe("SearchUnifiedFilterCard", () => {
       },
     };
     locationSearch = "?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97";
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("默认只展示统一筛选卡片与网盘筛选摘要", () => {
@@ -227,7 +232,7 @@ describe("SearchUnifiedFilterCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("右键网盘来源时打开聚焦菜单并可仅看此源", async () => {
+  it("右键网盘来源时打开聚焦菜单并可仅看此源", () => {
     render(
       <MemoryRouter>
         <SearchUnifiedFilterCard />
@@ -243,11 +248,64 @@ describe("SearchUnifiedFilterCard", () => {
 
     fireEvent.click(screen.getByRole("menuitem", { name: "仅看此源" }));
 
-    await waitFor(() => {
-      expect(setSearchParamsMock).toHaveBeenCalledWith({
-        cloudTypes: [CloudType.QUARK],
-      });
+    expect(setSearchParamsMock).toHaveBeenCalledWith({
+      cloudTypes: [CloudType.QUARK],
     });
+    expect(performSearchMock).not.toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith(
+      expect.stringContaining(`types=${CloudType.QUARK}`),
+      expect.objectContaining({
+        replace: true,
+        state: expect.objectContaining({
+          skipSearchSync: true,
+          preserveScroll: true,
+        }),
+      }),
+    );
+  });
+
+  it("连续切换多个网盘时只更新本地筛选，不重新搜索", () => {
+    render(
+      <MemoryRouter>
+        <SearchUnifiedFilterCard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /百度网盘/ }));
+    fireEvent.click(screen.getByRole("button", { name: /阿里云盘/ }));
+
+    expect(setSearchParamsMock).toHaveBeenCalledTimes(2);
+    expect(performSearchMock).not.toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("选择全部时只更新本地筛选，不重新搜索", () => {
+    searchStoreState.searchParams.cloudTypes = [CloudType.QUARK];
+    locationSearch = SearchService.buildSearchUrl({
+      keyword: "你的名字",
+      cloudTypes: [CloudType.QUARK],
+    }).replace("/search", "");
+
+    render(
+      <MemoryRouter>
+        <SearchUnifiedFilterCard />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "全选所有网盘类型" }));
+
+    expect(setSearchParamsMock).toHaveBeenCalledWith({ cloudTypes: [] });
+    expect(performSearchMock).not.toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith(
+      expect.not.stringContaining("types="),
+      expect.objectContaining({
+        replace: true,
+        state: expect.objectContaining({
+          skipSearchSync: true,
+          preserveScroll: true,
+        }),
+      }),
+    );
   });
 
   it("右键网盘来源只打开聚焦菜单，不触发普通切换", () => {

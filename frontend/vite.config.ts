@@ -8,6 +8,7 @@ import { configDefaults } from "vitest/config";
 export default defineConfig(() => {
   const enableLocator = process.env.VITE_ENABLE_LOCATOR === "1";
   const enableSourcemap = process.env.VITE_ENABLE_SOURCEMAP === "1";
+  const backendProxyTarget = process.env.VITE_BACKEND_PROXY_TARGET || "http://localhost:8888";
   return {
     test: {
       globals: true,
@@ -60,7 +61,7 @@ export default defineConfig(() => {
     server: {
       proxy: {
         "/api": {
-          target: "http://localhost:8888",
+          target: backendProxyTarget,
           changeOrigin: true,
           secure: false,
         },

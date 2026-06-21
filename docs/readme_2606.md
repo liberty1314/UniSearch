@@ -1103,3 +1103,13 @@
     - frontend/src/components/home/SearchResultsToolbar.tsx
     - frontend/src/components/search-results/SearchResultsHeader.tsx
     - docs/readme_2606.md
+
+- [2026-06-21 13:21] feat(search): 优化网盘结果的本地即时过滤并解决开发环境端口冲突
+  - Body: 前端网盘过滤改为本地即时筛选，避免不必要的重复网络请求，提升交互体验。本地启动脚本新增动态端口探测功能，自适应后端目标端口，解决本地开发时的端口冲突问题。
+  - Files:
+    - frontend/src/components/SearchUnifiedFilterCard.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/__tests__/SearchUnifiedFilterCard.test.tsx
+    - frontend/src/components/search-results/useSearchResultsPresentation.ts
+    - frontend/vite.config.ts
+    - scripts/local.sh

@@ -525,6 +525,59 @@ describe("SearchResults", () => {
     );
   });
 
+  it("切换网盘筛选时先用当前结果做本地即时过滤", async () => {
+    searchStoreState.searchResults = {
+      total: 2,
+      resources: [
+        searchStoreState.searchResults.resources[0],
+        {
+          id: "resource-baidu",
+          title: "你的名字 百度备份",
+          description: "百度资源",
+          source: { type: "plugin", id: "pansearch", name: "PanSearch" },
+          media_type: "movie",
+          target_type: "share",
+          links: [
+            {
+              type: "baidu",
+              url: "https://example.com/baidu",
+              password: "",
+              title: "你的名字 百度备份",
+              datetime: "2026-03-16T00:00:00Z",
+            },
+          ],
+          capabilities: { searchable: true, downloadable: true },
+          actions: [],
+          detail: { content: "百度详情", url: "https://example.com/baidu-detail" },
+          tags: [],
+          images: [],
+          meta: {},
+          published_at: "2026-03-16T00:00:00Z",
+        },
+      ],
+      facets: {
+        cloud_types: { quark: 1, baidu: 1 },
+        source_types: { plugin: 2 },
+        media_types: { movie: 2 },
+        target_types: { share: 2 },
+        capabilities: { downloadable: 2 },
+        action_types: { open_link: 1 },
+      },
+    };
+    searchStoreState.searchParams = {
+      keyword: "你的名字",
+      cloudTypes: ["quark"],
+    };
+    searchStoreState.isRefreshing = true;
+
+    renderSearchResults();
+
+    expect(await screen.findByText("你的名字 4K")).toBeInTheDocument();
+    expect(screen.queryByText("你的名字 百度备份")).not.toBeInTheDocument();
+    expect(screen.getByText("加载中")).toBeInTheDocument();
+    expect(screen.getByTestId("search-results-toolbar-meta")).toHaveTextContent("1");
+  });
+
   it("shows a dedicated empty state when the server returns zero results under active filters", async () => {
     searchStoreState.searchResults = {
       total: 0,
