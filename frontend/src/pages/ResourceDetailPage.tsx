@@ -19,6 +19,7 @@ import {
   isMagnetTarget,
   isScanTransferTarget,
   normalizeExternalUrl,
+  resolveDirectScanTransferUrl,
   resolveResourceDisplayTitle,
   resolveResourceDisplaySize,
   type ResourceOpenTarget,
@@ -197,6 +198,12 @@ const ResourceDetailPage: React.FC = () => {
   const handlePrimaryOpenTarget = useCallback(
     (target: ResourceOpenTarget | null) => {
       if (!target) {
+        return;
+      }
+
+      const directScanTransferUrl = resolveDirectScanTransferUrl(target);
+      if (directScanTransferUrl) {
+        handleOpenExternal(directScanTransferUrl);
         return;
       }
 

@@ -2,7 +2,7 @@ import React from "react";
 import { Copy, ExternalLink, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ResourceOpenTarget } from "@/utils/resourceDisplay";
-import { isScanTransferTarget } from "@/utils/resourceDisplay";
+import { isScanTransferTarget, resolveDirectScanTransferUrl } from "@/utils/resourceDisplay";
 
 interface ResourceDetailActionPanelProps {
   primaryTarget: ResourceOpenTarget | null;
@@ -18,7 +18,8 @@ const ResourceDetailActionPanel: React.FC<ResourceDetailActionPanelProps> = ({
   onCopyText,
 }) => {
   const hasPassword = Boolean(primaryTarget?.password);
-  const scanTransferMode = isScanTransferTarget(primaryTarget);
+  const scanTransferMode =
+    isScanTransferTarget(primaryTarget) && !resolveDirectScanTransferUrl(primaryTarget);
   const primaryStatusLabel = primaryTarget?.url
     ? scanTransferMode
       ? "需手机扫码"

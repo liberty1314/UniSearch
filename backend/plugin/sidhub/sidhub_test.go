@@ -831,6 +831,41 @@ func TestResolveLinkStartLinkDetectsScanTransfer(t *testing.T) {
 	}
 }
 
+func TestResolveLinkStartLinkDecodesMagnetCopyPage(t *testing.T) {
+	original := model.Link{
+		Type:      "magnet",
+		URL:       "https://sidhub.cc/link_start/?seed_id=708637&movie_title=%E9%93%81%E6%8B%B3%E6%95%99%E8%82%B2%E7%9A%84%E7%A3%81%E5%8A%9B",
+		WorkTitle: "铁拳教育",
+	}
+	body := []byte(`
+<html>
+  <body>
+    <p>磁力链接：<a href="#" title="Teach.You.a.Lesson.S01.MULTi.1080p.WEB.x264-FW[30.52G]">Teach.You.a.Lesson.S01.MULTi.1080p.WEB.x264-FW[30.52G]</a></p>
+    <button id="thunder">迅雷高速下载</button>
+    <button id="copy-btn">复制磁力</button>
+    <script>
+      const data = "bWFnbmV0Oj94dD11cm46YnRpaDpjY2NjMjEyODYyNjAzODgzOGU5YTNkOTAzZGVlM2ZhZTJmMDg3MjMw";
+      $("#thunder").click(function(e) {e.preventDefault();thunderLink.newTask({tasks: [{url: window.atob(data)}]});return false;});
+      new ClipboardJS('#copy-btn', { text: function () { return window.atob(data); } });
+    </script>
+  </body>
+</html>`)
+
+	resolved, handled, err := resolveLinkStartLink(original, body, "135689", 1)
+	if err != nil {
+		t.Fatalf("解析磁力复制页失败: %v", err)
+	}
+	if !handled {
+		t.Fatal("期望识别磁力复制页")
+	}
+	if resolved.Type != "magnet" || !strings.HasPrefix(resolved.URL, "magnet:?xt=urn:btih:cccc2128626038838e9a3d903dee3fae2f087230") {
+		t.Fatalf("期望解析为真实磁力链接，实际为 %#v", resolved)
+	}
+	if resolved.AccessMode == "scan_transfer" || resolved.ScanTransfer != nil {
+		t.Fatalf("磁力链接不应进入扫码转存，实际为 %#v", resolved)
+	}
+}
+
 func TestResolveLinkStartLinkPrefersScanTransferWhenDirectURLAlsoExists(t *testing.T) {
 	original := model.Link{
 		Type:      "quark",

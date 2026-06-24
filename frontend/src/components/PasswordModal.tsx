@@ -343,17 +343,31 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
                 </a>
               </Button>
             ) : openUrl ? (
-              <Button asChild variant="primary" size="md" fullWidth className="rounded-xl">
-                <a
-                  href={openUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={onClose}
+              magnetMode ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  fullWidth
+                  className="rounded-xl"
+                  onClick={() => void copyText(url, "磁力链接已复制")}
                 >
-                  <ExternalLink className="h-[18px] w-[18px]" />
-                  {magnetMode ? "打开磁力" : "打开链接"}
-                </a>
-              </Button>
+                  <Copy className="h-[18px] w-[18px]" />
+                  复制磁力链接
+                </Button>
+              ) : (
+                <Button asChild variant="primary" size="md" fullWidth className="rounded-xl">
+                  <a
+                    href={openUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={onClose}
+                  >
+                    <ExternalLink className="h-[18px] w-[18px]" />
+                    打开链接
+                  </a>
+                </Button>
+              )
             ) : (
               <Button
                 type="button"

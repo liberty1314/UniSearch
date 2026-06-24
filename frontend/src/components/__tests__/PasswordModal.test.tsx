@@ -63,7 +63,7 @@ describe('PasswordModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('renders magnet mode without password field and supports copy/open', async () => {
+  it('renders magnet mode without password field and uses copy as the primary action', async () => {
     Object.assign(navigator, {
       clipboard: {
         writeText: vi.fn(),
@@ -86,16 +86,11 @@ describe('PasswordModal', () => {
     expect(screen.queryByLabelText('访问码')).not.toBeInTheDocument();
     expect(screen.getByDisplayValue('magnet:?xt=urn:btih:testhash')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '复制磁力链接' }));
+    const copyButtons = screen.getAllByRole('button', { name: '复制磁力链接' });
+    expect(copyButtons).toHaveLength(2);
+    fireEvent.click(copyButtons[1]);
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('magnet:?xt=urn:btih:testhash');
-
-    const openMagnetLink = screen.getByRole('link', { name: '打开磁力' });
-    expect(openMagnetLink).toHaveAttribute('href', 'magnet:?xt=urn:btih:testhash');
-    expect(openMagnetLink).toHaveAttribute('target', '_blank');
-    expect(openMagnetLink).toHaveAttribute('rel', 'noopener noreferrer');
-
-    fireEvent.click(openMagnetLink);
-    expect(onClose).toHaveBeenCalled();
+    expect(screen.queryByRole('link', { name: '打开磁力' })).not.toBeInTheDocument();
   });
 
   it('renders scan transfer mode and supports refreshing the current qr code', async () => {

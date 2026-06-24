@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "UniSearch 资源详情页高保真原型",
+  "entry": "resource-detail-redesign-2.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "primary": true,
+  "createdAt": "2026-06-24T13:48:28.148Z",
+  "updatedAt": "2026-06-24T13:48:28.152Z",
+  "sourceSkillId": "agent-browser",
+  "metadata": {
+    "identifier": "resource-detail-redesign",
+    "artifactType": "text/html",
+    "inferred": false
+  }
+}

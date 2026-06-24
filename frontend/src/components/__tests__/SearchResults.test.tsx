@@ -430,6 +430,35 @@ describe("SearchResults", () => {
     expect(openSpy).not.toHaveBeenCalled();
   });
 
+  it("opens the scan transfer QR code value directly when it is a URL", async () => {
+    searchStoreState.searchResults.resources[0].links[0] = {
+      type: "quark",
+      url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+      password: "",
+      access_mode: "scan_transfer",
+      scan_transfer: {
+        qr_code_value: "https://pan.quark.cn/s/686290f881b7",
+        qr_code_base64: "data:image/png;base64,abc123",
+        refreshable: true,
+        refresh_key: "seedhub:4259:quark:1",
+      },
+      title: "你的名字 扫码直开资源",
+      datetime: "2026-03-15T00:00:00Z",
+    };
+
+    const openSpy = vi.spyOn(window, "open").mockReturnValue({
+      opener: null,
+    } as Window);
+
+    renderSearchResults();
+    await screen.findByTestId("search-result-grid-card-wrapper");
+    expect(screen.queryByText("需扫码")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
+
+    expect(openSpy).toHaveBeenCalledWith("https://pan.quark.cn/s/686290f881b7", "_blank");
+    expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();
+  });
+
   it("navigates to the dedicated resource detail page from the secondary detail entry", async () => {
     Object.defineProperty(window, "scrollY", {
       configurable: true,

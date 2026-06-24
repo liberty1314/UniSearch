@@ -207,6 +207,21 @@ export const isScanTransferTarget = (
   target: Pick<ResourceOpenTarget, "accessMode" | "scanTransfer"> | null,
 ): boolean => Boolean(target && (target.accessMode === "scan_transfer" || target.scanTransfer));
 
+export const resolveDirectScanTransferUrl = (
+  target: Pick<ResourceOpenTarget, "accessMode" | "scanTransfer"> | null,
+): string => {
+  if (!isScanTransferTarget(target)) {
+    return "";
+  }
+
+  const qrCodeValue = target?.scanTransfer?.qr_code_value?.trim() || "";
+  if (!/^https?:\/\//i.test(qrCodeValue)) {
+    return "";
+  }
+
+  return normalizeExternalUrl(qrCodeValue);
+};
+
 const resolveLinkAccessMode = (
   link: Pick<ResourceLink, "url" | "password" | "access_mode" | "scan_transfer"> | null | undefined,
   fallbackUrl?: string,

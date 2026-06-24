@@ -1248,3 +1248,34 @@
     - frontend/src/utils/__tests__/searchResultSorter.test.ts
     - frontend/src/utils/searchResultSorter.ts
     - docs/readme_2606.md
+
+- [2026-06-24 21:54] feat(sidhub): 新增 SidHub 渐进式解析功能及资源详情页重构
+  - Body: 实现 SidHub 插件渐进式解析机制，并重构前端资源详情页面结构与组件交互，优化密码输入及直链跳转体验。
+  - Files:
+    - .od-skills/agent-browser-ff76ddd73c/SKILL.md
+    - .od-skills/web-prototype-4ab6e4cb5f/SKILL.md
+    - .od-skills/web-prototype-4ab6e4cb5f/assets/template.html
+    - .od-skills/web-prototype-4ab6e4cb5f/example.html
+    - .od-skills/web-prototype-4ab6e4cb5f/open-design.json
+    - .od-skills/web-prototype-4ab6e4cb5f/references/checklist.md
+    - .od-skills/web-prototype-4ab6e4cb5f/references/layouts.md
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - critique.json
+    - docs/sidhub-progressive-resolution-development-plan.md
+    - frontend/src/components/PasswordModal.tsx
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/__tests__/PasswordModal.test.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/home/SearchResultGridCard.tsx
+    - frontend/src/components/home/SearchResultListItem.tsx
+    - frontend/src/components/resource-detail/ResourceDetailActionPanel.tsx
+    - frontend/src/components/resource-detail/ResourceDetailLinksSection.tsx
+    - frontend/src/pages/ResourceDetailPage.tsx
+    - frontend/src/pages/__tests__/ResourceDetailPage.test.tsx
+    - frontend/src/utils/resourceDisplay.ts
+    - resource-detail-redesign-2.html
+    - resource-detail-redesign-2.html.artifact.json
+    - resource-detail-redesign.html
+    - resource-detail-redesign.html.artifact.json
+    - docs/readme_2606.md

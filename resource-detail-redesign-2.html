@@ -1,0 +1,878 @@
+
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UniSearch 资源详情页高保真原型</title>
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --surface: #ffffff;
+      --surface-soft: #fbfbfd;
+      --fg: #1d1d1f;
+      --muted: rgba(0, 0, 0, 0.58);
+      --border: rgba(0, 0, 0, 0.08);
+      --accent: #0071e3;
+      --accent-dark: #0066cc;
+      --ok: #1f9d55;
+      --warn: #b45309;
+      --danger: #c2410c;
+      --font-display: "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --font-body: "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --shadow: rgba(0, 0, 0, 0.22) 3px 5px 30px 0;
+    }
+    * { box-sizing: border-box; }
+    html {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+      scroll-behavior: smooth;
+    }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--fg);
+      letter-spacing: -0.374px;
+    }
+    button, a { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .46; }
+    a { color: inherit; text-decoration: none; }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: 48px;
+      background: rgba(0, 0, 0, 0.82);
+      color: #fff;
+      backdrop-filter: saturate(180%) blur(20px);
+    }
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: min(1180px, calc(100% - 32px));
+      height: 100%;
+      margin: 0 auto;
+      font-size: 12px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 600;
+      letter-spacing: -0.12px;
+    }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      background: #fff;
+      color: #000;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: clamp(16px, 2.2vw, 28px);
+      color: rgba(255, 255, 255, .78);
+    }
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: clamp(20px, 4vw, 52px) 0 56px;
+    }
+    .back-path {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .back-button {
+      min-height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 980px;
+      background: rgba(255, 255, 255, .72);
+      color: var(--fg);
+      padding: 0 14px;
+      transition: transform .2s ease, background .2s ease;
+    }
+    .back-button:hover { background: #fff; transform: translateY(-1px); }
+    .path-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      border-radius: 980px;
+      background: rgba(255, 255, 255, .58);
+      padding: 0 11px;
+      color: rgba(0, 0, 0, .62);
+      white-space: nowrap;
+    }
+    .hero {
+      overflow: hidden;
+      border-radius: 30px;
+      background: #000;
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, .72fr);
+      gap: clamp(28px, 4vw, 58px);
+      padding: clamp(26px, 5vw, 64px);
+      min-height: 540px;
+    }
+    .hero-copy {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 32px;
+      min-width: 0;
+    }
+    .eyebrow {
+      color: #2997ff;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 760px;
+      margin: 10px 0 16px;
+      font-family: var(--font-display);
+      font-size: clamp(42px, 7vw, 82px);
+      line-height: .98;
+      letter-spacing: -1.6px;
+      text-wrap: balance;
+    }
+    .summary {
+      max-width: 680px;
+      margin: 0;
+      color: rgba(255, 255, 255, .78);
+      font-size: clamp(17px, 2.2vw, 22px);
+      line-height: 1.45;
+    }
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 22px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      border-radius: 980px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      background: rgba(255, 255, 255, .09);
+      color: rgba(255, 255, 255, .86);
+      padding: 0 12px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      max-width: 680px;
+    }
+    .stat {
+      min-width: 0;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, .1);
+      padding: 15px;
+    }
+    .stat span {
+      display: block;
+      color: rgba(255, 255, 255, .56);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+    .stat strong {
+      display: block;
+      margin-top: 7px;
+      font-size: 18px;
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+    .access-card {
+      align-self: stretch;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-width: 0;
+      border-radius: 26px;
+      background: #f5f5f7;
+      color: var(--fg);
+      padding: 24px;
+    }
+    .access-card h2 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 32px;
+      line-height: 1.08;
+      letter-spacing: -.55px;
+    }
+    .access-card p {
+      margin: 10px 0 0;
+      color: rgba(0, 0, 0, .58);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .resource-preview {
+      margin: 22px 0;
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at 72% 18%, rgba(0, 113, 227, .22), transparent 30%),
+        linear-gradient(145deg, #fff, #e7e7ec);
+      padding: 20px;
+    }
+    .folder-shape {
+      position: relative;
+      height: 164px;
+      border-radius: 24px;
+      background: #fff;
+      box-shadow: rgba(0, 0, 0, .12) 0 16px 34px;
+    }
+    .folder-shape::before {
+      content: "";
+      position: absolute;
+      left: 22px;
+      top: -13px;
+      width: 120px;
+      height: 34px;
+      border-radius: 14px 14px 0 0;
+      background: #fff;
+    }
+    .folder-lines {
+      position: absolute;
+      inset: 42px 22px auto;
+      display: grid;
+      gap: 12px;
+    }
+    .folder-lines i {
+      display: block;
+      height: 12px;
+      border-radius: 980px;
+      background: #d2d2d7;
+    }
+    .folder-lines i:nth-child(2) { width: 72%; }
+    .folder-lines i:nth-child(3) { width: 52%; }
+    .button-stack { display: grid; gap: 10px; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      border: 1px solid transparent;
+      border-radius: 980px;
+      padding: 0 18px;
+      font-size: 17px;
+      transition: transform .18s ease, background .18s ease, border-color .18s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #147ce5; }
+    .btn-secondary {
+      border-color: rgba(0, 102, 204, .34);
+      background: transparent;
+      color: var(--accent-dark);
+    }
+    .btn-secondary:hover { background: rgba(0, 113, 227, .08); }
+    .quick-copy {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      margin-top: 16px;
+      border-radius: 16px;
+      background: #fff;
+      padding: 10px 10px 10px 14px;
+    }
+    .quick-copy code {
+      min-width: 0;
+      overflow: hidden;
+      color: rgba(0, 0, 0, .68);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .icon-button {
+      width: 34px;
+      height: 34px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(0, 113, 227, .1);
+      color: var(--accent);
+    }
+    .body-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 24px;
+      margin-top: 24px;
+      align-items: start;
+    }
+    .panel {
+      border-radius: 26px;
+      background: var(--surface);
+      box-shadow: rgba(0, 0, 0, .05) 0 18px 50px;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 22px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 28px;
+      line-height: 1.12;
+      letter-spacing: -.42px;
+    }
+    .panel-subtitle {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .source-list {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+    }
+    .source-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      border-radius: 20px;
+      background: var(--surface-soft);
+      padding: 18px;
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+    .source-card:hover {
+      transform: translateY(-1px);
+      box-shadow: rgba(0, 0, 0, .08) 0 16px 36px;
+    }
+    .source-main { min-width: 0; }
+    .source-kicker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border-radius: 980px;
+      background: #ededf2;
+      color: rgba(0, 0, 0, .66);
+      padding: 0 9px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .tag.primary { background: #1d1d1f; color: #fff; }
+    .tag.warn { background: rgba(180, 83, 9, .11); color: var(--warn); }
+    .source-title {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.35;
+      letter-spacing: -.22px;
+    }
+    .source-url {
+      display: block;
+      margin-top: 8px;
+      color: rgba(0, 0, 0, .52);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+    .source-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 142px;
+    }
+    .small-btn {
+      min-height: 36px;
+      border-radius: 980px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--fg);
+      padding: 0 12px;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .small-btn.blue {
+      border-color: transparent;
+      background: var(--accent);
+      color: #fff;
+    }
+    .summary-panel {
+      margin-top: 24px;
+      padding: clamp(24px, 4vw, 36px);
+    }
+    .summary-panel p {
+      max-width: 76ch;
+      margin: 14px 0 0;
+      color: rgba(0, 0, 0, .72);
+      font-size: 17px;
+      line-height: 1.7;
+    }
+    .side {
+      position: sticky;
+      top: 72px;
+      display: grid;
+      gap: 16px;
+    }
+    .side-card { padding: 20px; }
+    .side-card h3 {
+      margin: 0;
+      font-size: 21px;
+      letter-spacing: -.22px;
+    }
+    .side-card p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .check-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .check-item {
+      display: grid;
+      grid-template-columns: 26px 1fr;
+      gap: 10px;
+      align-items: start;
+      color: rgba(0, 0, 0, .7);
+      font-size: 14px;
+      line-height: 1.42;
+    }
+    .check-dot {
+      display: grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(31, 157, 85, .1);
+      color: var(--ok);
+      font-weight: 700;
+    }
+    .similar {
+      margin-top: 24px;
+      padding: 24px;
+    }
+    .similar-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .similar-card {
+      min-width: 0;
+      border-radius: 20px;
+      background: var(--surface-soft);
+      padding: 18px;
+      min-height: 156px;
+    }
+    .similar-card strong {
+      display: block;
+      font-size: 16px;
+      line-height: 1.35;
+      letter-spacing: -.18px;
+    }
+    .similar-card span {
+      display: block;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .empty-warning {
+      display: none;
+      margin-top: 12px;
+      border-radius: 14px;
+      background: rgba(194, 65, 12, .1);
+      color: var(--danger);
+      padding: 12px 14px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .empty-warning.is-visible { display: block; }
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 40;
+      min-width: min(360px, calc(100vw - 40px));
+      border-radius: 18px;
+      background: rgba(0, 0, 0, .88);
+      color: #fff;
+      box-shadow: rgba(0, 0, 0, .28) 0 20px 54px;
+      padding: 15px 17px;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity .22s ease, transform .22s ease;
+      pointer-events: none;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 35;
+      display: none;
+      place-items: center;
+      background: rgba(0, 0, 0, .42);
+      padding: 20px;
+    }
+    .modal-backdrop.open { display: grid; }
+    .modal {
+      width: min(440px, 100%);
+      border-radius: 26px;
+      background: #fff;
+      box-shadow: rgba(0, 0, 0, .3) 0 30px 90px;
+      padding: 24px;
+    }
+    .modal h2 {
+      margin: 0;
+      font-size: 26px;
+      letter-spacing: -.35px;
+    }
+    .modal p {
+      margin: 10px 0 18px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    @media (max-width: 1020px) {
+      .hero-grid,
+      .body-grid { grid-template-columns: 1fr; }
+      .hero-grid { min-height: auto; }
+      .side {
+        position: static;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 720px) {
+      .nav-links { display: none; }
+      .page {
+        width: min(100% - 24px, 1180px);
+        padding-top: 18px;
+      }
+      .hero,
+      .panel { border-radius: 22px; }
+      .hero-grid { padding: 22px; }
+      .hero-stats,
+      .similar-grid,
+      .side { grid-template-columns: 1fr; }
+      .source-card { grid-template-columns: 1fr; }
+      .source-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        min-width: 0;
+      }
+      .source-actions .small-btn:first-child { grid-column: 1 / -1; }
+    }
+    @media (max-width: 390px) {
+      .quick-copy { grid-template-columns: 1fr; }
+      .icon-button {
+        width: 100%;
+        border-radius: 980px;
+      }
+      .source-actions { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#" aria-label="返回 UniSearch 首页">
+        <span class="brand-mark">U</span>
+        <span>UniSearch</span>
+      </a>
+      <nav class="nav-links" aria-label="资源详情导航">
+        <a href="#links">链接</a>
+        <a href="#summary">摘要</a>
+        <a href="#similar">相似资源</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="back-path" aria-label="搜索返回路径">
+      <button class="back-button" type="button">← 返回搜索结果</button>
+      <span class="path-chip">搜索：你的名字 4K</span>
+      <span class="path-chip">筛选：夸克网盘</span>
+      <span class="path-chip">第 3 条结果</span>
+    </div>
+
+    <section class="hero" aria-labelledby="resource-title">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <div>
+            <div class="eyebrow">资源详情</div>
+            <h1 id="resource-title">你的名字 4K 修复版合集</h1>
+            <p class="summary">聚合来自 SeedHub 与 PanSearch 的可访问网盘资源。首屏直接展示可打开状态、提取码和来源，减少用户在外部页面来回试错。</p>
+            <div class="meta-row" aria-label="资源元信息">
+              <span class="pill">夸克网盘</span>
+              <span class="pill">电影</span>
+              <span class="pill">4K / HDR</span>
+              <span class="pill">约 21.6 GB</span>
+            </div>
+          </div>
+          <div class="hero-stats" aria-label="打开前速览">
+            <div class="stat"><span>链接数量</span><strong>4 条</strong></div>
+            <div class="stat"><span>访问方式</span><strong>直达 / 提取码</strong></div>
+            <div class="stat"><span>更新时间</span><strong>2026-06-20</strong></div>
+          </div>
+        </div>
+
+        <aside class="access-card" aria-label="资源操作台">
+          <div>
+            <h2>先复制，再打开。</h2>
+            <p>如果资源需要提取码，系统优先把链接和密码并排放在主操作区，打开外部页面前就能完成准备。</p>
+            <div class="resource-preview" aria-hidden="true">
+              <div class="folder-shape">
+                <div class="folder-lines"><i></i><i></i><i></i></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="button-stack">
+              <button class="btn btn-primary" type="button" data-open="https://pan.quark.cn/s/46300ad81d60">打开主资源</button>
+              <button class="btn btn-secondary" type="button" data-copy="https://pan.quark.cn/s/46300ad81d60" data-copy-label="主链接已复制">复制主链接</button>
+              <button class="btn btn-secondary" type="button" data-copy="9x7a" data-copy-label="提取码已复制">复制提取码</button>
+            </div>
+            <div class="quick-copy">
+              <code>提取码：9x7a</code>
+              <button class="icon-button" type="button" aria-label="复制提取码" data-copy="9x7a" data-copy-label="提取码已复制">复制</button>
+            </div>
+            <div class="empty-warning" id="hero-error" role="alert">当前链接暂不可打开，请复制链接后手动访问，或尝试下方备用来源。</div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <div class="body-grid">
+      <div>
+        <section class="panel" id="links" aria-labelledby="links-title">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title" id="links-title">网盘与来源信息</h2>
+              <p class="panel-subtitle">把可转化动作放在每条来源旁边，减少用户判断成本。</p>
+            </div>
+          </div>
+          <div class="source-list">
+            <article class="source-card">
+              <div class="source-main">
+                <div class="source-kicker">
+                  <span class="tag primary">当前主链接</span>
+                  <span class="tag">夸克网盘</span>
+                  <span class="tag warn">需要提取码</span>
+                </div>
+                <h3 class="source-title">你的名字 4K HDR 内封字幕合集</h3>
+                <span class="source-url">https://pan.quark.cn/s/46300ad81d60</span>
+              </div>
+              <div class="source-actions">
+                <button class="small-btn blue" type="button" data-open="https://pan.quark.cn/s/46300ad81d60">打开资源</button>
+                <button class="small-btn" type="button" data-copy="https://pan.quark.cn/s/46300ad81d60" data-copy-label="链接已复制">复制链接</button>
+                <button class="small-btn" type="button" data-copy="9x7a" data-copy-label="提取码已复制">复制提取码</button>
+              </div>
+            </article>
+            <article class="source-card">
+              <div class="source-main">
+                <div class="source-kicker">
+                  <span class="tag">百度网盘</span>
+                  <span class="tag warn">需要提取码</span>
+                  <span class="tag">PanSearch</span>
+                </div>
+                <h3 class="source-title">你的名字 1080P / 4K 双版本备份</h3>
+                <span class="source-url">https://pan.baidu.com/s/1n7K-demo-resource</span>
+              </div>
+              <div class="source-actions">
+                <button class="small-btn blue" type="button" data-open="https://pan.baidu.com/s/1n7K-demo-resource">打开资源</button>
+                <button class="small-btn" type="button" data-copy="https://pan.baidu.com/s/1n7K-demo-resource" data-copy-label="链接已复制">复制链接</button>
+                <button class="small-btn" type="button" data-copy="m3q8" data-copy-label="提取码已复制">复制提取码</button>
+              </div>
+            </article>
+            <article class="source-card">
+              <div class="source-main">
+                <div class="source-kicker">
+                  <span class="tag">阿里云盘</span>
+                  <span class="tag">无需提取码</span>
+                  <span class="tag">SeedHub</span>
+                </div>
+                <h3 class="source-title">新海诚作品合集：你的名字 / 天气之子 / 铃芽之旅</h3>
+                <span class="source-url">https://www.aliyundrive.com/s/demo-ready-pack</span>
+              </div>
+              <div class="source-actions">
+                <button class="small-btn blue" type="button" data-open="https://www.aliyundrive.com/s/demo-ready-pack">打开资源</button>
+                <button class="small-btn" type="button" data-copy="https://www.aliyundrive.com/s/demo-ready-pack" data-copy-label="链接已复制">复制链接</button>
+                <button class="small-btn" type="button" data-copy="" data-copy-label="提取码已复制">复制提取码</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel summary-panel" id="summary" aria-labelledby="summary-title">
+          <h2 class="panel-title" id="summary-title">资源摘要</h2>
+          <p>该资源包含《你的名字》4K 修复版主体文件、字幕文件与多版本压制说明。标题已清洗掉来源站点噪声，摘要区保留原始详情中的关键说明，便于用户在跳转前确认版本、画质和字幕信息。</p>
+          <p>下载转化优先级为：可直达网盘链接、带提取码链接、原始详情页。无法打开或密码缺失时，页面应给出明确错误提示，并引导用户尝试备用来源。</p>
+        </section>
+
+        <section class="panel similar" id="similar" aria-labelledby="similar-title">
+          <h2 class="panel-title" id="similar-title">相似资源推荐</h2>
+          <div class="similar-grid">
+            <a class="similar-card" href="#">
+              <strong>天气之子 4K HDR 合集</strong>
+              <span>同导演作品，夸克与阿里云盘均有可访问来源。</span>
+            </a>
+            <a class="similar-card" href="#">
+              <strong>铃芽之旅 2160P 内封字幕</strong>
+              <span>匹配“新海诚 / 4K / 字幕”搜索路径。</span>
+            </a>
+            <a class="similar-card" href="#">
+              <strong>你的名字 原声 OST 无损</strong>
+              <span>从当前资源标签延展到音乐资源。</span>
+            </a>
+          </div>
+        </section>
+      </div>
+
+      <aside class="side" aria-label="下载决策辅助">
+        <section class="panel side-card">
+          <h3>打开前检查</h3>
+          <p>把影响转化的状态前置，让用户不必打开外站后才发现缺密码或链接失效。</p>
+          <div class="check-list">
+            <div class="check-item"><span class="check-dot">✓</span><span>主链接已识别为夸克网盘</span></div>
+            <div class="check-item"><span class="check-dot">✓</span><span>提取码可一键复制</span></div>
+            <div class="check-item"><span class="check-dot">✓</span><span>备用来源按可访问性排序</span></div>
+          </div>
+        </section>
+
+        <section class="panel side-card">
+          <h3>错误提示状态</h3>
+          <p>点击“模拟失效链接”可查看失败态。真实实现里对应打开失败、空链接或复制异常。</p>
+          <div class="button-stack" style="margin-top: 16px;">
+            <button class="btn btn-secondary" type="button" data-open="">模拟失效链接</button>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <div class="modal-backdrop" id="open-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <h2 id="modal-title">准备打开外部资源</h2>
+      <p id="modal-copy">已为你保留当前页面。外部网盘可能需要使用刚复制的提取码。</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" data-close-modal>留在页面</button>
+        <a class="btn btn-primary" id="modal-link" href="#" target="_blank" rel="noopener noreferrer">继续打开</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const toast = document.querySelector("#toast");
+    const modal = document.querySelector("#open-modal");
+    const modalLink = document.querySelector("#modal-link");
+    const heroError = document.querySelector("#hero-error");
+    let toastTimer = 0;
+
+    function showToast(message) {
+      window.clearTimeout(toastTimer);
+      toast.textContent = message;
+      toast.classList.add("show");
+      toastTimer = window.setTimeout(() => toast.classList.remove("show"), 2200);
+    }
+
+    async function copyText(value, label) {
+      const text = (value || "").trim();
+      if (!text) {
+        showToast("暂无可复制的提取码");
+        return;
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const textarea = document.createElement("textarea");
+          textarea.value = text;
+          textarea.setAttribute("readonly", "true");
+          textarea.style.position = "absolute";
+          textarea.style.left = "-9999px";
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textarea);
+        }
+        showToast(label || "已复制");
+      } catch (error) {
+        showToast("复制失败，请稍后重试");
+      }
+    }
+
+    function requestOpen(url) {
+      const target = (url || "").trim();
+      if (!target) {
+        heroError.classList.add("is-visible");
+        showToast("链接不可用，请尝试备用来源");
+        return;
+      }
+      heroError.classList.remove("is-visible");
+      modalLink.href = target;
+      modal.classList.add("open");
+    }
+
+    document.addEventListener("click", (event) => {
+      const copyButton = event.target.closest("[data-copy]");
+      if (copyButton) {
+        copyText(copyButton.dataset.copy, copyButton.dataset.copyLabel);
+        return;
+      }
+
+      const openButton = event.target.closest("[data-open]");
+      if (openButton) {
+        requestOpen(openButton.dataset.open);
+        return;
+      }
+
+      if (event.target.matches("[data-close-modal]") || event.target === modal) {
+        modal.classList.remove("open");
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        modal.classList.remove("open");
+      }
+    });
+  </script>
+</body>
+</html>

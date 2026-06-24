@@ -8,6 +8,7 @@ import {
   type ResultItem,
 } from "@/utils/cloudTypeUtils";
 import {
+  resolveDirectScanTransferUrl,
   resolveResourceDisplaySize,
   resolveResourceDisplayTitle,
   resolveResourceSourcePresentation,
@@ -38,8 +39,13 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
     const sourceInfo = resolveResourceSourcePresentation(resource);
     const sourceType = resource.source.type?.trim().toLowerCase();
     const hasPassword = Boolean(primaryLink?.password?.trim());
+    const directScanTransferUrl = resolveDirectScanTransferUrl({
+      accessMode: primaryLink?.access_mode || (primaryLink?.scan_transfer ? "scan_transfer" : "direct_open"),
+      scanTransfer: primaryLink?.scan_transfer,
+    });
     const scanTransferMode =
-      primaryLink?.access_mode === "scan_transfer" || Boolean(primaryLink?.scan_transfer);
+      (primaryLink?.access_mode === "scan_transfer" || Boolean(primaryLink?.scan_transfer)) &&
+      !directScanTransferUrl;
     const sizeLabel = resolveResourceDisplaySize(item);
     const displayTitle = resolveResourceDisplayTitle(resource);
 

@@ -3,6 +3,7 @@ package sidhub
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/base64"
 	"fmt"
 	"hash/fnv"
 	"io"
@@ -52,6 +53,8 @@ var (
 	thunderRegex        = regexp.MustCompile(`(?i)thunder://[^\s<"']+`)
 	quarkResolvedRegex  = regexp.MustCompile(`https?://pan\.quark\.cn/s/[0-9A-Za-z]+`)
 	httpURLRegex        = regexp.MustCompile(`https?://[^\s"'<>]+`)
+	atobValueRegex      = regexp.MustCompile(`\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*["']([A-Za-z0-9+/=]{16,})["']`)
+	atobCallRegex       = regexp.MustCompile(`\batob\s*\(\s*([A-Za-z_$][\w$]*)\s*\)`)
 	base64ImageRegex    = regexp.MustCompile(`data:image/[^;]+;base64,[A-Za-z0-9+/=]+`)
 	panLinkRegex        = regexp.MustCompile(`(?i)var\s+panLink\s*=\s*["']([^"']+)["']`)
 	transferCodeRegex   = regexp.MustCompile(`(?:转存|提取|访问|分享)?(?:口令|密码|验证码|提取码|访问码)\s*[:：]?\s*([A-Za-z0-9]{4,})`)
@@ -435,6 +438,12 @@ func shouldResolveSeedHubLinkStart(link model.Link) bool {
 func resolveLinkStartLink(original model.Link, body []byte, movieID string, entryIndex int) (model.Link, bool, error) {
 	resolvedLink := cloneSidHubLink(original)
 
+	if isSeedHubDownloadType(original.Type) {
+		if directURL := extractDirectResourceURLFromLinkStart(body, original.Type); directURL != "" {
+			return applyDirectSeedHubLink(resolvedLink, directURL), true, nil
+		}
+	}
+
 	scanTransfer, detected, err := extractScanTransferInfo(body, original.URL, original.Type, movieID, entryIndex)
 	if err != nil {
 		return original, false, err
@@ -446,17 +455,22 @@ func resolveLinkStartLink(original model.Link, body []byte, movieID string, entr
 	}
 
 	if directURL := extractDirectResourceURLFromLinkStart(body, original.Type); directURL != "" {
-		resolvedLink.URL = directURL
-		if directType := determineDirectLinkType(directURL); directType != "" {
-			resolvedLink.Type = directType
-		}
-		resolvedLink.Password = extractPassword(directURL)
-		resolvedLink.AccessMode = resolveSeedHubLinkAccessMode(resolvedLink)
-		resolvedLink.ScanTransfer = nil
-		return resolvedLink, true, nil
+		return applyDirectSeedHubLink(resolvedLink, directURL), true, nil
 	}
 
 	return original, false, nil
+}
+
+func applyDirectSeedHubLink(link model.Link, directURL string) model.Link {
+	resolvedLink := cloneSidHubLink(link)
+	resolvedLink.URL = directURL
+	if directType := determineDirectLinkType(directURL); directType != "" {
+		resolvedLink.Type = directType
+	}
+	resolvedLink.Password = extractPassword(directURL)
+	resolvedLink.AccessMode = resolveSeedHubLinkAccessMode(resolvedLink)
+	resolvedLink.ScanTransfer = nil
+	return resolvedLink
 }
 
 func buildFallbackScanTransferLink(link model.Link, movieID string, entryIndex int) model.Link {
@@ -493,7 +507,9 @@ func extractDirectResourceURLFromLinkStart(body []byte, expectedType string) str
 			}
 		}
 	})
-	candidates = append(candidates, httpURLRegex.FindAllString(string(body), -1)...)
+	bodyText := string(body)
+	candidates = append(candidates, httpURLRegex.FindAllString(bodyText, -1)...)
+	candidates = append(candidates, extractAtobDirectLinkCandidates(bodyText)...)
 
 	expectedType = strings.TrimSpace(expectedType)
 	for _, candidate := range candidates {
@@ -518,6 +534,44 @@ func extractDirectResourceURLFromLinkStart(body []byte, expectedType string) str
 	}
 
 	return ""
+}
+
+func extractAtobDirectLinkCandidates(bodyText string) []string {
+	usedNames := make(map[string]struct{})
+	for _, match := range atobCallRegex.FindAllStringSubmatch(bodyText, -1) {
+		if len(match) == 2 {
+			usedNames[match[1]] = struct{}{}
+		}
+	}
+	if len(usedNames) == 0 {
+		return nil
+	}
+
+	candidates := []string{}
+	for _, match := range atobValueRegex.FindAllStringSubmatch(bodyText, -1) {
+		if len(match) != 3 {
+			continue
+		}
+		if _, ok := usedNames[match[1]]; !ok {
+			continue
+		}
+		decoded, err := decodeSeedHubAtobValue(match[2])
+		if err != nil {
+			continue
+		}
+		value := strings.TrimSpace(string(decoded))
+		if determineDirectLinkType(value) != "" {
+			candidates = append(candidates, value)
+		}
+	}
+	return candidates
+}
+
+func decodeSeedHubAtobValue(value string) ([]byte, error) {
+	if decoded, err := base64.StdEncoding.DecodeString(value); err == nil {
+		return decoded, nil
+	}
+	return base64.RawStdEncoding.DecodeString(value)
 }
 
 func extractScanTransferInfo(body []byte, sourcePageURL string, linkType string, movieID string, entryIndex int) (*model.ScanTransferInfo, bool, error) {
@@ -1223,6 +1277,15 @@ func resolveSidHubTargetType(linkType string) string {
 		return "download"
 	default:
 		return "share"
+	}
+}
+
+func isSeedHubDownloadType(linkType string) bool {
+	switch normalizeLinkType(linkType) {
+	case "magnet", "ed2k", "thunder":
+		return true
+	default:
+		return false
 	}
 }
 

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getCloudTypeInfo, getCloudTypePriority } from "@/utils/cloudTypeUtils";
 import type { ResourceLink } from "@/types/resource";
-import type { ResourceOpenTarget } from "@/utils/resourceDisplay";
+import { resolveDirectScanTransferUrl, type ResourceOpenTarget } from "@/utils/resourceDisplay";
 
 interface ResourceDetailLinksSectionProps {
   resourceTitle: string;
@@ -32,6 +32,13 @@ const toTimestamp = (value?: string): number => {
   const parsed = new Date(value).getTime();
   return Number.isFinite(parsed) ? parsed : -1;
 };
+
+const isBlockingScanTransferLink = (link: ResourceLink): boolean =>
+  (link.access_mode === "scan_transfer" || Boolean(link.scan_transfer)) &&
+  !resolveDirectScanTransferUrl({
+    accessMode: link.access_mode || (link.scan_transfer ? "scan_transfer" : "direct_open"),
+    scanTransfer: link.scan_transfer,
+  });
 
 const ResourceDetailLinksSection: React.FC<ResourceDetailLinksSectionProps> = ({
   resourceTitle,
@@ -144,7 +151,7 @@ const ResourceDetailLinksSection: React.FC<ResourceDetailLinksSectionProps> = ({
                                 当前主链接
                               </Badge>
                             ) : null}
-                            {item.link.access_mode === "scan_transfer" || item.link.scan_transfer ? (
+                            {isBlockingScanTransferLink(item.link) ? (
                               <Badge variant="secondary" className="rounded-full">
                                 需手机扫码
                               </Badge>
@@ -197,7 +204,7 @@ const ResourceDetailLinksSection: React.FC<ResourceDetailLinksSectionProps> = ({
                             className="rounded-full"
                           >
                             <ExternalLink className="mr-2 h-4 w-4" />
-                            {item.link.access_mode === "scan_transfer" || item.link.scan_transfer
+                            {isBlockingScanTransferLink(item.link)
                               ? "扫码转存"
                               : "打开资源"}
                           </Button>

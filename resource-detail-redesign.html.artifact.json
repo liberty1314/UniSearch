@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "resource-detail-redesign.html",
+  "entry": "resource-detail-redesign.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-06-24T13:44:06.772Z",
+  "updatedAt": "2026-06-24T13:44:06.772Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

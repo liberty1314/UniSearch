@@ -25,6 +25,7 @@ import {
   isMagnetTarget,
   isScanTransferTarget,
   normalizeExternalUrl,
+  resolveDirectScanTransferUrl,
   type ResourceOpenTarget,
   resolveResourceOpenTarget,
 } from "@/utils/resourceDisplay";
@@ -209,6 +210,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     (item: ResultItem) => {
       const openTarget = resolveResourceOpenTarget(item);
       if (!openTarget) {
+        return;
+      }
+
+      const directScanTransferUrl = resolveDirectScanTransferUrl(openTarget);
+      if (directScanTransferUrl) {
+        openExternalResource(directScanTransferUrl);
         return;
       }
 

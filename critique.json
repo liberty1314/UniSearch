@@ -1,0 +1,26 @@
+{
+  "kind": "critique-panel",
+  "score": 4,
+  "axes": {
+    "clarity": {
+      "score": 4,
+      "notes": "首屏围绕打开主资源、复制链接和提取码组织，转化路径明确。"
+    },
+    "hierarchy": {
+      "score": 4,
+      "notes": "资源标题、主操作台、来源链接和相似推荐层级清晰，移动端主操作保持靠前。"
+    },
+    "typography": {
+      "score": 4,
+      "notes": "沿用 Apple 风格的紧凑显示字重与正文节奏，按钮和表格式信息保持可读。"
+    },
+    "motion": {
+      "score": 4,
+      "notes": "交互反馈集中在 toast、确认弹层和轻量 hover，不干扰下载决策。"
+    },
+    "brand": {
+      "score": 4,
+      "notes": "黑色产品首屏、浅灰信息区和蓝色交互色符合当前项目设计系统。"
+    }
+  }
+}
