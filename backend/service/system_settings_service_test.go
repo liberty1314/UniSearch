@@ -91,6 +91,10 @@ func TestSystemSettingsServiceGetSettingsCreatesDefaults(t *testing.T) {
 	if settings.HotRankingCacheTTLSeconds != 43200 {
 		t.Fatalf("expected hot_ranking_cache_ttl_seconds to use env default 43200, got %d", settings.HotRankingCacheTTLSeconds)
 	}
+
+	if !settings.RuntimeProgressiveSearchEnabled {
+		t.Fatalf("expected progressive search to be enabled by default, got %+v", settings)
+	}
 }
 
 func TestSystemSettingsServiceGetRuntimeSettingsUsesConfigDefaults(t *testing.T) {
@@ -135,6 +139,9 @@ func TestSystemSettingsServiceGetRuntimeSettingsUsesConfigDefaults(t *testing.T)
 	if !runtimeSettings.ProxyEnabled || runtimeSettings.ProxyURL != "socks5://127.0.0.1:7890" {
 		t.Fatalf("expected proxy defaults from app config, got %+v", runtimeSettings)
 	}
+	if !runtimeSettings.ProgressiveSearchEnabled {
+		t.Fatalf("expected progressive search enabled by default, got %+v", runtimeSettings)
+	}
 }
 
 func TestSystemSettingsServiceUpdateRuntimeSettingsPreservesExistingFields(t *testing.T) {
@@ -143,15 +150,17 @@ func TestSystemSettingsServiceUpdateRuntimeSettingsPreservesExistingFields(t *te
 	defaultConcurrency := 60
 	proxyEnabled := true
 	proxyURL := "https://proxy.example.com:8443"
+	progressiveEnabled := false
 	initial, err := service.UpdateRuntimeSettings(RuntimeSettingsUpdateInput{
-		DefaultConcurrency: &defaultConcurrency,
-		ProxyEnabled:       &proxyEnabled,
-		ProxyURL:           &proxyURL,
+		DefaultConcurrency:       &defaultConcurrency,
+		ProxyEnabled:             &proxyEnabled,
+		ProxyURL:                 &proxyURL,
+		ProgressiveSearchEnabled: &progressiveEnabled,
 	})
 	if err != nil {
 		t.Fatalf("initial UpdateRuntimeSettings returned error: %v", err)
 	}
-	if initial.DefaultConcurrency != 60 || !initial.ProxyEnabled || initial.ProxyURL != proxyURL {
+	if initial.DefaultConcurrency != 60 || !initial.ProxyEnabled || initial.ProxyURL != proxyURL || initial.ProgressiveSearchEnabled {
 		t.Fatalf("expected initial runtime settings to be saved, got %+v", initial)
 	}
 
@@ -171,6 +180,9 @@ func TestSystemSettingsServiceUpdateRuntimeSettingsPreservesExistingFields(t *te
 	}
 	if updated.AsyncMaxBackgroundWorkers != 32 {
 		t.Fatalf("expected workers to be updated, got %d", updated.AsyncMaxBackgroundWorkers)
+	}
+	if updated.ProgressiveSearchEnabled {
+		t.Fatalf("expected progressive search flag to be preserved as false, got %+v", updated)
 	}
 }
 
@@ -221,6 +233,7 @@ func TestSystemSettingsServiceApplyRuntimeSettingsUpdatesAppConfig(t *testing.T)
 		AsyncResponseTimeout:      8,
 		AsyncMaxBackgroundWorkers: 40,
 		AsyncMaxBackgroundTasks:   400,
+		ProgressiveSearchEnabled:  false,
 		ProxyEnabled:              true,
 		ProxyURL:                  "http://127.0.0.1:8080",
 	})
@@ -239,6 +252,9 @@ func TestSystemSettingsServiceApplyRuntimeSettingsUpdatesAppConfig(t *testing.T)
 	}
 	if config.AppConfig.AsyncMaxBackgroundWorkers != 40 || config.AppConfig.AsyncMaxBackgroundTasks != 400 {
 		t.Fatalf("expected async worker settings to be updated, got %+v", config.AppConfig)
+	}
+	if config.AppConfig.ProgressiveSearchEnabled {
+		t.Fatalf("expected progressive search config to be disabled, got %+v", config.AppConfig)
 	}
 	if !config.AppConfig.UseProxy || config.AppConfig.ProxyURL != "http://127.0.0.1:8080" {
 		t.Fatalf("expected proxy config to be updated, got use=%v url=%q", config.AppConfig.UseProxy, config.AppConfig.ProxyURL)

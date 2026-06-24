@@ -33,6 +33,7 @@ const createRuntimeSettings = (
   async_response_timeout: 4,
   async_max_background_workers: 20,
   async_max_background_tasks: 100,
+  progressive_search_enabled: true,
   proxy_enabled: false,
   proxy_url: '',
   config_source: 'database',
@@ -129,8 +130,19 @@ describe('SystemSettingsView TMDB section', () => {
     expect(screen.getByLabelText('响应超时')).toHaveValue(4);
     expect(screen.getByLabelText('最大工作者')).toHaveValue(20);
     expect(screen.getByLabelText('最大任务')).toHaveValue(100);
+    expect(screen.getByText('启用渐进式搜索')).toBeInTheDocument();
     expect(screen.getByLabelText('代理地址')).toBeDisabled();
     expect(screen.getByRole('button', { name: '保存运行配置' })).toBeInTheDocument();
+  });
+
+  it('支持切换渐进式搜索开关', async () => {
+    const user = userEvent.setup();
+    render(<SystemSettingsView />);
+
+    await user.click(screen.getByRole('tab', { name: '运行配置' }));
+    await user.click(screen.getByRole('switch', { name: '启用渐进式搜索' }));
+
+    expect(actions.updateRuntimeField).toHaveBeenCalledWith('progressive_search_enabled', false);
   });
 
   it('展示单输入框令牌配置并允许查看当前令牌', async () => {

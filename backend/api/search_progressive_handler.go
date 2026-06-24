@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"unisearch/config"
 	"unisearch/model"
 	"unisearch/service"
 	jsonutil "unisearch/util/json"
@@ -14,6 +15,10 @@ func SearchProgressiveHandler(searchService *service.SearchService) gin.HandlerF
 	return func(c *gin.Context) {
 		if searchService == nil {
 			c.JSON(http.StatusInternalServerError, model.NewErrorResponse(500, "搜索服务未初始化"))
+			return
+		}
+		if config.AppConfig != nil && !config.AppConfig.ProgressiveSearchEnabled {
+			c.JSON(http.StatusConflict, model.NewErrorResponse(http.StatusConflict, "渐进式搜索已关闭"))
 			return
 		}
 

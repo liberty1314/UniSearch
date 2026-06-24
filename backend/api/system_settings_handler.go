@@ -58,6 +58,7 @@ func GetSystemSettingsHandler(c *gin.Context) {
 		"enable_resource_detail_page":  settings.EnableResourceDetailPage,
 		"public_site_url":              settings.PublicSiteURL,
 		"default_copy_format_template": settings.DefaultCopyFormatTemplate,
+		"progressive_search_enabled":   settings.RuntimeProgressiveSearchEnabled,
 	})
 }
 
@@ -333,6 +334,7 @@ func UpdateRuntimeSettingsHandler(c *gin.Context) {
 		AsyncMaxBackgroundTasks   *int    `json:"async_max_background_tasks"`
 		ProxyEnabled              *bool   `json:"proxy_enabled"`
 		ProxyURL                  *string `json:"proxy_url"`
+		ProgressiveSearchEnabled  *bool   `json:"progressive_search_enabled"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -347,7 +349,8 @@ func UpdateRuntimeSettingsHandler(c *gin.Context) {
 		req.AsyncMaxBackgroundWorkers == nil &&
 		req.AsyncMaxBackgroundTasks == nil &&
 		req.ProxyEnabled == nil &&
-		req.ProxyURL == nil {
+		req.ProxyURL == nil &&
+		req.ProgressiveSearchEnabled == nil {
 		writeRuntimeAdminError(c, http.StatusBadRequest, "请求参数错误：至少需要提供一个运行配置字段")
 		return
 	}
@@ -361,6 +364,7 @@ func UpdateRuntimeSettingsHandler(c *gin.Context) {
 		AsyncMaxBackgroundTasks:   req.AsyncMaxBackgroundTasks,
 		ProxyEnabled:              req.ProxyEnabled,
 		ProxyURL:                  req.ProxyURL,
+		ProgressiveSearchEnabled:  req.ProgressiveSearchEnabled,
 	})
 	if err != nil {
 		writeRuntimeAdminError(c, http.StatusBadRequest, "更新运行配置失败："+err.Error())
@@ -460,6 +464,7 @@ func buildRuntimeSettingsResponse(settings *service.RuntimeSettings) gin.H {
 		"async_max_background_tasks":   settings.AsyncMaxBackgroundTasks,
 		"proxy_enabled":                settings.ProxyEnabled,
 		"proxy_url":                    settings.ProxyURL,
+		"progressive_search_enabled":   settings.ProgressiveSearchEnabled,
 		"config_source":                "database",
 		"restart_required_fields":      []string{"http_max_conns"},
 	}

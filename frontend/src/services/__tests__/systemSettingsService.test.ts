@@ -153,6 +153,7 @@ describe('SystemSettingsService TMDB admin api', () => {
       async_response_timeout: 4,
       async_max_background_workers: 20,
       async_max_background_tasks: 100,
+      progressive_search_enabled: true,
       proxy_enabled: false,
       proxy_url: '',
       config_source: 'database',
@@ -163,6 +164,7 @@ describe('SystemSettingsService TMDB admin api', () => {
 
     expect(getMock).toHaveBeenCalledWith('/admin/system-settings/runtime');
     expect(result.default_concurrency).toBe(50);
+    expect(result.progressive_search_enabled).toBe(true);
     expect(result.restart_required_fields).toEqual(['http_max_conns']);
   });
 
@@ -174,6 +176,7 @@ describe('SystemSettingsService TMDB admin api', () => {
       async_response_timeout: 5,
       async_max_background_workers: 30,
       async_max_background_tasks: 150,
+      progressive_search_enabled: false,
       proxy_enabled: true,
       proxy_url: 'http://127.0.0.1:8080',
       config_source: 'database',
@@ -183,12 +186,15 @@ describe('SystemSettingsService TMDB admin api', () => {
     const result = await SystemSettingsService.updateRuntimeSettings('token', {
       default_concurrency: 60,
       async_response_timeout: 5,
+      progressive_search_enabled: false,
     });
 
     expect(putMock).toHaveBeenCalledWith('/admin/system-settings/runtime', {
       default_concurrency: 60,
       async_response_timeout: 5,
+      progressive_search_enabled: false,
     });
     expect(result.default_concurrency).toBe(60);
+    expect(result.progressive_search_enabled).toBe(false);
   });
 });

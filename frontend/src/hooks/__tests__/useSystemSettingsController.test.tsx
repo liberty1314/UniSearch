@@ -6,6 +6,7 @@ const getSettingsAdminMock = vi.fn();
 const getTMDBSettingsMock = vi.fn();
 const getCacheSettingsMock = vi.fn();
 const getRuntimeSettingsMock = vi.fn();
+const getSettingsCachedMock = vi.fn();
 const updateTMDBSettingsMock = vi.fn();
 const updateRuntimeSettingsMock = vi.fn();
 const toastSuccessMock = vi.fn();
@@ -21,6 +22,7 @@ vi.mock('@/services/systemSettingsService', () => ({
     getTMDBSettings: (...args: unknown[]) => getTMDBSettingsMock(...args),
     getCacheSettings: (...args: unknown[]) => getCacheSettingsMock(...args),
     getRuntimeSettings: (...args: unknown[]) => getRuntimeSettingsMock(...args),
+    getSettingsCached: (...args: unknown[]) => getSettingsCachedMock(...args),
     updateTMDBSettings: (...args: unknown[]) => updateTMDBSettingsMock(...args),
     updateRuntimeSettings: (...args: unknown[]) => updateRuntimeSettingsMock(...args),
     updateSettings: vi.fn(),
@@ -44,6 +46,16 @@ describe('useSystemSettingsController TMDB config', () => {
       enable_resource_detail_page: false,
       public_site_url: '',
       default_copy_format_template: '',
+      progressive_search_enabled: true,
+    });
+    getSettingsCachedMock.mockResolvedValue({
+      enable_user_auth: true,
+      enable_user_login: true,
+      enable_user_signup: true,
+      enable_resource_detail_page: false,
+      public_site_url: '',
+      default_copy_format_template: '',
+      progressive_search_enabled: false,
     });
     getTMDBSettingsMock.mockResolvedValue({
       configured: true,
@@ -73,6 +85,7 @@ describe('useSystemSettingsController TMDB config', () => {
       async_response_timeout: 4,
       async_max_background_workers: 20,
       async_max_background_tasks: 100,
+      progressive_search_enabled: true,
       proxy_enabled: false,
       proxy_url: '',
       config_source: 'database',
@@ -97,6 +110,7 @@ describe('useSystemSettingsController TMDB config', () => {
 
     expect(getRuntimeSettingsMock).toHaveBeenCalledWith('test-token');
     expect(result.current.state.runtimeSettings.default_concurrency).toBe(50);
+    expect(result.current.state.runtimeSettings.progressive_search_enabled).toBe(true);
     expect(result.current.state.runtimeSettings.restart_required_fields).toEqual(['http_max_conns']);
   });
 
@@ -108,6 +122,7 @@ describe('useSystemSettingsController TMDB config', () => {
       async_response_timeout: 5,
       async_max_background_workers: 30,
       async_max_background_tasks: 150,
+      progressive_search_enabled: false,
       proxy_enabled: true,
       proxy_url: 'http://127.0.0.1:8080',
       config_source: 'database',
@@ -123,6 +138,7 @@ describe('useSystemSettingsController TMDB config', () => {
     act(() => {
       result.current.actions.updateRuntimeField('default_concurrency', 60);
       result.current.actions.updateRuntimeField('async_response_timeout', 5);
+      result.current.actions.updateRuntimeField('progressive_search_enabled', false);
     });
 
     await act(async () => {
@@ -132,8 +148,10 @@ describe('useSystemSettingsController TMDB config', () => {
     expect(updateRuntimeSettingsMock).toHaveBeenCalledWith('test-token', expect.objectContaining({
       default_concurrency: 60,
       async_response_timeout: 5,
+      progressive_search_enabled: false,
     }));
     expect(result.current.state.runtimeSettings.default_concurrency).toBe(60);
+    expect(result.current.state.runtimeSettings.progressive_search_enabled).toBe(false);
     expect(result.current.state.runtimeSettings.proxy_url).toBe('http://127.0.0.1:8080');
     expect(toastSuccessMock).toHaveBeenCalledWith('运行配置已更新');
   });

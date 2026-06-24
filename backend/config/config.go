@@ -77,10 +77,11 @@ type Config struct {
 	HTTPIdleTimeout  time.Duration // 空闲超时
 	HTTPMaxConns     int           // 最大连接数
 	// 搜索链路优化配置
-	SearchEventLogEnabled bool          // 是否启用常态搜索事件日志
-	PluginStateCacheTTL   time.Duration // 插件状态缓存 TTL
-	CacheWriteQueueSize   int           // 搜索缓存异步写队列长度
-	CacheWriteWorkers     int           // 搜索缓存异步写 worker 数
+	SearchEventLogEnabled    bool          // 是否启用常态搜索事件日志
+	PluginStateCacheTTL      time.Duration // 插件状态缓存 TTL
+	CacheWriteQueueSize      int           // 搜索缓存异步写队列长度
+	CacheWriteWorkers        int           // 搜索缓存异步写 worker 数
+	ProgressiveSearchEnabled bool          // 是否启用渐进式搜索
 	// TMDB 热门榜单配置
 	TMDBReadAccessToken          string
 	TMDBAPIKey                   string
@@ -210,10 +211,11 @@ func Init() {
 		HTTPIdleTimeout:  getHTTPIdleTimeout(),
 		HTTPMaxConns:     getHTTPMaxConns(),
 		// 搜索链路优化配置
-		SearchEventLogEnabled: getSearchEventLogEnabled(),
-		PluginStateCacheTTL:   getPluginStateCacheTTL(),
-		CacheWriteQueueSize:   getCacheWriteQueueSize(),
-		CacheWriteWorkers:     getCacheWriteWorkers(),
+		SearchEventLogEnabled:    getSearchEventLogEnabled(),
+		PluginStateCacheTTL:      getPluginStateCacheTTL(),
+		CacheWriteQueueSize:      getCacheWriteQueueSize(),
+		CacheWriteWorkers:        getCacheWriteWorkers(),
+		ProgressiveSearchEnabled: true,
 		// TMDB 热门榜单配置
 		TMDBReadAccessToken:          getTMDBReadAccessToken(),
 		TMDBAPIKey:                   getTMDBAPIKey(),

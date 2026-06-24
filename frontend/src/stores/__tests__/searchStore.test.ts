@@ -4,6 +4,7 @@ import type { RecentEffectiveSearch } from "@/components/search/searchLaunchpadT
 
 const searchMock = vi.fn();
 const searchProgressiveMock = vi.fn();
+const getSettingsCachedMock = vi.fn();
 
 vi.mock("@/services/searchService", () => ({
   SearchService: {
@@ -12,6 +13,12 @@ vi.mock("@/services/searchService", () => ({
     validateSearchParams: () => ({ valid: true }),
     getChannels: vi.fn(),
     getPlugins: vi.fn(),
+  },
+}));
+
+vi.mock("@/services/systemSettingsService", () => ({
+  SystemSettingsService: {
+    getSettingsCached: (...args: unknown[]) => getSettingsCachedMock(...args),
   },
 }));
 
@@ -46,7 +53,9 @@ describe("searchStore", () => {
     localStorage.clear();
     searchMock.mockReset();
     searchProgressiveMock.mockReset();
+    getSettingsCachedMock.mockReset();
     searchProgressiveMock.mockImplementation((...args: unknown[]) => searchMock(...args));
+    getSettingsCachedMock.mockResolvedValue({ progressive_search_enabled: true });
     const { useSearchStore } = await import("@/stores/searchStore");
     const { resetSearchRequestGuard } = await import("@/stores/searchRequestGuard");
     resetSearchRequestGuard();
@@ -242,6 +251,20 @@ describe("searchStore", () => {
     expect(searchMock).toHaveBeenCalled();
     expect(useSearchStore.getState().progressiveStatus).toBe("fallback");
     expect(useSearchStore.getState().searchResults?.resources[0]?.title).toBe("回退结果");
+  });
+
+  it("后台关闭渐进式搜索时直接使用普通搜索", async () => {
+    const { useSearchStore } = await import("@/stores/searchStore");
+
+    getSettingsCachedMock.mockResolvedValueOnce({ progressive_search_enabled: false });
+    searchMock.mockResolvedValueOnce(buildSearchResults("普通结果"));
+
+    await useSearchStore.getState().performSearch({ keyword: "普通" });
+
+    expect(searchProgressiveMock).not.toHaveBeenCalled();
+    expect(searchMock).toHaveBeenCalled();
+    expect(useSearchStore.getState().progressiveStatus).toBe("complete");
+    expect(useSearchStore.getState().searchResults?.resources[0]?.title).toBe("普通结果");
   });
 
   it("支持删除单条最近有效搜索并同步本地存储", async () => {

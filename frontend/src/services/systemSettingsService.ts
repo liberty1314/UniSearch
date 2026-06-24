@@ -23,6 +23,7 @@ export interface SystemSettingsResponse {
     enable_resource_detail_page: boolean; // 是否启用资源详情页展示
     public_site_url: string;        // 公开站点 URL（为空时由前端环境变量兜底）
     default_copy_format_template: string; // API Key 复制默认模板
+    progressive_search_enabled: boolean; // 是否启用渐进式搜索
 }
 
 export interface TMDBAdminSettingsResponse {
@@ -81,6 +82,7 @@ export interface RuntimeSettingsResponse {
     async_max_background_tasks: number;
     proxy_enabled: boolean;
     proxy_url: string;
+    progressive_search_enabled: boolean;
     config_source: 'database';
     restart_required_fields: string[];
 }

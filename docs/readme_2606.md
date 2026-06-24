@@ -1128,3 +1128,24 @@
     - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
     - frontend/src/types/system.ts
     - docs/readme_2606.md
+
+- [2026-06-24 12:19] feat(search): 支持在系统配置中动态开启和关闭渐进式搜索
+  - Body: 为系统运行时配置新增了 progressive_search_enabled 开关。前端搜索时会优先获取公共配置，若判断该开关已关闭，则自动回退至普通聚合搜索模式，方便在网络或客户端环境异常时快速降级搜索体验。
+  - Files:
+    - README.md
+    - backend/api/search_progressive_handler.go
+    - backend/api/system_settings_handler.go
+    - backend/api/system_settings_handler_test.go
+    - backend/config/config.go
+    - backend/model/system_settings.go
+    - backend/service/system_settings_service.go
+    - backend/service/system_settings_service_test.go
+    - frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx
+    - frontend/src/components/admin/system-settings/RuntimeSettingsPanel.tsx
+    - frontend/src/hooks/__tests__/useSystemSettingsController.test.tsx
+    - frontend/src/hooks/useSystemSettingsController.ts
+    - frontend/src/services/__tests__/systemSettingsService.test.ts
+    - frontend/src/services/systemSettingsService.ts
+    - frontend/src/stores/__tests__/searchStore.test.ts
+    - frontend/src/stores/searchStore.ts
+    - docs/readme_2606.md

@@ -122,6 +122,10 @@ func TestGetSystemSettingsHandlerReturnsPublicConfigFields(t *testing.T) {
 		t.Fatalf("expected enable_resource_detail_page in response, got %v", response)
 	}
 
+	if response["progressive_search_enabled"] != true {
+		t.Fatalf("expected progressive_search_enabled true, got %v", response["progressive_search_enabled"])
+	}
+
 	if response["auth_username_min_length"] != float64(5) {
 		t.Fatalf("expected auth_username_min_length to be 5, got %v", response["auth_username_min_length"])
 	}
@@ -479,6 +483,9 @@ func TestGetRuntimeSettingsHandlerReturnsRuntimeConfig(t *testing.T) {
 	if response["proxy_enabled"] != true || response["proxy_url"] != "socks5://127.0.0.1:7890" {
 		t.Fatalf("expected proxy fields from runtime settings, got %v", response)
 	}
+	if response["progressive_search_enabled"] != true {
+		t.Fatalf("expected progressive_search_enabled true, got %v", response["progressive_search_enabled"])
+	}
 	if response["config_source"] != "database" {
 		t.Fatalf("expected config_source database, got %v", response["config_source"])
 	}
@@ -500,6 +507,7 @@ func TestUpdateRuntimeSettingsHandlerPersistsRuntimeConfig(t *testing.T) {
 		"async_response_timeout":5,
 		"async_max_background_workers":30,
 		"async_max_background_tasks":150,
+		"progressive_search_enabled":false,
 		"proxy_enabled":true,
 		"proxy_url":"http://127.0.0.1:8080"
 	}`)
@@ -529,8 +537,58 @@ func TestUpdateRuntimeSettingsHandlerPersistsRuntimeConfig(t *testing.T) {
 	if response["proxy_enabled"] != true || response["proxy_url"] != "http://127.0.0.1:8080" {
 		t.Fatalf("expected proxy fields to be persisted, got %v", response)
 	}
-	if config.AppConfig.DefaultConcurrency != 60 || config.AppConfig.ProxyURL != "http://127.0.0.1:8080" {
+	if response["progressive_search_enabled"] != false {
+		t.Fatalf("expected progressive_search_enabled false, got %v", response["progressive_search_enabled"])
+	}
+	if config.AppConfig.DefaultConcurrency != 60 || config.AppConfig.ProxyURL != "http://127.0.0.1:8080" || config.AppConfig.ProgressiveSearchEnabled {
 		t.Fatalf("expected runtime config to apply to app config, got %+v", config.AppConfig)
+	}
+}
+
+func TestUpdateRuntimeSettingsHandlerAllowsProgressiveOnlyPayload(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+	config.AppConfig = &config.Config{}
+
+	body := bytes.NewBufferString(`{"progressive_search_enabled":false}`)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodPut, "/api/admin/system-settings/runtime", body)
+	context.Request.Header.Set("Content-Type", "application/json")
+
+	UpdateRuntimeSettingsHandler(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response["progressive_search_enabled"] != false {
+		t.Fatalf("expected progressive_search_enabled false, got %v", response["progressive_search_enabled"])
+	}
+}
+
+func TestSearchProgressiveHandlerRejectsWhenDisabled(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	oldConfig := config.AppConfig
+	defer func() { config.AppConfig = oldConfig }()
+	config.AppConfig = &config.Config{ProgressiveSearchEnabled: false}
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodPost, "/api/search/progressive", bytes.NewBufferString(`{"kw":"仙逆"}`))
+	context.Request.Header.Set("Content-Type", "application/json")
+
+	SearchProgressiveHandler(service.NewSearchService(nil, nil, nil))(context)
+
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("expected 409, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), "渐进式搜索已关闭") {
+		t.Fatalf("expected disabled message, got %s", recorder.Body.String())
 	}
 }
 

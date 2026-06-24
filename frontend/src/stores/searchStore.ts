@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import type { SearchParams, SearchProgressiveEvent, SearchResponse } from "@/types/search";
 import { SearchService } from "@/services/searchService";
+import { SystemSettingsService } from "@/services/systemSettingsService";
 import { getErrorCode, getErrorMessage } from "@/lib/error";
 import {
   readJsonStorage,
@@ -295,6 +296,16 @@ export const useSearchStore = create<SearchState>()(
         };
 
         try {
+          const publicSettings = await SystemSettingsService.getSettingsCached().catch(() => null);
+          if (publicSettings?.progressive_search_enabled === false) {
+            const results = await SearchService.search(finalParams);
+            if (!isLatestSearchRequest(requestId)) {
+              return;
+            }
+            commitCompletedSearch(results, "complete");
+            return;
+          }
+
           const results = await SearchService.searchProgressive(finalParams, {
             onEvent: (event) => {
               if (!isLatestSearchRequest(requestId)) {

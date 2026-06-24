@@ -33,6 +33,7 @@ type SystemSettings struct {
 	RuntimeAsyncMaxBackgroundTasks   int       `gorm:"not null;default:100" json:"runtime_async_max_background_tasks"`    // 异步插件最大后台任务
 	RuntimeProxyEnabled              bool      `gorm:"not null;default:false" json:"runtime_proxy_enabled"`               // 是否启用运行时代理
 	RuntimeProxyURL                  string    `gorm:"size:512;not null;default:''" json:"runtime_proxy_url"`             // 运行时代理地址
+	RuntimeProgressiveSearchEnabled  bool      `gorm:"not null;default:true" json:"runtime_progressive_search_enabled"`   // 是否启用渐进式搜索
 	CreatedAt                        time.Time `json:"created_at"`                                                        // 创建时间
 	UpdatedAt                        time.Time `json:"updated_at"`                                                        // 更新时间
 }

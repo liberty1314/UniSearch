@@ -47,6 +47,7 @@ type RuntimeSettings struct {
 	AsyncMaxBackgroundTasks   int    `json:"async_max_background_tasks"`
 	ProxyEnabled              bool   `json:"proxy_enabled"`
 	ProxyURL                  string `json:"proxy_url"`
+	ProgressiveSearchEnabled  bool   `json:"progressive_search_enabled"`
 }
 
 type CacheSettingOption struct {
@@ -88,6 +89,7 @@ type RuntimeSettingsUpdateInput struct {
 	AsyncMaxBackgroundTasks   *int
 	ProxyEnabled              *bool
 	ProxyURL                  *string
+	ProgressiveSearchEnabled  *bool
 }
 
 const (
@@ -204,6 +206,7 @@ func (s *SystemSettingsService) GetSettings() (*model.SystemSettings, error) {
 				RuntimeAsyncMaxBackgroundTasks:   runtimeDefaults.AsyncMaxBackgroundTasks,
 				RuntimeProxyEnabled:              runtimeDefaults.ProxyEnabled,
 				RuntimeProxyURL:                  runtimeDefaults.ProxyURL,
+				RuntimeProgressiveSearchEnabled:  runtimeDefaults.ProgressiveSearchEnabled,
 			}
 			if err := s.db.Create(&settings).Error; err != nil {
 				return nil, err
@@ -353,6 +356,9 @@ func (s *SystemSettingsService) UpdateRuntimeSettings(input RuntimeSettingsUpdat
 	if input.ProxyURL != nil {
 		next.ProxyURL = normalizeRuntimeProxyURL(*input.ProxyURL)
 	}
+	if input.ProgressiveSearchEnabled != nil {
+		next.ProgressiveSearchEnabled = *input.ProgressiveSearchEnabled
+	}
 	if strings.TrimSpace(next.ProxyURL) == "" {
 		next.ProxyEnabled = false
 	}
@@ -369,6 +375,7 @@ func (s *SystemSettingsService) UpdateRuntimeSettings(input RuntimeSettingsUpdat
 	settings.RuntimeAsyncMaxBackgroundTasks = next.AsyncMaxBackgroundTasks
 	settings.RuntimeProxyEnabled = next.ProxyEnabled
 	settings.RuntimeProxyURL = next.ProxyURL
+	settings.RuntimeProgressiveSearchEnabled = next.ProgressiveSearchEnabled
 
 	if err := s.db.Save(settings).Error; err != nil {
 		return nil, err
@@ -397,6 +404,7 @@ func (s *SystemSettingsService) ApplyRuntimeSettings(settings *RuntimeSettings) 
 	config.AppConfig.AsyncMaxBackgroundTasks = settings.AsyncMaxBackgroundTasks
 	config.AppConfig.UseProxy = settings.ProxyEnabled && strings.TrimSpace(settings.ProxyURL) != ""
 	config.AppConfig.ProxyURL = strings.TrimSpace(settings.ProxyURL)
+	config.AppConfig.ProgressiveSearchEnabled = settings.ProgressiveSearchEnabled
 }
 
 // GetAnnouncementEnabled 获取公告功能启用状态
@@ -579,6 +587,7 @@ func buildRuntimeSettings(settings *model.SystemSettings) *RuntimeSettings {
 		AsyncMaxBackgroundTasks:   settings.RuntimeAsyncMaxBackgroundTasks,
 		ProxyEnabled:              settings.RuntimeProxyEnabled,
 		ProxyURL:                  strings.TrimSpace(settings.RuntimeProxyURL),
+		ProgressiveSearchEnabled:  settings.RuntimeProgressiveSearchEnabled,
 	}
 
 	if runtimeSettings.DefaultConcurrency <= 0 {
@@ -598,6 +607,9 @@ func buildRuntimeSettings(settings *model.SystemSettings) *RuntimeSettings {
 	}
 	if runtimeSettings.ProxyURL == "" {
 		runtimeSettings.ProxyEnabled = false
+	}
+	if !settings.RuntimeProgressiveSearchEnabled && settings.ID == 0 {
+		runtimeSettings.ProgressiveSearchEnabled = defaults.ProgressiveSearchEnabled
 	}
 
 	return runtimeSettings
@@ -662,6 +674,7 @@ func resolveDefaultRuntimeSettings() RuntimeSettings {
 		AsyncMaxBackgroundTasks:   defaultRuntimeAsyncMaxBackgroundTasks,
 		ProxyEnabled:              false,
 		ProxyURL:                  "",
+		ProgressiveSearchEnabled:  true,
 	}
 
 	if config.AppConfig == nil {
@@ -686,7 +699,6 @@ func resolveDefaultRuntimeSettings() RuntimeSettings {
 	}
 	defaults.ProxyURL = strings.TrimSpace(config.AppConfig.ProxyURL)
 	defaults.ProxyEnabled = config.AppConfig.UseProxy && defaults.ProxyURL != ""
-
 	return defaults
 }
 

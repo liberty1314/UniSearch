@@ -18,6 +18,7 @@ export const DEFAULT_RUNTIME_SETTINGS: RuntimeSettingsResponse = {
   async_max_background_tasks: 100,
   proxy_enabled: false,
   proxy_url: '',
+  progressive_search_enabled: true,
   config_source: 'database',
   restart_required_fields: ['http_max_conns'],
 };
@@ -303,11 +304,13 @@ export const useSystemSettingsController = () => {
         async_max_background_tasks: runtimeSettings.async_max_background_tasks,
         proxy_enabled: runtimeSettings.proxy_enabled,
         proxy_url: runtimeSettings.proxy_url,
+        progressive_search_enabled: runtimeSettings.progressive_search_enabled,
       });
       setRuntimeSettings({
         ...DEFAULT_RUNTIME_SETTINGS,
         ...nextSettings,
       });
+      void SystemSettingsService.getSettingsCached(true);
       toast.success('运行配置已更新');
     } catch (error) {
       console.error('保存运行配置失败:', error);
