@@ -1179,3 +1179,72 @@
     - frontend/src/hooks/useSystemSettingsController.ts
     - frontend/src/services/systemSettingsService.ts
     - docs/readme_2606.md
+
+- [2026-06-24 20:14] feat(plugin): 引入插件运行时配置与SeedHub渐进式解析支持
+  - Body: 新增插件运行时配置服务及前后端管理逻辑，同时优化 SeedHub 的结果展示排序机制，支持渐进式解析与扫码转存优先级调整，并修改了前端搜索结果分页配置。
+  - Files:
+    - backend/api/plugin_runtime_config_handler.go
+    - backend/api/plugin_runtime_config_handler_test.go
+    - backend/api/router_admin.go
+    - backend/api/router_deps.go
+    - backend/cmd/bootstrap/app.go
+    - backend/model/plugin_catalog.go
+    - backend/model/plugin_runtime_config.go
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - backend/service/plugin_catalog_service.go
+    - backend/service/plugin_catalog_service_test.go
+    - backend/service/plugin_runtime_config_service.go
+    - backend/service/plugin_runtime_config_service_test.go
+    - backend/service/search_executor.go
+    - backend/service/search_service.go
+    - docs/sidhub-progressive-resolution-development-plan.md
+    - docs/sidhub-progressive-resolution-optimization-plan.md
+    - docs/sidhub-scan-transfer-adjustment-plan.md
+    - frontend/src/components/PasswordModal.tsx
+    - frontend/src/components/__tests__/PasswordModal.test.tsx
+    - frontend/src/components/admin/PluginManageDialog.tsx
+    - frontend/src/components/admin/PluginManagementView.tsx
+    - frontend/src/components/admin/__tests__/PluginManageDialog.test.tsx
+    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
+    - frontend/src/hooks/usePluginManageController.ts
+    - frontend/src/stores/__tests__/searchStore.test.ts
+    - frontend/src/stores/searchStore.ts
+    - frontend/src/types/plugin.ts
+    - frontend/src/utils/__tests__/searchResultSorter.test.ts
+    - frontend/src/utils/searchResultSorter.ts
+    - docs/readme_2606.md
+- [2026-06-24 20:14] feat(plugin): 引入插件运行时配置与SeedHub渐进式解析支持
+  - Body: 新增插件运行时配置服务及前后端管理逻辑，同时优化 SeedHub 的结果展示排序机制，支持渐进式解析与扫码转存优先级调整，并修改了前端搜索结果分页配置。
+  - Files:
+    - backend/api/plugin_runtime_config_handler.go
+    - backend/api/plugin_runtime_config_handler_test.go
+    - backend/api/router_admin.go
+    - backend/api/router_deps.go
+    - backend/cmd/bootstrap/app.go
+    - backend/model/plugin_catalog.go
+    - backend/model/plugin_runtime_config.go
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - backend/service/plugin_catalog_service.go
+    - backend/service/plugin_catalog_service_test.go
+    - backend/service/plugin_runtime_config_service.go
+    - backend/service/plugin_runtime_config_service_test.go
+    - backend/service/search_executor.go
+    - backend/service/search_service.go
+    - docs/sidhub-progressive-resolution-development-plan.md
+    - docs/sidhub-progressive-resolution-optimization-plan.md
+    - docs/sidhub-scan-transfer-adjustment-plan.md
+    - frontend/src/components/PasswordModal.tsx
+    - frontend/src/components/__tests__/PasswordModal.test.tsx
+    - frontend/src/components/admin/PluginManageDialog.tsx
+    - frontend/src/components/admin/PluginManagementView.tsx
+    - frontend/src/components/admin/__tests__/PluginManageDialog.test.tsx
+    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
+    - frontend/src/hooks/usePluginManageController.ts
+    - frontend/src/stores/__tests__/searchStore.test.ts
+    - frontend/src/stores/searchStore.ts
+    - frontend/src/types/plugin.ts
+    - frontend/src/utils/__tests__/searchResultSorter.test.ts
+    - frontend/src/utils/searchResultSorter.ts
+    - docs/readme_2606.md

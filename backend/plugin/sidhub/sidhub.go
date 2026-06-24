@@ -23,15 +23,21 @@ import (
 )
 
 const (
-	pluginName                 = "sidhub"
-	pluginDisplayName          = "SeedHub"
-	defaultPriority            = 3
-	primaryBaseURL             = "https://sidhub.cc"
-	fallbackBaseURL            = "https://www.seedhub.cc"
-	maxSearchCards             = 5
-	maxExpandedResultsPerMovie = 240
-	maxQuarkResolveLinks       = 8
-	cacheTTL                   = 1 * time.Hour
+	pluginName                         = "sidhub"
+	pluginDisplayName                  = "SeedHub"
+	defaultPriority                    = 3
+	defaultPreResolvedLinkStartPerType = 3
+	maxPreResolvedLinkStartPerType     = 20
+	primaryBaseURL                     = "https://sidhub.cc"
+	fallbackBaseURL                    = "https://www.seedhub.cc"
+	maxSearchCards                     = 5
+	maxExpandedResultsPerMovie         = 240
+	cacheTTL                           = 1 * time.Hour
+)
+
+const (
+	sidHubResolutionResolved = "resolved"
+	sidHubResolutionFallback = "fallback"
 )
 
 var (
@@ -109,15 +115,21 @@ type sidHubMovie struct {
 }
 
 type sidHubLinkEntry struct {
-	Link           model.Link
-	Title          string
-	GroupLabel     string
-	Index          int
-	Size           string
-	Year           string
-	Badges         []string
-	TitleSource    string
-	LinkTypeSource string
+	Link             model.Link
+	Title            string
+	GroupLabel       string
+	Index            int
+	Size             string
+	Year             string
+	Badges           []string
+	TitleSource      string
+	LinkTypeSource   string
+	ResolutionStatus string
+	ResolutionRank   int
+}
+
+type sidHubRuntimeConfig struct {
+	PreResolvedLinkStartPerType int
 }
 
 func init() {
@@ -137,6 +149,16 @@ func NewSidHubPlugin() *SidHubAsyncPlugin {
 		ContractVersion: "1.0",
 		Capabilities:    []string{"resource.search"},
 		Permissions:     []string{"network"},
+		ConfigSchema: []model.PluginConfigField{
+			{
+				Key:         "pre_resolved_link_start_per_type",
+				Label:       "每类完整解析数量",
+				Type:        "number",
+				Default:     float64(defaultPreResolvedLinkStartPerType),
+				Description: "SeedHub 每个资源类型前 N 条 link_start 会尝试完整解析。",
+				Group:       "解析性能",
+			},
+		},
 		Resource: model.ResourceDescriptor{
 			SourceLabel:         pluginDisplayName,
 			SourceGroup:         "search",
@@ -189,7 +211,8 @@ func (p *SidHubAsyncPlugin) doSearch(client *http.Client, keyword string, ext ma
 		return []model.SearchResult{}, nil
 	}
 
-	cacheKey := strings.ToLower(trimmedKeyword)
+	runtimeConfig := resolveSidHubRuntimeConfig(ext)
+	cacheKey := fmt.Sprintf("%s:%d:%s", strings.ToLower(trimmedKeyword), runtimeConfig.PreResolvedLinkStartPerType, strings.Join(resolveBaseURLs(ext), ","))
 	if cached, ok := searchCache.Load(cacheKey); ok {
 		entry, valid := cached.(cachedSearchResult)
 		if valid && time.Now().Before(entry.expiresAt) {
@@ -200,7 +223,7 @@ func (p *SidHubAsyncPlugin) doSearch(client *http.Client, keyword string, ext ma
 
 	var lastErr error
 	for _, baseURL := range resolveBaseURLs(ext) {
-		results, err := p.searchBaseURL(baseURL, trimmedKeyword)
+		results, err := p.searchBaseURL(baseURL, trimmedKeyword, runtimeConfig)
 		if err != nil {
 			lastErr = err
 			continue
@@ -222,7 +245,7 @@ func (p *SidHubAsyncPlugin) doSearch(client *http.Client, keyword string, ext ma
 	return []model.SearchResult{}, nil
 }
 
-func (p *SidHubAsyncPlugin) searchBaseURL(baseURL string, keyword string) ([]model.SearchResult, error) {
+func (p *SidHubAsyncPlugin) searchBaseURL(baseURL string, keyword string, runtimeConfig sidHubRuntimeConfig) ([]model.SearchResult, error) {
 	searchURL := buildSearchURL(baseURL, keyword)
 	body, err := p.fetchURL(searchURL)
 	if err != nil {
@@ -241,7 +264,7 @@ func (p *SidHubAsyncPlugin) searchBaseURL(baseURL string, keyword string) ([]mod
 		if detailErr == nil {
 			parsedEntries, parseErr := parseDetailLinkEntries(bytes.NewReader(detailBody), baseURL, card.Title)
 			if parseErr == nil {
-				entries, _ = limitExpandedSidHubEntries(p.resolveLinkStartEntries(parsedEntries, card.ID))
+				entries, _ = limitExpandedSidHubEntries(p.resolveLinkStartEntries(parsedEntries, card.ID, runtimeConfig.PreResolvedLinkStartPerType))
 			}
 		}
 
@@ -359,20 +382,43 @@ func (p *SidHubAsyncPlugin) getScraper() (*cloudscraper.Scraper, error) {
 	return p.scraper, nil
 }
 
-func (p *SidHubAsyncPlugin) resolveLinkStartEntries(entries []sidHubLinkEntry, movieID string) []sidHubLinkEntry {
+func (p *SidHubAsyncPlugin) resolveLinkStartEntries(entries []sidHubLinkEntry, movieID string, limits ...int) []sidHubLinkEntry {
 	resolved := make([]sidHubLinkEntry, 0, len(entries))
-	quarkResolveCount := 0
+	limit := defaultPreResolvedLinkStartPerType
+	if len(limits) > 0 {
+		limit = clampSidHubPreResolvedLimit(limits[0])
+	}
+	resolvedCountByType := make(map[string]int)
 
 	for _, entry := range entries {
 		nextEntry := entry
-		if shouldResolveSeedHubLinkStart(entry.Link) && quarkResolveCount < maxQuarkResolveLinks {
+		if !shouldResolveSeedHubLinkStart(entry.Link) {
+			resolved = append(resolved, nextEntry)
+			continue
+		}
+
+		linkType := normalizeLinkType(entry.Link.Type)
+		if linkType == "" {
+			linkType = strings.TrimSpace(entry.Link.Type)
+		}
+		if resolvedCountByType[linkType] < limit {
+			resolvedCountByType[linkType]++
 			if body, err := p.fetchURL(entry.Link.URL); err == nil {
 				if resolvedLink, handled, resolveErr := resolveLinkStartLink(entry.Link, body, movieID, entry.Index); resolveErr == nil && handled {
 					nextEntry.Link = resolvedLink
+					nextEntry.ResolutionStatus = sidHubResolutionResolved
+					nextEntry.ResolutionRank = 0
+					resolved = append(resolved, nextEntry)
+					continue
 				}
 			}
-			quarkResolveCount++
+			nextEntry.ResolutionStatus = sidHubResolutionFallback
+			nextEntry.ResolutionRank = 1
+		} else {
+			continue
 		}
+
+		nextEntry.Link = buildFallbackScanTransferLink(entry.Link, movieID, entry.Index)
 		resolved = append(resolved, nextEntry)
 	}
 
@@ -383,7 +429,7 @@ func shouldResolveSeedHubLinkStart(link model.Link) bool {
 	if !strings.Contains(link.URL, linkStartPathPrefix) {
 		return false
 	}
-	return isShareType(link.Type)
+	return normalizeLinkType(link.Type) != ""
 }
 
 func resolveLinkStartLink(original model.Link, body []byte, movieID string, entryIndex int) (model.Link, bool, error) {
@@ -411,6 +457,23 @@ func resolveLinkStartLink(original model.Link, body []byte, movieID string, entr
 	}
 
 	return original, false, nil
+}
+
+func buildFallbackScanTransferLink(link model.Link, movieID string, entryIndex int) model.Link {
+	resolvedLink := cloneSidHubLink(link)
+	resolvedLink.AccessMode = "scan_transfer"
+	resolvedLink.ScanTransfer = &model.ScanTransferInfo{
+		Provider:      strings.TrimSpace(link.Type),
+		Instruction:   "请使用手机网盘 App 扫码转存。",
+		SourcePageURL: strings.TrimSpace(link.URL),
+	}
+
+	if refreshKey := buildSeedHubRefreshKey(movieID, link.Type, entryIndex); refreshKey != "" {
+		resolvedLink.ScanTransfer.Refreshable = true
+		resolvedLink.ScanTransfer.RefreshKey = refreshKey
+	}
+
+	return resolvedLink
 }
 
 func extractDirectResourceURLFromLinkStart(body []byte, expectedType string) string {
@@ -657,6 +720,57 @@ func cloneSidHubLink(link model.Link) model.Link {
 		cloned.ScanTransfer = &scanTransfer
 	}
 	return cloned
+}
+
+func resolveSidHubRuntimeConfig(ext map[string]interface{}) sidHubRuntimeConfig {
+	config := sidHubRuntimeConfig{PreResolvedLinkStartPerType: defaultPreResolvedLinkStartPerType}
+	if ext == nil {
+		return config
+	}
+	rawConfig, ok := ext["plugin_runtime_config"].(map[string]interface{})
+	if !ok {
+		return config
+	}
+	rawValue, exists := rawConfig["pre_resolved_link_start_per_type"]
+	if !exists {
+		return config
+	}
+	value, ok := sidHubNumberToInt(rawValue)
+	if !ok {
+		return config
+	}
+	config.PreResolvedLinkStartPerType = clampSidHubPreResolvedLimit(value)
+	return config
+}
+
+func sidHubNumberToInt(value interface{}) (int, bool) {
+	switch typed := value.(type) {
+	case int:
+		return typed, true
+	case int64:
+		return int(typed), true
+	case int32:
+		return int(typed), true
+	case float64:
+		return int(typed), true
+	case float32:
+		return int(typed), true
+	case string:
+		parsed, err := strconv.Atoi(strings.TrimSpace(typed))
+		return parsed, err == nil
+	default:
+		return 0, false
+	}
+}
+
+func clampSidHubPreResolvedLimit(value int) int {
+	if value < 0 {
+		return defaultPreResolvedLinkStartPerType
+	}
+	if value > maxPreResolvedLinkStartPerType {
+		return maxPreResolvedLinkStartPerType
+	}
+	return value
 }
 
 func (p *SidHubAsyncPlugin) resolveQuarkURL(linkURL string) (string, error) {
@@ -1033,15 +1147,17 @@ func buildExpandedResult(card sidHubMovie, entry sidHubLinkEntry) model.SearchRe
 			Downloadable:    true,
 		},
 		Meta: map[string]interface{}{
-			"sid_hub_movie_id":         card.ID,
-			"sid_hub_detail_url":       card.DetailURL,
-			"sid_hub_link_type":        entry.Link.Type,
-			"sid_hub_group_label":      entry.GroupLabel,
-			"sid_hub_size":             entry.Size,
-			"sid_hub_year":             entry.Year,
-			"sid_hub_index":            entry.Index,
-			"sid_hub_title_source":     entry.TitleSource,
-			"sid_hub_link_type_source": entry.LinkTypeSource,
+			"sid_hub_movie_id":          card.ID,
+			"sid_hub_detail_url":        card.DetailURL,
+			"sid_hub_link_type":         entry.Link.Type,
+			"sid_hub_group_label":       entry.GroupLabel,
+			"sid_hub_size":              entry.Size,
+			"sid_hub_year":              entry.Year,
+			"sid_hub_index":             entry.Index,
+			"sid_hub_title_source":      entry.TitleSource,
+			"sid_hub_link_type_source":  entry.LinkTypeSource,
+			"sid_hub_resolution_status": entry.ResolutionStatus,
+			"sid_hub_resolution_rank":   entry.ResolutionRank,
 		},
 	}
 }

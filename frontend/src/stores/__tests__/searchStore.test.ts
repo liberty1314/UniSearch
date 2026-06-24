@@ -48,6 +48,16 @@ const buildSearchResults = (title = "测试资源"): SearchResponse => ({
   },
 });
 
+const buildManySearchResults = (count: number): SearchResponse => ({
+  ...buildSearchResults("批量资源"),
+  total: count,
+  resources: Array.from({ length: count }, (_, index) => ({
+    ...buildSearchResults(`资源 ${index + 1}`).resources[0],
+    id: `resource-${index + 1}`,
+    title: `资源 ${index + 1}`,
+  })),
+});
+
 describe("searchStore", () => {
   beforeEach(async () => {
     localStorage.clear();
@@ -265,6 +275,24 @@ describe("searchStore", () => {
     expect(searchMock).toHaveBeenCalled();
     expect(useSearchStore.getState().progressiveStatus).toBe("complete");
     expect(useSearchStore.getState().searchResults?.resources[0]?.title).toBe("普通结果");
+  });
+
+  it("首屏展示 48 条，继续加载每次追加 24 条", async () => {
+    const { useSearchStore } = await import("@/stores/searchStore");
+
+    searchMock.mockResolvedValueOnce(buildManySearchResults(100));
+
+    await useSearchStore.getState().performSearch({ keyword: "批量" });
+
+    expect(useSearchStore.getState().displayedCount).toBe(48);
+    expect(useSearchStore.getState().hasMore).toBe(true);
+
+    useSearchStore.getState().loadMore();
+    expect(useSearchStore.getState().displayedCount).toBe(72);
+    expect(useSearchStore.getState().hasMore).toBe(true);
+
+    useSearchStore.getState().loadMore();
+    expect(useSearchStore.getState().displayedCount).toBe(96);
   });
 
   it("支持删除单条最近有效搜索并同步本地存储", async () => {

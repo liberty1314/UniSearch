@@ -101,6 +101,11 @@ export interface PluginCatalogResponse {
   items: PluginInfo[];
 }
 
+export interface PluginRuntimeConfigResponse {
+  plugin_name: string;
+  config: Record<string, unknown>;
+}
+
 export interface BatchPluginStatusRequest {
   plugin_names: string[];
   is_enabled: boolean;

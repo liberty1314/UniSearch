@@ -28,6 +28,8 @@ func registerAdminRoutes(api *gin.RouterGroup, deps RouterDeps) {
 		admin.POST("/tags", CreateAdminTagHandler)
 		admin.PUT("/tags/:id", UpdateAdminTagHandler)
 		admin.DELETE("/tags/:id", DeleteAdminTagHandler)
+		admin.GET("/plugins/:pluginName/config", GetPluginRuntimeConfigHandler(deps.SearchService, deps.PluginRuntimeConfig))
+		admin.PUT("/plugins/:pluginName/config", SavePluginRuntimeConfigHandler(deps.SearchService, deps.PluginRuntimeConfig))
 		admin.POST("/plugins/:pluginName/test", TestPluginHandler(deps.SearchService, deps.PluginHealthService))
 		admin.POST("/plugins/:pluginName/status", SetPluginStatusHandler(deps.SearchService, deps.PluginStateService))
 		admin.POST("/plugins/batch-status", BatchSetPluginStatusHandler(deps.SearchService, deps.PluginStateService))

@@ -6,9 +6,12 @@ import (
 
 	"unisearch/config"
 	"unisearch/model"
+	"unisearch/plugin"
 	"unisearch/util/cache"
 	"unisearch/util/pool"
 )
+
+const pluginRuntimeConfigSnapshotExtKey = "_plugin_runtime_configs"
 
 type ChannelSearcher func(keyword string, channel string) ([]model.SearchResult, error)
 
@@ -78,11 +81,16 @@ type pluginSearchExecutor struct {
 	metrics             *SearchMetricsRecorder
 	pluginLocks         *sync.Map
 	pluginHealthService *PluginHealthService
+	pluginRuntimeConfig *PluginRuntimeConfigService
 }
 
-func newPluginSearchExecutor(pluginSelector *searchPluginSelector, searchCache SearchCache, metrics *SearchMetricsRecorder, pluginLocks *sync.Map, pluginHealthService *PluginHealthService) PluginSearchExecutor {
+func newPluginSearchExecutor(pluginSelector *searchPluginSelector, searchCache SearchCache, metrics *SearchMetricsRecorder, pluginLocks *sync.Map, pluginHealthService *PluginHealthService, pluginRuntimeConfig ...*PluginRuntimeConfigService) PluginSearchExecutor {
 	if pluginLocks == nil {
 		pluginLocks = &sync.Map{}
+	}
+	var runtimeConfig *PluginRuntimeConfigService
+	if len(pluginRuntimeConfig) > 0 {
+		runtimeConfig = pluginRuntimeConfig[0]
 	}
 	return &pluginSearchExecutor{
 		pluginSelector:      pluginSelector,
@@ -90,6 +98,7 @@ func newPluginSearchExecutor(pluginSelector *searchPluginSelector, searchCache S
 		metrics:             metrics,
 		pluginLocks:         pluginLocks,
 		pluginHealthService: pluginHealthService,
+		pluginRuntimeConfig: runtimeConfig,
 	}
 }
 
@@ -114,6 +123,15 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 	availablePluginNames := make([]string, 0, len(availablePlugins))
 	for _, p := range availablePlugins {
 		availablePluginNames = append(availablePluginNames, p.Name())
+	}
+	runtimeConfigs := e.runtimeConfigsForPlugins(availablePlugins)
+	if len(runtimeConfigs) > 0 {
+		nextExt := make(map[string]interface{}, len(ext)+1)
+		for key, value := range ext {
+			nextExt[key] = value
+		}
+		nextExt[pluginRuntimeConfigSnapshotExtKey] = runtimeConfigs
+		ext = nextExt
 	}
 
 	cacheKey := cache.GeneratePluginCacheKey(keyword, availablePluginNames, ext)
@@ -146,7 +164,7 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 			currentPlugin.SetMainCacheKey(cacheKey)
 			currentPlugin.SetCurrentKeyword(keyword)
 
-			result, searchErr := currentPlugin.SearchWithResult(keyword, ext)
+			result, searchErr := currentPlugin.SearchWithResult(keyword, e.extForPlugin(ext, currentPlugin))
 			if searchErr != nil {
 				return pluginTaskResult{
 					name: currentPlugin.Name(),
@@ -217,6 +235,43 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 		}
 	}
 	return allResults, warnings, nil
+}
+
+func (e *pluginSearchExecutor) extForPlugin(ext map[string]interface{}, currentPlugin plugin.AsyncSearchPlugin) map[string]interface{} {
+	nextExt := make(map[string]interface{}, len(ext)+1)
+	for key, value := range ext {
+		nextExt[key] = value
+	}
+	if snapshots, ok := ext[pluginRuntimeConfigSnapshotExtKey].(map[string]map[string]interface{}); ok {
+		if config, exists := snapshots[currentPlugin.Name()]; exists {
+			nextExt[PluginRuntimeConfigExtKey] = config
+			return nextExt
+		}
+	}
+	if e.pluginRuntimeConfig == nil || currentPlugin == nil {
+		return nextExt
+	}
+	config, err := e.pluginRuntimeConfig.GetConfig(currentPlugin.Name(), plugin.ResolvePluginManifest(currentPlugin))
+	if err != nil {
+		return nextExt
+	}
+	nextExt[PluginRuntimeConfigExtKey] = config
+	return nextExt
+}
+
+func (e *pluginSearchExecutor) runtimeConfigsForPlugins(plugins []plugin.AsyncSearchPlugin) map[string]map[string]interface{} {
+	if e.pluginRuntimeConfig == nil || len(plugins) == 0 {
+		return nil
+	}
+	result := make(map[string]map[string]interface{}, len(plugins))
+	for _, currentPlugin := range plugins {
+		config, err := e.pluginRuntimeConfig.GetConfig(currentPlugin.Name(), plugin.ResolvePluginManifest(currentPlugin))
+		if err != nil {
+			continue
+		}
+		result[currentPlugin.Name()] = config
+	}
+	return result
 }
 
 func (e *pluginSearchExecutor) lockForPlugin(name string) *sync.Mutex {

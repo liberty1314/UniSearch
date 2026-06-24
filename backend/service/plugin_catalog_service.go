@@ -100,6 +100,7 @@ func buildInstalledCatalogItem(name string, pluginType string, priority int, url
 		Category:    manifest.Category,
 		Description: description,
 		Manifest:    manifest,
+		ConfigSchema: manifest.ConfigSchema,
 		SourceType:  "local",
 		PluginType:  pluginType,
 		URL:         url,

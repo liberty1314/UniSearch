@@ -91,10 +91,13 @@ func Initialize() (*App, error) {
 	pluginStateService := service.NewPluginStateService(database.GetDB())
 	fmt.Println("PluginState 服务已启动（插件启停状态持久化已启用）")
 
+	pluginRuntimeConfigService := service.NewPluginRuntimeConfigService(database.GetDB())
+	fmt.Println("PluginRuntimeConfig 服务已启动（插件运行配置持久化已启用）")
+
 	tgChannelHealthService := service.NewTGChannelHealthService(database.GetDB())
 	fmt.Println("TGChannelHealth 服务已启动（TG 频道健康状态持久化已启用）")
 
-	searchService := service.NewSearchService(pluginManager, redisCache, pluginStateService)
+	searchService := service.NewSearchService(pluginManager, redisCache, pluginStateService, pluginRuntimeConfigService)
 	hotRankingService := service.NewHotRankingServiceWithRedis(redisCache)
 
 	return &App{
@@ -108,6 +111,7 @@ func Initialize() (*App, error) {
 			TGChannelService:       tgChannelService,
 			PluginHealthService:    pluginHealthService,
 			PluginStateService:     pluginStateService,
+			PluginRuntimeConfig:    pluginRuntimeConfigService,
 			TGChannelHealthService: tgChannelHealthService,
 			AdminTagService:        adminTagService,
 			HotRankingService:      hotRankingService,

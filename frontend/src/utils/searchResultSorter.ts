@@ -5,6 +5,7 @@ type SortableResultItem = ResultItem & {
   priority: number;
   matchRank: number;
   accessRank: number;
+  sidHubResolutionRank: number | null;
 };
 
 function resolvePrimaryLink(resource: ResourceObject) {
@@ -101,6 +102,18 @@ function resolveResourceAccessRank(resource: ResourceObject): number {
   return hasScanTransfer ? 0 : 1;
 }
 
+function resolveSidHubResolutionRank(resource: ResourceObject): number | null {
+  const rawRank = resource.meta?.sid_hub_resolution_rank;
+  if (typeof rawRank === "number" && Number.isFinite(rawRank)) {
+    return rawRank;
+  }
+  if (typeof rawRank === "string" && rawRank.trim() !== "") {
+    const parsed = Number(rawRank);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 export const sortResources = (
   resources: ResourceObject[] | undefined | null,
   keyword = "",
@@ -122,6 +135,7 @@ export const sortResources = (
       priority: getCloudTypePriority(cloudType),
       matchRank: resolveResourceMatchRank(resource, keyword),
       accessRank: resolveResourceAccessRank(resource),
+      sidHubResolutionRank: resolveSidHubResolutionRank(resource),
     };
   });
 
@@ -131,6 +145,13 @@ export const sortResources = (
     }
     if (a.accessRank !== b.accessRank) {
       return a.accessRank - b.accessRank;
+    }
+    if (
+      a.sidHubResolutionRank !== null &&
+      b.sidHubResolutionRank !== null &&
+      a.sidHubResolutionRank !== b.sidHubResolutionRank
+    ) {
+      return a.sidHubResolutionRank - b.sidHubResolutionRank;
     }
     const timeDiff = b.datetime - a.datetime;
     if (Math.abs(timeDiff) > 1000) {

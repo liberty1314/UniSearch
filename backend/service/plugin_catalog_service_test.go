@@ -25,6 +25,14 @@ func newCatalogTestPlugin(name string, priority int) *catalogTestPlugin {
 		ContractVersion: "1.0",
 		Capabilities:    []string{"resource.search"},
 		Permissions:     []string{"network"},
+		ConfigSchema: []model.PluginConfigField{
+			{
+				Key:     "pre_resolved_link_start_per_type",
+				Label:   "每类完整解析数量",
+				Type:    "number",
+				Default: float64(3),
+			},
+		},
 		Resource: model.ResourceDescriptor{
 			SourceLabel: "测试插件",
 			SourceGroup: "search",
@@ -72,6 +80,9 @@ func TestPluginCatalogServiceReturnsOnlyBuiltinCatalog(t *testing.T) {
 	}
 	if item.URL != "" || item.Install.Type != "" {
 		t.Fatalf("内置插件目录不应包含自定义 URL 或安装信息，实际为 %#v", item)
+	}
+	if len(item.ConfigSchema) != 1 || item.ConfigSchema[0].Key != "pre_resolved_link_start_per_type" {
+		t.Fatalf("插件目录应透传配置 schema，实际为 %#v", item.ConfigSchema)
 	}
 	if containsAction(item.AvailableActions, "install") || containsAction(item.AvailableActions, "delete") {
 		t.Fatalf("内置插件动作不应包含 install/delete，实际为 %#v", item.AvailableActions)

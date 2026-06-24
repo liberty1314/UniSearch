@@ -15,19 +15,20 @@ import (
 
 // SearchService 搜索服务
 type SearchService struct {
-	pluginManager      *plugin.PluginManager
-	cache              *cache.RedisCache // Redis 缓存客户端
-	pluginStateService *PluginStateService
-	normalizer         *searchRequestNormalizer
-	pluginSelector     *searchPluginSelector
-	resultMerger       *searchResultMerger
-	responseBuilder    *searchResponseBuilder
-	searchCache        SearchCache
-	tgExecutor         TGSearchExecutor
-	pluginExecutor     PluginSearchExecutor
-	metrics            *SearchMetricsRecorder
-	pluginLocks        sync.Map
-	pluginHealth       *PluginHealthService
+	pluginManager       *plugin.PluginManager
+	cache               *cache.RedisCache // Redis 缓存客户端
+	pluginStateService  *PluginStateService
+	pluginRuntimeConfig *PluginRuntimeConfigService
+	normalizer          *searchRequestNormalizer
+	pluginSelector      *searchPluginSelector
+	resultMerger        *searchResultMerger
+	responseBuilder     *searchResponseBuilder
+	searchCache         SearchCache
+	tgExecutor          TGSearchExecutor
+	pluginExecutor      PluginSearchExecutor
+	metrics             *SearchMetricsRecorder
+	pluginLocks         sync.Map
+	pluginHealth        *PluginHealthService
 }
 
 // NewSearchService 创建搜索服务实例
@@ -37,28 +38,33 @@ type SearchService struct {
 //
 // 返回:
 //   - *SearchService: 搜索服务实例
-func NewSearchService(pluginManager *plugin.PluginManager, redisCache *cache.RedisCache, pluginStateService *PluginStateService) *SearchService {
+func NewSearchService(pluginManager *plugin.PluginManager, redisCache *cache.RedisCache, pluginStateService *PluginStateService, runtimeConfigService ...*PluginRuntimeConfigService) *SearchService {
 	metrics := newSearchMetricsRecorder()
+	var pluginRuntimeConfig *PluginRuntimeConfigService
+	if len(runtimeConfigService) > 0 {
+		pluginRuntimeConfig = runtimeConfigService[0]
+	}
 	service := &SearchService{
-		pluginManager:      pluginManager,
-		cache:              redisCache,
-		pluginStateService: pluginStateService,
-		normalizer:         newSearchRequestNormalizer(),
-		pluginSelector:     newPluginSelector(pluginManager, pluginStateService),
-		resultMerger:       newResultMerger(),
-		responseBuilder:    newSearchResponseBuilder(),
-		metrics:            metrics,
-		searchCache:        newSearchCache(redisCache, metrics),
+		pluginManager:       pluginManager,
+		cache:               redisCache,
+		pluginStateService:  pluginStateService,
+		pluginRuntimeConfig: pluginRuntimeConfig,
+		normalizer:          newSearchRequestNormalizer(),
+		pluginSelector:      newPluginSelector(pluginManager, pluginStateService),
+		resultMerger:        newResultMerger(),
+		responseBuilder:     newSearchResponseBuilder(),
+		metrics:             metrics,
+		searchCache:         newSearchCache(redisCache, metrics),
 	}
 	service.tgExecutor = newTGSearchExecutor(service.searchCache, service.metrics, service.searchChannel)
-	service.pluginExecutor = newPluginSearchExecutor(service.pluginSelector, service.searchCache, service.metrics, &service.pluginLocks, service.pluginHealth)
+	service.pluginExecutor = newPluginSearchExecutor(service.pluginSelector, service.searchCache, service.metrics, &service.pluginLocks, service.pluginHealth, service.pluginRuntimeConfig)
 	return service
 }
 
 func (s *SearchService) SetPluginHealthService(pluginHealthService *PluginHealthService) {
 	s.pluginHealth = pluginHealthService
 	if s.pluginSelector != nil && s.searchCache != nil && s.metrics != nil {
-		s.pluginExecutor = newPluginSearchExecutor(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth)
+		s.pluginExecutor = newPluginSearchExecutor(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginRuntimeConfig)
 	}
 }
 
@@ -74,7 +80,7 @@ func (s *SearchService) Search(keyword string, channels []string, concurrency in
 		s.tgExecutor = newTGSearchExecutor(s.searchCache, s.metrics, s.searchChannel)
 	}
 	if s.pluginExecutor == nil {
-		s.pluginExecutor = newPluginSearchExecutor(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth)
+		s.pluginExecutor = newPluginSearchExecutor(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginRuntimeConfig)
 	}
 
 	normalized := s.normalizer.Normalize(keyword, channels, concurrency, forceRefresh, resultType, sourceType, plugins, cloudTypes, ext)
@@ -178,7 +184,7 @@ func (s *SearchService) searchTG(keyword string, channels []string, forceRefresh
 // searchPlugins 搜索插件
 func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRefresh bool, concurrency int, ext map[string]interface{}) (allResults []model.SearchResult, warnings []model.SearchSourceWarning, err error) {
 	if s.pluginExecutor == nil {
-		s.pluginExecutor = newPluginSearchExecutor(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth)
+		s.pluginExecutor = newPluginSearchExecutor(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginRuntimeConfig)
 	}
 	return s.pluginExecutor.Search(keyword, plugins, forceRefresh, concurrency, ext)
 }

@@ -92,6 +92,34 @@ const builtinPlugins: PluginInfo[] = [
     tags: ['电影'],
   },
   {
+    name: 'sidhub',
+    priority: 2,
+    status: 'active',
+    plugin_type: 'builtin',
+    is_enabled: true,
+    description: 'SeedHub',
+    id: 'search.sidhub',
+    version: '1.0.0',
+    category: 'search',
+    capabilities: ['resource.search'],
+    source_type: 'builtin',
+    is_local: true,
+    is_remote: false,
+    installed: true,
+    available_actions: ['detail', 'test', 'toggle'],
+    manifest_status: 'complete',
+    config_schema: [
+      {
+        key: 'pre_resolved_link_start_per_type',
+        label: '每类完整解析数量',
+        type: 'number',
+        required: false,
+        default: 3,
+        description: '每类完整解析数量',
+      },
+    ],
+  },
+  {
     name: 'media-enabled',
     priority: 2,
     status: 'active',
@@ -149,6 +177,7 @@ const builtinPlugins: PluginInfo[] = [
 ];
 
 let catalogItems: PluginInfo[] = [];
+let runtimeConfigs: Record<string, Record<string, unknown>> = {};
 
 const clonePlugin = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -181,6 +210,11 @@ describe('PluginManageDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     catalogItems = clonePlugin(builtinPlugins);
+    runtimeConfigs = {
+      sidhub: {
+        pre_resolved_link_start_per_type: 3,
+      },
+    };
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input.toString();
@@ -204,6 +238,28 @@ describe('PluginManageDialog', () => {
               { id: 1, name: '电影', scope: 'plugin' },
               { id: 2, name: '剧集', scope: 'plugin' },
             ],
+          }),
+        };
+      }
+
+      if (url.endsWith('/config')) {
+        const pluginName = url.split('/').slice(-2)[0];
+        if (init?.method === 'PUT') {
+          const body = readJsonBody(init);
+          runtimeConfigs[pluginName] = body.config as Record<string, unknown>;
+          return {
+            ok: true,
+            json: async () => ({
+              plugin_name: pluginName,
+              config: clonePlugin(runtimeConfigs[pluginName]),
+            }),
+          };
+        }
+        return {
+          ok: true,
+          json: async () => ({
+            plugin_name: pluginName,
+            config: clonePlugin(runtimeConfigs[pluginName] || {}),
           }),
         };
       }
@@ -374,6 +430,32 @@ describe('PluginManageDialog', () => {
     expect(screen.getByText('https://example.com/builtin-enabled')).toBeInTheDocument();
     expect(screen.getByText('健康状态')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '编辑该插件' })).not.toBeInTheDocument();
+  });
+
+  it('支持编辑并保存 SeedHub 数字配置项', async () => {
+    renderDialog();
+    await waitForCatalogReady();
+
+    const sidHubCard = getPluginCard('sidhub');
+    fireEvent.click(within(sidHubCard).getByRole('button', { name: /详情/ }));
+
+    const input = await screen.findByLabelText('每类完整解析数量');
+    fireEvent.change(input, { target: { value: '5' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存配置' }));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/admin/plugins/sidhub/config',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({
+            config: {
+              pre_resolved_link_start_per_type: 5,
+            },
+          }),
+        })
+      );
+    });
   });
 
   it('支持分类和能力筛选', async () => {

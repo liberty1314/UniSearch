@@ -24,6 +24,7 @@ type PluginCatalogItem struct {
 	Category         string                `json:"category" sonic:"category"`
 	Description      string                `json:"description" sonic:"description"`
 	Manifest         PluginManifest        `json:"manifest" sonic:"manifest"`
+	ConfigSchema     []PluginConfigField   `json:"config_schema,omitempty" sonic:"config_schema,omitempty"`
 	Install          PluginCatalogInstall  `json:"install,omitempty" sonic:"install,omitempty"`
 	Tags             []string              `json:"tags,omitempty" sonic:"tags,omitempty"`
 	Homepage         string                `json:"homepage,omitempty" sonic:"homepage,omitempty"`

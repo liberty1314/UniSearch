@@ -153,4 +153,23 @@ describe("sortResources", () => {
     ]);
     expect(result[0].primaryLink?.access_mode).toBe("scan_transfer");
   });
+
+  it("prioritizes resolved SeedHub resources before deferred SeedHub resources", () => {
+    const result = sortResources([
+      makeResource("deferred", "2026-06-20T00:00:00.000Z", CloudType.QUARK, {
+        source: { type: "plugin", id: "sidhub", name: "SeedHub" },
+        meta: {
+          sid_hub_resolution_rank: 2,
+        },
+      }),
+      makeResource("resolved", "2026-06-10T00:00:00.000Z", CloudType.QUARK, {
+        source: { type: "plugin", id: "sidhub", name: "SeedHub" },
+        meta: {
+          sid_hub_resolution_rank: 0,
+        },
+      }),
+    ]);
+
+    expect(result.map((item) => item.resource.id)).toEqual(["resolved", "deferred"]);
+  });
 });

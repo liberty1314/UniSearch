@@ -212,6 +212,13 @@ func TestSidHubPluginManifest(t *testing.T) {
 	if manifest.ManifestStatus != "complete" {
 		t.Fatalf("期望插件清单完整，实际状态为 %q", manifest.ManifestStatus)
 	}
+	if len(manifest.ConfigSchema) != 1 {
+		t.Fatalf("期望 SeedHub 声明 1 个运行配置项，实际为 %#v", manifest.ConfigSchema)
+	}
+	field := manifest.ConfigSchema[0]
+	if field.Key != "pre_resolved_link_start_per_type" || field.Type != "number" || field.Default != float64(3) {
+		t.Fatalf("期望声明每类完整解析数量配置，实际为 %#v", field)
+	}
 }
 
 func TestParseSearchCards(t *testing.T) {
@@ -908,6 +915,143 @@ func TestResolveLinkStartLinkDetectsCodeOnlyScanTransfer(t *testing.T) {
 	}
 	if resolved.ScanTransfer.TransferCode != "EFGH5678" {
 		t.Fatalf("期望提取转存口令，实际为 %#v", resolved.ScanTransfer)
+	}
+}
+
+func TestResolveLinkStartEntriesDropsOverflowLinkStartEntries(t *testing.T) {
+	p := NewSidHubPlugin()
+	fetchCount := map[string]int{}
+	entries := make([]sidHubLinkEntry, 0, defaultPreResolvedLinkStartPerType+1)
+
+	for index := 1; index <= defaultPreResolvedLinkStartPerType+1; index++ {
+		linkURL := fmt.Sprintf("https://www.seedhub.cc/link_start/?redirect_to=baidu_%d", index)
+		entries = append(entries, sidHubLinkEntry{
+			Link: model.Link{
+				Type:      "baidu",
+				URL:       linkURL,
+				WorkTitle: "巨星之路",
+			},
+			Index: index,
+			Title: fmt.Sprintf("百度资源 %d", index),
+		})
+	}
+
+	p.fetcher = func(targetURL string) ([]byte, error) {
+		fetchCount[targetURL]++
+		return []byte(sidHubScanTransferFixture), nil
+	}
+
+	resolved := p.resolveLinkStartEntries(entries, "626957")
+	if len(resolved) != defaultPreResolvedLinkStartPerType {
+		t.Fatalf("期望只保留前 %d 条结果，实际为 %d", defaultPreResolvedLinkStartPerType, len(resolved))
+	}
+
+	overflowURL := "https://www.seedhub.cc/link_start/?redirect_to=baidu_4"
+	if fetchCount[overflowURL] != 0 {
+		t.Fatalf("第 4 条不应触发预抓取，实际抓取次数为 %d", fetchCount[overflowURL])
+	}
+}
+
+func TestResolveLinkStartEntriesUsesPerTypeBudget(t *testing.T) {
+	p := NewSidHubPlugin()
+	entries := []sidHubLinkEntry{
+		{Link: model.Link{Type: "baidu", URL: "https://www.seedhub.cc/link_start/?redirect_to=baidu_1"}, Index: 1},
+		{Link: model.Link{Type: "baidu", URL: "https://www.seedhub.cc/link_start/?redirect_to=baidu_2"}, Index: 2},
+		{Link: model.Link{Type: "quark", URL: "https://www.seedhub.cc/link_start/?redirect_to=quark_1"}, Index: 3},
+		{Link: model.Link{Type: "quark", URL: "https://www.seedhub.cc/link_start/?redirect_to=quark_2"}, Index: 4},
+		{Link: model.Link{Type: "magnet", URL: "https://www.seedhub.cc/link_start/?seed_id=1"}, Index: 5},
+		{Link: model.Link{Type: "magnet", URL: "https://www.seedhub.cc/link_start/?seed_id=2"}, Index: 6},
+	}
+	fetched := []string{}
+	p.fetcher = func(targetURL string) ([]byte, error) {
+		fetched = append(fetched, targetURL)
+		return []byte(sidHubScanTransferFixture), nil
+	}
+
+	resolved := p.resolveLinkStartEntries(entries, "626957", 1)
+
+	if len(fetched) != 3 {
+		t.Fatalf("期望百度、夸克、磁力各预抓 1 条，实际抓取 %d 次: %#v", len(fetched), fetched)
+	}
+	if len(resolved) != 3 {
+		t.Fatalf("期望每类型只保留 1 条结果，实际为 %d: %#v", len(resolved), resolved)
+	}
+}
+
+func TestResolveLinkStartEntriesHonorsZeroBudget(t *testing.T) {
+	p := NewSidHubPlugin()
+	p.fetcher = func(targetURL string) ([]byte, error) {
+		t.Fatalf("N=0 时不应预抓 link_start: %s", targetURL)
+		return nil, nil
+	}
+
+	resolved := p.resolveLinkStartEntries([]sidHubLinkEntry{{
+		Link:  model.Link{Type: "baidu", URL: "https://www.seedhub.cc/link_start/?redirect_to=baidu_1"},
+		Index: 1,
+	}}, "626957", 0)
+
+	if len(resolved) != 0 {
+		t.Fatalf("期望 N=0 时不返回 SeedHub link_start 结果，实际为 %#v", resolved)
+	}
+}
+
+func TestResolveLinkStartEntriesFallsBackWhenPreResolveFails(t *testing.T) {
+	p := NewSidHubPlugin()
+	entry := sidHubLinkEntry{
+		Link: model.Link{
+			Type:      "uc",
+			URL:       "https://www.seedhub.cc/link_start/?redirect_to=uc_fail",
+			WorkTitle: "巨星之路",
+		},
+		Index: 1,
+	}
+
+	p.fetcher = func(targetURL string) ([]byte, error) {
+		return nil, errors.New("预抓取失败")
+	}
+
+	resolved := p.resolveLinkStartEntries([]sidHubLinkEntry{entry}, "626957")
+	link := resolved[0].Link
+	if link.AccessMode != "scan_transfer" || link.ScanTransfer == nil {
+		t.Fatalf("期望预抓取失败时兜底为扫码转存，实际为 %#v", link)
+	}
+	if link.ScanTransfer.RefreshKey != "seedhub:626957:uc:1" {
+		t.Fatalf("期望保留可刷新定位，实际为 %#v", link.ScanTransfer)
+	}
+}
+
+func TestResolveLinkStartEntriesLeavesDirectAndDownloadLinksUnchanged(t *testing.T) {
+	p := NewSidHubPlugin()
+	entries := []sidHubLinkEntry{
+		{
+			Link: model.Link{
+				Type: "quark",
+				URL:  "https://pan.quark.cn/s/direct123",
+			},
+			Index: 1,
+		},
+		{
+			Link: model.Link{
+				Type: "magnet",
+				URL:  "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567",
+			},
+			Index: 2,
+		},
+	}
+
+	p.fetcher = func(targetURL string) ([]byte, error) {
+		t.Fatalf("普通直链和下载型链接不应触发预抓取: %s", targetURL)
+		return nil, nil
+	}
+
+	resolved := p.resolveLinkStartEntries(entries, "626957")
+	for index, entry := range resolved {
+		if entry.Link.AccessMode != "" || entry.Link.ScanTransfer != nil {
+			t.Fatalf("第 %d 条链接不应被标记为扫码，实际为 %#v", index+1, entry.Link)
+		}
+		if entry.Link.URL != entries[index].Link.URL {
+			t.Fatalf("第 %d 条链接 URL 不应变化，实际为 %#v", index+1, entry.Link)
+		}
 	}
 }
 

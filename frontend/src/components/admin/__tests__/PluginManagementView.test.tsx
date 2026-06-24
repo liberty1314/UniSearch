@@ -8,7 +8,49 @@ vi.mock('@/stores/authStore', () => ({
   useAuthStore: () => ({ token: 'test-token' }),
 }));
 
-const createCatalogItems = () => Array.from({ length: 12 }, (_, index) => {
+const createSidHubItem = () => ({
+  id: 'search.sidhub',
+  name: 'sidhub',
+  version: '1.0.0',
+  category: 'search',
+  description: '基于 SeedHub 的影视、动漫资源搜索插件。',
+  plugin_type: 'builtin',
+  source_type: 'builtin',
+  is_local: true,
+  is_remote: false,
+  installed: true,
+  is_enabled: true,
+  status: 'active',
+  priority: 3,
+  available_actions: ['detail', 'test', 'toggle'],
+  capabilities: ['resource.search'],
+  tags: ['电影'],
+  author: 'UniSearch',
+  manifest_status: 'complete',
+  config_schema: [
+    {
+      key: 'pre_resolved_link_start_per_type',
+      label: '每类完整解析数量',
+      type: 'number',
+      required: false,
+      default: 3,
+      description: '每类完整解析数量',
+    },
+  ],
+  health: {
+    is_healthy: true,
+    check_source: 'manual_test',
+  },
+  resource: {
+    source_label: 'SeedHub',
+    source_group: 'search',
+    supported_media_types: ['movie'],
+    target_types: ['share'],
+    priority: 5,
+  },
+});
+
+const createCatalogItems = () => [createSidHubItem(), ...Array.from({ length: 12 }, (_, index) => {
   const order = index + 1;
   return {
     id: `search.builtin-enabled-${order}`,
@@ -41,10 +83,15 @@ const createCatalogItems = () => Array.from({ length: 12 }, (_, index) => {
       priority: 5,
     },
   };
-});
+})];
 
 describe('PluginManagementView', () => {
   beforeEach(() => {
+    const runtimeConfigs: Record<string, Record<string, unknown>> = {
+      sidhub: {
+        pre_resolved_link_start_per_type: 3,
+      },
+    };
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input.toString();
 
@@ -105,6 +152,20 @@ describe('PluginManagementView', () => {
           ok: true,
           json: async () => ({
             success: true,
+          }),
+        };
+      }
+
+      if (url.endsWith('/config')) {
+        const pluginName = url.split('/').slice(-2)[0];
+        if (init?.method === 'PUT') {
+          runtimeConfigs[pluginName] = JSON.parse(String(init.body)).config;
+        }
+        return {
+          ok: true,
+          json: async () => ({
+            plugin_name: pluginName,
+            config: runtimeConfigs[pluginName] || {},
           }),
         };
       }
@@ -263,6 +324,36 @@ describe('PluginManagementView', () => {
         ([url, init]) => url === '/api/admin/tags/2' && init?.method === 'DELETE'
       );
       expect(deleteCall).toBeTruthy();
+    });
+  });
+
+  it('页面级详情支持编辑并保存 SeedHub 解析条数', async () => {
+    render(<PluginManagementView />);
+
+    await screen.findByRole('heading', { name: '插件中心' });
+    fireEvent.change(screen.getByPlaceholderText('搜索名称、描述、能力或标签'), {
+      target: { value: 'sidhub' },
+    });
+    fireEvent.click(await screen.findByTestId('plugin-market-card-sidhub'));
+
+    const drawer = await screen.findByTestId('plugin-management-drawer');
+    expect(within(drawer).getByText('插件配置')).toBeInTheDocument();
+    const input = await within(drawer).findByLabelText('每类完整解析数量');
+    fireEvent.change(input, { target: { value: '5' } });
+    fireEvent.click(within(drawer).getByRole('button', { name: '保存配置' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/admin/plugins/sidhub/config',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({
+            config: {
+              pre_resolved_link_start_per_type: 5,
+            },
+          }),
+        })
+      );
     });
   });
 });

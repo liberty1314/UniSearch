@@ -26,6 +26,8 @@ export const MAX_SEARCH_HISTORY = 8;
 export const MAX_RECENT_EFFECTIVE_SEARCHES = 5;
 export const RECENT_EFFECTIVE_SEARCHES_STORAGE_KEY =
   "unisearch_recent_effective_searches";
+const initialDisplayCount = 48;
+const loadMoreIncrement = 24;
 
 /**
  * 搜索状态接口
@@ -61,7 +63,7 @@ interface SearchState {
 
   // 懒加载状态
   displayedCount: number; // 当前显示的结果数量
-  pageSize: number; // 每页显示数量（固定48）
+  pageSize: number; // 首屏显示数量
   hasMore: boolean; // 是否还有更多数据
 
   // 操作方法
@@ -211,8 +213,8 @@ export const useSearchStore = create<SearchState>()(
       recentEffectiveSearches: readRecentEffectiveSearches(),
       availableChannels: [],
       availablePlugins: [],
-      displayedCount: 48, // 初始显示48条
-      pageSize: 48, // 每页48条
+      displayedCount: initialDisplayCount,
+      pageSize: initialDisplayCount,
       hasMore: false,
 
       /**
@@ -254,7 +256,7 @@ export const useSearchStore = create<SearchState>()(
           error: null,
           searchResults: preserveResults ? state.searchResults : null,
           searchParams: finalParams,
-          displayedCount: state.pageSize, // 重置为初始显示数量
+          displayedCount: initialDisplayCount,
           hasMore: false,
         });
 
@@ -267,7 +269,7 @@ export const useSearchStore = create<SearchState>()(
             isRefreshing: false,
             progressiveStatus: status,
             lastCompletedSearchParams: normalizeSearchParams(finalParams),
-            hasMore: totalCount > state.pageSize,
+            hasMore: totalCount > initialDisplayCount,
           });
           writeRecentResourceSnapshots(results.resources, finalParams.keyword);
 
@@ -332,7 +334,8 @@ export const useSearchStore = create<SearchState>()(
                   completedSources: event.completed_sources || 0,
                   totalSources: event.total_sources || 0,
                   receivedBatches: event.received_batches || 0,
-                  hasMore: partial.resources.length > state.pageSize,
+                  displayedCount: initialDisplayCount,
+                  hasMore: partial.resources.length > initialDisplayCount,
                 });
               }
             },
@@ -413,7 +416,7 @@ export const useSearchStore = create<SearchState>()(
             totalSources: 0,
             receivedBatches: 0,
             lastCompletedSearchParams: null,
-            displayedCount: state.pageSize,
+            displayedCount: initialDisplayCount,
             hasMore: false,
             searchParams: { ...state.searchParams, keyword: "" },
           };
@@ -519,7 +522,7 @@ export const useSearchStore = create<SearchState>()(
         const totalCount = state.searchResults.resources?.length ?? 0;
 
         // 增加显示数量
-        const newDisplayedCount = state.displayedCount + state.pageSize;
+        const newDisplayedCount = state.displayedCount + loadMoreIncrement;
 
         set({
           displayedCount: newDisplayedCount,
@@ -543,7 +546,7 @@ export const useSearchStore = create<SearchState>()(
           receivedBatches: 0,
           error: null,
           lastCompletedSearchParams: null,
-          displayedCount: state.pageSize,
+            displayedCount: initialDisplayCount,
           hasMore: false,
         }));
       },

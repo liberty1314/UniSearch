@@ -79,6 +79,10 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
   const qrCodeValue = effectiveScanTransfer?.qr_code_value?.trim() || "";
   const mobileUrl = effectiveScanTransfer?.mobile_url?.trim() || "";
   const transferCode = effectiveScanTransfer?.transfer_code?.trim() || "";
+  const hasScanTransferPayload = Boolean(qrCodePreview || qrCodeValue || mobileUrl || transferCode);
+  const shouldPrioritizeRefresh = Boolean(
+    scanTransferMode && effectiveScanTransfer?.refreshable && !hasScanTransferPayload,
+  );
   const openUrl = scanTransferMode && qrCodeValue
     ? normalizeExternalUrl(qrCodeValue)
     : finalUrl;
@@ -313,7 +317,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
             {scanTransferMode && effectiveScanTransfer?.refreshable ? (
               <Button
                 type="button"
-                variant="outline"
+                variant={shouldPrioritizeRefresh ? "primary" : "outline"}
                 size="md"
                 fullWidth
                 className="rounded-xl"
@@ -323,11 +327,15 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
                 <RefreshCw
                   className={cn("h-[18px] w-[18px]", isRefreshingScanTransfer && "animate-spin")}
                 />
-                {isRefreshingScanTransfer ? "正在获取二维码" : "重新获取二维码"}
+                {isRefreshingScanTransfer
+                  ? "正在获取二维码"
+                  : shouldPrioritizeRefresh
+                    ? "获取二维码"
+                    : "重新获取二维码"}
               </Button>
             ) : null}
 
-            {mobileUrl ? (
+            {shouldPrioritizeRefresh ? null : mobileUrl ? (
               <Button asChild variant="primary" size="md" fullWidth className="rounded-xl">
                 <a href={mobileUrl} onClick={onClose}>
                   <Smartphone className="h-[18px] w-[18px]" />

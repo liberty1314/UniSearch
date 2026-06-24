@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { AdminTagListResponse, AdminTagOption, AdminTagScope, AdminDialogMode, CreateAdminTagRequest, CreateAdminTagResponse, DeleteAdminTagResponse, UpdateAdminTagRequest, UpdateAdminTagResponse } from "@/types/admin";
-import type { BatchPluginOperationResponse, PluginCatalogResponse, PluginInfo } from "@/types/plugin";
+import type { BatchPluginOperationResponse, PluginCatalogResponse, PluginInfo, PluginRuntimeConfigResponse } from "@/types/plugin";
 import { comparePlugins } from '@/components/admin/adminListSort';
 import {
   applyBatchEnabledState,
@@ -78,6 +78,9 @@ export type UsePluginManageControllerResult = {
   isOperationBusy: boolean;
   isCatalogLoading: boolean;
   catalogVersion: string;
+  pluginConfigValues: Record<string, unknown>;
+  isPluginConfigLoading: boolean;
+  isPluginConfigSaving: boolean;
   clearSelectedPlugins: () => void;
   setStatusFilter: (value: UnifiedStatusFilter) => void;
   setCurrentPage: (value: number) => void;
@@ -90,6 +93,8 @@ export type UsePluginManageControllerResult = {
   selectKey: (name: string, checked: boolean) => void;
   handleClose: () => void;
   handleOpenDetail: (plugin: PluginInfo) => void;
+  handlePluginConfigValueChange: (key: string, value: unknown) => void;
+  handleSavePluginConfig: () => Promise<void>;
   handleTestPlugin: (plugin: PluginInfo) => Promise<void>;
   handleBatchTest: () => Promise<void>;
   handleTogglePluginEnabled: (plugin: PluginInfo) => Promise<void>;
@@ -126,6 +131,9 @@ export function usePluginManageController({
   const [selectedTagFilters, setSelectedTagFiltersState] = useState<string[]>([]);
   const [catalogVersion, setCatalogVersion] = useState('local');
   const [pageSize, setPageSize] = useState(10);
+  const [pluginConfigValues, setPluginConfigValues] = useState<Record<string, unknown>>({});
+  const [isPluginConfigLoading, setIsPluginConfigLoading] = useState(false);
+  const [isPluginConfigSaving, setIsPluginConfigSaving] = useState(false);
   const {
     testingStatus,
     clearTestingStatus,
@@ -196,6 +204,42 @@ export function usePluginManageController({
   }, [clearTestingStatus, isOpen]);
 
   const dialogState = usePluginManageDialogState(isOpen, localPlugins);
+
+  useEffect(() => {
+    const plugin = dialogState.activeDetailPlugin;
+    if (!plugin?.config_schema?.length) {
+      setPluginConfigValues({});
+      return;
+    }
+
+    let ignored = false;
+    setIsPluginConfigLoading(true);
+    void requestAuthedJson<PluginRuntimeConfigResponse>(
+      `/api/admin/plugins/${plugin.name}/config`,
+      token,
+      `读取插件 ${plugin.name} 配置失败`
+    )
+      .then((response) => {
+        if (!ignored) {
+          setPluginConfigValues(response.config || {});
+        }
+      })
+      .catch((error) => {
+        if (!ignored) {
+          toast.error(getRequestErrorMessage(error, `读取插件 ${plugin.name} 配置出错`));
+          setPluginConfigValues({});
+        }
+      })
+      .finally(() => {
+        if (!ignored) {
+          setIsPluginConfigLoading(false);
+        }
+      });
+
+    return () => {
+      ignored = true;
+    };
+  }, [dialogState.activeDetailPlugin, token]);
 
   const availableCategories = useMemo(() => {
     const values = new Set<string>();
@@ -538,6 +582,50 @@ export function usePluginManageController({
     }
   }, [tagOptions, token]);
 
+  const handlePluginConfigValueChange = useCallback((key: string, value: unknown) => {
+    setPluginConfigValues((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  }, []);
+
+  const handleSavePluginConfig = useCallback(async () => {
+    const plugin = dialogState.activeDetailPlugin;
+    if (!plugin?.config_schema?.length) {
+      return;
+    }
+
+    const config = Object.fromEntries(
+      plugin.config_schema.map((field) => {
+        const value = pluginConfigValues[field.key] ?? field.default;
+        if (field.type === 'number') {
+          return [field.key, Number(value)];
+        }
+        return [field.key, value];
+      })
+    );
+
+    setIsPluginConfigSaving(true);
+    try {
+      const response = await requestAuthedJson<PluginRuntimeConfigResponse>(
+        `/api/admin/plugins/${plugin.name}/config`,
+        token,
+        `保存插件 ${plugin.name} 配置失败`,
+        {
+          method: 'PUT',
+          body: { config },
+        }
+      );
+      setPluginConfigValues(response.config || config);
+      toast.success(`插件 ${plugin.name} 配置已保存`);
+      void fetchCatalog();
+    } catch (error) {
+      toast.error(getRequestErrorMessage(error, `保存插件 ${plugin.name} 配置出错`));
+    } finally {
+      setIsPluginConfigSaving(false);
+    }
+  }, [dialogState.activeDetailPlugin, fetchCatalog, pluginConfigValues, token]);
+
   const setSelectedTagFilters = useCallback((value: string[]) => {
     setSelectedTagFiltersState(value);
     setCurrentPage(1);
@@ -575,6 +663,9 @@ export function usePluginManageController({
     isOperationBusy,
     isCatalogLoading,
     catalogVersion,
+    pluginConfigValues,
+    isPluginConfigLoading,
+    isPluginConfigSaving,
     clearSelectedPlugins: clearSelected,
     setStatusFilter,
     setCurrentPage,
@@ -587,6 +678,8 @@ export function usePluginManageController({
     selectKey,
     handleClose,
     handleOpenDetail: dialogState.handleOpenDetail,
+    handlePluginConfigValueChange,
+    handleSavePluginConfig,
     handleTestPlugin,
     handleBatchTest,
     handleTogglePluginEnabled,

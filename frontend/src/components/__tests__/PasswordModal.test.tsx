@@ -235,4 +235,26 @@ describe('PasswordModal', () => {
       'data:image/png;base64,abc123',
     );
   });
+
+  it('可刷新但没有二维码时把获取二维码作为主操作', () => {
+    render(
+      <PasswordModal
+        isOpen
+        onClose={vi.fn()}
+        password=""
+        url="https://www.seedhub.cc/link_start/?redirect_to=quark_scan"
+        cloudType={CloudType.QUARK}
+        resourceId="seedhub-scan-empty"
+        accessMode="scan_transfer"
+        scanTransfer={{
+          instruction: '请使用手机扫码转存',
+          refreshable: true,
+          refresh_key: 'seedhub:4259:quark:1',
+        }}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: '获取二维码' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '打开链接' })).not.toBeInTheDocument();
+  });
 });
