@@ -104,20 +104,6 @@ export const RuntimeSettingsPanel: React.FC<RuntimeSettingsPanelProps> = ({
                   disabled={isSavingRuntime}
                 />
               </div>
-              <div className="flex items-center justify-between rounded-xl bg-slate-50/80 p-3 dark:bg-slate-950/40">
-                <div>
-                  <Label className="text-sm font-semibold text-slate-900 dark:text-white">
-                    启用渐进式搜索
-                  </Label>
-                  <p className="mt-1 text-xs text-slate-500">开启后搜索页会按来源逐批展示结果</p>
-                </div>
-                <AppleSwitch
-                  aria-label="启用渐进式搜索"
-                  checked={runtimeSettings.progressive_search_enabled}
-                  onCheckedChange={(checked) => onUpdateRuntimeField('progressive_search_enabled', checked)}
-                  disabled={isSavingRuntime}
-                />
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="runtime-async-response-timeout">响应超时</Label>
                 <Input

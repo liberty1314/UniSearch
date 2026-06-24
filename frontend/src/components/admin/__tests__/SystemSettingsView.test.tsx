@@ -130,19 +130,29 @@ describe('SystemSettingsView TMDB section', () => {
     expect(screen.getByLabelText('响应超时')).toHaveValue(4);
     expect(screen.getByLabelText('最大工作者')).toHaveValue(20);
     expect(screen.getByLabelText('最大任务')).toHaveValue(100);
-    expect(screen.getByText('启用渐进式搜索')).toBeInTheDocument();
+    expect(screen.queryByText('启用渐进式搜索')).not.toBeInTheDocument();
     expect(screen.getByLabelText('代理地址')).toBeDisabled();
     expect(screen.getByRole('button', { name: '保存运行配置' })).toBeInTheDocument();
   });
 
-  it('支持切换渐进式搜索开关', async () => {
+  it('在搜索体验中支持切换渐进式搜索开关', async () => {
     const user = userEvent.setup();
     render(<SystemSettingsView />);
 
-    await user.click(screen.getByRole('tab', { name: '运行配置' }));
+    await user.click(screen.getByRole('tab', { name: '搜索体验' }));
     await user.click(screen.getByRole('switch', { name: '启用渐进式搜索' }));
 
     expect(actions.updateRuntimeField).toHaveBeenCalledWith('progressive_search_enabled', false);
+  });
+
+  it('在搜索体验中保存渐进式搜索设置', async () => {
+    const user = userEvent.setup();
+    render(<SystemSettingsView />);
+
+    await user.click(screen.getByRole('tab', { name: '搜索体验' }));
+    await user.click(screen.getByRole('button', { name: '保存搜索体验配置' }));
+
+    expect(actions.handleSaveRuntimeSettings).toHaveBeenCalled();
   });
 
   it('展示单输入框令牌配置并允许查看当前令牌', async () => {

@@ -1149,3 +1149,13 @@
     - frontend/src/stores/__tests__/searchStore.test.ts
     - frontend/src/stores/searchStore.ts
     - docs/readme_2606.md
+
+- [2026-06-24 13:05] refactor(admin): 将渐进式搜索开关迁移至搜索体验配置面板
+  - Body: 重构了系统设置界面，将原本位于运行配置中的“渐进式搜索”开关迁移至专门的“搜索体验”面板，并增加了保存按钮和更友好的界面样式，提升了后台管理的直观性和操作体验。同步更新了相关单元测试及使用说明文档。
+  - Files:
+    - README.md
+    - frontend/src/components/admin/SystemSettingsView.tsx
+    - frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx
+    - frontend/src/components/admin/system-settings/RuntimeSettingsPanel.tsx
+    - frontend/src/components/admin/system-settings/SearchExperienceSettingsPanel.tsx
+    - docs/readme_2606.md

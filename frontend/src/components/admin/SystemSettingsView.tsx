@@ -90,8 +90,12 @@ export const SystemSettingsView: React.FC = () => {
         return (
           <SearchExperienceSettingsPanel
             enableResourceDetailPage={enableResourceDetailPage}
+            runtimeSettings={runtimeSettings}
             isSaving={isSaving}
+            isSavingRuntime={isSavingRuntime}
             onToggleResourceDetailPage={actions.handleToggleResourceDetailPage}
+            onUpdateRuntimeField={actions.updateRuntimeField}
+            onSaveRuntimeSettings={actions.handleSaveRuntimeSettings}
           />
         );
       case 'runtime':
@@ -186,4 +190,3 @@ export const SystemSettingsView: React.FC = () => {
     </motion.div>
   );
 };
-
