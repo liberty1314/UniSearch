@@ -12,6 +12,7 @@ type SystemSettings struct {
 	EnableUserSignup                 bool      `gorm:"not null;default:true" json:"enable_user_signup"`                   // 是否启用用户注册功能（默认启用）
 	AnnouncementEnabled              bool      `gorm:"not null;default:false" json:"announcement_enabled"`                // 是否启用公告功能（默认禁用）
 	EnableResourceDetailPage         bool      `gorm:"not null;default:false" json:"enable_resource_detail_page"`         // 是否启用资源详情页展示（默认关闭）
+	EnableResourceSourceBadges       bool      `gorm:"not null;default:false" json:"enable_resource_source_badges"`       // 是否展示搜索结果来源标签（默认关闭）
 	PublicSiteURL                    string    `gorm:"size:255;not null;default:''" json:"public_site_url"`               // 公开站点 URL（为空时由前端环境变量兜底）
 	DefaultCopyFormatTemplate        string    `gorm:"size:1024;not null;default:''" json:"default_copy_format_template"` // API Key 复制默认模板
 	CacheEnabled                     bool      `gorm:"not null;default:true" json:"cache_enabled"`                        // 是否启用搜索缓存总开关

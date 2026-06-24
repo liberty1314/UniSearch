@@ -1159,3 +1159,23 @@
     - frontend/src/components/admin/system-settings/RuntimeSettingsPanel.tsx
     - frontend/src/components/admin/system-settings/SearchExperienceSettingsPanel.tsx
     - docs/readme_2606.md
+
+- [2026-06-24 13:41] feat(system-settings): 新增资源来源标签开关设置
+  - Body: 在系统设置中增加资源来源标签开关（enable_resource_source_badges），并在前端接入该配置以控制搜索结果中来源标签的展示。
+  - Files:
+    - backend/api/system_settings_handler.go
+    - backend/api/system_settings_handler_test.go
+    - backend/model/system_settings.go
+    - backend/service/system_settings_service.go
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/admin/SystemSettingsView.tsx
+    - frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx
+    - frontend/src/components/admin/system-settings/SearchExperienceSettingsPanel.tsx
+    - frontend/src/components/home/SearchResultGridCard.tsx
+    - frontend/src/components/home/SearchResultListItem.tsx
+    - frontend/src/components/search-results/SearchResultsList.tsx
+    - frontend/src/hooks/__tests__/useSystemSettingsController.test.tsx
+    - frontend/src/hooks/useSystemSettingsController.ts
+    - frontend/src/services/systemSettingsService.ts
+    - docs/readme_2606.md

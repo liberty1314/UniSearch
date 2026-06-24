@@ -48,17 +48,18 @@ func GetSystemSettingsHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"enable_user_auth":             settings.EnableUserAuth,
-		"enable_user_login":            settings.EnableUserLogin,
-		"enable_user_signup":           settings.EnableUserSignup,
-		"auth_username_min_length":     config.AppConfig.AuthUsernameMinLength,
-		"auth_username_max_length":     config.AppConfig.AuthUsernameMaxLength,
-		"auth_password_min_length":     config.AppConfig.AuthPasswordMinLength,
-		"auth_password_max_length":     config.AppConfig.AuthPasswordMaxLength,
-		"enable_resource_detail_page":  settings.EnableResourceDetailPage,
-		"public_site_url":              settings.PublicSiteURL,
-		"default_copy_format_template": settings.DefaultCopyFormatTemplate,
-		"progressive_search_enabled":   settings.RuntimeProgressiveSearchEnabled,
+		"enable_user_auth":              settings.EnableUserAuth,
+		"enable_user_login":             settings.EnableUserLogin,
+		"enable_user_signup":            settings.EnableUserSignup,
+		"auth_username_min_length":      config.AppConfig.AuthUsernameMinLength,
+		"auth_username_max_length":      config.AppConfig.AuthUsernameMaxLength,
+		"auth_password_min_length":      config.AppConfig.AuthPasswordMinLength,
+		"auth_password_max_length":      config.AppConfig.AuthPasswordMaxLength,
+		"enable_resource_detail_page":   settings.EnableResourceDetailPage,
+		"enable_resource_source_badges": settings.EnableResourceSourceBadges,
+		"public_site_url":               settings.PublicSiteURL,
+		"default_copy_format_template":  settings.DefaultCopyFormatTemplate,
+		"progressive_search_enabled":    settings.RuntimeProgressiveSearchEnabled,
 	})
 }
 
@@ -74,12 +75,13 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 
 	// 解析请求体
 	var req struct {
-		EnableUserAuth            *bool   `json:"enable_user_auth"`
-		EnableUserLogin           *bool   `json:"enable_user_login"`
-		EnableUserSignup          *bool   `json:"enable_user_signup"`
-		EnableResourceDetailPage  *bool   `json:"enable_resource_detail_page"`
-		PublicSiteURL             *string `json:"public_site_url"`
-		DefaultCopyFormatTemplate *string `json:"default_copy_format_template"`
+		EnableUserAuth             *bool   `json:"enable_user_auth"`
+		EnableUserLogin            *bool   `json:"enable_user_login"`
+		EnableUserSignup           *bool   `json:"enable_user_signup"`
+		EnableResourceDetailPage   *bool   `json:"enable_resource_detail_page"`
+		EnableResourceSourceBadges *bool   `json:"enable_resource_source_badges"`
+		PublicSiteURL              *string `json:"public_site_url"`
+		DefaultCopyFormatTemplate  *string `json:"default_copy_format_template"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -94,6 +96,7 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 		req.EnableUserLogin == nil &&
 		req.EnableUserSignup == nil &&
 		req.EnableResourceDetailPage == nil &&
+		req.EnableResourceSourceBadges == nil &&
 		req.PublicSiteURL == nil &&
 		req.DefaultCopyFormatTemplate == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -114,11 +117,12 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 	// 确定主开关的值
 	// 更新设置
 	input := service.SystemSettingsUpdateInput{
-		EnableUserLogin:           req.EnableUserLogin,
-		EnableUserSignup:          req.EnableUserSignup,
-		EnableResourceDetailPage:  req.EnableResourceDetailPage,
-		PublicSiteURL:             req.PublicSiteURL,
-		DefaultCopyFormatTemplate: req.DefaultCopyFormatTemplate,
+		EnableUserLogin:            req.EnableUserLogin,
+		EnableUserSignup:           req.EnableUserSignup,
+		EnableResourceDetailPage:   req.EnableResourceDetailPage,
+		EnableResourceSourceBadges: req.EnableResourceSourceBadges,
+		PublicSiteURL:              req.PublicSiteURL,
+		DefaultCopyFormatTemplate:  req.DefaultCopyFormatTemplate,
 	}
 	if req.EnableUserAuth != nil {
 		input.EnableUserAuth = req.EnableUserAuth
@@ -135,13 +139,14 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":                      "系统设置已更新",
-		"enable_user_auth":             settings.EnableUserAuth,
-		"enable_user_login":            settings.EnableUserLogin,
-		"enable_user_signup":           settings.EnableUserSignup,
-		"enable_resource_detail_page":  settings.EnableResourceDetailPage,
-		"public_site_url":              settings.PublicSiteURL,
-		"default_copy_format_template": settings.DefaultCopyFormatTemplate,
+		"message":                       "系统设置已更新",
+		"enable_user_auth":              settings.EnableUserAuth,
+		"enable_user_login":             settings.EnableUserLogin,
+		"enable_user_signup":            settings.EnableUserSignup,
+		"enable_resource_detail_page":   settings.EnableResourceDetailPage,
+		"enable_resource_source_badges": settings.EnableResourceSourceBadges,
+		"public_site_url":               settings.PublicSiteURL,
+		"default_copy_format_template":  settings.DefaultCopyFormatTemplate,
 	})
 }
 

@@ -11,6 +11,7 @@ interface SearchResultsListProps {
   resources: ResultItem[];
   viewMode: ViewMode;
   enableResourceDetailPage: boolean;
+  enableResourceSourceBadges: boolean;
   onOpenResource: (item: ResultItem) => void;
   onOpenDetail: (item: ResultItem) => void;
 }
@@ -19,6 +20,7 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
   resources,
   viewMode,
   enableResourceDetailPage,
+  enableResourceSourceBadges,
   onOpenResource,
   onOpenDetail,
 }) => (
@@ -39,6 +41,7 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
           index={index}
           canOpenResource={Boolean(resolveResourceOpenTarget(item))}
           showDetailEntry={enableResourceDetailPage}
+          showSourceBadge={enableResourceSourceBadges}
           onOpenResource={onOpenResource}
           onOpenDetail={enableResourceDetailPage ? onOpenDetail : () => undefined}
         />
@@ -51,6 +54,7 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
           onOpenResource={onOpenResource}
           onOpenDetail={enableResourceDetailPage ? onOpenDetail : () => undefined}
           showDetailEntry={enableResourceDetailPage}
+          showSourceBadge={enableResourceSourceBadges}
         />
       ),
     )}

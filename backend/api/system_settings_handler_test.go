@@ -122,6 +122,10 @@ func TestGetSystemSettingsHandlerReturnsPublicConfigFields(t *testing.T) {
 		t.Fatalf("expected enable_resource_detail_page in response, got %v", response)
 	}
 
+	if response["enable_resource_source_badges"] != false {
+		t.Fatalf("expected enable_resource_source_badges false by default, got %v", response["enable_resource_source_badges"])
+	}
+
 	if response["progressive_search_enabled"] != true {
 		t.Fatalf("expected progressive_search_enabled true, got %v", response["progressive_search_enabled"])
 	}
@@ -203,6 +207,35 @@ func TestUpdateSystemSettingsHandlerSupportsResourceDetailSwitch(t *testing.T) {
 
 	if response["enable_resource_detail_page"] != false {
 		t.Fatalf("expected enable_resource_detail_page to be false, got %v", response["enable_resource_detail_page"])
+	}
+}
+
+func TestUpdateSystemSettingsHandlerSupportsResourceSourceBadgesSwitch(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+
+	body := bytes.NewBufferString(`{
+		"enable_resource_source_badges":true
+	}`)
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodPut, "/api/admin/system-settings", body)
+	context.Request.Header.Set("Content-Type", "application/json")
+
+	UpdateSystemSettingsHandler(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response["enable_resource_source_badges"] != true {
+		t.Fatalf("expected enable_resource_source_badges to be true, got %v", response["enable_resource_source_badges"])
 	}
 }
 

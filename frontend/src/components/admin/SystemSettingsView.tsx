@@ -37,6 +37,7 @@ export const SystemSettingsView: React.FC = () => {
     enableUserLogin,
     enableUserSignup,
     enableResourceDetailPage,
+    enableResourceSourceBadges,
     publicSiteUrl,
     tmdbReadAccessToken,
     tmdbCurrentTokenPreview,
@@ -90,10 +91,12 @@ export const SystemSettingsView: React.FC = () => {
         return (
           <SearchExperienceSettingsPanel
             enableResourceDetailPage={enableResourceDetailPage}
+            enableResourceSourceBadges={enableResourceSourceBadges}
             runtimeSettings={runtimeSettings}
             isSaving={isSaving}
             isSavingRuntime={isSavingRuntime}
             onToggleResourceDetailPage={actions.handleToggleResourceDetailPage}
+            onToggleResourceSourceBadges={actions.handleToggleResourceSourceBadges}
             onUpdateRuntimeField={actions.updateRuntimeField}
             onSaveRuntimeSettings={actions.handleSaveRuntimeSettings}
           />

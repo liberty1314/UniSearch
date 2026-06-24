@@ -10,6 +10,7 @@ import {
 import {
   resolveResourceDisplaySize,
   resolveResourceDisplayTitle,
+  resolveResourceSourcePresentation,
 } from "@/utils/resourceDisplay";
 
 interface SearchResultListItemProps {
@@ -17,6 +18,7 @@ interface SearchResultListItemProps {
   index: number;
   canOpenResource: boolean;
   showDetailEntry?: boolean;
+  showSourceBadge: boolean;
   onOpenResource: (item: ResultItem) => void;
   onOpenDetail: (item: ResultItem) => void;
 }
@@ -27,11 +29,14 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
     index,
     canOpenResource,
     showDetailEntry = true,
+    showSourceBadge,
     onOpenResource,
     onOpenDetail,
   }) => {
     const { resource, primaryLink, cloudType, datetime } = item;
     const cloudInfo = getCloudTypeInfo(cloudType);
+    const sourceInfo = resolveResourceSourcePresentation(resource);
+    const sourceType = resource.source.type?.trim().toLowerCase();
     const hasPassword = Boolean(primaryLink?.password?.trim());
     const scanTransferMode =
       primaryLink?.access_mode === "scan_transfer" || Boolean(primaryLink?.scan_transfer);
@@ -109,6 +114,22 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
               >
                 {cloudInfo.name}
               </span>
+              {showSourceBadge ? (
+                <span
+                  data-testid="search-result-source-badge"
+                  title={sourceInfo.kindLabel}
+                  className={cn(
+                    "max-w-[10rem] truncate rounded-md border px-2 py-0.5 text-xs font-medium",
+                    sourceType === "plugin"
+                      ? "border-violet-200/60 bg-violet-50 text-violet-700 dark:border-violet-300/20 dark:bg-violet-400/[0.10] dark:text-violet-200"
+                      : sourceType === "tg"
+                        ? "border-cyan-200/70 bg-cyan-50 text-cyan-700 dark:border-cyan-300/20 dark:bg-cyan-400/[0.10] dark:text-cyan-200"
+                        : "border-slate-200/70 bg-slate-50 text-slate-600 dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-slate-300",
+                  )}
+                >
+                  {sourceInfo.primaryLabel}
+                </span>
+              ) : null}
               <span className="flex items-center gap-1">
                 <Clock3 className="w-3.5 h-3.5" />
                 {formatResultTime(datetime)}

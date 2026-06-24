@@ -10,6 +10,7 @@ import {
 import {
   resolveResourceDisplaySize,
   resolveResourceDisplayTitle,
+  resolveResourceSourcePresentation,
 } from "@/utils/resourceDisplay";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -20,6 +21,7 @@ interface SearchResultGridCardProps {
   index: number;
   canOpenResource: boolean;
   showDetailEntry: boolean;
+  showSourceBadge: boolean;
   onOpenResource: (item: ResultItem) => void;
   onOpenDetail: (item: ResultItem) => void;
 }
@@ -36,9 +38,11 @@ interface SearchResultGridCardProps {
  *   因此旧卡片不会重放入场动画，只有新挂载的卡片会动画进入。
  */
 export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
-  ({ item, index, canOpenResource, showDetailEntry, onOpenResource, onOpenDetail }) => {
+  ({ item, index, canOpenResource, showDetailEntry, showSourceBadge, onOpenResource, onOpenDetail }) => {
     const { resource, primaryLink, cloudType, datetime } = item;
     const cloudInfo = getCloudTypeInfo(cloudType);
+    const sourceInfo = resolveResourceSourcePresentation(resource);
+    const sourceType = resource.source.type?.trim().toLowerCase();
     const hasPassword = Boolean(primaryLink?.password?.trim());
     const scanTransferMode =
       primaryLink?.access_mode === "scan_transfer" || Boolean(primaryLink?.scan_transfer);
@@ -149,6 +153,23 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
               >
                 {cloudInfo.name}
               </div>
+
+              {showSourceBadge ? (
+                <div
+                  data-testid="search-result-source-badge"
+                  title={sourceInfo.kindLabel}
+                  className={cn(
+                    "flex min-w-0 shrink items-center truncate rounded-full border px-2.5 py-1 text-xs font-medium",
+                    sourceType === "plugin"
+                      ? "border-violet-200/60 bg-violet-50 text-violet-700 dark:border-violet-300/20 dark:bg-violet-400/[0.10] dark:text-violet-200"
+                      : sourceType === "tg"
+                        ? "border-cyan-200/70 bg-cyan-50 text-cyan-700 dark:border-cyan-300/20 dark:bg-cyan-400/[0.10] dark:text-cyan-200"
+                        : "border-slate-200/70 bg-slate-50 text-slate-600 dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-slate-300",
+                  )}
+                >
+                  <span className="truncate">{sourceInfo.primaryLabel}</span>
+                </div>
+              ) : null}
 
               {hasPassword && (
                 <div

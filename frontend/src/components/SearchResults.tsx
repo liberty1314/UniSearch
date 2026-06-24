@@ -118,6 +118,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   );
   const [passwordModalTarget, setPasswordModalTarget] = useState<ResourceOpenTarget | null>(null);
   const [enableResourceDetailPage, setEnableResourceDetailPage] = useState(true);
+  const [enableResourceSourceBadges, setEnableResourceSourceBadges] = useState(false);
 
   // ── 无限滚动观察器 ─────────────────────────────────────────────────────────
 
@@ -164,12 +165,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
           return;
         }
         setEnableResourceDetailPage(settings.enable_resource_detail_page);
+        setEnableResourceSourceBadges(Boolean(settings.enable_resource_source_badges));
       })
       .catch(() => {
         if (!isMounted) {
           return;
         }
         setEnableResourceDetailPage(true);
+        setEnableResourceSourceBadges(false);
       });
 
     return () => {
@@ -329,6 +332,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         resources={displayedResults}
         viewMode={viewMode}
         enableResourceDetailPage={enableResourceDetailPage}
+        enableResourceSourceBadges={enableResourceSourceBadges}
         onOpenResource={handleOpenResource}
         onOpenDetail={handleOpenDetail}
       />

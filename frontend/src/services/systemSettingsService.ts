@@ -21,6 +21,7 @@ export interface SystemSettingsResponse {
     auth_password_min_length?: number; // 密码最小长度
     auth_password_max_length?: number; // 密码最大长度
     enable_resource_detail_page: boolean; // 是否启用资源详情页展示
+    enable_resource_source_badges: boolean; // 是否展示搜索结果来源标签
     public_site_url: string;        // 公开站点 URL（为空时由前端环境变量兜底）
     default_copy_format_template: string; // API Key 复制默认模板
     progressive_search_enabled: boolean; // 是否启用渐进式搜索
@@ -153,6 +154,7 @@ export class SystemSettingsService {
             enable_user_login?: boolean;
             enable_user_signup?: boolean;
             enable_resource_detail_page?: boolean;
+            enable_resource_source_badges?: boolean;
             public_site_url?: string;
             default_copy_format_template?: string;
         }

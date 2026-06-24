@@ -6,7 +6,7 @@ import { getErrorDataError, getErrorMessage } from '@/lib/error';
 import { resolvePublicSiteUrl } from '@/lib/publicSiteConfig';
 import { DEFAULT_CACHE_SETTINGS, normalizeCacheSettings } from '@/lib/systemSettingsCacheOptions';
 
-export type SavingState = 'auth' | 'login' | 'signup' | 'resource_detail' | 'display' | null;
+export type SavingState = 'auth' | 'login' | 'signup' | 'resource_detail' | 'source_badges' | 'display' | null;
 export type TMDBConfigSource = 'secret_manager' | 'env_fallback' | 'unconfigured';
 
 export const DEFAULT_RUNTIME_SETTINGS: RuntimeSettingsResponse = {
@@ -31,6 +31,7 @@ export const useSystemSettingsController = () => {
   const [enableUserLogin, setEnableUserLogin] = useState<boolean>(true);
   const [enableUserSignup, setEnableUserSignup] = useState<boolean>(true);
   const [enableResourceDetailPage, setEnableResourceDetailPage] = useState<boolean>(false);
+  const [enableResourceSourceBadges, setEnableResourceSourceBadges] = useState<boolean>(false);
   const [publicSiteUrl, setPublicSiteUrl] = useState<string>(resolvePublicSiteUrl());
   const [tmdbReadAccessToken, setTMDBReadAccessToken] = useState<string>('');
   const [tmdbCurrentTokenPreview, setTMDBCurrentTokenPreview] = useState<string>('');
@@ -51,6 +52,7 @@ export const useSystemSettingsController = () => {
     enableUserLogin: true,
     enableUserSignup: true,
     enableResourceDetailPage: false,
+    enableResourceSourceBadges: false,
     publicSiteUrl: resolvePublicSiteUrl(),
   });
 
@@ -64,6 +66,7 @@ export const useSystemSettingsController = () => {
       setEnableUserLogin(settings.enable_user_login);
       setEnableUserSignup(settings.enable_user_signup);
       setEnableResourceDetailPage(settings.enable_resource_detail_page);
+      setEnableResourceSourceBadges(Boolean(settings.enable_resource_source_badges));
       setPublicSiteUrl(resolvePublicSiteUrl(settings));
       
       setOriginalValues({
@@ -71,6 +74,7 @@ export const useSystemSettingsController = () => {
         enableUserLogin: settings.enable_user_login,
         enableUserSignup: settings.enable_user_signup,
         enableResourceDetailPage: settings.enable_resource_detail_page,
+        enableResourceSourceBadges: Boolean(settings.enable_resource_source_badges),
         publicSiteUrl: resolvePublicSiteUrl(settings),
       });
 
@@ -181,6 +185,27 @@ export const useSystemSettingsController = () => {
     } catch (error) {
       console.error('保存系统设置失败:', error);
       setEnableResourceDetailPage(originalValues.enableResourceDetailPage);
+      toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
+    } finally {
+      setIsSaving(null);
+    }
+  };
+
+  const handleToggleResourceSourceBadges = async (checked: boolean) => {
+    if (!token) return;
+
+    setEnableResourceSourceBadges(checked);
+    setIsSaving('source_badges');
+
+    try {
+      await SystemSettingsService.updateSettings(token, {
+        enable_resource_source_badges: checked,
+      });
+      setOriginalValues(prev => ({ ...prev, enableResourceSourceBadges: checked }));
+      toast.success(checked ? '已显示搜索结果来源标签' : '已隐藏搜索结果来源标签');
+    } catch (error) {
+      console.error('保存系统设置失败:', error);
+      setEnableResourceSourceBadges(originalValues.enableResourceSourceBadges);
       toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
     } finally {
       setIsSaving(null);
@@ -359,6 +384,7 @@ export const useSystemSettingsController = () => {
       enableUserLogin,
       enableUserSignup,
       enableResourceDetailPage,
+      enableResourceSourceBadges,
       publicSiteUrl,
       tmdbReadAccessToken,
       tmdbCurrentTokenPreview,
@@ -381,6 +407,7 @@ export const useSystemSettingsController = () => {
       handleToggleLogin,
       handleToggleSignup,
       handleToggleResourceDetailPage,
+      handleToggleResourceSourceBadges,
       handleSaveDisplayConfig,
       handleSaveTMDBConfig,
       handleSaveCacheSettings,

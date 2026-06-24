@@ -7,6 +7,7 @@ const getTMDBSettingsMock = vi.fn();
 const getCacheSettingsMock = vi.fn();
 const getRuntimeSettingsMock = vi.fn();
 const getSettingsCachedMock = vi.fn();
+const updateSettingsMock = vi.fn();
 const updateTMDBSettingsMock = vi.fn();
 const updateRuntimeSettingsMock = vi.fn();
 const toastSuccessMock = vi.fn();
@@ -23,9 +24,9 @@ vi.mock('@/services/systemSettingsService', () => ({
     getCacheSettings: (...args: unknown[]) => getCacheSettingsMock(...args),
     getRuntimeSettings: (...args: unknown[]) => getRuntimeSettingsMock(...args),
     getSettingsCached: (...args: unknown[]) => getSettingsCachedMock(...args),
+    updateSettings: (...args: unknown[]) => updateSettingsMock(...args),
     updateTMDBSettings: (...args: unknown[]) => updateTMDBSettingsMock(...args),
     updateRuntimeSettings: (...args: unknown[]) => updateRuntimeSettingsMock(...args),
-    updateSettings: vi.fn(),
   },
 }));
 
@@ -44,6 +45,7 @@ describe('useSystemSettingsController TMDB config', () => {
       enable_user_login: true,
       enable_user_signup: true,
       enable_resource_detail_page: false,
+      enable_resource_source_badges: false,
       public_site_url: '',
       default_copy_format_template: '',
       progressive_search_enabled: true,
@@ -53,6 +55,7 @@ describe('useSystemSettingsController TMDB config', () => {
       enable_user_login: true,
       enable_user_signup: true,
       enable_resource_detail_page: false,
+      enable_resource_source_badges: false,
       public_site_url: '',
       default_copy_format_template: '',
       progressive_search_enabled: false,
@@ -112,6 +115,73 @@ describe('useSystemSettingsController TMDB config', () => {
     expect(result.current.state.runtimeSettings.default_concurrency).toBe(50);
     expect(result.current.state.runtimeSettings.progressive_search_enabled).toBe(true);
     expect(result.current.state.runtimeSettings.restart_required_fields).toEqual(['http_max_conns']);
+  });
+
+  it('加载时会同步资源来源标签开关', async () => {
+    getSettingsAdminMock.mockResolvedValueOnce({
+      enable_user_auth: true,
+      enable_user_login: true,
+      enable_user_signup: true,
+      enable_resource_detail_page: false,
+      enable_resource_source_badges: true,
+      public_site_url: '',
+      default_copy_format_template: '',
+      progressive_search_enabled: true,
+    });
+
+    const { result } = renderHook(() => useSystemSettingsController());
+
+    await waitFor(() => {
+      expect(result.current.state.isLoading).toBe(false);
+    });
+
+    expect(result.current.state.enableResourceSourceBadges).toBe(true);
+  });
+
+  it('会更新资源来源标签开关', async () => {
+    updateSettingsMock.mockResolvedValue({
+      enable_user_auth: true,
+      enable_user_login: true,
+      enable_user_signup: true,
+      enable_resource_detail_page: false,
+      enable_resource_source_badges: true,
+      public_site_url: '',
+      default_copy_format_template: '',
+      progressive_search_enabled: true,
+    });
+
+    const { result } = renderHook(() => useSystemSettingsController());
+
+    await waitFor(() => {
+      expect(result.current.state.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.actions.handleToggleResourceSourceBadges(true);
+    });
+
+    expect(updateSettingsMock).toHaveBeenCalledWith('test-token', {
+      enable_resource_source_badges: true,
+    });
+    expect(result.current.state.enableResourceSourceBadges).toBe(true);
+    expect(toastSuccessMock).toHaveBeenCalledWith('已显示搜索结果来源标签');
+  });
+
+  it('资源来源标签开关保存失败时会回滚', async () => {
+    updateSettingsMock.mockRejectedValueOnce(new Error('保存失败'));
+
+    const { result } = renderHook(() => useSystemSettingsController());
+
+    await waitFor(() => {
+      expect(result.current.state.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.actions.handleToggleResourceSourceBadges(true);
+    });
+
+    expect(result.current.state.enableResourceSourceBadges).toBe(false);
+    expect(toastErrorMock).toHaveBeenCalled();
   });
 
   it('会更新并保存运行配置', async () => {

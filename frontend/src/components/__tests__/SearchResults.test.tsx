@@ -91,6 +91,7 @@ let searchStoreState: SearchStoreState = {
   receivedBatches: 0,
 };
 let enableResourceDetailPage = true;
+let enableResourceSourceBadges = false;
 
 vi.mock("@/stores/searchStore", () => ({
   useSearchStore: () => searchStoreState,
@@ -103,6 +104,7 @@ vi.mock("@/services/systemSettingsService", () => ({
       enable_user_login: true,
       enable_user_signup: true,
       enable_resource_detail_page: enableResourceDetailPage,
+      enable_resource_source_badges: enableResourceSourceBadges,
       public_site_url: "",
       default_copy_format_template: "",
     })),
@@ -257,6 +259,7 @@ describe("SearchResults", () => {
       receivedBatches: 0,
     };
     enableResourceDetailPage = true;
+    enableResourceSourceBadges = false;
 
     class MockIntersectionObserver {
       observe = vi.fn();
@@ -287,6 +290,19 @@ describe("SearchResults", () => {
     expect(screen.queryByText("新海诚动画电影资源")).not.toBeInTheDocument();
     expect(screen.queryByText("打开夸克")).not.toBeInTheDocument();
     expect(screen.queryByText("资源详情")).not.toBeInTheDocument();
+  });
+
+  it("shows plugin source badge only when enabled", async () => {
+    enableResourceSourceBadges = true;
+
+    renderSearchResults();
+
+    const card = await screen.findByTestId("search-result-grid-card");
+    const sourceBadge = screen.getByTestId("search-result-source-badge");
+
+    expect(card).toHaveTextContent("PanSearch");
+    expect(sourceBadge).toHaveTextContent("PanSearch");
+    expect(sourceBadge.className).toContain("text-violet");
   });
 
   it("keeps cloud type, password badge and detail entry on a single footer row", async () => {
@@ -448,6 +464,7 @@ describe("SearchResults", () => {
   });
 
   it("shows service-side filter summary chips and re-runs search when clearing filters", async () => {
+    enableResourceSourceBadges = true;
     searchStoreState.searchResults = {
       total: 2,
       resources: [
@@ -498,6 +515,7 @@ describe("SearchResults", () => {
 
     expect(await screen.findAllByTestId("search-result-grid-card")).toHaveLength(2);
     expect(screen.getByText("你的名字 原画设定集")).toBeInTheDocument();
+    expect(screen.getByText("BookChannel")).toBeInTheDocument();
     expect(screen.getByText("包含：4K")).toBeInTheDocument();
     expect(screen.getByText("排除：设定集")).toBeInTheDocument();
     const toolbarMeta = screen.getByTestId("search-results-toolbar-meta");

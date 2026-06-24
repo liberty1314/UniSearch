@@ -16,12 +16,13 @@ import (
 )
 
 type SystemSettingsUpdateInput struct {
-	EnableUserAuth            *bool
-	EnableUserLogin           *bool
-	EnableUserSignup          *bool
-	EnableResourceDetailPage  *bool
-	PublicSiteURL             *string
-	DefaultCopyFormatTemplate *string
+	EnableUserAuth             *bool
+	EnableUserLogin            *bool
+	EnableUserSignup           *bool
+	EnableResourceDetailPage   *bool
+	EnableResourceSourceBadges *bool
+	PublicSiteURL              *string
+	DefaultCopyFormatTemplate  *string
 }
 
 type CacheSettings struct {
@@ -185,6 +186,7 @@ func (s *SystemSettingsService) GetSettings() (*model.SystemSettings, error) {
 				EnableUserSignup:                 true,  // 默认启用用户注册
 				AnnouncementEnabled:              false, // 默认禁用公告功能（需求 13.5）
 				EnableResourceDetailPage:         false, // 默认关闭资源详情页
+				EnableResourceSourceBadges:       false, // 默认关闭搜索结果来源标签
 				PublicSiteURL:                    "",
 				DefaultCopyFormatTemplate:        "",
 				CacheEnabled:                     cacheDefaults.CacheEnabled,
@@ -240,6 +242,9 @@ func (s *SystemSettingsService) UpdateSettings(input SystemSettingsUpdateInput) 
 	}
 	if input.EnableResourceDetailPage != nil {
 		settings.EnableResourceDetailPage = *input.EnableResourceDetailPage
+	}
+	if input.EnableResourceSourceBadges != nil {
+		settings.EnableResourceSourceBadges = *input.EnableResourceSourceBadges
 	}
 	if input.PublicSiteURL != nil {
 		settings.PublicSiteURL = strings.TrimSpace(*input.PublicSiteURL)
