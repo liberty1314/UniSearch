@@ -93,19 +93,19 @@ export const ChannelManagementView: React.FC = () => {
       onClear={controller.clearSelectedChannels}
       actions={(
         <>
-          <Button type="button" size="sm" variant="outline" onClick={() => controller.handleToggleSelectFiltered()} className="rounded-full">
+          <Button type="button" size="sm" variant="adminAction" onClick={() => controller.handleToggleSelectFiltered()}>
             {controller.isAllFilteredSelected ? '清空筛选选择' : '全选当前筛选'}
           </Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => void controller.handleBatchToggleChannels(true)} className="rounded-full">
+          <Button type="button" size="sm" variant="adminAction" onClick={() => void controller.handleBatchToggleChannels(true)} loading={controller.isBatchUpdating}>
             批量启用
           </Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => void controller.handleBatchToggleChannels(false)} className="rounded-full">
+          <Button type="button" size="sm" variant="adminAction" onClick={() => void controller.handleBatchToggleChannels(false)} loading={controller.isBatchUpdating}>
             批量停用
           </Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => void controller.handleBatchTest()} className="rounded-full">
+          <Button type="button" size="sm" variant="adminAction" onClick={() => void controller.handleBatchTest()} loading={controller.isBatchTesting}>
             批量测试
           </Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => controller.setBatchDeleteConfirmOpen(true)} className="rounded-full border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-950/30">
+          <Button type="button" size="sm" variant="adminDangerAction" onClick={() => controller.setBatchDeleteConfirmOpen(true)} disabled={controller.isOperationBusy}>
             批量删除
           </Button>
         </>
@@ -125,21 +125,21 @@ export const ChannelManagementView: React.FC = () => {
             meta={<span>当前共 {controller.channels.length} 个频道</span>}
             actions={(
               <>
-                <Button type="button" variant="outline" onClick={() => void controller.fetchChannels()} className="rounded-full" disabled={controller.loading}>
-                  {controller.loading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Zap className="mr-1 h-4 w-4" />}
+                <Button type="button" variant="adminAction" onClick={() => void controller.fetchChannels()} disabled={controller.loading} loading={controller.loading}>
+                  <Zap className="mr-1 h-4 w-4" />
                   刷新状态
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="adminAction"
                   onClick={() => void controller.handleQuickTest()}
                   disabled={controller.channels.filter((channel) => channel.is_enabled).length === 0}
-                  className="rounded-full"
+                  loading={controller.isBatchTesting}
                 >
                   <Zap className="mr-1 h-4 w-4" />
                   快速测试
                 </Button>
-                <Button type="button" onClick={() => controller.setAddDialogOpen(true)} className="rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-700 hover:to-cyan-600">
+                <Button type="button" variant="adminPrimaryAction" onClick={() => controller.setAddDialogOpen(true)}>
                   添加频道
                 </Button>
               </>
@@ -277,43 +277,37 @@ export const ChannelManagementView: React.FC = () => {
                             <Button
                               type="button"
                               size="sm"
-                              variant="outline"
+                              variant="adminAction"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 controller.setDetailChannelId(channel.id);
                               }}
-                              className="rounded-full"
                             >
                               详情
                             </Button>
                             <Button
                               type="button"
                               size="sm"
-                              variant="outline"
+                              variant="adminAction"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 void controller.handleTestChannel(channel.name);
                               }}
                               disabled={controller.testingStatus[channel.name] === 'testing' || controller.isOperationBusy}
-                              className="rounded-full"
+                              loading={controller.testingStatus[channel.name] === 'testing'}
                             >
-                              {controller.testingStatus[channel.name] === 'testing' ? (
-                                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                              ) : (
-                                <Zap className="mr-1 h-4 w-4" />
-                              )}
+                              <Zap className="mr-1 h-4 w-4" />
                               测试
                             </Button>
                             <Button
                               type="button"
                               size="sm"
-                              variant="outline"
+                              variant="adminAction"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 void controller.handleToggleEnabled(channel);
                               }}
                               disabled={controller.isOperationBusy}
-                              className="rounded-full"
                             >
                               {channel.is_enabled ? <ToggleRight className="mr-1 h-4 w-4" /> : <ToggleLeft className="mr-1 h-4 w-4" />}
                               {channel.is_enabled ? '停用' : '启用'}
@@ -321,13 +315,13 @@ export const ChannelManagementView: React.FC = () => {
                             <Button
                               type="button"
                               size="sm"
-                              variant="outline"
+                              variant="adminDangerAction"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 controller.setDeleteConfirm({ open: true, channel });
                               }}
                               disabled={controller.isOperationBusy}
-                              className="rounded-full border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-950/30"
+                              aria-label={`删除频道 ${channel.name}`}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -364,10 +358,16 @@ export const ChannelManagementView: React.FC = () => {
             emptyDescription="点击左侧频道行查看详细状态、最近错误和可执行操作。"
             footer={activeChannel ? (
               <div className="flex flex-wrap justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => void controller.handleTestChannel(activeChannel.name)} className="rounded-full">
+                <Button
+                  type="button"
+                  variant="adminAction"
+                  onClick={() => void controller.handleTestChannel(activeChannel.name)}
+                  disabled={controller.testingStatus[activeChannel.name] === 'testing' || controller.isOperationBusy}
+                  loading={controller.testingStatus[activeChannel.name] === 'testing'}
+                >
                   测试频道
                 </Button>
-                <Button type="button" variant="outline" onClick={() => void controller.handleToggleEnabled(activeChannel)} className="rounded-full">
+                <Button type="button" variant="adminAction" onClick={() => void controller.handleToggleEnabled(activeChannel)} disabled={controller.isOperationBusy}>
                   {activeChannel.is_enabled ? '停用频道' : '启用频道'}
                 </Button>
               </div>
@@ -415,12 +415,11 @@ export const ChannelManagementView: React.FC = () => {
                     <div className="flex justify-end">
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="adminAction"
                         onClick={() => void controller.handleSaveChannelTags()}
                         disabled={controller.isSavingTags}
-                        className="rounded-full"
+                        loading={controller.isSavingTags}
                       >
-                        {controller.isSavingTags ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
                         保存标签
                       </Button>
                     </div>

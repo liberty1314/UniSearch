@@ -18,6 +18,10 @@ const buttonVariants = cva(
         glass: 'glass text-slate-800 shadow-glass-strong hover:bg-white/72 hover:shadow-glass-strong dark:text-slate-200 dark:hover:bg-slate-900/58 dark:hover:shadow-glass-dark',
         ghost: 'text-slate-700 dark:text-slate-300 hover:bg-white/45 dark:hover:bg-slate-800/45 backdrop-blur-sm',
         link: 'text-blue-500 dark:text-cyan-400 underline-offset-4 hover:underline',
+        adminAction: 'rounded-full border-[0.5px] border-slate-200/60 bg-white/55 text-slate-700 shadow-sm shadow-slate-900/5 backdrop-blur-md hover:-translate-y-0.5 hover:border-cyan-200/80 hover:bg-white/85 hover:text-slate-950 hover:shadow-[0_10px_22px_rgba(15,23,42,0.10)] active:translate-y-0 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:text-slate-200 dark:hover:border-cyan-300/[0.30] dark:hover:bg-cyan-400/[0.10] dark:hover:text-cyan-100 dark:hover:shadow-[0_12px_28px_rgba(8,47,73,0.30)]',
+        adminPrimaryAction: 'rounded-full border-[0.5px] border-cyan-300/55 bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_10px_22px_rgba(14,165,233,0.22)] hover:-translate-y-0.5 hover:from-blue-700 hover:to-cyan-600 hover:shadow-[0_14px_30px_rgba(14,165,233,0.28)] active:translate-y-0 dark:border-cyan-300/[0.28] dark:from-blue-500 dark:to-cyan-400 dark:hover:from-blue-400 dark:hover:to-cyan-300',
+        adminDangerAction: 'rounded-full border-[0.5px] border-red-200/70 bg-white/55 text-red-600 shadow-sm shadow-red-900/5 backdrop-blur-md hover:-translate-y-0.5 hover:border-red-300 hover:bg-red-50 hover:text-red-700 hover:shadow-[0_10px_22px_rgba(220,38,38,0.12)] active:translate-y-0 dark:border-red-900/45 dark:bg-slate-950/[0.52] dark:text-red-300 dark:hover:border-red-500/55 dark:hover:bg-red-950/35 dark:hover:text-red-200',
+        adminIconAction: 'rounded-full border-[0.5px] border-slate-200/60 bg-white/45 text-slate-600 shadow-sm shadow-slate-900/5 backdrop-blur-md hover:-translate-y-0.5 hover:border-cyan-200/80 hover:bg-white/85 hover:text-slate-900 active:translate-y-0 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:text-slate-300 dark:hover:border-cyan-300/[0.30] dark:hover:bg-cyan-400/[0.10] dark:hover:text-cyan-100',
       },
       size: {
         sm: 'h-8 rounded-lg px-3 text-xs',
@@ -63,6 +67,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={asChild ? undefined : isDisabled}
         aria-disabled={isDisabled}
+        aria-busy={loading || undefined}
         {...props}
       >
         {asChild ? children : content}

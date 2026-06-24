@@ -138,27 +138,26 @@ export const PluginManagementView: React.FC = () => {
         <Button
           type="button"
           size="sm"
-          variant="outline"
+          variant="adminAction"
           onClick={(event) => {
             event.stopPropagation();
             void controller.handleTestPlugin(plugin);
           }}
           disabled={testing || controller.isOperationBusy}
-          className="rounded-full"
+          loading={testing}
         >
-          {testing ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Zap className="mr-1 h-4 w-4" />}
+          <Zap className="mr-1 h-4 w-4" />
           测试
         </Button>
         <Button
           type="button"
           size="sm"
-          variant="outline"
+          variant="adminAction"
           onClick={(event) => {
             event.stopPropagation();
             void controller.handleTogglePluginEnabled(plugin);
           }}
           disabled={controller.isOperationBusy}
-          className="rounded-full"
         >
           {plugin.is_enabled ? <ToggleRight className="mr-1 h-4 w-4" /> : <ToggleLeft className="mr-1 h-4 w-4" />}
           {status === 'inactive' ? '启用' : '停用'}
@@ -181,20 +180,20 @@ export const PluginManagementView: React.FC = () => {
               <>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="adminAction"
                   onClick={() => void controller.handleBatchTest()}
                   disabled={controller.localPlugins.length === 0 || controller.isOperationBusy}
-                  className="rounded-full"
+                  loading={controller.isBatchTesting}
                 >
                   <Activity className="mr-1 h-4 w-4" />
                   快速测试
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="adminAction"
                   onClick={() => void handleTestAbnormalPlugins()}
                   disabled={abnormalPlugins.length === 0 || controller.isOperationBusy}
-                  className="rounded-full"
+                  loading={controller.isBatchTesting}
                 >
                   <Zap className="mr-1 h-4 w-4" />
                   仅测试异常插件
@@ -280,20 +279,19 @@ export const PluginManagementView: React.FC = () => {
                 <Button
                   type="button"
                   size="sm"
-                  variant="outline"
+                  variant="adminAction"
                   onClick={() => controller.handleToggleSelectFiltered()}
                   disabled={controller.filteredItems.length === 0 || controller.isOperationBusy}
-                  className="rounded-full"
                 >
                   {controller.isAllFilteredSelected ? '清空筛选选择' : '全选当前筛选'}
                 </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => void controller.handleBatchTogglePlugins(true)} className="rounded-full">
+                <Button type="button" size="sm" variant="adminAction" onClick={() => void controller.handleBatchTogglePlugins(true)} loading={controller.isBatchUpdating}>
                   批量启用
                 </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => void controller.handleBatchTogglePlugins(false)} className="rounded-full">
+                <Button type="button" size="sm" variant="adminAction" onClick={() => void controller.handleBatchTogglePlugins(false)} loading={controller.isBatchUpdating}>
                   批量停用
                 </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => void controller.handleBatchTest()} className="rounded-full">
+                <Button type="button" size="sm" variant="adminAction" onClick={() => void controller.handleBatchTest()} loading={controller.isBatchTesting}>
                   批量测试
                 </Button>
               </>
@@ -338,7 +336,6 @@ export const PluginManagementView: React.FC = () => {
                                 <div className="flex flex-wrap items-center gap-2">
                                   <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{plugin.name}</h2>
                                   <Badge className={pluginStatusBadgeClass(status)}>{pluginStatusText(status)}</Badge>
-                                  <Badge variant="outline">内置插件</Badge>
                                 </div>
                                 <p className="line-clamp-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
                                   {plugin.description || '暂无描述'}
@@ -347,14 +344,13 @@ export const PluginManagementView: React.FC = () => {
                             </div>
                             <Button
                               type="button"
-                              variant="ghost"
+                              variant="adminIconAction"
                               size="icon"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 controller.handleOpenDetail(plugin);
                               }}
                               aria-label={`查看插件 ${plugin.name} 详情`}
-                              className="rounded-full"
                             >
                               <ArrowUpRight className="h-4 w-4" />
                             </Button>
@@ -431,10 +427,16 @@ export const PluginManagementView: React.FC = () => {
             emptyDescription="点击左侧卡片查看插件详情。"
             footer={activePlugin ? (
               <div className="flex flex-wrap justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => void controller.handleTestPlugin(activePlugin)} className="rounded-full">
+                <Button
+                  type="button"
+                  variant="adminAction"
+                  onClick={() => void controller.handleTestPlugin(activePlugin)}
+                  disabled={controller.testingStatus[activePlugin.name] === 'testing' || controller.isOperationBusy}
+                  loading={controller.testingStatus[activePlugin.name] === 'testing'}
+                >
                   测试
                 </Button>
-                <Button type="button" variant="outline" onClick={() => void controller.handleTogglePluginEnabled(activePlugin)} className="rounded-full">
+                <Button type="button" variant="adminAction" onClick={() => void controller.handleTogglePluginEnabled(activePlugin)} disabled={controller.isOperationBusy}>
                   {activePlugin.is_enabled ? '停用' : '启用'}
                 </Button>
               </div>
@@ -510,11 +512,13 @@ export const PluginManagementView: React.FC = () => {
                         <Button
                           type="button"
                           size="sm"
+                          variant="adminPrimaryAction"
                           className="mt-1"
                           onClick={() => void controller.handleSavePluginConfig()}
                           disabled={controller.isPluginConfigLoading || controller.isPluginConfigSaving}
+                          loading={controller.isPluginConfigSaving}
                         >
-                          {controller.isPluginConfigSaving ? '保存中' : '保存配置'}
+                          保存配置
                         </Button>
                       ) : null}
                     </div>

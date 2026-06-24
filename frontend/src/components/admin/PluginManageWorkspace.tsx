@@ -288,7 +288,6 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
                           <Badge className={pluginStatusBadgeClass(pluginStatus)}>
                             {pluginStatusText(pluginStatus)}
                           </Badge>
-                          <Badge variant="outline">内置</Badge>
                         </div>
                         <p className="mt-1 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">
                           {plugin.description || '无描述'}

@@ -50,7 +50,39 @@ const createSidHubItem = () => ({
   },
 });
 
-const createCatalogItems = () => [createSidHubItem(), ...Array.from({ length: 12 }, (_, index) => {
+const createDisabledBuiltinItem = () => ({
+  id: 'search.builtin-disabled',
+  name: 'builtin-disabled',
+  version: '1.2.3',
+  category: 'search',
+  description: '已停用内置插件示例',
+  plugin_type: 'builtin',
+  source_type: 'builtin',
+  is_local: true,
+  is_remote: false,
+  installed: true,
+  is_enabled: false,
+  status: 'inactive',
+  priority: 0,
+  available_actions: ['detail', 'test', 'toggle'],
+  capabilities: ['resource.search'],
+  tags: ['电影'],
+  author: 'UniSearch',
+  manifest_status: 'complete',
+  health: {
+    is_healthy: true,
+    check_source: 'manual_test',
+  },
+  resource: {
+    source_label: '内置资源',
+    source_group: 'search',
+    supported_media_types: ['movie'],
+    target_types: ['share'],
+    priority: 5,
+  },
+});
+
+const createCatalogItems = () => [createSidHubItem(), createDisabledBuiltinItem(), ...Array.from({ length: 12 }, (_, index) => {
   const order = index + 1;
   return {
     id: `search.builtin-enabled-${order}`,
@@ -188,6 +220,8 @@ describe('PluginManagementView', () => {
     expect(screen.getByTestId('plugin-market-card-builtin-enabled-1')).toBeInTheDocument();
     expect(screen.queryByTestId('plugin-market-card-builtin-enabled-11')).not.toBeInTheDocument();
     expect(screen.getByTestId('plugin-market-card-builtin-enabled-1')).toHaveClass('dark:bg-slate-950/[0.52]');
+    expect(within(screen.getByTestId('plugin-market-card-builtin-enabled-1')).getByText('启用')).toBeInTheDocument();
+    expect(screen.queryByText('内置插件')).not.toBeInTheDocument();
 
     const initialDrawer = await screen.findByTestId('plugin-management-drawer');
     expect(within(initialDrawer).getByText('builtin-enabled-1')).toBeInTheDocument();
@@ -209,6 +243,23 @@ describe('PluginManagementView', () => {
     const drawer = await screen.findByTestId('plugin-management-drawer');
     expect(within(drawer).getByText('builtin-enabled-11')).toBeInTheDocument();
     expect(within(drawer).getByText(/内置插件示例 11/)).toBeInTheDocument();
+  });
+
+  it('插件卡片使用启用状态替代内置徽标', async () => {
+    render(<PluginManagementView />);
+
+    await screen.findByRole('heading', { name: '插件中心' });
+    expect(within(screen.getByTestId('plugin-market-card-builtin-enabled-1')).getByText('启用')).toBeInTheDocument();
+    expect(screen.queryByText('内置插件')).not.toBeInTheDocument();
+
+    const statusSelect = screen.getByRole('combobox', { name: '插件状态筛选' });
+    await userEvent.click(statusSelect);
+    const listbox = await screen.findByRole('listbox');
+    await userEvent.click(within(listbox).getByRole('option', { name: '禁用' }));
+
+    const disabledCard = await screen.findByTestId('plugin-market-card-builtin-disabled');
+    expect(within(disabledCard).getByText('已停用')).toBeInTheDocument();
+    expect(within(disabledCard).queryByText('内置插件')).not.toBeInTheDocument();
   });
 
   it('支持标签筛选并仅匹配任一已选标签', async () => {

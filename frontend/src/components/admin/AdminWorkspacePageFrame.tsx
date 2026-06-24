@@ -7,7 +7,6 @@ import { ADMIN_DENSITY } from '@/components/admin/adminDensity';
 import {
   ADMIN_PANEL_SURFACE_CLASSES,
   ADMIN_PANEL_SURFACE_HOVER_CLASSES,
-  ADMIN_HOVERABLE_BUTTON_CLASSES,
 } from '@/components/admin/adminDesign';
 // 复用导出供后台各视图共享。
 export { AdminContentCard, AdminCardLoading, AdminCardEmpty } from './AdminContentCard';
@@ -148,10 +147,9 @@ export function AdminSelectionBar({
         {actions}
         <Button
           type="button"
-          variant="ghost"
+          variant="adminAction"
           size="sm"
           onClick={onClear}
-          className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'h-9 rounded-full px-3')}
         >
           清空选择
         </Button>
@@ -201,11 +199,10 @@ export function AdminDetailDrawer({
             </div>
             <Button
               type="button"
-              variant="ghost"
+              variant="adminIconAction"
               size="icon"
               onClick={onClose}
               aria-label="关闭详情抽屉"
-              className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'h-9 w-9 rounded-full')}
             >
               <X className="h-4 w-4" />
             </Button>

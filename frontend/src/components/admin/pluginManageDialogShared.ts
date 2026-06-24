@@ -13,7 +13,7 @@ export const resolvePluginStatus = (plugin: PluginInfo): PluginInfo['status'] =>
 
 export const pluginStatusText = (status: PluginInfo['status']): string => {
   if (status === 'custom') return '自定义';
-  if (status === 'active') return '内置';
+  if (status === 'active') return '启用';
   if (status === 'error') return '异常';
   return '已停用';
 };

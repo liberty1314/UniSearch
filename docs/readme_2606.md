@@ -1288,3 +1288,22 @@
     - docs/sidhub-progressive-resolution-development-plan.md
     - frontend/src/stores/searchStore.ts
     - docs/readme_2606.md
+
+- [2026-06-25 00:44] refactor(admin): 优化插件管理按钮变体与状态显示
+  - Body: 引入专门的管理后台按钮变体（adminAction等），优化插件列表的状态显示文案，并清理了废弃的静态设计草稿。
+  - Files:
+    - .gitignore
+    - critique.json
+    - frontend/src/components/admin/AdminWorkspacePageFrame.tsx
+    - frontend/src/components/admin/ChannelManagementView.tsx
+    - frontend/src/components/admin/PluginManageWorkspace.tsx
+    - frontend/src/components/admin/PluginManagementView.tsx
+    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
+    - frontend/src/components/admin/pluginManageDialogShared.ts
+    - frontend/src/components/ui/__tests__/Button.test.tsx
+    - frontend/src/components/ui/button.tsx
+    - resource-detail-redesign-2.html
+    - resource-detail-redesign-2.html.artifact.json
+    - resource-detail-redesign.html
+    - resource-detail-redesign.html.artifact.json
+    - docs/readme_2606.md

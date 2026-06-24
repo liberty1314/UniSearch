@@ -28,7 +28,9 @@ Thumbs.db
 .kiro/
 .clouder/
 .agent/
-.Codex/*
+.Codex/
+.od-skills/
+.remember/
 .superpowers/
 docs/superpowers/
 .codegraph/
@@ -39,6 +41,9 @@ docs/superpowers/
 .impeccable/
 .vercel/
 testsprite_tests/
+# ----- 临时文件 -----
+resource-detail-redesign*
+critique.json
 
 # ----- Node / 前端 -----
 node_modules/
