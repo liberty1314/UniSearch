@@ -1288,6 +1288,32 @@ func TestSidHubDoSearchHandlesEmptyAndFetchErrors(t *testing.T) {
 	}
 }
 
+func TestSidHubDoSearchReturnsEmptyWithoutTryingFallbackBaseURL(t *testing.T) {
+	searchCache = sync.Map{}
+	p := NewSidHubPlugin()
+
+	searchURL := "https://sidhub.cc/s/%E4%B8%8D%E5%AD%98%E5%9C%A8/"
+	fallbackCalled := false
+	p.fetcher = func(targetURL string) ([]byte, error) {
+		if targetURL == searchURL {
+			return []byte(`<main><p>没有找到相关内容</p></main>`), nil
+		}
+		fallbackCalled = true
+		return nil, errors.New("备用域名不应在空结果时被请求")
+	}
+
+	results, err := p.doSearch(nil, "不存在", nil)
+	if err != nil {
+		t.Fatalf("空搜索结果不应返回错误: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("期望空结果，实际为 %#v", results)
+	}
+	if fallbackCalled {
+		t.Fatal("主域名成功返回空结果时不应继续请求备用域名")
+	}
+}
+
 func TestSidHubHelpersCoverEdgeCases(t *testing.T) {
 	if extractMovieID("/bad/path") != "" {
 		t.Fatal("期望非法影片路径不返回 ID")

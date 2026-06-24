@@ -232,7 +232,7 @@ func (p *SidHubAsyncPlugin) doSearch(client *http.Client, keyword string, ext ma
 			continue
 		}
 		if len(results) == 0 {
-			continue
+			return []model.SearchResult{}, nil
 		}
 
 		searchCache.Store(cacheKey, cachedSearchResult{

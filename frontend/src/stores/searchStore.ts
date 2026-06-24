@@ -535,7 +535,7 @@ export const useSearchStore = create<SearchState>()(
        */
       reset: () => {
         invalidateSearchRequests();
-        set((state) => ({
+        set({
           searchParams: buildDefaultSearchParams(),
           searchResults: null,
           isLoading: false,
@@ -546,9 +546,9 @@ export const useSearchStore = create<SearchState>()(
           receivedBatches: 0,
           error: null,
           lastCompletedSearchParams: null,
-            displayedCount: initialDisplayCount,
+          displayedCount: initialDisplayCount,
           hasMore: false,
-        }));
+        });
       },
     }),
     {

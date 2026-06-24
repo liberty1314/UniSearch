@@ -1279,3 +1279,12 @@
     - resource-detail-redesign.html
     - resource-detail-redesign.html.artifact.json
     - docs/readme_2606.md
+
+- [2026-06-24 23:30] fix(sidhub): 搜索空结果时不再请求备用域名以避免超时
+  - Body: 当主域名成功返回空搜索页时直接返回空结果，避免继续请求备用域名拖慢响应导致插件超时。同时在前端 searchStore 进行了轻微的代码格式化。
+  - Files:
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - docs/sidhub-progressive-resolution-development-plan.md
+    - frontend/src/stores/searchStore.ts
+    - docs/readme_2606.md
