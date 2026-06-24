@@ -1113,3 +1113,18 @@
     - frontend/src/components/search-results/useSearchResultsPresentation.ts
     - frontend/vite.config.ts
     - scripts/local.sh
+
+- [2026-06-24 11:27] feat(metrics): 在搜索异常指标中记录并展示插件名称
+  - Body: 为 SearchMetricError 增加了 PluginName 字段。在搜索请求超时或异常时记录具体的插件名称，并在管理员界面的系统状态大盘中进行展示，方便排查由于特定插件导致的超时问题。
+  - Files:
+    - backend/model/search_progressive.go
+    - backend/service/search_executor.go
+    - backend/service/search_executor_test.go
+    - backend/service/search_metrics.go
+    - backend/service/search_progressive.go
+    - backend/service/search_progressive_test.go
+    - backend/service/search_service_test.go
+    - frontend/src/components/admin/SystemInfoView.tsx
+    - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
+    - frontend/src/types/system.ts
+    - docs/readme_2606.md

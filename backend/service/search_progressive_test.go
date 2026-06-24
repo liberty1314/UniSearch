@@ -130,4 +130,7 @@ func TestSearchProgressiveEmitsTimeoutWarning(t *testing.T) {
 	if searchService.ObservabilitySnapshot().TimeoutCount == 0 {
 		t.Fatal("expected timeout to be recorded in observability snapshot")
 	}
+	if got := searchService.ObservabilitySnapshot().RecentErrors[0].PluginName; got != "timeout-plugin" {
+		t.Fatalf("expected timeout plugin name to be recorded, got %q", got)
+	}
 }

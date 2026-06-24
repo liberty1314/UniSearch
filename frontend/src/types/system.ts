@@ -37,6 +37,7 @@ export interface SearchKeywordStat {
 
 export interface SearchMetricError {
   scope: string;
+  plugin_name?: string;
   keyword: string;
   message: string;
 }

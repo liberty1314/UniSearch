@@ -232,12 +232,13 @@ func (s *SearchService) startProgressivePluginTasks(ctx context.Context, normali
 				resultCh <- result
 			case <-time.After(pluginTimeout):
 				message := "插件搜索超时"
-				s.metrics.RecordTimeout("plugin", normalized.Keyword, message)
-				s.recordPluginHealth(currentPlugin.Name(), false, message, "timeout")
+				pluginName := currentPlugin.Name()
+				s.metrics.RecordTimeout("plugin", pluginName, normalized.Keyword, message)
+				s.recordPluginHealth(pluginName, false, message, "timeout")
 				resultCh <- progressiveSourceResult{
-					source: currentPlugin.Name(),
+					source: pluginName,
 					warnings: []model.SearchSourceWarning{{
-						Source:  currentPlugin.Name(),
+						Source:  pluginName,
 						Message: "该搜索源响应超时，已返回其他来源结果",
 					}},
 				}

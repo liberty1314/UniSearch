@@ -167,7 +167,6 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 			Source:  "plugin",
 			Message: "部分搜索源响应超时，已返回其他来源结果",
 		})
-		e.metrics.RecordTimeout("plugin", keyword, "部分搜索源响应超时")
 		logSearchEvent("plugin_timeout", map[string]interface{}{
 			"keyword":         keyword,
 			"submitted_tasks": submittedTasks,
@@ -210,8 +209,10 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 	}
 	if timedOut {
 		for _, currentPlugin := range availablePlugins {
-			if _, ok := completedPluginNames[currentPlugin.Name()]; !ok {
-				e.recordPluginHealth(currentPlugin.Name(), false, "插件搜索超时", "timeout")
+			pluginName := currentPlugin.Name()
+			if _, ok := completedPluginNames[pluginName]; !ok {
+				e.metrics.RecordTimeout("plugin", pluginName, keyword, "插件搜索超时")
+				e.recordPluginHealth(pluginName, false, "插件搜索超时", "timeout")
 			}
 		}
 	}

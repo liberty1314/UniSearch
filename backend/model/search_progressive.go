@@ -37,7 +37,8 @@ type SearchKeywordStat struct {
 }
 
 type SearchMetricError struct {
-	Scope   string `json:"scope" sonic:"scope"`
-	Keyword string `json:"keyword" sonic:"keyword"`
-	Message string `json:"message" sonic:"message"`
+	Scope      string `json:"scope" sonic:"scope"`
+	PluginName string `json:"plugin_name,omitempty" sonic:"plugin_name,omitempty"`
+	Keyword    string `json:"keyword" sonic:"keyword"`
+	Message    string `json:"message" sonic:"message"`
 }

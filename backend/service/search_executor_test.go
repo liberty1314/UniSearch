@@ -130,6 +130,49 @@ func TestPluginSearchExecutorDoesNotStorePartialPluginResults(t *testing.T) {
 	}
 }
 
+func TestPluginSearchExecutorRecordsTimedOutPluginName(t *testing.T) {
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{
+		CacheEnabled:              false,
+		DefaultConcurrency:        2,
+		AsyncMaxBackgroundWorkers: 2,
+		PluginTimeout:             20 * time.Millisecond,
+	}
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	pm := plugin.NewPluginManager()
+	pm.RegisterPlugin(&mockAsyncSearchPlugin{name: "fast-plugin"})
+	pm.RegisterPlugin(&mockAsyncSearchPlugin{name: "timeout-plugin", delay: 200 * time.Millisecond})
+
+	metrics := newSearchMetricsRecorder()
+	selector := newPluginSelector(pm, nil)
+	executor := newPluginSearchExecutor(selector, newSearchCache(nil, metrics), metrics, nil, nil)
+
+	results, warnings, err := executor.Search("仙逆", nil, true, 2, nil)
+	if err != nil {
+		t.Fatalf("unexpected search error: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected fast plugin result only, got %d", len(results))
+	}
+	if len(warnings) != 1 {
+		t.Fatalf("expected timeout warning, got %#v", warnings)
+	}
+
+	snapshot := metrics.Snapshot()
+	if snapshot.TimeoutCount != 1 {
+		t.Fatalf("expected one timeout, got %d", snapshot.TimeoutCount)
+	}
+	if len(snapshot.RecentErrors) == 0 {
+		t.Fatal("expected timeout to be recorded in recent errors")
+	}
+	if got := snapshot.RecentErrors[0].PluginName; got != "timeout-plugin" {
+		t.Fatalf("expected timeout plugin name to be recorded, got %q", got)
+	}
+}
+
 func TestPluginSearchExecutorIsolatesRequestStatePerPlugin(t *testing.T) {
 	oldConfig := config.AppConfig
 	config.AppConfig = &config.Config{

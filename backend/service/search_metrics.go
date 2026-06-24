@@ -67,7 +67,7 @@ func (r *SearchMetricsRecorder) RecordSearch(scope string, keyword string, durat
 	r.resultBuckets[resultCountBucket(resultCount)]++
 	if err != nil {
 		r.searchErrorCount[scope]++
-		r.appendRecentErrorLocked(scope, keyword, err.Error())
+		r.appendRecentErrorLocked(scope, "", keyword, err.Error())
 	}
 	r.mu.Unlock()
 
@@ -94,11 +94,11 @@ func (r *SearchMetricsRecorder) RecordWarning(count int) {
 	r.warningCount += count
 }
 
-func (r *SearchMetricsRecorder) RecordTimeout(scope string, keyword string, message string) {
+func (r *SearchMetricsRecorder) RecordTimeout(scope string, pluginName string, keyword string, message string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.timeoutCount++
-	r.appendRecentErrorLocked(scope, keyword, message)
+	r.appendRecentErrorLocked(scope, pluginName, keyword, message)
 }
 
 func (r *SearchMetricsRecorder) Snapshot() model.SearchObservabilitySnapshot {
@@ -164,11 +164,12 @@ func resultCountBucket(count int) string {
 	}
 }
 
-func (r *SearchMetricsRecorder) appendRecentErrorLocked(scope string, keyword string, message string) {
+func (r *SearchMetricsRecorder) appendRecentErrorLocked(scope string, pluginName string, keyword string, message string) {
 	r.recentErrors = append([]model.SearchMetricError{{
-		Scope:   scope,
-		Keyword: keyword,
-		Message: message,
+		Scope:      scope,
+		PluginName: pluginName,
+		Keyword:    keyword,
+		Message:    message,
 	}}, r.recentErrors...)
 	if len(r.recentErrors) > 20 {
 		r.recentErrors = r.recentErrors[:20]

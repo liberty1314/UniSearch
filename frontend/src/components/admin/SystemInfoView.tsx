@@ -554,9 +554,11 @@ export const SystemInfoView: React.FC = () => {
               <div className="mt-3 space-y-2">
                 {searchHealthSummary.recentErrors.length > 0 ? searchHealthSummary.recentErrors.slice(0, 3).map((item, index) => (
                   <div key={`${item.scope}-${item.keyword}-${index}`} className="rounded-xl border border-rose-200/60 bg-white/70 px-3 py-2 text-xs text-rose-700 dark:border-rose-300/20 dark:bg-white/[0.04] dark:text-rose-200">
-                    <span className="font-medium">{item.scope}</span>
-                    {item.keyword ? <span> · {item.keyword}</span> : null}
-                    <span>：{item.message}</span>
+                    {[
+                      item.scope,
+                      item.plugin_name,
+                      item.keyword,
+                    ].filter(Boolean).join(' · ')}：{item.message}
                   </div>
                 )) : (
                   <span className="text-sm text-slate-500 dark:text-slate-400">暂无异常记录</span>

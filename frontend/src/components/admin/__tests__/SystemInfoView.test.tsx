@@ -154,7 +154,7 @@ describe('SystemInfoView', () => {
             timeout_count: 1,
             warning_count: 2,
             recent_errors: [
-              { scope: 'plugin', keyword: '测试', message: '插件搜索超时' },
+              { scope: 'plugin', plugin_name: 'timeout-plugin', keyword: '测试', message: '插件搜索超时' },
             ],
             top_keywords: [
               { keyword: '流浪地球', count: 3 },
@@ -185,7 +185,7 @@ describe('SystemInfoView', () => {
     expect(screen.getByText('插件状态摘要')).toBeInTheDocument();
     expect(screen.getByText('搜索健康摘要')).toBeInTheDocument();
     expect(screen.getByText('流浪地球 · 3')).toBeInTheDocument();
-    expect(screen.getByText(/插件搜索超时/)).toBeInTheDocument();
+    expect(screen.getByText('plugin · timeout-plugin · 测试：插件搜索超时')).toBeInTheDocument();
     expect(screen.getByText(/异常包含启用与禁用频道/)).toBeInTheDocument();
     expect(screen.getAllByText('点击进入管理页')).toHaveLength(2);
 

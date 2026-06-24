@@ -60,6 +60,9 @@ func (m *mockAsyncSearchPlugin) SetCurrentKeyword(_ string) {}
 
 func (m *mockAsyncSearchPlugin) SearchWithResult(keyword string, _ map[string]interface{}) (model.PluginSearchResult, error) {
 	m.searchCalls.Add(1)
+	if m.delay > 0 {
+		time.Sleep(m.delay)
+	}
 	if m.err != nil {
 		return model.PluginSearchResult{}, m.err
 	}
