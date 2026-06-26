@@ -27,7 +27,7 @@ const (
 	pluginName                         = "sidhub"
 	pluginDisplayName                  = "SeedHub"
 	defaultPriority                    = 3
-	defaultPreResolvedLinkStartPerType = 3
+	defaultPreResolvedLinkStartPerType = 0
 	maxPreResolvedLinkStartPerType     = 20
 	primaryBaseURL                     = "https://sidhub.cc"
 	fallbackBaseURL                    = "https://www.seedhub.cc"
@@ -158,7 +158,7 @@ func NewSidHubPlugin() *SidHubAsyncPlugin {
 				Label:       "每类完整解析数量",
 				Type:        "number",
 				Default:     float64(defaultPreResolvedLinkStartPerType),
-				Description: "SeedHub 每个资源类型前 N 条 link_start 会尝试完整解析。",
+				Description: "SeedHub 每个资源类型前 N 条 link_start 会在搜索阶段尝试完整解析；0 表示点击时再获取扫码载荷。",
 				Group:       "解析性能",
 			},
 		},
@@ -344,12 +344,15 @@ func hasGzipMagicHeader(body []byte) bool {
 
 // RefreshScanTransfer 重新抓取当前扫码转存页并返回最新载荷。
 func (p *SidHubAsyncPlugin) RefreshScanTransfer(linkURL string, refreshKey string) (model.Link, error) {
-	movieID, linkType, entryIndex, err := parseSeedHubRefreshKey(refreshKey)
+	refreshTarget, err := parseSeedHubRefreshKey(refreshKey)
 	if err != nil {
 		return model.Link{}, err
 	}
 
 	trimmedURL := strings.TrimSpace(linkURL)
+	if refreshTarget.linkURL != "" {
+		trimmedURL = refreshTarget.linkURL
+	}
 	if trimmedURL == "" || !strings.Contains(trimmedURL, linkStartPathPrefix) {
 		return model.Link{}, fmt.Errorf("无效的 SeedHub 刷新链接")
 	}
@@ -360,14 +363,19 @@ func (p *SidHubAsyncPlugin) RefreshScanTransfer(linkURL string, refreshKey strin
 	}
 
 	refreshedLink, handled, err := resolveLinkStartLink(model.Link{
-		Type: linkType,
+		Type: refreshTarget.linkType,
 		URL:  trimmedURL,
-	}, body, movieID, entryIndex)
+	}, body, refreshTarget.movieID, refreshTarget.entryIndex)
 	if err != nil {
 		return model.Link{}, err
 	}
 	if !handled || refreshedLink.AccessMode != "scan_transfer" || refreshedLink.ScanTransfer == nil {
 		return model.Link{}, fmt.Errorf("当前资源未返回可刷新的扫码转存载荷")
+	}
+	if refreshTarget.linkURL != "" {
+		refreshedLink.ScanTransfer.Refreshable = true
+		refreshedLink.ScanTransfer.RefreshKey = strings.TrimSpace(refreshKey)
+		refreshedLink.ScanTransfer.SourcePageURL = trimmedURL
 	}
 
 	return refreshedLink, nil
@@ -417,8 +425,6 @@ func (p *SidHubAsyncPlugin) resolveLinkStartEntries(entries []sidHubLinkEntry, m
 			}
 			nextEntry.ResolutionStatus = sidHubResolutionFallback
 			nextEntry.ResolutionRank = 1
-		} else {
-			continue
 		}
 
 		nextEntry.Link = buildFallbackScanTransferLink(entry.Link, movieID, entry.Index)
@@ -483,6 +489,9 @@ func buildFallbackScanTransferLink(link model.Link, movieID string, entryIndex i
 	}
 
 	if refreshKey := buildSeedHubRefreshKey(movieID, link.Type, entryIndex); refreshKey != "" {
+		resolvedLink.ScanTransfer.Refreshable = true
+		resolvedLink.ScanTransfer.RefreshKey = refreshKey
+	} else if refreshKey := buildSeedHubURLRefreshKey(link.URL, link.Type); refreshKey != "" {
 		resolvedLink.ScanTransfer.Refreshable = true
 		resolvedLink.ScanTransfer.RefreshKey = refreshKey
 	}
@@ -735,20 +744,55 @@ func buildSeedHubRefreshKey(movieID string, linkType string, entryIndex int) str
 	return fmt.Sprintf("seedhub:%s:%s:%d", strings.TrimSpace(movieID), strings.TrimSpace(linkType), entryIndex)
 }
 
-func parseSeedHubRefreshKey(refreshKey string) (string, string, int, error) {
+func buildSeedHubURLRefreshKey(linkURL string, linkType string) string {
+	trimmedURL := strings.TrimSpace(linkURL)
+	normalizedType := normalizeLinkType(linkType)
+	if trimmedURL == "" || normalizedType == "" || !strings.Contains(trimmedURL, linkStartPathPrefix) {
+		return ""
+	}
+	encodedURL := base64.RawURLEncoding.EncodeToString([]byte(trimmedURL))
+	return fmt.Sprintf("seedhub-url:%s:%s", normalizedType, encodedURL)
+}
+
+type seedHubRefreshTarget struct {
+	movieID    string
+	linkType   string
+	entryIndex int
+	linkURL    string
+}
+
+func parseSeedHubRefreshKey(refreshKey string) (seedHubRefreshTarget, error) {
 	parts := strings.Split(strings.TrimSpace(refreshKey), ":")
+	if len(parts) == 3 && parts[0] == "seedhub-url" {
+		linkType := normalizeLinkType(parts[1])
+		decodedURL, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(parts[2]))
+		linkURL := strings.TrimSpace(string(decodedURL))
+		if linkType == "" || err != nil || linkURL == "" || !strings.Contains(linkURL, linkStartPathPrefix) {
+			return seedHubRefreshTarget{}, fmt.Errorf("无效的 SeedHub refresh_key")
+		}
+		return seedHubRefreshTarget{
+			linkType:   linkType,
+			entryIndex: 1,
+			linkURL:    linkURL,
+		}, nil
+	}
+
 	if len(parts) != 4 || parts[0] != "seedhub" {
-		return "", "", 0, fmt.Errorf("无效的 SeedHub refresh_key")
+		return seedHubRefreshTarget{}, fmt.Errorf("无效的 SeedHub refresh_key")
 	}
 
 	movieID := strings.TrimSpace(parts[1])
 	linkType := normalizeLinkType(parts[2])
 	entryIndex, err := strconv.Atoi(strings.TrimSpace(parts[3]))
 	if movieID == "" || linkType == "" || err != nil || entryIndex <= 0 {
-		return "", "", 0, fmt.Errorf("无效的 SeedHub refresh_key")
+		return seedHubRefreshTarget{}, fmt.Errorf("无效的 SeedHub refresh_key")
 	}
 
-	return movieID, linkType, entryIndex, nil
+	return seedHubRefreshTarget{
+		movieID:    movieID,
+		linkType:   linkType,
+		entryIndex: entryIndex,
+	}, nil
 }
 
 func resolveSeedHubLinkAccessMode(link model.Link) string {

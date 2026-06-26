@@ -216,7 +216,7 @@ func TestSidHubPluginManifest(t *testing.T) {
 		t.Fatalf("期望 SeedHub 声明 1 个运行配置项，实际为 %#v", manifest.ConfigSchema)
 	}
 	field := manifest.ConfigSchema[0]
-	if field.Key != "pre_resolved_link_start_per_type" || field.Type != "number" || field.Default != float64(3) {
+	if field.Key != "pre_resolved_link_start_per_type" || field.Type != "number" || field.Default != float64(0) {
 		t.Fatalf("期望声明每类完整解析数量配置，实际为 %#v", field)
 	}
 }
@@ -751,7 +751,7 @@ func TestSidHubDoSearchFetchesDetailsAndUsesCache(t *testing.T) {
 	}
 
 	counts := map[string]int{}
-	hasResolvedQuark := false
+	hasRefreshableFallback := false
 	for _, result := range results {
 		if result.SourcePluginID != "sidhub" || result.SourceName != "SeedHub" {
 			t.Fatalf("期望来源为 SeedHub，实际为 %#v", result)
@@ -763,8 +763,9 @@ func TestSidHubDoSearchFetchesDetailsAndUsesCache(t *testing.T) {
 			t.Fatalf("期望媒体类型为 tv，实际为 %q", result.MediaType)
 		}
 		counts[result.Links[0].Type]++
-		if result.Links[0].URL == "https://pan.quark.cn/s/real123" {
-			hasResolvedQuark = true
+		link := result.Links[0]
+		if link.AccessMode == "scan_transfer" && link.ScanTransfer != nil && link.ScanTransfer.RefreshKey != "" {
+			hasRefreshableFallback = true
 		}
 	}
 
@@ -772,8 +773,8 @@ func TestSidHubDoSearchFetchesDetailsAndUsesCache(t *testing.T) {
 	if !reflect.DeepEqual(counts, expected) {
 		t.Fatalf("期望展开结果类型计数为 %#v，实际为 %#v", expected, counts)
 	}
-	if !hasResolvedQuark {
-		t.Fatalf("期望夸克跳转被解析为真实链接，实际为 %#v", results)
+	if !hasRefreshableFallback {
+		t.Fatalf("期望搜索阶段返回可刷新的扫码兜底结果，实际为 %#v", results)
 	}
 
 	p.fetcher = func(targetURL string) ([]byte, error) {
@@ -786,7 +787,7 @@ func TestSidHubDoSearchFetchesDetailsAndUsesCache(t *testing.T) {
 	if len(cachedResults) != 10 || cachedResults[0].SourcePluginID != "sidhub" {
 		t.Fatalf("期望缓存返回同一结果，实际为 %#v", cachedResults)
 	}
-	if fetchCount[searchURL] != 1 || fetchCount[detailURL] != 1 || fetchCount[linkStartURL] != 1 {
+	if fetchCount[searchURL] != 1 || fetchCount[detailURL] != 1 || fetchCount[linkStartURL] != 0 {
 		t.Fatalf("期望每个测试地址只请求一次，实际为 %#v", fetchCount)
 	}
 }
@@ -953,12 +954,12 @@ func TestResolveLinkStartLinkDetectsCodeOnlyScanTransfer(t *testing.T) {
 	}
 }
 
-func TestResolveLinkStartEntriesDropsOverflowLinkStartEntries(t *testing.T) {
+func TestResolveLinkStartEntriesKeepsOverflowAsFallback(t *testing.T) {
 	p := NewSidHubPlugin()
 	fetchCount := map[string]int{}
-	entries := make([]sidHubLinkEntry, 0, defaultPreResolvedLinkStartPerType+1)
+	entries := make([]sidHubLinkEntry, 0, 2)
 
-	for index := 1; index <= defaultPreResolvedLinkStartPerType+1; index++ {
+	for index := 1; index <= 2; index++ {
 		linkURL := fmt.Sprintf("https://www.seedhub.cc/link_start/?redirect_to=baidu_%d", index)
 		entries = append(entries, sidHubLinkEntry{
 			Link: model.Link{
@@ -976,14 +977,18 @@ func TestResolveLinkStartEntriesDropsOverflowLinkStartEntries(t *testing.T) {
 		return []byte(sidHubScanTransferFixture), nil
 	}
 
-	resolved := p.resolveLinkStartEntries(entries, "626957")
-	if len(resolved) != defaultPreResolvedLinkStartPerType {
-		t.Fatalf("期望只保留前 %d 条结果，实际为 %d", defaultPreResolvedLinkStartPerType, len(resolved))
+	resolved := p.resolveLinkStartEntries(entries, "626957", 1)
+	if len(resolved) != len(entries) {
+		t.Fatalf("期望保留全部结果，实际为 %d: %#v", len(resolved), resolved)
 	}
 
-	overflowURL := "https://www.seedhub.cc/link_start/?redirect_to=baidu_4"
+	overflowURL := "https://www.seedhub.cc/link_start/?redirect_to=baidu_2"
 	if fetchCount[overflowURL] != 0 {
-		t.Fatalf("第 4 条不应触发预抓取，实际抓取次数为 %d", fetchCount[overflowURL])
+		t.Fatalf("超预算资源不应触发预抓取，实际抓取次数为 %d", fetchCount[overflowURL])
+	}
+	overflowLink := resolved[1].Link
+	if overflowLink.AccessMode != "scan_transfer" || overflowLink.ScanTransfer == nil {
+		t.Fatalf("期望超预算资源保留为扫码兜底，实际为 %#v", overflowLink)
 	}
 }
 
@@ -1008,8 +1013,8 @@ func TestResolveLinkStartEntriesUsesPerTypeBudget(t *testing.T) {
 	if len(fetched) != 3 {
 		t.Fatalf("期望百度、夸克、磁力各预抓 1 条，实际抓取 %d 次: %#v", len(fetched), fetched)
 	}
-	if len(resolved) != 3 {
-		t.Fatalf("期望每类型只保留 1 条结果，实际为 %d: %#v", len(resolved), resolved)
+	if len(resolved) != len(entries) {
+		t.Fatalf("期望保留全部结果，实际为 %d: %#v", len(resolved), resolved)
 	}
 }
 
@@ -1025,8 +1030,40 @@ func TestResolveLinkStartEntriesHonorsZeroBudget(t *testing.T) {
 		Index: 1,
 	}}, "626957", 0)
 
-	if len(resolved) != 0 {
-		t.Fatalf("期望 N=0 时不返回 SeedHub link_start 结果，实际为 %#v", resolved)
+	if len(resolved) != 1 {
+		t.Fatalf("期望 N=0 时返回扫码兜底结果，实际为 %#v", resolved)
+	}
+	link := resolved[0].Link
+	if link.AccessMode != "scan_transfer" || link.ScanTransfer == nil {
+		t.Fatalf("期望 N=0 时返回扫码兜底载荷，实际为 %#v", link)
+	}
+	if link.ScanTransfer.RefreshKey != "seedhub:626957:baidu:1" {
+		t.Fatalf("期望 N=0 时保留 refresh_key，实际为 %#v", link.ScanTransfer)
+	}
+}
+
+func TestResolveLinkStartEntriesUsesURLRefreshKeyWithoutMovieID(t *testing.T) {
+	p := NewSidHubPlugin()
+	linkStartURL := "https://sidhub.cc/link_start/?movie_title=%E9%93%81%E6%8B%B3%E6%95%99%E8%82%B2&redirect_to=pan_id_660573"
+	p.fetcher = func(targetURL string) ([]byte, error) {
+		t.Fatalf("N=0 且无 movieID 时不应预抓 link_start: %s", targetURL)
+		return nil, nil
+	}
+
+	resolved := p.resolveLinkStartEntries([]sidHubLinkEntry{{
+		Link:  model.Link{Type: "baidu", URL: linkStartURL},
+		Index: 1,
+	}}, "", 0)
+
+	if len(resolved) != 1 {
+		t.Fatalf("期望保留无 movieID 的 link_start 结果，实际为 %#v", resolved)
+	}
+	link := resolved[0].Link
+	if link.AccessMode != "scan_transfer" || link.ScanTransfer == nil {
+		t.Fatalf("期望无 movieID 时返回扫码兜底载荷，实际为 %#v", link)
+	}
+	if !link.ScanTransfer.Refreshable || !strings.HasPrefix(link.ScanTransfer.RefreshKey, "seedhub-url:baidu:") {
+		t.Fatalf("期望无 movieID 时生成 URL 型 refresh_key，实际为 %#v", link.ScanTransfer)
 	}
 }
 
@@ -1264,6 +1301,32 @@ func TestSidHubRefreshScanTransferReturnsLatestPayload(t *testing.T) {
 	}
 	if refreshedLink.ScanTransfer.RefreshKey != "seedhub:4259:quark:1" {
 		t.Fatalf("期望刷新后保留相同 refresh_key，实际为 %#v", refreshedLink.ScanTransfer)
+	}
+}
+
+func TestSidHubRefreshScanTransferAcceptsURLRefreshKey(t *testing.T) {
+	p := NewSidHubPlugin()
+	linkStartURL := "https://sidhub.cc/link_start/?movie_title=%E9%93%81%E6%8B%B3%E6%95%99%E8%82%B2&redirect_to=pan_id_660573"
+	refreshKey := buildSeedHubURLRefreshKey(linkStartURL, "baidu")
+	if refreshKey == "" {
+		t.Fatalf("期望生成 URL 型 refresh_key")
+	}
+	p.fetcher = func(targetURL string) ([]byte, error) {
+		if targetURL != linkStartURL {
+			t.Fatalf("期望使用 refresh_key 内的 link_start URL，实际为 %s", targetURL)
+		}
+		return []byte(sidHubScanTransferFixture), nil
+	}
+
+	refreshedLink, err := p.RefreshScanTransfer("", refreshKey)
+	if err != nil {
+		t.Fatalf("URL 型 refresh_key 刷新失败: %v", err)
+	}
+	if refreshedLink.AccessMode != "scan_transfer" || refreshedLink.ScanTransfer == nil {
+		t.Fatalf("期望返回扫码转存载荷，实际为 %#v", refreshedLink)
+	}
+	if !refreshedLink.ScanTransfer.Refreshable || refreshedLink.ScanTransfer.RefreshKey != refreshKey {
+		t.Fatalf("期望刷新后保留 URL 型 refresh_key，实际为 %#v", refreshedLink.ScanTransfer)
 	}
 }
 

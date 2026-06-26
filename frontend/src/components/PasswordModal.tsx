@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
   Copy,
@@ -65,6 +65,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
     scanTransfer,
   );
   const [isRefreshingScanTransfer, setIsRefreshingScanTransfer] = useState(false);
+  const autoRefreshAttemptRef = useRef<string>("");
 
   useEffect(() => {
     setCurrentScanTransfer(scanTransfer);
@@ -107,7 +108,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
     toast.error(scanTransferMode ? "转存页面地址为空" : magnetMode ? "磁力链接为空" : "链接地址为空");
   };
 
-  const handleRefreshScanTransfer = async () => {
+  const handleRefreshScanTransfer = useCallback(async () => {
     const refreshKey = effectiveScanTransfer?.refresh_key?.trim();
     if (!refreshKey) {
       toast.error("当前资源暂不支持重新获取二维码");
@@ -137,7 +138,30 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
     } finally {
       setIsRefreshingScanTransfer(false);
     }
-  };
+  }, [effectiveScanTransfer?.refresh_key, resourceId, url]);
+
+  useEffect(() => {
+    const refreshKey = effectiveScanTransfer?.refresh_key?.trim();
+    if (!isOpen || !shouldPrioritizeRefresh || !refreshKey || isRefreshingScanTransfer) {
+      return;
+    }
+
+    const attemptKey = `${resourceId ?? ""}|${url}|${refreshKey}`;
+    if (autoRefreshAttemptRef.current === attemptKey) {
+      return;
+    }
+
+    autoRefreshAttemptRef.current = attemptKey;
+    void handleRefreshScanTransfer();
+  }, [
+    effectiveScanTransfer?.refresh_key,
+    handleRefreshScanTransfer,
+    isOpen,
+    isRefreshingScanTransfer,
+    resourceId,
+    shouldPrioritizeRefresh,
+    url,
+  ]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>

@@ -6,6 +6,7 @@ import React, {
 } from "react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useSearchStore } from "@/stores/searchStore";
 import { cn } from "@/lib/utils";
 import PasswordModal from "./PasswordModal";
@@ -47,6 +48,17 @@ const isSearchResultsViewMode = (
 const readStoredViewMode = (): SearchResultsViewMode | null => {
   const value = readJsonStorage<unknown>(SEARCH_RESULTS_VIEW_MODE_KEY, null);
   return isSearchResultsViewMode(value) ? value : null;
+};
+
+const hasScanTransferPayload = (target: ResourceOpenTarget): boolean => {
+  const scanTransfer = target.scanTransfer;
+  return Boolean(
+    scanTransfer?.qr_code_base64 ||
+      scanTransfer?.qr_code_image_url ||
+      scanTransfer?.qr_code_value ||
+      scanTransfer?.mobile_url ||
+      scanTransfer?.transfer_code,
+  );
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -118,6 +130,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     initialViewModeRef.current.mode,
   );
   const [passwordModalTarget, setPasswordModalTarget] = useState<ResourceOpenTarget | null>(null);
+  const [resolvingResourceId, setResolvingResourceId] = useState<string | null>(null);
   const [enableResourceDetailPage, setEnableResourceDetailPage] = useState(true);
   const [enableResourceSourceBadges, setEnableResourceSourceBadges] = useState(false);
 
@@ -207,7 +220,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   }, []);
 
   const handleOpenResource = useCallback(
-    (item: ResultItem) => {
+    async (item: ResultItem) => {
+      if (resolvingResourceId) {
+        return;
+      }
+
       const openTarget = resolveResourceOpenTarget(item);
       if (!openTarget) {
         return;
@@ -219,6 +236,49 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         return;
       }
 
+      const refreshKey = openTarget.scanTransfer?.refresh_key?.trim();
+      if (
+        isScanTransferTarget(openTarget) &&
+        openTarget.scanTransfer?.refreshable &&
+        refreshKey &&
+        !hasScanTransferPayload(openTarget)
+      ) {
+        const resourceKey = openTarget.resourceId || openTarget.url;
+        setResolvingResourceId(resourceKey);
+        try {
+          const response = await SearchService.refreshScanTransfer({
+            resource_id: openTarget.resourceId,
+            link_url: openTarget.url,
+            refresh_key: refreshKey,
+          });
+          if (!response.scan_transfer) {
+            throw new Error("当前资源未返回新的扫码载荷");
+          }
+          const refreshedDirectUrl = resolveDirectScanTransferUrl({
+            accessMode: "scan_transfer",
+            scanTransfer: response.scan_transfer,
+          });
+          if (refreshedDirectUrl) {
+            openExternalResource(refreshedDirectUrl);
+            return;
+          }
+          setPasswordModalTarget({
+            ...openTarget,
+            accessMode: "scan_transfer",
+            scanTransfer: response.scan_transfer,
+          });
+        } catch (error) {
+          const message =
+            error instanceof Error && error.message.trim()
+              ? error.message
+              : "获取二维码失败";
+          toast.error(message);
+        } finally {
+          setResolvingResourceId(null);
+        }
+        return;
+      }
+
       if (openTarget.password || isMagnetTarget(openTarget) || isScanTransferTarget(openTarget)) {
         setPasswordModalTarget(openTarget);
         return;
@@ -226,7 +286,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
 
       openExternalResource(openTarget.url);
     },
-    [openExternalResource],
+    [openExternalResource, resolvingResourceId],
   );
 
   const handlePasswordModalClose = useCallback(() => {
@@ -340,6 +400,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         viewMode={viewMode}
         enableResourceDetailPage={enableResourceDetailPage}
         enableResourceSourceBadges={enableResourceSourceBadges}
+        resolvingResourceId={resolvingResourceId}
         onOpenResource={handleOpenResource}
         onOpenDetail={handleOpenDetail}
       />

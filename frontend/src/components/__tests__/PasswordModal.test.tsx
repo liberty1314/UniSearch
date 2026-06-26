@@ -231,7 +231,20 @@ describe('PasswordModal', () => {
     );
   });
 
-  it('可刷新但没有二维码时把获取二维码作为主操作', () => {
+  it('可刷新但没有二维码时打开弹窗会自动获取二维码', async () => {
+    vi.mocked(SearchService.refreshScanTransfer).mockResolvedValue({
+      resource_id: 'seedhub-scan-empty',
+      link_url: 'https://www.seedhub.cc/link_start/?redirect_to=quark_scan',
+      access_mode: 'scan_transfer',
+      scan_transfer: {
+        qr_code_base64: 'data:image/png;base64,auto456',
+        transfer_code: 'AUTO1234',
+        instruction: '请使用手机扫码转存',
+        refreshable: true,
+        refresh_key: 'seedhub:4259:quark:1',
+      },
+    });
+
     render(
       <PasswordModal
         isOpen
@@ -249,7 +262,48 @@ describe('PasswordModal', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: '获取二维码' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: '打开链接' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /正在获取二维码|获取二维码/ })).toBeInTheDocument();
+
+    await waitFor(() =>
+      expect(SearchService.refreshScanTransfer).toHaveBeenCalledWith({
+        resource_id: 'seedhub-scan-empty',
+        link_url: 'https://www.seedhub.cc/link_start/?redirect_to=quark_scan',
+        refresh_key: 'seedhub:4259:quark:1',
+      }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByAltText('扫码转存二维码')).toHaveAttribute(
+        'src',
+        'data:image/png;base64,auto456',
+      ),
+    );
+    expect(screen.getByDisplayValue('AUTO1234')).toBeInTheDocument();
+  });
+
+  it('已有二维码时打开弹窗不会自动刷新', () => {
+    render(
+      <PasswordModal
+        isOpen
+        onClose={vi.fn()}
+        password=""
+        url="https://www.seedhub.cc/link_start/?redirect_to=quark_scan"
+        cloudType={CloudType.QUARK}
+        resourceId="seedhub-scan-ready"
+        accessMode="scan_transfer"
+        scanTransfer={{
+          qr_code_base64: 'data:image/png;base64,ready123',
+          instruction: '请使用手机扫码转存',
+          refreshable: true,
+          refresh_key: 'seedhub:4259:quark:1',
+        }}
+      />
+    );
+
+    expect(SearchService.refreshScanTransfer).not.toHaveBeenCalled();
+    expect(screen.getByAltText('扫码转存二维码')).toHaveAttribute(
+      'src',
+      'data:image/png;base64,ready123',
+    );
   });
 });

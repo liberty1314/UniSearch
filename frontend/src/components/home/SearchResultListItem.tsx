@@ -18,6 +18,7 @@ interface SearchResultListItemProps {
   item: ResultItem;
   index: number;
   canOpenResource: boolean;
+  isResolvingResource?: boolean;
   showDetailEntry?: boolean;
   showSourceBadge: boolean;
   onOpenResource: (item: ResultItem) => void;
@@ -29,6 +30,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
     item,
     index,
     canOpenResource,
+    isResolvingResource = false,
     showDetailEntry = true,
     showSourceBadge,
     onOpenResource,
@@ -50,7 +52,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
     const displayTitle = resolveResourceDisplayTitle(resource);
 
     const handleClick = (e: React.MouseEvent) => {
-      if (!canOpenResource) {
+      if (!canOpenResource || isResolvingResource) {
         return;
       }
       e.stopPropagation();
@@ -58,7 +60,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (!canOpenResource) {
+      if (!canOpenResource || isResolvingResource) {
         return;
       }
       if (e.key === "Enter" || e.key === " ") {
@@ -73,6 +75,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
         role={canOpenResource ? "button" : undefined}
         tabIndex={canOpenResource ? 0 : undefined}
         aria-label={`${cloudInfo.name}资源：${displayTitle || "未命名资源"}${hasPassword ? "（需要访问码）" : ""}`}
+        aria-busy={isResolvingResource || undefined}
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{
@@ -157,7 +160,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
             )}
             {scanTransferMode && (
               <div className="flex-shrink-0 px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-full border border-amber-200/70 dark:bg-amber-400/[0.08] dark:text-amber-200 dark:border-amber-300/18">
-                <span>需扫码</span>
+                <span>{isResolvingResource ? "正在获取" : "需扫码"}</span>
               </div>
             )}
             {showDetailEntry ? (

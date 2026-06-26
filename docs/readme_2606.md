@@ -1307,3 +1307,17 @@
     - resource-detail-redesign.html
     - resource-detail-redesign.html.artifact.json
     - docs/readme_2606.md
+
+
+- [2026-06-26 17:36] feat(search): 增加资源解析状态提示并优化前端组件交互
+  - Body: 为搜索结果列表卡片增加 isResolvingResource 状态，防止资源获取时的重复点击并显示加载提示。同时在后端 sidhub 插件中更新了相关逻辑。
+  - Files:
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - frontend/src/components/PasswordModal.tsx
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/__tests__/PasswordModal.test.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/home/SearchResultGridCard.tsx
+    - frontend/src/components/home/SearchResultListItem.tsx
+    - frontend/src/components/search-results/SearchResultsList.tsx

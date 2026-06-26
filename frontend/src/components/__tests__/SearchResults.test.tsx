@@ -1,6 +1,6 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import {
   MemoryRouter,
   Route,
@@ -9,6 +9,7 @@ import {
   useParams,
 } from "react-router-dom";
 import SearchResults from "@/components/SearchResults";
+import { SearchService } from "@/services/searchService";
 import type { SearchParams, SearchResponse } from "@/types/search";
 
 type SearchStoreState = {
@@ -95,6 +96,16 @@ let enableResourceSourceBadges = false;
 
 vi.mock("@/stores/searchStore", () => ({
   useSearchStore: () => searchStoreState,
+}));
+
+vi.mock("@/services/searchService", () => ({
+  SearchService: {
+    buildSearchUrl: vi.fn((params: SearchParams) => {
+      const keyword = params.keyword ? `?q=${encodeURIComponent(params.keyword)}` : "";
+      return `/search${keyword}`;
+    }),
+    refreshScanTransfer: vi.fn(),
+  },
 }));
 
 vi.mock("@/services/systemSettingsService", () => ({
@@ -192,6 +203,7 @@ const renderSearchResults = () =>
 
 describe("SearchResults", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     localStorage.clear();
     searchStoreState = {
       searchResults: {
@@ -268,7 +280,8 @@ describe("SearchResults", () => {
     }
 
     vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
-    vi.restoreAllMocks();
+    vi.mocked(SearchService.refreshScanTransfer).mockReset();
+    vi.mocked(SearchService.buildSearchUrl).mockClear();
     Object.defineProperty(window, "innerWidth", {
       configurable: true,
       writable: true,
@@ -428,6 +441,94 @@ describe("SearchResults", () => {
       "|https://www.seedhub.cc/link_start/?redirect_to=quark_scan|quark",
     );
     expect(openSpy).not.toHaveBeenCalled();
+  });
+
+  it("点击无二维码的扫码资源时先刷新，成功后再打开弹窗", async () => {
+    searchStoreState.searchResults.resources[0].links[0] = {
+      type: "quark",
+      url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+      password: "",
+      access_mode: "scan_transfer",
+      scan_transfer: {
+        refreshable: true,
+        refresh_key: "seedhub:4259:quark:1",
+      },
+      title: "你的名字 待解析扫码资源",
+      datetime: "2026-03-15T00:00:00Z",
+    };
+    vi.mocked(SearchService.refreshScanTransfer).mockResolvedValue({
+      resource_id: "resource-1",
+      link_url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+      access_mode: "scan_transfer",
+      scan_transfer: {
+        qr_code_base64: "data:image/png;base64,new123",
+        refreshable: true,
+        refresh_key: "seedhub:4259:quark:1",
+      },
+    });
+
+    renderSearchResults();
+    await screen.findByTestId("search-result-grid-card-wrapper");
+
+    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
+
+    expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();
+    expect(screen.getByText("正在获取")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(SearchService.refreshScanTransfer).toHaveBeenCalledWith({
+        resource_id: "resource-1",
+        link_url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+        refresh_key: "seedhub:4259:quark:1",
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("password-modal")).toHaveTextContent(
+        "|https://www.seedhub.cc/link_start/?redirect_to=quark_scan|quark",
+      ),
+    );
+  });
+
+  it("点击无二维码的扫码资源刷新出二维码内容链接时直接打开链接", async () => {
+    searchStoreState.searchResults.resources[0].links[0] = {
+      type: "baidu",
+      url: "https://www.seedhub.cc/link_start/?redirect_to=baidu_scan",
+      password: "",
+      access_mode: "scan_transfer",
+      scan_transfer: {
+        refreshable: true,
+        refresh_key: "seedhub:4259:baidu:1",
+      },
+      title: "你的名字 待直跳扫码资源",
+      datetime: "2026-03-15T00:00:00Z",
+    };
+    vi.mocked(SearchService.refreshScanTransfer).mockResolvedValue({
+      resource_id: "resource-1",
+      link_url: "https://www.seedhub.cc/link_start/?redirect_to=baidu_scan",
+      access_mode: "scan_transfer",
+      scan_transfer: {
+        qr_code_value: "https://pan.baidu.com/s/1XG5rTVKw14x2axO6pBabc",
+        refreshable: true,
+        refresh_key: "seedhub:4259:baidu:1",
+      },
+    });
+    const openSpy = vi.spyOn(window, "open").mockReturnValue({
+      opener: null,
+    } as Window);
+
+    renderSearchResults();
+    await screen.findByTestId("search-result-grid-card-wrapper");
+
+    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
+
+    expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();
+    expect(screen.getByText("正在获取")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(openSpy).toHaveBeenCalledWith(
+        "https://pan.baidu.com/s/1XG5rTVKw14x2axO6pBabc",
+        "_blank",
+      ),
+    );
+    expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();
   });
 
   it("opens the scan transfer QR code value directly when it is a URL", async () => {
