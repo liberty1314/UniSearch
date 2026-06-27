@@ -334,6 +334,34 @@ func TestParseSearchCardsUsesImageAltAndContainerTitleFallback(t *testing.T) {
 	}
 }
 
+func TestParseSidHubDateSupportsRelativeAndAbsoluteFormats(t *testing.T) {
+	now := time.Date(2026, 6, 27, 18, 30, 0, 0, time.Local)
+	cases := []struct {
+		name     string
+		text     string
+		expected time.Time
+	}{
+		{name: "今天", text: "今天", expected: time.Date(2026, 6, 27, 12, 0, 0, 0, time.Local)},
+		{name: "昨天", text: "昨天", expected: time.Date(2026, 6, 26, 12, 0, 0, 0, time.Local)},
+		{name: "三天前", text: "3 天前", expected: time.Date(2026, 6, 24, 12, 0, 0, 0, time.Local)},
+		{name: "短横线完整日期", text: "更新于 2026-06-20", expected: time.Date(2026, 6, 20, 12, 0, 0, 0, time.Local)},
+		{name: "斜线完整日期", text: "2026/06/20", expected: time.Date(2026, 6, 20, 12, 0, 0, 0, time.Local)},
+		{name: "中文完整日期", text: "2026年6月20日", expected: time.Date(2026, 6, 20, 12, 0, 0, 0, time.Local)},
+		{name: "当年月日", text: "06-20", expected: time.Date(2026, 6, 20, 12, 0, 0, 0, time.Local)},
+		{name: "未来月日回退上一年", text: "06-28", expected: time.Date(2025, 6, 28, 12, 0, 0, 0, time.Local)},
+		{name: "中文月日", text: "6月20日", expected: time.Date(2026, 6, 20, 12, 0, 0, 0, time.Local)},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := parseSidHubDate(tc.text, now)
+			if !actual.Equal(tc.expected) {
+				t.Fatalf("期望解析为 %s，实际为 %s", tc.expected, actual)
+			}
+		})
+	}
+}
+
 func TestParseDetailLinks(t *testing.T) {
 	// 覆盖矩阵：D5、T1。
 	html := `
@@ -421,6 +449,7 @@ func TestParseDetailLinkEntriesUsesNativeSeedHubLists(t *testing.T) {
 }
 
 func TestSidHubBuildsOneResultPerDownloadEntry(t *testing.T) {
+	resourceTime := time.Date(2026, 6, 20, 12, 0, 0, 0, time.Local)
 	card := sidHubMovie{
 		ID:        "4259",
 		Title:     "你的名字。 君の名は。",
@@ -438,6 +467,9 @@ func TestSidHubBuildsOneResultPerDownloadEntry(t *testing.T) {
 			Size:       "8.19G",
 			Year:       "2025年",
 			Badges:     []string{"蓝光"},
+			Datetime:   resourceTime,
+			DateText:   "2026-06-20",
+			DateSource: sidHubTimeSourceResourceRow,
 		},
 		{
 			Link:       model.Link{Type: "quark", URL: "https://pan.quark.cn/s/q2", WorkTitle: "你的名字。"},
@@ -457,11 +489,82 @@ func TestSidHubBuildsOneResultPerDownloadEntry(t *testing.T) {
 	if results[0].Title != "你的名字。国粤日多音轨" || len(results[0].Links) != 1 || results[0].Links[0].Type != "magnet" {
 		t.Fatalf("期望首条结果为独立磁力资源，实际为 %#v", results[0])
 	}
+	if !results[0].Datetime.Equal(resourceTime) || !results[0].Links[0].Datetime.Equal(resourceTime) {
+		t.Fatalf("期望展开结果和链接继承资源时间，实际结果时间 %s，链接时间 %s", results[0].Datetime, results[0].Links[0].Datetime)
+	}
 	if results[0].TargetType != "download" {
 		t.Fatalf("期望磁力结果 target_type 为 download，实际为 %q", results[0].TargetType)
 	}
 	if results[1].TargetType != "share" {
 		t.Fatalf("期望网盘结果 target_type 为 share，实际为 %q", results[1].TargetType)
+	}
+}
+
+func TestBuildResultUsesLatestEntryTime(t *testing.T) {
+	older := time.Date(2026, 6, 20, 12, 0, 0, 0, time.Local)
+	newer := time.Date(2026, 6, 22, 12, 0, 0, 0, time.Local)
+	card := sidHubMovie{
+		ID:         "120138",
+		Title:      "大濛",
+		DetailURL:  "https://sidhub.cc/movies/120138/",
+		Datetime:   older,
+		DateText:   "2026-06-20",
+		DateSource: sidHubTimeSourceMovieCard,
+	}
+	entries := []sidHubLinkEntry{
+		{
+			Link:       model.Link{Type: "quark", URL: "https://pan.quark.cn/s/old"},
+			Title:      "旧资源",
+			Datetime:   older,
+			DateText:   "2026-06-20",
+			DateSource: sidHubTimeSourceResourceRow,
+		},
+		{
+			Link:       model.Link{Type: "baidu", URL: "https://pan.baidu.com/s/new"},
+			Title:      "新资源",
+			Datetime:   newer,
+			DateText:   "2026-06-22",
+			DateSource: sidHubTimeSourceResourceRow,
+		},
+	}
+
+	result := buildResult(card, entries)
+	if !result.Datetime.Equal(newer) {
+		t.Fatalf("期望聚合结果使用最新资源时间，实际为 %s", result.Datetime)
+	}
+	if result.Meta["sid_hub_time_source"] != sidHubTimeSourceResourceRow || result.Meta["sid_hub_time_text"] != "2026-06-22" {
+		t.Fatalf("期望聚合结果记录最新时间来源，实际为 %#v", result.Meta)
+	}
+	if !result.Links[1].Datetime.Equal(newer) {
+		t.Fatalf("期望链接时间被写入，实际为 %#v", result.Links[1])
+	}
+}
+
+func TestBuildExpandedResultBackfillsSyntheticTimeWhenPageHasNoDate(t *testing.T) {
+	before := time.Now()
+	card := sidHubMovie{
+		ID:        "120138",
+		Title:     "大濛",
+		DetailURL: "https://sidhub.cc/movies/120138/",
+		MediaType: "movie",
+	}
+	entry := sidHubLinkEntry{
+		Link:       model.Link{Type: "quark", URL: "https://pan.quark.cn/s/source", WorkTitle: "大濛"},
+		Title:      "大濛 2160P 杜比视界",
+		GroupLabel: "夸克",
+		Index:      1,
+	}
+
+	result := buildExpandedResult(card, entry)
+	after := time.Now()
+	if result.Datetime.IsZero() || result.Datetime.Before(before) || result.Datetime.After(after) {
+		t.Fatalf("期望无页面时间时写入当前解析时间，实际为 %s，范围 %s - %s", result.Datetime, before, after)
+	}
+	if result.Meta["sid_hub_time_source"] != sidHubTimeSourceSyntheticFetch || result.Meta["sid_hub_time_text"] != "" {
+		t.Fatalf("期望标记合成时间来源，实际为 %#v", result.Meta)
+	}
+	if len(result.Links) != 1 || !result.Links[0].Datetime.Equal(result.Datetime) {
+		t.Fatalf("期望链接时间与结果时间一致，实际为 %#v", result.Links)
 	}
 }
 
@@ -483,6 +586,12 @@ func TestParseDetailLinkEntriesFallsBackToActiveSeedHubTab(t *testing.T) {
 	if !strings.Contains(entry.Title, "WEB-4K") {
 		t.Fatalf("期望标题保留 WEB-4K 关键词，实际为 %#v", entry)
 	}
+	if entry.DateText != "今天" || entry.DateSource != sidHubTimeSourceResourceRow || entry.Link.Datetime.IsZero() {
+		t.Fatalf("期望从资源行写入今天的时间，实际为 %#v", entry)
+	}
+	if entry.Link.Datetime.Hour() != 12 || entry.Link.Datetime.Minute() != 0 {
+		t.Fatalf("期望日期精度统一为中午，实际为 %s", entry.Link.Datetime)
+	}
 }
 
 func TestParseDetailLinkEntriesUsesRowTitleForQuark4KResource(t *testing.T) {
@@ -502,6 +611,9 @@ func TestParseDetailLinkEntriesUsesRowTitleForQuark4KResource(t *testing.T) {
 	}
 	if !strings.Contains(entry.Title, "4K+1080P") {
 		t.Fatalf("期望短链接文案时回退到整行资源标题，实际为 %#v", entry)
+	}
+	if entry.DateText != "2天前" || entry.DateSource != sidHubTimeSourceResourceRow || entry.Link.Datetime.IsZero() {
+		t.Fatalf("期望从资源行写入相对更新时间，实际为 %#v", entry)
 	}
 }
 
@@ -1302,6 +1414,173 @@ func TestSidHubRefreshScanTransferReturnsLatestPayload(t *testing.T) {
 	}
 	if refreshedLink.ScanTransfer.RefreshKey != "seedhub:4259:quark:1" {
 		t.Fatalf("期望刷新后保留相同 refresh_key，实际为 %#v", refreshedLink.ScanTransfer)
+	}
+}
+
+func TestSidHubRefreshScanTransferUsesSuccessCache(t *testing.T) {
+	p := NewSidHubPlugin()
+	linkStartURL := "https://www.seedhub.cc/link_start/?redirect_to=quark_scan"
+	fetchCount := 0
+	p.fetcher = func(targetURL string) ([]byte, error) {
+		if targetURL != linkStartURL {
+			t.Fatalf("期望刷新固定链接，实际为 %s", targetURL)
+		}
+		fetchCount++
+		return []byte(sidHubScanTransferFixture), nil
+	}
+
+	firstLink, err := p.RefreshScanTransfer(context.Background(), linkStartURL, "seedhub:4259:quark:1")
+	if err != nil {
+		t.Fatalf("首次刷新失败: %v", err)
+	}
+	if firstLink.ScanTransfer == nil {
+		t.Fatalf("首次刷新应返回扫码载荷")
+	}
+	firstLink.ScanTransfer.TransferCode = "MUTATED"
+
+	secondLink, err := p.RefreshScanTransfer(context.Background(), linkStartURL, "seedhub:4259:quark:1")
+	if err != nil {
+		t.Fatalf("第二次刷新失败: %v", err)
+	}
+	if fetchCount != 1 {
+		t.Fatalf("期望第二次刷新命中缓存，实际抓取 %d 次", fetchCount)
+	}
+	if secondLink.ScanTransfer == nil || secondLink.ScanTransfer.TransferCode == "MUTATED" {
+		t.Fatalf("期望缓存返回隔离副本，实际为 %#v", secondLink.ScanTransfer)
+	}
+}
+
+func TestSidHubRefreshScanTransferSingleflightMergesConcurrentRequests(t *testing.T) {
+	p := NewSidHubPlugin()
+	linkStartURL := "https://www.seedhub.cc/link_start/?redirect_to=quark_scan"
+	started := make(chan struct{})
+	release := make(chan struct{})
+	fetchCount := 0
+	p.fetcher = func(targetURL string) ([]byte, error) {
+		fetchCount++
+		if fetchCount == 1 {
+			close(started)
+			<-release
+		}
+		if targetURL != linkStartURL {
+			t.Fatalf("期望刷新固定链接，实际为 %s", targetURL)
+		}
+		return []byte(sidHubScanTransferFixture), nil
+	}
+
+	resultCh := make(chan error, 2)
+	go func() {
+		_, err := p.RefreshScanTransfer(context.Background(), linkStartURL, "seedhub:4259:quark:1")
+		resultCh <- err
+	}()
+	<-started
+	go func() {
+		_, err := p.RefreshScanTransfer(context.Background(), linkStartURL, "seedhub:4259:quark:1")
+		resultCh <- err
+	}()
+	close(release)
+
+	for i := 0; i < 2; i++ {
+		if err := <-resultCh; err != nil {
+			t.Fatalf("并发刷新失败: %v", err)
+		}
+	}
+	if fetchCount != 1 {
+		t.Fatalf("期望并发刷新只抓取一次，实际为 %d 次", fetchCount)
+	}
+}
+
+func TestSidHubRefreshScanTransferRetriesWhenSharedCallWasCanceled(t *testing.T) {
+	p := NewSidHubPlugin()
+	linkStartURL := "https://www.seedhub.cc/link_start/?redirect_to=quark_scan"
+	started := make(chan struct{})
+	releaseFirstFetch := make(chan struct{})
+	var startedOnce sync.Once
+	var fetchMu sync.Mutex
+	fetchCount := 0
+	p.fetcher = func(targetURL string) ([]byte, error) {
+		if targetURL != linkStartURL {
+			t.Fatalf("期望刷新固定链接，实际为 %s", targetURL)
+		}
+		fetchMu.Lock()
+		fetchCount++
+		currentFetch := fetchCount
+		fetchMu.Unlock()
+		if currentFetch == 1 {
+			startedOnce.Do(func() { close(started) })
+			<-releaseFirstFetch
+		}
+		return []byte(sidHubScanTransferFixture), nil
+	}
+
+	leaderCtx, cancelLeader := context.WithCancel(context.Background())
+	leaderErrCh := make(chan error, 1)
+	go func() {
+		_, err := p.RefreshScanTransfer(leaderCtx, linkStartURL, "seedhub:4259:quark:1")
+		leaderErrCh <- err
+	}()
+	<-started
+
+	waiterErrCh := make(chan error, 1)
+	go func() {
+		refreshedLink, err := p.RefreshScanTransfer(context.Background(), linkStartURL, "seedhub:4259:quark:1")
+		if err == nil && (refreshedLink.ScanTransfer == nil || refreshedLink.ScanTransfer.RefreshKey != "seedhub:4259:quark:1") {
+			err = fmt.Errorf("期望等待者重试后返回扫码载荷，实际为 %#v", refreshedLink.ScanTransfer)
+		}
+		waiterErrCh <- err
+	}()
+	time.Sleep(10 * time.Millisecond)
+	cancelLeader()
+
+	if err := <-leaderErrCh; !errors.Is(err, context.Canceled) {
+		t.Fatalf("期望领头请求返回 context.Canceled，实际为 %v", err)
+	}
+	if err := <-waiterErrCh; err != nil {
+		t.Fatalf("期望等待者在领头请求取消后重新刷新成功，实际为 %v", err)
+	}
+	close(releaseFirstFetch)
+
+	fetchMu.Lock()
+	defer fetchMu.Unlock()
+	if fetchCount != 2 {
+		t.Fatalf("期望取消后的等待者重新抓取一次，实际抓取 %d 次", fetchCount)
+	}
+}
+
+func TestSidHubRefreshScanTransferRefetchesExpiredCache(t *testing.T) {
+	p := NewSidHubPlugin()
+	linkStartURL := "https://www.seedhub.cc/link_start/?redirect_to=quark_scan"
+	refreshKey := "seedhub:4259:quark:1"
+	cacheKey := p.buildSeedHubRefreshCacheKey(linkStartURL, refreshKey)
+	refreshCache.Store(cacheKey, cachedRefreshResult{
+		link: model.Link{
+			Type:       "quark",
+			URL:        linkStartURL,
+			AccessMode: "scan_transfer",
+			ScanTransfer: &model.ScanTransferInfo{
+				TransferCode: "EXPIRED",
+			},
+		},
+		expiresAt: time.Now().Add(-time.Second),
+	})
+	fetchCount := 0
+	p.fetcher = func(targetURL string) ([]byte, error) {
+		fetchCount++
+		if targetURL != linkStartURL {
+			t.Fatalf("期望刷新固定链接，实际为 %s", targetURL)
+		}
+		return []byte(sidHubScanTransferFixture), nil
+	}
+
+	refreshedLink, err := p.RefreshScanTransfer(context.Background(), linkStartURL, refreshKey)
+	if err != nil {
+		t.Fatalf("过期缓存重新刷新失败: %v", err)
+	}
+	if fetchCount != 1 {
+		t.Fatalf("期望过期缓存触发重新抓取，实际抓取 %d 次", fetchCount)
+	}
+	if refreshedLink.ScanTransfer == nil || refreshedLink.ScanTransfer.TransferCode == "EXPIRED" {
+		t.Fatalf("期望返回新载荷，实际为 %#v", refreshedLink.ScanTransfer)
 	}
 }
 

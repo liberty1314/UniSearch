@@ -173,8 +173,8 @@ func TestRefreshScanTransferHandlerRepeatedRefreshKeepsCurrentPayloadIsolated(t 
 	router := gin.New()
 	router.POST("/api/resources/scan-transfer/refresh", RefreshScanTransferHandler)
 
-	serveRefresh := func() *httptest.ResponseRecorder {
-		body := bytes.NewBufferString(`{"link_url":"https://www.seedhub.cc/link_start/?redirect_to=quark_scan","refresh_key":"seedhub:4259:quark:1"}`)
+	serveRefresh := func(refreshKey string) *httptest.ResponseRecorder {
+		body := bytes.NewBufferString(`{"link_url":"https://www.seedhub.cc/link_start/?redirect_to=quark_scan","refresh_key":"` + refreshKey + `"}`)
 		req := httptest.NewRequest(http.MethodPost, "/api/resources/scan-transfer/refresh", body)
 		req.Header.Set("Content-Type", "application/json")
 		recorder := httptest.NewRecorder()
@@ -182,8 +182,8 @@ func TestRefreshScanTransferHandlerRepeatedRefreshKeepsCurrentPayloadIsolated(t 
 		return recorder
 	}
 
-	firstRecorder := serveRefresh()
-	secondRecorder := serveRefresh()
+	firstRecorder := serveRefresh("seedhub:4259:quark:1")
+	secondRecorder := serveRefresh("seedhub:4259:quark:2")
 
 	if firstRecorder.Code != http.StatusOK || secondRecorder.Code != http.StatusOK {
 		t.Fatalf("期望两次刷新都成功，首次 %d: %s，第二次 %d: %s", firstRecorder.Code, firstRecorder.Body.String(), secondRecorder.Code, secondRecorder.Body.String())

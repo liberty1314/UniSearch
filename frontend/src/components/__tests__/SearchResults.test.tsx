@@ -27,6 +27,7 @@ type SearchStoreState = {
   completedSources: number;
   totalSources: number;
   receivedBatches: number;
+  updateResourceScanTransfer: ReturnType<typeof vi.fn>;
 };
 
 let searchStoreState: SearchStoreState = {
@@ -90,6 +91,7 @@ let searchStoreState: SearchStoreState = {
   completedSources: 0,
   totalSources: 0,
   receivedBatches: 0,
+  updateResourceScanTransfer: vi.fn(),
 };
 let enableResourceDetailPage = true;
 let enableResourceSourceBadges = false;
@@ -269,6 +271,27 @@ describe("SearchResults", () => {
       completedSources: 0,
       totalSources: 0,
       receivedBatches: 0,
+      updateResourceScanTransfer: vi.fn((resourceId: string, linkUrl: string, scanTransfer) => {
+        const results = searchStoreState.searchResults;
+        if (!results) {
+          return;
+        }
+        searchStoreState.searchResults = {
+          ...results,
+          resources: results.resources.map((resource) =>
+            resource.id === resourceId
+              ? {
+                  ...resource,
+                  links: resource.links.map((link) =>
+                    link.url === linkUrl
+                      ? { ...link, access_mode: "scan_transfer", scan_transfer: scanTransfer }
+                      : link,
+                  ),
+                }
+              : resource,
+          ),
+        };
+      }),
     };
     enableResourceDetailPage = true;
     enableResourceSourceBadges = false;
@@ -569,6 +592,105 @@ describe("SearchResults", () => {
 
     await waitFor(() => expect(capturedSignal?.aborted).toBe(true));
     expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();
+  });
+
+  it("只预热前 6 条 SeedHub 待解析扫码资源", async () => {
+    searchStoreState.searchResults = {
+      ...searchStoreState.searchResults!,
+      total: 8,
+      resources: Array.from({ length: 8 }, (_, index) => ({
+        ...searchStoreState.searchResults!.resources[0],
+        id: `seedhub-resource-${index + 1}`,
+        title: `SeedHub 资源 ${index + 1}`,
+        source: { type: "plugin", id: "sidhub", name: "SeedHub" },
+        links: [
+          {
+            type: "quark",
+            url: `https://www.seedhub.cc/link_start/?redirect_to=quark_scan_${index + 1}`,
+            password: "",
+            access_mode: "scan_transfer" as const,
+            scan_transfer: {
+              refreshable: true,
+              refresh_key: `seedhub:4259:quark:${index + 1}`,
+            },
+            title: `SeedHub 资源 ${index + 1}`,
+            datetime: "2026-03-15T00:00:00Z",
+          },
+        ],
+        meta: { sid_hub_movie_id: "4259" },
+      })),
+    };
+    vi.mocked(SearchService.refreshScanTransfer).mockResolvedValue({
+      access_mode: "scan_transfer",
+      link_url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+      scan_transfer: {
+        qr_code_base64: "data:image/png;base64,prewarm",
+      },
+    });
+
+    renderSearchResults();
+    await screen.findByText("SeedHub 资源 1");
+
+    await waitFor(() => expect(SearchService.refreshScanTransfer).toHaveBeenCalledTimes(6));
+    expect(SearchService.refreshScanTransfer).not.toHaveBeenCalledWith(
+      expect.objectContaining({ refresh_key: "seedhub:4259:quark:7" }),
+      expect.anything(),
+    );
+  });
+
+  it("预热成功后点击资源会直接使用已回写的二维码链接", async () => {
+    searchStoreState.searchResults.resources[0] = {
+      ...searchStoreState.searchResults.resources[0],
+      source: { type: "plugin", id: "sidhub", name: "SeedHub" },
+      links: [
+        {
+          type: "quark",
+          url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+          password: "",
+          access_mode: "scan_transfer",
+          scan_transfer: {
+            refreshable: true,
+            refresh_key: "seedhub:4259:quark:1",
+          },
+          title: "你的名字 待预热扫码资源",
+          datetime: "2026-03-15T00:00:00Z",
+        },
+      ],
+      meta: { sid_hub_movie_id: "4259" },
+    };
+    vi.mocked(SearchService.refreshScanTransfer).mockResolvedValue({
+      resource_id: "resource-1",
+      link_url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+      access_mode: "scan_transfer",
+      scan_transfer: {
+        qr_code_value: "https://pan.quark.cn/s/prewarmed",
+        refreshable: true,
+        refresh_key: "seedhub:4259:quark:1",
+      },
+    });
+    const openSpy = vi.spyOn(window, "open").mockReturnValue({
+      opener: null,
+    } as Window);
+
+    const view = renderSearchResults();
+    await waitFor(() =>
+      expect(searchStoreState.updateResourceScanTransfer).toHaveBeenCalledWith(
+        "resource-1",
+        "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+        expect.objectContaining({ qr_code_value: "https://pan.quark.cn/s/prewarmed" }),
+      ),
+    );
+    view.rerender(
+      <MemoryRouter initialEntries={["/search?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97"]}>
+        <Routes>
+          <Route path="/search" element={<SearchResults />} />
+          <Route path="/resource/:resourceId" element={<DetailRouteProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByTestId("search-result-grid-card-wrapper"));
+    expect(openSpy).toHaveBeenCalledWith("https://pan.quark.cn/s/prewarmed", "_blank");
   });
 
   it("opens the scan transfer QR code value directly when it is a URL", async () => {

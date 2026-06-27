@@ -5,11 +5,14 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"unisearch/model"
 )
+
+const scanTransferRefreshTimeout = 12 * time.Second
 
 type scanTransferRefreshPlugin interface {
 	RefreshScanTransfer(ctx context.Context, linkURL string, refreshKey string) (model.Link, error)
@@ -49,7 +52,9 @@ func RefreshScanTransferHandler(c *gin.Context) {
 		return
 	}
 
-	refreshedLink, err := refresher.RefreshScanTransfer(c.Request.Context(), req.LinkURL, req.RefreshKey)
+	refreshCtx, cancel := context.WithTimeout(c.Request.Context(), scanTransferRefreshTimeout)
+	defer cancel()
+	refreshedLink, err := refresher.RefreshScanTransfer(refreshCtx, req.LinkURL, req.RefreshKey)
 	if err != nil {
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			c.JSON(499, model.NewErrorResponse(499, "请求已取消"))

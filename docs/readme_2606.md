@@ -1341,3 +1341,15 @@
     - frontend/src/services/searchService.ts
     - scripts/local.sh
     - docs/readme_2606.md
+
+- [2026-06-27 21:59] feat(search): 支持影视资源更新时间解析并实现扫码转存链接的前端预热与后端缓存优化
+  - Body: 前端对前 6 条 SeedHub 待解析扫码资源引入后台静默预热机制以消除用户点击等待。后端针对该刷新接口实现 12 秒成功缓存与并发 singleflight 合并，并为影视资源新增发布更新时间的解析与展示。
+  - Files:
+    - backend/api/scan_transfer_handler.go
+    - backend/api/scan_transfer_handler_test.go
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/stores/searchStore.ts
+    - docs/readme_2606.md

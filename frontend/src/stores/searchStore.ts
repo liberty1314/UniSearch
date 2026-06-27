@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import type { SearchParams, SearchProgressiveEvent, SearchResponse } from "@/types/search";
+import type { ScanTransferInfo } from "@/types/resource";
 import { SearchService } from "@/services/searchService";
 import { SystemSettingsService } from "@/services/systemSettingsService";
 import { getErrorCode, getErrorMessage } from "@/lib/error";
@@ -81,6 +82,7 @@ interface SearchState {
   clearRecentEffectiveSearches: () => void;
   loadAvailableOptions: () => Promise<void>;
   loadMore: () => void; // 前端懒加载，不再是异步
+  updateResourceScanTransfer: (resourceId: string, linkUrl: string, scanTransfer: ScanTransferInfo) => void;
   reset: () => void;
 }
 
@@ -527,6 +529,52 @@ export const useSearchStore = create<SearchState>()(
         set({
           displayedCount: newDisplayedCount,
           hasMore: newDisplayedCount < totalCount,
+        });
+      },
+
+      updateResourceScanTransfer: (resourceId, linkUrl, scanTransfer) => {
+        const trimmedResourceId = resourceId.trim();
+        const trimmedLinkUrl = linkUrl.trim();
+        if (!trimmedResourceId || !trimmedLinkUrl) {
+          return;
+        }
+
+        set((state) => {
+          if (!state.searchResults) {
+            return state;
+          }
+
+          let didUpdate = false;
+          const nextResources = state.searchResults.resources.map((resource) => {
+            if (resource.id !== trimmedResourceId) {
+              return resource;
+            }
+
+            const nextLinks = resource.links.map((link) => {
+              if (link.url !== trimmedLinkUrl) {
+                return link;
+              }
+              didUpdate = true;
+              return {
+                ...link,
+                access_mode: "scan_transfer" as const,
+                scan_transfer: { ...scanTransfer },
+              };
+            });
+
+            return didUpdate ? { ...resource, links: nextLinks } : resource;
+          });
+
+          if (!didUpdate) {
+            return state;
+          }
+
+          return {
+            searchResults: {
+              ...state.searchResults,
+              resources: nextResources,
+            },
+          };
         });
       },
 

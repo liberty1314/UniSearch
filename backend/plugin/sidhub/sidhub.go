@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"io"
@@ -35,6 +36,7 @@ const (
 	maxSearchCards                     = 5
 	maxExpandedResultsPerMovie         = 240
 	cacheTTL                           = 1 * time.Hour
+	refreshCacheTTL                    = 5 * time.Minute
 )
 
 const (
@@ -43,7 +45,10 @@ const (
 )
 
 var (
-	searchCache sync.Map
+	searchCache           sync.Map
+	refreshCache          sync.Map
+	refreshSingleflightMu sync.Mutex
+	refreshSingleflight   = make(map[string]*sidHubRefreshCall)
 
 	movieIDRegex        = regexp.MustCompile(`/movies/(\d+)/?`)
 	movieInfoRegex      = regexp.MustCompile(`\d{4}\s*/\s*(?:电影|剧集|动漫)[^豆瓣评分类型]*`)
@@ -63,8 +68,17 @@ var (
 	groupCountRegex     = regexp.MustCompile(`[（(]\d+[）)]`)
 	sidHubSizeRegex     = regexp.MustCompile(`(?i)\d+(?:\.\d+)?\s*(?:G|GB|M|MB)`)
 	sidHubYearTextRegex = regexp.MustCompile(`20\d{2}年`)
-	sidHubDateTextRegex = regexp.MustCompile(`(?:今天|昨天|\d+\s*天前)`)
+	sidHubDateTextRegex = regexp.MustCompile(`(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{4}年\d{1,2}月\d{1,2}日?|\d{1,2}[-/]\d{1,2}|\d{1,2}月\d{1,2}日?|今天|昨天|\d+\s*天前)`)
+	sidHubDaysAgoRegex  = regexp.MustCompile(`^(\d+)\s*天前$`)
+	sidHubFullDateRegex = regexp.MustCompile(`^(\d{4})(?:[-/](\d{1,2})[-/](\d{1,2})|年(\d{1,2})月(\d{1,2})日?)$`)
+	sidHubMonthDayRegex = regexp.MustCompile(`^(\d{1,2})(?:[-/](\d{1,2})|月(\d{1,2})日?)$`)
 	linkStartPathPrefix = "/link_start/"
+)
+
+const (
+	sidHubTimeSourceResourceRow    = "resource_row"
+	sidHubTimeSourceMovieCard      = "movie_card"
+	sidHubTimeSourceSyntheticFetch = "synthetic_fetch_time"
 )
 
 var scanTransferHintTexts = []string{
@@ -99,6 +113,17 @@ type cachedSearchResult struct {
 	expiresAt time.Time
 }
 
+type cachedRefreshResult struct {
+	link      model.Link
+	expiresAt time.Time
+}
+
+type sidHubRefreshCall struct {
+	done chan struct{}
+	link model.Link
+	err  error
+}
+
 // SidHubAsyncPlugin 接入 SidHub / SeedHub 影视资源搜索。
 type SidHubAsyncPlugin struct {
 	*plugin.BaseAsyncPlugin
@@ -109,13 +134,16 @@ type SidHubAsyncPlugin struct {
 }
 
 type sidHubMovie struct {
-	ID        string
-	Title     string
-	DetailURL string
-	CoverURL  string
-	Content   string
-	MediaType string
-	Tags      []string
+	ID         string
+	Title      string
+	DetailURL  string
+	CoverURL   string
+	Content    string
+	MediaType  string
+	Tags       []string
+	Datetime   time.Time
+	DateText   string
+	DateSource string
 }
 
 type sidHubLinkEntry struct {
@@ -130,6 +158,9 @@ type sidHubLinkEntry struct {
 	LinkTypeSource   string
 	ResolutionStatus string
 	ResolutionRank   int
+	Datetime         time.Time
+	DateText         string
+	DateSource       string
 }
 
 type sidHubRuntimeConfig struct {
@@ -411,6 +442,40 @@ func (p *SidHubAsyncPlugin) RefreshScanTransfer(ctx context.Context, linkURL str
 		return model.Link{}, fmt.Errorf("无效的 SeedHub 刷新链接")
 	}
 
+	cacheKey := p.buildSeedHubRefreshCacheKey(trimmedURL, refreshKey)
+	if cachedLink, ok := loadSeedHubRefreshCache(cacheKey); ok {
+		return cachedLink, nil
+	}
+
+	for {
+		call, leader := acquireSeedHubRefreshCall(cacheKey)
+		if leader {
+			refreshedLink, refreshErr := p.refreshScanTransferUncached(ctx, trimmedURL, refreshKey, refreshTarget)
+			if refreshErr == nil {
+				storeSeedHubRefreshCache(cacheKey, refreshedLink)
+			}
+			finishSeedHubRefreshCall(cacheKey, call, refreshedLink, refreshErr)
+			return refreshedLink, refreshErr
+		}
+
+		select {
+		case <-ctx.Done():
+			return model.Link{}, ctx.Err()
+		case <-call.done:
+			if call.err == nil {
+				return cloneSidHubLink(call.link), nil
+			}
+			if !isSeedHubContextError(call.err) || ctx.Err() != nil {
+				return model.Link{}, call.err
+			}
+			if cachedLink, ok := loadSeedHubRefreshCache(cacheKey); ok {
+				return cachedLink, nil
+			}
+		}
+	}
+}
+
+func (p *SidHubAsyncPlugin) refreshScanTransferUncached(ctx context.Context, trimmedURL string, refreshKey string, refreshTarget seedHubRefreshTarget) (model.Link, error) {
 	body, err := p.fetchURL(ctx, trimmedURL)
 	if err != nil {
 		return model.Link{}, fmt.Errorf("获取 SeedHub 刷新页失败: %w", err)
@@ -436,6 +501,68 @@ func (p *SidHubAsyncPlugin) RefreshScanTransfer(ctx context.Context, linkURL str
 	}
 
 	return refreshedLink, nil
+}
+
+func (p *SidHubAsyncPlugin) buildSeedHubRefreshCacheKey(linkURL string, refreshKey string) string {
+	prefix := fmt.Sprintf("plugin:%p:", p)
+	trimmedKey := strings.TrimSpace(refreshKey)
+	if trimmedKey != "" {
+		return prefix + "refresh-key:" + trimmedKey
+	}
+	return prefix + "link-url:" + strings.TrimSpace(linkURL)
+}
+
+func loadSeedHubRefreshCache(cacheKey string) (model.Link, bool) {
+	if cacheKey == "" {
+		return model.Link{}, false
+	}
+	cached, ok := refreshCache.Load(cacheKey)
+	if !ok {
+		return model.Link{}, false
+	}
+	entry, ok := cached.(cachedRefreshResult)
+	if !ok || time.Now().After(entry.expiresAt) {
+		refreshCache.Delete(cacheKey)
+		return model.Link{}, false
+	}
+	return cloneSidHubLink(entry.link), true
+}
+
+func storeSeedHubRefreshCache(cacheKey string, link model.Link) {
+	if cacheKey == "" {
+		return
+	}
+	refreshCache.Store(cacheKey, cachedRefreshResult{
+		link:      cloneSidHubLink(link),
+		expiresAt: time.Now().Add(refreshCacheTTL),
+	})
+}
+
+func isSeedHubContextError(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
+}
+
+func acquireSeedHubRefreshCall(cacheKey string) (*sidHubRefreshCall, bool) {
+	refreshSingleflightMu.Lock()
+	defer refreshSingleflightMu.Unlock()
+
+	if call, ok := refreshSingleflight[cacheKey]; ok {
+		return call, false
+	}
+	call := &sidHubRefreshCall{done: make(chan struct{})}
+	refreshSingleflight[cacheKey] = call
+	return call, true
+}
+
+func finishSeedHubRefreshCall(cacheKey string, call *sidHubRefreshCall, link model.Link, err error) {
+	refreshSingleflightMu.Lock()
+	if refreshSingleflight[cacheKey] == call {
+		delete(refreshSingleflight, cacheKey)
+	}
+	call.link = cloneSidHubLink(link)
+	call.err = err
+	close(call.done)
+	refreshSingleflightMu.Unlock()
 }
 
 func (p *SidHubAsyncPlugin) getScraper() (*cloudscraper.Scraper, error) {
@@ -980,15 +1107,20 @@ func parseSearchCards(reader io.Reader, baseURL string, limit int) ([]sidHubMovi
 
 		containerText := cleanText(container.Text())
 		content := buildMovieContent(containerText)
+		dateText := extractSidHubDateText(containerText)
+		datetime := parseSidHubDate(dateText, time.Now())
 
 		cards = append(cards, sidHubMovie{
-			ID:        movieID,
-			Title:     title,
-			DetailURL: absoluteURL(baseURL, href),
-			CoverURL:  extractCoverURL(selection, baseURL),
-			Content:   content,
-			MediaType: inferMediaType(containerText),
-			Tags:      extractTags(containerText),
+			ID:         movieID,
+			Title:      title,
+			DetailURL:  absoluteURL(baseURL, href),
+			CoverURL:   extractCoverURL(selection, baseURL),
+			Content:    content,
+			MediaType:  inferMediaType(containerText),
+			Tags:       extractTags(containerText),
+			Datetime:   datetime,
+			DateText:   dateText,
+			DateSource: resolveSidHubDateSource(datetime, sidHubTimeSourceMovieCard),
 		})
 		seenIDs[movieID] = struct{}{}
 		return true
@@ -1094,11 +1226,14 @@ func parseDetailLinkEntries(reader io.Reader, baseURL string, movieTitle string)
 		rowText := cleanText(row.Text())
 		badges := extractSidHubBadges(row)
 		title, titleSource := resolveSidHubEntryTitle(selection, row, movieTitle, badges)
+		dateText := extractSidHubDateText(rowText)
+		datetime := parseSidHubDate(dateText, time.Now())
 		addLinkEntry(&entries, seen, sidHubLinkEntry{
 			Link: model.Link{
 				Type:      linkType,
 				URL:       linkURL,
 				Password:  extractPassword(linkURL),
+				Datetime:  datetime,
 				WorkTitle: cleanText(movieTitle),
 			},
 			Title:          title,
@@ -1108,6 +1243,9 @@ func parseDetailLinkEntries(reader io.Reader, baseURL string, movieTitle string)
 			Badges:         badges,
 			TitleSource:    titleSource,
 			LinkTypeSource: linkTypeSource,
+			Datetime:       datetime,
+			DateText:       dateText,
+			DateSource:     resolveSidHubDateSource(datetime, sidHubTimeSourceResourceRow),
 		})
 	})
 
@@ -1216,11 +1354,14 @@ func parseEntriesInScope(scope *goquery.Selection, baseURL string, movieTitle st
 		rowText := cleanText(row.Text())
 		badges := extractSidHubBadges(row)
 		title, titleSource := resolveSidHubEntryTitle(selection, row, movieTitle, badges)
+		dateText := extractSidHubDateText(rowText)
+		datetime := parseSidHubDate(dateText, time.Now())
 		entry := sidHubLinkEntry{
 			Link: model.Link{
 				Type:      linkType,
 				URL:       linkURL,
 				Password:  extractPassword(linkURL),
+				Datetime:  datetime,
 				WorkTitle: cleanText(movieTitle),
 			},
 			Title:          title,
@@ -1231,19 +1372,25 @@ func parseEntriesInScope(scope *goquery.Selection, baseURL string, movieTitle st
 			Badges:         badges,
 			TitleSource:    titleSource,
 			LinkTypeSource: "group_label",
+			Datetime:       datetime,
+			DateText:       dateText,
+			DateSource:     resolveSidHubDateSource(datetime, sidHubTimeSourceResourceRow),
 		}
 		addLinkEntry(entries, seen, entry)
 	})
 }
 
 func buildResult(card sidHubMovie, entries []sidHubLinkEntry) model.SearchResult {
+	card, entries = fillSidHubTimes(card, entries, time.Now())
 	links := make([]model.Link, 0, len(entries))
 	for _, entry := range entries {
 		links = append(links, entry.Link)
 	}
+	resultTime, resultDateText, resultDateSource := resolveSidHubResultTime(card, entries)
 
 	return model.SearchResult{
 		UniqueID:       fmt.Sprintf("%s-%s", pluginName, card.ID),
+		Datetime:       resultTime,
 		Title:          card.Title,
 		Content:        buildResultContent(card, entries),
 		Links:          links,
@@ -1261,14 +1408,17 @@ func buildResult(card sidHubMovie, entries []sidHubLinkEntry) model.SearchResult
 			Downloadable:    len(links) > 0,
 		},
 		Meta: map[string]interface{}{
-			"sid_hub_movie_id": card.ID,
-			"detail_url":       card.DetailURL,
-			"link_count":       len(links),
+			"sid_hub_movie_id":    card.ID,
+			"detail_url":          card.DetailURL,
+			"link_count":          len(links),
+			"sid_hub_time_source": resultDateSource,
+			"sid_hub_time_text":   resultDateText,
 		},
 	}
 }
 
 func buildExpandedResults(card sidHubMovie, entries []sidHubLinkEntry) []model.SearchResult {
+	card, entries = fillSidHubTimes(card, entries, time.Now())
 	if len(entries) == 0 {
 		return []model.SearchResult{buildResult(card, nil)}
 	}
@@ -1284,6 +1434,8 @@ func buildExpandedResults(card sidHubMovie, entries []sidHubLinkEntry) []model.S
 }
 
 func buildExpandedResult(card sidHubMovie, entry sidHubLinkEntry) model.SearchResult {
+	card, entries := fillSidHubTimes(card, []sidHubLinkEntry{entry}, time.Now())
+	entry = entries[0]
 	title := cleanText(entry.Title)
 	if title == "" {
 		title = card.Title
@@ -1291,6 +1443,7 @@ func buildExpandedResult(card sidHubMovie, entry sidHubLinkEntry) model.SearchRe
 
 	return model.SearchResult{
 		UniqueID:       buildExpandedUniqueID(card.ID, entry),
+		Datetime:       entry.Datetime,
 		Title:          title,
 		Content:        buildExpandedContent(card, entry),
 		Links:          []model.Link{entry.Link},
@@ -1319,8 +1472,55 @@ func buildExpandedResult(card sidHubMovie, entry sidHubLinkEntry) model.SearchRe
 			"sid_hub_link_type_source":  entry.LinkTypeSource,
 			"sid_hub_resolution_status": entry.ResolutionStatus,
 			"sid_hub_resolution_rank":   entry.ResolutionRank,
+			"sid_hub_time_source":       entry.DateSource,
+			"sid_hub_time_text":         entry.DateText,
 		},
 	}
+}
+
+func fillSidHubTimes(card sidHubMovie, entries []sidHubLinkEntry, now time.Time) (sidHubMovie, []sidHubLinkEntry) {
+	if now.IsZero() {
+		now = time.Now()
+	}
+	if card.Datetime.IsZero() {
+		card.Datetime = now
+		card.DateText = ""
+		card.DateSource = sidHubTimeSourceSyntheticFetch
+	} else if card.DateSource == "" {
+		card.DateSource = sidHubTimeSourceMovieCard
+	}
+
+	nextEntries := make([]sidHubLinkEntry, len(entries))
+	for index, entry := range entries {
+		nextEntry := entry
+		if nextEntry.Datetime.IsZero() {
+			nextEntry.Datetime = card.Datetime
+			nextEntry.DateText = card.DateText
+			nextEntry.DateSource = card.DateSource
+		} else if nextEntry.DateSource == "" {
+			nextEntry.DateSource = sidHubTimeSourceResourceRow
+		}
+		nextEntry.Link.Datetime = nextEntry.Datetime
+		nextEntries[index] = nextEntry
+	}
+	return card, nextEntries
+}
+
+func resolveSidHubResultTime(card sidHubMovie, entries []sidHubLinkEntry) (time.Time, string, string) {
+	resultTime := card.Datetime
+	resultDateText := card.DateText
+	resultDateSource := card.DateSource
+	for _, entry := range entries {
+		if entry.Datetime.IsZero() {
+			continue
+		}
+		if resultTime.IsZero() || entry.Datetime.After(resultTime) {
+			resultTime = entry.Datetime
+			resultDateText = entry.DateText
+			resultDateSource = entry.DateSource
+		}
+	}
+	return resultTime, resultDateText, resultDateSource
 }
 
 func imagesFromCard(card sidHubMovie) []string {
@@ -1674,6 +1874,102 @@ func resolveSidHubEntryTitle(selection *goquery.Selection, row *goquery.Selectio
 		return linkText, "link_text"
 	}
 	return cleanText(movieTitle), "movie_title_fallback"
+}
+
+func extractSidHubDateText(text string) string {
+	return cleanText(sidHubDateTextRegex.FindString(text))
+}
+
+func parseSidHubDate(text string, now time.Time) time.Time {
+	dateText := extractSidHubDateText(text)
+	if dateText == "" {
+		return time.Time{}
+	}
+	if now.IsZero() {
+		now = time.Now()
+	}
+
+	location := now.Location()
+	nowInLocation := now.In(location)
+	normalized := strings.ReplaceAll(dateText, " ", "")
+	switch normalized {
+	case "今天":
+		return sidHubDateAtNoon(nowInLocation.Year(), nowInLocation.Month(), nowInLocation.Day(), location)
+	case "昨天":
+		yesterday := nowInLocation.AddDate(0, 0, -1)
+		return sidHubDateAtNoon(yesterday.Year(), yesterday.Month(), yesterday.Day(), location)
+	}
+
+	if matches := sidHubDaysAgoRegex.FindStringSubmatch(dateText); len(matches) == 2 {
+		days, err := strconv.Atoi(strings.TrimSpace(matches[1]))
+		if err != nil {
+			return time.Time{}
+		}
+		target := nowInLocation.AddDate(0, 0, -days)
+		return sidHubDateAtNoon(target.Year(), target.Month(), target.Day(), location)
+	}
+
+	if matches := sidHubFullDateRegex.FindStringSubmatch(normalized); len(matches) == 6 {
+		year := parseSidHubDatePart(matches[1])
+		month := parseSidHubDatePart(firstNonEmptyString(matches[2], matches[4]))
+		day := parseSidHubDatePart(firstNonEmptyString(matches[3], matches[5]))
+		return sidHubDateAtNoon(year, time.Month(month), day, location)
+	}
+
+	if matches := sidHubMonthDayRegex.FindStringSubmatch(normalized); len(matches) == 4 {
+		year := nowInLocation.Year()
+		month := parseSidHubDatePart(matches[1])
+		day := parseSidHubDatePart(firstNonEmptyString(matches[2], matches[3]))
+		datetime := sidHubDateAtNoon(year, time.Month(month), day, location)
+		if datetime.IsZero() {
+			return time.Time{}
+		}
+		today := sidHubDateAtNoon(nowInLocation.Year(), nowInLocation.Month(), nowInLocation.Day(), location)
+		if datetime.After(today) {
+			datetime = sidHubDateAtNoon(year-1, time.Month(month), day, location)
+		}
+		return datetime
+	}
+
+	return time.Time{}
+}
+
+func sidHubDateAtNoon(year int, month time.Month, day int, location *time.Location) time.Time {
+	if year <= 0 || month < time.January || month > time.December || day <= 0 {
+		return time.Time{}
+	}
+	if location == nil {
+		location = time.Local
+	}
+	datetime := time.Date(year, month, day, 12, 0, 0, 0, location)
+	if datetime.Year() != year || datetime.Month() != month || datetime.Day() != day {
+		return time.Time{}
+	}
+	return datetime
+}
+
+func parseSidHubDatePart(value string) int {
+	parsed, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil {
+		return 0
+	}
+	return parsed
+}
+
+func resolveSidHubDateSource(datetime time.Time, source string) string {
+	if datetime.IsZero() {
+		return ""
+	}
+	return source
+}
+
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func cleanSidHubEntryRowTitle(rowText string, linkText string, badges []string) string {

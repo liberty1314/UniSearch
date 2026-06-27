@@ -61,6 +61,17 @@ const hasScanTransferPayload = (target: ResourceOpenTarget): boolean => {
   );
 };
 
+const seedHubPrewarmLimit = 6;
+const seedHubPrewarmConcurrency = 2;
+const seedHubPrewarmTimeoutMs = 8000;
+
+interface ScanTransferPrewarmCandidate {
+  key: string;
+  resourceId: string;
+  linkUrl: string;
+  refreshKey: string;
+}
+
 const isAbortLikeError = (error: unknown): boolean => {
   if (error instanceof DOMException && error.name === "AbortError") {
     return true;
@@ -92,6 +103,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     displayedCount,
     setSearchParams,
     progressiveStatus,
+    updateResourceScanTransfer,
   } = useSearchStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -150,6 +162,10 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   const [enableResourceDetailPage, setEnableResourceDetailPage] = useState(true);
   const [enableResourceSourceBadges, setEnableResourceSourceBadges] = useState(false);
   const resolveAbortControllerRef = useRef<AbortController | null>(null);
+  const prewarmAttemptedKeysRef = useRef<Set<string>>(new Set());
+  const prewarmQueueRef = useRef<ScanTransferPrewarmCandidate[]>([]);
+  const prewarmAbortControllersRef = useRef<Map<string, AbortController>>(new Map());
+  const drainPrewarmQueueRef = useRef<() => void>(() => undefined);
 
   // ── 无限滚动观察器 ─────────────────────────────────────────────────────────
 
@@ -215,6 +231,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     () => () => {
       resolveAbortControllerRef.current?.abort();
       resolveAbortControllerRef.current = null;
+      prewarmAbortControllersRef.current.forEach((controller) => controller.abort());
+      prewarmAbortControllersRef.current.clear();
+      prewarmQueueRef.current = [];
     },
     [],
   );
@@ -229,6 +248,13 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     searchParams,
     displayedCount,
   });
+
+  useEffect(() => {
+    prewarmAbortControllersRef.current.forEach((controller) => controller.abort());
+    prewarmAbortControllersRef.current.clear();
+    prewarmQueueRef.current = [];
+    prewarmAttemptedKeysRef.current.clear();
+  }, [searchParams.keyword]);
 
   // ── 回调（useCallback 保持引用稳定，配合卡片的 React.memo）───────────────
 
@@ -249,6 +275,118 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     resolveAbortControllerRef.current = null;
     setResolvingResourceId(null);
   }, []);
+
+  const cancelPrewarmCandidate = useCallback((candidateKey: string) => {
+    const controller = prewarmAbortControllersRef.current.get(candidateKey);
+    controller?.abort();
+    prewarmQueueRef.current = prewarmQueueRef.current.filter((item) => item.key !== candidateKey);
+  }, []);
+
+  const runPrewarmCandidate = useCallback(
+    async (candidate: ScanTransferPrewarmCandidate) => {
+      const abortController = new AbortController();
+      prewarmAbortControllersRef.current.set(candidate.key, abortController);
+      const timeoutId = window.setTimeout(() => {
+        abortController.abort();
+      }, seedHubPrewarmTimeoutMs);
+
+      try {
+        const response = await SearchService.refreshScanTransfer(
+          {
+            resource_id: candidate.resourceId,
+            link_url: candidate.linkUrl,
+            refresh_key: candidate.refreshKey,
+          },
+          { signal: abortController.signal },
+        );
+        if (!abortController.signal.aborted && response.scan_transfer) {
+          updateResourceScanTransfer(candidate.resourceId, candidate.linkUrl, response.scan_transfer);
+        }
+      } catch {
+        // 预热是静默优化，失败后仍保留用户点击时的手动获取路径。
+      } finally {
+        window.clearTimeout(timeoutId);
+        prewarmAbortControllersRef.current.delete(candidate.key);
+        drainPrewarmQueueRef.current();
+      }
+    },
+    [updateResourceScanTransfer],
+  );
+
+  const drainPrewarmQueue = useCallback(() => {
+    while (
+      prewarmAbortControllersRef.current.size < seedHubPrewarmConcurrency &&
+      prewarmQueueRef.current.length > 0
+    ) {
+      const candidate = prewarmQueueRef.current.shift();
+      if (!candidate) {
+        return;
+      }
+      void runPrewarmCandidate(candidate);
+    }
+  }, [runPrewarmCandidate]);
+
+  useEffect(() => {
+    drainPrewarmQueueRef.current = drainPrewarmQueue;
+  }, [drainPrewarmQueue]);
+
+  useEffect(() => {
+    const candidates = displayedResults
+      .map((item): ScanTransferPrewarmCandidate | null => {
+        const resource = item.resource;
+        const sourceValues = [
+          resource.source.id,
+          resource.source.name,
+          resource.source.plugin_id,
+          resource.meta?.sid_hub_movie_id,
+        ]
+          .map((value) => String(value || "").trim().toLowerCase())
+          .filter(Boolean);
+        const isSeedHub = sourceValues.some((value) => value.includes("sidhub") || value.includes("seedhub"));
+        if (!isSeedHub || !item.primaryLink) {
+          return null;
+        }
+
+        const scanTransfer = item.primaryLink.scan_transfer;
+        const openTarget = resolveResourceOpenTarget(item);
+        if (
+          !scanTransfer?.refreshable ||
+          !scanTransfer.refresh_key?.trim() ||
+          !openTarget ||
+          hasScanTransferPayload(openTarget)
+        ) {
+          return null;
+        }
+
+        const linkUrl = item.primaryLink.url.trim();
+        const refreshKey = scanTransfer.refresh_key.trim();
+        if (!linkUrl) {
+          return null;
+        }
+
+        return {
+          key: `${resource.id}|${linkUrl}|${refreshKey}`,
+          resourceId: resource.id,
+          linkUrl,
+          refreshKey,
+        };
+      })
+      .filter((candidate): candidate is ScanTransferPrewarmCandidate => Boolean(candidate))
+      .slice(0, seedHubPrewarmLimit);
+
+    for (const candidate of candidates) {
+      if (
+        prewarmAttemptedKeysRef.current.has(candidate.key) ||
+        prewarmAbortControllersRef.current.has(candidate.key) ||
+        prewarmQueueRef.current.some((item) => item.key === candidate.key)
+      ) {
+        continue;
+      }
+      prewarmAttemptedKeysRef.current.add(candidate.key);
+      prewarmQueueRef.current.push(candidate);
+    }
+    drainPrewarmQueue();
+  }, [displayedResults, drainPrewarmQueue]);
 
   const handleOpenResource = useCallback(
     async (item: ResultItem) => {
@@ -275,6 +413,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         !hasScanTransferPayload(openTarget)
       ) {
         const resourceKey = openTarget.resourceId || openTarget.url;
+        cancelPrewarmCandidate(`${openTarget.resourceId}|${openTarget.url.trim()}|${refreshKey}`);
         resolveAbortControllerRef.current?.abort();
         const abortController = new AbortController();
         resolveAbortControllerRef.current = abortController;
@@ -331,7 +470,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
 
       openExternalResource(openTarget.url);
     },
-    [openExternalResource, resolvingResourceId],
+    [cancelPrewarmCandidate, openExternalResource, resolvingResourceId],
   );
 
   const handlePasswordModalClose = useCallback(() => {
