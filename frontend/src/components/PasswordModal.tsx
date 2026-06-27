@@ -49,6 +49,22 @@ const copyText = async (value: string, successMessage: string): Promise<void> =>
   toast.success(successMessage);
 };
 
+const isAbortLikeError = (error: unknown): boolean => {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return true;
+  }
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  const record = error as { code?: unknown; name?: unknown; message?: unknown };
+  return (
+    record.code === "ERR_CANCELED" ||
+    record.name === "CanceledError" ||
+    record.name === "AbortError" ||
+    record.message === "canceled"
+  );
+};
+
 const PasswordModal: React.FC<PasswordModalProps> = ({
   isOpen,
   onClose,
@@ -66,11 +82,22 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
   );
   const [isRefreshingScanTransfer, setIsRefreshingScanTransfer] = useState(false);
   const autoRefreshAttemptRef = useRef<string>("");
+  const refreshAbortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    refreshAbortControllerRef.current?.abort();
+    refreshAbortControllerRef.current = null;
     setCurrentScanTransfer(scanTransfer);
     setIsRefreshingScanTransfer(false);
   }, [isOpen, scanTransfer, url]);
+
+  useEffect(
+    () => () => {
+      refreshAbortControllerRef.current?.abort();
+      refreshAbortControllerRef.current = null;
+    },
+    [],
+  );
 
   const scanTransferMode = accessMode === "scan_transfer" || Boolean(currentScanTransfer);
   const finalUrl = normalizeExternalUrl(url);
@@ -115,14 +142,22 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
       return;
     }
 
+    refreshAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    refreshAbortControllerRef.current = abortController;
     setIsRefreshingScanTransfer(true);
     try {
       const response = await SearchService.refreshScanTransfer({
         resource_id: resourceId,
         link_url: url,
         refresh_key: refreshKey,
+      }, {
+        signal: abortController.signal,
       });
 
+      if (abortController.signal.aborted) {
+        return;
+      }
       if (!response.scan_transfer) {
         throw new Error("当前资源未返回新的扫码载荷");
       }
@@ -130,15 +165,34 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
       setCurrentScanTransfer(response.scan_transfer);
       toast.success("二维码已重新获取");
     } catch (error) {
+      if (isAbortLikeError(error) || abortController.signal.aborted) {
+        return;
+      }
       const message =
         error instanceof Error && error.message.trim()
           ? error.message
           : "重新获取二维码失败";
       toast.error(message);
     } finally {
-      setIsRefreshingScanTransfer(false);
+      if (refreshAbortControllerRef.current === abortController) {
+        refreshAbortControllerRef.current = null;
+        setIsRefreshingScanTransfer(false);
+      }
     }
   }, [effectiveScanTransfer?.refresh_key, resourceId, url]);
+
+  const handleDialogOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) {
+        return;
+      }
+      refreshAbortControllerRef.current?.abort();
+      refreshAbortControllerRef.current = null;
+      setIsRefreshingScanTransfer(false);
+      onClose();
+    },
+    [onClose],
+  );
 
   useEffect(() => {
     const refreshKey = effectiveScanTransfer?.refresh_key?.trim();
@@ -164,7 +218,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
   ]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-md sm:max-w-[500px] max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <DialogHeader className="flex flex-col items-center text-center space-y-3 pt-2">
           <div

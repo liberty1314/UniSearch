@@ -1321,3 +1321,23 @@
     - frontend/src/components/home/SearchResultGridCard.tsx
     - frontend/src/components/home/SearchResultListItem.tsx
     - frontend/src/components/search-results/SearchResultsList.tsx
+
+- [2026-06-27 09:25] feat(scan-transfer): 支持获取扫码转存资源时主动取消并优化本地启动脚本
+  - Body: 在获取扫码转存资源的链路中引入 Context/AbortSignal 上下文控制以实现主动取消，并在前端卡片及结果列表中添加取消按钮与状态同步。同时，优化了 local.sh 开发启动脚本，增加数据库结构自动迁移、核心表与管理员账户智能检查以及前端依赖自动安装逻辑。
+  - Files:
+    - backend/api/scan_transfer_handler.go
+    - backend/api/scan_transfer_handler_test.go
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - frontend/pnpm-workspace.yaml
+    - frontend/src/components/PasswordModal.tsx
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/__tests__/PasswordModal.test.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/home/SearchResultGridCard.tsx
+    - frontend/src/components/home/SearchResultListItem.tsx
+    - frontend/src/components/search-results/SearchResultsList.tsx
+    - frontend/src/services/__tests__/searchService.test.ts
+    - frontend/src/services/searchService.ts
+    - scripts/local.sh
+    - docs/readme_2606.md

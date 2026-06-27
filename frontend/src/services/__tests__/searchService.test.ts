@@ -96,6 +96,37 @@ describe('SearchService', () => {
     });
   });
 
+  it('刷新扫码转存载荷时会透传取消信号', async () => {
+    const refreshResponse = {
+      resource_id: 'seedhub-scan-1',
+      link_url: 'https://www.seedhub.cc/link_start/?redirect_to=quark_scan',
+      access_mode: 'scan_transfer',
+    };
+    const abortController = new AbortController();
+    postMock.mockResolvedValue(refreshResponse);
+
+    await expect(
+      SearchService.refreshScanTransfer(
+        {
+          resource_id: 'seedhub-scan-1',
+          link_url: 'https://www.seedhub.cc/link_start/?redirect_to=quark_scan',
+          refresh_key: 'seedhub:4259:quark:1',
+        },
+        { signal: abortController.signal },
+      ),
+    ).resolves.toBe(refreshResponse);
+
+    expect(postMock).toHaveBeenCalledWith(
+      '/resources/scan-transfer/refresh',
+      {
+        resource_id: 'seedhub-scan-1',
+        link_url: 'https://www.seedhub.cc/link_start/?redirect_to=quark_scan',
+        refresh_key: 'seedhub:4259:quark:1',
+      },
+      { signal: abortController.signal },
+    );
+  });
+
   it('round-trips advanced filters through the search URL codec', () => {
     const url = SearchService.buildSearchUrl({
       keyword: '你的名字',

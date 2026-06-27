@@ -26,6 +26,10 @@ interface ProgressiveSearchHandlers {
   onEvent?: (event: SearchProgressiveEvent) => void;
 }
 
+interface RefreshScanTransferOptions {
+  signal?: AbortSignal;
+}
+
 /**
  * 搜索服务类
  */
@@ -157,12 +161,19 @@ export class SearchService {
    */
   static async refreshScanTransfer(
     payload: ScanTransferRefreshRequest,
+    options: RefreshScanTransferOptions = {},
   ): Promise<ScanTransferRefreshResponse> {
     try {
-      const response = await apiClient.post<ScanTransferRefreshResponse>(
-        '/resources/scan-transfer/refresh',
-        payload,
-      );
+      const response = options.signal
+        ? await apiClient.post<ScanTransferRefreshResponse>(
+            '/resources/scan-transfer/refresh',
+            payload,
+            { signal: options.signal },
+          )
+        : await apiClient.post<ScanTransferRefreshResponse>(
+            '/resources/scan-transfer/refresh',
+            payload,
+          );
 
       if (response) {
         return response;

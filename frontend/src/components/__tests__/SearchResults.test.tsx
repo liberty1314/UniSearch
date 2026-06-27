@@ -434,7 +434,7 @@ describe("SearchResults", () => {
 
     renderSearchResults();
     await screen.findByTestId("search-result-grid-card-wrapper");
-    expect(screen.getByText("需扫码")).toBeInTheDocument();
+    expect(screen.queryByText("需扫码")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
 
     expect(screen.getByTestId("password-modal")).toHaveTextContent(
@@ -473,13 +473,16 @@ describe("SearchResults", () => {
     fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
 
     expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();
-    expect(screen.getByText("正在获取")).toBeInTheDocument();
+    expect(screen.getByText("取消获取")).toBeInTheDocument();
     await waitFor(() =>
-      expect(SearchService.refreshScanTransfer).toHaveBeenCalledWith({
-        resource_id: "resource-1",
-        link_url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
-        refresh_key: "seedhub:4259:quark:1",
-      }),
+      expect(SearchService.refreshScanTransfer).toHaveBeenCalledWith(
+        {
+          resource_id: "resource-1",
+          link_url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+          refresh_key: "seedhub:4259:quark:1",
+        },
+        { signal: expect.any(Object) },
+      ),
     );
     await waitFor(() =>
       expect(screen.getByTestId("password-modal")).toHaveTextContent(
@@ -521,13 +524,50 @@ describe("SearchResults", () => {
     fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
 
     expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();
-    expect(screen.getByText("正在获取")).toBeInTheDocument();
+    expect(screen.getByText("取消获取")).toBeInTheDocument();
     await waitFor(() =>
       expect(openSpy).toHaveBeenCalledWith(
         "https://pan.baidu.com/s/1XG5rTVKw14x2axO6pBabc",
         "_blank",
       ),
     );
+    expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();
+  });
+
+  it("点击取消获取会中止无二维码扫码资源刷新", async () => {
+    searchStoreState.searchResults.resources[0].links[0] = {
+      type: "quark",
+      url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+      password: "",
+      access_mode: "scan_transfer",
+      scan_transfer: {
+        refreshable: true,
+        refresh_key: "seedhub:4259:quark:1",
+      },
+      title: "你的名字 可取消扫码资源",
+      datetime: "2026-03-15T00:00:00Z",
+    };
+    let capturedSignal: AbortSignal | undefined;
+    vi.mocked(SearchService.refreshScanTransfer).mockImplementation((_, options?: { signal?: AbortSignal }) => {
+      capturedSignal = options?.signal;
+      return new Promise((_, reject) => {
+        options?.signal?.addEventListener("abort", () => {
+          const error = new Error("canceled") as Error & { code?: string };
+          error.name = "CanceledError";
+          error.code = "ERR_CANCELED";
+          reject(error);
+        });
+      });
+    });
+
+    renderSearchResults();
+    await screen.findByTestId("search-result-grid-card-wrapper");
+
+    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
+    const cancelButton = await screen.findByRole("button", { name: "取消获取" });
+    fireEvent.click(cancelButton);
+
+    await waitFor(() => expect(capturedSignal?.aborted).toBe(true));
     expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();
   });
 

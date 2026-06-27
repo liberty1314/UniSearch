@@ -22,6 +22,7 @@ interface SearchResultListItemProps {
   showDetailEntry?: boolean;
   showSourceBadge: boolean;
   onOpenResource: (item: ResultItem) => void;
+  onCancelResolveResource: () => void;
   onOpenDetail: (item: ResultItem) => void;
 }
 
@@ -34,6 +35,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
     showDetailEntry = true,
     showSourceBadge,
     onOpenResource,
+    onCancelResolveResource,
     onOpenDetail,
   }) => {
     const { resource, primaryLink, cloudType, datetime } = item;
@@ -158,11 +160,19 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
                 <span>有码</span>
               </div>
             )}
-            {scanTransferMode && (
-              <div className="flex-shrink-0 px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-full border border-amber-200/70 dark:bg-amber-400/[0.08] dark:text-amber-200 dark:border-amber-300/18">
-                <span>{isResolvingResource ? "正在获取" : "需扫码"}</span>
-              </div>
-            )}
+            {scanTransferMode && isResolvingResource ? (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onCancelResolveResource();
+                }}
+                className="flex-shrink-0 px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-full border border-amber-200/70 transition hover:bg-amber-100 dark:bg-amber-400/[0.08] dark:text-amber-200 dark:border-amber-300/18 dark:hover:bg-amber-400/[0.14]"
+              >
+                取消获取
+              </button>
+            ) : null}
             {showDetailEntry ? (
               <button
                 type="button"

@@ -1,6 +1,8 @@
 package api
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -10,7 +12,7 @@ import (
 )
 
 type scanTransferRefreshPlugin interface {
-	RefreshScanTransfer(linkURL string, refreshKey string) (model.Link, error)
+	RefreshScanTransfer(ctx context.Context, linkURL string, refreshKey string) (model.Link, error)
 }
 
 type scanTransferRefreshRequest struct {
@@ -47,8 +49,12 @@ func RefreshScanTransferHandler(c *gin.Context) {
 		return
 	}
 
-	refreshedLink, err := refresher.RefreshScanTransfer(req.LinkURL, req.RefreshKey)
+	refreshedLink, err := refresher.RefreshScanTransfer(c.Request.Context(), req.LinkURL, req.RefreshKey)
 	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			c.JSON(499, model.NewErrorResponse(499, "请求已取消"))
+			return
+		}
 		c.JSON(http.StatusBadRequest, model.NewErrorResponse(400, err.Error()))
 		return
 	}

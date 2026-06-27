@@ -35,10 +35,12 @@ LOG_DIR="logs"
 PID_DIR="pids"
 BACKEND_LOG="${LOG_DIR}/backend.log"
 FRONTEND_LOG="${LOG_DIR}/frontend.log"
+MIGRATION_LOG="${LOG_DIR}/migration.log"
 BACKEND_PID_FILE="${PID_DIR}/backend.pid"
 FRONTEND_PID_FILE="${PID_DIR}/frontend.pid"
 BACKEND_PORT_FILE="${PID_DIR}/backend.port"
 FRONTEND_PORT_FILE="${PID_DIR}/frontend.port"
+CORE_SCHEMA_TABLES="users secrets refresh_tokens tg_channels user_login_daily_stats"
 
 # ==============================================================================
 # 基础工具函数
@@ -72,6 +74,10 @@ show_recent_log() {
 check_http_health() {
     local url=$1
     curl -s --max-time 3 --fail "$url" >/dev/null 2>&1
+}
+
+mysql_exec() {
+    MYSQL_PWD="${DB_PASSWORD:-}" mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" "$@"
 }
 
 # 打印横幅
@@ -203,6 +209,138 @@ graceful_stop_process() {
     kill -9 $pid 2>/dev/null || true
 }
 
+run_database_migration() {
+    local reason=$1
+
+    log_step "执行数据库迁移..."
+    log_info "$reason"
+    mkdir -p "$LOG_DIR"
+
+    if (
+        cd backend
+        go run ./cmd/migrate
+    ) > "$MIGRATION_LOG" 2>&1; then
+        log_success "数据库迁移完成"
+        if grep -q "默认管理员账户创建成功" "$MIGRATION_LOG"; then
+            log_success "默认管理员账户已创建：admin/admin"
+        fi
+        return 0
+    fi
+
+    log_error "数据库迁移失败，请检查日志: $MIGRATION_LOG"
+    show_recent_log "$MIGRATION_LOG" "数据库迁移"
+    exit 1
+}
+
+verify_database_ready() {
+    if ! command -v mysql &> /dev/null; then
+        return 0
+    fi
+
+    local table
+    for table in $CORE_SCHEMA_TABLES; do
+        local table_count
+        table_count=$(mysql_exec --batch --skip-column-names -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$DB_NAME' AND table_name = '$table';" 2>/dev/null || echo "0")
+        if [ "$table_count" != "1" ]; then
+            log_error "数据库迁移后仍缺失核心表: $table"
+            show_recent_log "$MIGRATION_LOG" "数据库迁移"
+            exit 1
+        fi
+    done
+
+    local admin_count
+    admin_count=$(mysql_exec --batch --skip-column-names "$DB_NAME" -e "SELECT COUNT(*) FROM users WHERE username = 'admin' AND role = 'admin' AND is_enabled = true AND deleted_at IS NULL;" 2>/dev/null || echo "0")
+    if [ "$admin_count" = "0" ]; then
+        log_error "数据库迁移后仍未检测到启用的 admin 管理员"
+        log_info "若已有管理员被禁用或密码已修改，请在后台用户管理或 MySQL 中恢复管理员状态"
+        show_recent_log "$MIGRATION_LOG" "数据库迁移"
+        exit 1
+    fi
+}
+
+ensure_database_schema() {
+    log_step "检查数据库表结构..."
+
+    if ! command -v mysql &> /dev/null; then
+        log_warning "未找到 mysql 客户端，无法检测表结构"
+        run_database_migration "迁移命令幂等，将直接通过后端迁移入口确保表结构和默认管理员就绪"
+        return 0
+    fi
+
+    local missing_tables=""
+    local table
+    for table in $CORE_SCHEMA_TABLES; do
+        local table_count
+        table_count=$(mysql_exec --batch --skip-column-names -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$DB_NAME' AND table_name = '$table';" 2>/dev/null || echo "0")
+        if [ "$table_count" != "1" ]; then
+            missing_tables="$missing_tables $table"
+        fi
+    done
+
+    if [ -n "$missing_tables" ]; then
+        run_database_migration "检测到缺失核心表:${missing_tables}"
+        verify_database_ready
+        return 0
+    fi
+
+    local admin_count
+    admin_count=$(mysql_exec --batch --skip-column-names "$DB_NAME" -e "SELECT COUNT(*) FROM users WHERE username = 'admin' AND role = 'admin' AND is_enabled = true AND deleted_at IS NULL;" 2>/dev/null || echo "0")
+    if [ "$admin_count" = "0" ]; then
+        run_database_migration "未检测到启用的默认管理员账户，将执行迁移入口补齐种子数据"
+        verify_database_ready
+        return 0
+    fi
+
+    log_success "数据库表结构和默认管理员已就绪"
+}
+
+ensure_frontend_dependencies() {
+    log_step "检查前端依赖..."
+
+    if [ ! -f "frontend/package.json" ]; then
+        log_error "frontend/package.json 不存在"
+        exit 1
+    fi
+
+    if (
+        cd frontend
+        pnpm exec vite --version >/dev/null 2>&1
+    ); then
+        log_success "前端依赖已就绪"
+        return 0
+    fi
+
+    log_warning "前端依赖缺失或 Vite 不可用，开始安装前端依赖..."
+    if (
+        cd frontend
+        CI=true pnpm install --frozen-lockfile
+    ) > "$FRONTEND_LOG" 2>&1; then
+        if (
+            cd frontend
+            pnpm exec vite --version >/dev/null 2>&1
+        ); then
+            log_success "前端依赖安装完成"
+            return 0
+        fi
+
+        log_warning "前端依赖已安装但 Vite 仍不可用，开始重建依赖..."
+        if (
+            cd frontend
+            CI=true pnpm install --frozen-lockfile --force
+        ) >> "$FRONTEND_LOG" 2>&1 && (
+            cd frontend
+            pnpm exec vite --version >/dev/null 2>&1
+        ); then
+            log_success "前端依赖链接重建完成"
+            return 0
+        fi
+    fi
+
+    log_error "前端依赖安装失败，请检查日志: $FRONTEND_LOG"
+    show_recent_log "$FRONTEND_LOG" "前端依赖安装"
+    exit 1
+}
+
 # ==============================================================================
 # 核心功能：Start
 # ==============================================================================
@@ -270,6 +408,9 @@ do_start() {
     DB_USER=${DB_USER:-root}
     DB_PASSWORD=${DB_PASSWORD:-root}
     DB_NAME=${DB_NAME:-unisearch}
+
+    # 目录准备需要早于迁移和依赖安装，确保失败日志可落盘。
+    mkdir -p "$LOG_DIR" "$PID_DIR" "backend/cache"
     
     # 检查 MySQL 端口是否可访问
     if command -v nc &> /dev/null; then
@@ -290,14 +431,14 @@ do_start() {
         log_step "测试数据库连接..."
         
         # 尝试连接数据库
-        if mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASSWORD" -e "USE $DB_NAME;" 2>/dev/null; then
+        if mysql_exec -e "USE $DB_NAME;" 2>/dev/null; then
             log_success "数据库连接测试通过 (数据库: $DB_NAME)"
         else
             log_warning "数据库 '$DB_NAME' 不存在或连接失败"
             log_info "尝试创建数据库..."
             
             # 尝试创建数据库
-            if mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null; then
+            if mysql_exec -e "CREATE DATABASE IF NOT EXISTS $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null; then
                 log_success "数据库 '$DB_NAME' 创建成功"
             else
                 log_error "无法创建数据库 '$DB_NAME'"
@@ -311,8 +452,8 @@ do_start() {
         log_info "应用启动时将自动尝试连接数据库"
     fi
 
-    # 6. 目录准备
-    mkdir -p "$LOG_DIR" "$PID_DIR" "backend/cache"
+    # 6. 检查并补齐数据库表结构和默认管理员
+    ensure_database_schema
 
     # 7. 选择可用端口
     local actual_backend_port
@@ -357,11 +498,11 @@ do_start() {
 
     # 9. 启动前端
     log_step "启动前端服务..."
+    ensure_frontend_dependencies
     cd frontend
-    if [ ! -f "package.json" ]; then log_error "frontend/package.json 不存在"; exit 1; fi
     
     log_info "运行 Vite 开发服务器..."
-    VITE_BACKEND_PROXY_TARGET="http://localhost:$actual_backend_port" nohup pnpm run dev -- --port "$actual_frontend_port" > "../$FRONTEND_LOG" 2>&1 &
+    VITE_BACKEND_PROXY_TARGET="http://localhost:$actual_backend_port" nohup pnpm exec vite --port "$actual_frontend_port" > "../$FRONTEND_LOG" 2>&1 &
     FRONTEND_PID=$!
     echo $FRONTEND_PID > "../$FRONTEND_PID_FILE"
     echo "$actual_frontend_port" > "../$FRONTEND_PORT_FILE"

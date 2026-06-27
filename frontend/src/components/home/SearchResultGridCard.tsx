@@ -25,6 +25,7 @@ interface SearchResultGridCardProps {
   showDetailEntry: boolean;
   showSourceBadge: boolean;
   onOpenResource: (item: ResultItem) => void;
+  onCancelResolveResource: () => void;
   onOpenDetail: (item: ResultItem) => void;
 }
 
@@ -40,7 +41,7 @@ interface SearchResultGridCardProps {
  *   因此旧卡片不会重放入场动画，只有新挂载的卡片会动画进入。
  */
 export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
-  ({ item, index, canOpenResource, isResolvingResource = false, showDetailEntry, showSourceBadge, onOpenResource, onOpenDetail }) => {
+  ({ item, index, canOpenResource, isResolvingResource = false, showDetailEntry, showSourceBadge, onOpenResource, onCancelResolveResource, onOpenDetail }) => {
     const { resource, primaryLink, cloudType, datetime } = item;
     const cloudInfo = getCloudTypeInfo(cloudType);
     const sourceInfo = resolveResourceSourcePresentation(resource);
@@ -188,11 +189,19 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
                   <span>有码</span>
                 </div>
               )}
-              {scanTransferMode && (
-                <div className="flex shrink-0 items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-full border border-amber-200/70 dark:bg-amber-400/[0.08] dark:text-amber-200 dark:border-amber-300/18">
-                  <span>{isResolvingResource ? "正在获取" : "需扫码"}</span>
-                </div>
-              )}
+              {scanTransferMode && isResolvingResource ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onCancelResolveResource();
+                  }}
+                  className="flex shrink-0 items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-full border border-amber-200/70 transition hover:bg-amber-100 dark:bg-amber-400/[0.08] dark:text-amber-200 dark:border-amber-300/18 dark:hover:bg-amber-400/[0.14]"
+                >
+                  <span>取消获取</span>
+                </button>
+              ) : null}
             </div>
 
             {showDetailEntry ? (

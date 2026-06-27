@@ -14,6 +14,7 @@ interface SearchResultsListProps {
   enableResourceSourceBadges: boolean;
   resolvingResourceId?: string | null;
   onOpenResource: (item: ResultItem) => void;
+  onCancelResolveResource: () => void;
   onOpenDetail: (item: ResultItem) => void;
 }
 
@@ -24,6 +25,7 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
   enableResourceSourceBadges,
   resolvingResourceId,
   onOpenResource,
+  onCancelResolveResource,
   onOpenDetail,
 }) => (
   <div
@@ -46,6 +48,7 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
           showDetailEntry={enableResourceDetailPage}
           showSourceBadge={enableResourceSourceBadges}
           onOpenResource={onOpenResource}
+          onCancelResolveResource={onCancelResolveResource}
           onOpenDetail={enableResourceDetailPage ? onOpenDetail : () => undefined}
         />
       ) : (
@@ -56,6 +59,7 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
           canOpenResource={Boolean(resolveResourceOpenTarget(item))}
           isResolvingResource={resolvingResourceId === item.resource.id}
           onOpenResource={onOpenResource}
+          onCancelResolveResource={onCancelResolveResource}
           onOpenDetail={enableResourceDetailPage ? onOpenDetail : () => undefined}
           showDetailEntry={enableResourceDetailPage}
           showSourceBadge={enableResourceSourceBadges}

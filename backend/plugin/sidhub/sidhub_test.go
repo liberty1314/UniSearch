@@ -3,6 +3,7 @@ package sidhub
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -977,7 +978,7 @@ func TestResolveLinkStartEntriesKeepsOverflowAsFallback(t *testing.T) {
 		return []byte(sidHubScanTransferFixture), nil
 	}
 
-	resolved := p.resolveLinkStartEntries(entries, "626957", 1)
+	resolved := p.resolveLinkStartEntries(context.Background(), entries, "626957", 1)
 	if len(resolved) != len(entries) {
 		t.Fatalf("期望保留全部结果，实际为 %d: %#v", len(resolved), resolved)
 	}
@@ -1008,7 +1009,7 @@ func TestResolveLinkStartEntriesUsesPerTypeBudget(t *testing.T) {
 		return []byte(sidHubScanTransferFixture), nil
 	}
 
-	resolved := p.resolveLinkStartEntries(entries, "626957", 1)
+	resolved := p.resolveLinkStartEntries(context.Background(), entries, "626957", 1)
 
 	if len(fetched) != 3 {
 		t.Fatalf("期望百度、夸克、磁力各预抓 1 条，实际抓取 %d 次: %#v", len(fetched), fetched)
@@ -1025,7 +1026,7 @@ func TestResolveLinkStartEntriesHonorsZeroBudget(t *testing.T) {
 		return nil, nil
 	}
 
-	resolved := p.resolveLinkStartEntries([]sidHubLinkEntry{{
+	resolved := p.resolveLinkStartEntries(context.Background(), []sidHubLinkEntry{{
 		Link:  model.Link{Type: "baidu", URL: "https://www.seedhub.cc/link_start/?redirect_to=baidu_1"},
 		Index: 1,
 	}}, "626957", 0)
@@ -1050,7 +1051,7 @@ func TestResolveLinkStartEntriesUsesURLRefreshKeyWithoutMovieID(t *testing.T) {
 		return nil, nil
 	}
 
-	resolved := p.resolveLinkStartEntries([]sidHubLinkEntry{{
+	resolved := p.resolveLinkStartEntries(context.Background(), []sidHubLinkEntry{{
 		Link:  model.Link{Type: "baidu", URL: linkStartURL},
 		Index: 1,
 	}}, "", 0)
@@ -1082,7 +1083,7 @@ func TestResolveLinkStartEntriesFallsBackWhenPreResolveFails(t *testing.T) {
 		return nil, errors.New("预抓取失败")
 	}
 
-	resolved := p.resolveLinkStartEntries([]sidHubLinkEntry{entry}, "626957")
+	resolved := p.resolveLinkStartEntries(context.Background(), []sidHubLinkEntry{entry}, "626957")
 	link := resolved[0].Link
 	if link.AccessMode != "scan_transfer" || link.ScanTransfer == nil {
 		t.Fatalf("期望预抓取失败时兜底为扫码转存，实际为 %#v", link)
@@ -1116,7 +1117,7 @@ func TestResolveLinkStartEntriesLeavesDirectAndDownloadLinksUnchanged(t *testing
 		return nil, nil
 	}
 
-	resolved := p.resolveLinkStartEntries(entries, "626957")
+	resolved := p.resolveLinkStartEntries(context.Background(), entries, "626957")
 	for index, entry := range resolved {
 		if entry.Link.AccessMode != "" || entry.Link.ScanTransfer != nil {
 			t.Fatalf("第 %d 条链接不应被标记为扫码，实际为 %#v", index+1, entry.Link)
@@ -1134,7 +1135,7 @@ func TestFetchURLRejectsCloudflareChallengeFromInjectedFetcher(t *testing.T) {
 		return []byte("Just a moment... window._cf_chl_opt Cloudflare"), nil
 	}
 
-	_, err := p.fetchURL("https://www.seedhub.cc/link_start/?redirect_to=challenge")
+	_, err := p.fetchURL(context.Background(), "https://www.seedhub.cc/link_start/?redirect_to=challenge")
 	if err == nil || !strings.Contains(err.Error(), "Cloudflare") {
 		t.Fatalf("期望测试抓取器返回挑战页时被拒绝，实际为 %v", err)
 	}
@@ -1292,7 +1293,7 @@ func TestSidHubRefreshScanTransferReturnsLatestPayload(t *testing.T) {
 		return []byte(sidHubScanTransferFixture), nil
 	}
 
-	refreshedLink, err := p.RefreshScanTransfer(linkStartURL, "seedhub:4259:quark:1")
+	refreshedLink, err := p.RefreshScanTransfer(context.Background(), linkStartURL, "seedhub:4259:quark:1")
 	if err != nil {
 		t.Fatalf("刷新扫码转存载荷失败: %v", err)
 	}
@@ -1301,6 +1302,21 @@ func TestSidHubRefreshScanTransferReturnsLatestPayload(t *testing.T) {
 	}
 	if refreshedLink.ScanTransfer.RefreshKey != "seedhub:4259:quark:1" {
 		t.Fatalf("期望刷新后保留相同 refresh_key，实际为 %#v", refreshedLink.ScanTransfer)
+	}
+}
+
+func TestSidHubRefreshScanTransferStopsWhenContextCanceled(t *testing.T) {
+	p := NewSidHubPlugin()
+	p.fetcher = func(_ string) ([]byte, error) {
+		t.Fatal("上下文取消后不应发起页面抓取")
+		return nil, nil
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := p.RefreshScanTransfer(ctx, "https://www.seedhub.cc/link_start/?redirect_to=quark_scan", "seedhub:4259:quark:1")
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("期望返回 context.Canceled，实际为 %v", err)
 	}
 }
 
@@ -1318,7 +1334,7 @@ func TestSidHubRefreshScanTransferAcceptsURLRefreshKey(t *testing.T) {
 		return []byte(sidHubScanTransferFixture), nil
 	}
 
-	refreshedLink, err := p.RefreshScanTransfer("", refreshKey)
+	refreshedLink, err := p.RefreshScanTransfer(context.Background(), "", refreshKey)
 	if err != nil {
 		t.Fatalf("URL 型 refresh_key 刷新失败: %v", err)
 	}

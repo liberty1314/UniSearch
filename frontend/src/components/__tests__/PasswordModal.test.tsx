@@ -147,11 +147,14 @@ describe('PasswordModal', () => {
     fireEvent.click(screen.getByRole('button', { name: '重新获取二维码' }));
 
     await waitFor(() =>
-      expect(SearchService.refreshScanTransfer).toHaveBeenCalledWith({
-        resource_id: 'seedhub-scan-1',
-        link_url: 'https://www.seedhub.cc/link_start/?redirect_to=quark_scan',
-        refresh_key: 'seedhub:4259:quark:1',
-      }),
+      expect(SearchService.refreshScanTransfer).toHaveBeenCalledWith(
+        {
+          resource_id: 'seedhub-scan-1',
+          link_url: 'https://www.seedhub.cc/link_start/?redirect_to=quark_scan',
+          refresh_key: 'seedhub:4259:quark:1',
+        },
+        { signal: expect.any(Object) },
+      ),
     );
 
     await waitFor(() =>
@@ -265,11 +268,14 @@ describe('PasswordModal', () => {
     expect(screen.getByRole('button', { name: /正在获取二维码|获取二维码/ })).toBeInTheDocument();
 
     await waitFor(() =>
-      expect(SearchService.refreshScanTransfer).toHaveBeenCalledWith({
-        resource_id: 'seedhub-scan-empty',
-        link_url: 'https://www.seedhub.cc/link_start/?redirect_to=quark_scan',
-        refresh_key: 'seedhub:4259:quark:1',
-      }),
+      expect(SearchService.refreshScanTransfer).toHaveBeenCalledWith(
+        {
+          resource_id: 'seedhub-scan-empty',
+          link_url: 'https://www.seedhub.cc/link_start/?redirect_to=quark_scan',
+          refresh_key: 'seedhub:4259:quark:1',
+        },
+        { signal: expect.any(Object) },
+      ),
     );
 
     await waitFor(() =>
@@ -279,6 +285,54 @@ describe('PasswordModal', () => {
       ),
     );
     expect(screen.getByDisplayValue('AUTO1234')).toBeInTheDocument();
+  });
+
+  it('自动获取二维码时关闭弹窗会取消请求且不提示失败', async () => {
+    let capturedSignal: AbortSignal | undefined;
+    vi.mocked(SearchService.refreshScanTransfer).mockImplementation((_, options?: { signal?: AbortSignal }) => {
+      capturedSignal = options?.signal;
+      return new Promise((_, reject) => {
+        options?.signal?.addEventListener('abort', () => {
+          const error = new Error('canceled') as Error & { code?: string };
+          error.name = 'CanceledError';
+          error.code = 'ERR_CANCELED';
+          reject(error);
+        });
+      });
+    });
+
+    const props = {
+      password: '',
+      url: 'https://www.seedhub.cc/link_start/?redirect_to=quark_scan',
+      cloudType: CloudType.QUARK,
+      resourceId: 'seedhub-scan-empty',
+      accessMode: 'scan_transfer' as const,
+      scanTransfer: {
+        instruction: '请使用手机扫码转存',
+        refreshable: true,
+        refresh_key: 'seedhub:4259:quark:1',
+      },
+    };
+    const { rerender } = render(
+      <PasswordModal
+        {...props}
+        isOpen
+        onClose={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(capturedSignal).toBeDefined());
+
+    rerender(
+      <PasswordModal
+        {...props}
+        isOpen={false}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(capturedSignal?.aborted).toBe(true));
+    expect(toastErrorMock).not.toHaveBeenCalled();
   });
 
   it('已有二维码时打开弹窗不会自动刷新', () => {

@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -81,6 +82,36 @@ func TestRefreshScanTransferHandlerRejectsInvalidRefreshKey(t *testing.T) {
 	}
 	if !bytes.Contains(recorder.Body.Bytes(), []byte("无效的 SeedHub refresh_key")) {
 		t.Fatalf("期望响应提示 refresh_key 无效，实际为 %s", recorder.Body.String())
+	}
+}
+
+func TestRefreshScanTransferHandlerReturns499WhenRequestCanceled(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	seedHubPlugin := sidhub.NewSidHubPlugin()
+	seedHubPlugin.SetFetcherForTest(func(_ string) ([]byte, error) {
+		t.Fatal("请求已取消时不应发起页面抓取")
+		return nil, nil
+	})
+
+	pm := plugin.NewPluginManager()
+	pm.RegisterPlugin(seedHubPlugin)
+	SetSearchService(service.NewSearchService(pm, nil, nil))
+
+	router := gin.New()
+	router.POST("/api/resources/scan-transfer/refresh", RefreshScanTransferHandler)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	body := bytes.NewBufferString(`{"link_url":"https://www.seedhub.cc/link_start/?redirect_to=quark_scan","refresh_key":"seedhub:4259:quark:1"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/resources/scan-transfer/refresh", body).WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != 499 {
+		t.Fatalf("期望请求取消返回 499，实际为 %d，响应为 %s", recorder.Code, recorder.Body.String())
 	}
 }
 

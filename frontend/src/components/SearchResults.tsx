@@ -61,6 +61,22 @@ const hasScanTransferPayload = (target: ResourceOpenTarget): boolean => {
   );
 };
 
+const isAbortLikeError = (error: unknown): boolean => {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return true;
+  }
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  const record = error as { code?: unknown; name?: unknown; message?: unknown };
+  return (
+    record.code === "ERR_CANCELED" ||
+    record.name === "CanceledError" ||
+    record.name === "AbortError" ||
+    record.message === "canceled"
+  );
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
@@ -133,6 +149,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   const [resolvingResourceId, setResolvingResourceId] = useState<string | null>(null);
   const [enableResourceDetailPage, setEnableResourceDetailPage] = useState(true);
   const [enableResourceSourceBadges, setEnableResourceSourceBadges] = useState(false);
+  const resolveAbortControllerRef = useRef<AbortController | null>(null);
 
   // ── 无限滚动观察器 ─────────────────────────────────────────────────────────
 
@@ -194,6 +211,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     };
   }, []);
 
+  useEffect(
+    () => () => {
+      resolveAbortControllerRef.current?.abort();
+      resolveAbortControllerRef.current = null;
+    },
+    [],
+  );
+
   const {
     activeFilterChips,
     allSortedResults,
@@ -217,6 +242,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     if (openedWindow) {
       openedWindow.opener = null;
     }
+  }, []);
+
+  const cancelResolveResource = useCallback(() => {
+    resolveAbortControllerRef.current?.abort();
+    resolveAbortControllerRef.current = null;
+    setResolvingResourceId(null);
   }, []);
 
   const handleOpenResource = useCallback(
@@ -244,13 +275,21 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         !hasScanTransferPayload(openTarget)
       ) {
         const resourceKey = openTarget.resourceId || openTarget.url;
+        resolveAbortControllerRef.current?.abort();
+        const abortController = new AbortController();
+        resolveAbortControllerRef.current = abortController;
         setResolvingResourceId(resourceKey);
         try {
           const response = await SearchService.refreshScanTransfer({
             resource_id: openTarget.resourceId,
             link_url: openTarget.url,
             refresh_key: refreshKey,
+          }, {
+            signal: abortController.signal,
           });
+          if (abortController.signal.aborted) {
+            return;
+          }
           if (!response.scan_transfer) {
             throw new Error("当前资源未返回新的扫码载荷");
           }
@@ -268,13 +307,19 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
             scanTransfer: response.scan_transfer,
           });
         } catch (error) {
+          if (isAbortLikeError(error) || abortController.signal.aborted) {
+            return;
+          }
           const message =
             error instanceof Error && error.message.trim()
               ? error.message
               : "获取二维码失败";
           toast.error(message);
         } finally {
-          setResolvingResourceId(null);
+          if (resolveAbortControllerRef.current === abortController) {
+            resolveAbortControllerRef.current = null;
+            setResolvingResourceId(null);
+          }
         }
         return;
       }
@@ -402,6 +447,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         enableResourceSourceBadges={enableResourceSourceBadges}
         resolvingResourceId={resolvingResourceId}
         onOpenResource={handleOpenResource}
+        onCancelResolveResource={cancelResolveResource}
         onOpenDetail={handleOpenDetail}
       />
 

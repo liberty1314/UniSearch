@@ -3,6 +3,7 @@ package sidhub
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"hash/fnv"
@@ -226,7 +227,7 @@ func (p *SidHubAsyncPlugin) doSearch(client *http.Client, keyword string, ext ma
 
 	var lastErr error
 	for _, baseURL := range resolveBaseURLs(ext) {
-		results, err := p.searchBaseURL(baseURL, trimmedKeyword, runtimeConfig)
+		results, err := p.searchBaseURL(context.Background(), baseURL, trimmedKeyword, runtimeConfig)
 		if err != nil {
 			lastErr = err
 			continue
@@ -248,9 +249,9 @@ func (p *SidHubAsyncPlugin) doSearch(client *http.Client, keyword string, ext ma
 	return []model.SearchResult{}, nil
 }
 
-func (p *SidHubAsyncPlugin) searchBaseURL(baseURL string, keyword string, runtimeConfig sidHubRuntimeConfig) ([]model.SearchResult, error) {
+func (p *SidHubAsyncPlugin) searchBaseURL(ctx context.Context, baseURL string, keyword string, runtimeConfig sidHubRuntimeConfig) ([]model.SearchResult, error) {
 	searchURL := buildSearchURL(baseURL, keyword)
-	body, err := p.fetchURL(searchURL)
+	body, err := p.fetchURL(ctx, searchURL)
 	if err != nil {
 		return nil, err
 	}
@@ -262,12 +263,15 @@ func (p *SidHubAsyncPlugin) searchBaseURL(baseURL string, keyword string, runtim
 
 	results := make([]model.SearchResult, 0, len(cards))
 	for _, card := range cards {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		entries := []sidHubLinkEntry{}
-		detailBody, detailErr := p.fetchURL(card.DetailURL)
+		detailBody, detailErr := p.fetchURL(ctx, card.DetailURL)
 		if detailErr == nil {
 			parsedEntries, parseErr := parseDetailLinkEntries(bytes.NewReader(detailBody), baseURL, card.Title)
 			if parseErr == nil {
-				entries, _ = limitExpandedSidHubEntries(p.resolveLinkStartEntries(parsedEntries, card.ID, runtimeConfig.PreResolvedLinkStartPerType))
+				entries, _ = limitExpandedSidHubEntries(p.resolveLinkStartEntries(ctx, parsedEntries, card.ID, runtimeConfig.PreResolvedLinkStartPerType))
 			}
 		}
 
@@ -277,16 +281,38 @@ func (p *SidHubAsyncPlugin) searchBaseURL(baseURL string, keyword string, runtim
 	return results, nil
 }
 
-func (p *SidHubAsyncPlugin) fetchURL(targetURL string) ([]byte, error) {
+func (p *SidHubAsyncPlugin) fetchURL(ctx context.Context, targetURL string) ([]byte, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if p.fetcher != nil {
-		body, err := p.fetcher(targetURL)
-		if err != nil {
-			return nil, err
+		type fetchResult struct {
+			body []byte
+			err  error
 		}
-		if isCloudflareChallenge(body) {
-			return nil, fmt.Errorf("请求 %s 仍返回 Cloudflare 挑战页", targetURL)
+		resultCh := make(chan fetchResult, 1)
+		go func() {
+			body, err := p.fetcher(targetURL)
+			select {
+			case resultCh <- fetchResult{body: body, err: err}:
+			case <-ctx.Done():
+			}
+		}()
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case result := <-resultCh:
+			if result.err != nil {
+				return nil, result.err
+			}
+			if isCloudflareChallenge(result.body) {
+				return nil, fmt.Errorf("请求 %s 仍返回 Cloudflare 挑战页", targetURL)
+			}
+			return result.body, nil
 		}
-		return body, nil
 	}
 
 	scraper, err := p.getScraper()
@@ -294,9 +320,31 @@ func (p *SidHubAsyncPlugin) fetchURL(targetURL string) ([]byte, error) {
 		return nil, err
 	}
 
-	resp, err := scraper.Get(targetURL)
-	if err != nil {
-		return nil, fmt.Errorf("请求 %s 失败: %w", targetURL, err)
+	type scraperResult struct {
+		resp *http.Response
+		err  error
+	}
+	resultCh := make(chan scraperResult, 1)
+	go func() {
+		resp, err := scraper.Get(targetURL)
+		select {
+		case resultCh <- scraperResult{resp: resp, err: err}:
+		case <-ctx.Done():
+			if resp != nil && resp.Body != nil {
+				_ = resp.Body.Close()
+			}
+		}
+	}()
+
+	var resp *http.Response
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case result := <-resultCh:
+		if result.err != nil {
+			return nil, fmt.Errorf("请求 %s 失败: %w", targetURL, result.err)
+		}
+		resp = result.resp
 	}
 	defer resp.Body.Close()
 
@@ -307,6 +355,9 @@ func (p *SidHubAsyncPlugin) fetchURL(targetURL string) ([]byte, error) {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("读取 %s 响应失败: %w", targetURL, err)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 	body, err = decodeSidHubHTTPBody(body, resp.Header.Get("Content-Encoding"))
 	if err != nil {
@@ -343,7 +394,10 @@ func hasGzipMagicHeader(body []byte) bool {
 }
 
 // RefreshScanTransfer 重新抓取当前扫码转存页并返回最新载荷。
-func (p *SidHubAsyncPlugin) RefreshScanTransfer(linkURL string, refreshKey string) (model.Link, error) {
+func (p *SidHubAsyncPlugin) RefreshScanTransfer(ctx context.Context, linkURL string, refreshKey string) (model.Link, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	refreshTarget, err := parseSeedHubRefreshKey(refreshKey)
 	if err != nil {
 		return model.Link{}, err
@@ -357,9 +411,12 @@ func (p *SidHubAsyncPlugin) RefreshScanTransfer(linkURL string, refreshKey strin
 		return model.Link{}, fmt.Errorf("无效的 SeedHub 刷新链接")
 	}
 
-	body, err := p.fetchURL(trimmedURL)
+	body, err := p.fetchURL(ctx, trimmedURL)
 	if err != nil {
 		return model.Link{}, fmt.Errorf("获取 SeedHub 刷新页失败: %w", err)
+	}
+	if err := ctx.Err(); err != nil {
+		return model.Link{}, err
 	}
 
 	refreshedLink, handled, err := resolveLinkStartLink(model.Link{
@@ -393,7 +450,10 @@ func (p *SidHubAsyncPlugin) getScraper() (*cloudscraper.Scraper, error) {
 	return p.scraper, nil
 }
 
-func (p *SidHubAsyncPlugin) resolveLinkStartEntries(entries []sidHubLinkEntry, movieID string, limits ...int) []sidHubLinkEntry {
+func (p *SidHubAsyncPlugin) resolveLinkStartEntries(ctx context.Context, entries []sidHubLinkEntry, movieID string, limits ...int) []sidHubLinkEntry {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	resolved := make([]sidHubLinkEntry, 0, len(entries))
 	limit := defaultPreResolvedLinkStartPerType
 	if len(limits) > 0 {
@@ -402,6 +462,9 @@ func (p *SidHubAsyncPlugin) resolveLinkStartEntries(entries []sidHubLinkEntry, m
 	resolvedCountByType := make(map[string]int)
 
 	for _, entry := range entries {
+		if ctx.Err() != nil {
+			return resolved
+		}
 		nextEntry := entry
 		if !shouldResolveSeedHubLinkStart(entry.Link) {
 			resolved = append(resolved, nextEntry)
@@ -414,7 +477,7 @@ func (p *SidHubAsyncPlugin) resolveLinkStartEntries(entries []sidHubLinkEntry, m
 		}
 		if resolvedCountByType[linkType] < limit {
 			resolvedCountByType[linkType]++
-			if body, err := p.fetchURL(entry.Link.URL); err == nil {
+			if body, err := p.fetchURL(ctx, entry.Link.URL); err == nil {
 				if resolvedLink, handled, resolveErr := resolveLinkStartLink(entry.Link, body, movieID, entry.Index); resolveErr == nil && handled {
 					nextEntry.Link = resolvedLink
 					nextEntry.ResolutionStatus = sidHubResolutionResolved
@@ -872,7 +935,7 @@ func clampSidHubPreResolvedLimit(value int) int {
 }
 
 func (p *SidHubAsyncPlugin) resolveQuarkURL(linkURL string) (string, error) {
-	body, err := p.fetchURL(linkURL)
+	body, err := p.fetchURL(context.Background(), linkURL)
 	if err != nil {
 		return "", err
 	}
