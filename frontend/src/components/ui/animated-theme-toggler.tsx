@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Moon, Sun } from "lucide-react"
 import { flushSync } from "react-dom"
 
+import {
+  applyThemePreference,
+  readAccountPreferences,
+  writeAccountPreferences,
+} from "@/lib/accountPreferences"
 import { cn } from "@/lib/utils"
 
 interface AnimatedThemeTogglerProps extends React.ComponentPropsWithoutRef<"button"> {
@@ -29,10 +34,7 @@ export const AnimatedThemeToggler = ({
       setIsDark(document.documentElement.classList.contains("dark"))
     }
 
-    const savedTheme = localStorage.getItem("theme")
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-    const shouldUseDark = savedTheme ? savedTheme === "dark" : prefersDark
-    document.documentElement.classList.toggle("dark", shouldUseDark)
+    applyThemePreference(readAccountPreferences().theme)
     updateTheme()
 
     const observer = new MutationObserver(updateTheme)
@@ -50,10 +52,13 @@ export const AnimatedThemeToggler = ({
 
     const performToggle = () => {
       flushSync(() => {
-        const newTheme = !isDark
-        setIsDark(newTheme)
-        document.documentElement.classList.toggle("dark", newTheme)
-        localStorage.setItem("theme", newTheme ? "dark" : "light")
+        const shouldUseDark = !document.documentElement.classList.contains("dark")
+        const nextTheme = shouldUseDark ? "dark" : "light"
+        setIsDark(shouldUseDark)
+        writeAccountPreferences({
+          ...readAccountPreferences(),
+          theme: nextTheme,
+        })
       })
     }
 
@@ -85,7 +90,7 @@ export const AnimatedThemeToggler = ({
     }
 
     performToggle()
-  }, [isDark, duration])
+  }, [duration])
 
   return (
     <button
@@ -95,7 +100,7 @@ export const AnimatedThemeToggler = ({
       {...props}
     >
       {isDark ? <Sun strokeWidth={1.5} /> : <Moon strokeWidth={1.5} />}
-      <span className="sr-only">Toggle theme</span>
+      <span className="sr-only">切换主题</span>
     </button>
   )
 }

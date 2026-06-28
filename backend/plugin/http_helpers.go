@@ -1,12 +1,17 @@
 package plugin
 
 import (
+	"context"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"sort"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"golang.org/x/net/proxy"
+	"unisearch/config"
 	"unisearch/util/logger"
 )
 
@@ -30,11 +35,38 @@ func NewPooledHTTPClient(options HTTPClientOptions) *http.Client {
 		ExpectContinueTimeout: options.ExpectContinueTimeout,
 		ForceAttemptHTTP2:     true,
 	}
+	applyConfiguredProxy(transport)
 
 	return &http.Client{
 		Transport: transport,
 		Timeout:   options.Timeout,
 	}
+}
+
+func applyConfiguredProxy(transport *http.Transport) {
+	if transport == nil || config.AppConfig == nil || !config.AppConfig.UseProxy {
+		return
+	}
+
+	proxyURL, err := url.Parse(config.AppConfig.ProxyURL)
+	if err != nil {
+		logger.Warn("plugin_proxy_config_invalid", logger.Any("error", err))
+		return
+	}
+
+	if proxyURL.Scheme == "socks5" {
+		dialer, err := proxy.FromURL(proxyURL, proxy.Direct)
+		if err != nil {
+			logger.Warn("plugin_proxy_socks5_invalid", logger.Any("error", err))
+			return
+		}
+		transport.DialContext = func(_ context.Context, network string, addr string) (net.Conn, error) {
+			return dialer.Dial(network, addr)
+		}
+		return
+	}
+
+	transport.Proxy = http.ProxyURL(proxyURL)
 }
 
 func ApplyBrowserHeaders(req *http.Request, referer string) {

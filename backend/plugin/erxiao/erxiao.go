@@ -84,18 +84,14 @@ type ErxiaoAsyncPlugin struct {
 
 // createOptimizedHTTPClient 创建优化的HTTP客户端
 func createOptimizedHTTPClient() *http.Client {
-	transport := &http.Transport{
+	return plugin.NewPooledHTTPClient(plugin.HTTPClientOptions{
+		Timeout:             DefaultTimeout,
 		MaxIdleConns:        MaxIdleConns,
 		MaxIdleConnsPerHost: MaxIdleConnsPerHost,
 		MaxConnsPerHost:     MaxConnsPerHost,
 		IdleConnTimeout:     IdleConnTimeout,
-		DisableKeepAlives:   false,
-	}
-
-	return &http.Client{
-		Transport: transport,
-		Timeout:   DefaultTimeout,
-	}
+		TLSHandshakeTimeout: 10 * time.Second,
+	})
 }
 
 func NewErxiaoPlugin() *ErxiaoAsyncPlugin {

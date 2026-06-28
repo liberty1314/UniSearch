@@ -203,6 +203,9 @@ func (p *JavdbPlugin) executeSearchWithRateLimit(client *http.Client, keyword st
 	}
 
 	if resp.StatusCode != 200 {
+		if resp.StatusCode == http.StatusForbidden {
+			return nil, fmt.Errorf("[%s] 上游访问受限: HTTP 403，当前出口 IP 可能被 JavDB 或 Cloudflare 拦截，请更换代理节点后重试", p.Name()), false
+		}
 		return nil, fmt.Errorf("[%s] 搜索请求HTTP状态错误: %d", p.Name(), resp.StatusCode), false
 	}
 

@@ -1426,3 +1426,24 @@
     - frontend/src/types/search.ts
     - nginx.conf
 
+- [2026-06-28 09:23] feat(plugin): 支持插件池化客户端全局代理与主题偏好同步并清理过期文档
+  - Body: 为后端插件池化 HTTP 客户端引入全局代理（HTTP/SOCKS5）配置支持，并优化 JavDB 出口 403 拦截提示。前端重构 AnimatedThemeToggler 统一至账户偏好设置，并清理 docs 目录下多份过期的安全与优化方案文件。
+  - Files:
+    - backend/plugin/erxiao/erxiao.go
+    - backend/plugin/http_helpers.go
+    - backend/plugin/http_helpers_test.go
+    - backend/plugin/javdb/javdb.go
+    - docs/compat-deprecation-checklist.md
+    - docs/readme_2606.md
+    - docs/search-observability.md
+    - docs/security-and-quality-audit-2026-06-27.md
+    - docs/security-and-quality-development-plan-2026-06-27.md
+    - docs/security-and-quality-optimization-plan-2026-06-27.md
+    - docs/security-release-gate-2026-06-27.md
+    - docs/sidhub-progressive-resolution-development-plan.md
+    - docs/sidhub-progressive-resolution-optimization-plan.md
+    - docs/sidhub-scan-transfer-adjustment-plan.md
+    - frontend/src/components/ui/__tests__/animated-theme-toggler.test.tsx
+    - frontend/src/components/ui/animated-theme-toggler.tsx
+
+
