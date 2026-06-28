@@ -1478,4 +1478,8 @@
     - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
     - frontend/src/components/admin/adminDateFormat.ts
 
-
+- [2026-06-28 16:58] build(docker): 调整 Dockerfile 复制 frontend 构建所需的 pnpm 配置文件
+  - Body: 在 Docker 构建 frontend 阶段，补充拷贝 pnpm-workspace.yaml 和 .pnpmfile.cjs，以保证在 workspace 下执行 pnpm install 依赖解析的完整性，防止构建因缺少这些配置文件而失败。
+  - Files:
+    - Dockerfile
+    - docs/readme_2606.md
