@@ -171,7 +171,8 @@ func GetTMDBAdminSettingsHandler(c *gin.Context) {
 		"configured":        settings.Configured,
 		"updated_at":        settings.UpdatedAt,
 		"source":            settings.Source,
-		"read_access_token": settings.ReadAccessToken,
+		"token_preview":     settings.TokenPreview,
+		"read_access_token": settings.TokenPreview,
 	})
 }
 
@@ -226,7 +227,8 @@ func UpdateTMDBAdminSettingsHandler(c *gin.Context) {
 		"configured":        settings.Configured,
 		"updated_at":        settings.UpdatedAt,
 		"source":            settings.Source,
-		"read_access_token": settings.ReadAccessToken,
+		"token_preview":     settings.TokenPreview,
+		"read_access_token": settings.TokenPreview,
 	})
 }
 

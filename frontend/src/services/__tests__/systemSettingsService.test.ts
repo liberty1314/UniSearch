@@ -30,12 +30,14 @@ describe('SystemSettingsService TMDB admin api', () => {
       configured: true,
       updated_at: '2026-05-25T10:00:00Z',
       source: 'secret_manager',
+      token_preview: 'exis********oken',
     });
 
     const result = await SystemSettingsService.getTMDBSettings('token');
 
     expect(getMock).toHaveBeenCalledWith('/admin/system-settings/tmdb');
     expect(result.configured).toBe(true);
+    expect(result.token_preview).toBe('exis********oken');
   });
 
   it('更新 TMDB 读取令牌', async () => {
@@ -43,6 +45,7 @@ describe('SystemSettingsService TMDB admin api', () => {
       configured: true,
       updated_at: '2026-05-25T10:00:00Z',
       source: 'secret_manager',
+      token_preview: 'new-********oken',
     });
 
     const result = await SystemSettingsService.updateTMDBSettings('token', {
@@ -53,6 +56,7 @@ describe('SystemSettingsService TMDB admin api', () => {
       tmdb_read_access_token: 'new-token',
     });
     expect(result.source).toBe('secret_manager');
+    expect(result.token_preview).toBe('new-********oken');
   });
 
   it('获取缓存配置', async () => {

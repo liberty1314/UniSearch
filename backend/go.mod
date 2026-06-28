@@ -1,19 +1,17 @@
 module unisearch
 
-go 1.24.1
-
-toolchain go1.24.3
+go 1.25.0
 
 require (
 	github.com/Advik-B/cloudscraper v0.0.0-20250623142001-d5e0e43555db
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/bytedance/sonic v1.15.0
 	github.com/gin-gonic/gin v1.9.1
-	github.com/golang-jwt/jwt/v5 v5.2.0
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/joho/godotenv v1.5.1
-	github.com/redis/go-redis/v9 v9.7.0
-	golang.org/x/crypto v0.39.0
-	golang.org/x/net v0.41.0
+	github.com/redis/go-redis/v9 v9.7.3
+	golang.org/x/crypto v0.51.0
+	golang.org/x/net v0.55.0
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1
@@ -49,8 +47,8 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	golang.org/x/arch v0.24.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

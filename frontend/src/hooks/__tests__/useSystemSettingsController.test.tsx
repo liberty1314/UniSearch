@@ -64,7 +64,7 @@ describe('useSystemSettingsController TMDB config', () => {
       configured: true,
       updated_at: '2026-05-25T10:00:00Z',
       source: 'secret_manager',
-      read_access_token: 'existing-token',
+      token_preview: 'exis********oken',
     });
     getCacheSettingsMock.mockResolvedValue({
       cache_enabled: true,
@@ -100,7 +100,7 @@ describe('useSystemSettingsController TMDB config', () => {
     const { result } = renderHook(() => useSystemSettingsController());
 
     await waitFor(() => {
-      expect(result.current.state.tmdbCurrentTokenPreview).toBe('existing-token');
+      expect(result.current.state.tmdbCurrentTokenPreview).toBe('exis********oken');
     });
   });
 
@@ -231,7 +231,7 @@ describe('useSystemSettingsController TMDB config', () => {
       configured: true,
       updated_at: '2026-05-25T12:00:00Z',
       source: 'secret_manager',
-      read_access_token: 'new-token',
+      token_preview: 'new-********oken',
     });
 
     const { result } = renderHook(() => useSystemSettingsController());
@@ -252,7 +252,7 @@ describe('useSystemSettingsController TMDB config', () => {
       tmdb_read_access_token: 'new-token',
     });
     expect(result.current.state.tmdbReadAccessToken).toBe('');
-    expect(result.current.state.tmdbCurrentTokenPreview).toBe('new-token');
+    expect(result.current.state.tmdbCurrentTokenPreview).toBe('new-********oken');
     expect(toastSuccessMock).toHaveBeenCalled();
   });
 

@@ -311,7 +311,7 @@ func calculatePluginWorkerCount(concurrency int, pluginCount int) int {
 	}
 
 	effectiveWorkers := concurrency
-	if maxBackgroundWorkers > effectiveWorkers {
+	if maxBackgroundWorkers < effectiveWorkers {
 		effectiveWorkers = maxBackgroundWorkers
 	}
 	if pluginCount < effectiveWorkers {

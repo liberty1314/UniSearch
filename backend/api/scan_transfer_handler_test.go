@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -80,8 +81,11 @@ func TestRefreshScanTransferHandlerRejectsInvalidRefreshKey(t *testing.T) {
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("期望无效 refresh_key 返回 400，实际为 %d，响应为 %s", recorder.Code, recorder.Body.String())
 	}
-	if !bytes.Contains(recorder.Body.Bytes(), []byte("无效的 SeedHub refresh_key")) {
-		t.Fatalf("期望响应提示 refresh_key 无效，实际为 %s", recorder.Body.String())
+	if !bytes.Contains(recorder.Body.Bytes(), []byte(`"error_code":"SCAN_TRANSFER_INVALID_REFRESH_KEY"`)) {
+		t.Fatalf("期望响应包含稳定 refresh_key 错误码，实际为 %s", recorder.Body.String())
+	}
+	if bytes.Contains(recorder.Body.Bytes(), []byte("SeedHub refresh_key")) {
+		t.Fatalf("响应不应泄露内部错误细节，实际为 %s", recorder.Body.String())
 	}
 }
 
@@ -144,8 +148,18 @@ func TestRefreshScanTransferHandlerReportsChangedPageStructure(t *testing.T) {
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("期望页面结构变化返回 400，实际为 %d，响应为 %s", recorder.Code, recorder.Body.String())
 	}
-	if !bytes.Contains(recorder.Body.Bytes(), []byte("当前资源未返回可刷新的扫码转存载荷")) {
-		t.Fatalf("期望响应提示扫码载荷不可刷新，实际为 %s", recorder.Body.String())
+	var response struct {
+		Message   string `json:"message"`
+		ErrorCode string `json:"error_code"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("解析错误响应失败：%v", err)
+	}
+	if response.ErrorCode != "SCAN_TRANSFER_PAYLOAD_UNAVAILABLE" {
+		t.Fatalf("期望响应包含稳定载荷不可用错误码，实际为 %s", recorder.Body.String())
+	}
+	if response.Message != "当前资源暂时无法刷新扫码载荷" {
+		t.Fatalf("期望响应使用稳定用户提示，实际为 %s", recorder.Body.String())
 	}
 }
 

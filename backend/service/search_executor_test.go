@@ -24,12 +24,12 @@ func TestCalculatePluginWorkerCountUsesConfigFallbackAndPluginLimit(t *testing.T
 	}()
 
 	workers := calculatePluginWorkerCount(0, 4)
-	if workers != 4 {
-		t.Fatalf("expected plugin count to cap worker count at 4, got %d", workers)
+	if workers != 3 {
+		t.Fatalf("expected default concurrency to cap worker count at 3, got %d", workers)
 	}
 }
 
-func TestCalculatePluginWorkerCountPrefersLargerBackgroundPool(t *testing.T) {
+func TestCalculatePluginWorkerCountDoesNotRaiseRequestConcurrency(t *testing.T) {
 	oldConfig := config.AppConfig
 	config.AppConfig = &config.Config{
 		DefaultConcurrency:        2,
@@ -40,8 +40,8 @@ func TestCalculatePluginWorkerCountPrefersLargerBackgroundPool(t *testing.T) {
 	}()
 
 	workers := calculatePluginWorkerCount(2, 12)
-	if workers != 6 {
-		t.Fatalf("expected background worker limit to win with 6 workers, got %d", workers)
+	if workers != 2 {
+		t.Fatalf("expected request concurrency to stay at 2, got %d", workers)
 	}
 }
 

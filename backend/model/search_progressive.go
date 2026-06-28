@@ -7,6 +7,8 @@ type SearchProgressiveEvent struct {
 	Keyword          string                `json:"keyword,omitempty" sonic:"keyword,omitempty"`
 	Source           string                `json:"source,omitempty" sonic:"source,omitempty"`
 	Message          string                `json:"message,omitempty" sonic:"message,omitempty"`
+	ErrorCode        string                `json:"error_code,omitempty" sonic:"error_code,omitempty"`
+	RequestID        string                `json:"request_id,omitempty" sonic:"request_id,omitempty"`
 	Resources        []ResourceObject      `json:"resources,omitempty" sonic:"resources,omitempty"`
 	Warnings         []SearchSourceWarning `json:"warnings,omitempty" sonic:"warnings,omitempty"`
 	CompletedSources int                   `json:"completed_sources,omitempty" sonic:"completed_sources,omitempty"`

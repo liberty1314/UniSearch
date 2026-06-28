@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api';
-import type { AdminLoginRequest, AdminLoginResponse, LoginRequest, LoginResponse, LoginWithRememberRequest, LoginWithRememberResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest, RevokeRefreshTokenRequest } from "@/types/auth";
+import type { AdminLoginRequest, AdminLoginResponse, CurrentUserResponse, LoginRequest, LoginResponse, LoginWithRememberRequest, LoginWithRememberResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest, RevokeRefreshTokenRequest } from "@/types/auth";
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 
 export class AuthService {
@@ -52,6 +52,10 @@ export class AuthService {
   static async adminLogin(username: string, password: string): Promise<AdminLoginResponse> {
     const request: AdminLoginRequest = { username, password };
     return apiClient.post<AdminLoginResponse>('/admin/login', request);
+  }
+
+  static async getCurrentUser(): Promise<CurrentUserResponse> {
+    return apiClient.get<CurrentUserResponse>('/user/me');
   }
 
   static async refreshAccessToken(refreshToken: string): Promise<RefreshTokenResponse> {

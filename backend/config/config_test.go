@@ -105,6 +105,196 @@ func TestGetDefaultConcurrencyDoesNotNeedPluginCountEnv(t *testing.T) {
 	}
 }
 
+func TestResolveInitialAdminCredentialsAllowsDevelopmentDefault(t *testing.T) {
+	oldConfig := AppConfig
+	t.Cleanup(func() {
+		AppConfig = oldConfig
+	})
+	AppConfig = &Config{AppEnv: "development"}
+
+	credentials, err := ResolveInitialAdminCredentials()
+	if err != nil {
+		t.Fatalf("开发环境默认管理员凭据不应失败: %v", err)
+	}
+	if credentials.Username != "admin" || credentials.Password != "admin" || !credentials.UsingDevelopmentDefault {
+		t.Fatalf("开发环境应返回默认管理员凭据标记，实际为 %#v", credentials)
+	}
+}
+
+func TestResolveInitialAdminCredentialsRequiresProductionValues(t *testing.T) {
+	oldConfig := AppConfig
+	t.Cleanup(func() {
+		AppConfig = oldConfig
+	})
+	AppConfig = &Config{AppEnv: "production"}
+
+	if _, err := ResolveInitialAdminCredentials(); err == nil {
+		t.Fatal("生产环境缺少初始管理员配置时应失败")
+	}
+}
+
+func TestResolveInitialAdminCredentialsRejectsWeakProductionPassword(t *testing.T) {
+	oldConfig := AppConfig
+	t.Cleanup(func() {
+		AppConfig = oldConfig
+	})
+	AppConfig = &Config{
+		AppEnv:                "production",
+		InitialAdminUsername:  "root-admin",
+		InitialAdminPassword:  "weakpass",
+		AuthUsernameMinLength: 3,
+		AuthUsernameMaxLength: 32,
+		AuthPasswordMinLength: 6,
+		AuthPasswordMaxLength: 64,
+	}
+
+	if _, err := ResolveInitialAdminCredentials(); err == nil {
+		t.Fatal("生产环境弱初始管理员密码应失败")
+	}
+}
+
+func TestResolveInitialAdminCredentialsAcceptsStrongProductionPassword(t *testing.T) {
+	oldConfig := AppConfig
+	t.Cleanup(func() {
+		AppConfig = oldConfig
+	})
+	AppConfig = &Config{
+		AppEnv:                "production",
+		InitialAdminUsername:  "root-admin",
+		InitialAdminPassword:  "Str0ng!Initial",
+		AuthUsernameMinLength: 3,
+		AuthUsernameMaxLength: 32,
+		AuthPasswordMinLength: 6,
+		AuthPasswordMaxLength: 64,
+	}
+
+	credentials, err := ResolveInitialAdminCredentials()
+	if err != nil {
+		t.Fatalf("生产环境强初始管理员密码不应失败: %v", err)
+	}
+	if credentials.Username != "root-admin" || credentials.Password != "Str0ng!Initial" || credentials.UsingDevelopmentDefault {
+		t.Fatalf("生产环境应返回显式管理员凭据，实际为 %#v", credentials)
+	}
+}
+
+func TestInitWithErrorRejectsMissingProductionSecrets(t *testing.T) {
+	preserveProductionSecretEnv(t)
+	t.Setenv("APP_ENV", "production")
+	if err := os.Unsetenv("AUTH_JWT_SECRET"); err != nil {
+		t.Fatalf("清理 AUTH_JWT_SECRET 失败: %v", err)
+	}
+	if err := os.Unsetenv("REFRESH_TOKEN_ENCRYPT_KEY"); err != nil {
+		t.Fatalf("清理 REFRESH_TOKEN_ENCRYPT_KEY 失败: %v", err)
+	}
+	if err := os.Unsetenv("SECRET_MASTER_KEY"); err != nil {
+		t.Fatalf("清理 SECRET_MASTER_KEY 失败: %v", err)
+	}
+
+	if err := InitWithError(); err == nil {
+		t.Fatal("生产环境缺少关键密钥时应拒绝初始化")
+	}
+}
+
+func TestInitWithErrorRejectsPlaceholderProductionSecrets(t *testing.T) {
+	preserveProductionSecretEnv(t)
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("AUTH_JWT_SECRET", "PLEASE_GENERATE_A_STRONG_RANDOM_SECRET_KEY_HERE")
+	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "strong-refresh-token-secret-000001")
+	t.Setenv("SECRET_MASTER_KEY", "strong-secret-master-key-000000001")
+
+	if err := InitWithError(); err == nil {
+		t.Fatal("生产环境占位符密钥应拒绝初始化")
+	}
+}
+
+func TestInitWithErrorRejectsDuplicateProductionSecrets(t *testing.T) {
+	preserveProductionSecretEnv(t)
+	duplicate := "same-secret-value-with-at-least-32-chars"
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("AUTH_JWT_SECRET", duplicate)
+	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", duplicate)
+	t.Setenv("SECRET_MASTER_KEY", "different-secret-master-key-00000001")
+
+	if err := InitWithError(); err == nil {
+		t.Fatal("生产环境关键密钥重复时应拒绝初始化")
+	}
+}
+
+func TestInitWithErrorAcceptsDistinctProductionSecrets(t *testing.T) {
+	preserveProductionSecretEnv(t)
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("ALLOWED_ORIGINS", "https://example.com")
+	t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
+	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
+	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
+
+	if err := InitWithError(); err != nil {
+		t.Fatalf("生产环境有效密钥应初始化成功: %v", err)
+	}
+}
+
+func TestInitWithErrorRejectsMissingProductionAllowedOrigins(t *testing.T) {
+	preserveProductionSecretEnv(t)
+	t.Setenv("APP_ENV", "production")
+	if err := os.Unsetenv("ALLOWED_ORIGINS"); err != nil {
+		t.Fatalf("清理 ALLOWED_ORIGINS 失败: %v", err)
+	}
+	t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
+	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
+	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
+
+	if err := InitWithError(); err == nil {
+		t.Fatal("生产环境缺少 ALLOWED_ORIGINS 时应拒绝初始化")
+	}
+}
+
+func TestInitWithErrorRejectsWildcardProductionAllowedOrigins(t *testing.T) {
+	preserveProductionSecretEnv(t)
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("ALLOWED_ORIGINS", "*")
+	t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
+	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
+	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
+
+	if err := InitWithError(); err == nil {
+		t.Fatal("生产环境 ALLOWED_ORIGINS 使用通配符时应拒绝初始化")
+	}
+}
+
+func TestInitWithErrorGeneratesDevelopmentSecrets(t *testing.T) {
+	preserveProductionSecretEnv(t)
+	t.Setenv("APP_ENV", "development")
+	if err := os.Unsetenv("AUTH_JWT_SECRET"); err != nil {
+		t.Fatalf("清理 AUTH_JWT_SECRET 失败: %v", err)
+	}
+	if err := os.Unsetenv("REFRESH_TOKEN_ENCRYPT_KEY"); err != nil {
+		t.Fatalf("清理 REFRESH_TOKEN_ENCRYPT_KEY 失败: %v", err)
+	}
+	if err := os.Unsetenv("SECRET_MASTER_KEY"); err != nil {
+		t.Fatalf("清理 SECRET_MASTER_KEY 失败: %v", err)
+	}
+
+	if err := InitWithError(); err != nil {
+		t.Fatalf("开发环境缺少密钥时应生成临时随机值: %v", err)
+	}
+	if AppConfig.AuthJWTSecret == "" || AppConfig.RefreshTokenEncryptKey == "" || AppConfig.SecretMasterKey == "" {
+		t.Fatalf("开发环境应生成临时随机密钥，实际配置为 %#v", AppConfig)
+	}
+}
+
+func preserveProductionSecretEnv(t *testing.T) {
+	t.Helper()
+	oldConfig := AppConfig
+	t.Cleanup(func() {
+		AppConfig = oldConfig
+	})
+	preserveEnv(t, "APP_ENV")
+	preserveEnv(t, "ALLOWED_ORIGINS")
+	preserveEnv(t, "AUTH_JWT_SECRET")
+	preserveEnv(t, "REFRESH_TOKEN_ENCRYPT_KEY")
+	preserveEnv(t, "SECRET_MASTER_KEY")
+}
+
 func preserveEnv(t *testing.T, key string) {
 	t.Helper()
 	value, exists := os.LookupEnv(key)

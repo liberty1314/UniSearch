@@ -35,20 +35,20 @@ type scanTransferRefreshResponse struct {
 func RefreshScanTransferHandler(c *gin.Context) {
 	var req scanTransferRefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, model.NewErrorResponse(400, "请求参数无效"))
+		writeAPIError(c, http.StatusBadRequest, "SCAN_TRANSFER_INVALID_REQUEST", "请求参数无效", nil)
 		return
 	}
 
 	req.LinkURL = strings.TrimSpace(req.LinkURL)
 	req.RefreshKey = strings.TrimSpace(req.RefreshKey)
 	if req.LinkURL == "" || req.RefreshKey == "" {
-		c.JSON(http.StatusBadRequest, model.NewErrorResponse(400, "link_url 和 refresh_key 不能为空"))
+		writeAPIError(c, http.StatusBadRequest, "SCAN_TRANSFER_INVALID_REQUEST", "请求参数无效", nil)
 		return
 	}
 
 	refresher := resolveScanTransferRefreshPlugin()
 	if refresher == nil {
-		c.JSON(http.StatusServiceUnavailable, model.NewErrorResponse(503, "SeedHub 插件不可用"))
+		writeAPIError(c, http.StatusServiceUnavailable, "SCAN_TRANSFER_PLUGIN_UNAVAILABLE", "扫码刷新服务暂时不可用", nil)
 		return
 	}
 
@@ -57,10 +57,11 @@ func RefreshScanTransferHandler(c *gin.Context) {
 	refreshedLink, err := refresher.RefreshScanTransfer(refreshCtx, req.LinkURL, req.RefreshKey)
 	if err != nil {
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			c.JSON(499, model.NewErrorResponse(499, "请求已取消"))
+			writeAPIError(c, 499, "SCAN_TRANSFER_REQUEST_CANCELED", "请求已取消", nil)
 			return
 		}
-		c.JSON(http.StatusBadRequest, model.NewErrorResponse(400, err.Error()))
+		errorCode, message := scanTransferRefreshErrorResponse(err)
+		writeAPIError(c, http.StatusBadRequest, errorCode, message, err)
 		return
 	}
 
@@ -87,4 +88,19 @@ func resolveScanTransferRefreshPlugin() scanTransferRefreshPlugin {
 	}
 
 	return nil
+}
+
+func scanTransferRefreshErrorResponse(err error) (string, string) {
+	if err == nil {
+		return "SCAN_TRANSFER_REFRESH_FAILED", "扫码载荷刷新失败，请稍后重试"
+	}
+
+	errText := err.Error()
+	if strings.Contains(errText, "refresh_key") || strings.Contains(errText, "刷新链接") {
+		return "SCAN_TRANSFER_INVALID_REFRESH_KEY", "扫码刷新参数无效"
+	}
+	if strings.Contains(errText, "未返回可刷新的扫码转存载荷") {
+		return "SCAN_TRANSFER_PAYLOAD_UNAVAILABLE", "当前资源暂时无法刷新扫码载荷"
+	}
+	return "SCAN_TRANSFER_REFRESH_FAILED", "扫码载荷刷新失败，请稍后重试"
 }

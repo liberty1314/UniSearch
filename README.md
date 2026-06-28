@@ -54,7 +54,7 @@
 
 ### 后端
 
-- Go 1.24 + Gin 框架
+- Go 1.25 + Gin 框架
 - MySQL 8.0 (GORM)
 - Redis 7 缓存
 - JWT 认证 + 刷新令牌
@@ -104,6 +104,19 @@ UNISEARCH_REAL_SEARCH_SMOKE=1 scripts/tests/local-quality.sh
 ```bash
 scripts/tests/release-candidate.sh
 ```
+
+发布前安全门禁必须额外执行并留痕：
+
+```bash
+cd backend && go test ./...
+cd backend && /Users/abner/go/bin/govulncheck ./...
+cd frontend && pnpm lint
+cd frontend && pnpm check
+cd frontend && pnpm test -- --run
+cd frontend && pnpm audit --audit-level high
+```
+
+任一 high/critical 漏洞、`govulncheck` 可达漏洞、pnpm 供应链年龄策略失败或本地测试失败都阻断发布。moderate/low 漏洞不直接阻断，但必须在发布记录中说明影响范围、接受理由和后续处理计划。详细模板见 [`docs/security-release-gate-2026-06-27.md`](docs/security-release-gate-2026-06-27.md)。
 
 也可以按风险单独运行：
 
@@ -385,7 +398,7 @@ REDIS_PASSWORD=${REDIS_PASSWORD}
 
 #### 1. 前置条件
 
-- Go 1.24+
+- Go 1.25+
 - Node.js 18+
 - pnpm
 - MySQL 8.0

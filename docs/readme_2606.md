@@ -1353,3 +1353,76 @@
     - frontend/src/components/__tests__/SearchResults.test.tsx
     - frontend/src/stores/searchStore.ts
     - docs/readme_2606.md
+
+- [2026-06-28 08:52] feat(security): 全面落实系统安全审计与质量优化开发计划
+  - Body: 全面落实安全审计方案的全部 14 个开发任务，重点实现微博插件 Web 路由安全鉴权、生产弱口令消除、密钥强度生产校验、CORS 与请求体大小安全限制、TMDB 密钥掩码化、Refresh Token 存储与防抖机制、路由守卫服务端角色确认以及发布安全门禁，升级前端存在高危风险的依赖版本。
+  - Footer: 破坏性变更: 生产模式下不再隐式支持开发环境的弱口令与临时随机密钥，缺少或不合规的密钥、初始管理员和跨域配置会导致程序启动阻断。Migration: 生产部署时必须显式配置 AUTH_JWT_SECRET、REFRESH_TOKEN_ENCRYPT_KEY、SECRET_MASTER_KEY、INITIAL_ADMIN_USERNAME、INITIAL_ADMIN_PASSWORD 以及 ALLOWED_ORIGINS 环境变量，且密钥需满足强度。
+  - Files:
+    - .env.example
+    - DESIGN.md
+    - Dockerfile
+    - PRODUCT.md
+    - README.md
+    - backend/api/account_auth_flow_test.go
+    - backend/api/admin_routes_test.go
+    - backend/api/error_response.go
+    - backend/api/error_response_test.go
+    - backend/api/handler.go
+    - backend/api/middleware.go
+    - backend/api/middleware_test.go
+    - backend/api/rate_limiter.go
+    - backend/api/router.go
+    - backend/api/router_admin.go
+    - backend/api/router_auth.go
+    - backend/api/scan_transfer_handler.go
+    - backend/api/scan_transfer_handler_test.go
+    - backend/api/search_progressive_handler.go
+    - backend/api/search_request_parser.go
+    - backend/api/search_request_parser_test.go
+    - backend/api/system_settings_handler.go
+    - backend/api/system_settings_handler_test.go
+    - backend/cmd/bootstrap/app.go
+    - backend/cmd/migrate/main.go
+    - backend/config/config.go
+    - backend/config/config_auth.go
+    - backend/config/config_env.go
+    - backend/config/config_test.go
+    - backend/database/seed.go
+    - backend/database/seed_test.go
+    - backend/go.mod
+    - backend/go.sum
+    - backend/model/search_progressive.go
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - backend/service/auth_service.go
+    - backend/service/auth_service_test.go
+    - backend/service/search_executor.go
+    - backend/service/search_executor_test.go
+    - backend/service/system_settings_service.go
+    - docker-compose.yml
+    - docs/readme_2606.md
+    - docs/security-and-quality-audit-2026-06-27.md
+    - docs/security-and-quality-development-plan-2026-06-27.md
+    - docs/security-and-quality-optimization-plan-2026-06-27.md
+    - docs/security-release-gate-2026-06-27.md
+    - frontend/.pnpmfile.cjs
+    - frontend/eslint.config.js
+    - frontend/package.json
+    - frontend/pnpm-lock.yaml
+    - frontend/src/components/PageLoader.tsx
+    - frontend/src/hooks/__tests__/useSystemSettingsController.test.tsx
+    - frontend/src/hooks/useSystemSettingsController.ts
+    - frontend/src/lib/__tests__/api.test.ts
+    - frontend/src/lib/__tests__/authRefreshManager.test.ts
+    - frontend/src/lib/__tests__/error.test.ts
+    - frontend/src/lib/api.ts
+    - frontend/src/lib/error.ts
+    - frontend/src/routes/RouteGuards.tsx
+    - frontend/src/routes/__tests__/RouteGuards.test.tsx
+    - frontend/src/services/__tests__/systemSettingsService.test.ts
+    - frontend/src/services/authService.ts
+    - frontend/src/services/systemSettingsService.ts
+    - frontend/src/types/auth.ts
+    - frontend/src/types/search.ts
+    - nginx.conf
+

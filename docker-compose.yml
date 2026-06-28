@@ -1,3 +1,5 @@
+# 本文件用于本地开发和单机调试。生产部署请使用 docker-compose.prod.example.yml
+#
 services:
   # UniSearch 主应用（单容器：前端 + 后端 + Nginx）
   app:
@@ -11,16 +13,16 @@ services:
     env_file:
       - .env
     environment:
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_USER=root
-      - DB_PASSWORD=root
-      - DB_NAME=unisearch
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=
-      - REDIS_DB=0
-      - REDIS_TTL=3600
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ${MYSQL_APP_USER:-unisearch_dev}
+      DB_PASSWORD: ${MYSQL_APP_PASSWORD:-unisearch_dev_password}
+      DB_NAME: ${MYSQL_DATABASE:-unisearch}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: 0
+      REDIS_TTL: 3600
     volumes:
       - app-cache:/app/cache
     networks:
@@ -45,15 +47,17 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: unisearch
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-unisearch_dev_root_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-unisearch}
+      MYSQL_USER: ${MYSQL_APP_USER:-unisearch_dev}
+      MYSQL_PASSWORD: ${MYSQL_APP_PASSWORD:-unisearch_dev_password}
       TZ: Asia/Shanghai
     volumes:
       - mysql-data:/var/lib/mysql
     networks:
       - unisearch-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$${MYSQL_ROOT_PASSWORD}\""]
       interval: 10s
       timeout: 5s
       retries: 5

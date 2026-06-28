@@ -7,6 +7,7 @@ import (
 
 func registerAuthRoutes(api *gin.RouterGroup, deps RouterDeps, authController *controller.AuthController) {
 	auth := api.Group("/auth")
+	auth.Use(BodySizeLimitMiddleware(authRequestBodyLimitBytes))
 	{
 		auth.POST("/register", registerRateLimitMiddleware(), authController.Register)
 		auth.GET("/check-username", checkUsernameRateLimitMiddleware(), authController.CheckUsername)
@@ -21,6 +22,6 @@ func registerAuthRoutes(api *gin.RouterGroup, deps RouterDeps, authController *c
 		auth.POST("/logout", LogoutHandler)
 	}
 
-	api.POST("/admin/login", AdminLoginHandler)
-	api.POST("/admin/login-remember", AdminLoginWithRememberHandler(deps.RefreshTokenService))
+	api.POST("/admin/login", BodySizeLimitMiddleware(authRequestBodyLimitBytes), AdminLoginHandler)
+	api.POST("/admin/login-remember", BodySizeLimitMiddleware(authRequestBodyLimitBytes), AdminLoginWithRememberHandler(deps.RefreshTokenService))
 }

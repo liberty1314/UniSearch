@@ -1,8 +1,10 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"runtime/debug"
+	"strings"
 	"time"
 )
 
@@ -43,6 +45,10 @@ func (rc *RedisConfig) GetAddress() string {
 
 // Config 应用配置结构
 type Config struct {
+	AppEnv string
+	// CORS 允许来源。生产环境必须显式配置，开发环境使用 localhost 默认值。
+	AllowedOrigins []string
+
 	DefaultChannels    []string
 	DefaultConcurrency int
 	Port               string
@@ -107,6 +113,8 @@ type Config struct {
 	AuthUsernameMaxLength int               // 用户名最大长度
 	AuthPasswordMinLength int               // 密码最小长度
 	AuthPasswordMaxLength int               // 密码最大长度
+	InitialAdminUsername  string            // 首次初始化管理员用户名
+	InitialAdminPassword  string            // 首次初始化管理员密码
 
 	// 密钥管理配置
 	SecretBackend   string // 密钥后端类型（database 或 environment）
@@ -155,8 +163,14 @@ func DefaultEnabledPlugins() []string {
 	return append([]string(nil), defaultEnabledPlugins...)
 }
 
-// 初始化配置
 func Init() {
+	if err := InitWithError(); err != nil {
+		panic(err)
+	}
+}
+
+// InitWithError 初始化配置并返回生产基线校验错误。
+func InitWithError() error {
 	proxyURL := getProxyURL()
 	pluginTimeoutSeconds := getPluginTimeout()
 	asyncResponseTimeoutSeconds := getAsyncResponseTimeout()
@@ -177,6 +191,9 @@ func Init() {
 	}
 
 	AppConfig = &Config{
+		AppEnv:         getAppEnv(),
+		AllowedOrigins: getAllowedOrigins(),
+
 		DefaultChannels:    getDefaultChannels(),
 		DefaultConcurrency: getDefaultConcurrency(),
 		Port:               getPort(),
@@ -241,6 +258,8 @@ func Init() {
 		AuthUsernameMaxLength: getAuthUsernameMaxLength(),
 		AuthPasswordMinLength: getAuthPasswordMinLength(),
 		AuthPasswordMaxLength: getAuthPasswordMaxLength(),
+		InitialAdminUsername:  getInitialAdminUsername(),
+		InitialAdminPassword:  getInitialAdminPassword(),
 
 		// 密钥管理配置
 		SecretBackend:   getSecretBackend(),
@@ -274,8 +293,90 @@ func Init() {
 		Redis: redisConfig,
 	}
 
+	if err := validateProductionSecrets(AppConfig); err != nil {
+		return err
+	}
+	if err := validateProductionCORS(AppConfig); err != nil {
+		return err
+	}
+
 	// 应用GC配置
 	applyGCSettings()
+	return nil
+}
+
+// IsProduction 返回当前配置是否为生产环境。
+func (c *Config) IsProduction() bool {
+	if c == nil {
+		return false
+	}
+	return c.AppEnv == "production"
+}
+
+func validateProductionCORS(cfg *Config) error {
+	if cfg == nil || !cfg.IsProduction() {
+		return nil
+	}
+	if len(cfg.AllowedOrigins) == 0 {
+		return errors.New("ALLOWED_ORIGINS 未配置，生产环境拒绝启动")
+	}
+	for _, origin := range cfg.AllowedOrigins {
+		if strings.TrimSpace(origin) == "*" {
+			return errors.New("ALLOWED_ORIGINS 不能在生产环境使用通配符")
+		}
+	}
+	return nil
+}
+
+func validateProductionSecrets(cfg *Config) error {
+	if cfg == nil || !cfg.IsProduction() {
+		return nil
+	}
+
+	requiredSecrets := map[string]string{
+		"AUTH_JWT_SECRET":           cfg.AuthJWTSecret,
+		"REFRESH_TOKEN_ENCRYPT_KEY": cfg.RefreshTokenEncryptKey,
+		"SECRET_MASTER_KEY":         cfg.SecretMasterKey,
+	}
+	for name, value := range requiredSecrets {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			return fmt.Errorf("%s 未配置，生产环境拒绝启动", name)
+		}
+		if isPlaceholderSecret(trimmed) {
+			return fmt.Errorf("%s 仍为占位符，生产环境拒绝启动", name)
+		}
+		if len(trimmed) < 32 {
+			return fmt.Errorf("%s 长度不足 32 字符，生产环境拒绝启动", name)
+		}
+	}
+	if hasDuplicateSecretValues(requiredSecrets) {
+		return errors.New("生产环境关键密钥不能使用相同值")
+	}
+	return nil
+}
+
+func isPlaceholderSecret(value string) bool {
+	upper := strings.ToUpper(strings.TrimSpace(value))
+	return strings.Contains(upper, "PLEASE_") ||
+		strings.Contains(upper, "CHANGE_ME") ||
+		strings.Contains(upper, "GENERATE_A") ||
+		strings.Contains(upper, "PLACEHOLDER")
+}
+
+func hasDuplicateSecretValues(secrets map[string]string) bool {
+	seen := make(map[string]string, len(secrets))
+	for name, value := range secrets {
+		normalized := strings.TrimSpace(value)
+		if normalized == "" {
+			continue
+		}
+		if previousName, exists := seen[normalized]; exists && previousName != name {
+			return true
+		}
+		seen[normalized] = name
+	}
+	return false
 }
 
 // 应用GC设置

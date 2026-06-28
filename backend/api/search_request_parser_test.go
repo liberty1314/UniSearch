@@ -141,6 +141,57 @@ func TestParseSearchRequestRejectsInvalidFilter(t *testing.T) {
 	}
 }
 
+func TestParseSearchRequestRejectsLongKeyword(t *testing.T) {
+	setupSearchRequestParserTest(t)
+
+	longKeyword := strings.Repeat("片", maxSearchKeywordLength+1)
+	values := url.Values{"kw": {longKeyword}}
+	_, err := parseSearchRequest(newSearchRequestParserContext(http.MethodGet, "/api/search?"+values.Encode(), ""))
+	if err == nil || !strings.Contains(err.Error(), "kw长度超过限制") {
+		t.Fatalf("期望关键词长度错误，实际为 %v", err)
+	}
+}
+
+func TestParseSearchRequestRejectsTooManyPlugins(t *testing.T) {
+	setupSearchRequestParserTest(t)
+
+	plugins := make([]string, 0, maxSearchPlugins+1)
+	for i := 0; i < maxSearchPlugins+1; i++ {
+		plugins = append(plugins, "plugin")
+	}
+	values := url.Values{
+		"kw":      {"仙逆"},
+		"src":     {"plugin"},
+		"plugins": {strings.Join(plugins, ",")},
+	}
+	_, err := parseSearchRequest(newSearchRequestParserContext(http.MethodGet, "/api/search?"+values.Encode(), ""))
+	if err == nil || !strings.Contains(err.Error(), "plugins数量超过限制") {
+		t.Fatalf("期望插件数量错误，实际为 %v", err)
+	}
+}
+
+func TestParseSearchRequestRejectsOversizedExt(t *testing.T) {
+	setupSearchRequestParserTest(t)
+
+	values := url.Values{
+		"kw":  {"仙逆"},
+		"ext": {strings.Repeat("x", maxSearchExtBytes+1)},
+	}
+	_, err := parseSearchRequest(newSearchRequestParserContext(http.MethodGet, "/api/search?"+values.Encode(), ""))
+	if err == nil || !strings.Contains(err.Error(), "ext参数过大") {
+		t.Fatalf("期望 ext 过大错误，实际为 %v", err)
+	}
+}
+
+func TestParseSearchRequestRejectsUnknownExtKey(t *testing.T) {
+	setupSearchRequestParserTest(t)
+
+	_, err := parseSearchRequest(newSearchRequestParserContext(http.MethodPost, "/api/search", `{"kw":"仙逆","ext":{"unknown":"value"}}`))
+	if err == nil || !strings.Contains(err.Error(), "ext包含未知字段") {
+		t.Fatalf("期望 ext 未知字段错误，实际为 %v", err)
+	}
+}
+
 func setupSearchRequestParserTest(t *testing.T) {
 	t.Helper()
 

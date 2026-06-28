@@ -1,6 +1,10 @@
 package api
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+	"unisearch/config"
+	"unisearch/plugin"
+)
 
 func registerAdminRoutes(api *gin.RouterGroup, deps RouterDeps) {
 	admin := api.Group("/admin")
@@ -33,6 +37,7 @@ func registerAdminRoutes(api *gin.RouterGroup, deps RouterDeps) {
 		admin.POST("/plugins/:pluginName/test", TestPluginHandler(deps.SearchService, deps.PluginHealthService))
 		admin.POST("/plugins/:pluginName/status", SetPluginStatusHandler(deps.SearchService, deps.PluginStateService))
 		admin.POST("/plugins/batch-status", BatchSetPluginStatusHandler(deps.SearchService, deps.PluginStateService))
+		registerProtectedPluginWebRoutes(admin, deps)
 
 		admin.GET("/system-settings", GetSystemSettingsHandler)
 		admin.PUT("/system-settings", UpdateSystemSettingsHandler)
@@ -56,5 +61,19 @@ func registerAdminRoutes(api *gin.RouterGroup, deps RouterDeps) {
 			channels.DELETE("/:id", DeleteTGChannelHandler)
 			channels.POST("/:name/test", TestTGChannelHandler)
 		}
+	}
+}
+
+func registerProtectedPluginWebRoutes(admin *gin.RouterGroup, deps RouterDeps) {
+	if config.AppConfig == nil || !config.AppConfig.AsyncPluginEnabled || deps.SearchService == nil || deps.SearchService.GetPluginManager() == nil {
+		return
+	}
+
+	for _, p := range deps.SearchService.GetPluginManager().GetPlugins() {
+		webPlugin, ok := p.(plugin.PluginWithWebHandler)
+		if !ok {
+			continue
+		}
+		webPlugin.RegisterWebRoutes(admin.Group("/plugins/" + p.Name() + "/web"))
 	}
 }

@@ -145,6 +145,7 @@ type TMDBAdminSettings struct {
 	UpdatedAt       *time.Time
 	Source          string
 	ReadAccessToken string
+	TokenPreview    string
 }
 
 // NewSystemSettingsService 创建系统设置服务实例
@@ -472,7 +473,7 @@ func (s *SystemSettingsService) GetTMDBSettings() (*TMDBAdminSettings, error) {
 			settings.Configured = true
 			settings.Source = "secret_manager"
 			settings.UpdatedAt = &secret.UpdatedAt
-			settings.ReadAccessToken = secretValue
+			settings.TokenPreview = maskSecretPreview(secretValue)
 			return settings, nil
 		}
 
@@ -480,7 +481,7 @@ func (s *SystemSettingsService) GetTMDBSettings() (*TMDBAdminSettings, error) {
 		settings.Configured = true
 		settings.Source = "env_fallback"
 		settings.UpdatedAt = &now
-		settings.ReadAccessToken = secretValue
+		settings.TokenPreview = maskSecretPreview(secretValue)
 		return settings, nil
 	}
 
@@ -489,10 +490,21 @@ func (s *SystemSettingsService) GetTMDBSettings() (*TMDBAdminSettings, error) {
 		settings.Configured = true
 		settings.Source = "env_fallback"
 		settings.UpdatedAt = &now
-		settings.ReadAccessToken = strings.TrimSpace(config.AppConfig.TMDBReadAccessToken)
+		settings.TokenPreview = maskSecretPreview(config.AppConfig.TMDBReadAccessToken)
 	}
 
 	return settings, nil
+}
+
+func maskSecretPreview(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ""
+	}
+	if len(trimmed) <= 8 {
+		return strings.Repeat("*", len(trimmed))
+	}
+	return trimmed[:4] + strings.Repeat("*", 8) + trimmed[len(trimmed)-4:]
 }
 
 // UpdateTMDBReadAccessToken 更新 TMDB 访问令牌

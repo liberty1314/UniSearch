@@ -1,7 +1,7 @@
 # ============================================
 # 阶段 1: 构建后端 (Go)
 # ============================================
-FROM golang:1.24-alpine AS backend-builder
+FROM golang:1.25-alpine AS backend-builder
 
 RUN apk add --no-cache git ca-certificates tzdata
 

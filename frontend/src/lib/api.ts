@@ -13,6 +13,8 @@ import { refreshAuthTokenSingleFlight } from '@/lib/authRefreshManager';
 
 type ApiErrorResponse = ApiResponse & {
   error?: string;
+  error_code?: string;
+  request_id?: string;
 };
 
 export type ApiRequestConfig = AxiosRequestConfig & {
@@ -199,6 +201,32 @@ class ApiClient {
     return '';
   }
 
+  private getErrorCodeMessage(errorCode?: string): string {
+    switch (errorCode) {
+      case 'SEARCH_INVALID_REQUEST':
+        return '搜索请求参数无效';
+      case 'SEARCH_REQUEST_BODY_TOO_LARGE':
+        return '请求体过大';
+      case 'SEARCH_FAILED':
+      case 'SEARCH_SERVICE_NOT_INITIALIZED':
+      case 'SEARCH_PROGRESSIVE_FAILED':
+        return '搜索服务暂时不可用，请稍后重试';
+      case 'SCAN_TRANSFER_INVALID_REQUEST':
+      case 'SCAN_TRANSFER_INVALID_REFRESH_KEY':
+        return '请求参数无效';
+      case 'SCAN_TRANSFER_PAYLOAD_UNAVAILABLE':
+        return '当前资源暂时无法刷新扫码载荷';
+      case 'SCAN_TRANSFER_PLUGIN_UNAVAILABLE':
+        return '扫码刷新服务暂时不可用';
+      case 'SCAN_TRANSFER_REQUEST_CANCELED':
+        return '请求已取消';
+      case 'SCAN_TRANSFER_REFRESH_FAILED':
+        return '扫码载荷刷新失败，请稍后重试';
+      default:
+        return '';
+    }
+  }
+
   /**
    * 统一错误处理
    */
@@ -206,6 +234,11 @@ class ApiClient {
     if (error.response) {
       // 服务器响应错误
       const { status, data } = error.response;
+
+      const errorCodeMessage = this.getErrorCodeMessage(data?.error_code);
+      if (errorCodeMessage) {
+        return errorCodeMessage;
+      }
 
       // 优先使用后端返回的错误消息
       if (typeof data?.message === 'string' && data.message.trim()) {

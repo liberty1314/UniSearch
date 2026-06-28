@@ -339,9 +339,8 @@ func (s *AuthService) ValidateToken(tokenString string) (*util.JWTClaims, error)
 	return claims, nil
 }
 
-// CreateDefaultAdmin 创建默认管理员账户
-// 检查是否存在 role='admin' 的用户，如果不存在则创建默认管理员
-// 默认管理员：username='admin', password='admin'
+// CreateDefaultAdmin 创建首次管理员账户。
+// 生产环境必须显式配置初始管理员凭据；开发环境允许本地默认值但不输出明文密码。
 // 验证需求：2.3, 2.4, 2.5
 func (s *AuthService) CreateDefaultAdmin() error {
 	// 检查是否存在管理员账户
@@ -356,19 +355,20 @@ func (s *AuthService) CreateDefaultAdmin() error {
 		return nil
 	}
 
-	// 创建默认管理员
-	defaultUsername := "admin"
-	defaultPassword := "admin"
+	credentials, err := config.ResolveInitialAdminCredentials()
+	if err != nil {
+		return fmt.Errorf("初始管理员配置无效: %w", err)
+	}
 
 	// 使用 bcrypt 加密密码（cost=10）
-	passwordHash, err := util.HashPassword(defaultPassword)
+	passwordHash, err := util.HashPassword(credentials.Password)
 	if err != nil {
 		return fmt.Errorf("密码加密失败: %w", err)
 	}
 
 	// 创建管理员用户对象
 	admin := &model.User{
-		Username:     defaultUsername,
+		Username:     credentials.Username,
 		PasswordHash: passwordHash,
 		Role:         "admin",
 	}
@@ -380,9 +380,10 @@ func (s *AuthService) CreateDefaultAdmin() error {
 
 	// 在控制台输出提示信息
 	log.Printf("✓ 默认管理员账户已创建")
-	log.Printf("  用户名: %s", defaultUsername)
-	log.Printf("  密码: %s", defaultPassword)
-	log.Printf("  ⚠️  请尽快修改默认密码！")
+	log.Printf("  用户名: %s", credentials.Username)
+	if credentials.UsingDevelopmentDefault {
+		log.Printf("  提示: 当前使用开发环境默认管理员，请勿用于生产环境")
+	}
 
 	return nil
 }

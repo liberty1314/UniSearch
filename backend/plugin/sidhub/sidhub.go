@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -247,7 +248,11 @@ func (p *SidHubAsyncPlugin) doSearch(client *http.Client, keyword string, ext ma
 	}
 
 	runtimeConfig := resolveSidHubRuntimeConfig(ext)
-	cacheKey := fmt.Sprintf("%s:%d:%s", strings.ToLower(trimmedKeyword), runtimeConfig.PreResolvedLinkStartPerType, strings.Join(resolveBaseURLs(ext), ","))
+	baseURLs, err := resolveBaseURLs(ext)
+	if err != nil {
+		return nil, err
+	}
+	cacheKey := fmt.Sprintf("%s:%d:%s", strings.ToLower(trimmedKeyword), runtimeConfig.PreResolvedLinkStartPerType, strings.Join(baseURLs, ","))
 	if cached, ok := searchCache.Load(cacheKey); ok {
 		entry, valid := cached.(cachedSearchResult)
 		if valid && time.Now().Before(entry.expiresAt) {
@@ -257,7 +262,7 @@ func (p *SidHubAsyncPlugin) doSearch(client *http.Client, keyword string, ext ma
 	}
 
 	var lastErr error
-	for _, baseURL := range resolveBaseURLs(ext) {
+	for _, baseURL := range baseURLs {
 		results, err := p.searchBaseURL(context.Background(), baseURL, trimmedKeyword, runtimeConfig)
 		if err != nil {
 			lastErr = err
@@ -1605,13 +1610,58 @@ func buildSearchURL(baseURL string, keyword string) string {
 	return fmt.Sprintf("%s/s/%s/", trimmedBase, url.PathEscape(strings.TrimSpace(keyword)))
 }
 
-func resolveBaseURLs(ext map[string]interface{}) []string {
+func resolveBaseURLs(ext map[string]interface{}) ([]string, error) {
 	if ext != nil {
 		if customBaseURL, ok := ext["sidhub_base_url"].(string); ok && strings.TrimSpace(customBaseURL) != "" {
-			return []string{strings.TrimRight(strings.TrimSpace(customBaseURL), "/")}
+			normalized, err := normalizeSeedHubBaseURL(customBaseURL)
+			if err != nil {
+				return nil, err
+			}
+			return []string{normalized}, nil
 		}
 	}
-	return []string{primaryBaseURL, fallbackBaseURL}
+	return []string{primaryBaseURL, fallbackBaseURL}, nil
+}
+
+func normalizeSeedHubBaseURL(rawURL string) (string, error) {
+	trimmed := strings.TrimRight(strings.TrimSpace(rawURL), "/")
+	parsed, err := url.Parse(trimmed)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return "", fmt.Errorf("无效的 SeedHub base URL")
+	}
+	if parsed.Scheme != "https" {
+		return "", fmt.Errorf("SeedHub base URL 必须使用 HTTPS")
+	}
+	if parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", fmt.Errorf("SeedHub base URL 不能包含认证信息、查询参数或片段")
+	}
+
+	host := strings.TrimSpace(parsed.Hostname())
+	if host == "" {
+		return "", fmt.Errorf("SeedHub base URL 缺少主机名")
+	}
+	normalizedHost := strings.ToLower(host)
+	if normalizedHost == "localhost" || strings.HasSuffix(normalizedHost, ".localhost") {
+		return "", fmt.Errorf("SeedHub base URL 不能指向 localhost")
+	}
+	if ip := net.ParseIP(host); ip != nil && isDisallowedSeedHubIP(ip) {
+		return "", fmt.Errorf("SeedHub base URL 不能指向内网地址")
+	}
+
+	return trimmed, nil
+}
+
+func isDisallowedSeedHubIP(ip net.IP) bool {
+	if ip == nil {
+		return true
+	}
+	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+		return true
+	}
+	if ip.Equal(net.ParseIP("169.254.169.254")) {
+		return true
+	}
+	return false
 }
 
 func extractMovieID(href string) string {

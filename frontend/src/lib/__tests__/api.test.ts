@@ -39,4 +39,19 @@ describe('apiClient handleError', () => {
 
     expect(message).toBe('数据库写入失败');
   });
+
+  it('maps stable backend error_code to predictable user message', () => {
+    const message = callHandleError({
+      response: {
+        status: 500,
+        data: {
+          code: 500,
+          message: '内部抓取 https://private.example.test 失败',
+          error_code: 'SEARCH_FAILED',
+        },
+      } as unknown as AxiosError<ApiResponse>['response'],
+    });
+
+    expect(message).toBe('搜索服务暂时不可用，请稍后重试');
+  });
 });

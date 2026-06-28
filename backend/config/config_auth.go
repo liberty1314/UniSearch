@@ -1,11 +1,16 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // 本文件集中认证、密钥管理、API Key 与刷新令牌相关的环境变量读取函数。
@@ -58,6 +63,139 @@ func getAuthPasswordMaxLength() int {
 	return length
 }
 
+func getAppEnv() string {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
+	if value == "" {
+		return "development"
+	}
+	switch value {
+	case "development", "test", "production":
+		return value
+	default:
+		println("警告: APP_ENV 值无效，使用 development")
+		return "development"
+	}
+}
+
+func getInitialAdminUsername() string {
+	return strings.TrimSpace(os.Getenv("INITIAL_ADMIN_USERNAME"))
+}
+
+func getInitialAdminPassword() string {
+	return os.Getenv("INITIAL_ADMIN_PASSWORD")
+}
+
+type InitialAdminCredentials struct {
+	Username                string
+	Password                string
+	UsingDevelopmentDefault bool
+}
+
+// ResolveInitialAdminCredentials 返回首次初始化管理员凭据。
+// 生产环境必须显式配置强密码；开发环境允许使用本地默认值但不会在日志中输出明文密码。
+func ResolveInitialAdminCredentials() (InitialAdminCredentials, error) {
+	cfg := AppConfig
+	if cfg == nil {
+		return InitialAdminCredentials{}, errors.New("应用配置未初始化")
+	}
+
+	username := strings.TrimSpace(cfg.InitialAdminUsername)
+	password := cfg.InitialAdminPassword
+	usingDefault := false
+	if username == "" && password == "" && !cfg.IsProduction() {
+		username = "admin"
+		password = "admin"
+		usingDefault = true
+		return InitialAdminCredentials{
+			Username:                username,
+			Password:                password,
+			UsingDevelopmentDefault: true,
+		}, nil
+	}
+
+	if username == "" {
+		return InitialAdminCredentials{}, errors.New("INITIAL_ADMIN_USERNAME 未配置")
+	}
+	if password == "" {
+		return InitialAdminCredentials{}, errors.New("INITIAL_ADMIN_PASSWORD 未配置")
+	}
+	if err := validateInitialAdminUsername(username, cfg); err != nil {
+		return InitialAdminCredentials{}, err
+	}
+	if err := validateInitialAdminPassword(password, cfg); err != nil {
+		return InitialAdminCredentials{}, err
+	}
+
+	return InitialAdminCredentials{
+		Username:                username,
+		Password:                password,
+		UsingDevelopmentDefault: usingDefault,
+	}, nil
+}
+
+func validateInitialAdminUsername(username string, cfg *Config) error {
+	minLength := cfg.AuthUsernameMinLength
+	if minLength == 0 {
+		minLength = 3
+	}
+	maxLength := cfg.AuthUsernameMaxLength
+	if maxLength == 0 {
+		maxLength = 32
+	}
+	if len(username) < minLength || len(username) > maxLength {
+		return fmt.Errorf("INITIAL_ADMIN_USERNAME 长度必须在 %d-%d 字符之间", minLength, maxLength)
+	}
+	for _, char := range username {
+		if !(unicode.IsLetter(char) || unicode.IsDigit(char) || char == '_' || char == '-') {
+			return errors.New("INITIAL_ADMIN_USERNAME 只能包含字母、数字、下划线和连字符")
+		}
+	}
+	return nil
+}
+
+func validateInitialAdminPassword(password string, cfg *Config) error {
+	minLength := cfg.AuthPasswordMinLength
+	if minLength == 0 {
+		minLength = 6
+	}
+	maxLength := cfg.AuthPasswordMaxLength
+	if maxLength == 0 {
+		maxLength = 64
+	}
+	if len(password) < minLength || len(password) > maxLength {
+		return fmt.Errorf("INITIAL_ADMIN_PASSWORD 长度必须在 %d-%d 字符之间", minLength, maxLength)
+	}
+	for _, char := range password {
+		if unicode.IsSpace(char) {
+			return errors.New("INITIAL_ADMIN_PASSWORD 不能包含空白字符")
+		}
+	}
+	if cfg.IsProduction() && !isStrongInitialAdminPassword(password) {
+		return errors.New("INITIAL_ADMIN_PASSWORD 在生产环境必须包含大小写字母、数字和符号，且长度至少 12 位")
+	}
+	return nil
+}
+
+func isStrongInitialAdminPassword(password string) bool {
+	if len(password) < 12 {
+		return false
+	}
+	var hasUpper, hasLower, hasDigit, hasSymbol bool
+	for _, char := range password {
+		switch {
+		case unicode.IsUpper(char):
+			hasUpper = true
+		case unicode.IsLower(char):
+			hasLower = true
+		case unicode.IsDigit(char):
+			hasDigit = true
+		case unicode.IsPunct(char) || unicode.IsSymbol(char):
+			hasSymbol = true
+		}
+	}
+	return hasUpper && hasLower && hasDigit && hasSymbol
+}
+
 // 从环境变量获取认证开关，如果未设置则默认关闭
 func getAuthEnabled() bool {
 	enabled := os.Getenv("AUTH_ENABLED")
@@ -103,14 +241,11 @@ func getAuthTokenExpiry() time.Duration {
 func getAuthJWTSecret() string {
 	secret := os.Getenv("AUTH_JWT_SECRET")
 	if secret == "" {
-		// 生成随机密钥（32字节）
-		import_crypto := "crypto/rand"
-		import_encoding := "encoding/base64"
-		_ = import_crypto
-		_ = import_encoding
-		// 注意：实际使用时应该使用crypto/rand生成随机密钥
-		// 这里为了简化，使用时间戳作为临时密钥
-		secret = "unisearch-default-secret-" + strconv.FormatInt(time.Now().Unix(), 10)
+		if getAppEnv() == "production" {
+			return ""
+		}
+		secret = generateEphemeralSecret("jwt")
+		println("警告: AUTH_JWT_SECRET 环境变量未设置，开发环境使用临时随机密钥")
 	}
 	return secret
 }
@@ -202,10 +337,11 @@ func getRefreshTokenStorePath() string {
 func getRefreshTokenEncryptKey() string {
 	key := os.Getenv("REFRESH_TOKEN_ENCRYPT_KEY")
 	if key == "" {
-		// 生成随机密钥（建议在生产环境中设置固定密钥）
-		key = "unisearch-refresh-token-secret-" + strconv.FormatInt(time.Now().Unix(), 10)
-		println("警告: REFRESH_TOKEN_ENCRYPT_KEY 环境变量未设置，使用临时密钥")
-		println("提示: 在生产环境中请设置固定的 32 字节加密密钥")
+		if getAppEnv() == "production" {
+			return ""
+		}
+		key = generateEphemeralSecret("refresh")
+		println("警告: REFRESH_TOKEN_ENCRYPT_KEY 环境变量未设置，开发环境使用临时随机密钥")
 	}
 	return key
 }
@@ -228,10 +364,19 @@ func getSecretBackend() string {
 func getSecretMasterKey() string {
 	key := os.Getenv("SECRET_MASTER_KEY")
 	if key == "" {
-		// 生成临时密钥（建议在生产环境中设置固定密钥）
-		key = "unisearch-secret-master-key-" + strconv.FormatInt(time.Now().Unix(), 10)
-		println("警告: SECRET_MASTER_KEY 环境变量未设置，使用临时密钥")
-		println("提示: 在生产环境中请设置固定的 32 字节主密钥")
+		if getAppEnv() == "production" {
+			return ""
+		}
+		key = generateEphemeralSecret("master")
+		println("警告: SECRET_MASTER_KEY 环境变量未设置，开发环境使用临时随机密钥")
 	}
 	return key
+}
+
+func generateEphemeralSecret(label string) string {
+	buf := make([]byte, 32)
+	if _, err := rand.Read(buf); err != nil {
+		panic(fmt.Sprintf("生成%s临时密钥失败: %v", label, err))
+	}
+	return base64.StdEncoding.EncodeToString(buf)
 }

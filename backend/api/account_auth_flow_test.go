@@ -706,6 +706,56 @@ func TestRefreshReturnsRateLimitExceededAfterThreshold(t *testing.T) {
 	}
 }
 
+func TestRefreshRotatesRefreshTokenAndRevokesOldToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := newAccountFlowTestDB(t)
+	refreshTokenService := newAccountFlowRefreshTokenService(t, db)
+	router := newAccountFlowRouterWithRefreshService(t, db, refreshTokenService)
+
+	config.AppConfig.RefreshTokenEnabled = true
+	config.AppConfig.RefreshTokenTTL = time.Hour
+
+	token, err := refreshTokenService.CreateToken("neo", false, "device-a", time.Hour)
+	if err != nil {
+		t.Fatalf("create refresh token: %v", err)
+	}
+
+	encryptedToken, err := refreshTokenService.EncryptForClient(token.Token)
+	if err != nil {
+		t.Fatalf("encrypt refresh token: %v", err)
+	}
+
+	body := bytes.NewBufferString(fmt.Sprintf(`{"refresh_token":"%s","device_fingerprint":"device-a"}`, encryptedToken))
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", body)
+	req.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	var response RefreshTokenResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response.RefreshToken == "" || response.AccessToken == "" {
+		t.Fatalf("expected access token and rotated refresh token, got %#v", response)
+	}
+	if _, err := refreshTokenService.ValidateToken(token.Token, "device-a"); err == nil {
+		t.Fatal("expected old refresh token to be revoked after rotation")
+	}
+
+	decryptedNewToken, err := refreshTokenService.DecryptFromClient(response.RefreshToken)
+	if err != nil {
+		t.Fatalf("decrypt rotated token: %v", err)
+	}
+	if _, err := refreshTokenService.ValidateToken(decryptedNewToken, "device-a"); err != nil {
+		t.Fatalf("expected rotated refresh token to be valid: %v", err)
+	}
+}
+
 func TestRevokeRefreshTokenMarksTokenRevoked(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := newAccountFlowTestDB(t)

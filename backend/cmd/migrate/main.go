@@ -21,7 +21,9 @@ func main() {
 		log.Println("成功加载 .env 文件")
 	}
 
-	config.Init()
+	if err := config.InitWithError(); err != nil {
+		log.Fatalf("配置初始化失败: %v", err)
+	}
 
 	log.Println("正在连接数据库...")
 	if err := database.InitDB(); err != nil {

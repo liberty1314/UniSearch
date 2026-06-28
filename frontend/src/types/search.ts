@@ -129,6 +129,8 @@ export interface SearchProgressiveEvent {
   keyword?: string;
   source?: string;
   message?: string;
+  error_code?: string;
+  request_id?: string;
   resources?: ResourceObject[];
   warnings?: SearchSourceWarning[];
   completed_sources?: number;

@@ -12,6 +12,22 @@ import (
 	jsonutil "unisearch/util/json"
 )
 
+const (
+	maxSearchKeywordLength = 128
+	maxSearchPlugins       = 32
+	maxSearchChannels      = 128
+	maxSearchCloudTypes    = 32
+	maxSearchExtBytes      = 8192
+	maxSearchExtKeys       = 16
+)
+
+var allowedSearchExtKeys = map[string]struct{}{
+	"sidhub_base_url": {},
+	"title_en":        {},
+	"search":          {},
+	"debug":           {},
+}
+
 func parseSearchRequest(c *gin.Context) (model.SearchRequest, error) {
 	var req model.SearchRequest
 	var err error
@@ -25,7 +41,11 @@ func parseSearchRequest(c *gin.Context) (model.SearchRequest, error) {
 		return model.SearchRequest{}, err
 	}
 
-	return normalizeHTTPSearchRequest(req), nil
+	normalized := normalizeHTTPSearchRequest(req)
+	if err := validateHTTPSearchRequest(normalized); err != nil {
+		return model.SearchRequest{}, err
+	}
+	return normalized, nil
 }
 
 func parseGetSearchRequest(c *gin.Context) (model.SearchRequest, error) {
@@ -56,6 +76,9 @@ func parseGetSearchRequest(c *gin.Context) (model.SearchRequest, error) {
 func parsePostSearchRequest(c *gin.Context) (model.SearchRequest, error) {
 	data, err := c.GetRawData()
 	if err != nil {
+		if isRequestBodyTooLargeError(err) {
+			return model.SearchRequest{}, errRequestBodyTooLarge
+		}
 		return model.SearchRequest{}, searchRequestParseError("读取请求数据失败: " + err.Error())
 	}
 
@@ -115,6 +138,9 @@ func parseExtParam(value string) (map[string]interface{}, error) {
 	if strings.TrimSpace(value) == "" {
 		return make(map[string]interface{}), nil
 	}
+	if len(value) > maxSearchExtBytes {
+		return nil, searchRequestParseError("ext参数过大")
+	}
 
 	ext := make(map[string]interface{})
 	if strings.TrimSpace(value) == "{}" {
@@ -128,6 +154,30 @@ func parseExtParam(value string) (map[string]interface{}, error) {
 		return make(map[string]interface{}), nil
 	}
 	return ext, nil
+}
+
+func validateHTTPSearchRequest(req model.SearchRequest) error {
+	if len([]rune(strings.TrimSpace(req.Keyword))) > maxSearchKeywordLength {
+		return searchRequestParseError("kw长度超过限制")
+	}
+	if len(req.Plugins) > maxSearchPlugins {
+		return searchRequestParseError("plugins数量超过限制")
+	}
+	if len(req.Channels) > maxSearchChannels {
+		return searchRequestParseError("channels数量超过限制")
+	}
+	if len(req.CloudTypes) > maxSearchCloudTypes {
+		return searchRequestParseError("cloud_types数量超过限制")
+	}
+	if len(req.Ext) > maxSearchExtKeys {
+		return searchRequestParseError("ext键数量超过限制")
+	}
+	for key := range req.Ext {
+		if _, ok := allowedSearchExtKeys[key]; !ok {
+			return searchRequestParseError("ext包含未知字段: " + key)
+		}
+	}
+	return nil
 }
 
 func parseFilterParam(value string) (*model.FilterConfig, error) {

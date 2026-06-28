@@ -1,7 +1,9 @@
 package api
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -11,6 +13,47 @@ import (
 	"unisearch/util"
 	"unisearch/util/logger"
 )
+
+const (
+	authRequestBodyLimitBytes   int64 = 16 * 1024
+	searchRequestBodyLimitBytes int64 = 128 * 1024
+)
+
+var errRequestBodyTooLarge = errors.New("请求体过大")
+
+// BodySizeLimitMiddleware 为高风险入口设置请求体读取上限。
+func BodySizeLimitMiddleware(limitBytes int64) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if limitBytes <= 0 || c.Request == nil || c.Request.Body == nil {
+			c.Next()
+			return
+		}
+
+		if c.Request.ContentLength > limitBytes {
+			abortRequestBodyTooLarge(c)
+			return
+		}
+
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, limitBytes)
+		c.Next()
+	}
+}
+
+func abortRequestBodyTooLarge(c *gin.Context) {
+	writeAPIError(c, http.StatusRequestEntityTooLarge, "REQUEST_BODY_TOO_LARGE", "请求体过大", nil)
+	c.Abort()
+}
+
+func isRequestBodyTooLargeError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, errRequestBodyTooLarge) {
+		return true
+	}
+	var maxBytesErr *http.MaxBytesError
+	return errors.As(err, &maxBytesErr)
+}
 
 func recordAuthenticatedRequestActivity(c *gin.Context) {
 	if authService == nil {
@@ -51,9 +94,12 @@ func recordAuthenticatedRequestActivity(c *gin.Context) {
 // CORSMiddleware 跨域中间件
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		if origin := c.GetHeader("Origin"); isCORSOriginAllowed(origin) {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Add("Vary", "Origin")
+		}
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
@@ -62,6 +108,18 @@ func CORSMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+func isCORSOriginAllowed(origin string) bool {
+	if strings.TrimSpace(origin) == "" || config.AppConfig == nil {
+		return false
+	}
+	for _, allowedOrigin := range config.AppConfig.AllowedOrigins {
+		if allowedOrigin == "*" || allowedOrigin == origin {
+			return true
+		}
+	}
+	return false
 }
 
 // LoggerMiddleware 日志中间件

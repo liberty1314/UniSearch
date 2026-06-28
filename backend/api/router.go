@@ -3,8 +3,6 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	"unisearch/api/controller"
-	"unisearch/config"
-	"unisearch/plugin"
 	"unisearch/util"
 )
 
@@ -38,7 +36,6 @@ func SetupRouter(deps RouterDeps) *gin.Engine {
 	registerAnnouncementRoutes(apiGroup, deps)
 	registerAdminRoutes(apiGroup, deps)
 	registerHealthRoutes(apiGroup, deps)
-	registerPluginWebRoutes(r, deps)
 	if deps.SearchService != nil {
 		deps.SearchService.SetPluginHealthService(deps.PluginHealthService)
 	}
@@ -51,10 +48,10 @@ func registerPublicRoutes(api *gin.RouterGroup, deps RouterDeps) {
 	api.GET("/hot", GetHotRankingHandler(deps.HotRankingService))
 	api.GET("/system-settings/announcement-enabled", GetAnnouncementFeatureEnabledHandler(deps.SystemSettingsService))
 	api.POST("/system-settings/announcement-enabled", JWTMiddleware(), AdminMiddleware(), SetAnnouncementFeatureEnabledHandler(deps.SystemSettingsService))
-	api.POST("/search", SearchJWTMiddleware(), SearchHandler)
+	api.POST("/search", BodySizeLimitMiddleware(searchRequestBodyLimitBytes), SearchJWTMiddleware(), SearchHandler)
 	api.GET("/search", SearchJWTMiddleware(), SearchHandler)
-	api.POST("/search/progressive", SearchJWTMiddleware(), SearchProgressiveHandler(deps.SearchService))
-	api.POST("/resources/scan-transfer/refresh", SearchJWTMiddleware(), RefreshScanTransferHandler)
+	api.POST("/search/progressive", BodySizeLimitMiddleware(searchRequestBodyLimitBytes), SearchJWTMiddleware(), SearchProgressiveHandler(deps.SearchService))
+	api.POST("/resources/scan-transfer/refresh", BodySizeLimitMiddleware(authRequestBodyLimitBytes), SearchJWTMiddleware(), RefreshScanTransferHandler)
 }
 
 func registerUserRoutes(api *gin.RouterGroup, deps RouterDeps, authController *controller.AuthController) {
@@ -63,18 +60,5 @@ func registerUserRoutes(api *gin.RouterGroup, deps RouterDeps, authController *c
 	{
 		user.GET("/me", authController.GetCurrentUser)
 		user.POST("/change-password", ChangePasswordHandler(deps.UserService))
-	}
-}
-
-func registerPluginWebRoutes(r *gin.Engine, deps RouterDeps) {
-	if !config.AppConfig.AsyncPluginEnabled || deps.SearchService == nil || deps.SearchService.GetPluginManager() == nil {
-		return
-	}
-
-	enabledPlugins := deps.SearchService.GetPluginManager().GetPlugins()
-	for _, p := range enabledPlugins {
-		if webPlugin, ok := p.(plugin.PluginWithWebHandler); ok {
-			webPlugin.RegisterWebRoutes(r.Group(""))
-		}
 	}
 }

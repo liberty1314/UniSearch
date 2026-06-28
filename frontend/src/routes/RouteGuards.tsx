@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { buildAdminUrl } from '@/lib/adminRoute';
+import { AuthService } from '@/services/authService';
 
 interface GuardProps {
   children: React.ReactNode;
@@ -15,10 +16,56 @@ interface RouteGuardState {
 }
 
 export const AdminRoute: React.FC<GuardProps> = ({ children }) => {
-  const { isAdmin } = useAuthStore();
+  const { token, isAdmin, logout } = useAuthStore();
   const location = useLocation();
+  const [isVerifiedAdmin, setIsVerifiedAdmin] = useState(false);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(() => Boolean(token && isAdmin));
 
-  if (!isAdmin) {
+  useEffect(() => {
+    let active = true;
+
+    if (!token || !isAdmin) {
+      setIsVerifiedAdmin(false);
+      setIsCheckingAdmin(false);
+      return;
+    }
+
+    setIsCheckingAdmin(true);
+    AuthService.getCurrentUser()
+      .then((user) => {
+        if (!active) return;
+        if (user.role === 'admin' && user.is_enabled) {
+          setIsVerifiedAdmin(true);
+          return;
+        }
+        logout();
+        setIsVerifiedAdmin(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        logout();
+        setIsVerifiedAdmin(false);
+      })
+      .finally(() => {
+        if (active) {
+          setIsCheckingAdmin(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isAdmin, logout, token]);
+
+  if (!token || !isAdmin) {
+    return <Navigate to="/admin/login" replace state={{ from: location }} />;
+  }
+
+  if (isCheckingAdmin) {
+    return <div role="status" aria-label="正在确认管理员权限" />;
+  }
+
+  if (!isVerifiedAdmin) {
     return <Navigate to="/admin/login" replace state={{ from: location }} />;
   }
 

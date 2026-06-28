@@ -76,47 +76,56 @@ func buildRateLimitKey(c *gin.Context, parts ...string) string {
 	return strings.Join(keyParts, "|")
 }
 
-func readRequestBody(c *gin.Context) []byte {
+func readRequestBody(c *gin.Context) ([]byte, error) {
 	if c.Request == nil || c.Request.Body == nil {
-		return nil
+		return nil, nil
 	}
 
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		c.Request.Body = io.NopCloser(bytes.NewBuffer(nil))
-		return nil
+		if isRequestBodyTooLargeError(err) {
+			return nil, errRequestBodyTooLarge
+		}
+		return nil, err
 	}
 
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
-	return body
+	return body, nil
 }
 
-func registerRateLimitKeyResolver(c *gin.Context) string {
-	body := readRequestBody(c)
+func registerRateLimitKeyResolver(c *gin.Context) (string, error) {
+	body, err := readRequestBody(c)
+	if err != nil {
+		return buildRateLimitKey(c), err
+	}
 	if len(body) == 0 {
-		return buildRateLimitKey(c)
+		return buildRateLimitKey(c), nil
 	}
 
 	var req controller.RegisterRequest
 	if err := json.Unmarshal(body, &req); err != nil {
-		return buildRateLimitKey(c)
+		return buildRateLimitKey(c), nil
 	}
 
-	return buildRateLimitKey(c, req.Username)
+	return buildRateLimitKey(c, req.Username), nil
 }
 
-func loginRateLimitKeyResolver(c *gin.Context) string {
-	body := readRequestBody(c)
+func loginRateLimitKeyResolver(c *gin.Context) (string, error) {
+	body, err := readRequestBody(c)
+	if err != nil {
+		return buildRateLimitKey(c), err
+	}
 	if len(body) == 0 {
-		return buildRateLimitKey(c)
+		return buildRateLimitKey(c), nil
 	}
 
 	var req controller.LoginRequest
 	if err := json.Unmarshal(body, &req); err != nil {
-		return buildRateLimitKey(c)
+		return buildRateLimitKey(c), nil
 	}
 
-	return buildRateLimitKey(c, req.Username)
+	return buildRateLimitKey(c, req.Username), nil
 }
 
 func denyAuthEntryRateLimit(c *gin.Context) {
@@ -144,7 +153,12 @@ func denyRefreshRateLimit(c *gin.Context) {
 
 func registerRateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !signupRateLimiter.Allow(registerRateLimitKeyResolver(c)) {
+		key, err := registerRateLimitKeyResolver(c)
+		if isRequestBodyTooLargeError(err) {
+			abortRequestBodyTooLarge(c)
+			return
+		}
+		if !signupRateLimiter.Allow(key) {
 			denyAuthEntryRateLimit(c)
 			return
 		}
@@ -154,7 +168,12 @@ func registerRateLimitMiddleware() gin.HandlerFunc {
 
 func loginRateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !userLoginRateLimiter.Allow(loginRateLimitKeyResolver(c)) {
+		key, err := loginRateLimitKeyResolver(c)
+		if isRequestBodyTooLargeError(err) {
+			abortRequestBodyTooLarge(c)
+			return
+		}
+		if !userLoginRateLimiter.Allow(key) {
 			denyAuthEntryRateLimit(c)
 			return
 		}

@@ -79,7 +79,7 @@ export const useSystemSettingsController = () => {
       });
 
       const tmdbSettings = await SystemSettingsService.getTMDBSettings(token);
-      setTMDBCurrentTokenPreview(tmdbSettings.read_access_token ?? '');
+      setTMDBCurrentTokenPreview(tmdbSettings.token_preview ?? tmdbSettings.read_access_token ?? '');
 
       const latestCacheSettings = await SystemSettingsService.getCacheSettings(token);
       setCacheSettings(normalizeCacheSettings(latestCacheSettings));
@@ -244,7 +244,7 @@ export const useSystemSettingsController = () => {
       const result = await SystemSettingsService.updateTMDBSettings(token, {
         tmdb_read_access_token: tmdbReadAccessToken.trim(),
       });
-      setTMDBCurrentTokenPreview(result.read_access_token ?? '');
+      setTMDBCurrentTokenPreview(result.token_preview ?? result.read_access_token ?? '');
       setTMDBReadAccessToken('');
       toast.success('TMDB 访问令牌已更新');
     } catch (error) {

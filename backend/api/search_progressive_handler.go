@@ -9,22 +9,27 @@ import (
 	"unisearch/model"
 	"unisearch/service"
 	jsonutil "unisearch/util/json"
+	"unisearch/util/logger"
 )
 
 func SearchProgressiveHandler(searchService *service.SearchService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if searchService == nil {
-			c.JSON(http.StatusInternalServerError, model.NewErrorResponse(500, "搜索服务未初始化"))
+			writeAPIError(c, http.StatusInternalServerError, "SEARCH_SERVICE_NOT_INITIALIZED", "搜索服务暂时不可用，请稍后重试", nil)
 			return
 		}
 		if config.AppConfig != nil && !config.AppConfig.ProgressiveSearchEnabled {
-			c.JSON(http.StatusConflict, model.NewErrorResponse(http.StatusConflict, "渐进式搜索已关闭"))
+			writeAPIError(c, http.StatusConflict, "SEARCH_PROGRESSIVE_DISABLED", "渐进式搜索已关闭", nil)
 			return
 		}
 
 		req, err := parseSearchRequest(c)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, model.NewErrorResponse(400, err.Error()))
+			if isRequestBodyTooLargeError(err) {
+				writeRequestBodyTooLargeError(c, "SEARCH_REQUEST_BODY_TOO_LARGE")
+				return
+			}
+			writeAPIError(c, http.StatusBadRequest, "SEARCH_INVALID_REQUEST", "搜索请求参数无效", nil)
 			return
 		}
 
@@ -49,9 +54,17 @@ func SearchProgressiveHandler(searchService *service.SearchService) gin.HandlerF
 		}
 
 		if err := searchService.SearchProgressive(c.Request.Context(), req, emit); err != nil {
+			logger.Error(
+				"search_progressive_failed",
+				logger.String("request_id", requestIDFromContext(c)),
+				logger.String("keyword", req.Keyword),
+				logger.Any("error", err),
+			)
 			_ = emit(model.SearchProgressiveEvent{
-				Type:    "error",
-				Message: "渐进式搜索失败: " + err.Error(),
+				Type:      "error",
+				Message:   "渐进式搜索暂时不可用，请稍后重试",
+				ErrorCode: "SEARCH_PROGRESSIVE_FAILED",
+				RequestID: requestIDFromContext(c),
 			})
 		}
 	}

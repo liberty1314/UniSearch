@@ -1683,11 +1683,18 @@ func TestSidHubHelpersCoverEdgeCases(t *testing.T) {
 		t.Fatal("期望未知媒体类型返回 unknown")
 	}
 
-	baseURLs := resolveBaseURLs(map[string]interface{}{"sidhub_base_url": " https://example.test/ "})
+	baseURLs, err := resolveBaseURLs(map[string]interface{}{"sidhub_base_url": " https://example.test/ "})
+	if err != nil {
+		t.Fatalf("自定义 baseURL 不应失败: %v", err)
+	}
 	if len(baseURLs) != 1 || baseURLs[0] != "https://example.test" {
 		t.Fatalf("期望自定义 baseURL 被清理，实际为 %#v", baseURLs)
 	}
-	if len(resolveBaseURLs(nil)) != 2 {
+	defaultBaseURLs, err := resolveBaseURLs(nil)
+	if err != nil {
+		t.Fatalf("默认 baseURL 不应失败: %v", err)
+	}
+	if len(defaultBaseURLs) != 2 {
 		t.Fatal("期望默认 baseURL 包含主站和备用站")
 	}
 
@@ -1777,5 +1784,21 @@ func TestSidHubHelpersCoverEdgeCases(t *testing.T) {
 	}
 	if isCloudflareChallenge([]byte("普通页面")) {
 		t.Fatal("普通页面不应识别为 Cloudflare 挑战")
+	}
+}
+
+func TestResolveBaseURLsRejectsUnsafeCustomBaseURL(t *testing.T) {
+	cases := []string{
+		"http://example.test",
+		"https://localhost",
+		"https://127.0.0.1",
+		"https://10.0.0.5",
+		"https://169.254.169.254",
+	}
+
+	for _, rawURL := range cases {
+		if _, err := resolveBaseURLs(map[string]interface{}{"sidhub_base_url": rawURL}); err == nil {
+			t.Fatalf("期望拒绝不安全 baseURL %s", rawURL)
+		}
 	}
 }

@@ -296,8 +296,43 @@ func TestUpdateTMDBAdminSettingsHandlerStoresToken(t *testing.T) {
 		t.Fatalf("expected secret_manager source, got %v", response["source"])
 	}
 
-	if response["read_access_token"] != "test-read-token" {
-		t.Fatalf("expected read_access_token to echo stored token, got %v", response["read_access_token"])
+	if response["read_access_token"] == "test-read-token" || response["token_preview"] == "test-read-token" {
+		t.Fatalf("response must not echo full token: %v", response)
+	}
+
+	if response["token_preview"] != "test********oken" {
+		t.Fatalf("expected masked token preview, got %v", response["token_preview"])
+	}
+}
+
+func TestGetTMDBAdminSettingsHandlerMasksStoredToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	settingsService := newSystemSettingsHandlerService(t)
+	SetSystemSettingsService(settingsService)
+	if err := settingsService.UpdateTMDBReadAccessToken("stored-secret-token"); err != nil {
+		t.Fatalf("store token: %v", err)
+	}
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodGet, "/api/admin/system-settings/tmdb", nil)
+
+	GetTMDBAdminSettingsHandler(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response["read_access_token"] == "stored-secret-token" || response["token_preview"] == "stored-secret-token" {
+		t.Fatalf("GET response must not echo full token: %v", response)
+	}
+	if response["token_preview"] != "stor********oken" {
+		t.Fatalf("expected stored token preview, got %v", response["token_preview"])
 	}
 }
 
@@ -334,8 +369,12 @@ func TestUpdateTMDBAdminSettingsHandlerUpdatesExistingTokenWithoutDuplicateKey(t
 		t.Fatalf("decode response: %v", err)
 	}
 
-	if response["read_access_token"] != "second-token" {
-		t.Fatalf("expected updated read_access_token, got %v", response["read_access_token"])
+	if response["read_access_token"] == "second-token" || response["token_preview"] == "second-token" {
+		t.Fatalf("response must not echo full token: %v", response)
+	}
+
+	if response["token_preview"] != "seco********oken" {
+		t.Fatalf("expected updated token preview, got %v", response["token_preview"])
 	}
 }
 

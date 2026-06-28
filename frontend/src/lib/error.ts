@@ -4,12 +4,14 @@ interface ErrorLike {
   data?: {
     error?: unknown;
     code?: unknown;
+    error_code?: unknown;
   };
   response?: {
     status?: unknown;
     data?: {
       error?: unknown;
       code?: unknown;
+      error_code?: unknown;
     };
   };
 }
@@ -67,6 +69,12 @@ export function getErrorDataCode(error: unknown): string | undefined {
   const err = toErrorLike(error);
   if (!err) {
     return undefined;
+  }
+  if (typeof err.data?.error_code === 'string') {
+    return err.data.error_code;
+  }
+  if (typeof err.response?.data?.error_code === 'string') {
+    return err.response.data.error_code;
   }
   if (typeof err.data?.code === 'string') {
     return err.data.code;

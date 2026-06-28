@@ -35,6 +35,29 @@ func parseTrimmedUniqueEnvList(raw string) []string {
 	return items
 }
 
+func getAllowedOrigins() []string {
+	if origins := parseTrimmedUniqueEnvList(os.Getenv("ALLOWED_ORIGINS")); len(origins) > 0 {
+		return origins
+	}
+
+	if getAppEnv() == "production" {
+		return nil
+	}
+
+	return []string{
+		"http://localhost:3000",
+		"http://localhost:5173",
+		"http://localhost:5174",
+		"http://localhost:8080",
+		"http://localhost:8888",
+		"http://127.0.0.1:3000",
+		"http://127.0.0.1:5173",
+		"http://127.0.0.1:5174",
+		"http://127.0.0.1:8080",
+		"http://127.0.0.1:8888",
+	}
+}
+
 // 从环境变量获取默认频道列表，如果未设置则使用默认值
 func getDefaultChannels() []string {
 	channels := parseTrimmedUniqueEnvList(os.Getenv("CHANNELS"))

@@ -23,15 +23,11 @@ const PageLoader: React.FC<PageLoaderProps> = ({ isLoading, onComplete }) => {
 
         const updateProgress = () => {
             const elapsed = Date.now() - startTime;
-            let p = 0;
-
-            if (elapsed < 600) {
-                p = (elapsed / 600) * 65;
-            } else if (elapsed < 900) {
-                p = 65 + ((elapsed - 600) / 300) * 20;
-            } else {
-                p = 85 + Math.min((elapsed - 900) / 500, 1) * 10;
-            }
+            const p = elapsed < 600
+                ? (elapsed / 600) * 65
+                : elapsed < 900
+                    ? 65 + ((elapsed - 600) / 300) * 20
+                    : 85 + Math.min((elapsed - 900) / 500, 1) * 10;
 
             setProgress(Math.min(p, 95));
         };

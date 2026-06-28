@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getErrorDataError, getErrorMessage, getErrorStatus } from '@/lib/error';
+import { getErrorDataCode, getErrorDataError, getErrorMessage, getErrorStatus } from '@/lib/error';
 
 describe('error helpers', () => {
   it('reads status and backend error from normalized api client errors', () => {
@@ -26,5 +26,18 @@ describe('error helpers', () => {
     };
 
     expect(getErrorMessage(error)).toBe('创建用户失败');
+  });
+
+  it('prefers stable backend error_code over legacy string code', () => {
+    const error = {
+      code: 400,
+      message: '请求参数错误',
+      data: {
+        code: 'LEGACY_CODE',
+        error_code: 'SEARCH_INVALID_REQUEST',
+      },
+    };
+
+    expect(getErrorDataCode(error)).toBe('SEARCH_INVALID_REQUEST');
   });
 });

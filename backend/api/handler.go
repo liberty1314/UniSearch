@@ -8,6 +8,7 @@ import (
 	"unisearch/model"
 	"unisearch/service"
 	jsonutil "unisearch/util/json"
+	"unisearch/util/logger"
 )
 
 // 保存搜索服务的实例
@@ -29,7 +30,11 @@ func SetAuthService(service *service.AuthService) {
 func SearchHandler(c *gin.Context) {
 	req, err := parseSearchRequest(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, model.NewErrorResponse(400, err.Error()))
+		if isRequestBodyTooLargeError(err) {
+			writeRequestBodyTooLargeError(c, "SEARCH_REQUEST_BODY_TOO_LARGE")
+			return
+		}
+		writeAPIError(c, http.StatusBadRequest, "SEARCH_INVALID_REQUEST", "搜索请求参数无效", nil)
 		return
 	}
 
@@ -37,7 +42,18 @@ func SearchHandler(c *gin.Context) {
 		return searchService.Search(req.Keyword, req.Channels, req.Concurrency, forceRefresh, req.ResultType, req.SourceType, req.Plugins, req.CloudTypes, req.Ext)
 	})
 	if err != nil {
-		response := model.NewErrorResponse(500, "搜索失败: "+err.Error())
+		logger.Error(
+			"search_failed",
+			logger.String("request_id", requestIDFromContext(c)),
+			logger.String("keyword", req.Keyword),
+			logger.Any("error", err),
+		)
+		response := apiErrorResponse{
+			Code:      http.StatusInternalServerError,
+			Message:   "搜索服务暂时不可用，请稍后重试",
+			ErrorCode: "SEARCH_FAILED",
+			RequestID: requestIDFromContext(c),
+		}
 		jsonData, _ := jsonutil.Marshal(response)
 		c.Data(http.StatusInternalServerError, "application/json", jsonData)
 		return

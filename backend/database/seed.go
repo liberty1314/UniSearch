@@ -2,17 +2,15 @@ package database
 
 import (
 	"log"
+	"unisearch/config"
 	"unisearch/model"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
-// SeedDefaultAdmin 创建默认管理员账户
-// 检查是否存在 role='admin' 的用户
-// 如果不存在，创建默认管理员（username='admin', password='admin'）
-// 使用 bcrypt 加密密码（cost=10）
-// 在控制台输出提示信息
+// SeedDefaultAdmin 创建首次管理员账户。
+// 生产环境必须显式配置初始管理员凭据；开发环境允许本地默认值但不输出明文密码。
 // 验证需求：2.3, 2.4, 2.5
 func SeedDefaultAdmin() error {
 	log.Println("检查默认管理员账户...")
@@ -31,12 +29,20 @@ func SeedDefaultAdmin() error {
 		return nil
 	}
 
-	// 不存在管理员账户，创建默认管理员
-	log.Println("未找到管理员账户，开始创建默认管理员...")
+	credentials, err := config.ResolveInitialAdminCredentials()
+	if err != nil {
+		log.Printf("✗ 初始管理员配置无效: %v", err)
+		return err
+	}
+
+	if credentials.UsingDevelopmentDefault {
+		log.Println("未找到管理员账户，使用开发环境默认管理员配置...")
+	} else {
+		log.Println("未找到管理员账户，使用显式初始管理员配置...")
+	}
 
 	// 使用 bcrypt 加密密码（cost=10）
-	defaultPassword := "admin"
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(defaultPassword), 10)
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(credentials.Password), 10)
 	if err != nil {
 		log.Printf("✗ 密码加密失败: %v", err)
 		return err
@@ -44,7 +50,7 @@ func SeedDefaultAdmin() error {
 
 	// 创建默认管理员用户
 	defaultAdmin := &model.User{
-		Username:     "admin",
+		Username:     credentials.Username,
 		PasswordHash: string(passwordHash),
 		Role:         "admin",
 	}
@@ -63,10 +69,9 @@ func SeedDefaultAdmin() error {
 
 	// 在控制台输出提示信息
 	log.Println("✓ 默认管理员账户创建成功")
-	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	log.Println("  默认管理员账户: admin/admin")
-	log.Println("  ⚠️  请在生产环境中立即修改默认密码！")
-	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	if credentials.UsingDevelopmentDefault {
+		log.Println("提示: 当前使用开发环境默认管理员，请勿用于生产环境")
+	}
 
 	return nil
 }

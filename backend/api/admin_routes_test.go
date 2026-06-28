@@ -10,6 +10,7 @@ import (
 
 	"unisearch/config"
 	"unisearch/model"
+	"unisearch/plugin"
 	"unisearch/service"
 	"unisearch/util"
 
@@ -44,6 +45,63 @@ func TestAdminCustomPluginRoutesAreRemoved(t *testing.T) {
 				t.Fatalf("期望旧自定义插件入口返回 404，实际为 %d: %s", w.Code, w.Body.String())
 			}
 		})
+	}
+}
+
+func TestPluginWebRoutesRequireAdminAuthentication(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	oldConfig := config.AppConfig
+	t.Cleanup(func() {
+		config.AppConfig = oldConfig
+	})
+	config.AppConfig = &config.Config{
+		AsyncPluginEnabled: true,
+		AuthJWTSecret:      "test-plugin-web-secret",
+	}
+
+	manager := plugin.NewPluginManager()
+	manager.RegisterPlugin(&mockAdminWebPlugin{name: "mock-web"})
+	searchSvc := service.NewSearchService(manager, nil, nil)
+
+	router := gin.New()
+	registerAdminRoutes(router.Group("/api"), RouterDeps{SearchService: searchSvc})
+
+	oldReq := httptest.NewRequest(http.MethodGet, "/mock/ping", nil)
+	oldResp := httptest.NewRecorder()
+	router.ServeHTTP(oldResp, oldReq)
+	if oldResp.Code != http.StatusNotFound {
+		t.Fatalf("期望旧插件 Web 裸路径返回 404，实际为 %d: %s", oldResp.Code, oldResp.Body.String())
+	}
+
+	anonymousReq := httptest.NewRequest(http.MethodGet, "/api/admin/plugins/mock-web/web/mock/ping", nil)
+	anonymousResp := httptest.NewRecorder()
+	router.ServeHTTP(anonymousResp, anonymousReq)
+	if anonymousResp.Code != http.StatusUnauthorized {
+		t.Fatalf("期望匿名访问受保护插件 Web 路由返回 401，实际为 %d: %s", anonymousResp.Code, anonymousResp.Body.String())
+	}
+
+	userToken, err := util.GenerateJWTToken(2, "normal-user", "user", config.AppConfig.AuthJWTSecret, time.Hour)
+	if err != nil {
+		t.Fatalf("生成普通用户 token 失败: %v", err)
+	}
+	userReq := httptest.NewRequest(http.MethodGet, "/api/admin/plugins/mock-web/web/mock/ping", nil)
+	userReq.Header.Set("Authorization", "Bearer "+userToken)
+	userResp := httptest.NewRecorder()
+	router.ServeHTTP(userResp, userReq)
+	if userResp.Code != http.StatusForbidden {
+		t.Fatalf("期望普通用户访问受保护插件 Web 路由返回 403，实际为 %d: %s", userResp.Code, userResp.Body.String())
+	}
+
+	adminToken, err := util.GenerateJWTToken(1, "admin-user", "admin", config.AppConfig.AuthJWTSecret, time.Hour)
+	if err != nil {
+		t.Fatalf("生成管理员 token 失败: %v", err)
+	}
+	adminReq := httptest.NewRequest(http.MethodGet, "/api/admin/plugins/mock-web/web/mock/ping", nil)
+	adminReq.Header.Set("Authorization", "Bearer "+adminToken)
+	adminResp := httptest.NewRecorder()
+	router.ServeHTTP(adminResp, adminReq)
+	if adminResp.Code != http.StatusOK {
+		t.Fatalf("期望管理员访问受保护插件 Web 路由返回 200，实际为 %d: %s", adminResp.Code, adminResp.Body.String())
 	}
 }
 
@@ -143,4 +201,39 @@ func createAdminRouteTestUser(t *testing.T, db *gorm.DB, username string, role s
 		t.Fatalf("create route test user: %v", err)
 	}
 	return user
+}
+
+type mockAdminWebPlugin struct {
+	*plugin.BaseAsyncPlugin
+	name string
+}
+
+func (p *mockAdminWebPlugin) Name() string {
+	return p.name
+}
+
+func (p *mockAdminWebPlugin) Priority() int {
+	return 1
+}
+
+func (p *mockAdminWebPlugin) AsyncSearch(_ string, _ func(*http.Client, string, map[string]interface{}) ([]model.SearchResult, error), _ string, _ map[string]interface{}) ([]model.SearchResult, error) {
+	return nil, nil
+}
+
+func (p *mockAdminWebPlugin) SetMainCacheKey(_ string) {}
+
+func (p *mockAdminWebPlugin) SetCurrentKeyword(_ string) {}
+
+func (p *mockAdminWebPlugin) SearchWithResult(_ string, _ map[string]interface{}) (model.PluginSearchResult, error) {
+	return model.PluginSearchResult{Results: []model.SearchResult{}, IsFinal: true}, nil
+}
+
+func (p *mockAdminWebPlugin) SkipServiceFilter() bool {
+	return false
+}
+
+func (p *mockAdminWebPlugin) RegisterWebRoutes(group *gin.RouterGroup) {
+	group.GET("/mock/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
 }
