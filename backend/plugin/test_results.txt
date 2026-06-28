@@ -9,13 +9,11 @@ ok  	unisearch/plugin/daishudj	0.399s
 ?   	unisearch/plugin/djgou	[no test files]
 ok  	unisearch/plugin/duoduo	0.441s
 ok  	unisearch/plugin/dyyj	0.558s
-?   	unisearch/plugin/erxiao	[no test files]
 ?   	unisearch/plugin/feikuai	[no test files]
 ok  	unisearch/plugin/fox4k	0.673s
 ok  	unisearch/plugin/hdr4k	0.812s
 ok  	unisearch/plugin/huban	0.932s
 ?   	unisearch/plugin/hunhepan	[no test files]
-ok  	unisearch/plugin/javdb	1.064s
 ok  	unisearch/plugin/jikepan	1.190s
 ?   	unisearch/plugin/jsnoteclub	[no test files]
 ?   	unisearch/plugin/jutoushe	[no test files]

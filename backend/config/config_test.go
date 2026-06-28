@@ -38,13 +38,13 @@ func TestGetEnabledPluginsUsesDefaultListWhenEnvMissing(t *testing.T) {
 	got := getEnabledPlugins()
 	expected := []string{
 		"labi", "shandian", "muou", "wanou", "hunhepan", "pansearch",
-		"panta", "susu", "thepiratebay", "ouge", "erxiao", "clmao",
-		"u3c3", "javdb", "jutoushe", "nyaa", "xinjuc", "aikanzy",
+		"panta", "susu", "thepiratebay", "ouge", "clmao",
+		"u3c3", "jutoushe", "nyaa", "xinjuc", "aikanzy",
 		"quark4k", "quarksoo", "huban", "panwiki", "panyq", "sidhub",
 	}
 
 	if !reflect.DeepEqual(got, expected) {
-		t.Fatalf("未设置 ENABLED_PLUGINS 时应使用默认 24 插件，实际为 %#v", got)
+		t.Fatalf("未设置 ENABLED_PLUGINS 时应使用默认 22 插件，实际为 %#v", got)
 	}
 }
 

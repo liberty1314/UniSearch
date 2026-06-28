@@ -5,7 +5,7 @@
 - **搜索URL格式**: `http://xsayang.fun:12512/index.php/vod/search/wd/{关键词}.html`
 - **详情URL格式**: `http://xsayang.fun:12512/index.php/vod/detail/id/{资源ID}.html`
 - **数据特点**: 视频点播(VOD)系统网页，提供HTML格式的影视资源数据
-- **特殊说明**: 使用HTML解析替代JSON API，与erxiao/zhizhen/muou插件使用相同的HTML结构
+- **特殊说明**: 使用 HTML 解析替代 JSON API，与 muou 等插件使用相同的 HTML 结构
 
 ## HTML 页面结构
 
@@ -130,4 +130,3 @@
 4. **缓存管理**: 使用sync.Map缓存详情页结果，避免重复请求
 5. **链接验证**: 过滤掉无效链接（如包含`javascript:`、`#`等）
 6. **密码提取**: 从URL中提取`?pwd=`参数作为密码
-

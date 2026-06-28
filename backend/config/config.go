@@ -153,8 +153,8 @@ var AppConfig *Config
 
 var defaultEnabledPlugins = []string{
 	"labi", "shandian", "muou", "wanou", "hunhepan", "pansearch",
-	"panta", "susu", "thepiratebay", "ouge", "erxiao", "clmao",
-	"u3c3", "javdb", "jutoushe", "nyaa", "xinjuc", "aikanzy",
+	"panta", "susu", "thepiratebay", "ouge", "clmao",
+	"u3c3", "jutoushe", "nyaa", "xinjuc", "aikanzy",
 	"quark4k", "quarksoo", "huban", "panwiki", "panyq", "sidhub",
 }
 

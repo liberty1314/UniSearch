@@ -58,7 +58,7 @@ ENV PORT=8888 \
     ASYNC_MAX_BACKGROUND_WORKERS=20 \
     ASYNC_MAX_BACKGROUND_TASKS=100 \
     ASYNC_CACHE_TTL_HOURS=1 \
-    ENABLED_PLUGINS=labi,shandian,muou,wanou,hunhepan,pansearch,panta,susu,thepiratebay,ouge,erxiao,clmao,u3c3,javdb,jutoushe,nyaa,xinjuc,aikanzy,quark4k,quarksoo,huban,panwiki,panyq,sidhub
+    ENABLED_PLUGINS=labi,shandian,muou,wanou,hunhepan,pansearch,panta,susu,thepiratebay,ouge,clmao,u3c3,jutoushe,nyaa,xinjuc,aikanzy,quark4k,quarksoo,huban,panwiki,panyq,sidhub
 
 EXPOSE 80
 

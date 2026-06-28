@@ -166,30 +166,6 @@ const pluginCatalogResponse = {
         source_label: '本地',
       },
     },
-    {
-      name: 'javdb',
-      priority: 2,
-      status: 'error',
-      plugin_type: 'builtin',
-      is_enabled: false,
-      description: '停用且最近测试异常的 E2E 插件目录项',
-      version: '1.0.0',
-      category: 'search',
-      source_type: 'local',
-      capabilities: ['resource.search'],
-      tags: ['异常'],
-      is_local: true,
-      installed: true,
-      health: {
-        is_healthy: false,
-        checked_at: '2026-06-28T12:40:00Z',
-        check_source: 'manual_test',
-        last_error: '[javdb] 搜索请求 HTTP状态错误: 403',
-      },
-      resource: {
-        source_label: '本地',
-      },
-    },
   ],
 };
 

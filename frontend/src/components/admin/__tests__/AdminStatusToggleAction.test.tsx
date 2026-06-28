@@ -24,12 +24,12 @@ describe('AdminStatusToggleAction', () => {
     render(
       <AdminStatusToggleAction
         enabled={false}
-        entityLabel="频道 javdb"
+        entityLabel="频道 示例"
         onClick={vi.fn()}
       />,
     );
 
-    const toggle = screen.getByRole('switch', { name: '频道 javdb 当前已停用' });
+    const toggle = screen.getByRole('switch', { name: '频道 示例 当前已停用' });
     expect(toggle).toHaveAttribute('aria-checked', 'false');
     expect(screen.getByText('已停用')).toBeInTheDocument();
     expect(screen.queryByText(/点击启用/)).not.toBeInTheDocument();

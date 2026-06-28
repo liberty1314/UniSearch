@@ -1495,3 +1495,23 @@
     - frontend/src/components/admin/__tests__/PluginManageWorkspace.test.tsx
     - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
 
+- [2026-06-28 18:27] chore(plugin): 移除 erxiao 与 javdb 内置插件及关联配置
+  - Body: 从系统中彻底下线并删除 erxiao 与 javdb 两个内置插件。相应地，清理了默认插件启用列表、编译注册、测试套件以及前端的 mock 数据和 E2E 测试用例。
+  - Files:
+    - .env.example
+    - Dockerfile
+    - README.md
+    - backend/config/config.go
+    - backend/config/config_test.go
+    - backend/main.go
+    - backend/plugin/erxiao/erxiao.go
+    - backend/plugin/erxiao/html结构分析.md
+    - backend/plugin/huban/html结构分析.md
+    - backend/plugin/javdb/javdb.go
+    - backend/plugin/javdb/javdb_test.go
+    - backend/plugin/test_results.txt
+    - backend/tools/validate_plugin_manifests.go
+    - frontend/e2e/admin-plugin.spec.ts
+    - frontend/e2e/test-helpers.ts
+    - frontend/src/components/admin/__tests__/AdminStatusToggleAction.test.tsx
+    - docs/readme_2606.md
