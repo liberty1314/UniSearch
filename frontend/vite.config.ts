@@ -1,7 +1,6 @@
 /// <reference types="vitest" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import tsconfigPaths from "vite-tsconfig-paths";
 import { configDefaults } from "vitest/config";
 
 // https://vite.dev/config/
@@ -32,31 +31,42 @@ export default defineConfig(() => {
     },
     build: {
       sourcemap: enableSourcemap ? "hidden" as const : false,
-      rollupOptions: {
+      rolldownOptions: {
         output: {
-          manualChunks: {
-            "react-vendor": ["react", "react-dom"],
-            "router-vendor": ["react-router-dom"],
-            "motion-vendor": ["framer-motion", "gsap"],
-            "radix-vendor": [
-              "@radix-ui/react-alert-dialog",
-              "@radix-ui/react-checkbox",
-              "@radix-ui/react-dialog",
-              "@radix-ui/react-label",
-              "@radix-ui/react-scroll-area",
-              "@radix-ui/react-select",
-              "@radix-ui/react-slot",
-              "@radix-ui/react-tabs",
-            ],
-            "ui-vendor": [
-              "lucide-react",
-              "sonner",
-              "zustand",
-              "axios",
+          codeSplitting: {
+            groups: [
+              {
+                name: "react-vendor",
+                test: /node_modules\/(?:react|react-dom)\//,
+                priority: 40,
+              },
+              {
+                name: "router-vendor",
+                test: /node_modules\/react-router-dom\//,
+                priority: 30,
+              },
+              {
+                name: "motion-vendor",
+                test: /node_modules\/(?:framer-motion|gsap)\//,
+                priority: 20,
+              },
+              {
+                name: "radix-vendor",
+                test: /node_modules\/@radix-ui\/react-(?:alert-dialog|checkbox|dialog|label|scroll-area|select|slot|tabs)\//,
+                priority: 20,
+              },
+              {
+                name: "ui-vendor",
+                test: /node_modules\/(?:lucide-react|sonner|zustand|axios)\//,
+                priority: 10,
+              },
             ],
           },
         },
       },
+    },
+    resolve: {
+      tsconfigPaths: true,
     },
     server: {
       proxy: {
@@ -73,7 +83,6 @@ export default defineConfig(() => {
           plugins: enableLocator ? ["react-dev-locator"] : [],
         },
       }),
-      tsconfigPaths(),
     ],
   };
 });

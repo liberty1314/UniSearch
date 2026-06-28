@@ -1446,4 +1446,12 @@
     - frontend/src/components/ui/__tests__/animated-theme-toggler.test.tsx
     - frontend/src/components/ui/animated-theme-toggler.tsx
 
+- [2026-06-28 12:41] build(frontend): 迁移前端构建配置至 vite8 并移除 vite-tsconfig-paths
+  - Body: 在前端项目中引入 Vite 8 新特性，移除冗余的 vite-tsconfig-paths 依赖并改为内置解析；同时将 Rollup 分包配置迁移至 Rolldown 的 codeSplitting 配置以提升构建兼容性。
+  - Files:
+    - docs/readme_2606.md
+    - frontend/package.json
+    - frontend/pnpm-lock.yaml
+    - frontend/vite.config.ts
+
 
