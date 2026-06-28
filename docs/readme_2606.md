@@ -1483,3 +1483,15 @@
   - Files:
     - Dockerfile
     - docs/readme_2606.md
+
+- [2026-06-28 18:20] fix(admin): 修复停用且异常的插件在管理界面中开关启用状态判断错误的问题
+  - Body: 前端在渲染插件卡片及工作台开关时，统一使用插件对象的真实启用属性 is_enabled 代替派生的运行状态，确保对于已被停用但最近测试结果为异常的插件，界面能正确渲染出停用状态开关。同时补齐了对应的单元测试与 E2E 验证案例。
+  - Files:
+    - docs/readme_2606.md
+    - frontend/e2e/admin-plugin.spec.ts
+    - frontend/e2e/test-helpers.ts
+    - frontend/src/components/admin/PluginManageWorkspace.tsx
+    - frontend/src/components/admin/PluginManagementView.tsx
+    - frontend/src/components/admin/__tests__/PluginManageWorkspace.test.tsx
+    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
+

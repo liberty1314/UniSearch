@@ -333,7 +333,7 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
 
                           <AdminStatusToggleAction
                             compact
-                            enabled={pluginStatus !== 'inactive'}
+                            enabled={plugin.is_enabled}
                             entityLabel={`插件 ${plugin.name}`}
                             onClick={() => onTogglePluginEnabled(plugin)}
                             disabled={isOperationBusy}

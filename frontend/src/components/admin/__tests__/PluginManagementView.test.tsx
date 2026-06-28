@@ -82,7 +82,40 @@ const createDisabledBuiltinItem = () => ({
   },
 });
 
-const createCatalogItems = () => [createSidHubItem(), createDisabledBuiltinItem(), ...Array.from({ length: 12 }, (_, index) => {
+const createDisabledErrorItem = () => ({
+  id: 'search.builtin-disabled-error',
+  name: 'builtin-disabled-error',
+  version: '1.2.3',
+  category: 'search',
+  description: '已停用但最近测试异常的插件示例',
+  plugin_type: 'builtin',
+  source_type: 'builtin',
+  is_local: true,
+  is_remote: false,
+  installed: true,
+  is_enabled: false,
+  status: 'error',
+  priority: 1,
+  available_actions: ['detail', 'test', 'toggle'],
+  capabilities: ['resource.search'],
+  tags: ['电影'],
+  author: 'UniSearch',
+  manifest_status: 'complete',
+  health: {
+    is_healthy: false,
+    check_source: 'manual_test',
+    last_error: '最近测试失败',
+  },
+  resource: {
+    source_label: '内置资源',
+    source_group: 'search',
+    supported_media_types: ['movie'],
+    target_types: ['share'],
+    priority: 5,
+  },
+});
+
+const createCatalogItems = () => [createSidHubItem(), createDisabledBuiltinItem(), createDisabledErrorItem(), ...Array.from({ length: 12 }, (_, index) => {
   const order = index + 1;
   return {
     id: `search.builtin-enabled-${order}`,
@@ -274,6 +307,21 @@ describe('PluginManagementView', () => {
     expect(disabledSwitch).toHaveAttribute('aria-checked', 'false');
     expect(within(disabledSwitch).getByText('已停用')).toBeInTheDocument();
     expect(within(disabledCard).queryByText('内置插件')).not.toBeInTheDocument();
+
+    const disabledErrorCard = await screen.findByTestId('plugin-market-card-builtin-disabled-error');
+    const disabledErrorSwitch = within(disabledErrorCard).getByRole('switch', {
+      name: '插件 builtin-disabled-error 当前已停用',
+    });
+    expect(within(disabledErrorCard).getByText('异常')).toBeInTheDocument();
+    expect(disabledErrorSwitch).toHaveAttribute('aria-checked', 'false');
+    expect(within(disabledErrorSwitch).getByText('已停用')).toBeInTheDocument();
+
+    fireEvent.click(disabledErrorCard);
+    const drawer = await screen.findByTestId('plugin-management-drawer');
+    const drawerSwitch = within(drawer).getByRole('switch', {
+      name: '插件 builtin-disabled-error 当前已停用',
+    });
+    expect(drawerSwitch).toHaveAttribute('aria-checked', 'false');
   });
 
   it('支持标签筛选并仅匹配任一已选标签', async () => {

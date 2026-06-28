@@ -123,8 +123,6 @@ export const PluginManagementView: React.FC = () => {
   };
 
   const renderPluginCardActions = (plugin: PluginInfo) => {
-    const status = resolvePluginStatus(plugin);
-
     return (
       <>
         <AdminTestAction
@@ -138,7 +136,7 @@ export const PluginManagementView: React.FC = () => {
         />
         <AdminStatusToggleAction
           compact
-          enabled={status !== 'inactive'}
+          enabled={plugin.is_enabled}
           entityLabel={`插件 ${plugin.name}`}
           onClick={(event) => {
             event.stopPropagation();
@@ -417,7 +415,7 @@ export const PluginManagementView: React.FC = () => {
                   disabled={controller.isOperationBusy}
                 />
                 <AdminStatusToggleAction
-                  enabled={resolvePluginStatus(activePlugin) !== 'inactive'}
+                  enabled={activePlugin.is_enabled}
                   entityLabel={`插件 ${activePlugin.name}`}
                   onClick={() => void controller.handleTogglePluginEnabled(activePlugin)}
                   disabled={controller.isOperationBusy}

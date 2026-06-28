@@ -1,5 +1,5 @@
 import React, { createRef } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { PluginManageWorkspace } from '../PluginManageWorkspace';
 
@@ -77,5 +77,41 @@ describe('PluginManageWorkspace', () => {
     expect(document.querySelector('.modal-shell-overlay')).toBeNull();
     expect(screen.getByRole('heading', { name: /插件工作台/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '关闭插件管理' })).not.toBeInTheDocument();
+  });
+
+  it('停用异常插件的开关使用真实启停状态', () => {
+    render(
+      <PluginManageWorkspace
+        workspace={createWorkspace({
+          isReadOnly: false,
+          localPluginsCount: 1,
+          filteredItemsCount: 1,
+          pagedItems: [
+            {
+              name: 'builtin-disabled-error',
+              priority: 1,
+              status: 'error',
+              plugin_type: 'builtin',
+              is_enabled: false,
+              description: '已停用但最近测试异常',
+              health: {
+                is_healthy: false,
+                check_source: 'manual_test',
+              },
+              capabilities: ['resource.search'],
+            },
+          ],
+        })}
+      />
+    );
+
+    const card = screen.getByTestId('plugin-card-builtin-disabled-error');
+    expect(within(card).getAllByText('异常').length).toBeGreaterThan(0);
+
+    const switchControl = screen.getByRole('switch', {
+      name: '插件 builtin-disabled-error 当前已停用',
+    });
+    expect(card).toContainElement(switchControl);
+    expect(switchControl).toHaveAttribute('aria-checked', 'false');
   });
 });
