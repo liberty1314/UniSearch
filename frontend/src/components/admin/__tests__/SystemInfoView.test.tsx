@@ -194,6 +194,8 @@ describe('SystemInfoView', () => {
       .map((label) => label.parentElement?.querySelector('p:last-child')?.textContent?.trim())
       .filter((value): value is string => Boolean(value));
     expect(errorValues.filter((value) => value === '2').length).toBeGreaterThanOrEqual(2);
+    expect(container.innerHTML).toContain('dark:bg-rose-400/10');
+    expect(container.innerHTML).not.toContain('dark:bg-rose-950/24');
 
     expect(screen.queryByText('plugin-alpha')).not.toBeInTheDocument();
     expect(screen.queryByText('chan-alpha')).not.toBeInTheDocument();

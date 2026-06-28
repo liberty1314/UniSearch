@@ -1,12 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import {
-  AlertCircle,
   Loader2,
   Radio,
-  ShieldCheck,
-  ToggleLeft,
-  ToggleRight,
-  Trash2,
   Zap,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
@@ -17,6 +12,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Label } from '@/components/ui/label';
 import { AdminTagMultiSelect } from './AdminTagMultiSelect';
+import { AdminDeleteAction } from './AdminDeleteAction';
+import { AdminStatusToggleAction } from './AdminStatusToggleAction';
+import { AdminTestAction } from './AdminTestAction';
 import { ChannelAddDialog } from './ChannelAddDialog';
 import { ApplePagination } from './ApplePagination';
 import {
@@ -32,6 +30,7 @@ import {
   AdminWorkspaceHero,
   AdminWorkspacePageFrame,
 } from './AdminWorkspacePageFrame';
+import { formatAdminHealthTime } from './adminDateFormat';
 import { describeChannelHealth, normalizeChannelHealth } from './channelManageDialogShared';
 
 const CHANNEL_STATUS_OPTIONS = [
@@ -212,7 +211,6 @@ export const ChannelManagementView: React.FC = () => {
               ) : (
                 <div className="space-y-3">
                   {controller.pagedItems.map((channel) => {
-                    const health = normalizeChannelHealth(channel);
                     return (
                       <article
                         key={channel.id}
@@ -220,7 +218,7 @@ export const ChannelManagementView: React.FC = () => {
                         onClick={() => controller.setDetailChannelId(channel.id)}
                         className="cursor-pointer rounded-[1.3rem] border border-slate-200/70 bg-white/75 p-4 transition hover:border-slate-300 hover:shadow-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:hover:border-cyan-300/[0.24]"
                       >
-                        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr),minmax(0,0.8fr),auto] xl:items-center">
+                        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr),minmax(12rem,0.65fr),auto] xl:items-center">
                           <div className="flex items-start gap-3">
                             <Checkbox
                               checked={controller.selectedChannelIds.has(channel.id)}
@@ -235,19 +233,6 @@ export const ChannelManagementView: React.FC = () => {
                                 <Badge variant={channel.is_enabled ? 'success' : 'outline'}>
                                   {channel.is_enabled ? '启用' : '禁用'}
                                 </Badge>
-                                {health === 'healthy' ? (
-                                  <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                                    <ShieldCheck className="mr-1 h-3 w-3" />
-                                    正常
-                                  </Badge>
-                                ) : null}
-                                {health === 'error' ? (
-                                  <Badge className="bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300">
-                                    <AlertCircle className="mr-1 h-3 w-3" />
-                                    异常
-                                  </Badge>
-                                ) : null}
-                                {health === 'untested' ? <Badge variant="secondary">未测试</Badge> : null}
                               </div>
                               <p className="text-sm text-slate-500 dark:text-slate-400">
                                 {channel.last_error || '暂无错误信息'}
@@ -264,67 +249,40 @@ export const ChannelManagementView: React.FC = () => {
                             </div>
                           </div>
                           <div className="rounded-[1.1rem] border border-slate-200/70 bg-slate-50/80 p-3 text-sm dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.44]">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-slate-500 dark:text-slate-400">健康状态</span>
-                              <span className="font-medium text-slate-700 dark:text-slate-200">{describeChannelHealth(channel)}</span>
-                            </div>
-                            <div className="mt-2 flex items-center justify-between gap-2">
-                              <span className="text-slate-500 dark:text-slate-400">最近检查</span>
-                              <span className="font-medium text-slate-700 dark:text-slate-200">{channel.last_checked_at || '暂无'}</span>
+                            <div className="min-w-0">
+                              <span className="block text-xs text-slate-500 dark:text-slate-400">最近检查</span>
+                              <span className="mt-1 block whitespace-nowrap font-medium tabular-nums text-slate-700 dark:text-slate-200">{formatAdminHealthTime(channel.last_checked_at)}</span>
                             </div>
                           </div>
                           <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="adminAction"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                controller.setDetailChannelId(channel.id);
-                              }}
-                            >
-                              详情
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="adminAction"
+                            <AdminTestAction
+                              compact
+                              status={controller.testingStatus[channel.name] || 'idle'}
                               onClick={(event) => {
                                 event.stopPropagation();
                                 void controller.handleTestChannel(channel.name);
                               }}
-                              disabled={controller.testingStatus[channel.name] === 'testing' || controller.isOperationBusy}
-                              loading={controller.testingStatus[channel.name] === 'testing'}
-                            >
-                              <Zap className="mr-1 h-4 w-4" />
-                              测试
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="adminAction"
+                              disabled={controller.isOperationBusy}
+                            />
+                            <AdminStatusToggleAction
+                              compact
+                              enabled={channel.is_enabled}
+                              entityLabel={`频道 ${channel.name}`}
                               onClick={(event) => {
                                 event.stopPropagation();
                                 void controller.handleToggleEnabled(channel);
                               }}
                               disabled={controller.isOperationBusy}
-                            >
-                              {channel.is_enabled ? <ToggleRight className="mr-1 h-4 w-4" /> : <ToggleLeft className="mr-1 h-4 w-4" />}
-                              {channel.is_enabled ? '停用' : '启用'}
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="adminDangerAction"
+                            />
+                            <AdminDeleteAction
+                              compact
                               onClick={(event) => {
                                 event.stopPropagation();
                                 controller.setDeleteConfirm({ open: true, channel });
                               }}
                               disabled={controller.isOperationBusy}
                               aria-label={`删除频道 ${channel.name}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            />
                           </div>
                         </div>
                       </article>
@@ -358,18 +316,17 @@ export const ChannelManagementView: React.FC = () => {
             emptyDescription="点击左侧频道行查看详细状态、最近错误和可执行操作。"
             footer={activeChannel ? (
               <div className="flex flex-wrap justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="adminAction"
+                <AdminTestAction
+                  status={controller.testingStatus[activeChannel.name] || 'idle'}
                   onClick={() => void controller.handleTestChannel(activeChannel.name)}
-                  disabled={controller.testingStatus[activeChannel.name] === 'testing' || controller.isOperationBusy}
-                  loading={controller.testingStatus[activeChannel.name] === 'testing'}
-                >
-                  测试频道
-                </Button>
-                <Button type="button" variant="adminAction" onClick={() => void controller.handleToggleEnabled(activeChannel)} disabled={controller.isOperationBusy}>
-                  {activeChannel.is_enabled ? '停用频道' : '启用频道'}
-                </Button>
+                  disabled={controller.isOperationBusy}
+                />
+                <AdminStatusToggleAction
+                  enabled={activeChannel.is_enabled}
+                  entityLabel={`频道 ${activeChannel.name}`}
+                  onClick={() => void controller.handleToggleEnabled(activeChannel)}
+                  disabled={controller.isOperationBusy}
+                />
               </div>
             ) : undefined}
           >
@@ -436,7 +393,7 @@ export const ChannelManagementView: React.FC = () => {
                   </div>
                   <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.34]">
                     <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">最近检查</p>
-                    <p className="mt-2 font-medium text-slate-900 dark:text-white">{activeChannel.last_checked_at || '暂无'}</p>
+                    <p className="mt-2 font-medium tabular-nums text-slate-900 dark:text-white">{formatAdminHealthTime(activeChannel.last_checked_at)}</p>
                   </div>
                   <div className="rounded-[1.15rem] border border-slate-200/70 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.34]">
                     <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">检查来源</p>

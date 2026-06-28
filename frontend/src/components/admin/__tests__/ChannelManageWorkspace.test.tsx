@@ -2,6 +2,7 @@ import React, { createRef } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ChannelManageWorkspace } from '../ChannelManageWorkspace';
+import type { TGChannel } from '@/types/channel';
 
 describe('ChannelManageWorkspace', () => {
   const createWorkspace = (
@@ -71,5 +72,37 @@ describe('ChannelManageWorkspace', () => {
     expect(document.querySelector('.modal-shell-overlay')).toBeNull();
     expect(screen.getByRole('heading', { name: /Telegram 频道工作台/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '关闭频道管理' })).not.toBeInTheDocument();
+  });
+
+  it('使用统一删除动作处理频道删除入口', () => {
+    const onOpenDeleteConfirm = vi.fn();
+    const channel: TGChannel = {
+      id: 7,
+      name: 'chan-action',
+      is_enabled: true,
+      sort_order: 1,
+      created_at: '',
+      updated_at: '',
+      health_status: 'healthy',
+    };
+
+    render(
+      <ChannelManageWorkspace
+        workspace={createWorkspace({
+          presentation: 'page',
+          isReadOnly: false,
+          totalChannels: 1,
+          filteredItemsCount: 1,
+          pagedItems: [channel],
+          onOpenDeleteConfirm,
+        })}
+      />
+    );
+
+    const deleteButton = screen.getByRole('button', { name: '删除频道 chan-action' });
+    expect(deleteButton).toHaveClass('admin-delete-action');
+
+    fireEvent.click(deleteButton);
+    expect(onOpenDeleteConfirm).toHaveBeenCalledWith(channel);
   });
 });

@@ -3,22 +3,18 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   Activity,
   ArrowUpRight,
-  CheckCircle2,
   Eye,
   Layers,
-  Loader2,
   Search,
-  ToggleLeft,
-  ToggleRight,
   X,
-  XCircle,
-  Zap,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { AdminStatusToggleAction } from './AdminStatusToggleAction';
+import { AdminTestAction } from './AdminTestAction';
 import { AdminWorkspaceFooter } from './AdminWorkspaceFooter';
 import { AdminWorkspaceToolbar } from './AdminWorkspaceToolbar';
 import { AdminSelectField } from './AdminSelectField';
@@ -87,13 +83,6 @@ interface PluginManageWorkspaceProps {
   workspace: PluginManageWorkspaceViewModel;
 }
 
-const getTestIcon = (status: TestStatus) => {
-  if (status === 'testing') return <Loader2 className="h-4 w-4 animate-spin" />;
-  if (status === 'success') return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-  if (status === 'error') return <XCircle className="h-4 w-4 text-red-500" />;
-  return <Zap className="h-4 w-4" />;
-};
-
 export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps) {
   const shouldReduceMotion = useReducedMotion();
   const {
@@ -109,7 +98,6 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
     capabilityFilter,
     availableCategories = ['all'],
     availableCapabilities = ['all'],
-    isCatalogLoading,
     catalogVersion,
     filteredItemsCount,
     currentPage,
@@ -336,33 +324,20 @@ export function PluginManageWorkspace({ workspace }: PluginManageWorkspaceProps)
 
                       {!isReadOnly ? (
                         <>
-                          <Button
-                            variant="outline"
-                            size="sm"
+                          <AdminTestAction
+                            compact
+                            status={testingStatus[plugin.name] || 'idle'}
                             onClick={() => onTestPlugin(plugin)}
-                            disabled={isOperationBusy || testingStatus[plugin.name] === 'testing'}
-                            className="h-8 px-2"
-                          >
-                            {testingStatus[plugin.name] === 'testing' && isCatalogLoading
-                              ? <Loader2 className="h-4 w-4 animate-spin" />
-                              : getTestIcon(testingStatus[plugin.name] || 'idle')}
-                            <span className="ml-1">测试</span>
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onTogglePluginEnabled(plugin)}
-                            aria-label={`切换插件 ${plugin.name} 状态`}
                             disabled={isOperationBusy}
-                            className={`h-8 px-2 ${
-                              plugin.is_enabled
-                                ? 'border-green-200 text-green-600 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-900/20'
-                                : 'border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-700/50'
-                            }`}
-                          >
-                            {plugin.is_enabled ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
-                          </Button>
+                          />
+
+                          <AdminStatusToggleAction
+                            compact
+                            enabled={pluginStatus !== 'inactive'}
+                            entityLabel={`插件 ${plugin.name}`}
+                            onClick={() => onTogglePluginEnabled(plugin)}
+                            disabled={isOperationBusy}
+                          />
 
                         </>
                       ) : null}

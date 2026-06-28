@@ -155,11 +155,11 @@ const fetchSearchObservability = async (token: string): Promise<SearchObservabil
 
 const summaryMetricClasses = {
   neutral:
-    'border-slate-200/65 bg-white/58 text-slate-700 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.48] dark:text-slate-200',
+    'border-slate-200/65 bg-white/60 text-slate-700 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.48] dark:text-slate-200',
   success:
-    'border-emerald-200/70 bg-emerald-50/72 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-950/24 dark:text-emerald-300',
+    'border-emerald-200/70 bg-emerald-50/70 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-900/25 dark:text-emerald-300',
   danger:
-    'border-rose-200/70 bg-rose-50/70 text-rose-700 dark:border-rose-400/20 dark:bg-rose-950/24 dark:text-rose-300',
+    'border-rose-200/70 bg-rose-50/70 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200',
 } as const;
 
 type SummaryMetricTone = keyof typeof summaryMetricClasses;

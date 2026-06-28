@@ -29,7 +29,7 @@ describe('ChannelManagementView', () => {
                 health_status: id === 12 ? 'error' : 'healthy',
                 last_error: id === 12 ? 'timeout' : undefined,
                 check_source: id === 12 ? 'manual_test' : 'system',
-                last_checked_at: id === 12 ? '2026-05-17 00:20:00' : '2026-05-17 00:10:00',
+                last_checked_at: id === 12 ? '2026-05-17T00:20:00' : '2026-05-17 00:10:00',
                 created_at: '',
                 updated_at: '',
               };
@@ -131,7 +131,22 @@ describe('ChannelManagementView', () => {
     const drawer = await screen.findByTestId('channel-management-drawer');
     expect(within(drawer).getByText('chan-12')).toBeInTheDocument();
     expect(within(drawer).getByText('timeout')).toBeInTheDocument();
-    expect(within(drawer).getByRole('button', { name: '测试频道' })).toBeInTheDocument();
+    expect(within(drawer).getByRole('button', { name: '测试' })).toHaveClass('admin-test-action');
+    expect(within(screen.getByTestId('channel-row-12')).queryByRole('button', { name: '详情' })).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('channel-row-12')).queryByText('健康状态')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('channel-row-12')).queryByText('异常')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('channel-row-12')).getByText('2026-05-17 00:20')).toHaveClass('tabular-nums');
+    expect(within(screen.getByTestId('channel-row-12')).queryByText('2026-05-17T00:20:00')).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('channel-row-12')).getByRole('switch', {
+        name: '频道 chan-12 当前已启用',
+      }),
+    ).toHaveClass('admin-status-toggle-action');
+    expect(
+      within(screen.getByTestId('channel-row-12')).getByRole('button', {
+        name: '删除频道 chan-12',
+      }),
+    ).toHaveClass('admin-delete-action');
   });
 
   it('支持状态下拉与标签筛选联动', async () => {

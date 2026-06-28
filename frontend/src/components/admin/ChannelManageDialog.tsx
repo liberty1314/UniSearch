@@ -1,7 +1,5 @@
 import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, ToggleLeft, ToggleRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +11,8 @@ import {
 import type { AdminDialogMode } from "@/types/admin";
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ChannelAddDialog } from './ChannelAddDialog';
+import { AdminStatusToggleAction } from './AdminStatusToggleAction';
+import { AdminTestAction } from './AdminTestAction';
 import {
   ChannelManageWorkspace,
   type ChannelManageWorkspaceViewModel,
@@ -159,37 +159,17 @@ export function ChannelManageSurface({
 
               {!controller.isReadOnly ? (
                 <DialogFooter>
-                  <Button
-                    variant="outline"
+                  <AdminTestAction
+                    status={controller.testingStatus[controller.activeDetailChannel.name] || 'idle'}
                     onClick={() => void controller.handleTestChannel(controller.activeDetailChannel.name)}
-                    disabled={
-                      controller.isOperationBusy ||
-                      controller.testingStatus[controller.activeDetailChannel.name] === 'testing'
-                    }
-                  >
-                    {controller.testingStatus[controller.activeDetailChannel.name] === 'testing' ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : null}
-                    <span className="ml-1">测试</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => void controller.handleToggleEnabled(controller.activeDetailChannel)}
-                    aria-label={`切换频道 ${controller.activeDetailChannel.name} 状态`}
                     disabled={controller.isOperationBusy}
-                  >
-                    {controller.activeDetailChannel.is_enabled ? (
-                      <>
-                        <ToggleRight className="mr-1 h-4 w-4" />
-                        停用
-                      </>
-                    ) : (
-                      <>
-                        <ToggleLeft className="mr-1 h-4 w-4" />
-                        启用
-                      </>
-                    )}
-                  </Button>
+                  />
+                  <AdminStatusToggleAction
+                    enabled={controller.activeDetailChannel.is_enabled}
+                    entityLabel={`频道 ${controller.activeDetailChannel.name}`}
+                    onClick={() => void controller.handleToggleEnabled(controller.activeDetailChannel)}
+                    disabled={controller.isOperationBusy}
+                  />
                 </DialogFooter>
               ) : null}
             </>

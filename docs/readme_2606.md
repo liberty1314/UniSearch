@@ -1454,4 +1454,28 @@
     - frontend/pnpm-lock.yaml
     - frontend/vite.config.ts
 
+- [2026-06-28 15:15] refactor(admin): 提取后台管理通用动作组件并优化日期格式化
+  - Body: 将后台管理中的删除、切换状态和测试三个操作重构为通用的组件 AdminDeleteAction、AdminStatusToggleAction 和 AdminTestAction，并在各个管理面板中进行复用。同时新增并应用统一的健康时间格式化方法，并对相关的单元测试进行了相应的迁移与补充。
+  - Files:
+    - docs/readme_2606.md
+    - frontend/src/components/admin/AdminDeleteAction.tsx
+    - frontend/src/components/admin/AdminStatusToggleAction.tsx
+    - frontend/src/components/admin/AdminTestAction.tsx
+    - frontend/src/components/admin/ChannelManageDialog.tsx
+    - frontend/src/components/admin/ChannelManageWorkspace.tsx
+    - frontend/src/components/admin/ChannelManagementView.tsx
+    - frontend/src/components/admin/PluginManageWorkspace.tsx
+    - frontend/src/components/admin/PluginManagementView.tsx
+    - frontend/src/components/admin/SystemInfoView.tsx
+    - frontend/src/components/admin/__tests__/AdminDeleteAction.test.tsx
+    - frontend/src/components/admin/__tests__/AdminStatusToggleAction.test.tsx
+    - frontend/src/components/admin/__tests__/AdminTestAction.test.tsx
+    - frontend/src/components/admin/__tests__/ChannelManageDialog.test.tsx
+    - frontend/src/components/admin/__tests__/ChannelManageWorkspace.test.tsx
+    - frontend/src/components/admin/__tests__/ChannelManagementView.test.tsx
+    - frontend/src/components/admin/__tests__/PluginManageDialog.test.tsx
+    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
+    - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
+    - frontend/src/components/admin/adminDateFormat.ts
+
 

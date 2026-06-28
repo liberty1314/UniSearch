@@ -221,6 +221,16 @@ describe('PluginManagementView', () => {
     expect(screen.queryByTestId('plugin-market-card-builtin-enabled-11')).not.toBeInTheDocument();
     expect(screen.getByTestId('plugin-market-card-builtin-enabled-1')).toHaveClass('dark:bg-slate-950/[0.52]');
     expect(within(screen.getByTestId('plugin-market-card-builtin-enabled-1')).getByText('启用')).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('plugin-market-card-builtin-enabled-1')).getByRole('switch', {
+        name: '插件 builtin-enabled-1 当前已启用',
+      }),
+    ).toHaveClass('admin-status-toggle-action');
+    expect(
+      within(screen.getByTestId('plugin-market-card-builtin-enabled-1')).getByRole('button', {
+        name: '测试',
+      }),
+    ).toHaveClass('admin-test-action');
     expect(screen.queryByText('内置插件')).not.toBeInTheDocument();
 
     const initialDrawer = await screen.findByTestId('plugin-management-drawer');
@@ -258,7 +268,11 @@ describe('PluginManagementView', () => {
     await userEvent.click(within(listbox).getByRole('option', { name: '禁用' }));
 
     const disabledCard = await screen.findByTestId('plugin-market-card-builtin-disabled');
-    expect(within(disabledCard).getByText('已停用')).toBeInTheDocument();
+    const disabledSwitch = within(disabledCard).getByRole('switch', {
+      name: '插件 builtin-disabled 当前已停用',
+    });
+    expect(disabledSwitch).toHaveAttribute('aria-checked', 'false');
+    expect(within(disabledSwitch).getByText('已停用')).toBeInTheDocument();
     expect(within(disabledCard).queryByText('内置插件')).not.toBeInTheDocument();
   });
 

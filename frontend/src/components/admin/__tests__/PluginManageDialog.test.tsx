@@ -338,7 +338,9 @@ describe('PluginManageDialog', () => {
     renderDialog();
     await waitForCatalogReady();
 
-    fireEvent.click(screen.getByLabelText('切换插件 builtin-enabled 状态'));
+    fireEvent.click(screen.getByRole('switch', {
+      name: '插件 builtin-enabled 当前已启用',
+    }));
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(

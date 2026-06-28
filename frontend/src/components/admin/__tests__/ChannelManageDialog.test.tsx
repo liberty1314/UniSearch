@@ -309,7 +309,9 @@ describe('ChannelManageDialog', () => {
     const secondNode = screen.getByText('second-disabled');
     expect(firstNode.compareDocumentPosition(secondNode) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-    fireEvent.click(screen.getByLabelText('切换频道 second-disabled 状态'));
+    fireEvent.click(screen.getByRole('switch', {
+      name: '频道 second-disabled 当前已停用',
+    }));
 
     await waitFor(() => {
       const nextFirstNode = screen.getByText('first-enabled');

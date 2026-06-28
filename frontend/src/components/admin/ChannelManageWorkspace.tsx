@@ -7,18 +7,16 @@ import {
   Loader2,
   Radio,
   ShieldCheck,
-  ToggleLeft,
-  ToggleRight,
-  Trash2,
   X,
-  XCircle,
-  Zap,
 } from 'lucide-react';
 import type { TGChannel } from "@/types/channel";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { AdminDeleteAction } from './AdminDeleteAction';
+import { AdminStatusToggleAction } from './AdminStatusToggleAction';
+import { AdminTestAction } from './AdminTestAction';
 import { AdminWorkspaceFooter } from './AdminWorkspaceFooter';
 import { AdminWorkspaceToolbar } from './AdminWorkspaceToolbar';
 import {
@@ -77,13 +75,6 @@ export interface ChannelManageWorkspaceViewModel {
 interface ChannelManageWorkspaceProps {
   workspace: ChannelManageWorkspaceViewModel;
 }
-
-const getTestIcon = (status: ChannelTestStatus) => {
-  if (status === 'testing') return <Loader2 className="h-3.5 w-3.5 animate-spin" />;
-  if (status === 'success') return <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />;
-  if (status === 'error') return <XCircle className="h-3.5 w-3.5 text-red-500" />;
-  return <Zap className="h-3.5 w-3.5" />;
-};
 
 export function ChannelManageWorkspace({ workspace }: ChannelManageWorkspaceProps) {
   const shouldReduceMotion = useReducedMotion();
@@ -255,45 +246,28 @@ export function ChannelManageWorkspace({ workspace }: ChannelManageWorkspaceProp
 
                       {!isReadOnly ? (
                         <>
-                          <Button
-                            variant="outline"
-                            size="sm"
+                          <AdminTestAction
+                            compact
+                            status={testingStatus[channel.name] || 'idle'}
                             onClick={() => onTestChannel(channel.name)}
-                            disabled={isOperationBusy || testingStatus[channel.name] === 'testing'}
-                            className="h-8 px-2"
-                          >
-                            {getTestIcon(testingStatus[channel.name] || 'idle')}
-                            <span className="ml-1">测试</span>
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onToggleEnabled(channel)}
-                            aria-label={`切换频道 ${channel.name} 状态`}
                             disabled={isOperationBusy}
-                            className={`h-8 px-2 ${
-                              channel.is_enabled
-                                ? 'border-green-200 text-green-600 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-900/20'
-                                : 'border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-700/50'
-                            }`}
-                          >
-                            {channel.is_enabled ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
-                          </Button>
+                          />
 
-                          <Button
-                            variant="outline"
-                            size="sm"
+                          <AdminStatusToggleAction
+                            compact
+                            enabled={channel.is_enabled}
+                            entityLabel={`频道 ${channel.name}`}
+                            onClick={() => onToggleEnabled(channel)}
+                            disabled={isOperationBusy}
+                          />
+
+                          <AdminDeleteAction
+                            compact
                             onClick={() => onOpenDeleteConfirm(channel)}
                             disabled={isOperationBusy || deletingIds.has(channel.id)}
-                            className="h-8 px-2 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-                          >
-                            {deletingIds.has(channel.id) ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4" />
-                            )}
-                          </Button>
+                            isLoading={deletingIds.has(channel.id)}
+                            aria-label={`删除频道 ${channel.name}`}
+                          />
                         </>
                       ) : null}
                     </div>

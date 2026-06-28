@@ -4,8 +4,6 @@ import {
   ArrowUpRight,
   Layers,
   Loader2,
-  ToggleLeft,
-  ToggleRight,
   Zap,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
@@ -15,6 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ApplePagination } from './ApplePagination';
 import { AdminTagMultiSelect } from './AdminTagMultiSelect';
+import { AdminStatusToggleAction } from './AdminStatusToggleAction';
+import { AdminTestAction } from './AdminTestAction';
 import {
   AdminContentCard,
   AdminCardEmpty,
@@ -29,6 +29,7 @@ import {
   AdminWorkspacePageFrame,
 } from './AdminWorkspacePageFrame';
 import { AdminSelectField } from './AdminSelectField';
+import { formatAdminHealthTime } from './adminDateFormat';
 import {
   pluginStatusBadgeClass,
   pluginStatusText,
@@ -51,14 +52,6 @@ const healthSourceText = (source?: string) => {
   if (source === 'batch_test') return '批量测试';
   if (source === 'system') return '系统检查';
   return source || '暂无来源';
-};
-
-const formatHealthTime = (value?: string) => {
-  if (!value) return '暂无检查时间';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
 export const PluginManagementView: React.FC = () => {
@@ -130,38 +123,29 @@ export const PluginManagementView: React.FC = () => {
   };
 
   const renderPluginCardActions = (plugin: PluginInfo) => {
-    const testing = controller.testingStatus[plugin.name] === 'testing';
     const status = resolvePluginStatus(plugin);
 
     return (
       <>
-        <Button
-          type="button"
-          size="sm"
-          variant="adminAction"
+        <AdminTestAction
+          compact
+          status={controller.testingStatus[plugin.name] || 'idle'}
           onClick={(event) => {
             event.stopPropagation();
             void controller.handleTestPlugin(plugin);
           }}
-          disabled={testing || controller.isOperationBusy}
-          loading={testing}
-        >
-          <Zap className="mr-1 h-4 w-4" />
-          测试
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="adminAction"
+          disabled={controller.isOperationBusy}
+        />
+        <AdminStatusToggleAction
+          compact
+          enabled={status !== 'inactive'}
+          entityLabel={`插件 ${plugin.name}`}
           onClick={(event) => {
             event.stopPropagation();
             void controller.handleTogglePluginEnabled(plugin);
           }}
           disabled={controller.isOperationBusy}
-        >
-          {plugin.is_enabled ? <ToggleRight className="mr-1 h-4 w-4" /> : <ToggleLeft className="mr-1 h-4 w-4" />}
-          {status === 'inactive' ? '启用' : '停用'}
-        </Button>
+        />
       </>
     );
   };
@@ -382,7 +366,7 @@ export const PluginManagementView: React.FC = () => {
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-slate-500 dark:text-slate-400">最近检查</span>
                               <span className="text-right text-slate-600 dark:text-slate-300">
-                                {formatHealthTime(plugin.health?.last_checked_at)}
+                                {formatAdminHealthTime(plugin.health?.last_checked_at)}
                               </span>
                             </div>
                             {plugin.health?.last_error ? (
@@ -427,18 +411,17 @@ export const PluginManagementView: React.FC = () => {
             emptyDescription="点击左侧卡片查看插件详情。"
             footer={activePlugin ? (
               <div className="flex flex-wrap justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="adminAction"
+                <AdminTestAction
+                  status={controller.testingStatus[activePlugin.name] || 'idle'}
                   onClick={() => void controller.handleTestPlugin(activePlugin)}
-                  disabled={controller.testingStatus[activePlugin.name] === 'testing' || controller.isOperationBusy}
-                  loading={controller.testingStatus[activePlugin.name] === 'testing'}
-                >
-                  测试
-                </Button>
-                <Button type="button" variant="adminAction" onClick={() => void controller.handleTogglePluginEnabled(activePlugin)} disabled={controller.isOperationBusy}>
-                  {activePlugin.is_enabled ? '停用' : '启用'}
-                </Button>
+                  disabled={controller.isOperationBusy}
+                />
+                <AdminStatusToggleAction
+                  enabled={resolvePluginStatus(activePlugin) !== 'inactive'}
+                  entityLabel={`插件 ${activePlugin.name}`}
+                  onClick={() => void controller.handleTogglePluginEnabled(activePlugin)}
+                  disabled={controller.isOperationBusy}
+                />
               </div>
             ) : undefined}
           >
@@ -462,7 +445,7 @@ export const PluginManagementView: React.FC = () => {
                       来源：{healthSourceText(activePlugin.health?.check_source)}
                     </p>
                     <p className="mt-1 text-slate-500 dark:text-slate-400">
-                      最近检查：{formatHealthTime(activePlugin.health?.last_checked_at)}
+                      最近检查：{formatAdminHealthTime(activePlugin.health?.last_checked_at)}
                     </p>
                     <p className="mt-1 break-words text-slate-500 dark:text-slate-400">{activePlugin.health?.last_error || '暂无错误信息'}</p>
                   </div>
