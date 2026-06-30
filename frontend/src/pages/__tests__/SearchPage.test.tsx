@@ -9,6 +9,7 @@ const {
   performSearchMock,
   setSearchParamsMock,
   clearResultsMock,
+  canReuseCurrentSearchMock,
   removeRecentEffectiveSearchMock,
   clearRecentEffectiveSearchesMock,
   getHotRankingsMock,
@@ -16,6 +17,7 @@ const {
   performSearchMock: vi.fn(),
   setSearchParamsMock: vi.fn(),
   clearResultsMock: vi.fn(),
+  canReuseCurrentSearchMock: vi.fn(),
   removeRecentEffectiveSearchMock: vi.fn(),
   clearRecentEffectiveSearchesMock: vi.fn(),
   getHotRankingsMock: vi.fn(),
@@ -96,6 +98,7 @@ vi.mock("@/stores/searchStore", () => ({
     performSearch: performSearchMock,
     setSearchParams: setSearchParamsMock,
     clearResults: clearResultsMock,
+    canReuseCurrentSearch: canReuseCurrentSearchMock,
     removeRecentEffectiveSearch: removeRecentEffectiveSearchMock,
     clearRecentEffectiveSearches: clearRecentEffectiveSearchesMock,
   }),
@@ -172,6 +175,8 @@ describe("SearchPage", () => {
     performSearchMock.mockReset();
     setSearchParamsMock.mockReset();
     clearResultsMock.mockReset();
+    canReuseCurrentSearchMock.mockReset();
+    canReuseCurrentSearchMock.mockReturnValue(false);
     removeRecentEffectiveSearchMock.mockReset();
     clearRecentEffectiveSearchesMock.mockReset();
     locationState = undefined;

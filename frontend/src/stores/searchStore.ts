@@ -53,6 +53,7 @@ interface SearchState {
 
   // 最近一次成功完成的搜索参数快照
   lastCompletedSearchParams: SearchParams | null;
+  activeSearchParams: SearchParams | null;
 
   // 搜索历史
   searchHistory: string[];
@@ -73,6 +74,10 @@ interface SearchState {
     params?: Partial<SearchParams>,
     options?: { preserveResults?: boolean },
   ) => Promise<void>;
+  canReuseCurrentSearch: (
+    params: Partial<SearchParams>,
+    options?: { forceSkeleton?: boolean },
+  ) => boolean;
   clearResults: () => void;
   setError: (error: string | null) => void;
   addToHistory: (keyword: string) => void;
@@ -208,6 +213,7 @@ export const useSearchStore = create<SearchState>()(
       receivedBatches: 0,
       error: null,
       lastCompletedSearchParams: null,
+      activeSearchParams: null,
       searchHistory: readJsonStorage<string[]>(
         "unisearch_search_history",
         [],
@@ -244,11 +250,14 @@ export const useSearchStore = create<SearchState>()(
         // 验证搜索参数
         const validation = SearchService.validateSearchParams(finalParams);
         if (!validation.valid) {
-          set({ error: validation.error });
+          set({ activeSearchParams: null, error: validation.error });
           return;
         }
 
+        const normalizedFinalParams = normalizeSearchParams(finalParams);
+
         set({
+          activeSearchParams: normalizedFinalParams,
           isLoading: !preserveResults,
           isRefreshing: preserveResults,
           progressiveStatus: "running",
@@ -270,7 +279,7 @@ export const useSearchStore = create<SearchState>()(
             isLoading: false,
             isRefreshing: false,
             progressiveStatus: status,
-            lastCompletedSearchParams: normalizeSearchParams(finalParams),
+            lastCompletedSearchParams: normalizedFinalParams,
             hasMore: totalCount > initialDisplayCount,
           });
           writeRecentResourceSnapshots(results.resources, finalParams.keyword);
@@ -362,6 +371,7 @@ export const useSearchStore = create<SearchState>()(
               isRefreshing: false,
               progressiveStatus: "error",
               searchResults: preserveResults ? state.searchResults : null,
+              activeSearchParams: null,
             });
             // 抛出错误，让调用方处理跳转逻辑
             throw error;
@@ -384,9 +394,34 @@ export const useSearchStore = create<SearchState>()(
               isRefreshing: false,
               progressiveStatus: "error",
               searchResults: preserveResults ? state.searchResults : null,
+              activeSearchParams: null,
             });
           }
         }
+      },
+
+      canReuseCurrentSearch: (params, options) => {
+        if (options?.forceSkeleton || params.refresh) {
+          return false;
+        }
+
+        const state = get();
+        const targetParams = {
+          ...state.searchParams,
+          ...params,
+        };
+
+        if (
+          state.progressiveStatus === "running" &&
+          areSearchParamsEqual(state.activeSearchParams, targetParams)
+        ) {
+          return true;
+        }
+
+        return Boolean(
+          state.searchResults &&
+            areSearchParamsEqual(state.lastCompletedSearchParams, targetParams),
+        );
       },
 
       /**
@@ -418,6 +453,7 @@ export const useSearchStore = create<SearchState>()(
             totalSources: 0,
             receivedBatches: 0,
             lastCompletedSearchParams: null,
+            activeSearchParams: null,
             displayedCount: initialDisplayCount,
             hasMore: false,
             searchParams: { ...state.searchParams, keyword: "" },
@@ -594,6 +630,7 @@ export const useSearchStore = create<SearchState>()(
           receivedBatches: 0,
           error: null,
           lastCompletedSearchParams: null,
+          activeSearchParams: null,
           displayedCount: initialDisplayCount,
           hasMore: false,
         });

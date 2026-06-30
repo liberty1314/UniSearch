@@ -8,12 +8,14 @@ const {
   performSearchMock,
   setSearchParamsMock,
   clearResultsMock,
+  canReuseCurrentSearchMock,
   authState,
   searchStoreState,
 } = vi.hoisted(() => ({
   performSearchMock: vi.fn(),
   setSearchParamsMock: vi.fn(),
   clearResultsMock: vi.fn(),
+  canReuseCurrentSearchMock: vi.fn(),
   authState: {
     isAuthenticated: true,
   },
@@ -41,6 +43,7 @@ vi.mock("@/stores/searchStore", () => ({
     performSearch: performSearchMock,
     setSearchParams: setSearchParamsMock,
     clearResults: clearResultsMock,
+    canReuseCurrentSearch: canReuseCurrentSearchMock,
   }),
 }));
 
@@ -85,6 +88,8 @@ describe("useSearchUrlSync", () => {
     performSearchMock.mockReset();
     setSearchParamsMock.mockReset();
     clearResultsMock.mockReset();
+    canReuseCurrentSearchMock.mockReset();
+    canReuseCurrentSearchMock.mockReturnValue(false);
     authState.isAuthenticated = true;
     searchStoreState.searchParams = {
       keyword: "",
@@ -220,7 +225,27 @@ describe("useSearchUrlSync", () => {
     expect(performSearchMock).not.toHaveBeenCalled();
   });
 
+  it("同一 URL 重新挂载且当前搜索可复用时不会重复搜索", async () => {
+    canReuseCurrentSearchMock.mockReturnValue(true);
+
+    renderHookProbe("/search?q=%E6%B5%8B%E8%AF%95");
+
+    await waitFor(() => {
+      expect(setSearchParamsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ keyword: "测试" }),
+      );
+    });
+    expect(canReuseCurrentSearchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ keyword: "测试" }),
+      { forceSkeleton: false },
+    );
+    expect(performSearchMock).not.toHaveBeenCalled();
+  });
+
   it("已有完成结果且未强制刷新时，窗口重新聚焦不会再次刷新", async () => {
+    canReuseCurrentSearchMock
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
     searchStoreState.searchResults = {
       resources: [{ id: "old-resource" }],
     };
@@ -246,6 +271,29 @@ describe("useSearchUrlSync", () => {
 
     fireEvent.focus(window);
 
+    expect(performSearchMock).not.toHaveBeenCalled();
+
+    nowSpy.mockRestore();
+  });
+
+  it("窗口重新聚焦且当前搜索仍可复用时不会重复搜索", async () => {
+    canReuseCurrentSearchMock
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
+    renderHookProbe("/search?q=%E6%B5%8B%E8%AF%95");
+
+    await waitFor(() => {
+      expect(performSearchMock).toHaveBeenCalledTimes(1);
+    });
+
+    performSearchMock.mockClear();
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 11_000);
+
+    fireEvent.focus(window);
+
+    expect(canReuseCurrentSearchMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ keyword: "测试" }),
+    );
     expect(performSearchMock).not.toHaveBeenCalled();
 
     nowSpy.mockRestore();

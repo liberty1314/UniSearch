@@ -33,6 +33,7 @@ export function useSearchUrlSync(): void {
     setSearchParams,
     clearResults,
     lastCompletedSearchParams,
+    canReuseCurrentSearch,
   } = useSearchStore();
   const { isAuthenticated } = useAuthStore();
   const location = useLocation();
@@ -151,6 +152,10 @@ export function useSearchUrlSync(): void {
 
     const forceSkeleton = state?.forceSkeleton ?? false;
     lastFocusRevalidateAtRef.current = Date.now();
+    if (canReuseCurrentSearch(nextParams, { forceSkeleton })) {
+      return;
+    }
+
     void performSearch(nextParams, {
       preserveResults: forceSkeleton ? false : Boolean(searchResults) && lastCompletedSearchParams?.keyword === nextParams.keyword,
     });
@@ -163,6 +168,7 @@ export function useSearchUrlSync(): void {
       });
     }
   }, [
+    canReuseCurrentSearch,
     clearResults,
     lastCompletedSearchParams?.keyword,
     location.hash,
@@ -194,33 +200,30 @@ export function useSearchUrlSync(): void {
         return;
       }
 
-      const hasCompletedVisibleResults =
-        Boolean(searchResults) && lastCompletedSearchParams?.keyword === keyword;
-      if (!parsedParams.refresh && hasCompletedVisibleResults) {
+      const revalidateParams = {
+        keyword,
+        source: parsedParams.source || "all",
+        resultType: parsedParams.resultType || "merge",
+        cloudTypes: parsedParams.cloudTypes || [],
+        channels: parsedParams.channels || [],
+        plugins: parsedParams.plugins || [],
+        concurrency: searchParams.concurrency || 5,
+        refresh: parsedParams.refresh || false,
+        ext: searchParams.ext || {},
+        filter: parsedParams.filter,
+      };
+
+      if (canReuseCurrentSearch(revalidateParams)) {
         lastFocusRevalidateAtRef.current = now;
         return;
       }
 
       lastFocusRevalidateAtRef.current = now;
-      void performSearch(
-        {
-          keyword,
-          source: parsedParams.source || "all",
-          resultType: parsedParams.resultType || "merge",
-          cloudTypes: parsedParams.cloudTypes || [],
-          channels: parsedParams.channels || [],
-          plugins: parsedParams.plugins || [],
-          concurrency: searchParams.concurrency || 5,
-          refresh: parsedParams.refresh || false,
-          ext: searchParams.ext || {},
-          filter: parsedParams.filter,
-        },
-        {
-          preserveResults:
-            Boolean(searchResults) &&
-            lastCompletedSearchParams?.keyword === keyword,
-        },
-      );
+      void performSearch(revalidateParams, {
+        preserveResults:
+          Boolean(searchResults) &&
+          lastCompletedSearchParams?.keyword === keyword,
+      });
     };
 
     const handleVisibilityChange = () => {
@@ -237,6 +240,7 @@ export function useSearchUrlSync(): void {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [
+    canReuseCurrentSearch,
     isAuthenticated,
     lastCompletedSearchParams?.keyword,
     location.pathname,

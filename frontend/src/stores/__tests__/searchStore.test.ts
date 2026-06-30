@@ -250,6 +250,61 @@ describe("searchStore", () => {
     expect(state.searchResults?.resources[0]?.title).toBe("最终结果");
   });
 
+  it("渐进式搜索运行中同一参数可复用当前搜索", async () => {
+    const { useSearchStore } = await import("@/stores/searchStore");
+
+    let resolveSearch: (value: SearchResponse) => void = () => {};
+    const pendingSearch = new Promise<SearchResponse>((resolve) => {
+      resolveSearch = resolve;
+    });
+    searchProgressiveMock.mockReturnValueOnce(pendingSearch);
+
+    const searchPromise = useSearchStore.getState().performSearch({
+      keyword: "复用搜索",
+      cloudTypes: ["quark", "aliyun"],
+    });
+
+    await vi.waitFor(() => {
+      expect(searchProgressiveMock).toHaveBeenCalled();
+    });
+
+    expect(useSearchStore.getState().canReuseCurrentSearch({
+      keyword: "复用搜索",
+      cloudTypes: ["aliyun", "quark"],
+    })).toBe(true);
+
+    resolveSearch(buildSearchResults("复用搜索结果"));
+    await searchPromise;
+  });
+
+  it("刷新、强制骨架屏或不同参数时不可复用当前搜索", async () => {
+    const { useSearchStore } = await import("@/stores/searchStore");
+
+    searchMock.mockResolvedValueOnce(buildSearchResults("完成结果"));
+
+    await useSearchStore.getState().performSearch({
+      keyword: "不可复用",
+      cloudTypes: ["quark"],
+    });
+
+    expect(useSearchStore.getState().canReuseCurrentSearch({
+      keyword: "不可复用",
+      cloudTypes: ["quark"],
+      refresh: true,
+    })).toBe(false);
+    expect(useSearchStore.getState().canReuseCurrentSearch(
+      {
+        keyword: "不可复用",
+        cloudTypes: ["quark"],
+      },
+      { forceSkeleton: true },
+    )).toBe(false);
+    expect(useSearchStore.getState().canReuseCurrentSearch({
+      keyword: "新的关键词",
+      cloudTypes: ["quark"],
+    })).toBe(false);
+  });
+
   it("渐进式搜索失败时会回退普通搜索", async () => {
     const { useSearchStore } = await import("@/stores/searchStore");
 

@@ -1515,3 +1515,13 @@
     - frontend/e2e/test-helpers.ts
     - frontend/src/components/admin/__tests__/AdminStatusToggleAction.test.tsx
     - docs/readme_2606.md
+
+- [2026-06-30 09:37] feat(search): 支持在搜索中或完成后复用当前搜索以避免重复请求
+  - Body: 在搜索进行中（active）或已完成（completed）且参数相同时，支持在页面重新挂载或聚焦时复用当前搜索，避免发起不必要的重复搜索请求，并增加了相应单元测试。
+  - Files:
+    - docs/readme_2606.md
+    - frontend/src/hooks/__tests__/useSearchUrlSync.test.tsx
+    - frontend/src/hooks/useSearchUrlSync.ts
+    - frontend/src/pages/__tests__/SearchPage.test.tsx
+    - frontend/src/stores/__tests__/searchStore.test.ts
+    - frontend/src/stores/searchStore.ts
