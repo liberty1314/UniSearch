@@ -1525,3 +1525,13 @@
     - frontend/src/pages/__tests__/SearchPage.test.tsx
     - frontend/src/stores/__tests__/searchStore.test.ts
     - frontend/src/stores/searchStore.ts
+
+- [2026-06-30 09:53] chore(search): 移除搜索启动台的精准模板模块及相关代码
+  - Body: 清理了搜索启动台（search launchpad）中的精准模板模块，移除了对应的预设预定义模板、类型声明以及相关图标，并同步更新了测试用例，使无关键词时仅展示最近有效搜索和热榜直搜。
+  - Files:
+    - docs/readme_2606.md
+    - frontend/src/components/search/SearchEmptyWorkbench.tsx
+    - frontend/src/components/search/searchLaunchpadPresets.ts
+    - frontend/src/components/search/searchLaunchpadTypes.ts
+    - frontend/src/pages/__tests__/SearchPage.test.tsx
+

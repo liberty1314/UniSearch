@@ -1,32 +1,21 @@
 import React from 'react';
 import {
   ArrowRight,
-  BookOpen,
   Clock3,
-  Film,
   Flame,
   LoaderCircle,
-  MonitorPlay,
   Search,
-  Sparkles,
   X,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   formatCloudTypeNames,
-  searchLaunchTemplateGroups,
 } from '@/components/search/searchLaunchpadPresets';
 import type {
   RecentEffectiveSearch,
   SearchLaunchPreset,
   SearchLaunchTrendingEntry,
 } from '@/components/search/searchLaunchpadTypes';
-
-const sectionIcons = {
-  影视娱乐: Film,
-  学习资料: BookOpen,
-  实用软件: MonitorPlay,
-} as const;
 
 interface SearchEmptyWorkbenchProps {
   recentSearches?: RecentEffectiveSearch[];
@@ -68,7 +57,7 @@ export function SearchEmptyWorkbench({
                 选一个更明确的线索，再开始聚合搜索
               </h2>
               <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300/80">
-                未输入关键词时，这里优先展示最近有效搜索、热榜条目和精准模板，尽量减少一上来就搜到一大片泛结果。
+                未输入关键词时，这里优先展示最近有效搜索和热榜条目，尽量减少一上来就搜到一大片泛结果。
               </p>
             </div>
 
@@ -195,60 +184,9 @@ export function SearchEmptyWorkbench({
               </div>
             ) : (
               <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                热榜暂时没有返回可用条目，下面的精准模板仍可作为手动搜索参考。
+                热榜暂时没有返回可用条目，可以直接在上方输入更具体的关键词。
               </p>
             )}
-          </div>
-
-          <div className="rounded-[1.25rem] border border-slate-200/70 bg-white/60 p-4 dark:border-white/10 dark:bg-slate-900/40">
-            <div className="flex min-w-0 items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/80 text-cyan-700 shadow-sm dark:bg-slate-900/50 dark:text-cyan-200">
-                <Sparkles className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  精准模板
-                </p>
-                <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                  每个模板都展示更明确的搜索意图，可作为手动输入关键词和筛选条件的参考。
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-4 lg:grid-cols-3">
-              {searchLaunchTemplateGroups.map((group) => {
-                const Icon = sectionIcons[group.title as keyof typeof sectionIcons];
-
-                return (
-                  <div key={group.title} className="min-w-0">
-                    <div className="flex items-start gap-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[0.8rem] bg-cyan-50 text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-200">
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                          {group.title}
-                        </h3>
-                        <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                          {group.description}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {group.keywords.map((preset) => (
-                        <span
-                          key={preset.id}
-                          className="inline-flex cursor-default items-center rounded-full border border-slate-200/75 bg-white/80 px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-cyan-400/40 dark:hover:text-cyan-200"
-                        >
-                          {preset.label}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
         </div>
       </div>

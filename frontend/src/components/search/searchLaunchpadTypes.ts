@@ -1,6 +1,6 @@
 import type { SearchParams, CloudTypeValue } from "@/types/search";
 
-export type SearchLaunchPresetSource = "template" | "trending" | "recent";
+export type SearchLaunchPresetSource = "trending" | "recent";
 
 export interface SearchLaunchPreset {
   id: string;
@@ -13,12 +13,6 @@ export interface SearchLaunchPreset {
     originalTitle?: string;
     keyword: string;
   };
-}
-
-export interface SearchLaunchTemplateGroup {
-  title: string;
-  description: string;
-  keywords: SearchLaunchPreset[];
 }
 
 export interface SearchLaunchTrendingEntry {

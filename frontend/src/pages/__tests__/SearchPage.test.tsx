@@ -300,7 +300,7 @@ describe("SearchPage", () => {
     expect(screen.getByText("search-box")).toBeInTheDocument();
   });
 
-  it("无关键词时展示最近有效搜索、热榜直搜和精准模板", async () => {
+  it("无关键词时展示最近有效搜索和热榜直搜，不展示精准模板", async () => {
     searchStoreState.recentEffectiveSearches = [
       {
         id: "recent-1",
@@ -359,7 +359,7 @@ describe("SearchPage", () => {
     expect(screen.getByTestId("search-empty-workbench")).toBeInTheDocument();
     expect(screen.getByText("搜索启动台")).toBeInTheDocument();
     expect(screen.getByText("最近有效搜索")).toBeInTheDocument();
-    expect(screen.getByText("精准模板")).toBeInTheDocument();
+    expect(screen.queryByText("精准模板")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "恢复搜索 三体 4K" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "删除最近有效搜索 三体 4K" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "清空最近有效搜索" })).toBeInTheDocument();
@@ -375,7 +375,7 @@ describe("SearchPage", () => {
     });
     expect(screen.getByText("沙丘 2")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "搜 4K 沙丘 2" })).toBeInTheDocument();
-    expect(screen.getByText("电影 4K")).toBeInTheDocument();
+    expect(screen.queryByText("电影 4K")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "按模板搜索 电影 4K" })).not.toBeInTheDocument();
   });
 
@@ -401,20 +401,15 @@ describe("SearchPage", () => {
     expect(screen.getByText("来自热门榜单：沙丘 2")).toBeInTheDocument();
   });
 
-  it("精准模板仅展示为参考标签，不会触发搜索或同步地址", async () => {
+  it("精准模板标签不再作为空状态入口渲染", async () => {
     renderSearchPage("/search");
 
     await waitFor(() => {
-      expect(screen.getByText("精准模板")).toBeInTheDocument();
+      expect(screen.getByTestId("search-empty-workbench")).toBeInTheDocument();
     });
 
-    setSearchParamsMock.mockClear();
-    performSearchMock.mockClear();
-
-    fireEvent.click(screen.getByText("电影 4K"));
-
-    expect(setSearchParamsMock).not.toHaveBeenCalled();
-    expect(performSearchMock).not.toHaveBeenCalled();
+    expect(screen.queryByText("精准模板")).not.toBeInTheDocument();
+    expect(screen.queryByText("电影 4K")).not.toBeInTheDocument();
     expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
     expect(screen.getByTestId("location-probe")).toHaveTextContent('"search":""');
     expect(screen.getByTestId("location-probe")).not.toHaveTextContent("forceSkeleton");
@@ -422,19 +417,19 @@ describe("SearchPage", () => {
     expect(screen.getByTestId("location-probe")).not.toHaveTextContent("mediaTypes=");
   });
 
-  it("匿名查看精准模板时点击标签不会进入登录或保留搜索意图", async () => {
+  it("匿名访问空搜索页时不渲染精准模板入口", async () => {
     searchAccessStatus = "anonymous";
 
     renderSearchPage("/search");
 
     await waitFor(() => {
-      expect(screen.getByText("精准模板")).toBeInTheDocument();
+      expect(screen.getByTestId("search-empty-workbench")).toBeInTheDocument();
     });
 
     performSearchMock.mockClear();
 
-    fireEvent.click(screen.getByText("电影 4K"));
-
+    expect(screen.queryByText("精准模板")).not.toBeInTheDocument();
+    expect(screen.queryByText("电影 4K")).not.toBeInTheDocument();
     expect(performSearchMock).not.toHaveBeenCalled();
     expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
     expect(screen.getByTestId("location-probe")).not.toHaveTextContent('"pendingSearch"');
