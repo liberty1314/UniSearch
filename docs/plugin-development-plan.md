@@ -217,39 +217,47 @@ flowchart LR
 - 渐进式调度接入：`backend/service/search_progressive.go`。
 - 测试覆盖：`backend/service/plugin_priority_calculator_test.go`。
 
-### 阶段四：管理后台可视化，P1，预计 5 个工作日
+### 阶段四：管理后台可视化，P1，预计 5 个工作日（已完成）
 
 #### 6.10 前端类型与接口
 
-- 新增插件指标相关 TypeScript 类型。
-- 新增管理端 API 调用封装。
-- 新增数据刷新 Hook。
+- [x] 新增插件指标相关 TypeScript 类型。
+- [x] 新增管理端 API 调用封装。
+- [x] 新增数据刷新 Hook。
 
 验收条件：
-- 类型覆盖实时指标、聚合指标、错误日志和分页响应。
-- 请求失败时显示现有后台风格错误提示。
+- [x] 类型覆盖实时指标、聚合指标、错误日志和分页响应。
+- [x] 请求失败时显示现有后台风格错误提示。
 
 #### 6.11 监控视图组件
 
-- 新增实时指标卡片：活跃插件数、平均响应、成功率、错误数。
-- 新增响应时间趋势图。
-- 新增插件性能对比表。
-- 新增错误日志抽屉。
-- 新增熔断状态和恢复倒计时展示。
+- [x] 新增实时指标卡片：活跃插件数、平均响应、成功率、错误数。
+- [x] 新增响应时间趋势图。
+- [x] 新增插件性能对比表。
+- [x] 新增错误日志抽屉。
+- [x] 新增熔断状态和恢复倒计时展示。
 
 验收条件：
-- 桌面和移动布局无文本溢出。
-- 加载、空数据、错误和有数据状态均有测试覆盖。
-- 自动刷新默认 30 秒，并在组件卸载时停止。
+- [x] 桌面和移动布局无文本溢出。
+- [x] 加载、空数据、错误和有数据状态均有测试覆盖。
+- [x] 自动刷新默认 30 秒，并在组件卸载时停止。
 
 #### 6.12 导航集成
 
-- 在管理后台侧边栏或插件中心内增加“性能监控”入口。
-- 与现有 `PluginManagementView` 保持视觉一致。
+- [x] 在管理后台侧边栏或插件中心内增加“性能监控”入口。
+- [x] 与现有 `PluginManagementView` 保持视觉一致。
 
 验收条件：
-- 管理员可从后台稳定进入监控视图。
-- 现有插件中心筛选、测试和启停功能不回归。
+- [x] 管理员可从后台稳定进入监控视图。
+- [x] 现有插件中心筛选、测试和启停功能不回归。
+
+完成记录：
+- 后端快照扩展：`backend/model/plugin_catalog.go`、`backend/service/plugin_health_service.go`。
+- 前端类型：`frontend/src/types/plugin.ts`、`frontend/src/types/pluginMetrics.ts`。
+- 数据刷新 Hook：`frontend/src/hooks/usePluginMetricsController.ts`。
+- 监控视图：`frontend/src/components/admin/PluginPerformanceDashboard.tsx`。
+- 导航接入：`frontend/src/lib/adminRoute.ts`、`frontend/src/components/admin/Sidebar.tsx`、`frontend/src/pages/Admin.tsx`。
+- 测试覆盖：`backend/service/plugin_health_service_test.go`、`frontend/src/components/admin/__tests__/PluginPerformanceDashboard.test.tsx`、`frontend/src/hooks/__tests__/useAdminPageController.test.tsx`、`frontend/src/pages/__tests__/AdminNavigation.test.tsx`、`frontend/src/pages/__tests__/Admin.test.tsx`。
 
 ### 阶段五：清理、验证与发布，P0，预计 2 个工作日
 

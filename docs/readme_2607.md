@@ -67,3 +67,24 @@
     - backend/service/search_progressive.go
     - docs/plugin-development-plan.md
     - docs/readme_2607.md
+
+[2026-07-04 22:56] feat(plugin-observability): 新增插件性能监控后台视图
+  Body: 新增插件性能监控页面、指标数据 Hook、前端类型和后台导航入口，并透出插件熔断状态快照。同步补充组件、导航、页面与健康快照测试，并更新插件开发计划。
+  Files:
+    - backend/model/plugin_catalog.go
+    - backend/service/plugin_health_service.go
+    - backend/service/plugin_health_service_test.go
+    - backend/service/search_executor_test.go
+    - docs/plugin-development-plan.md
+    - frontend/src/components/admin/PluginPerformanceDashboard.tsx
+    - frontend/src/components/admin/Sidebar.tsx
+    - frontend/src/components/admin/__tests__/PluginPerformanceDashboard.test.tsx
+    - frontend/src/hooks/__tests__/useAdminPageController.test.tsx
+    - frontend/src/hooks/usePluginMetricsController.ts
+    - frontend/src/lib/adminRoute.ts
+    - frontend/src/pages/Admin.tsx
+    - frontend/src/pages/__tests__/Admin.test.tsx
+    - frontend/src/pages/__tests__/AdminNavigation.test.tsx
+    - frontend/src/types/plugin.ts
+    - frontend/src/types/pluginMetrics.ts
+    - docs/readme_2607.md

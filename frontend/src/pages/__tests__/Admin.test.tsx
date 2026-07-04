@@ -40,6 +40,10 @@ vi.mock('@/components/admin/PluginManagementView', () => ({
   PluginManagementView: () => <div>PluginManagementView</div>,
 }));
 
+vi.mock('@/components/admin/PluginPerformanceDashboard', () => ({
+  PluginPerformanceDashboard: () => <div>PluginPerformanceDashboard</div>,
+}));
+
 vi.mock('@/components/admin/AdminUsersView', () => ({
   default: () => (
     <>
@@ -118,6 +122,15 @@ describe('Admin', () => {
     render(<Admin />);
 
     expect(await screen.findByText('PluginManagementView')).toBeInTheDocument();
+    expect(screen.queryByText('AdminUsersView')).not.toBeInTheDocument();
+  });
+
+  it('在插件性能监控视图渲染独立页面', async () => {
+    currentViewState.value = 'plugin_observability';
+
+    render(<Admin />);
+
+    expect(await screen.findByText('PluginPerformanceDashboard')).toBeInTheDocument();
     expect(screen.queryByText('AdminUsersView')).not.toBeInTheDocument();
   });
 });

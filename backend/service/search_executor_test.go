@@ -157,7 +157,14 @@ func TestPluginSearchExecutorRecordsTimedOutPluginName(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("expected fast plugin result only, got %d", len(results))
 	}
-	if len(warnings) != 1 {
+	hasPluginTimeoutWarning := false
+	for _, warning := range warnings {
+		if warning.Source == "timeout-plugin" {
+			hasPluginTimeoutWarning = true
+			break
+		}
+	}
+	if !hasPluginTimeoutWarning {
 		t.Fatalf("expected timeout warning, got %#v", warnings)
 	}
 

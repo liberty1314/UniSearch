@@ -37,6 +37,10 @@ vi.mock('@/components/admin/PluginManagementView', () => ({
   PluginManagementView: () => <div>PluginManagementView</div>,
 }));
 
+vi.mock('@/components/admin/PluginPerformanceDashboard', () => ({
+  PluginPerformanceDashboard: () => <div>PluginPerformanceDashboard</div>,
+}));
+
 vi.mock('@/components/admin/AdminUsersView', () => ({
   default: () => <div>AdminUsersView</div>,
 }));
@@ -74,6 +78,7 @@ describe('Admin 导航集成', () => {
       .map((button) => button.textContent?.trim().replace(/\s+/g, ' '));
 
     expect(labels.at(-1)).toBe('系统设置');
+    expect(labels).toContain('性能监控');
   });
 
   it('点击侧边栏后会同步切换 URL 与页面内容', async () => {
@@ -105,5 +110,32 @@ describe('Admin 导航集成', () => {
     });
     expect(await screen.findByText('ChannelManagementView')).toBeInTheDocument();
     expect(screen.queryByText('PluginManagementView')).not.toBeInTheDocument();
+  });
+
+  it('性能监控入口可以进入插件观测页面', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/admin?view=plugin_management']}>
+        <Routes>
+          <Route
+            path="/admin"
+            element={
+              <>
+                <LocationProbe />
+                <Admin />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getAllByRole('button', { name: '性能监控' })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent('/admin?view=plugin_observability');
+    });
+    expect(await screen.findByText('PluginPerformanceDashboard')).toBeInTheDocument();
   });
 });

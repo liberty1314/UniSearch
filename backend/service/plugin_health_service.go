@@ -212,10 +212,12 @@ func (s *PluginHealthService) GetSnapshotMap(pluginNames []string) (map[string]m
 	for _, item := range statuses {
 		if original, ok := normalizedToOriginal[item.PluginName]; ok {
 			result[original] = model.PluginHealthSnapshot{
-				IsHealthy:     item.IsHealthy,
-				LastCheckedAt: item.LastCheckedAt,
-				LastError:     item.LastError,
-				CheckSource:   item.CheckSource,
+				IsHealthy:            item.IsHealthy,
+				LastCheckedAt:        item.LastCheckedAt,
+				LastError:            item.LastError,
+				CheckSource:          item.CheckSource,
+				CircuitState:         item.CircuitState,
+				CircuitCooldownUntil: item.CircuitCooldownUntil,
 			}
 		}
 	}

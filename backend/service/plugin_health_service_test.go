@@ -2,6 +2,7 @@ package service
 
 import (
 	"testing"
+	"time"
 
 	"unisearch/model"
 
@@ -126,6 +127,38 @@ func TestPluginHealthServiceRecordResultTracksConsecutiveFailures(t *testing.T) 
 	}
 	if status.TimeoutCount != 0 || status.TimeoutRate != 0 {
 		t.Fatalf("普通失败不应计入超时统计，实际 timeout_count=%d timeout_rate=%v", status.TimeoutCount, status.TimeoutRate)
+	}
+}
+
+func TestPluginHealthServiceGetSnapshotMapIncludesCircuitState(t *testing.T) {
+	service := newPluginHealthTestService(t)
+	cooldownUntil := time.Now().Add(30 * time.Second).UTC()
+
+	if err := service.db.Create(&model.PluginHealthStatus{
+		PluginName:           "open-plugin",
+		IsHealthy:            false,
+		LastCheckedAt:        time.Now().UTC(),
+		LastError:            "连续失败",
+		CheckSource:          "search_failure",
+		CircuitState:         "open",
+		CircuitCooldownUntil: &cooldownUntil,
+	}).Error; err != nil {
+		t.Fatalf("写入熔断健康状态失败: %v", err)
+	}
+
+	snapshots, err := service.GetSnapshotMap([]string{"Open-Plugin"})
+	if err != nil {
+		t.Fatalf("查询健康快照失败: %v", err)
+	}
+	snapshot, ok := snapshots["Open-Plugin"]
+	if !ok {
+		t.Fatal("应按请求中的原始插件名返回快照")
+	}
+	if snapshot.CircuitState != "open" {
+		t.Fatalf("熔断状态应为 open，实际为 %q", snapshot.CircuitState)
+	}
+	if snapshot.CircuitCooldownUntil == nil || !snapshot.CircuitCooldownUntil.Equal(cooldownUntil) {
+		t.Fatalf("冷却截止时间未正确透出，实际为 %#v", snapshot.CircuitCooldownUntil)
 	}
 }
 

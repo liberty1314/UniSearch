@@ -46,6 +46,7 @@ const ControllerProbe = () => {
       <button onClick={() => setCurrentView('system_settings')}>go settings</button>
       <button onClick={() => setCurrentView('channel_management')}>go channels</button>
       <button onClick={() => setCurrentView('plugin_management')}>go plugins</button>
+      <button onClick={() => setCurrentView('plugin_observability')}>go plugin metrics</button>
     </div>
   );
 };
@@ -125,5 +126,14 @@ describe('useAdminPageController', () => {
       expect(screen.getByTestId('location')).toHaveTextContent('/admin?view=plugin_management');
     });
     expect(screen.getByTestId('current-view')).toHaveTextContent('plugin_management');
+  });
+
+  it('recognizes the plugin observability view as a legal admin view', async () => {
+    renderProbe('/admin?view=plugin_observability');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent('/admin?view=plugin_observability');
+    });
+    expect(screen.getByTestId('current-view')).toHaveTextContent('plugin_observability');
   });
 });

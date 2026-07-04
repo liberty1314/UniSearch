@@ -10,10 +10,12 @@ type PluginCatalogInstall struct {
 
 // PluginHealthSnapshot 是插件中心展示最近健康检查的稳定快照。
 type PluginHealthSnapshot struct {
-	IsHealthy     bool      `json:"is_healthy" sonic:"is_healthy"`
-	LastCheckedAt time.Time `json:"last_checked_at,omitempty" sonic:"last_checked_at,omitempty"`
-	LastError     string    `json:"last_error,omitempty" sonic:"last_error,omitempty"`
-	CheckSource   string    `json:"check_source,omitempty" sonic:"check_source,omitempty"`
+	IsHealthy            bool       `json:"is_healthy" sonic:"is_healthy"`
+	LastCheckedAt        time.Time  `json:"last_checked_at,omitempty" sonic:"last_checked_at,omitempty"`
+	LastError            string     `json:"last_error,omitempty" sonic:"last_error,omitempty"`
+	CheckSource          string     `json:"check_source,omitempty" sonic:"check_source,omitempty"`
+	CircuitState         string     `json:"circuit_state,omitempty" sonic:"circuit_state,omitempty"`
+	CircuitCooldownUntil *time.Time `json:"circuit_cooldown_until,omitempty" sonic:"circuit_cooldown_until,omitempty"`
 }
 
 // PluginCatalogItem 是插件中心统一条目，合并本地状态与远程市场元数据。

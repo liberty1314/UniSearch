@@ -67,6 +67,8 @@ export interface PluginHealthSnapshot {
   last_checked_at?: string;
   last_error?: string;
   check_source?: string;
+  circuit_state?: 'closed' | 'open' | 'half_open' | string;
+  circuit_cooldown_until?: string;
 }
 
 export interface PluginConfigField {
