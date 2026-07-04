@@ -101,3 +101,10 @@
     - frontend/src/components/admin/__tests__/PluginPerformanceDashboard.test.tsx
     - frontend/src/hooks/usePluginMetricsController.ts
     - docs/readme_2607.md
+
+[2026-07-05 01:23] fix(plugin-observability): 修复插件监控表格列宽溢出
+  Body: 调整后台数据表格管理网格的横向滚动与最小宽度能力，并压缩插件性能监控表格指标列展示。避免状态、响应、质量和熔断信息在桌面表格中换行挤压或溢出。
+  Files:
+    - frontend/src/components/admin/AdminDataTable.tsx
+    - frontend/src/components/admin/PluginPerformanceDashboard.tsx
+    - docs/readme_2607.md

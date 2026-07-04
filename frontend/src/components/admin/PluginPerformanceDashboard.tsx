@@ -43,6 +43,10 @@ const formatRate = (value: number) => `${((value || 0) * 100).toFixed(1)}%`;
 
 const formatCount = (value: number) => new Intl.NumberFormat('zh-CN').format(value || 0);
 
+const metricValueClassName = 'whitespace-nowrap text-sm font-semibold tabular-nums text-slate-900 dark:text-white';
+
+const metricHintClassName = 'mt-1 whitespace-nowrap text-xs tabular-nums text-slate-500 dark:text-slate-400';
+
 const healthSourceText = (source?: string) => {
   if (source === 'manual_test') return '手动测试';
   if (source === 'search_failure') return '搜索失败';
@@ -187,19 +191,61 @@ function TrendChart({ points }: { points: PluginTrendPoint[] }) {
 function PluginStatusCell({ row }: { row: PluginObservabilityRow }) {
   const badge = statusBadge(row);
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Badge variant="outline" className={cn('rounded-full px-2.5 py-1', badge.className)}>
+    <div className="flex min-w-0 flex-col items-center gap-1">
+      <Badge variant="outline" className={cn('whitespace-nowrap rounded-full px-2.5 py-1', badge.className)}>
         {badge.label}
       </Badge>
       {row.enabled ? (
-        <Badge variant="outline" className="rounded-full border-sky-200 bg-sky-50 px-2.5 py-1 text-sky-700 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-200">
+        <Badge variant="outline" className="whitespace-nowrap rounded-full border-sky-200 bg-sky-50 px-2.5 py-1 text-sky-700 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-200">
           启用
         </Badge>
       ) : (
-        <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-500 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-300">
+        <Badge variant="outline" className="whitespace-nowrap rounded-full border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-500 dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-300">
           停用
         </Badge>
       )}
+    </div>
+  );
+}
+
+function ResponseMetricCell({ row }: { row: PluginObservabilityRow }) {
+  return (
+    <div className="min-w-0">
+      <p className={metricValueClassName}>{formatMS(row.avgResponseMS)}</p>
+      <p className={metricHintClassName}>P95 {formatMS(row.p95ResponseMS)}</p>
+    </div>
+  );
+}
+
+function QualityMetricCell({ row }: { row: PluginObservabilityRow }) {
+  return (
+    <div className="min-w-0">
+      <p className={metricValueClassName}>{formatRate(row.successRate)}</p>
+      <p className={metricHintClassName}>超时 {formatRate(row.timeoutRate)}</p>
+    </div>
+  );
+}
+
+function ErrorMetricCell({ row }: { row: PluginObservabilityRow }) {
+  return (
+    <span className={cn(
+      'inline-flex min-w-10 justify-end whitespace-nowrap tabular-nums',
+      row.errorCount > 0 ? 'font-semibold text-rose-600 dark:text-rose-300' : 'text-slate-700 dark:text-slate-200'
+    )}>
+      {formatCount(row.errorCount)}
+    </span>
+  );
+}
+
+function CircuitMetricCell({ row }: { row: PluginObservabilityRow }) {
+  return (
+    <div className="flex min-w-0 flex-col items-center gap-1">
+      <Badge variant="outline" className={cn('whitespace-nowrap rounded-full px-2.5 py-1', circuitBadgeClass(row.circuitState))}>
+        {circuitText(row.circuitState)}
+      </Badge>
+      {row.circuitState === 'open' ? (
+        <p className="whitespace-nowrap text-[11px] tabular-nums text-slate-500 dark:text-slate-400">{formatCooldown(row.circuitCooldownUntil)}</p>
+      ) : null}
     </div>
   );
 }
@@ -241,56 +287,35 @@ export const PluginPerformanceDashboard: React.FC = () => {
     {
       key: 'status',
       title: '状态',
+      align: 'center',
       render: (row) => <PluginStatusCell row={row} />,
     },
     {
       key: 'avgResponseMS',
-      title: '平均',
+      title: '响应',
       sortable: true,
       align: 'right',
-      render: (row) => <span className="font-medium">{formatMS(row.avgResponseMS)}</span>,
-    },
-    {
-      key: 'p95ResponseMS',
-      title: 'P95',
-      sortable: true,
-      align: 'right',
-      render: (row) => <span>{formatMS(row.p95ResponseMS)}</span>,
+      render: (row) => <ResponseMetricCell row={row} />,
     },
     {
       key: 'successRate',
-      title: '成功率',
+      title: '质量',
       sortable: true,
       align: 'right',
-      render: (row) => <span>{formatRate(row.successRate)}</span>,
-    },
-    {
-      key: 'timeoutRate',
-      title: '超时率',
-      sortable: true,
-      align: 'right',
-      render: (row) => <span>{formatRate(row.timeoutRate)}</span>,
+      render: (row) => <QualityMetricCell row={row} />,
     },
     {
       key: 'errorCount',
       title: '错误',
       sortable: true,
       align: 'right',
-      render: (row) => <span className={row.errorCount > 0 ? 'font-semibold text-rose-600 dark:text-rose-300' : undefined}>{formatCount(row.errorCount)}</span>,
+      render: (row) => <ErrorMetricCell row={row} />,
     },
     {
       key: 'circuitState',
       title: '熔断',
-      render: (row) => (
-        <div className="space-y-1">
-          <Badge variant="outline" className={cn('rounded-full px-2.5 py-1', circuitBadgeClass(row.circuitState))}>
-            {circuitText(row.circuitState)}
-          </Badge>
-          {row.circuitState === 'open' ? (
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">{formatCooldown(row.circuitCooldownUntil)}</p>
-          ) : null}
-        </div>
-      ),
+      align: 'center',
+      render: (row) => <CircuitMetricCell row={row} />,
     },
   ], []);
 
@@ -389,6 +414,9 @@ export const PluginPerformanceDashboard: React.FC = () => {
                 countLabel="个插件"
                 onRowClick={(row) => controller.setSelectedPluginName(row.pluginName)}
                 renderMobileItem={(row) => <PluginMobileItem row={row} />}
+                desktopVariant="management-grid"
+                desktopGridGapClassName="gap-2"
+                desktopGridTemplateColumns="minmax(130px,1fr) 86px 88px 94px 42px 104px"
               />
             )}
           </AdminContentCard>

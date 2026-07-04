@@ -39,6 +39,7 @@ export interface AdminDataTableProps<T> {
   desktopVariant?: 'table' | 'management-grid';
   desktopGridGapClassName?: string;
   desktopGridTemplateColumns?: string;
+  desktopGridMinWidth?: string;
   getRowAccentClassName?: (item: T, index: number) => string;
 }
 
@@ -62,6 +63,7 @@ export function AdminDataTable<T extends object>({
   desktopVariant = 'table',
   desktopGridGapClassName = 'gap-3',
   desktopGridTemplateColumns,
+  desktopGridMinWidth,
   getRowAccentClassName,
 }: AdminDataTableProps<T>) {
   const shouldReduceMotion = useReducedMotion();
@@ -196,6 +198,9 @@ export function AdminDataTable<T extends object>({
   const desktopGridStyle = desktopGridTemplateColumns
     ? { gridTemplateColumns: desktopGridTemplateColumns }
     : undefined;
+  const desktopGridContentStyle = desktopGridMinWidth
+    ? { minWidth: desktopGridMinWidth }
+    : undefined;
 
   const renderOverlayLayer = () => (
     <AnimatePresence>
@@ -223,7 +228,8 @@ export function AdminDataTable<T extends object>({
 
   const renderManagementGridDesktopView = () => (
     <div className="relative hidden md:block">
-      <div className="space-y-2 px-2 pb-2">
+      <div className="overflow-x-auto px-2 pb-2">
+        <div className="min-w-full space-y-2" style={desktopGridContentStyle}>
         <div
           className={cn('grid grid-cols-12 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400', desktopGridGapClassName)}
           style={desktopGridStyle}
@@ -311,6 +317,7 @@ export function AdminDataTable<T extends object>({
             );
           })}
         </AnimatePresence>
+        </div>
       </div>
 
       {renderOverlayLayer()}
