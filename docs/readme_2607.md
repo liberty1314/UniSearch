@@ -1,0 +1,13 @@
+- [2026-07-04 10:59] feat(search): 实现搜索插件自适应超时调整与降级机制
+  - Body: 引入自适应超时感知和降级策略，根据插件历史健康状况与平均耗时动态调整超时时间，并补充监控日志、部署指南和效果验证脚本，以优化并发搜索场景下的性能与稳定性。
+  - Files:
+    - IMPLEMENTATION_SUMMARY.md
+    - QUICK_REFERENCE.md
+    - backend/plugin/baseasyncplugin.go
+    - backend/service/search_adaptive_timeout.go
+    - backend/service/search_executor.go
+    - backend/service/search_progressive.go
+    - docs/deployment-optimization-guide.md
+    - docs/plugin-timeout-solution.md
+    - docs/readme_2607.md
+    - scripts/verify-optimization.sh

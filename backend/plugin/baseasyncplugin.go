@@ -31,9 +31,9 @@ var (
 	initLock    sync.Mutex
 
 	// 默认配置值
-	defaultAsyncResponseTimeout = 4 * time.Second
-	defaultPluginTimeout        = 30 * time.Second
-	defaultCacheTTL             = 1 * time.Hour // 恢复但仅用于内存缓存
+	defaultAsyncResponseTimeout = 3 * time.Second  // 优化：从 4 秒降至 3 秒，加快快速响应
+	defaultPluginTimeout        = 10 * time.Second // 优化：从 30 秒降至 10 秒，避免长时间阻塞
+	defaultCacheTTL             = 1 * time.Hour    // 恢复但仅用于内存缓存
 	defaultMaxBackgroundWorkers = 20
 	defaultMaxBackgroundTasks   = 100
 

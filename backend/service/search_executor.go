@@ -148,7 +148,7 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 	}
 
 	effectivePluginWorkers := calculatePluginWorkerCount(concurrency, len(availablePlugins))
-	pluginTimeout := 30 * time.Second
+	pluginTimeout := 10 * time.Second // 优化：从 30 秒降至 10 秒
 	if config.AppConfig != nil && config.AppConfig.PluginTimeout > 0 {
 		pluginTimeout = config.AppConfig.PluginTimeout
 	}

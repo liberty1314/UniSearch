@@ -290,7 +290,7 @@ func effectivePluginTimeout() time.Duration {
 	if config.AppConfig != nil && config.AppConfig.PluginTimeout > 0 {
 		return config.AppConfig.PluginTimeout
 	}
-	return 30 * time.Second
+	return 10 * time.Second // 优化：从 30 秒降至 10 秒
 }
 
 func maxInt(a int, b int) int {
