@@ -58,3 +58,12 @@
     - backend/service/search_service.go
     - docs/plugin-development-plan.md
     - docs/readme_2607.md
+
+[2026-07-04 22:26] feat(plugin-priority): 新增插件智能优先级调度
+  Body: 新增插件优先级计算器，基于健康状态、响应时间、成功率和用户显式选择对插件分级排序。将排序与延迟调度接入渐进式搜索，让快速和关键插件优先返回，并补充优先级与渐进式调度测试。
+  Files:
+    - backend/service/plugin_priority_calculator.go
+    - backend/service/plugin_priority_calculator_test.go
+    - backend/service/search_progressive.go
+    - docs/plugin-development-plan.md
+    - docs/readme_2607.md

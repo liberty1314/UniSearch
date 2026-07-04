@@ -188,29 +188,34 @@ flowchart LR
 - 启动接线：`backend/cmd/bootstrap/app.go`、`backend/cmd/bootstrap/server.go`。
 - 测试覆盖：`backend/service/plugin_circuit_breaker_test.go`、`backend/service/search_executor_test.go`。
 
-### 阶段三：智能负载均衡，P1，预计 4 个工作日
+### 阶段三：智能负载均衡，P1，预计 4 个工作日（已完成）
 
 #### 6.8 优先级计算
 
-- 新增 `PluginPriorityCalculator`。
-- 基于健康度、平均响应时间、成功率和连续失败次数计算综合得分。
-- 输出 `Critical`、`Fast`、`Medium`、`Slow`、`Degraded` 分级。
+- [x] 新增 `PluginPriorityCalculator`。
+- [x] 基于健康度、平均响应时间、成功率和连续失败次数计算综合得分。
+- [x] 输出 `Critical`、`Fast`、`Medium`、`Slow`、`Degraded` 分级。
 
 验收条件：
-- 无历史数据插件使用稳定默认分。
-- 用户显式选择或高优先级插件可进入 `Critical`。
-- 超时率高或连续失败插件进入低优先级或降级分组。
+- [x] 无历史数据插件使用稳定默认分。
+- [x] 用户显式选择或高优先级插件可进入 `Critical`。
+- [x] 超时率高或连续失败插件进入低优先级或降级分组。
 
 #### 6.9 调度策略接入
 
-- 在渐进式搜索中按 `Critical > Fast > Medium > Slow` 排序提交。
-- 对 `Slow` 和 `Degraded` 插件降低并发或延迟提交。
-- 保留全局并发上限和单插件锁。
+- [x] 在渐进式搜索中按 `Critical > Fast > Medium > Slow > Degraded` 排序提交。
+- [x] 对 `Slow` 和 `Degraded` 插件延迟提交，避免抢占快速插件 worker。
+- [x] 保留全局并发上限和单插件锁。
 
 验收条件：
-- 快速插件结果优先返回。
-- 降级插件不会占满 worker。
-- 排序结果有单元测试覆盖。
+- [x] 快速插件结果优先返回。
+- [x] 降级插件不会占满 worker。
+- [x] 排序结果有单元测试覆盖。
+
+完成记录：
+- 优先级计算：`backend/service/plugin_priority_calculator.go`。
+- 渐进式调度接入：`backend/service/search_progressive.go`。
+- 测试覆盖：`backend/service/plugin_priority_calculator_test.go`。
 
 ### 阶段四：管理后台可视化，P1，预计 5 个工作日
 

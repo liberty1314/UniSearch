@@ -185,6 +185,14 @@ func (s *SearchService) startProgressivePluginTasks(ctx context.Context, normali
 	if len(plugins) == 0 {
 		return
 	}
+	priorityCalculator := NewPluginPriorityCalculator(s.pluginHealth, s.pluginMetrics)
+	rankedPlugins := priorityCalculator.RankPlugins(plugins, normalized.Plugins)
+	plugins = make([]plugin.AsyncSearchPlugin, 0, len(rankedPlugins))
+	pluginTierMap := make(map[string]PluginPriorityTier, len(rankedPlugins))
+	for _, rankedPlugin := range rankedPlugins {
+		plugins = append(plugins, rankedPlugin.Plugin)
+		pluginTierMap[normalizePluginName(rankedPlugin.Name)] = rankedPlugin.Tier
+	}
 
 	pluginNames := make([]string, 0, len(plugins))
 	for _, currentPlugin := range plugins {
@@ -219,6 +227,14 @@ func (s *SearchService) startProgressivePluginTasks(ctx context.Context, normali
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			if delay := pluginTierScheduleDelay(pluginTierMap[normalizePluginName(currentPlugin.Name())]); delay > 0 {
+				select {
+				case <-time.After(delay):
+				case <-ctx.Done():
+					resultCh <- progressiveSourceResult{source: currentPlugin.Name(), err: ctx.Err()}
+					return
+				}
+			}
 			select {
 			case sem <- struct{}{}:
 				defer func() { <-sem }()
