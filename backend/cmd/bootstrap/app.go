@@ -24,6 +24,7 @@ type App struct {
 	Search        *service.SearchService
 	HotRanking    *service.HotRankingService
 	PluginMetrics *service.PluginMetricsCollector
+	PluginCleaner *service.PluginMetricsCleaner
 	PluginChecker *service.PluginHealthChecker
 }
 
@@ -98,6 +99,9 @@ func Initialize() (*App, error) {
 	pluginMetricsCollector := service.NewPluginMetricsCollector(database.GetDB())
 	fmt.Println("PluginMetrics 服务已启动（插件性能指标采集已启用）")
 
+	pluginMetricsCleaner := service.NewPluginMetricsCleaner(database.GetDB())
+	fmt.Println("PluginMetricsCleaner 服务已启动（插件指标清理已启用）")
+
 	pluginStateService := service.NewPluginStateService(database.GetDB())
 	fmt.Println("PluginState 服务已启动（插件启停状态持久化已启用）")
 
@@ -137,6 +141,7 @@ func Initialize() (*App, error) {
 		Search:        searchService,
 		HotRanking:    hotRankingService,
 		PluginMetrics: pluginMetricsCollector,
+		PluginCleaner: pluginMetricsCleaner,
 		PluginChecker: pluginHealthChecker,
 	}, nil
 }

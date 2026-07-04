@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { getRequestErrorMessage, requestAuthedJson } from '@/components/admin/adminWorkspaceApi';
+import { refreshAuthTokenSingleFlight } from '@/lib/authRefreshManager';
 import type { PluginCatalogResponse, PluginInfo } from '@/types/plugin';
 import type {
   PluginErrorLog,
@@ -17,6 +18,7 @@ import type {
 const AUTO_REFRESH_MS = 30_000;
 const METRIC_LIMIT = 200;
 const ERROR_LOG_PAGE_SIZE = 20;
+const ACCESS_TOKEN_REFRESH_TIMEOUT_MS = 8_000;
 
 const EMPTY_REALTIME_SNAPSHOT: PluginMetricsRealtimeSnapshot = {
   active_plugin_count: 0,
@@ -37,6 +39,21 @@ const rateFromMetric = (metric: PluginPerformanceMetric | undefined, key: 'succe
   return count / metric.request_count;
 };
 
+const withTimeout = async <T>(promise: Promise<T>, timeoutMS: number, timeoutMessage: string): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMS);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+};
+
 const latestMetricByPlugin = (metrics: PluginPerformanceMetric[]) => {
   const result = new Map<string, PluginPerformanceMetric>();
   metrics.forEach((metric) => {
@@ -47,6 +64,40 @@ const latestMetricByPlugin = (metrics: PluginPerformanceMetric[]) => {
     }
   });
   return result;
+};
+
+const buildSnapshotFromMetrics = (metrics: PluginPerformanceMetric[]): PluginMetricsRealtimeSnapshot => {
+  const latestMetrics = Array.from(latestMetricByPlugin(metrics).values());
+  if (latestMetrics.length === 0) {
+    return EMPTY_REALTIME_SNAPSHOT;
+  }
+
+  const totals = latestMetrics.reduce(
+    (summary, metric) => {
+      summary.requestCount += metric.request_count;
+      summary.successCount += metric.success_count;
+      summary.timeoutCount += metric.timeout_count;
+      summary.errorCount += metric.error_count;
+      summary.weightedDuration += metric.avg_response_ms * metric.request_count;
+      return summary;
+    },
+    {
+      requestCount: 0,
+      successCount: 0,
+      timeoutCount: 0,
+      errorCount: 0,
+      weightedDuration: 0,
+    }
+  );
+
+  return {
+    active_plugin_count: latestMetrics.length,
+    avg_response_ms: totals.requestCount > 0 ? Math.round(totals.weightedDuration / totals.requestCount) : 0,
+    success_rate: totals.requestCount > 0 ? totals.successCount / totals.requestCount : 0,
+    timeout_rate: totals.requestCount > 0 ? totals.timeoutCount / totals.requestCount : 0,
+    error_count: totals.errorCount,
+    items: [],
+  };
 };
 
 const toRow = (
@@ -162,7 +213,8 @@ const matchesStatus = (row: PluginObservabilityRow, statusFilter: PluginMetricSt
 };
 
 export function usePluginMetricsController() {
-  const { token } = useAuthStore();
+  const { token, refreshToken } = useAuthStore();
+  const hasAuthSession = Boolean(token || refreshToken);
   const [snapshot, setSnapshot] = useState<PluginMetricsRealtimeSnapshot>(EMPTY_REALTIME_SNAPSHOT);
   const [metrics, setMetrics] = useState<PluginPerformanceMetric[]>([]);
   const [errorLogs, setErrorLogs] = useState<PluginErrorLog[]>([]);
@@ -174,22 +226,22 @@ export function usePluginMetricsController() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<PluginMetricStatusFilter>('all');
   const [selectedPluginName, setSelectedPluginName] = useState<string | null>(null);
-  const requestSeqRef = useRef(0);
+  const requestInFlightRef = useRef(false);
   const mountedRef = useRef(true);
 
-  useEffect(() => () => {
-    mountedRef.current = false;
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
-  const refresh = useCallback(async (options: { silent?: boolean; signal?: AbortSignal } = {}) => {
-    if (!token) {
-      setLoading(false);
-      setErrorMessage('缺少管理员登录状态');
+  const refresh = useCallback(async (options: { silent?: boolean } = {}) => {
+    if (requestInFlightRef.current) {
       return;
     }
+    requestInFlightRef.current = true;
 
-    const requestSeq = requestSeqRef.current + 1;
-    requestSeqRef.current = requestSeq;
     if (options.silent) {
       setRefreshing(true);
     } else {
@@ -198,70 +250,90 @@ export function usePluginMetricsController() {
     setErrorMessage(null);
 
     try {
+      const authState = useAuthStore.getState();
+      let requestToken = authState.token;
+      if (!requestToken) {
+        if (!authState.refreshToken) {
+          throw new Error('缺少管理员登录状态');
+        }
+        const payload = await withTimeout(
+          refreshAuthTokenSingleFlight(),
+          ACCESS_TOKEN_REFRESH_TIMEOUT_MS,
+          '恢复管理员登录状态超时，请重新登录后再试'
+        );
+        requestToken = payload.access_token || useAuthStore.getState().token;
+      }
+      if (!requestToken) {
+        throw new Error('恢复管理员登录状态失败，请重新登录后再试');
+      }
+
       const [nextSnapshot, metricResponse, errorResponse, catalogResponse] = await Promise.all([
         requestAuthedJson<PluginMetricsRealtimeSnapshot>(
           '/api/admin/plugin-metrics/realtime',
-          token,
-          '获取插件实时指标失败',
-          { signal: options.signal }
+          requestToken,
+          '获取插件实时指标失败'
         ),
         requestAuthedJson<PluginMetricsListResponse>(
           `/api/admin/plugin-metrics?limit=${METRIC_LIMIT}`,
-          token,
-          '获取插件聚合指标失败',
-          { signal: options.signal }
+          requestToken,
+          '获取插件聚合指标失败'
         ),
         requestAuthedJson<PluginErrorLogsResponse>(
           `/api/admin/plugin-metrics/errors?page=1&page_size=${ERROR_LOG_PAGE_SIZE}`,
-          token,
-          '获取插件错误日志失败',
-          { signal: options.signal }
+          requestToken,
+          '获取插件错误日志失败'
         ),
         requestAuthedJson<PluginCatalogResponse>(
           '/api/admin/plugin-center/catalog?refresh=false',
-          token,
-          '获取插件目录失败',
-          { signal: options.signal }
+          requestToken,
+          '获取插件目录失败'
         ),
       ]);
 
-      if (!mountedRef.current || requestSeqRef.current !== requestSeq) {
+      if (!mountedRef.current) {
         return;
       }
 
-      setSnapshot({ ...EMPTY_REALTIME_SNAPSHOT, ...nextSnapshot, items: nextSnapshot.items ?? [] });
-      setMetrics(metricResponse.items ?? []);
+      const nextMetrics = metricResponse.items ?? [];
+      const normalizedSnapshot = { ...EMPTY_REALTIME_SNAPSHOT, ...nextSnapshot, items: nextSnapshot.items ?? [] };
+      setSnapshot(normalizedSnapshot.items.length > 0 ? normalizedSnapshot : buildSnapshotFromMetrics(nextMetrics));
+      setMetrics(nextMetrics);
       setErrorLogs(errorResponse.items ?? []);
       setCatalogItems(catalogResponse.items ?? []);
       setLastUpdatedAt(new Date());
     } catch (error) {
-      if (options.signal?.aborted) {
-        return;
-      }
       if (!mountedRef.current) {
         return;
       }
       setErrorMessage(getRequestErrorMessage(error, '获取插件性能监控数据失败'));
     } finally {
-      if (mountedRef.current && requestSeqRef.current === requestSeq) {
+      requestInFlightRef.current = false;
+      if (mountedRef.current) {
         setLoading(false);
         setRefreshing(false);
       }
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
-    void refresh({ signal: controller.signal });
-    return () => controller.abort();
-  }, [refresh]);
+    if (!hasAuthSession) {
+      setLoading(false);
+      setErrorMessage('缺少管理员登录状态');
+      return undefined;
+    }
+    void refresh();
+    return undefined;
+  }, [hasAuthSession, refresh]);
 
   useEffect(() => {
+    if (!hasAuthSession) {
+      return undefined;
+    }
     const interval = window.setInterval(() => {
       void refresh({ silent: true });
     }, AUTO_REFRESH_MS);
     return () => window.clearInterval(interval);
-  }, [refresh]);
+  }, [hasAuthSession, refresh]);
 
   const rows = useMemo(
     () => buildRows(catalogItems, snapshot.items, metrics),

@@ -88,3 +88,16 @@
     - frontend/src/types/plugin.ts
     - frontend/src/types/pluginMetrics.ts
     - docs/readme_2607.md
+
+[2026-07-05 00:45] feat(plugin-metrics): 新增插件指标清理与监控兜底
+  Body: 新增插件指标清理器，定时删除过期性能指标和错误日志，并接入服务启动流程。优化性能监控页在访问令牌恢复和实时窗口为空时的展示兜底，并补充清理与监控测试。
+  Files:
+    - backend/cmd/bootstrap/app.go
+    - backend/cmd/bootstrap/server.go
+    - backend/service/plugin_metrics_cleaner.go
+    - backend/service/plugin_metrics_cleaner_test.go
+    - docs/plugin-development-plan.md
+    - frontend/src/components/admin/PluginPerformanceDashboard.tsx
+    - frontend/src/components/admin/__tests__/PluginPerformanceDashboard.test.tsx
+    - frontend/src/hooks/usePluginMetricsController.ts
+    - docs/readme_2607.md

@@ -43,6 +43,7 @@ func Run(srv *http.Server, app *App) error {
 
 	startHotRankingPreloader(serverLifecycleCtx, app)
 	startPluginMetricsCollector(serverLifecycleCtx, app)
+	startPluginMetricsCleaner(serverLifecycleCtx, app)
 	startPluginHealthChecker(serverLifecycleCtx, app)
 
 	serverErr := make(chan error, 1)
@@ -109,6 +110,15 @@ func startPluginMetricsCollector(ctx context.Context, app *App) {
 	}
 	app.Search.StartPluginMetricsCollector(ctx)
 	log.Println("插件指标采集器已启动：每 5 分钟聚合写入数据库")
+}
+
+func startPluginMetricsCleaner(ctx context.Context, app *App) {
+	if app == nil || app.PluginCleaner == nil {
+		log.Println("插件指标清理器未启动：服务不可用")
+		return
+	}
+	app.PluginCleaner.Start(ctx)
+	log.Println("插件指标清理器已启动：每天清理 30 天前指标和 7 天前错误日志")
 }
 
 func serveHTTP(srv *http.Server) error {

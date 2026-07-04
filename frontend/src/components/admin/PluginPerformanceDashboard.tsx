@@ -297,6 +297,7 @@ export const PluginPerformanceDashboard: React.FC = () => {
   const drawerOpen = Boolean(controller.selectedRow);
   const selected = controller.selectedRow;
   const hasAnyData = controller.rows.length > 0 || controller.errorLogs.length > 0 || controller.trendPoints.length > 0;
+  const snapshotSourceText = controller.snapshot.items.length > 0 ? '实时内存窗口' : '最近聚合窗口';
 
   return (
     <AdminWorkspacePageFrame
@@ -328,9 +329,9 @@ export const PluginPerformanceDashboard: React.FC = () => {
       metrics={(
         <AdminMetricGrid>
           <AdminMetricCard label="活跃插件" value={formatCount(controller.snapshot.active_plugin_count)} hint={`当前窗口 ${formatCount(controller.rows.length)} 个插件`} />
-          <AdminMetricCard label="平均响应" value={formatMS(controller.snapshot.avg_response_ms)} hint="实时内存窗口" />
+          <AdminMetricCard label="平均响应" value={formatMS(controller.snapshot.avg_response_ms)} hint={snapshotSourceText} />
           <AdminMetricCard label="成功率" value={formatRate(controller.snapshot.success_rate)} hint={`超时率 ${formatRate(controller.snapshot.timeout_rate)}`} />
-          <AdminMetricCard label="错误数" value={formatCount(controller.snapshot.error_count)} hint="当前内存窗口累计" />
+          <AdminMetricCard label="错误数" value={formatCount(controller.snapshot.error_count)} hint={`${snapshotSourceText}累计`} />
         </AdminMetricGrid>
       )}
       filters={(

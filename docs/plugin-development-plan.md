@@ -259,29 +259,37 @@ flowchart LR
 - 导航接入：`frontend/src/lib/adminRoute.ts`、`frontend/src/components/admin/Sidebar.tsx`、`frontend/src/pages/Admin.tsx`。
 - 测试覆盖：`backend/service/plugin_health_service_test.go`、`frontend/src/components/admin/__tests__/PluginPerformanceDashboard.test.tsx`、`frontend/src/hooks/__tests__/useAdminPageController.test.tsx`、`frontend/src/pages/__tests__/AdminNavigation.test.tsx`、`frontend/src/pages/__tests__/Admin.test.tsx`。
 
-### 阶段五：清理、验证与发布，P0，预计 2 个工作日
+### 阶段五：清理、验证与发布，P0，预计 2 个工作日（已完成）
 
 #### 6.13 数据清理任务
 
-- 每天清理 30 天前性能指标。
-- 每天清理 7 天前错误日志。
-- 清理任务输出结构化日志。
+- [x] 每天清理 30 天前性能指标。
+- [x] 每天清理 7 天前错误日志。
+- [x] 清理任务输出结构化日志。
 
 验收条件：
-- 单元测试覆盖清理边界时间。
-- 清理失败不会影响搜索服务。
+- [x] 单元测试覆盖清理边界时间。
+- [x] 清理失败不会影响搜索服务。
 
 #### 6.14 全量验证
 
-- 后端：`go test ./...`。
-- 前端：`pnpm tsc -b --noEmit`、`pnpm eslint .`、`pnpm vitest run`。
-- 集成：`scripts/tests/local-quality.sh`。
-- 可选：开启 `UNISEARCH_REAL_SEARCH_SMOKE=1` 执行真实搜索冒烟。
+- [x] 后端：`go test ./...`。
+- [x] 前端：`pnpm tsc -b --noEmit`、`pnpm eslint .`、`pnpm vitest run`。
+- [x] 集成：`scripts/tests/local-quality.sh`。
+- [x] 可选真实搜索冒烟策略已记录；本次未设置 `UNISEARCH_REAL_SEARCH_SMOKE=1`，按脚本默认跳过。
 
 验收条件：
-- 所有本地验证通过。
-- `.Codex/verification-report.md` 记录评分、风险和结论。
-- 新增文档和迁移说明完整。
+- [x] 所有本地验证通过。
+- [x] `.Codex/verification-report.md` 记录评分、风险和结论。
+- [x] 新增文档和迁移说明完整。
+
+完成记录：
+- 清理服务：`backend/service/plugin_metrics_cleaner.go`。
+- 启动接线：`backend/cmd/bootstrap/app.go`、`backend/cmd/bootstrap/server.go`。
+- 测试覆盖：`backend/service/plugin_metrics_cleaner_test.go`。
+- 验证报告：`.Codex/verification-report.md`。
+- 迁移说明：阶段五未新增数据库表或字段；复用阶段一已迁移的 `plugin_performance_metrics` 和 `plugin_error_logs`，无需额外迁移步骤。
+- 真实搜索冒烟：`scripts/tests/local-quality.sh` 默认跳过；如需执行，设置 `UNISEARCH_REAL_SEARCH_SMOKE=1` 后运行同一脚本。
 
 ## 7. API 契约草案
 

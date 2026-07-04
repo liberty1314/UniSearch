@@ -4,8 +4,26 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PluginPerformanceDashboard } from '../PluginPerformanceDashboard';
 
+const { authState, refreshAuthTokenSingleFlightMock, useAuthStoreMock } = vi.hoisted(() => {
+  const state = {
+    token: 'test-token' as string | null,
+    refreshToken: null as string | null,
+  };
+  return {
+    authState: state,
+    refreshAuthTokenSingleFlightMock: vi.fn(),
+    useAuthStoreMock: Object.assign(vi.fn(() => state), {
+      getState: vi.fn(() => state),
+    }),
+  };
+});
+
 vi.mock('@/stores/authStore', () => ({
-  useAuthStore: () => ({ token: 'test-token' }),
+  useAuthStore: useAuthStoreMock,
+}));
+
+vi.mock('@/lib/authRefreshManager', () => ({
+  refreshAuthTokenSingleFlight: refreshAuthTokenSingleFlightMock,
 }));
 
 const futureCooldown = '2099-01-01T00:00:00Z';
@@ -15,11 +33,23 @@ const createFetchResponse = (body: unknown, ok = true) => ({
   json: async () => body,
 });
 
-const mockSuccessfulFetch = () => {
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+const mockSuccessfulFetch = (options: { emptyRealtime?: boolean } = {}) => {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString();
+    void init;
 
     if (url === '/api/admin/plugin-metrics/realtime') {
+      if (options.emptyRealtime) {
+        return createFetchResponse({
+          active_plugin_count: 0,
+          avg_response_ms: 0,
+          success_rate: 0,
+          timeout_rate: 0,
+          error_count: 0,
+          items: [],
+        });
+      }
+
       return createFetchResponse({
         active_plugin_count: 2,
         avg_response_ms: 250,
@@ -187,11 +217,17 @@ const mockSuccessfulFetch = () => {
 describe('PluginPerformanceDashboard', () => {
   beforeEach(() => {
     vi.useRealTimers();
+    authState.token = 'test-token';
+    authState.refreshToken = null;
+    useAuthStoreMock.mockClear();
+    useAuthStoreMock.getState.mockClear();
+    refreshAuthTokenSingleFlightMock.mockReset();
     mockSuccessfulFetch();
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   it('展示实时指标、趋势图、性能表和熔断详情抽屉', async () => {
@@ -209,6 +245,41 @@ describe('PluginPerformanceDashboard', () => {
     expect(within(drawer).getByText(/恢复倒计时：/)).toBeInTheDocument();
     expect(within(drawer).getByText('插件搜索超时')).toBeInTheDocument();
     expect(within(drawer).getByText(/耗时 3000 ms/)).toBeInTheDocument();
+  });
+
+  it('刷新页面仅保留刷新令牌时先恢复访问令牌再加载数据', async () => {
+    authState.token = null;
+    authState.refreshToken = 'refresh-token';
+    refreshAuthTokenSingleFlightMock.mockResolvedValue({
+      access_token: 'restored-token',
+      refresh_token: 'new-refresh-token',
+      expires_at: 1_782_534_400,
+    });
+    const fetchMock = mockSuccessfulFetch();
+
+    render(<PluginPerformanceDashboard />);
+
+    expect(await screen.findByText('250 ms')).toBeInTheDocument();
+    expect(refreshAuthTokenSingleFlightMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/admin/plugin-metrics/realtime',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer restored-token',
+        }),
+      })
+    );
+  });
+
+  it('实时窗口为空时使用最近聚合指标填充顶部摘要', async () => {
+    mockSuccessfulFetch({ emptyRealtime: true });
+
+    render(<PluginPerformanceDashboard />);
+
+    expect(await screen.findByText('247 ms')).toBeInTheDocument();
+    expect(screen.getByText('93.3%')).toBeInTheDocument();
+    expect(screen.getAllByText('最近聚合窗口').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('1').length).toBeGreaterThan(0);
   });
 
   it('支持按健康状态筛选插件', async () => {
