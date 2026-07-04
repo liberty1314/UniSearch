@@ -30,6 +30,8 @@ type SearchService struct {
 	pluginLocks         sync.Map
 	pluginHealth        *PluginHealthService
 	pluginMetrics       *PluginMetricsCollector
+	pluginCircuit       *PluginCircuitBreakerService
+	pluginHealthChecker *PluginHealthChecker
 }
 
 // NewSearchService 创建搜索服务实例
@@ -58,22 +60,33 @@ func NewSearchService(pluginManager *plugin.PluginManager, redisCache *cache.Red
 		searchCache:         newSearchCache(redisCache, metrics),
 	}
 	service.tgExecutor = newTGSearchExecutor(service.searchCache, service.metrics, service.searchChannel)
-	service.pluginExecutor = newPluginSearchExecutorWithMetrics(service.pluginSelector, service.searchCache, service.metrics, &service.pluginLocks, service.pluginHealth, service.pluginMetrics, service.pluginRuntimeConfig)
+	service.pluginExecutor = newPluginSearchExecutorWithMetrics(service.pluginSelector, service.searchCache, service.metrics, &service.pluginLocks, service.pluginHealth, service.pluginMetrics, service.pluginCircuit, service.pluginRuntimeConfig)
 	return service
 }
 
 func (s *SearchService) SetPluginHealthService(pluginHealthService *PluginHealthService) {
 	s.pluginHealth = pluginHealthService
 	if s.pluginSelector != nil && s.searchCache != nil && s.metrics != nil {
-		s.pluginExecutor = newPluginSearchExecutorWithMetrics(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginMetrics, s.pluginRuntimeConfig)
+		s.pluginExecutor = newPluginSearchExecutorWithMetrics(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginMetrics, s.pluginCircuit, s.pluginRuntimeConfig)
 	}
 }
 
 func (s *SearchService) SetPluginMetricsCollector(pluginMetrics *PluginMetricsCollector) {
 	s.pluginMetrics = pluginMetrics
 	if s.pluginSelector != nil && s.searchCache != nil && s.metrics != nil {
-		s.pluginExecutor = newPluginSearchExecutorWithMetrics(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginMetrics, s.pluginRuntimeConfig)
+		s.pluginExecutor = newPluginSearchExecutorWithMetrics(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginMetrics, s.pluginCircuit, s.pluginRuntimeConfig)
 	}
+}
+
+func (s *SearchService) SetPluginCircuitBreaker(pluginCircuit *PluginCircuitBreakerService) {
+	s.pluginCircuit = pluginCircuit
+	if s.pluginSelector != nil && s.searchCache != nil && s.metrics != nil {
+		s.pluginExecutor = newPluginSearchExecutorWithMetrics(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginMetrics, s.pluginCircuit, s.pluginRuntimeConfig)
+	}
+}
+
+func (s *SearchService) SetPluginHealthChecker(pluginHealthChecker *PluginHealthChecker) {
+	s.pluginHealthChecker = pluginHealthChecker
 }
 
 func (s *SearchService) StartPluginMetricsCollector(ctx context.Context) {
@@ -95,7 +108,7 @@ func (s *SearchService) Search(keyword string, channels []string, concurrency in
 		s.tgExecutor = newTGSearchExecutor(s.searchCache, s.metrics, s.searchChannel)
 	}
 	if s.pluginExecutor == nil {
-		s.pluginExecutor = newPluginSearchExecutorWithMetrics(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginMetrics, s.pluginRuntimeConfig)
+		s.pluginExecutor = newPluginSearchExecutorWithMetrics(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginMetrics, s.pluginCircuit, s.pluginRuntimeConfig)
 	}
 
 	normalized := s.normalizer.Normalize(keyword, channels, concurrency, forceRefresh, resultType, sourceType, plugins, cloudTypes, ext)
@@ -199,7 +212,7 @@ func (s *SearchService) searchTG(keyword string, channels []string, forceRefresh
 // searchPlugins 搜索插件
 func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRefresh bool, concurrency int, ext map[string]interface{}) (allResults []model.SearchResult, warnings []model.SearchSourceWarning, err error) {
 	if s.pluginExecutor == nil {
-		s.pluginExecutor = newPluginSearchExecutorWithMetrics(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginMetrics, s.pluginRuntimeConfig)
+		s.pluginExecutor = newPluginSearchExecutorWithMetrics(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginMetrics, s.pluginCircuit, s.pluginRuntimeConfig)
 	}
 	return s.pluginExecutor.Search(keyword, plugins, forceRefresh, concurrency, ext)
 }

@@ -142,44 +142,51 @@ flowchart LR
 - 启动接线：`backend/cmd/bootstrap/app.go`、`backend/cmd/bootstrap/server.go`。
 - 测试覆盖：`backend/service/plugin_metrics_collector_test.go`、`backend/service/search_executor_test.go`、`backend/api/plugin_metrics_handler_test.go`。
 
-### 阶段二：熔断与自动恢复，P0，预计 5 个工作日
+### 阶段二：熔断与自动恢复，P0，预计 5 个工作日（已完成）
 
 #### 6.5 熔断器服务
 
-- 新增 `PluginCircuitBreakerService`。
-- 实现 `Closed`、`Open`、`HalfOpen` 三态状态机。
-- 使用每插件独立锁避免并发状态转换冲突。
-- 提供 `ShouldAllowRequest` 和 `RecordResult` 两个核心方法。
+- [x] 新增 `PluginCircuitBreakerService`。
+- [x] 实现 `Closed`、`Open`、`HalfOpen` 三态状态机。
+- [x] 使用每插件独立锁避免并发状态转换冲突。
+- [x] 提供 `ShouldAllowRequest` 和 `RecordResult` 两个核心方法。
 
 验收条件：
-- 连续失败达到阈值后进入 `Open`。
-- 冷却期结束后进入 `HalfOpen`。
-- 半开连续成功后恢复 `Closed`。
-- 半开任一失败后回到 `Open`。
+- [x] 连续失败达到阈值后进入 `Open`。
+- [x] 冷却期结束后进入 `HalfOpen`。
+- [x] 半开连续成功后恢复 `Closed`。
+- [x] 半开任一失败后回到 `Open`。
 
 #### 6.6 降级策略接入
 
-- 搜索前调用 `ShouldAllowRequest`。
-- 熔断插件直接跳过并返回来源级 warning。
-- 超时率过高时接入 `adaptiveTimeoutCalculator` 缩短插件超时。
-- 将熔断结果同步写入健康状态和指标事件。
+- [x] 搜索前调用 `ShouldAllowRequest`。
+- [x] 熔断插件直接跳过并返回来源级 warning。
+- [x] 超时率过高时接入 `adaptiveTimeoutCalculator` 缩短插件超时。
+- [x] 将熔断结果同步写入健康状态和指标事件。
 
 验收条件：
-- 故障插件被跳过时不影响其他插件结果。
-- warning 能指明插件被临时降级。
-- 手动测试插件仍可作为恢复探测入口。
+- [x] 故障插件被跳过时不影响其他插件结果。
+- [x] warning 能指明插件被临时降级。
+- [x] 手动测试插件仍可作为恢复探测入口。
 
 #### 6.7 主动健康检查
 
-- 新增 `PluginHealthChecker`。
-- `Closed` 状态插件默认 5 分钟检查一次。
-- `Open` 状态插件默认 30 秒探测一次，并使用指数退避限制频率。
-- 在应用启动流程中注册后台任务，并提供停止上下文。
+- [x] 新增 `PluginHealthChecker`。
+- [x] `Closed` 状态插件默认 5 分钟检查一次。
+- [x] `Open` 状态插件默认 30 秒探测一次，并使用指数退避限制频率。
+- [x] 在应用启动流程中注册后台任务，并提供停止上下文。
 
 验收条件：
-- 后台任务随服务启动和关闭正确创建与退出。
-- 探测失败不会造成 goroutine 泄漏。
-- 恢复成功后健康状态、熔断状态和指标快照一致。
+- [x] 后台任务随服务启动和关闭正确创建与退出。
+- [x] 探测失败不会造成 goroutine 泄漏。
+- [x] 恢复成功后健康状态、熔断状态和指标快照一致。
+
+完成记录：
+- 熔断服务：`backend/service/plugin_circuit_breaker.go`。
+- 主动探测：`backend/service/plugin_health_checker.go`。
+- 搜索接入：`backend/service/search_executor.go`、`backend/service/search_progressive.go`、`backend/service/search_service.go`。
+- 启动接线：`backend/cmd/bootstrap/app.go`、`backend/cmd/bootstrap/server.go`。
+- 测试覆盖：`backend/service/plugin_circuit_breaker_test.go`、`backend/service/search_executor_test.go`。
 
 ### 阶段三：智能负载均衡，P1，预计 4 个工作日
 

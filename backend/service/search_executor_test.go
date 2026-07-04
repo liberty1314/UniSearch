@@ -192,7 +192,7 @@ func TestPluginSearchExecutorRecordsPluginMetrics(t *testing.T) {
 	collector, _ := newPluginMetricsTestCollector(t)
 	metrics := newSearchMetricsRecorder()
 	selector := newPluginSelector(pm, nil)
-	executor := newPluginSearchExecutorWithMetrics(selector, newSearchCache(nil, metrics), metrics, nil, nil, collector)
+	executor := newPluginSearchExecutorWithMetrics(selector, newSearchCache(nil, metrics), metrics, nil, nil, collector, nil)
 
 	_, _, err := executor.Search("仙逆", nil, true, 2, nil)
 	if err != nil {

@@ -24,6 +24,7 @@ type App struct {
 	Search        *service.SearchService
 	HotRanking    *service.HotRankingService
 	PluginMetrics *service.PluginMetricsCollector
+	PluginChecker *service.PluginHealthChecker
 }
 
 func Initialize() (*App, error) {
@@ -91,6 +92,9 @@ func Initialize() (*App, error) {
 	pluginHealthService := service.NewPluginHealthService(database.GetDB())
 	fmt.Println("PluginHealth 服务已启动（插件健康状态持久化已启用）")
 
+	pluginCircuitBreaker := service.NewPluginCircuitBreakerService(pluginHealthService)
+	fmt.Println("PluginCircuitBreaker 服务已启动（插件熔断降级已启用）")
+
 	pluginMetricsCollector := service.NewPluginMetricsCollector(database.GetDB())
 	fmt.Println("PluginMetrics 服务已启动（插件性能指标采集已启用）")
 
@@ -104,7 +108,11 @@ func Initialize() (*App, error) {
 	fmt.Println("TGChannelHealth 服务已启动（TG 频道健康状态持久化已启用）")
 
 	searchService := service.NewSearchService(pluginManager, redisCache, pluginStateService, pluginRuntimeConfigService)
+	searchService.SetPluginHealthService(pluginHealthService)
 	searchService.SetPluginMetricsCollector(pluginMetricsCollector)
+	searchService.SetPluginCircuitBreaker(pluginCircuitBreaker)
+	pluginHealthChecker := service.NewPluginHealthChecker(searchService, pluginCircuitBreaker)
+	searchService.SetPluginHealthChecker(pluginHealthChecker)
 	hotRankingService := service.NewHotRankingServiceWithRedis(redisCache)
 
 	return &App{
@@ -129,6 +137,7 @@ func Initialize() (*App, error) {
 		Search:        searchService,
 		HotRanking:    hotRankingService,
 		PluginMetrics: pluginMetricsCollector,
+		PluginChecker: pluginHealthChecker,
 	}, nil
 }
 

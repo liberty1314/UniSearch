@@ -43,6 +43,7 @@ func Run(srv *http.Server, app *App) error {
 
 	startHotRankingPreloader(serverLifecycleCtx, app)
 	startPluginMetricsCollector(serverLifecycleCtx, app)
+	startPluginHealthChecker(serverLifecycleCtx, app)
 
 	serverErr := make(chan error, 1)
 	go func() {
@@ -90,6 +91,15 @@ func Run(srv *http.Server, app *App) error {
 
 	fmt.Println("🎉 服务器已安全关闭")
 	return nil
+}
+
+func startPluginHealthChecker(ctx context.Context, app *App) {
+	if app == nil || app.PluginChecker == nil {
+		log.Println("插件健康检查器未启动：服务不可用")
+		return
+	}
+	app.PluginChecker.Start(ctx)
+	log.Println("插件健康检查器已启动：Closed 5 分钟检查一次，Open 冷却后 30 秒探测一次")
 }
 
 func startPluginMetricsCollector(ctx context.Context, app *App) {

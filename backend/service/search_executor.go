@@ -83,13 +83,14 @@ type pluginSearchExecutor struct {
 	pluginHealthService *PluginHealthService
 	pluginRuntimeConfig *PluginRuntimeConfigService
 	pluginMetrics       *PluginMetricsCollector
+	pluginCircuit       *PluginCircuitBreakerService
 }
 
 func newPluginSearchExecutor(pluginSelector *searchPluginSelector, searchCache SearchCache, metrics *SearchMetricsRecorder, pluginLocks *sync.Map, pluginHealthService *PluginHealthService, pluginRuntimeConfig ...*PluginRuntimeConfigService) PluginSearchExecutor {
-	return newPluginSearchExecutorWithMetrics(pluginSelector, searchCache, metrics, pluginLocks, pluginHealthService, nil, pluginRuntimeConfig...)
+	return newPluginSearchExecutorWithMetrics(pluginSelector, searchCache, metrics, pluginLocks, pluginHealthService, nil, nil, pluginRuntimeConfig...)
 }
 
-func newPluginSearchExecutorWithMetrics(pluginSelector *searchPluginSelector, searchCache SearchCache, metrics *SearchMetricsRecorder, pluginLocks *sync.Map, pluginHealthService *PluginHealthService, pluginMetrics *PluginMetricsCollector, pluginRuntimeConfig ...*PluginRuntimeConfigService) PluginSearchExecutor {
+func newPluginSearchExecutorWithMetrics(pluginSelector *searchPluginSelector, searchCache SearchCache, metrics *SearchMetricsRecorder, pluginLocks *sync.Map, pluginHealthService *PluginHealthService, pluginMetrics *PluginMetricsCollector, pluginCircuit *PluginCircuitBreakerService, pluginRuntimeConfig ...*PluginRuntimeConfigService) PluginSearchExecutor {
 	if pluginLocks == nil {
 		pluginLocks = &sync.Map{}
 	}
@@ -105,6 +106,7 @@ func newPluginSearchExecutorWithMetrics(pluginSelector *searchPluginSelector, se
 		pluginHealthService: pluginHealthService,
 		pluginRuntimeConfig: runtimeConfig,
 		pluginMetrics:       pluginMetrics,
+		pluginCircuit:       pluginCircuit,
 	}
 }
 
@@ -128,6 +130,28 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 	}
 
 	availablePlugins := e.pluginSelector.ResolvePlugins(plugins)
+	filteredPlugins := make([]plugin.AsyncSearchPlugin, 0, len(availablePlugins))
+	for _, p := range availablePlugins {
+		if e.pluginCircuit == nil {
+			filteredPlugins = append(filteredPlugins, p)
+			continue
+		}
+		allowed, state := e.pluginCircuit.ShouldAllowRequest(p.Name())
+		if allowed {
+			filteredPlugins = append(filteredPlugins, p)
+			continue
+		}
+		warnings = append(warnings, buildPluginHealthWarning(p.Name(), state))
+		e.recordPluginMetric(PluginMetricEvent{
+			PluginName:   p.Name(),
+			Keyword:      keyword,
+			Success:      false,
+			ErrorType:    "circuit_open",
+			ErrorMessage: "插件已临时熔断",
+			OccurredAt:   time.Now(),
+		})
+	}
+	availablePlugins = filteredPlugins
 	availablePluginNames := make([]string, 0, len(availablePlugins))
 	for _, p := range availablePlugins {
 		availablePluginNames = append(availablePluginNames, p.Name())
@@ -161,7 +185,7 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 	}
 
 	if len(availablePlugins) == 0 {
-		return []model.SearchResult{}, nil, nil
+		return []model.SearchResult{}, warnings, nil
 	}
 
 	effectivePluginWorkers := calculatePluginWorkerCount(concurrency, len(availablePlugins))
@@ -169,6 +193,7 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 	if config.AppConfig != nil && config.AppConfig.PluginTimeout > 0 {
 		pluginTimeout = config.AppConfig.PluginTimeout
 	}
+	timeoutCalculator := newAdaptiveTimeoutCalculator(e.pluginHealthService)
 
 	tasks := make([]pool.Task, 0, len(availablePlugins))
 	for _, p := range availablePlugins {
@@ -178,15 +203,8 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 			defer finishPluginRequest()
 			concurrentRequests := e.currentPluginMetricConcurrency(currentPlugin.Name())
 
-			pluginLock := e.lockForPlugin(currentPlugin.Name())
-			pluginLock.Lock()
-			defer pluginLock.Unlock()
-
-			currentPlugin.SetMainCacheKey(cacheKey)
-			currentPlugin.SetCurrentKeyword(keyword)
-
 			startedAt := time.Now()
-			result, searchErr := currentPlugin.SearchWithResult(keyword, e.extForPlugin(ext, currentPlugin))
+			result, searchErr := e.searchPluginWithTimeout(currentPlugin, keyword, e.extForPlugin(ext, currentPlugin), cacheKey, timeoutCalculator.CalculateTimeout(currentPlugin.Name()))
 			duration := time.Since(startedAt)
 			if searchErr != nil {
 				return pluginTaskResult{
@@ -231,18 +249,31 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 		taskResult := result.(pluginTaskResult)
 		completedPluginNames[taskResult.name] = struct{}{}
 		if taskResult.err != nil {
+			source := "search_failure"
+			errorType := "search_failure"
+			timeout := false
+			message := taskResult.err.Error()
+			warningMessage := "该搜索源暂时不可用，已返回其他来源结果"
+			if isPluginSearchTimeout(taskResult.err) {
+				source = "timeout"
+				errorType = "timeout"
+				timeout = true
+				warningMessage = "该搜索源响应超时，已返回其他来源结果"
+				e.metrics.RecordTimeout("plugin", taskResult.name, keyword, message)
+			}
 			warnings = append(warnings, model.SearchSourceWarning{
 				Source:  taskResult.name,
-				Message: "该搜索源暂时不可用，已返回其他来源结果",
+				Message: warningMessage,
 			})
-			e.recordPluginHealth(taskResult.name, false, taskResult.err.Error(), "search_failure")
+			e.recordPluginHealth(taskResult.name, false, message, source)
 			e.recordPluginMetric(PluginMetricEvent{
 				PluginName:         taskResult.name,
 				Keyword:            keyword,
 				Duration:           taskResult.duration,
 				Success:            false,
-				ErrorType:          "search_failure",
-				ErrorMessage:       taskResult.err.Error(),
+				Timeout:            timeout,
+				ErrorType:          errorType,
+				ErrorMessage:       message,
 				ConcurrentRequests: taskResult.concurrentRequests,
 				OccurredAt:         time.Now(),
 			})
@@ -292,6 +323,33 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 		}
 	}
 	return allResults, warnings, nil
+}
+
+func (e *pluginSearchExecutor) searchPluginWithTimeout(currentPlugin plugin.AsyncSearchPlugin, keyword string, ext map[string]interface{}, cacheKey string, timeout time.Duration) (model.PluginSearchResult, error) {
+	search := func() (model.PluginSearchResult, error) {
+		pluginLock := e.lockForPlugin(currentPlugin.Name())
+		pluginLock.Lock()
+		defer pluginLock.Unlock()
+
+		currentPlugin.SetMainCacheKey(cacheKey)
+		currentPlugin.SetCurrentKeyword(keyword)
+		return currentPlugin.SearchWithResult(keyword, ext)
+	}
+	if timeout <= 0 {
+		return search()
+	}
+	resultCh := make(chan pluginSearchCallResult, 1)
+	go func() {
+		result, err := search()
+		resultCh <- pluginSearchCallResult{result: result, err: err}
+	}()
+
+	select {
+	case result := <-resultCh:
+		return result.result, result.err
+	case <-time.After(timeout):
+		return model.PluginSearchResult{}, errPluginSearchTimeout{}
+	}
 }
 
 func (e *pluginSearchExecutor) beginPluginMetricRequest(pluginName string) func() {
@@ -358,6 +416,10 @@ func (e *pluginSearchExecutor) lockForPlugin(name string) *sync.Mutex {
 }
 
 func (e *pluginSearchExecutor) recordPluginHealth(pluginName string, healthy bool, message string, source string) {
+	if e.pluginCircuit != nil {
+		_ = e.pluginCircuit.RecordResultWithSource(pluginName, healthy, message, source)
+		return
+	}
 	if e.pluginHealthService == nil {
 		return
 	}
@@ -368,6 +430,22 @@ func (e *pluginSearchExecutor) recordPluginHealth(pluginName string, healthy boo
 			"error":  err.Error(),
 		})
 	}
+}
+
+type pluginSearchCallResult struct {
+	result model.PluginSearchResult
+	err    error
+}
+
+type errPluginSearchTimeout struct{}
+
+func (errPluginSearchTimeout) Error() string {
+	return "插件搜索超时"
+}
+
+func isPluginSearchTimeout(err error) bool {
+	_, ok := err.(errPluginSearchTimeout)
+	return ok
 }
 
 func calculatePluginWorkerCount(concurrency int, pluginCount int) int {

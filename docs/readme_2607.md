@@ -43,3 +43,18 @@
     - docs/plugin-timeout-solution.md
     - docs/plugin.md
     - docs/readme_2607.md
+
+[2026-07-04 22:11] feat(plugin-circuit): 新增插件熔断降级与健康探测
+  Body: 新增插件熔断器和主动健康检查器，将熔断准入、超时降级和恢复探测接入搜索执行流程。同步补充熔断状态转换、跳过故障插件和探测失败场景测试，并更新插件开发计划。
+  Files:
+    - backend/cmd/bootstrap/app.go
+    - backend/cmd/bootstrap/server.go
+    - backend/service/plugin_circuit_breaker.go
+    - backend/service/plugin_circuit_breaker_test.go
+    - backend/service/plugin_health_checker.go
+    - backend/service/search_executor.go
+    - backend/service/search_executor_test.go
+    - backend/service/search_progressive.go
+    - backend/service/search_service.go
+    - docs/plugin-development-plan.md
+    - docs/readme_2607.md

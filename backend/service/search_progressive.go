@@ -177,7 +177,7 @@ func (s *SearchService) ensureSearchDependencies() {
 		s.tgExecutor = newTGSearchExecutor(s.searchCache, s.metrics, s.searchChannel)
 	}
 	if s.pluginExecutor == nil {
-		s.pluginExecutor = newPluginSearchExecutorWithMetrics(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginMetrics, s.pluginRuntimeConfig)
+		s.pluginExecutor = newPluginSearchExecutorWithMetrics(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginMetrics, s.pluginCircuit, s.pluginRuntimeConfig)
 	}
 }
 
@@ -198,9 +198,24 @@ func (s *SearchService) startProgressivePluginTasks(ctx context.Context, normali
 	}
 	sem := make(chan struct{}, workerCount)
 	pluginTimeout := effectivePluginTimeout()
+	timeoutCalculator := newAdaptiveTimeoutCalculator(s.pluginHealth)
 
 	for _, p := range plugins {
 		currentPlugin := p
+		if s.pluginCircuit != nil {
+			allowed, state := s.pluginCircuit.ShouldAllowRequest(currentPlugin.Name())
+			if !allowed {
+				wg.Add(1)
+				go func(pluginName string, circuitState CircuitState) {
+					defer wg.Done()
+					resultCh <- progressiveSourceResult{
+						source:   pluginName,
+						warnings: []model.SearchSourceWarning{buildPluginHealthWarning(pluginName, circuitState)},
+					}
+				}(currentPlugin.Name(), state)
+				continue
+			}
+		}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -222,6 +237,10 @@ func (s *SearchService) startProgressivePluginTasks(ctx context.Context, normali
 				}
 			}()
 
+			currentTimeout := pluginTimeout
+			if timeoutCalculator != nil {
+				currentTimeout = timeoutCalculator.CalculateTimeout(currentPlugin.Name())
+			}
 			select {
 			case result := <-done:
 				if result.err != nil {
@@ -230,7 +249,7 @@ func (s *SearchService) startProgressivePluginTasks(ctx context.Context, normali
 					s.recordPluginHealth(currentPlugin.Name(), true, "", "search_failure")
 				}
 				resultCh <- result
-			case <-time.After(pluginTimeout):
+			case <-time.After(currentTimeout):
 				message := "插件搜索超时"
 				pluginName := currentPlugin.Name()
 				s.metrics.RecordTimeout("plugin", pluginName, normalized.Keyword, message)
@@ -270,6 +289,10 @@ func (s *SearchService) lockForPlugin(name string) *sync.Mutex {
 }
 
 func (s *SearchService) recordPluginHealth(pluginName string, healthy bool, message string, source string) {
+	if s.pluginCircuit != nil {
+		_ = s.pluginCircuit.RecordResultWithSource(pluginName, healthy, message, source)
+		return
+	}
 	if s.pluginHealth == nil {
 		return
 	}
