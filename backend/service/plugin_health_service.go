@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 	"unisearch/model"
 
@@ -12,7 +13,9 @@ import (
 
 // PluginHealthService 插件健康状态服务
 type PluginHealthService struct {
-	db *gorm.DB
+	db          *gorm.DB
+	migrateErr  error
+	migrateOnce sync.Once
 }
 
 // NewPluginHealthService 创建插件健康状态服务
@@ -20,12 +23,37 @@ func NewPluginHealthService(db *gorm.DB) *PluginHealthService {
 	return &PluginHealthService{db: db}
 }
 
+func (s *PluginHealthService) ensureMigrated() error {
+	if s == nil || s.db == nil {
+		return nil
+	}
+	s.migrateOnce.Do(func() {
+		s.migrateErr = s.db.AutoMigrate(&model.PluginHealthStatus{})
+	})
+	return s.migrateErr
+}
+
 func normalizePluginName(name string) string {
 	return strings.ToLower(strings.TrimSpace(name))
 }
 
+func isTimeoutHealthResult(source string, errMsg string) bool {
+	normalizedSource := strings.ToLower(strings.TrimSpace(source))
+	normalizedMessage := strings.ToLower(strings.TrimSpace(errMsg))
+	return normalizedSource == "timeout" ||
+		strings.Contains(normalizedMessage, "timeout") ||
+		strings.Contains(normalizedMessage, "超时")
+}
+
 // RecordResult 记录插件最近一次测试结果
 func (s *PluginHealthService) RecordResult(pluginName string, healthy bool, errMsg string, source string) error {
+	if s == nil || s.db == nil {
+		return nil
+	}
+	if err := s.ensureMigrated(); err != nil {
+		return fmt.Errorf("迁移插件健康状态表失败: %w", err)
+	}
+
 	normalizedName := normalizePluginName(pluginName)
 	if normalizedName == "" {
 		return fmt.Errorf("插件名称不能为空")
@@ -50,10 +78,19 @@ func (s *PluginHealthService) RecordResult(pluginName string, healthy bool, errM
 	status.IsHealthy = healthy
 	status.LastCheckedAt = time.Now()
 	status.CheckSource = source
+	status.TotalChecks++
+	if isTimeoutHealthResult(source, errMsg) {
+		status.TimeoutCount++
+	}
+	if status.TotalChecks > 0 {
+		status.TimeoutRate = float64(status.TimeoutCount) / float64(status.TotalChecks)
+	}
 	if healthy {
 		status.LastError = ""
+		status.ConsecutiveFailures = 0
 	} else {
 		status.LastError = strings.TrimSpace(errMsg)
+		status.ConsecutiveFailures++
 	}
 
 	if err := s.db.Save(&status).Error; err != nil {
@@ -62,8 +99,41 @@ func (s *PluginHealthService) RecordResult(pluginName string, healthy bool, errM
 	return nil
 }
 
+// GetStatus 获取单个插件健康状态，未测试过的插件返回 nil。
+func (s *PluginHealthService) GetStatus(pluginName string) (*model.PluginHealthStatus, error) {
+	if s == nil || s.db == nil {
+		return nil, nil
+	}
+	if err := s.ensureMigrated(); err != nil {
+		return nil, fmt.Errorf("迁移插件健康状态表失败: %w", err)
+	}
+
+	normalizedName := normalizePluginName(pluginName)
+	if normalizedName == "" {
+		return nil, nil
+	}
+
+	var status model.PluginHealthStatus
+	if err := s.db.Where("plugin_name = ?", normalizedName).First(&status).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("查询插件健康状态失败: %w", err)
+	}
+
+	return &status, nil
+}
+
 // GetStatusMap 批量获取插件健康状态，返回值仅包含有测试记录的插件
 func (s *PluginHealthService) GetStatusMap(pluginNames []string) (map[string]bool, error) {
+	result := make(map[string]bool)
+	if s == nil || s.db == nil || len(pluginNames) == 0 {
+		return result, nil
+	}
+	if err := s.ensureMigrated(); err != nil {
+		return nil, fmt.Errorf("迁移插件健康状态表失败: %w", err)
+	}
+
 	normalizedToOriginal := make(map[string]string, len(pluginNames))
 	normalizedNames := make([]string, 0, len(pluginNames))
 
@@ -80,7 +150,6 @@ func (s *PluginHealthService) GetStatusMap(pluginNames []string) (map[string]boo
 		normalizedNames = append(normalizedNames, normalized)
 	}
 
-	result := make(map[string]bool)
 	if len(normalizedNames) == 0 {
 		return result, nil
 	}
@@ -101,6 +170,14 @@ func (s *PluginHealthService) GetStatusMap(pluginNames []string) (map[string]boo
 
 // GetSnapshotMap 批量获取插件健康快照，返回值仅包含有测试记录的插件。
 func (s *PluginHealthService) GetSnapshotMap(pluginNames []string) (map[string]model.PluginHealthSnapshot, error) {
+	result := make(map[string]model.PluginHealthSnapshot)
+	if s == nil || s.db == nil || len(pluginNames) == 0 {
+		return result, nil
+	}
+	if err := s.ensureMigrated(); err != nil {
+		return nil, fmt.Errorf("迁移插件健康状态表失败: %w", err)
+	}
+
 	normalizedToOriginal := make(map[string]string, len(pluginNames))
 	normalizedNames := make([]string, 0, len(pluginNames))
 
@@ -117,7 +194,6 @@ func (s *PluginHealthService) GetSnapshotMap(pluginNames []string) (map[string]m
 		normalizedNames = append(normalizedNames, normalized)
 	}
 
-	result := make(map[string]model.PluginHealthSnapshot)
 	if len(normalizedNames) == 0 {
 		return result, nil
 	}
@@ -143,6 +219,13 @@ func (s *PluginHealthService) GetSnapshotMap(pluginNames []string) (map[string]m
 
 // ClearStatus 清理单个插件健康状态
 func (s *PluginHealthService) ClearStatus(pluginName string) error {
+	if s == nil || s.db == nil {
+		return nil
+	}
+	if err := s.ensureMigrated(); err != nil {
+		return fmt.Errorf("迁移插件健康状态表失败: %w", err)
+	}
+
 	normalizedName := normalizePluginName(pluginName)
 	if normalizedName == "" {
 		return nil
@@ -155,6 +238,13 @@ func (s *PluginHealthService) ClearStatus(pluginName string) error {
 
 // ClearAllStatuses 批量清理插件健康状态
 func (s *PluginHealthService) ClearAllStatuses(pluginNames []string) error {
+	if s == nil || s.db == nil {
+		return nil
+	}
+	if err := s.ensureMigrated(); err != nil {
+		return fmt.Errorf("迁移插件健康状态表失败: %w", err)
+	}
+
 	normalizedNames := make([]string, 0, len(pluginNames))
 	seen := make(map[string]struct{}, len(pluginNames))
 	for _, name := range pluginNames {

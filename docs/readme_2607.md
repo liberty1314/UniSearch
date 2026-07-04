@@ -11,3 +11,9 @@
     - docs/plugin-timeout-solution.md
     - docs/readme_2607.md
     - scripts/verify-optimization.sh
+[2026-07-04 20:59] feat(plugin-health): 完善插件健康服务的错误处理和日志记录
+  Body: 更新插件健康服务，实现更稳健的错误处理并记录关键操作。
+  Files:
+    - backend/model/plugin_health_status.go
+    - backend/service/plugin_health_service.go
+    - backend/service/plugin_health_service_test.go
