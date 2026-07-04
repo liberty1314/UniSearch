@@ -23,6 +23,7 @@ type App struct {
 	RedisCache    *cache.RedisCache
 	Search        *service.SearchService
 	HotRanking    *service.HotRankingService
+	PluginMetrics *service.PluginMetricsCollector
 }
 
 func Initialize() (*App, error) {
@@ -90,6 +91,9 @@ func Initialize() (*App, error) {
 	pluginHealthService := service.NewPluginHealthService(database.GetDB())
 	fmt.Println("PluginHealth 服务已启动（插件健康状态持久化已启用）")
 
+	pluginMetricsCollector := service.NewPluginMetricsCollector(database.GetDB())
+	fmt.Println("PluginMetrics 服务已启动（插件性能指标采集已启用）")
+
 	pluginStateService := service.NewPluginStateService(database.GetDB())
 	fmt.Println("PluginState 服务已启动（插件启停状态持久化已启用）")
 
@@ -100,6 +104,7 @@ func Initialize() (*App, error) {
 	fmt.Println("TGChannelHealth 服务已启动（TG 频道健康状态持久化已启用）")
 
 	searchService := service.NewSearchService(pluginManager, redisCache, pluginStateService, pluginRuntimeConfigService)
+	searchService.SetPluginMetricsCollector(pluginMetricsCollector)
 	hotRankingService := service.NewHotRankingServiceWithRedis(redisCache)
 
 	return &App{
@@ -112,6 +117,7 @@ func Initialize() (*App, error) {
 			AnnouncementService:    announcementService,
 			TGChannelService:       tgChannelService,
 			PluginHealthService:    pluginHealthService,
+			PluginMetricsCollector: pluginMetricsCollector,
 			PluginStateService:     pluginStateService,
 			PluginRuntimeConfig:    pluginRuntimeConfigService,
 			TGChannelHealthService: tgChannelHealthService,
@@ -122,6 +128,7 @@ func Initialize() (*App, error) {
 		RedisCache:    redisCache,
 		Search:        searchService,
 		HotRanking:    hotRankingService,
+		PluginMetrics: pluginMetricsCollector,
 	}, nil
 }
 

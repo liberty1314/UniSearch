@@ -27,6 +27,9 @@ func registerAdminRoutes(api *gin.RouterGroup, deps RouterDeps) {
 
 		admin.GET("/system-info", GetSystemInfoHandler(deps.SearchService, deps.UserService, deps.PluginHealthService, deps.PluginStateService))
 		admin.GET("/search-observability", SearchObservabilityHandler(deps.SearchService))
+		admin.GET("/plugin-metrics", PluginMetricsListHandler(deps.PluginMetricsCollector))
+		admin.GET("/plugin-metrics/errors", PluginMetricsErrorLogsHandler(deps.PluginMetricsCollector))
+		admin.GET("/plugin-metrics/realtime", PluginMetricsRealtimeHandler(deps.PluginMetricsCollector))
 		admin.GET("/plugin-center/catalog", PluginCenterCatalogHandler(deps.SearchService, deps.PluginHealthService, deps.PluginStateService))
 		admin.GET("/tags", ListAdminTagsHandler)
 		admin.POST("/tags", CreateAdminTagHandler)

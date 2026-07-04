@@ -13,16 +13,18 @@ func AutoMigrate() error {
 
 	err := DB.AutoMigrate(
 		&model.User{},
-		&model.AdminTag{},              // 创建 admin_tags 表（后台标签词库）
-		&model.SystemSettings{},        // 创建 system_settings 表
-		&model.RefreshToken{},          // 创建 refresh_tokens 表（记住密码功能）
-		&model.Secret{},                // 创建 secrets 表（密钥管理）
-		&model.Announcement{},          // 创建 announcements 表（系统公告）
-		&model.TGChannel{},             // 创建 tg_channels 表（Telegram 频道管理）
-		&model.PluginState{},           // 创建 plugin_states 表（插件启用状态）
-		&model.PluginHealthStatus{},    // 创建 plugin_health_statuses 表（插件健康状态）
-		&model.TGChannelHealthStatus{}, // 创建 tg_channel_health_statuses 表（TG 频道健康状态）
-		&model.UserLoginDailyStat{},    // 创建 user_login_daily_stats 表（用户日登录统计）
+		&model.AdminTag{},                // 创建 admin_tags 表（后台标签词库）
+		&model.SystemSettings{},          // 创建 system_settings 表
+		&model.RefreshToken{},            // 创建 refresh_tokens 表（记住密码功能）
+		&model.Secret{},                  // 创建 secrets 表（密钥管理）
+		&model.Announcement{},            // 创建 announcements 表（系统公告）
+		&model.TGChannel{},               // 创建 tg_channels 表（Telegram 频道管理）
+		&model.PluginState{},             // 创建 plugin_states 表（插件启用状态）
+		&model.PluginHealthStatus{},      // 创建 plugin_health_statuses 表（插件健康状态）
+		&model.PluginPerformanceMetric{}, // 创建 plugin_performance_metrics 表（插件性能聚合指标）
+		&model.PluginErrorLog{},          // 创建 plugin_error_logs 表（插件错误日志）
+		&model.TGChannelHealthStatus{},   // 创建 tg_channel_health_statuses 表（TG 频道健康状态）
+		&model.UserLoginDailyStat{},      // 创建 user_login_daily_stats 表（用户日登录统计）
 	)
 
 	if err != nil {
@@ -40,6 +42,8 @@ func AutoMigrate() error {
 	log.Println("  - tg_channels 表已创建/更新")
 	log.Println("  - plugin_states 表已创建/更新")
 	log.Println("  - plugin_health_statuses 表已创建/更新")
+	log.Println("  - plugin_performance_metrics 表已创建/更新")
+	log.Println("  - plugin_error_logs 表已创建/更新")
 	log.Println("  - tg_channel_health_statuses 表已创建/更新")
 	log.Println("  - user_login_daily_stats 表已创建/更新")
 

@@ -42,6 +42,7 @@ func Run(srv *http.Server, app *App) error {
 	defer stopServerLifecycle()
 
 	startHotRankingPreloader(serverLifecycleCtx, app)
+	startPluginMetricsCollector(serverLifecycleCtx, app)
 
 	serverErr := make(chan error, 1)
 	go func() {
@@ -89,6 +90,15 @@ func Run(srv *http.Server, app *App) error {
 
 	fmt.Println("🎉 服务器已安全关闭")
 	return nil
+}
+
+func startPluginMetricsCollector(ctx context.Context, app *App) {
+	if app == nil || app.Search == nil || app.PluginMetrics == nil {
+		log.Println("插件指标采集器未启动：服务不可用")
+		return
+	}
+	app.Search.StartPluginMetricsCollector(ctx)
+	log.Println("插件指标采集器已启动：每 5 分钟聚合写入数据库")
 }
 
 func serveHTTP(srv *http.Server) error {

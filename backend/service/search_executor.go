@@ -82,9 +82,14 @@ type pluginSearchExecutor struct {
 	pluginLocks         *sync.Map
 	pluginHealthService *PluginHealthService
 	pluginRuntimeConfig *PluginRuntimeConfigService
+	pluginMetrics       *PluginMetricsCollector
 }
 
 func newPluginSearchExecutor(pluginSelector *searchPluginSelector, searchCache SearchCache, metrics *SearchMetricsRecorder, pluginLocks *sync.Map, pluginHealthService *PluginHealthService, pluginRuntimeConfig ...*PluginRuntimeConfigService) PluginSearchExecutor {
+	return newPluginSearchExecutorWithMetrics(pluginSelector, searchCache, metrics, pluginLocks, pluginHealthService, nil, pluginRuntimeConfig...)
+}
+
+func newPluginSearchExecutorWithMetrics(pluginSelector *searchPluginSelector, searchCache SearchCache, metrics *SearchMetricsRecorder, pluginLocks *sync.Map, pluginHealthService *PluginHealthService, pluginMetrics *PluginMetricsCollector, pluginRuntimeConfig ...*PluginRuntimeConfigService) PluginSearchExecutor {
 	if pluginLocks == nil {
 		pluginLocks = &sync.Map{}
 	}
@@ -99,14 +104,17 @@ func newPluginSearchExecutor(pluginSelector *searchPluginSelector, searchCache S
 		pluginLocks:         pluginLocks,
 		pluginHealthService: pluginHealthService,
 		pluginRuntimeConfig: runtimeConfig,
+		pluginMetrics:       pluginMetrics,
 	}
 }
 
 type pluginTaskResult struct {
-	name    string
-	results []model.SearchResult
-	isFinal bool
-	err     error
+	name               string
+	results            []model.SearchResult
+	isFinal            bool
+	err                error
+	duration           time.Duration
+	concurrentRequests int
 }
 
 func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRefresh bool, concurrency int, ext map[string]interface{}) (allResults []model.SearchResult, warnings []model.SearchSourceWarning, err error) {
@@ -139,6 +147,15 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 		var cachedResults []model.SearchResult
 		cacheHit, _ := e.searchCache.Load("plugin", cacheKey, keyword, &cachedResults)
 		if cacheHit {
+			for _, pluginName := range availablePluginNames {
+				e.recordPluginMetric(PluginMetricEvent{
+					PluginName: pluginName,
+					Keyword:    keyword,
+					Success:    true,
+					CacheHit:   true,
+					OccurredAt: time.Now(),
+				})
+			}
 			return cachedResults, nil, nil
 		}
 	}
@@ -157,6 +174,10 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 	for _, p := range availablePlugins {
 		currentPlugin := p
 		tasks = append(tasks, func() interface{} {
+			finishPluginRequest := e.beginPluginMetricRequest(currentPlugin.Name())
+			defer finishPluginRequest()
+			concurrentRequests := e.currentPluginMetricConcurrency(currentPlugin.Name())
+
 			pluginLock := e.lockForPlugin(currentPlugin.Name())
 			pluginLock.Lock()
 			defer pluginLock.Unlock()
@@ -164,17 +185,23 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 			currentPlugin.SetMainCacheKey(cacheKey)
 			currentPlugin.SetCurrentKeyword(keyword)
 
+			startedAt := time.Now()
 			result, searchErr := currentPlugin.SearchWithResult(keyword, e.extForPlugin(ext, currentPlugin))
+			duration := time.Since(startedAt)
 			if searchErr != nil {
 				return pluginTaskResult{
-					name: currentPlugin.Name(),
-					err:  searchErr,
+					name:               currentPlugin.Name(),
+					err:                searchErr,
+					duration:           duration,
+					concurrentRequests: concurrentRequests,
 				}
 			}
 			return pluginTaskResult{
-				name:    currentPlugin.Name(),
-				results: result.GetResults(),
-				isFinal: result.IsFinal,
+				name:               currentPlugin.Name(),
+				results:            result.GetResults(),
+				isFinal:            result.IsFinal,
+				duration:           duration,
+				concurrentRequests: concurrentRequests,
 			}
 		})
 	}
@@ -209,9 +236,28 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 				Message: "该搜索源暂时不可用，已返回其他来源结果",
 			})
 			e.recordPluginHealth(taskResult.name, false, taskResult.err.Error(), "search_failure")
+			e.recordPluginMetric(PluginMetricEvent{
+				PluginName:         taskResult.name,
+				Keyword:            keyword,
+				Duration:           taskResult.duration,
+				Success:            false,
+				ErrorType:          "search_failure",
+				ErrorMessage:       taskResult.err.Error(),
+				ConcurrentRequests: taskResult.concurrentRequests,
+				OccurredAt:         time.Now(),
+			})
 			continue
 		}
 		e.recordPluginHealth(taskResult.name, true, "", "search_failure")
+		e.recordPluginMetric(PluginMetricEvent{
+			PluginName:         taskResult.name,
+			Keyword:            keyword,
+			Duration:           taskResult.duration,
+			Success:            true,
+			ResultCount:        len(taskResult.results),
+			ConcurrentRequests: taskResult.concurrentRequests,
+			OccurredAt:         time.Now(),
+		})
 		if !taskResult.isFinal {
 			allPluginResultsFinal = false
 		}
@@ -231,10 +277,42 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 			if _, ok := completedPluginNames[pluginName]; !ok {
 				e.metrics.RecordTimeout("plugin", pluginName, keyword, "插件搜索超时")
 				e.recordPluginHealth(pluginName, false, "插件搜索超时", "timeout")
+				e.recordPluginMetric(PluginMetricEvent{
+					PluginName:         pluginName,
+					Keyword:            keyword,
+					Duration:           pluginTimeout,
+					Success:            false,
+					Timeout:            true,
+					ErrorType:          "timeout",
+					ErrorMessage:       "插件搜索超时",
+					ConcurrentRequests: e.currentPluginMetricConcurrency(pluginName),
+					OccurredAt:         time.Now(),
+				})
 			}
 		}
 	}
 	return allResults, warnings, nil
+}
+
+func (e *pluginSearchExecutor) beginPluginMetricRequest(pluginName string) func() {
+	if e == nil || e.pluginMetrics == nil {
+		return func() {}
+	}
+	return e.pluginMetrics.BeginPluginRequest(pluginName)
+}
+
+func (e *pluginSearchExecutor) currentPluginMetricConcurrency(pluginName string) int {
+	if e == nil || e.pluginMetrics == nil {
+		return 0
+	}
+	return e.pluginMetrics.currentConcurrentRequests(pluginName)
+}
+
+func (e *pluginSearchExecutor) recordPluginMetric(event PluginMetricEvent) {
+	if e == nil || e.pluginMetrics == nil {
+		return
+	}
+	e.pluginMetrics.RecordEvent(event)
 }
 
 func (e *pluginSearchExecutor) extForPlugin(ext map[string]interface{}, currentPlugin plugin.AsyncSearchPlugin) map[string]interface{} {

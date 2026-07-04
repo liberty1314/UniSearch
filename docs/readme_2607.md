@@ -17,3 +17,29 @@
     - backend/model/plugin_health_status.go
     - backend/service/plugin_health_service.go
     - backend/service/plugin_health_service_test.go
+
+[2026-07-04 21:51] feat(plugin-metrics): 新增插件性能指标采集与查询接口
+  Body: 新增插件性能指标采集器、持久化模型和后台查询接口，并将指标记录接入搜索执行流程。同步补充处理器与采集器测试，以及插件监控与优化方案文档。
+  Files:
+    - .env.example
+    - backend/api/plugin_metrics_handler.go
+    - backend/api/plugin_metrics_handler_test.go
+    - backend/api/router_admin.go
+    - backend/api/router_deps.go
+    - backend/cmd/bootstrap/app.go
+    - backend/cmd/bootstrap/server.go
+    - backend/database/migration.go
+    - backend/model/plugin_health_status.go
+    - backend/model/plugin_metrics.go
+    - backend/service/plugin_health_service.go
+    - backend/service/plugin_metrics_collector.go
+    - backend/service/plugin_metrics_collector_test.go
+    - backend/service/search_executor.go
+    - backend/service/search_executor_test.go
+    - backend/service/search_progressive.go
+    - backend/service/search_service.go
+    - docs/deployment-optimization-guide.md
+    - docs/plugin-development-plan.md
+    - docs/plugin-timeout-solution.md
+    - docs/plugin.md
+    - docs/readme_2607.md

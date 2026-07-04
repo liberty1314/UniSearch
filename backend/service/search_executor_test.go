@@ -173,6 +173,48 @@ func TestPluginSearchExecutorRecordsTimedOutPluginName(t *testing.T) {
 	}
 }
 
+func TestPluginSearchExecutorRecordsPluginMetrics(t *testing.T) {
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{
+		CacheEnabled:              false,
+		DefaultConcurrency:        2,
+		AsyncMaxBackgroundWorkers: 2,
+		PluginTimeout:             20 * time.Millisecond,
+	}
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	pm := plugin.NewPluginManager()
+	pm.RegisterPlugin(&mockAsyncSearchPlugin{name: "metric-ok"})
+	pm.RegisterPlugin(&mockAsyncSearchPlugin{name: "metric-timeout", delay: 200 * time.Millisecond})
+
+	collector, _ := newPluginMetricsTestCollector(t)
+	metrics := newSearchMetricsRecorder()
+	selector := newPluginSelector(pm, nil)
+	executor := newPluginSearchExecutorWithMetrics(selector, newSearchCache(nil, metrics), metrics, nil, nil, collector)
+
+	_, _, err := executor.Search("仙逆", nil, true, 2, nil)
+	if err != nil {
+		t.Fatalf("unexpected search error: %v", err)
+	}
+
+	snapshot := collector.RealtimeSnapshot()
+	if len(snapshot.Items) != 2 {
+		t.Fatalf("期望记录两个插件指标，实际为 %#v", snapshot.Items)
+	}
+	byName := make(map[string]model.PluginMetricsRealtimeItem, len(snapshot.Items))
+	for _, item := range snapshot.Items {
+		byName[item.PluginName] = item
+	}
+	if byName["metric-ok"].SuccessCount != 1 {
+		t.Fatalf("成功插件指标不正确: %#v", byName["metric-ok"])
+	}
+	if byName["metric-timeout"].TimeoutCount != 1 || byName["metric-timeout"].ErrorCount != 1 {
+		t.Fatalf("超时插件指标不正确: %#v", byName["metric-timeout"])
+	}
+}
+
 func TestPluginSearchExecutorIsolatesRequestStatePerPlugin(t *testing.T) {
 	oldConfig := config.AppConfig
 	config.AppConfig = &config.Config{

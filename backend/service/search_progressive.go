@@ -177,7 +177,7 @@ func (s *SearchService) ensureSearchDependencies() {
 		s.tgExecutor = newTGSearchExecutor(s.searchCache, s.metrics, s.searchChannel)
 	}
 	if s.pluginExecutor == nil {
-		s.pluginExecutor = newPluginSearchExecutor(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth)
+		s.pluginExecutor = newPluginSearchExecutorWithMetrics(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginMetrics, s.pluginRuntimeConfig)
 	}
 }
 

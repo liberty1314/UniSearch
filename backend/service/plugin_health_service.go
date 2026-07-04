@@ -62,6 +62,7 @@ func (s *PluginHealthService) RecordResult(pluginName string, healthy bool, errM
 	if source == "" {
 		source = "manual_test"
 	}
+	checkedAt := time.Now()
 
 	var status model.PluginHealthStatus
 	err := s.db.Where("plugin_name = ?", normalizedName).First(&status).Error
@@ -76,7 +77,7 @@ func (s *PluginHealthService) RecordResult(pluginName string, healthy bool, errM
 	}
 
 	status.IsHealthy = healthy
-	status.LastCheckedAt = time.Now()
+	status.LastCheckedAt = checkedAt
 	status.CheckSource = source
 	status.TotalChecks++
 	if isTimeoutHealthResult(source, errMsg) {
@@ -88,9 +89,14 @@ func (s *PluginHealthService) RecordResult(pluginName string, healthy bool, errM
 	if healthy {
 		status.LastError = ""
 		status.ConsecutiveFailures = 0
+		status.LastSuccessAt = &checkedAt
 	} else {
 		status.LastError = strings.TrimSpace(errMsg)
 		status.ConsecutiveFailures++
+		status.LastFailureAt = &checkedAt
+	}
+	if strings.TrimSpace(status.CircuitState) == "" {
+		status.CircuitState = "closed"
 	}
 
 	if err := s.db.Save(&status).Error; err != nil {

@@ -12,6 +12,7 @@ type RouterDeps struct {
 	AnnouncementService    *service.AnnouncementService
 	TGChannelService       *service.TGChannelService
 	PluginHealthService    *service.PluginHealthService
+	PluginMetricsCollector *service.PluginMetricsCollector
 	PluginStateService     *service.PluginStateService
 	PluginRuntimeConfig    *service.PluginRuntimeConfigService
 	TGChannelHealthService *service.TGChannelHealthService
