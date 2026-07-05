@@ -35,9 +35,9 @@ const PluginManagementView = lazy(() =>
     default: module.PluginManagementView,
   }))
 );
-const PluginPerformanceDashboard = lazy(() =>
-  import("@/components/admin/PluginPerformanceDashboard").then((module) => ({
-    default: module.PluginPerformanceDashboard,
+const PerformanceObservabilityView = lazy(() =>
+  import("@/components/admin/PerformanceObservabilityView").then((module) => ({
+    default: module.PerformanceObservabilityView,
   }))
 );
 const AdminUsersView = lazy(() => import("@/components/admin/AdminUsersView"));
@@ -79,7 +79,7 @@ const Admin: React.FC = () => {
                     {currentView === "user_management" && <AdminUsersView />}
                     {currentView === "channel_management" && <ChannelManagementView />}
                     {currentView === "plugin_management" && <PluginManagementView />}
-                    {currentView === "plugin_observability" && <PluginPerformanceDashboard />}
+                    {currentView === "plugin_observability" && <PerformanceObservabilityView />}
                     {currentView === "system_settings" && <SystemSettingsView />}
                     {currentView === "announcement_management" && <AnnouncementManagement />}
                   </Suspense>

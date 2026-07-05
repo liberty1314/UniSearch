@@ -25,10 +25,12 @@ type PluginMetricsCleanerConfig struct {
 }
 
 type PluginMetricsCleanupResult struct {
-	MetricsDeleted int64
-	ErrorsDeleted  int64
-	MetricsCutoff  time.Time
-	ErrorsCutoff   time.Time
+	MetricsDeleted        int64
+	ErrorsDeleted         int64
+	ChannelMetricsDeleted int64
+	ChannelErrorsDeleted  int64
+	MetricsCutoff         time.Time
+	ErrorsCutoff          time.Time
 }
 
 // PluginMetricsCleaner 负责清理过期插件指标和错误日志。
@@ -110,6 +112,22 @@ func (c *PluginMetricsCleaner) Cleanup(ctx context.Context) (PluginMetricsCleanu
 	}
 	result.ErrorsDeleted = errorDelete.RowsAffected
 
+	channelMetricDelete := db.
+		Where("bucket_ended_at < ?", result.MetricsCutoff).
+		Delete(&model.TGChannelPerformanceMetric{})
+	if channelMetricDelete.Error != nil {
+		return result, fmt.Errorf("清理频道性能指标失败: %w", channelMetricDelete.Error)
+	}
+	result.ChannelMetricsDeleted = channelMetricDelete.RowsAffected
+
+	channelErrorDelete := db.
+		Where("occurred_at < ?", result.ErrorsCutoff).
+		Delete(&model.TGChannelErrorLog{})
+	if channelErrorDelete.Error != nil {
+		return result, fmt.Errorf("清理频道错误日志失败: %w", channelErrorDelete.Error)
+	}
+	result.ChannelErrorsDeleted = channelErrorDelete.RowsAffected
+
 	return result, nil
 }
 
@@ -120,9 +138,11 @@ func (c *PluginMetricsCleaner) runAndLog(ctx context.Context) {
 		return
 	}
 	log.Printf(
-		"event=plugin_metrics_cleanup status=success metrics_deleted=%d errors_deleted=%d metrics_cutoff=%s errors_cutoff=%s",
+		"event=plugin_metrics_cleanup status=success metrics_deleted=%d errors_deleted=%d channel_metrics_deleted=%d channel_errors_deleted=%d metrics_cutoff=%s errors_cutoff=%s",
 		result.MetricsDeleted,
 		result.ErrorsDeleted,
+		result.ChannelMetricsDeleted,
+		result.ChannelErrorsDeleted,
 		result.MetricsCutoff.Format(time.RFC3339),
 		result.ErrorsCutoff.Format(time.RFC3339),
 	)

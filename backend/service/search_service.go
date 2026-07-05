@@ -30,6 +30,8 @@ type SearchService struct {
 	pluginLocks         sync.Map
 	pluginHealth        *PluginHealthService
 	pluginMetrics       *PluginMetricsCollector
+	channelMetrics      *TGChannelMetricsCollector
+	channelHealth       *TGChannelHealthService
 	pluginCircuit       *PluginCircuitBreakerService
 	pluginHealthChecker *PluginHealthChecker
 }
@@ -59,7 +61,7 @@ func NewSearchService(pluginManager *plugin.PluginManager, redisCache *cache.Red
 		metrics:             metrics,
 		searchCache:         newSearchCache(redisCache, metrics),
 	}
-	service.tgExecutor = newTGSearchExecutor(service.searchCache, service.metrics, service.searchChannel)
+	service.tgExecutor = newTGSearchExecutor(service.searchCache, service.metrics, service.searchChannel, service.channelMetrics, service.channelHealth)
 	service.pluginExecutor = newPluginSearchExecutorWithMetrics(service.pluginSelector, service.searchCache, service.metrics, &service.pluginLocks, service.pluginHealth, service.pluginMetrics, service.pluginCircuit, service.pluginRuntimeConfig)
 	return service
 }
@@ -75,6 +77,20 @@ func (s *SearchService) SetPluginMetricsCollector(pluginMetrics *PluginMetricsCo
 	s.pluginMetrics = pluginMetrics
 	if s.pluginSelector != nil && s.searchCache != nil && s.metrics != nil {
 		s.pluginExecutor = newPluginSearchExecutorWithMetrics(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginMetrics, s.pluginCircuit, s.pluginRuntimeConfig)
+	}
+}
+
+func (s *SearchService) SetTGChannelMetricsCollector(channelMetrics *TGChannelMetricsCollector) {
+	s.channelMetrics = channelMetrics
+	if s.searchCache != nil && s.metrics != nil {
+		s.tgExecutor = newTGSearchExecutor(s.searchCache, s.metrics, s.searchChannel, s.channelMetrics, s.channelHealth)
+	}
+}
+
+func (s *SearchService) SetTGChannelHealthService(channelHealth *TGChannelHealthService) {
+	s.channelHealth = channelHealth
+	if s.searchCache != nil && s.metrics != nil {
+		s.tgExecutor = newTGSearchExecutor(s.searchCache, s.metrics, s.searchChannel, s.channelMetrics, s.channelHealth)
 	}
 }
 
@@ -96,6 +112,13 @@ func (s *SearchService) StartPluginMetricsCollector(ctx context.Context) {
 	s.pluginMetrics.Start(ctx)
 }
 
+func (s *SearchService) StartTGChannelMetricsCollector(ctx context.Context) {
+	if s == nil || s.channelMetrics == nil {
+		return
+	}
+	s.channelMetrics.Start(ctx)
+}
+
 // Search 执行搜索
 func (s *SearchService) Search(keyword string, channels []string, concurrency int, forceRefresh bool, resultType string, sourceType string, plugins []string, cloudTypes []string, ext map[string]interface{}) (model.SearchResponse, error) {
 	if s.searchCache == nil {
@@ -105,7 +128,7 @@ func (s *SearchService) Search(keyword string, channels []string, concurrency in
 		s.responseBuilder = newSearchResponseBuilder()
 	}
 	if s.tgExecutor == nil {
-		s.tgExecutor = newTGSearchExecutor(s.searchCache, s.metrics, s.searchChannel)
+		s.tgExecutor = newTGSearchExecutor(s.searchCache, s.metrics, s.searchChannel, s.channelMetrics, s.channelHealth)
 	}
 	if s.pluginExecutor == nil {
 		s.pluginExecutor = newPluginSearchExecutorWithMetrics(s.pluginSelector, s.searchCache, s.metrics, &s.pluginLocks, s.pluginHealth, s.pluginMetrics, s.pluginCircuit, s.pluginRuntimeConfig)
@@ -204,7 +227,7 @@ func (s *SearchService) searchChannel(keyword string, channel string) ([]model.S
 // searchTG 搜索TG频道
 func (s *SearchService) searchTG(keyword string, channels []string, forceRefresh bool) (results []model.SearchResult, err error) {
 	if s.tgExecutor == nil {
-		s.tgExecutor = newTGSearchExecutor(s.searchCache, s.metrics, s.searchChannel)
+		s.tgExecutor = newTGSearchExecutor(s.searchCache, s.metrics, s.searchChannel, s.channelMetrics, s.channelHealth)
 	}
 	return s.tgExecutor.Search(keyword, channels, forceRefresh)
 }

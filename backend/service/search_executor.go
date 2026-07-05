@@ -27,14 +27,26 @@ type tgSearchExecutor struct {
 	searchCache     SearchCache
 	metrics         *SearchMetricsRecorder
 	channelSearcher ChannelSearcher
+	channelMetrics  *TGChannelMetricsCollector
+	channelHealth   *TGChannelHealthService
 }
 
-func newTGSearchExecutor(searchCache SearchCache, metrics *SearchMetricsRecorder, channelSearcher ChannelSearcher) TGSearchExecutor {
+func newTGSearchExecutor(searchCache SearchCache, metrics *SearchMetricsRecorder, channelSearcher ChannelSearcher, channelMetrics *TGChannelMetricsCollector, channelHealth *TGChannelHealthService) TGSearchExecutor {
 	return &tgSearchExecutor{
 		searchCache:     searchCache,
 		metrics:         metrics,
 		channelSearcher: channelSearcher,
+		channelMetrics:  channelMetrics,
+		channelHealth:   channelHealth,
 	}
+}
+
+type tgChannelTaskResult struct {
+	name               string
+	results            []model.SearchResult
+	err                error
+	duration           time.Duration
+	concurrentRequests int
 }
 
 func (e *tgSearchExecutor) Search(keyword string, channels []string, forceRefresh bool) (results []model.SearchResult, err error) {
@@ -48,6 +60,7 @@ func (e *tgSearchExecutor) Search(keyword string, channels []string, forceRefres
 		var cachedResults []model.SearchResult
 		cacheHit, _ := e.searchCache.Load("tg", cacheKey, keyword, &cachedResults)
 		if cacheHit {
+			e.recordTGCacheHitMetrics(keyword, channels, cachedResults)
 			return cachedResults, nil
 		}
 	}
@@ -56,23 +69,142 @@ func (e *tgSearchExecutor) Search(keyword string, channels []string, forceRefres
 	for _, channel := range channels {
 		ch := channel
 		tasks = append(tasks, func() interface{} {
+			finishChannelRequest := e.beginTGChannelMetricRequest(ch)
+			defer finishChannelRequest()
+			concurrentRequests := e.currentTGChannelMetricConcurrency(ch)
+
+			channelStartedAt := time.Now()
 			channelResults, searchErr := e.channelSearcher(keyword, ch)
+			duration := time.Since(channelStartedAt)
 			if searchErr != nil {
-				return nil
+				return tgChannelTaskResult{
+					name:               ch,
+					err:                searchErr,
+					duration:           duration,
+					concurrentRequests: concurrentRequests,
+				}
 			}
-			return channelResults
+			return tgChannelTaskResult{
+				name:               ch,
+				results:            channelResults,
+				duration:           duration,
+				concurrentRequests: concurrentRequests,
+			}
 		})
 	}
 
-	taskResults := pool.ExecuteBatchWithTimeout(tasks, len(channels), config.AppConfig.PluginTimeout)
+	taskResults, submittedTasks, timedOut := pool.ExecuteBatchWithTimeoutDetailed(tasks, len(channels), config.AppConfig.PluginTimeout)
+	completedChannelNames := make(map[string]struct{}, len(taskResults))
 	for _, result := range taskResults {
 		if result != nil {
-			results = append(results, result.([]model.SearchResult)...)
+			taskResult := result.(tgChannelTaskResult)
+			completedChannelNames[normalizeChannelName(taskResult.name)] = struct{}{}
+			if taskResult.err != nil {
+				e.recordTGChannelMetric(TGChannelMetricEvent{
+					ChannelName:        taskResult.name,
+					Keyword:            keyword,
+					Duration:           taskResult.duration,
+					Success:            false,
+					ErrorType:          "search_failure",
+					ErrorMessage:       taskResult.err.Error(),
+					ConcurrentRequests: taskResult.concurrentRequests,
+					OccurredAt:         time.Now(),
+				})
+				e.recordTGChannelHealth(taskResult.name, false, taskResult.err.Error(), "search_failure")
+				continue
+			}
+			results = append(results, taskResult.results...)
+			e.recordTGChannelMetric(TGChannelMetricEvent{
+				ChannelName:        taskResult.name,
+				Keyword:            keyword,
+				Duration:           taskResult.duration,
+				Success:            true,
+				ResultCount:        len(taskResult.results),
+				ConcurrentRequests: taskResult.concurrentRequests,
+				OccurredAt:         time.Now(),
+			})
+			e.recordTGChannelHealth(taskResult.name, true, "", "search_success")
 		}
+	}
+	if timedOut {
+		e.recordTGChannelTimeoutMetrics(keyword, channels, submittedTasks, completedChannelNames)
 	}
 
 	e.searchCache.Store("tg", cacheKey, keyword, results)
 	return results, nil
+}
+
+func (e *tgSearchExecutor) beginTGChannelMetricRequest(channelName string) func() {
+	if e == nil || e.channelMetrics == nil {
+		return func() {}
+	}
+	return e.channelMetrics.BeginChannelRequest(channelName)
+}
+
+func (e *tgSearchExecutor) currentTGChannelMetricConcurrency(channelName string) int {
+	if e == nil || e.channelMetrics == nil {
+		return 0
+	}
+	return e.channelMetrics.currentConcurrentRequests(channelName)
+}
+
+func (e *tgSearchExecutor) recordTGChannelMetric(event TGChannelMetricEvent) {
+	if e == nil || e.channelMetrics == nil {
+		return
+	}
+	e.channelMetrics.RecordEvent(event)
+}
+
+func (e *tgSearchExecutor) recordTGChannelHealth(channelName string, healthy bool, errMsg string, source string) {
+	if e == nil || e.channelHealth == nil {
+		return
+	}
+	_ = e.channelHealth.RecordResult(channelName, healthy, errMsg, source)
+}
+
+func (e *tgSearchExecutor) recordTGCacheHitMetrics(keyword string, channels []string, cachedResults []model.SearchResult) {
+	resultCountByChannel := make(map[string]int, len(channels))
+	for _, result := range cachedResults {
+		channelName := normalizeChannelName(result.Channel)
+		if channelName == "" {
+			continue
+		}
+		resultCountByChannel[channelName]++
+	}
+
+	for _, channel := range channels {
+		e.recordTGChannelMetric(TGChannelMetricEvent{
+			ChannelName: channel,
+			Keyword:     keyword,
+			Success:     true,
+			CacheHit:    true,
+			ResultCount: resultCountByChannel[normalizeChannelName(channel)],
+			OccurredAt:  time.Now(),
+		})
+		e.recordTGChannelHealth(channel, true, "", "search_success")
+	}
+}
+
+func (e *tgSearchExecutor) recordTGChannelTimeoutMetrics(keyword string, channels []string, submittedTasks int, completedChannelNames map[string]struct{}) {
+	if submittedTasks > len(channels) {
+		submittedTasks = len(channels)
+	}
+	for _, channel := range channels[:submittedTasks] {
+		normalizedName := normalizeChannelName(channel)
+		if _, ok := completedChannelNames[normalizedName]; ok {
+			continue
+		}
+		e.recordTGChannelMetric(TGChannelMetricEvent{
+			ChannelName:  channel,
+			Keyword:      keyword,
+			Success:      false,
+			Timeout:      true,
+			ErrorType:    "timeout",
+			ErrorMessage: "频道搜索超时",
+			OccurredAt:   time.Now(),
+		})
+		e.recordTGChannelHealth(channel, false, "频道搜索超时", "timeout")
+	}
 }
 
 type pluginSearchExecutor struct {

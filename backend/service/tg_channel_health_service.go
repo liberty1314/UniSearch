@@ -64,6 +64,13 @@ func (s *TGChannelHealthService) RecordResult(channelName string, healthy bool, 
 	if err := s.db.Save(&status).Error; err != nil {
 		return fmt.Errorf("保存频道健康状态失败: %w", err)
 	}
+	if !healthy {
+		if err := s.db.Model(&model.TGChannelHealthStatus{}).
+			Where("channel_name = ?", normalizedName).
+			Update("is_healthy", false).Error; err != nil {
+			return fmt.Errorf("保存频道异常状态失败: %w", err)
+		}
+	}
 	return nil
 }
 

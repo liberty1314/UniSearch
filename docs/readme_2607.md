@@ -108,3 +108,37 @@
     - frontend/src/components/admin/AdminDataTable.tsx
     - frontend/src/components/admin/PluginPerformanceDashboard.tsx
     - docs/readme_2607.md
+
+[2026-07-05 18:03] feat(channel-observability): 新增频道性能观测与管理视图
+  Body: 新增 TG 频道性能指标采集、聚合模型、后台查询接口和清理复用逻辑，并将频道指标记录接入搜索执行流程。同步新增频道性能面板、观测导航、数据 Hook、类型定义、测试覆盖和实施文档。
+  Files:
+    - backend/api/channel_metrics_handler.go
+    - backend/api/channel_metrics_handler_test.go
+    - backend/api/router_admin.go
+    - backend/api/router_deps.go
+    - backend/cmd/bootstrap/app.go
+    - backend/cmd/bootstrap/server.go
+    - backend/database/migration.go
+    - backend/model/tg_channel_metrics.go
+    - backend/service/plugin_metrics_cleaner.go
+    - backend/service/plugin_metrics_cleaner_test.go
+    - backend/service/search_executor.go
+    - backend/service/search_executor_test.go
+    - backend/service/search_progressive.go
+    - backend/service/search_service.go
+    - backend/service/tg_channel_health_service.go
+    - backend/service/tg_channel_metrics_collector.go
+    - backend/service/tg_channel_metrics_collector_test.go
+    - docs/channel-observability-development-plan.md
+    - docs/channel-observability-plan.md
+    - frontend/src/components/admin/ChannelPerformancePanel.tsx
+    - frontend/src/components/admin/PerformanceObservabilityView.tsx
+    - frontend/src/components/admin/PerformanceSectionNav.tsx
+    - frontend/src/components/admin/PluginPerformancePanel.tsx
+    - frontend/src/components/admin/__tests__/ChannelPerformancePanel.test.tsx
+    - frontend/src/components/admin/__tests__/PerformanceObservabilityView.test.tsx
+    - frontend/src/hooks/__tests__/useChannelMetricsController.test.tsx
+    - frontend/src/hooks/useChannelMetricsController.ts
+    - frontend/src/pages/Admin.tsx
+    - frontend/src/types/channelMetrics.ts
+    - docs/readme_2607.md

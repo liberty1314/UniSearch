@@ -18,14 +18,15 @@ import (
 )
 
 type App struct {
-	RouterDeps    api.RouterDeps
-	PluginManager *plugin.PluginManager
-	RedisCache    *cache.RedisCache
-	Search        *service.SearchService
-	HotRanking    *service.HotRankingService
-	PluginMetrics *service.PluginMetricsCollector
-	PluginCleaner *service.PluginMetricsCleaner
-	PluginChecker *service.PluginHealthChecker
+	RouterDeps     api.RouterDeps
+	PluginManager  *plugin.PluginManager
+	RedisCache     *cache.RedisCache
+	Search         *service.SearchService
+	HotRanking     *service.HotRankingService
+	PluginMetrics  *service.PluginMetricsCollector
+	ChannelMetrics *service.TGChannelMetricsCollector
+	PluginCleaner  *service.PluginMetricsCleaner
+	PluginChecker  *service.PluginHealthChecker
 }
 
 func Initialize() (*App, error) {
@@ -99,6 +100,9 @@ func Initialize() (*App, error) {
 	pluginMetricsCollector := service.NewPluginMetricsCollector(database.GetDB())
 	fmt.Println("PluginMetrics 服务已启动（插件性能指标采集已启用）")
 
+	tgChannelMetricsCollector := service.NewTGChannelMetricsCollector(database.GetDB())
+	fmt.Println("TGChannelMetrics 服务已启动（TG 频道性能指标采集已启用）")
+
 	pluginMetricsCleaner := service.NewPluginMetricsCleaner(database.GetDB())
 	fmt.Println("PluginMetricsCleaner 服务已启动（插件指标清理已启用）")
 
@@ -114,6 +118,8 @@ func Initialize() (*App, error) {
 	searchService := service.NewSearchService(pluginManager, redisCache, pluginStateService, pluginRuntimeConfigService)
 	searchService.SetPluginHealthService(pluginHealthService)
 	searchService.SetPluginMetricsCollector(pluginMetricsCollector)
+	searchService.SetTGChannelMetricsCollector(tgChannelMetricsCollector)
+	searchService.SetTGChannelHealthService(tgChannelHealthService)
 	searchService.SetPluginCircuitBreaker(pluginCircuitBreaker)
 	pluginHealthChecker := service.NewPluginHealthChecker(searchService, pluginCircuitBreaker)
 	searchService.SetPluginHealthChecker(pluginHealthChecker)
@@ -121,28 +127,30 @@ func Initialize() (*App, error) {
 
 	return &App{
 		RouterDeps: api.RouterDeps{
-			SearchService:          searchService,
-			AuthService:            authService,
-			RefreshTokenService:    refreshTokenService,
-			UserService:            userService,
-			SystemSettingsService:  systemSettingsService,
-			AnnouncementService:    announcementService,
-			TGChannelService:       tgChannelService,
-			PluginHealthService:    pluginHealthService,
-			PluginMetricsCollector: pluginMetricsCollector,
-			PluginStateService:     pluginStateService,
-			PluginRuntimeConfig:    pluginRuntimeConfigService,
-			TGChannelHealthService: tgChannelHealthService,
-			AdminTagService:        adminTagService,
-			HotRankingService:      hotRankingService,
+			SearchService:             searchService,
+			AuthService:               authService,
+			RefreshTokenService:       refreshTokenService,
+			UserService:               userService,
+			SystemSettingsService:     systemSettingsService,
+			AnnouncementService:       announcementService,
+			TGChannelService:          tgChannelService,
+			PluginHealthService:       pluginHealthService,
+			PluginMetricsCollector:    pluginMetricsCollector,
+			TGChannelMetricsCollector: tgChannelMetricsCollector,
+			PluginStateService:        pluginStateService,
+			PluginRuntimeConfig:       pluginRuntimeConfigService,
+			TGChannelHealthService:    tgChannelHealthService,
+			AdminTagService:           adminTagService,
+			HotRankingService:         hotRankingService,
 		},
-		PluginManager: pluginManager,
-		RedisCache:    redisCache,
-		Search:        searchService,
-		HotRanking:    hotRankingService,
-		PluginMetrics: pluginMetricsCollector,
-		PluginCleaner: pluginMetricsCleaner,
-		PluginChecker: pluginHealthChecker,
+		PluginManager:  pluginManager,
+		RedisCache:     redisCache,
+		Search:         searchService,
+		HotRanking:     hotRankingService,
+		PluginMetrics:  pluginMetricsCollector,
+		ChannelMetrics: tgChannelMetricsCollector,
+		PluginCleaner:  pluginMetricsCleaner,
+		PluginChecker:  pluginHealthChecker,
 	}, nil
 }
 

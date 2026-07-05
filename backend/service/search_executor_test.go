@@ -1,11 +1,15 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
+
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 
 	"unisearch/config"
 	"unisearch/model"
@@ -222,6 +226,161 @@ func TestPluginSearchExecutorRecordsPluginMetrics(t *testing.T) {
 	}
 }
 
+func TestTGSearchExecutorRecordsChannelMetricsOnSuccess(t *testing.T) {
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{
+		CacheEnabled:  false,
+		PluginTimeout: time.Second,
+	}
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	collector, _ := newTGChannelMetricsTestCollector(t)
+	executor := newTGSearchExecutor(newSearchCache(nil, newSearchMetricsRecorder()), newSearchMetricsRecorder(), func(keyword string, channel string) ([]model.SearchResult, error) {
+		return []model.SearchResult{{Channel: channel, Title: keyword}}, nil
+	}, collector, nil)
+
+	results, err := executor.Search("仙逆", []string{"MetricChannel"}, true)
+	if err != nil {
+		t.Fatalf("频道搜索不应失败: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("期望返回 1 条结果，实际为 %d", len(results))
+	}
+
+	snapshot := collector.RealtimeSnapshot()
+	if len(snapshot.Items) != 1 {
+		t.Fatalf("期望记录一个频道指标，实际为 %#v", snapshot.Items)
+	}
+	item := snapshot.Items[0]
+	if item.ChannelName != "metricchannel" || item.SuccessCount != 1 || item.ResultCount != 1 {
+		t.Fatalf("成功频道指标不正确: %#v", item)
+	}
+}
+
+func TestTGSearchExecutorRecordsChannelMetricsOnFailure(t *testing.T) {
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{
+		CacheEnabled:  false,
+		PluginTimeout: time.Second,
+	}
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("打开 SQLite 测试库失败: %v", err)
+	}
+	if err := db.AutoMigrate(&model.TGChannelHealthStatus{}); err != nil {
+		t.Fatalf("迁移频道健康表失败: %v", err)
+	}
+
+	collector, _ := newTGChannelMetricsTestCollector(t)
+	health := NewTGChannelHealthService(db)
+	executor := newTGSearchExecutor(newSearchCache(nil, newSearchMetricsRecorder()), newSearchMetricsRecorder(), func(_ string, _ string) ([]model.SearchResult, error) {
+		return nil, fmt.Errorf("频道不可用")
+	}, collector, health)
+
+	results, err := executor.Search("仙逆", []string{"BrokenChannel"}, true)
+	if err != nil {
+		t.Fatalf("执行器应吞掉单频道错误并返回其他结果，实际错误: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("失败频道不应返回结果，实际为 %d", len(results))
+	}
+
+	snapshot := collector.RealtimeSnapshot()
+	if len(snapshot.Items) != 1 || snapshot.Items[0].ErrorCount != 1 {
+		t.Fatalf("失败频道指标不正确: %#v", snapshot.Items)
+	}
+
+	statusMap, err := health.GetStatusMap([]string{"BrokenChannel"})
+	if err != nil {
+		t.Fatalf("查询频道健康状态失败: %v", err)
+	}
+	status, ok := statusMap["BrokenChannel"]
+	if !ok || status.IsHealthy || status.CheckSource != "search_failure" {
+		t.Fatalf("频道健康状态未记录失败: ok=%v status=%#v", ok, status)
+	}
+}
+
+func TestTGSearchExecutorRecordsChannelMetricsOnCacheHit(t *testing.T) {
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{
+		CacheEnabled:  true,
+		PluginTimeout: time.Second,
+	}
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	collector, _ := newTGChannelMetricsTestCollector(t)
+	cache := &staticSearchCache{
+		loadHit: true,
+		results: []model.SearchResult{
+			{Channel: "CachedChannel", Title: "缓存结果"},
+		},
+	}
+	executor := newTGSearchExecutor(cache, newSearchMetricsRecorder(), func(_ string, _ string) ([]model.SearchResult, error) {
+		t.Fatal("缓存命中时不应调用频道搜索")
+		return nil, nil
+	}, collector, nil)
+
+	results, err := executor.Search("仙逆", []string{"CachedChannel"}, false)
+	if err != nil {
+		t.Fatalf("缓存命中不应失败: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("期望返回缓存结果，实际为 %d", len(results))
+	}
+
+	snapshot := collector.RealtimeSnapshot()
+	if len(snapshot.Items) != 1 || snapshot.Items[0].CacheHitCount != 1 || snapshot.Items[0].ResultCount != 1 {
+		t.Fatalf("缓存命中频道指标不正确: %#v", snapshot.Items)
+	}
+}
+
+func TestTGSearchExecutorRecordsChannelTimeoutForUnfinishedTasks(t *testing.T) {
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{
+		CacheEnabled:  false,
+		PluginTimeout: 20 * time.Millisecond,
+	}
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	collector, _ := newTGChannelMetricsTestCollector(t)
+	executor := newTGSearchExecutor(newSearchCache(nil, newSearchMetricsRecorder()), newSearchMetricsRecorder(), func(_ string, channel string) ([]model.SearchResult, error) {
+		if channel == "slow-channel" {
+			time.Sleep(200 * time.Millisecond)
+		}
+		return []model.SearchResult{{Channel: channel}}, nil
+	}, collector, nil)
+
+	results, err := executor.Search("仙逆", []string{"fast-channel", "slow-channel"}, true)
+	if err != nil {
+		t.Fatalf("频道超时不应让执行器失败: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("期望只返回快速频道结果，实际为 %d", len(results))
+	}
+
+	snapshot := collector.RealtimeSnapshot()
+	byName := make(map[string]model.TGChannelMetricsRealtimeItem, len(snapshot.Items))
+	for _, item := range snapshot.Items {
+		byName[item.ChannelName] = item
+	}
+	if byName["fast-channel"].SuccessCount != 1 {
+		t.Fatalf("快速频道指标不正确: %#v", byName["fast-channel"])
+	}
+	if byName["slow-channel"].TimeoutCount != 1 || byName["slow-channel"].ErrorCount != 1 {
+		t.Fatalf("超时频道指标不正确: %#v", byName["slow-channel"])
+	}
+}
+
 func TestPluginSearchExecutorIsolatesRequestStatePerPlugin(t *testing.T) {
 	oldConfig := config.AppConfig
 	config.AppConfig = &config.Config{
@@ -287,6 +446,27 @@ func TestPluginSearchExecutorIsolatesRequestStatePerPlugin(t *testing.T) {
 			t.Fatalf("expected %s search to observe cache key %s, got %s", outcome.keyword, expectedCacheKey, result.Content)
 		}
 	}
+}
+
+type staticSearchCache struct {
+	loadHit bool
+	results []model.SearchResult
+}
+
+func (c *staticSearchCache) Load(_ string, _ string, _ string, target interface{}) (bool, error) {
+	if !c.loadHit {
+		return false, nil
+	}
+	if output, ok := target.(*[]model.SearchResult); ok {
+		*output = append([]model.SearchResult(nil), c.results...)
+	}
+	return true, nil
+}
+
+func (c *staticSearchCache) Store(_ string, _ string, _ string, _ interface{}) {}
+
+func (c *staticSearchCache) Close(_ context.Context) error {
+	return nil
 }
 
 type requestStateProbePlugin struct {
