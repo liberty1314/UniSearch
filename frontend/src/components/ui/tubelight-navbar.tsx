@@ -11,7 +11,7 @@ interface NavItem {
 
 interface NavBarProps {
   items: NavItem[];
-  activeUrl: string;
+  activeUrl: string | null;
   className?: string;
   "aria-label"?: string;
 }

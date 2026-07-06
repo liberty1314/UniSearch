@@ -125,7 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
 
             <aside
                 className={cn(
-                    'fixed left-0 top-16 z-40 flex h-[calc(100vh-4rem)] w-64 flex-shrink-0 transition-transform duration-300 ease-in-out lg:w-[300px]',
+                    'fixed left-0 top-20 z-40 flex h-[calc(100vh-5rem)] w-64 flex-shrink-0 transition-transform duration-300 ease-in-out lg:w-[300px]',
                     isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
                 )}
             >

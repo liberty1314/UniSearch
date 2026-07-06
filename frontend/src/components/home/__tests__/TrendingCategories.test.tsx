@@ -58,7 +58,7 @@ describe('TrendingCategories', () => {
 
     cards.forEach((card) => {
       expect(card).toHaveAttribute('data-glass-panel', 'true');
-      expect(card).toHaveClass('glass-card-premium');
+      expect(card).toHaveClass('surface-card');
       expect(card).toHaveClass('p-5');
     });
 

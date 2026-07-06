@@ -176,12 +176,12 @@ describe('Auth entry pages', () => {
     await screen.findByText('欢迎回来');
 
     const loginRoot = loginRender.container.firstChild as HTMLElement;
-    const loginCard = loginRender.container.querySelector('.glass-card-premium') as HTMLElement;
+    const loginCard = loginRender.container.querySelector('.surface-focus') as HTMLElement;
 
     expect(loginRoot).toHaveClass('min-h-dvh');
     expect(loginRoot).toHaveClass('overflow-hidden');
     expect(loginRoot).not.toHaveClass('overflow-y-auto');
-    expect(loginCard.className).toContain('min-h-[35rem]');
+    expect(loginCard.className).toContain('min-h-[34rem]');
 
     cleanup();
 
@@ -194,10 +194,10 @@ describe('Auth entry pages', () => {
     await screen.findByText('创建账户');
 
     const registerRoot = registerRender.container.firstChild as HTMLElement;
-    const registerCard = registerRender.container.querySelector('.glass-card-premium') as HTMLElement;
+    const registerCard = registerRender.container.querySelector('.surface-focus') as HTMLElement;
 
     expect(registerRoot.className).toBe(loginRoot.className);
-    expect(registerCard.className).toContain('min-h-[35rem]');
+    expect(registerCard.className).toContain('min-h-[34rem]');
   });
 
   it('does not render the decorative sparkle icon on the admin login page', async () => {

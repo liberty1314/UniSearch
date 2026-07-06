@@ -32,7 +32,8 @@ describe('DisclaimerPage', () => {
 
     expect(container.firstChild).toHaveClass('bg-white');
     expect(container.firstChild).not.toHaveClass('bg-gray-50');
-    expect(container.innerHTML).toContain('dark:border-cyan-300/[0.14]');
+    expect(container.innerHTML).toContain('surface-panel');
+    expect(container.innerHTML).toContain('max-w-3xl');
     expect(container.innerHTML).toContain('dark:border-cyan-300/[0.12]');
   });
 });

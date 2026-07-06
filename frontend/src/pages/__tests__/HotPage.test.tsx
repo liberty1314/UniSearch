@@ -1003,7 +1003,7 @@ describe("HotPage", () => {
       });
     });
 
-    expect(screen.getByRole("button", { name: "重置条件" })).toHaveClass("dark:bg-slate-950/[0.52]");
+    expect(screen.getByRole("button", { name: "重置条件" })).toHaveClass("dark:bg-slate-950/[0.46]");
     expect(screen.getByRole("button", { name: "重置条件" })).toHaveClass("dark:border-cyan-300/[0.14]");
 
     expect(getHotRankingsMock).toHaveBeenNthCalledWith(3, {

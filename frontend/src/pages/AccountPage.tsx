@@ -168,9 +168,9 @@ const AccountPage: React.FC = () => {
   const passwordPolicyText = getPasswordPolicyHelperText(authPolicy);
 
   return (
-    <PublicPageShell contentClassName="container mx-auto px-4 py-8 pb-16 pt-24">
+    <PublicPageShell contentClassName="container mx-auto px-4 py-6 pb-12 pt-22 sm:pt-24 sm:pb-16">
       <SEO title="个人中心 | UniSearch" description="管理您的 UniSearch 账号与安全设置。" />
-      <div className="mx-auto max-w-7xl space-y-8">
+      <div className="mx-auto max-w-7xl space-y-6 sm:space-y-8">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}

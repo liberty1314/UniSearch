@@ -142,3 +142,55 @@
     - frontend/src/pages/Admin.tsx
     - frontend/src/types/channelMetrics.ts
     - docs/readme_2607.md
+
+[2026-07-06 11:27] feat(frontend-ui): 完成全站前端设计优化
+  Body: 完成全站导航分流、表面层级、按钮层级、移动端压缩、认证与账号页微调、动效降级、免责声明和 404 收尾优化。同步补充前端优化计划文档、分页辅助逻辑、页面与组件测试，保证后台和公共页面视觉层级一致。
+  Files:
+    - docs/frontend-ui-optimization-development-plan.md
+    - docs/frontend-ui-optimization-plan.md
+    - frontend/e2e/test-helpers.ts
+    - frontend/src/components/Navbar.tsx
+    - frontend/src/components/__tests__/Navbar.test.tsx
+    - frontend/src/components/account/AccountWorkspaceShell.tsx
+    - frontend/src/components/account/accountDesign.ts
+    - frontend/src/components/admin/ChannelPerformancePanel.tsx
+    - frontend/src/components/admin/PluginPerformanceDashboard.tsx
+    - frontend/src/components/admin/Sidebar.tsx
+    - frontend/src/components/admin/__tests__/ChannelPerformancePanel.test.tsx
+    - frontend/src/components/admin/__tests__/PluginPerformanceDashboard.test.tsx
+    - frontend/src/components/admin/adminDesign.ts
+    - frontend/src/components/admin/useAdminClientPagination.ts
+    - frontend/src/components/auth/authEntryLayout.ts
+    - frontend/src/components/home/FeatureCard.tsx
+    - frontend/src/components/home/PlatformMarquee.tsx
+    - frontend/src/components/home/__tests__/PlatformMarquee.test.tsx
+    - frontend/src/components/home/__tests__/TrendingCategories.test.tsx
+    - frontend/src/components/resource-detail/ResourceDetailActionPanel.tsx
+    - frontend/src/components/resource-detail/ResourceDetailLinksSection.tsx
+    - frontend/src/components/resource-detail/ResourceDetailMetaSection.tsx
+    - frontend/src/components/search/SearchEmptyWorkbench.tsx
+    - frontend/src/components/trending/HotToolbar.tsx
+    - frontend/src/components/ui/__tests__/Button.test.tsx
+    - frontend/src/components/ui/button.tsx
+    - frontend/src/components/ui/card.tsx
+    - frontend/src/components/ui/page-not-found.tsx
+    - frontend/src/components/ui/tubelight-navbar.tsx
+    - frontend/src/index.css
+    - frontend/src/lib/accountPreferences.ts
+    - frontend/src/pages/AccountPage.tsx
+    - frontend/src/pages/Admin.tsx
+    - frontend/src/pages/AdminLogin.tsx
+    - frontend/src/pages/DisclaimerPage.tsx
+    - frontend/src/pages/Home.tsx
+    - frontend/src/pages/ResourceDetailPage.tsx
+    - frontend/src/pages/SearchPage.tsx
+    - frontend/src/pages/__tests__/AccountPage.test.tsx
+    - frontend/src/pages/__tests__/Admin.test.tsx
+    - frontend/src/pages/__tests__/AdminNavigation.test.tsx
+    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
+    - frontend/src/pages/__tests__/DisclaimerPage.test.tsx
+    - frontend/src/pages/__tests__/Home.test.tsx
+    - frontend/src/pages/__tests__/HotPage.test.tsx
+    - frontend/src/routes/AppRoutes.tsx
+    - frontend/src/routes/__tests__/AppRoutes.test.tsx
+    - docs/readme_2607.md

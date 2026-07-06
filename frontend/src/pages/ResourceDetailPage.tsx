@@ -326,14 +326,14 @@ const ResourceDetailPage: React.FC = () => {
   }
 
   return (
-    <PublicPageShell contentClassName="container mx-auto px-4 py-8 pt-24 pb-16">
+    <PublicPageShell contentClassName="container mx-auto px-4 py-6 pt-22 pb-12 sm:pt-24 sm:pb-16">
       <SEO
         title={`${resource.title} | UniSearch`}
         description={seoDescription}
         image={resource.images?.[0]}
       />
 
-      <div data-testid="resource-detail-page" className="mx-auto max-w-7xl space-y-7">
+      <div data-testid="resource-detail-page" className="mx-auto max-w-7xl space-y-6">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -370,13 +370,13 @@ const ResourceDetailPage: React.FC = () => {
 
           <div
             data-testid="resource-detail-body-bridge"
-            className="resource-detail-body-bridge grid gap-6 xl:grid-cols-[minmax(0,1fr),300px] xl:gap-7"
+            className="resource-detail-body-bridge grid gap-5 xl:grid-cols-[minmax(0,1fr),300px] xl:gap-6"
           >
             <div className="space-y-6">
               {resource.detail.content ? (
                 <section
                   data-testid="resource-detail-summary"
-                  className="resource-detail-summary-panel overflow-hidden rounded-[2rem] px-6 py-6 sm:px-7 sm:py-7 xl:px-10 xl:py-8"
+                  className="resource-detail-summary-panel overflow-hidden rounded-[1.65rem] px-5 py-5 sm:px-6 sm:py-6 xl:px-8 xl:py-7"
                 >
                   <div className="max-w-[70ch] space-y-4">
                     <h2

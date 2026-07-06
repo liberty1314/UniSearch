@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, matchPath, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import Navbar from '@/components/Navbar';
@@ -163,18 +163,33 @@ const renderRouteElement = (element: React.ReactNode, pathname: string) =>
 
 const AppRoutes: React.FC = () => {
   const { pathname } = useLocation();
+  const [prefersCompactFooter, setPrefersCompactFooter] = useState(false);
   const isStandaloneAuthPage = isAuthRoute(pathname);
+  const isAdminRoute = pathname.startsWith('/admin');
   const isKnownRoute = KNOWN_ROUTE_PATTERNS.some((path) =>
     matchPath({ path, end: true }, pathname)
   );
   const isNotFoundRoute = !isKnownRoute;
   const showSiteFooter =
     !isNotFoundRoute &&
-    !pathname.startsWith('/admin') &&
+    !isAdminRoute &&
     pathname !== '/auth' &&
     !isStandaloneAuthPage;
-  const showCinematicFooter = showSiteFooter && pathname === '/';
-  const showNavbar = !isNotFoundRoute;
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    const updateFooterMode = () => setPrefersCompactFooter(mediaQuery.matches);
+    updateFooterMode();
+    mediaQuery.addEventListener('change', updateFooterMode);
+
+    return () => mediaQuery.removeEventListener('change', updateFooterMode);
+  }, []);
+
+  const showCinematicFooter = showSiteFooter && pathname === '/' && !prefersCompactFooter;
+  const showNavbar = !isNotFoundRoute && !isAdminRoute;
   const appShellClassName = isNotFoundRoute
     ? 'bg-black'
     : isStandaloneAuthPage

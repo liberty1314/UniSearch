@@ -1,4 +1,4 @@
-import { ArrowLeft, House } from 'lucide-react';
+import { ArrowLeft, House, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BLUE_CYAN_TEXT_GRADIENT } from '@/lib/brandTheme';
@@ -59,6 +59,11 @@ const STICK_FIGURES: StickFigure[] = [
 const PRIMARY_BUTTON_GRADIENT = 'bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500';
 const SURFACE_GLOW = 'shadow-[0_24px_60px_rgba(6,182,212,0.16)]';
 
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' &&
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 export default function NotFoundPage() {
   return (
     <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(6,182,212,0.16),transparent_24%),radial-gradient(circle_at_bottom_left,_rgba(59,130,246,0.16),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eff6ff_46%,#ecfeff_100%)]">
@@ -74,6 +79,11 @@ function MessageDisplay() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    if (prefersReducedMotion()) {
+      setIsVisible(true);
+      return;
+    }
+
     const timer = window.setTimeout(() => {
       setIsVisible(true);
     }, 1200);
@@ -114,6 +124,14 @@ function MessageDisplay() {
             <House className="h-5 w-5 transition-transform duration-300 group-hover:translate-y-[-1px]" />
             回到首页
           </button>
+          <button
+            type="button"
+            onClick={() => navigate('/search')}
+            className="glass-toolbar group inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-6 py-2 text-base font-medium text-slate-700 transition-all duration-300 ease-in-out hover:border-cyan-300 hover:text-cyan-700"
+          >
+            <Search className="h-5 w-5" />
+            去搜索
+          </button>
         </div>
       </div>
     </div>
@@ -140,6 +158,10 @@ function CharactersAnimation() {
       if (!container) return;
 
       clearCharacters();
+
+      if (prefersReducedMotion()) {
+        return;
+      }
 
       STICK_FIGURES.forEach((figure, index) => {
         const stick = document.createElement('img');
@@ -215,6 +237,10 @@ function CircleAnimation() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    if (prefersReducedMotion()) {
+      return;
+    }
 
     const initCircles = () => {
       circlesRef.current = [];

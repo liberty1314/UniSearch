@@ -12,11 +12,11 @@ describe('Button', () => {
     expect(button.querySelector('svg')).toHaveClass('animate-spin');
   });
 
-  it('后台动作变体提供圆角和按压反馈', () => {
+  it('后台动作变体提供圆角和低强度表面反馈', () => {
     render(<Button variant="adminAction">详情</Button>);
 
     const button = screen.getByRole('button', { name: '详情' });
     expect(button).toHaveClass('rounded-full');
-    expect(button).toHaveClass('hover:-translate-y-0.5');
+    expect(button).toHaveClass('shadow-[0_4px_12px_rgba(15,23,42,0.04)]');
   });
 });

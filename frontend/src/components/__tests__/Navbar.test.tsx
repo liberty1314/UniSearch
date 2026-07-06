@@ -98,6 +98,28 @@ describe('Navbar', () => {
     expect(screen.getByRole('link', { name: '后台管理' })).toHaveAttribute('href', '/admin?view=system_info');
   });
 
+  it('头像菜单打开后保持浮层定位，不撑开导航布局', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    const userMenuButton = screen.getByRole('button', { name: /admin/i });
+    expect(userMenuButton).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(userMenuButton);
+
+    const userMenu = screen.getByTestId('navbar-user-menu');
+    expect(userMenuButton).toHaveAttribute('aria-expanded', 'true');
+    expect(userMenu).toHaveAttribute('role', 'menu');
+    expect(userMenu.className).toContain('!absolute');
+    expect(userMenu.className).toContain('top-full');
+    expect(userMenu.className).toContain('glass-panel');
+  });
+
   it('renders the hot ranking entry in the navbar', () => {
     render(
       <MemoryRouter>

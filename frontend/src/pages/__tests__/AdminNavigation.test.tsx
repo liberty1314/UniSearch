@@ -5,15 +5,36 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Admin from '@/pages/Admin';
 
-vi.mock('@/stores/authStore', () => ({
-  useAuthStore: () => ({
+const { authState, revokeRefreshTokenMock } = vi.hoisted(() => ({
+  authState: {
     isAdmin: true,
-  }),
+    username: 'root',
+    refreshToken: 'refresh-token',
+    logout: vi.fn(),
+  },
+  revokeRefreshTokenMock: vi.fn(),
+}));
+
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: () => authState,
+}));
+
+vi.mock('@/services/authService', () => ({
+  AuthService: {
+    revokeRefreshToken: revokeRefreshTokenMock,
+  },
+}));
+
+vi.mock('@/components/ui/animated-theme-toggler', () => ({
+  AnimatedThemeToggler: ({ className }: { className?: string }) => (
+    <button className={className}>切换主题</button>
+  ),
 }));
 
 vi.mock('sonner', () => ({
   toast: {
     error: vi.fn(),
+    success: vi.fn(),
   },
 }));
 
@@ -53,6 +74,8 @@ const LocationProbe = () => {
 describe('Admin 导航集成', () => {
   beforeEach(() => {
     document.title = '初始标题';
+    authState.logout.mockClear();
+    revokeRefreshTokenMock.mockClear();
   });
 
   it('系统设置固定放在导航末尾', async () => {
@@ -79,6 +102,126 @@ describe('Admin 导航集成', () => {
 
     expect(labels.at(-1)).toBe('系统设置');
     expect(labels).toContain('性能监控');
+    expect(screen.getByRole('heading', { name: '系统监控' })).toBeInTheDocument();
+  });
+
+  it('后台顶部导航使用前台品牌导航样式且不显示模块胶囊', async () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/admin?view=system_info']}>
+        <Routes>
+          <Route
+            path="/admin"
+            element={
+              <>
+                <LocationProbe />
+                <Admin />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('banner')).toHaveClass('h-20');
+    expect(screen.getByRole('banner')).toHaveClass('glass');
+    expect(screen.getByText('UniSearch')).toHaveClass('bg-clip-text');
+    expect(screen.queryByLabelText('当前后台模块')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '系统监控' })).toHaveClass('sr-only');
+    expect(container.querySelector('.top-20')).toBeInTheDocument();
+  });
+
+  it('后台顶部仅保留 logo 作为回首页入口', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/admin?view=system_info']}>
+        <Routes>
+          <Route path="/" element={<LocationProbe />} />
+          <Route
+            path="/admin"
+            element={
+              <>
+                <LocationProbe />
+                <Admin />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const logoAction = screen.getByRole('link', { name: '返回 UniSearch 首页' });
+
+    expect(logoAction).toHaveAttribute('href', '/');
+    expect(screen.queryByRole('link', { name: '返回首页' })).not.toBeInTheDocument();
+
+    await user.click(logoAction);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent('/');
+    });
+  });
+
+  it('后台右侧账号操作区固定在导航栏右侧', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin?view=system_info']}>
+        <Routes>
+          <Route
+            path="/admin"
+            element={
+              <>
+                <LocationProbe />
+                <Admin />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByLabelText('后台通知').parentElement).toHaveClass('col-start-3');
+    expect(screen.getByLabelText('后台通知').parentElement).toHaveClass('justify-end');
+  });
+
+  it('后台头像菜单可以点击展开并执行退出登录', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/admin?view=system_info']}>
+        <Routes>
+          <Route path="/" element={<LocationProbe />} />
+          <Route
+            path="/admin"
+            element={
+              <>
+                <LocationProbe />
+                <Admin />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const accountButton = screen.getByRole('button', { name: /root/i });
+    expect(accountButton).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(accountButton);
+
+    const userMenu = screen.getByTestId('admin-user-menu');
+    expect(accountButton).toHaveAttribute('aria-expanded', 'true');
+    expect(userMenu).toHaveAttribute('role', 'menu');
+    expect(userMenu.className).toContain('!absolute');
+    expect(userMenu.className).toContain('top-full');
+    expect(screen.getByRole('menuitem', { name: '个人中心' })).toHaveAttribute('href', '/account');
+
+    await user.click(screen.getByRole('menuitem', { name: '退出登录' }));
+
+    await waitFor(() => {
+      expect(revokeRefreshTokenMock).toHaveBeenCalledWith('refresh-token');
+    });
+    expect(authState.logout).toHaveBeenCalled();
+    expect(screen.getByTestId('location')).toHaveTextContent('/');
   });
 
   it('点击侧边栏后会同步切换 URL 与页面内容', async () => {

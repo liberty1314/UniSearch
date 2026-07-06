@@ -141,6 +141,15 @@ describe('AppRoutes', () => {
     expect(screen.getByTestId('site-footer')).toBeInTheDocument();
   });
 
+  it('does not render the public navbar or site footer for admin routes', async () => {
+    renderRoutesAt('/admin');
+
+    expect(await screen.findByText('Admin Page')).toBeInTheDocument();
+    expect(screen.queryByTestId('navbar')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('site-footer')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('cinematic-footer')).not.toBeInTheDocument();
+  });
+
   it('renders the resource detail page at /resource/:resourceId', async () => {
     renderRoutesAt('/resource/resource-1');
 

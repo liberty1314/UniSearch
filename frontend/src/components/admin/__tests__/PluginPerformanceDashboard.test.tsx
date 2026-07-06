@@ -33,7 +33,177 @@ const createFetchResponse = (body: unknown, ok = true) => ({
   json: async () => body,
 });
 
-const mockSuccessfulFetch = (options: { emptyRealtime?: boolean } = {}) => {
+const mockSuccessfulFetch = (options: { emptyRealtime?: boolean; extraPluginCount?: number } = {}) => {
+  const extraPluginNames = Array.from({ length: options.extraPluginCount ?? 0 }, (_, index) => `perf-plugin-${String(index + 1).padStart(2, '0')}`);
+  const realtimeItems = [
+    {
+      plugin_name: 'sidhub',
+      request_count: 10,
+      success_count: 8,
+      timeout_count: 1,
+      error_count: 2,
+      cache_hit_count: 1,
+      max_concurrent_requests: 3,
+      avg_response_ms: 420,
+      p50_response_ms: 380,
+      p95_response_ms: 900,
+      p99_response_ms: 1100,
+      success_rate: 0.8,
+      timeout_rate: 0.1,
+      last_error: '远端响应超时',
+    },
+    {
+      plugin_name: 'pansearch',
+      request_count: 20,
+      success_count: 20,
+      timeout_count: 0,
+      error_count: 0,
+      cache_hit_count: 3,
+      max_concurrent_requests: 2,
+      avg_response_ms: 120,
+      p50_response_ms: 100,
+      p95_response_ms: 180,
+      p99_response_ms: 210,
+      success_rate: 1,
+      timeout_rate: 0,
+    },
+    ...extraPluginNames.map((pluginName, index) => ({
+      plugin_name: pluginName,
+      request_count: 10 + index,
+      success_count: 10 + index,
+      timeout_count: 0,
+      error_count: 0,
+      cache_hit_count: 0,
+      max_concurrent_requests: 1,
+      avg_response_ms: 150 + index,
+      p50_response_ms: 120 + index,
+      p95_response_ms: 220 + index,
+      p99_response_ms: 260 + index,
+      success_rate: 1,
+      timeout_rate: 0,
+    })),
+  ];
+  const metricItems = [
+    {
+      id: 1,
+      plugin_name: 'sidhub',
+      bucket_started_at: '2026-07-04T14:00:00Z',
+      bucket_ended_at: '2026-07-04T14:05:00Z',
+      request_count: 5,
+      success_count: 4,
+      timeout_count: 1,
+      error_count: 1,
+      cache_hit_count: 0,
+      max_concurrent_requests: 2,
+      avg_response_ms: 500,
+      p50_response_ms: 450,
+      p95_response_ms: 900,
+      p99_response_ms: 1200,
+    },
+    {
+      id: 2,
+      plugin_name: 'pansearch',
+      bucket_started_at: '2026-07-04T14:05:00Z',
+      bucket_ended_at: '2026-07-04T14:10:00Z',
+      request_count: 10,
+      success_count: 10,
+      timeout_count: 0,
+      error_count: 0,
+      cache_hit_count: 2,
+      max_concurrent_requests: 2,
+      avg_response_ms: 120,
+      p50_response_ms: 100,
+      p95_response_ms: 180,
+      p99_response_ms: 210,
+    },
+    ...extraPluginNames.map((pluginName, index) => ({
+      id: 100 + index,
+      plugin_name: pluginName,
+      bucket_started_at: '2026-07-04T14:10:00Z',
+      bucket_ended_at: '2026-07-04T14:15:00Z',
+      request_count: 8 + index,
+      success_count: 8 + index,
+      timeout_count: 0,
+      error_count: 0,
+      cache_hit_count: 0,
+      max_concurrent_requests: 1,
+      avg_response_ms: 150 + index,
+      p50_response_ms: 120 + index,
+      p95_response_ms: 220 + index,
+      p99_response_ms: 260 + index,
+    })),
+  ];
+  const catalogItems = [
+    {
+      id: 'search.sidhub',
+      name: 'sidhub',
+      version: '1.0.0',
+      category: 'search',
+      description: 'SeedHub 资源搜索插件',
+      plugin_type: 'builtin',
+      source_type: 'builtin',
+      is_local: true,
+      is_remote: false,
+      installed: true,
+      is_enabled: true,
+      status: 'error',
+      priority: 3,
+      available_actions: ['detail'],
+      health: {
+        is_healthy: false,
+        check_source: 'search_failure',
+        last_error: '连续失败',
+        last_checked_at: '2026-07-04T14:06:00Z',
+        circuit_state: 'open',
+        circuit_cooldown_until: futureCooldown,
+      },
+    },
+    {
+      id: 'search.pansearch',
+      name: 'pansearch',
+      version: '1.0.0',
+      category: 'search',
+      description: '网盘搜索插件',
+      plugin_type: 'builtin',
+      source_type: 'builtin',
+      is_local: true,
+      is_remote: false,
+      installed: true,
+      is_enabled: true,
+      status: 'active',
+      priority: 5,
+      available_actions: ['detail'],
+      health: {
+        is_healthy: true,
+        check_source: 'search_success',
+        last_checked_at: '2026-07-04T14:05:00Z',
+        circuit_state: 'closed',
+      },
+    },
+    ...extraPluginNames.map((pluginName, index) => ({
+      id: `search.${pluginName}`,
+      name: pluginName,
+      version: '1.0.0',
+      category: 'search',
+      description: `性能分页测试插件 ${index + 1}`,
+      plugin_type: 'builtin',
+      source_type: 'builtin',
+      is_local: true,
+      is_remote: false,
+      installed: true,
+      is_enabled: true,
+      status: 'active',
+      priority: 10 + index,
+      available_actions: ['detail'],
+      health: {
+        is_healthy: true,
+        check_source: 'search_success',
+        last_checked_at: '2026-07-04T14:05:00Z',
+        circuit_state: 'closed',
+      },
+    })),
+  ];
+
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString();
     void init;
@@ -51,83 +221,18 @@ const mockSuccessfulFetch = (options: { emptyRealtime?: boolean } = {}) => {
       }
 
       return createFetchResponse({
-        active_plugin_count: 2,
+        active_plugin_count: realtimeItems.length,
         avg_response_ms: 250,
         success_rate: 0.9,
         timeout_rate: 0.05,
         error_count: 2,
-        items: [
-          {
-            plugin_name: 'sidhub',
-            request_count: 10,
-            success_count: 8,
-            timeout_count: 1,
-            error_count: 2,
-            cache_hit_count: 1,
-            max_concurrent_requests: 3,
-            avg_response_ms: 420,
-            p50_response_ms: 380,
-            p95_response_ms: 900,
-            p99_response_ms: 1100,
-            success_rate: 0.8,
-            timeout_rate: 0.1,
-            last_error: '远端响应超时',
-          },
-          {
-            plugin_name: 'pansearch',
-            request_count: 20,
-            success_count: 20,
-            timeout_count: 0,
-            error_count: 0,
-            cache_hit_count: 3,
-            max_concurrent_requests: 2,
-            avg_response_ms: 120,
-            p50_response_ms: 100,
-            p95_response_ms: 180,
-            p99_response_ms: 210,
-            success_rate: 1,
-            timeout_rate: 0,
-          },
-        ],
+        items: realtimeItems,
       });
     }
 
     if (url === '/api/admin/plugin-metrics?limit=200') {
       return createFetchResponse({
-        items: [
-          {
-            id: 1,
-            plugin_name: 'sidhub',
-            bucket_started_at: '2026-07-04T14:00:00Z',
-            bucket_ended_at: '2026-07-04T14:05:00Z',
-            request_count: 5,
-            success_count: 4,
-            timeout_count: 1,
-            error_count: 1,
-            cache_hit_count: 0,
-            max_concurrent_requests: 2,
-            avg_response_ms: 500,
-            p50_response_ms: 450,
-            p95_response_ms: 900,
-            p99_response_ms: 1200,
-          },
-          {
-            id: 2,
-            plugin_name: 'pansearch',
-            bucket_started_at: '2026-07-04T14:05:00Z',
-            bucket_ended_at: '2026-07-04T14:10:00Z',
-            request_count: 10,
-            success_count: 10,
-            timeout_count: 0,
-            error_count: 0,
-            cache_hit_count: 2,
-            max_concurrent_requests: 2,
-            avg_response_ms: 120,
-            p50_response_ms: 100,
-            p95_response_ms: 180,
-            p99_response_ms: 210,
-          },
-        ],
+        items: metricItems,
         range: {},
         granularity: '5m',
       });
@@ -156,54 +261,7 @@ const mockSuccessfulFetch = (options: { emptyRealtime?: boolean } = {}) => {
       return createFetchResponse({
         version: '2026.07',
         source: 'all',
-        items: [
-          {
-            id: 'search.sidhub',
-            name: 'sidhub',
-            version: '1.0.0',
-            category: 'search',
-            description: 'SeedHub 资源搜索插件',
-            plugin_type: 'builtin',
-            source_type: 'builtin',
-            is_local: true,
-            is_remote: false,
-            installed: true,
-            is_enabled: true,
-            status: 'error',
-            priority: 3,
-            available_actions: ['detail'],
-            health: {
-              is_healthy: false,
-              check_source: 'search_failure',
-              last_error: '连续失败',
-              last_checked_at: '2026-07-04T14:06:00Z',
-              circuit_state: 'open',
-              circuit_cooldown_until: futureCooldown,
-            },
-          },
-          {
-            id: 'search.pansearch',
-            name: 'pansearch',
-            version: '1.0.0',
-            category: 'search',
-            description: '网盘搜索插件',
-            plugin_type: 'builtin',
-            source_type: 'builtin',
-            is_local: true,
-            is_remote: false,
-            installed: true,
-            is_enabled: true,
-            status: 'active',
-            priority: 5,
-            available_actions: ['detail'],
-            health: {
-              is_healthy: true,
-              check_source: 'search_success',
-              last_checked_at: '2026-07-04T14:05:00Z',
-              circuit_state: 'closed',
-            },
-          },
-        ],
+        items: catalogItems,
       });
     }
 
@@ -295,6 +353,34 @@ describe('PluginPerformanceDashboard', () => {
       expect(screen.queryAllByText('sidhub')).toHaveLength(0);
     });
     expect(screen.getAllByText('pansearch').length).toBeGreaterThan(0);
+  });
+
+  it('支持分页浏览插件性能表并切换每页条数', async () => {
+    const user = userEvent.setup();
+    mockSuccessfulFetch({ extraPluginCount: 5 });
+
+    render(<PluginPerformanceDashboard />);
+
+    await waitFor(() => {
+      expect(within(screen.getByRole('region', { name: '数据表格' })).getAllByText('perf-plugin-03').length).toBeGreaterThan(0);
+    });
+    expect(within(screen.getByRole('region', { name: '数据表格' })).queryAllByText('perf-plugin-04')).toHaveLength(0);
+    expect(screen.getByRole('combobox', { name: '每页条数' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /下一页/ }));
+
+    await waitFor(() => {
+      expect(within(screen.getByRole('region', { name: '数据表格' })).getAllByText('perf-plugin-04').length).toBeGreaterThan(0);
+    });
+
+    await user.click(screen.getByRole('combobox', { name: '每页条数' }));
+    const pageSizeListbox = await screen.findByRole('listbox');
+    await user.click(within(pageSizeListbox).getByRole('option', { name: '10 条' }));
+
+    await waitFor(() => {
+      expect(within(screen.getByRole('region', { name: '数据表格' })).getAllByText('perf-plugin-05').length).toBeGreaterThan(0);
+    });
+    expect(within(screen.getByRole('region', { name: '数据表格' })).getAllByText('sidhub').length).toBeGreaterThan(0);
   });
 
   it('接口失败时展示后台风格错误提示', async () => {

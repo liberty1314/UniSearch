@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Admin from '@/pages/Admin';
 
@@ -88,20 +89,27 @@ vi.mock('@/components/ui/alert-dialog', () => ({
   AlertDialogTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+const renderAdmin = () =>
+  render(
+    <MemoryRouter initialEntries={['/admin']}>
+      <Admin />
+    </MemoryRouter>
+  );
+
 describe('Admin', () => {
   beforeEach(() => {
     currentViewState.value = 'user_management';
   });
 
   it('使用纯白浅色页背景', () => {
-    const { container } = render(<Admin />);
+    const { container } = renderAdmin();
 
     expect(container.firstChild).toHaveClass('bg-white');
     expect(container.firstChild).toHaveClass('obsidian-shell');
   });
 
   it('在用户管理视图通过共享 ConfirmDialog 入口渲染确认框', async () => {
-    render(<Admin />);
+    renderAdmin();
 
     expect(await screen.findByText('确认删除用户')).toBeInTheDocument();
     expect(screen.getAllByTestId('confirm-dialog')).toHaveLength(1);
@@ -110,7 +118,7 @@ describe('Admin', () => {
   it('在频道管理视图渲染独立页面', async () => {
     currentViewState.value = 'channel_management';
 
-    render(<Admin />);
+    renderAdmin();
 
     expect(await screen.findByText('ChannelManagementView')).toBeInTheDocument();
     expect(screen.queryByText('AdminUsersView')).not.toBeInTheDocument();
@@ -119,7 +127,7 @@ describe('Admin', () => {
   it('在插件管理视图渲染独立页面', async () => {
     currentViewState.value = 'plugin_management';
 
-    render(<Admin />);
+    renderAdmin();
 
     expect(await screen.findByText('PluginManagementView')).toBeInTheDocument();
     expect(screen.queryByText('AdminUsersView')).not.toBeInTheDocument();
@@ -128,7 +136,7 @@ describe('Admin', () => {
   it('在插件性能监控视图渲染独立页面', async () => {
     currentViewState.value = 'plugin_observability';
 
-    render(<Admin />);
+    renderAdmin();
 
     expect(await screen.findByText('PluginPerformanceDashboard')).toBeInTheDocument();
     expect(screen.queryByText('AdminUsersView')).not.toBeInTheDocument();

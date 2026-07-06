@@ -146,18 +146,18 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
   };
 
   return (
-    <section className="glass-card-premium p-5 md:p-6">
-      <div className="space-y-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <section className="surface-panel p-4 md:p-5">
+      <div className="space-y-3 md:space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
                 热榜控制台
               </p>
-              <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50 sm:text-xl">
                 先定口径，再看榜单
               </h2>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+              <p className="mt-1.5 max-w-xl text-xs leading-5 text-slate-500 dark:text-slate-400 sm:text-sm sm:leading-6">
                 先选择榜单模式、时间维度与内容分类，结果区会立刻按当前口径刷新。
               </p>
             </div>
@@ -189,11 +189,11 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
         <div
           data-testid="hot-toolbar-filter-grid"
           className={cn(
-            "gap-4 lg:grid lg:grid-cols-2 xl:grid-cols-[minmax(12rem,0.8fr)_minmax(18rem,1.2fr)_minmax(21rem,1.45fr)_minmax(15rem,1fr)]",
+            "gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-[minmax(12rem,0.8fr)_minmax(18rem,1.2fr)_minmax(21rem,1.45fr)_minmax(15rem,1fr)]",
             mobileExpanded ? "grid" : "hidden sm:grid",
           )}
         >
-          <div className="glass-toolbar min-w-0 rounded-[1.35rem] p-3">
+          <div className="surface-card min-w-0 rounded-[1.15rem] p-3">
             <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
               榜单模式
             </p>
@@ -202,7 +202,7 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
             </div>
           </div>
 
-          <div className="glass-toolbar min-w-0 rounded-[1.35rem] p-3">
+          <div className="surface-card min-w-0 rounded-[1.15rem] p-3">
             <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
               时间维度
             </p>
@@ -211,7 +211,7 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
             </div>
           </div>
 
-          <div className="glass-toolbar min-w-0 rounded-[1.35rem] p-3">
+          <div className="surface-card min-w-0 rounded-[1.15rem] p-3">
             <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
               内容分类
             </p>
@@ -222,7 +222,7 @@ const HotToolbar: React.FC<HotToolbarProps> = ({
 
           <div
             data-testid="hot-toolbar-time-panel"
-            className="glass-toolbar min-w-0 rounded-[1.35rem] p-3"
+            className="surface-card min-w-0 rounded-[1.15rem] p-3"
           >
             <div>
               {renderTimeField()}

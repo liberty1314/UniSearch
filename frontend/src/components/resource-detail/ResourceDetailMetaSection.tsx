@@ -23,7 +23,7 @@ const ResourceDetailMetaSection: React.FC<ResourceDetailMetaSectionProps> = ({
 
   return (
     <section className="grid gap-6 xl:grid-cols-[minmax(0,0.78fr),minmax(0,1.22fr)]">
-      <div className="rounded-[2rem] border border-white/60 bg-white/78 p-6 shadow-[0_20px_50px_rgba(15,23,42,0.06)] backdrop-blur-[24px] dark:border-white/10 dark:bg-slate-950/56 dark:shadow-[0_20px_50px_rgba(0,0,0,0.24)]">
+      <div className="surface-panel rounded-[1.65rem] p-5 sm:p-6">
         <div className="mb-5 flex items-center gap-3">
           <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-3 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200">
             <Tag className="h-5 w-5" />
@@ -53,7 +53,7 @@ const ResourceDetailMetaSection: React.FC<ResourceDetailMetaSectionProps> = ({
         </div>
       </div>
 
-      <div className="rounded-[2rem] border border-white/60 bg-white/78 p-6 shadow-[0_20px_50px_rgba(15,23,42,0.06)] backdrop-blur-[24px] dark:border-white/10 dark:bg-slate-950/56 dark:shadow-[0_20px_50px_rgba(0,0,0,0.24)]">
+      <div className="surface-panel rounded-[1.65rem] p-5 sm:p-6">
         <div className="mb-5 flex items-center gap-3">
           <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-3 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200">
             <Info className="h-5 w-5" />

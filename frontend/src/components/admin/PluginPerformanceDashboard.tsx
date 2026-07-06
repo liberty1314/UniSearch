@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   Activity,
   AlertTriangle,
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { usePluginMetricsController } from '@/hooks/usePluginMetricsController';
 import type { PluginMetricStatusFilter, PluginObservabilityRow, PluginTrendPoint } from '@/types/pluginMetrics';
+import { ApplePagination } from './ApplePagination';
 import { AdminDataTable, type AdminDataTableColumn } from './AdminDataTable';
 import {
   AdminCardEmpty,
@@ -27,6 +28,10 @@ import {
   AdminWorkspacePageFrame,
 } from './AdminWorkspacePageFrame';
 import { formatAdminHealthTime } from './adminDateFormat';
+import {
+  PERFORMANCE_TABLE_PAGE_SIZE_OPTIONS,
+  useAdminClientPagination,
+} from './useAdminClientPagination';
 
 const STATUS_OPTIONS: Array<{ value: PluginMetricStatusFilter; label: string }> = [
   { value: 'all', label: '全部状态' },
@@ -271,6 +276,8 @@ function PluginMobileItem({ row }: { row: PluginObservabilityRow }) {
 
 export const PluginPerformanceDashboard: React.FC = () => {
   const controller = usePluginMetricsController();
+  const pagination = useAdminClientPagination(controller.filteredRows);
+  const { resetPage } = pagination;
 
   const columns = useMemo<AdminDataTableColumn<PluginObservabilityRow>[]>(() => [
     {
@@ -323,6 +330,10 @@ export const PluginPerformanceDashboard: React.FC = () => {
   const selected = controller.selectedRow;
   const hasAnyData = controller.rows.length > 0 || controller.errorLogs.length > 0 || controller.trendPoints.length > 0;
   const snapshotSourceText = controller.snapshot.items.length > 0 ? '实时内存窗口' : '最近聚合窗口';
+
+  useEffect(() => {
+    resetPage();
+  }, [controller.searchKeyword, controller.statusFilter, resetPage]);
 
   return (
     <AdminWorkspacePageFrame
@@ -406,7 +417,7 @@ export const PluginPerformanceDashboard: React.FC = () => {
               />
             ) : (
               <AdminDataTable
-                data={controller.filteredRows}
+                data={pagination.pagedItems}
                 columns={columns}
                 rowKey={(row) => row.pluginName}
                 loading={controller.loading}
@@ -420,6 +431,19 @@ export const PluginPerformanceDashboard: React.FC = () => {
               />
             )}
           </AdminContentCard>
+
+          {controller.filteredRows.length > 0 ? (
+            <ApplePagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              totalItems={pagination.totalItems}
+              pageSize={pagination.pageSize}
+              onPageChange={pagination.setCurrentPage}
+              onPageSizeChange={pagination.setPageSize}
+              isLoading={controller.loading}
+              pageSizeOptions={[...PERFORMANCE_TABLE_PAGE_SIZE_OPTIONS]}
+            />
+          ) : null}
         </div>
       )}
       drawer={(

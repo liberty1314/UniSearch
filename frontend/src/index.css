@@ -64,6 +64,14 @@
   --glass-border-dark: rgba(255, 255, 255, 0.14);
   --glass-surface-light: rgba(255, 255, 255, 0.64);
   --glass-surface-dark: rgba(15, 23, 42, 0.44);
+  --surface-page-light: #f8fafc;
+  --surface-page-dark: #020617;
+  --surface-panel-light: rgba(255, 255, 255, 0.78);
+  --surface-panel-dark: rgba(15, 23, 42, 0.68);
+  --surface-card-light: rgba(255, 255, 255, 0.66);
+  --surface-card-dark: rgba(15, 23, 42, 0.52);
+  --surface-focus-light: rgba(255, 255, 255, 0.9);
+  --surface-focus-dark: rgba(8, 47, 73, 0.72);
 }
 
 /* 基础样式重置 */
@@ -198,17 +206,41 @@ body {
 }
 
 /* 玻璃态高级卡片样式 */
+.surface-page {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(14, 165, 233, 0.08), transparent 30%),
+    var(--surface-page-light);
+}
+
+.dark .surface-page {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(34, 211, 238, 0.10), transparent 32%),
+    linear-gradient(180deg, #020617 0%, #071827 48%, #020617 100%);
+}
+
+.surface-panel {
+  @apply relative overflow-hidden rounded-[1.45rem] border border-slate-200/70 bg-white/[0.78] shadow-[0_10px_30px_rgba(15,23,42,0.055)] backdrop-blur-xl transition-colors duration-300 dark:border-cyan-300/[0.16] dark:bg-slate-950/[0.62] dark:shadow-[0_14px_36px_rgba(2,6,23,0.32)];
+}
+
+.surface-card {
+  @apply relative overflow-hidden rounded-[1.35rem] border border-slate-200/65 bg-white/[0.66] shadow-[0_6px_18px_rgba(15,23,42,0.045)] backdrop-blur-md transition-colors duration-300 dark:border-white/10 dark:bg-slate-950/[0.50] dark:shadow-[0_10px_24px_rgba(2,6,23,0.26)];
+}
+
+.surface-focus {
+  @apply relative overflow-hidden rounded-[1.65rem] border border-cyan-200/70 bg-white/[0.90] shadow-[0_16px_42px_rgba(14,165,233,0.12)] backdrop-blur-2xl transition-colors duration-300 dark:border-cyan-300/[0.24] dark:bg-slate-950/[0.76] dark:shadow-[0_20px_52px_rgba(8,47,73,0.38)];
+}
+
 .glass-card-premium {
-  @apply relative overflow-hidden rounded-[2rem] border-[0.5px] border-slate-200/60 bg-white/[0.72] shadow-[0_10px_28px_rgba(15,23,42,0.06)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/[0.58] dark:shadow-[0_14px_34px_rgba(0,0,0,0.34)] transition-all duration-300 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)] dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.42)];
+  @apply relative overflow-hidden rounded-[1.45rem] border border-slate-200/65 bg-white/[0.66] shadow-[0_6px_18px_rgba(15,23,42,0.045)] backdrop-blur-md transition-colors duration-300 hover:border-cyan-200/60 hover:bg-white/[0.74] hover:shadow-[0_10px_26px_rgba(15,23,42,0.065)] dark:border-white/10 dark:bg-slate-950/[0.50] dark:shadow-[0_10px_24px_rgba(2,6,23,0.26)] dark:hover:border-cyan-300/[0.18] dark:hover:bg-slate-950/[0.58] dark:hover:shadow-[0_14px_34px_rgba(2,6,23,0.34)];
 }
 
 /* 基础玻璃态面板 */
 .glass-panel {
-  @apply rounded-[1.4rem] border-[0.5px] border-slate-200/65 bg-white/[0.72] shadow-[0_8px_22px_rgba(15,23,42,0.06)] backdrop-blur-lg dark:border-white/10 dark:bg-slate-900/[0.55] dark:shadow-[0_12px_28px_rgba(0,0,0,0.28)];
+  @apply relative overflow-hidden rounded-[1.4rem] border border-slate-200/70 bg-white/[0.78] shadow-[0_10px_30px_rgba(15,23,42,0.055)] backdrop-blur-xl transition-colors duration-300 dark:border-cyan-300/[0.16] dark:bg-slate-950/[0.62] dark:shadow-[0_14px_36px_rgba(2,6,23,0.32)];
 }
 
 .glass-toolbar {
-  @apply rounded-2xl border-[0.5px] border-slate-200/70 bg-white/70 shadow-sm backdrop-blur-lg dark:border-white/10 dark:bg-slate-900/[0.58] dark:shadow-[0_10px_24px_rgba(0,0,0,0.26)];
+  @apply rounded-2xl border-[0.5px] border-slate-200/70 bg-white/[0.62] shadow-[0_4px_12px_rgba(15,23,42,0.035)] backdrop-blur-lg dark:border-white/10 dark:bg-slate-900/[0.50] dark:shadow-[0_8px_18px_rgba(0,0,0,0.20)];
 }
 
 .glass-input {
@@ -429,7 +461,7 @@ body {
 }
 
 .auth-bg-orb {
-  @apply absolute w-80 h-80 rounded-full blur-3xl animate-pulse;
+  @apply absolute w-80 h-80 rounded-full blur-3xl opacity-60 animate-pulse;
 }
 
 .auth-bg-orb-top {
@@ -451,7 +483,7 @@ body {
 }
 
 .auth-bg-particle {
-  @apply absolute w-2 h-2 rounded-full;
+  @apply absolute w-1.5 h-1.5 rounded-full opacity-55;
   left: var(--auth-particle-x);
   top: var(--auth-particle-y);
   animation-name: auth-float;
@@ -462,7 +494,7 @@ body {
 }
 
 .auth-card-glow {
-  @apply absolute -inset-1 rounded-2xl blur-2xl opacity-20 animate-pulse;
+  @apply absolute -inset-1 rounded-2xl blur-2xl opacity-[0.14] animate-pulse;
 }
 
 .auth-ripple {
@@ -1255,17 +1287,17 @@ body {
 }
 
 .resource-detail-summary-panel {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.62));
-  border: 1px solid rgba(255, 255, 255, 0.46);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.48), 0 16px 40px rgba(15, 23, 42, 0.05);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(226, 232, 240, 0.68);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.045);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .dark .resource-detail-summary-panel {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.64), rgba(15, 23, 42, 0.48));
+  background: rgba(15, 23, 42, 0.56);
   border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 18px 46px rgba(0, 0, 0, 0.26);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
 }
 
 .resource-detail-summary-flow {
@@ -1277,17 +1309,17 @@ body {
 }
 
 .resource-detail-action-panel {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.64));
-  border: 1px solid rgba(226, 232, 240, 0.64);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 14px 34px rgba(15, 23, 42, 0.06);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(226, 232, 240, 0.68);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .dark .resource-detail-action-panel {
-  background: linear-gradient(180deg, rgba(2, 6, 23, 0.62), rgba(15, 23, 42, 0.42));
+  background: rgba(15, 23, 42, 0.58);
   border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 16px 36px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.20);
 }
 
 .resource-detail-gallery-strip {
@@ -1557,6 +1589,12 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+
   .page-loader-orbit,
   .page-loader-orbit-glow,
   .page-loader-scan-ring {
@@ -1578,8 +1616,37 @@ body {
   }
 
   .auth-icon-intro,
-  .auth-sparkle-intro {
+  .auth-sparkle-intro,
+  .auth-bg-particle,
+  .auth-bg-orb,
+  .auth-card-glow,
+  .animate-auth-gradient,
+  .animate-auth-ripple,
+  .animate-auth-border-flow,
+  .animate-auth-fade-in-up,
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-pulse-slow,
+  .animate-gradient,
+  .animate-shimmer,
+  .animate-blob,
+  .skeleton-shimmer,
+  .skeleton-shimmer-size {
     animation: none !important;
+  }
+
+  .auth-bg-orb,
+  .auth-card-glow {
+    opacity: 0.08 !important;
+  }
+
+  .skeleton-shimmer {
+    background-image: none !important;
+  }
+
+  .resource-detail-body-bridge::before,
+  .page-loader-progress-glow {
+    display: none !important;
   }
 }
 

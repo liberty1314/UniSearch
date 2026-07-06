@@ -13,6 +13,9 @@ describe('PlatformMarquee', () => {
 
     const list = screen.getByTestId('platform-coverage-list');
     expect(list).toHaveClass('flex');
+    expect(list).toHaveClass('overflow-visible');
+    expect(list.className).not.toContain('overflow-hidden');
+    expect(list.className).not.toContain('max-h-[5.75rem]');
 
     platformThemes.forEach((theme) => {
       const chip = screen.getAllByText(theme.name)[0].closest('div');

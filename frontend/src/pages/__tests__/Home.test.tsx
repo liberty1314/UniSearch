@@ -20,21 +20,24 @@ vi.mock('framer-motion', () => {
     get: (_, tagName: string) => {
       const MotionComponent = ({
         children,
-        initial,
-        animate,
-        transition,
-        whileInView,
-        viewport,
-        ...restProps
+          initial,
+          animate,
+          transition,
+          whileHover,
+          whileInView,
+          viewport,
+          ...restProps
       }: React.HTMLAttributes<HTMLElement> & {
         initial?: unknown;
         animate?: unknown;
         transition?: unknown;
+        whileHover?: unknown;
         whileInView?: unknown;
         viewport?: unknown;
       }) => {
         void animate;
         void transition;
+        void whileHover;
         void whileInView;
         void viewport;
 
@@ -51,6 +54,7 @@ vi.mock('framer-motion', () => {
   return {
     motion,
     AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    useReducedMotion: () => false,
   };
 });
 
@@ -255,11 +259,11 @@ describe('Home', () => {
     renderHome();
 
     const featureCard = screen.getByText('多平台搜索').closest('div.group');
-    const featureSurface = featureCard?.querySelector('div.glass-card-premium');
+    const featureSurface = featureCard?.querySelector('div.surface-card');
 
     expect(featureSurface).not.toBeNull();
-    expect(featureSurface).toHaveClass('glass-card-premium');
-    expect(featureSurface).toHaveClass('p-8');
+    expect(featureSurface).toHaveClass('surface-card');
+    expect(featureSurface).toHaveClass('p-7');
   });
 
   it('uses the shared grid-backed page shell in the default state', () => {
@@ -278,11 +282,13 @@ describe('Home', () => {
 
     renderHome();
 
+    const heroHeading = screen.getByRole('heading', { level: 1, name: 'UniSearch' });
     const heroTitle = screen.getByTestId('gradient-text');
     const heroSubtitle = screen.getByRole('heading', { level: 2, name: '一个入口，聚合搜索主流网盘资源' });
     const sectionTitle = screen.getByRole('heading', { level: 2, name: '帮你更快找到资源' });
     const animatedGrid = screen.getByTestId('animated-grid');
 
+    expect(heroHeading).toBeInTheDocument();
     expect(heroTitle).toHaveAttribute('data-colors', '#3b82f6,#0ea5e9,#06b6d4');
     expect(heroTitle.className).toContain('text-4xl');
     expect(heroTitle.className).toContain('font-extrabold');
@@ -317,6 +323,7 @@ describe('Home', () => {
     expect(screen.getByTestId('animated-grid')).toBeInTheDocument();
     expect(screen.getByTestId('public-page-glow')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: '帮你更快找到资源' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: '如何更快找到想要的资源' })).toBeInTheDocument();
   });
 
   it('匿名访问时展示首页搜索准入提示', () => {
@@ -345,8 +352,8 @@ describe('Home', () => {
 
     expect(trustStrip).toHaveClass('overflow-x-auto');
     expect(trustStrip).toHaveClass('sm:overflow-visible');
-    expect(searchStage).toHaveClass('space-y-4');
-    expect(searchStage).toHaveClass('sm:space-y-6');
+    expect(searchStage).toHaveClass('space-y-3');
+    expect(searchStage).toHaveClass('sm:space-y-4');
   });
 
   it('在夜间主题背景下为信任条胶囊提供更清晰的对比层级', () => {
@@ -383,16 +390,44 @@ describe('Home', () => {
     expect(screen.queryByRole('button', { name: '沙丘 2' })).not.toBeInTheDocument();
   });
 
-  it('renders the new trust-building usage section after platform coverage', () => {
+  it('separates core capabilities from usage guidance in homepage flow', () => {
     renderHome();
 
-    const capabilityHeading = screen.getByRole('heading', { level: 2, name: '支持识别与聚合这些链接类型' });
+    const coreHeading = screen.getByRole('heading', { level: 2, name: '帮你更快找到资源' });
     const usageHeading = screen.getByRole('heading', { level: 2, name: '如何更快找到想要的资源' });
+    const capabilityHeading = screen.getByRole('heading', { level: 2, name: '支持识别与聚合这些链接类型' });
 
-    expect(capabilityHeading.compareDocumentPosition(usageHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(coreHeading.compareDocumentPosition(usageHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(usageHeading.compareDocumentPosition(capabilityHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.getByText('多平台搜索')).toBeInTheDocument();
+    expect(screen.getByText('智能匹配')).toBeInTheDocument();
+    expect(screen.getByText('实时更新')).toBeInTheDocument();
     expect(screen.getByText('输入明确关键词')).toBeInTheDocument();
     expect(screen.getByText('优先使用分类入口')).toBeInTheDocument();
     expect(screen.getByText('进入详情页判断资源')).toBeInTheDocument();
+  });
+
+  it('keeps feature cards as animated motion containers', () => {
+    renderHome();
+
+    const featureCards = screen.getAllByTestId('home-feature-card');
+
+    expect(featureCards).toHaveLength(3);
+    featureCards.forEach((card) => {
+      expect(card).toHaveAttribute('data-motion-initial');
+      expect(card.getAttribute('data-motion-initial')).toBe(JSON.stringify({ opacity: 0, y: 34, rotateX: 6 }));
+      expect(card).toHaveClass('[transform-style:preserve-3d]');
+    });
+  });
+
+  it('does not crop platform coverage chips on mobile', () => {
+    renderHome();
+
+    const platformList = screen.getByTestId('platform-coverage-list');
+
+    expect(platformList).toHaveClass('overflow-visible');
+    expect(platformList.className).not.toContain('overflow-hidden');
+    expect(platformList.className).not.toContain('max-h-[5.75rem]');
   });
 
   it('plays the homepage entrance animation on the first visit of a browser session', () => {
@@ -409,7 +444,7 @@ describe('Home', () => {
         .getByText('多平台搜索')
         .closest('[data-motion-initial]')
         ?.getAttribute('data-motion-initial')
-    ).toBe(JSON.stringify({ opacity: 0, y: 30 }));
+    ).toBe(JSON.stringify({ opacity: 0, y: 34, rotateX: 6 }));
   });
 
   it('skips the homepage entrance animation after the session has already visited home once', () => {

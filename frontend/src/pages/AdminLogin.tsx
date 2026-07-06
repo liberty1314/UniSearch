@@ -15,6 +15,11 @@ import { authVisualPresets } from '@/components/auth/authVisualPresets';
 import { cn } from '@/lib/utils';
 import { useAuthParticles } from '@/components/auth/useAuthParticles';
 import { resolveAuthDirection, type AuthTransitionState } from '@/components/auth/authRouteMotion';
+import {
+    AUTH_ENTRY_CARD_BASE_CLASS,
+    AUTH_ENTRY_CARD_SHELL_CLASS,
+    AUTH_ENTRY_PAGE_CONTAINER_CLASS,
+} from '@/components/auth/authEntryLayout';
 import { getErrorMessage, getErrorStatus } from '@/lib/error';
 import { DEFAULT_AUTH_POLICY, resolveAuthPolicy } from '@/lib/authPolicy';
 import { SystemSettingsService } from '@/services/systemSettingsService';
@@ -121,13 +126,16 @@ const AdminLogin: React.FC = () => {
     };
 
     return (
-        <div className="obsidian-shell min-h-screen w-full flex items-center justify-center bg-gray-50 px-4 pt-16 overflow-hidden relative">
+        <div className={AUTH_ENTRY_PAGE_CONTAINER_CLASS}>
             <AuthBackground preset={authVisualPresets.adminLogin} particles={particles} />
 
             {/* 登录卡片 */}
-            <AuthCardShell glowClassName={authVisualPresets.adminLogin.cardGlowGradientClass}>
+            <AuthCardShell
+                glowClassName={authVisualPresets.adminLogin.cardGlowGradientClass}
+                className={AUTH_ENTRY_CARD_SHELL_CLASS}
+            >
                 <AuthSwitchMotion routeKey={location.pathname} direction={authDirection}>
-                    <Card className="relative border-rose-200/65 dark:border-rose-900/50">
+                    <Card className={cn(AUTH_ENTRY_CARD_BASE_CLASS, "border-rose-200/65 dark:border-rose-900/50")}>
                         <CardHeader className="space-y-3 pb-6">
                             {/* Logo 或图标 */}
                             <div className="flex justify-center mb-2">

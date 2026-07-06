@@ -36,10 +36,10 @@ const ResourceDetailActionPanel: React.FC<ResourceDetailActionPanelProps> = ({
 
   return (
     <aside className="xl:self-start">
-      <div className="xl:sticky xl:top-28">
+      <div className="xl:sticky xl:top-24">
         <div
           data-testid="resource-detail-action-panel"
-          className="resource-detail-action-panel overflow-hidden rounded-[1.85rem] p-5 sm:p-6"
+          className="resource-detail-action-panel overflow-hidden rounded-[1.55rem] p-4 sm:p-5"
         >
           <div className="flex items-start justify-between gap-3">
             <div>

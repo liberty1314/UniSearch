@@ -108,7 +108,7 @@ export const readAccountPreferences = (): AccountPreferences => {
 };
 
 const resolveSystemDarkMode = (): boolean => {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
     return false;
   }
 

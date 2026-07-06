@@ -91,7 +91,7 @@ const ResourceDetailLinksSection: React.FC<ResourceDetailLinksSectionProps> = ({
     });
 
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-white/60 bg-white/78 shadow-[0_20px_60px_rgba(15,23,42,0.06)] backdrop-blur-[24px] dark:border-white/10 dark:bg-slate-950/56 dark:shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
+    <section className="surface-panel overflow-hidden rounded-[1.65rem]">
       <div className="border-b border-slate-200/70 px-6 py-5 dark:border-white/10">
         <div className="flex items-center gap-3">
           <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-3 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200">
@@ -117,7 +117,7 @@ const ResourceDetailLinksSection: React.FC<ResourceDetailLinksSectionProps> = ({
               <section
                 key={cloudType}
                 data-testid={`resource-link-group-${cloudType}`}
-                className="rounded-[1.75rem] border border-slate-200/70 bg-slate-50/65 p-4 dark:border-white/10 dark:bg-white/[0.03]"
+                className="surface-card rounded-[1.35rem] p-4"
               >
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -134,7 +134,7 @@ const ResourceDetailLinksSection: React.FC<ResourceDetailLinksSectionProps> = ({
                   {items.map((item, index) => (
                     <article
                       key={`${item.cloudType}-${item.link.url}-${index}`}
-                      className="group relative overflow-hidden rounded-[1.35rem] border border-slate-200/70 bg-white/88 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/[0.04] dark:hover:shadow-[0_18px_40px_rgba(0,0,0,0.26)]"
+                      className="group relative overflow-hidden rounded-[1.15rem] border border-slate-200/70 bg-white/80 p-4 transition-all duration-300 hover:border-cyan-200/70 hover:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:hover:border-cyan-300/25"
                     >
                       <div
                         className={cn(

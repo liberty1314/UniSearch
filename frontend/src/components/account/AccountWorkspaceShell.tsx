@@ -54,14 +54,14 @@ const AccountWorkspaceShell: React.FC<AccountWorkspaceShellProps> = ({
   const roleLabel = getAccountRoleLabel(profile?.role);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <AccountHeroBanner
         profile={profile}
         cachedUsername={cachedUsername}
         isLoadingProfile={isLoadingProfile}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start">
+      <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start xl:grid-cols-[300px_minmax(0,1fr)]">
         <aside className="space-y-4">
           <div className={`${ACCOUNT_PANEL_SURFACE_CLASSES} ${ACCOUNT_PANEL_SURFACE_HOVER_CLASSES} p-3`}>
             <div className="mb-3 flex items-center gap-2 px-2 pt-2">
@@ -89,7 +89,7 @@ const AccountWorkspaceShell: React.FC<AccountWorkspaceShellProps> = ({
                       {isActive ? (
                         <motion.div 
                           layoutId="activeAccountNavBg"
-                          className="absolute inset-0 z-0 rounded-[1.4rem] border-[0.5px] border-white/60 bg-white shadow-[0_4px_20px_rgb(0,0,0,0.06),0_1px_3px_rgb(0,0,0,0.02)] dark:border-cyan-300/[0.18] dark:bg-slate-950/[0.82] dark:shadow-[0_14px_30px_rgba(2,6,23,0.32)]" 
+                          className="absolute inset-0 z-0 rounded-[1.25rem] border-[0.5px] border-cyan-200/70 bg-white/[0.78] shadow-[0_6px_18px_rgba(15,23,42,0.055)] dark:border-cyan-300/[0.18] dark:bg-slate-950/[0.72] dark:shadow-[0_10px_24px_rgba(2,6,23,0.26)]" 
                           transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                         />
                       ) : null}
@@ -99,7 +99,7 @@ const AccountWorkspaceShell: React.FC<AccountWorkspaceShellProps> = ({
                         onClick={() => onSectionChange(id)}
                         aria-pressed={isActive}
                         className={cn(
-                          'relative z-10 h-auto w-full justify-start rounded-[1.4rem] border border-transparent bg-transparent px-4 py-4 text-left shadow-none transition-colors duration-300',
+                          'relative z-10 h-auto w-full justify-start rounded-[1.25rem] border border-transparent bg-transparent px-3.5 py-3 text-left shadow-none transition-colors duration-300',
                           !isActive && 'hover:bg-slate-100/50 dark:hover:bg-cyan-400/[0.08]'
                         )}
                       >
@@ -108,7 +108,7 @@ const AccountWorkspaceShell: React.FC<AccountWorkspaceShellProps> = ({
                             {isActive ? (
                               <motion.div 
                                 layoutId="activeAccountNavIconBg"
-                                className="absolute inset-0 z-0 rounded-[14px] bg-white shadow-[0_4px_16px_rgba(37,99,235,0.15)] ring-[0.5px] ring-slate-900/5 dark:bg-slate-950/[0.86] dark:ring-cyan-300/[0.18] dark:shadow-[0_8px_18px_rgba(34,211,238,0.10)]" 
+                                className="absolute inset-0 z-0 rounded-[14px] bg-white shadow-[0_4px_12px_rgba(37,99,235,0.12)] ring-[0.5px] ring-slate-900/5 dark:bg-slate-950/[0.78] dark:ring-cyan-300/[0.18] dark:shadow-[0_6px_14px_rgba(34,211,238,0.08)]" 
                                 transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                               />
                             ) : (

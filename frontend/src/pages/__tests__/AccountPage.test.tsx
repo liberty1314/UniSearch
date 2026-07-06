@@ -96,8 +96,8 @@ vi.mock('@/lib/error', () => ({
 const expectPrimaryAccountActionButton = (button: HTMLElement) => {
   expect(button.className).toContain('rounded-full');
   expect(button.className).toContain('bg-[#0071e3]');
-  expect(button.className).toContain('shadow-[0_12px_28px_rgba(0,113,227,0.28)]');
-  expect(button.className).toContain('hover:-translate-y-0.5');
+  expect(button.className).toContain('shadow-[0_10px_24px_rgba(0,113,227,0.24)]');
+  expect(button.className).toContain('hover:shadow-[0_12px_30px_rgba(0,113,227,0.30)]');
   expect(button.className).toContain('active:scale-[0.98]');
 };
 
@@ -106,7 +106,7 @@ const expectSecondaryAccountActionButton = (button: HTMLElement) => {
   expect(button.className).toContain('border-blue-200');
   expect(button.className).toContain('bg-blue-50/80');
   expect(button.className).toContain('text-blue-700');
-  expect(button.className).toContain('hover:-translate-y-0.5');
+  expect(button.className).toContain('shadow-[0_6px_16px_rgba(0,113,227,0.10)]');
   expect(button.className).toContain('active:scale-[0.98]');
 };
 
@@ -180,7 +180,7 @@ describe('AccountPage', () => {
     const securityNavButton = screen.getByRole('button', { name: /账号安全/ });
     expect(securityNavButton).toHaveClass('dark:hover:bg-cyan-400/[0.08]');
     expect(securityNavButton.className).not.toContain('shadow-[0_12px_28px_rgba(0,113,227,0.28)]');
-    expect(container.innerHTML).toContain('dark:bg-slate-950/[0.82]');
+    expect(container.innerHTML).toContain('dark:bg-slate-950/[0.72]');
 
     expect(screen.queryByLabelText('当前密码')).not.toBeInTheDocument();
 

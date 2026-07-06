@@ -5,12 +5,12 @@ const CONTACT_EMAIL = 'UniSearch@163.com';
 const DisclaimerPage: React.FC = () => {
   return (
     <div className="obsidian-shell min-h-screen bg-white">
-      <div className="container mx-auto px-4 pt-24 pb-16 sm:pb-20">
-        <article className="glass-card-premium relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-gray-200/70 dark:border-cyan-300/[0.14]">
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-nebula-500/70 to-transparent dark:via-nebula-300/70" />
+      <div className="container mx-auto px-4 pt-24 pb-12 sm:pb-16">
+        <article className="surface-panel relative mx-auto max-w-3xl overflow-hidden rounded-[1.5rem]">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/55 to-transparent dark:via-cyan-300/35" />
 
-          <header className="border-b border-gray-200/70 px-6 pb-5 pt-7 dark:border-cyan-300/[0.12] sm:px-8 sm:pt-9">
-            <p className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-nebula-700 dark:text-nebula-300 bg-nebula-100/80 dark:bg-nebula-900/30 border border-nebula-200/80 dark:border-nebula-700/40">
+          <header className="border-b border-gray-200/70 px-5 pb-5 pt-6 dark:border-cyan-300/[0.12] sm:px-7 sm:pt-8">
+            <p className="inline-flex items-center rounded-full border border-cyan-200/80 bg-cyan-50/80 px-3 py-1 text-xs font-medium text-cyan-700 dark:border-cyan-300/20 dark:bg-cyan-400/10 dark:text-cyan-200">
               Legal Notice
             </p>
             <h1 className="mt-4 text-3xl sm:text-4xl font-bold text-gray-900 dark:text-slate-100 tracking-tight">
@@ -21,7 +21,7 @@ const DisclaimerPage: React.FC = () => {
             </p>
           </header>
 
-          <div className="px-6 sm:px-8 py-6 sm:py-8 space-y-6 text-sm sm:text-base leading-7 text-gray-600 dark:text-slate-300">
+          <div className="space-y-5 px-5 py-6 text-sm leading-7 text-gray-600 dark:text-slate-300 sm:px-7 sm:py-7 sm:text-base">
             <section>
               <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-200 mb-2">1. 服务性质与平台定位</h2>
               <p>

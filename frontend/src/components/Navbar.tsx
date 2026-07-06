@@ -102,7 +102,7 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
   const activeNavPath = navItems.find((item) => {
     const isSearchRoute = item.path === '/search' && location.pathname.startsWith('/search');
     return item.path === '/' ? location.pathname === '/' : isSearchRoute || location.pathname === item.path;
-  })?.path ?? '/';
+  })?.path ?? null;
   const tubelightNavItems = navItems.map((item) => ({
     name: item.label,
     url: item.path,
@@ -173,6 +173,9 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                 <div className="relative" ref={userMenuRef}>
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    aria-haspopup="menu"
+                    aria-expanded={isUserMenuOpen}
+                    aria-controls="navbar-user-menu"
                     className={cn(
                       "flex items-center gap-2 rounded-2xl border px-3 py-1.5 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2",
                       isUserMenuOpen
@@ -189,11 +192,15 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
                   <AnimatePresence>
                     {isUserMenuOpen && (
                       <motion.div
+                        id="navbar-user-menu"
+                        role="menu"
+                        aria-label="用户菜单"
+                        data-testid="navbar-user-menu"
                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute right-0 mt-2 w-56 rounded-xl glass-panel shadow-xl overflow-hidden z-50"
+                        className="!absolute right-0 top-full z-50 mt-2 w-56 origin-top-right rounded-xl glass-panel shadow-xl overflow-hidden"
                       >
                         <div className="px-4 py-3 border-b border-gray-100 dark:border-white/10">
                           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">

@@ -186,7 +186,7 @@ const SearchPage: React.FC = () => {
   };
 
   return (
-    <PublicPageShell contentClassName="container mx-auto px-4 py-8 pt-24 pb-16">
+    <PublicPageShell contentClassName="container mx-auto px-4 py-6 pt-22 pb-12 sm:pt-24 sm:pb-16">
       <SEO
         title={
           hasKeyword
@@ -196,8 +196,8 @@ const SearchPage: React.FC = () => {
         description="在 UniSearch 中查看聚合搜索结果，并按网盘与关键词进一步筛选。"
       />
 
-      <div className="mx-auto max-w-6xl space-y-8">
-        <div className="flex flex-col gap-4">
+      <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8">
+        <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-4">
             <Button
               type="button"
@@ -211,8 +211,8 @@ const SearchPage: React.FC = () => {
             </Button>
           </div>
 
-          <div className="space-y-3">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50 sm:text-3xl">
               {hasKeyword ? `“${searchParams.keyword}” 的搜索结果` : "开始新的搜索"}
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
@@ -228,7 +228,7 @@ const SearchPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-4 sm:space-y-5">
           <SearchBox
             className="w-full max-w-4xl"
             autoFocus={!hasKeyword}

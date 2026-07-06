@@ -230,6 +230,21 @@ export async function mockPublicApis(page: Page) {
 }
 
 export async function mockAdminApis(page: Page) {
+  await page.route('**/api/user/me', async (route) => {
+    await route.fulfill({
+      json: apiEnvelope({
+        id: 1,
+        username: 'admin',
+        role: 'admin',
+        is_enabled: true,
+        last_login_at: '2026-06-07T00:00:00Z',
+        monthly_login_days: ['2026-06-07'],
+        monthly_login_day_count: 1,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-06-07T00:00:00Z',
+      }),
+    });
+  });
   await page.route('**/api/admin/plugin-center/catalog?**', async (route) => {
     await route.fulfill({ json: pluginCatalogResponse });
   });

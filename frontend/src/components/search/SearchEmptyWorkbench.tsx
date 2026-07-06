@@ -41,29 +41,29 @@ export function SearchEmptyWorkbench({
   return (
     <section
       data-testid="search-empty-workbench"
-      className="overflow-hidden rounded-[1.75rem] border border-slate-200/70 bg-white/70 shadow-[0_20px_54px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/50"
+      className="surface-panel rounded-[1.45rem]"
     >
-      <div className="relative p-5 sm:p-6">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-cyan-100/42 via-sky-50/20 to-transparent dark:from-cyan-400/8 dark:via-sky-400/5" />
+      <div className="relative p-4 sm:p-5">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-cyan-100/[0.34] via-sky-50/[0.16] to-transparent dark:from-cyan-400/8 dark:via-sky-400/5" />
 
-        <div className="relative z-10 flex flex-col gap-6">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="relative z-10 flex flex-col gap-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200/70 bg-white/75 px-3 py-1 text-xs font-semibold text-cyan-700 shadow-[0_10px_28px_rgba(14,165,233,0.12)] dark:border-cyan-300/20 dark:bg-slate-900/45 dark:text-cyan-200">
                 <Search className="h-3.5 w-3.5" />
                 搜索启动台
               </div>
-              <h2 className="mt-4 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+              <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50 sm:text-2xl">
                 选一个更明确的线索，再开始聚合搜索
               </h2>
-              <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300/80">
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300/80">
                 未输入关键词时，这里优先展示最近有效搜索和热榜条目，尽量减少一上来就搜到一大片泛结果。
               </p>
             </div>
 
             <Link
               to="/trending"
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-slate-200/75 bg-white/70 px-4 py-2 text-sm font-medium text-cyan-700 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-white dark:border-white/10 dark:bg-slate-900/42 dark:text-cyan-200 dark:hover:border-cyan-300/30"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-slate-200/75 bg-white/70 px-4 py-2 text-sm font-medium text-cyan-700 shadow-sm transition hover:border-cyan-200 hover:bg-white dark:border-white/10 dark:bg-slate-900/[0.42] dark:text-cyan-200 dark:hover:border-cyan-300/30"
             >
               <Flame className="h-4 w-4" />
               查看热门榜单
@@ -72,7 +72,7 @@ export function SearchEmptyWorkbench({
           </div>
 
           {visibleRecentSearches.length > 0 ? (
-            <div className="rounded-[1.25rem] border border-slate-200/70 bg-white/60 p-4 dark:border-white/10 dark:bg-slate-900/40">
+            <div className="surface-card rounded-[1.15rem] p-3.5">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
                   <Clock3 className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />
@@ -89,11 +89,11 @@ export function SearchEmptyWorkbench({
                   </button>
                 ) : null}
               </div>
-              <div className="flex flex-wrap gap-2.5">
+              <div className="flex flex-wrap gap-2">
                 {visibleRecentSearches.map((search) => (
                   <div
                     key={search.id}
-                    className="group/recent relative inline-flex min-w-[13rem] max-w-full items-stretch overflow-hidden rounded-2xl border border-slate-200/75 bg-white/80 text-left text-sm font-medium text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-cyan-400/40 dark:hover:text-cyan-200"
+                    className="group/recent relative inline-flex min-w-[12rem] max-w-full items-stretch overflow-hidden rounded-2xl border border-slate-200/75 bg-white/80 text-left text-sm font-medium text-slate-600 shadow-sm transition-all duration-200 hover:border-cyan-200 hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-cyan-400/40 dark:hover:text-cyan-200"
                   >
                     <button
                       type="button"
@@ -127,7 +127,7 @@ export function SearchEmptyWorkbench({
             </div>
           ) : null}
 
-          <div className="rounded-[1.25rem] border border-slate-200/70 bg-white/60 p-4 dark:border-white/10 dark:bg-slate-900/40">
+          <div className="surface-card rounded-[1.15rem] p-3.5">
             <div className="flex min-w-0 items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/80 text-cyan-700 shadow-sm dark:bg-slate-900/50 dark:text-cyan-200">
                 <Flame className="h-4 w-4" />
@@ -148,11 +148,11 @@ export function SearchEmptyWorkbench({
                 正在整理今日热榜线索
               </div>
             ) : trendingEntries.length > 0 ? (
-              <div className="mt-4 grid gap-4 lg:grid-cols-3">
+              <div className="mt-4 grid gap-3 lg:grid-cols-3">
                 {trendingEntries.map((entry) => (
                   <div
                     key={entry.id}
-                    className="rounded-[1.25rem] border border-slate-200/70 bg-white/70 p-4 dark:border-white/10 dark:bg-slate-950/35"
+                    className="rounded-[1rem] border border-slate-200/70 bg-white/70 p-3 dark:border-white/10 dark:bg-slate-950/35"
                   >
                     <div className="space-y-1">
                       <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">

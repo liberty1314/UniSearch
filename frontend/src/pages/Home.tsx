@@ -149,7 +149,7 @@ const Home: React.FC = () => {
     : { delay: 0.6, duration: 0.6 };
 
   return (
-    <PublicPageShell contentClassName="container mx-auto px-4 py-8 pt-24 pb-16">
+    <PublicPageShell contentClassName="container mx-auto px-4 py-6 pt-20 pb-10 sm:pt-24 sm:pb-14">
       <SEO />
       {/* 页面头部 - 增强品牌形象 */}
       <motion.div
@@ -157,7 +157,7 @@ const Home: React.FC = () => {
         initial={shouldPlayHomeEntrance ? { opacity: 0, y: 24 } : false}
         animate={{ opacity: 1, y: 0 }}
         transition={heroTransition}
-        className="relative z-10 mb-8 text-center sm:mb-10 lg:mb-12"
+        className="relative z-10 mb-5 text-center sm:mb-8 lg:mb-10"
       >
         <motion.div
           initial={shouldPlayHomeEntrance ? { opacity: 0, scale: 0.985 } : false}
@@ -165,18 +165,20 @@ const Home: React.FC = () => {
           transition={heroChildTransition}
           className="mx-auto max-w-4xl"
         >
+          <h1 aria-label="UniSearch" className="mb-3">
             <GradientText
               colors={["#3b82f6", "#0ea5e9", "#06b6d4"]}
-              className="mb-5 text-4xl font-extrabold tracking-tight sm:text-5xl md:text-7xl"
+              className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl"
             >
               UniSearch
             </GradientText>
+          </h1>
 
           <motion.h2
             initial={shouldPlayHomeEntrance ? { opacity: 0, y: 18 } : false}
             animate={{ opacity: 1, y: 0 }}
             transition={heroCopyTransition}
-            className="mb-4 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-50 sm:text-3xl md:text-4xl"
+            className="mb-3 text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50 sm:text-2xl md:text-3xl"
           >
             一个入口，聚合搜索主流网盘资源
           </motion.h2>
@@ -185,7 +187,7 @@ const Home: React.FC = () => {
             initial={shouldPlayHomeEntrance ? { opacity: 0 } : false}
             animate={{ opacity: 1 }}
             transition={heroDescriptionTransition}
-            className="mx-auto max-w-2xl text-base leading-relaxed text-slate-500 dark:text-slate-400 sm:text-lg"
+            className="mx-auto max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400 sm:text-base"
           >
             快速定位影视、课程、软件与资料资源，减少平台切换成本
           </motion.p>
@@ -196,12 +198,12 @@ const Home: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={statsTransition}
           data-testid="home-trust-strip"
-          className="relative z-20 mx-auto mt-6 flex max-w-full items-center gap-2 overflow-x-auto px-1 pb-1 text-xs text-slate-500 [scrollbar-width:none] dark:text-slate-300 sm:mt-8 sm:max-w-3xl sm:flex-wrap sm:justify-center sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 sm:text-sm"
+          className="relative z-20 mx-auto mt-4 flex max-w-full items-center gap-2 overflow-x-auto px-1 pb-1 text-xs text-slate-500 [scrollbar-width:none] dark:text-slate-300 sm:mt-6 sm:max-w-3xl sm:flex-wrap sm:justify-center sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 sm:text-sm"
         >
           {trustSignals.map((signal) => (
             <div
               key={signal}
-              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200/60 bg-white/55 px-3 py-1.5 text-slate-600 shadow-[0_8px_22px_rgba(15,23,42,0.04)] backdrop-blur-xl dark:border-cyan-300/[0.16] dark:bg-slate-950/[0.58] dark:text-slate-100 dark:shadow-[0_14px_36px_rgba(2,6,23,0.34)] sm:px-4 sm:py-2"
+              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200/60 bg-white/55 px-3 py-1.5 text-slate-600 shadow-[0_6px_16px_rgba(15,23,42,0.035)] backdrop-blur-xl dark:border-cyan-300/[0.16] dark:bg-slate-950/[0.58] dark:text-slate-100 sm:px-4 sm:py-2"
             >
               <span className="h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_0_4px_rgba(34,211,238,0.14)] dark:shadow-[0_0_0_5px_rgba(34,211,238,0.16)]" />
               <span className="font-medium">{signal}</span>
@@ -212,7 +214,7 @@ const Home: React.FC = () => {
 
       <div
         data-testid="home-search-stage"
-        className="relative z-30 mb-10 flex w-full flex-col items-center space-y-4 sm:mb-16 sm:space-y-6"
+        className="relative z-30 mb-8 flex w-full flex-col items-center space-y-3 sm:mb-12 sm:space-y-4"
       >
         <motion.div
           initial={
@@ -235,22 +237,30 @@ const Home: React.FC = () => {
       </div>
 
       <div className="max-w-6xl mx-auto">
-        <div className="space-y-20 pb-28">
-          <div>
+        <div className="space-y-14 pb-16 sm:space-y-16 sm:pb-20">
+          <section aria-labelledby="home-core-capabilities-title">
             <motion.div
               initial={shouldPlayHomeEntrance ? { opacity: 0, y: 20 } : false}
               animate={{ opacity: 1, y: 0 }}
               transition={sectionTransition}
-              className="mb-16"
+              className="mb-9 sm:mb-12"
             >
               <HomeSectionHeader
                 eyebrow="核心能力"
                 title="帮你更快找到资源"
                 description="把关键词、分类入口与平台覆盖说明放在同一条检索链路里，减少判断成本。"
+                className="[&_h2]:scroll-mt-24"
               />
             </motion.div>
 
-            <div className="grid grid-cols-1 gap-10 md:grid-cols-3 [perspective:1600px]">
+            <div
+              id="home-core-capabilities-title"
+              className="sr-only"
+            >
+              帮你更快找到资源
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3 [perspective:1600px]">
               {featureCards.map((feature, index) => (
                 <FeatureCard
                   key={feature.title}
@@ -260,56 +270,63 @@ const Home: React.FC = () => {
                 />
               ))}
             </div>
+          </section>
 
-            <TrendingCategories shouldPlayEntrance={shouldPlayHomeEntrance} />
-
-            <PlatformMarquee />
-
-            <div className="mt-24">
+          <section aria-labelledby="home-usage-advice-title">
+            <motion.div
+              initial={shouldPlayHomeEntrance ? { opacity: 0, y: 20 } : false}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                ...sectionTransition,
+                delay: skipHomeEntrance ? 0 : 0.72,
+              }}
+              className="mb-8 sm:mb-10"
+            >
               <HomeSectionHeader
                 eyebrow="使用建议"
                 title="如何更快找到想要的资源"
                 description="先从明确关键词或分类入口进入，再通过详情页快速判断资源是否值得打开。"
-                className="mb-10"
+                className="[&_h2]:scroll-mt-24"
               />
+            </motion.div>
 
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-                {usageSteps.map((step, index) => (
+            <div
+              id="home-usage-advice-title"
+              className="sr-only"
+            >
+              如何更快找到想要的资源
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+              {usageSteps.map((step, index) => (
+                <div
+                  key={step.title}
+                  className="surface-card group relative flex min-h-[12rem] flex-col justify-between gap-5 p-6 text-left sm:min-h-[13rem] sm:p-7"
+                >
                   <div
-                    key={step.title}
-                    className="glass-card-premium group relative overflow-hidden p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-cyan-200/70 hover:shadow-[0_24px_54px_rgba(14,165,233,0.14)] dark:hover:border-cyan-300/20 dark:hover:shadow-[0_26px_58px_rgba(8,47,73,0.34)] md:p-7"
+                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] bg-gradient-to-br ${step.badgeGradient} text-base font-bold text-white shadow-[0_14px_28px_rgba(14,165,233,0.18)]`}
                   >
-                    <div
-                      aria-hidden="true"
-                      className={`pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full ${step.halo} blur-3xl transition-transform duration-500 group-hover:scale-125`}
-                    />
-                    <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/50 to-transparent dark:via-cyan-200/20" />
-
-                    <div className="relative z-10 mb-6 flex items-center justify-between gap-4">
-                      <div
-                        className={`inline-flex h-12 w-12 items-center justify-center rounded-[1.15rem] bg-gradient-to-br ${step.badgeGradient} text-base font-bold text-white shadow-[0_16px_32px_rgba(14,165,233,0.22)] ring-1 ring-white/70 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:rotate-3 dark:ring-white/15`}
-                      >
-                        {index + 1}
-                      </div>
-                      <span className="rounded-full border border-slate-200/70 bg-white/65 px-3 py-1 text-xs font-semibold text-slate-500 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-300">
-                        Step {index + 1}
-                      </span>
-                    </div>
-
+                    {index + 1}
+                  </div>
+                  <div className="min-w-0">
                     <h3
-                      className={`relative z-10 text-lg font-semibold tracking-tight text-slate-900 transition-colors duration-300 dark:text-slate-50 ${step.accent}`}
+                      className={`text-xl font-semibold tracking-tight text-slate-900 transition-colors duration-300 dark:text-slate-50 ${step.accent}`}
                     >
                       {step.title}
                     </h3>
-                    <p className="relative z-10 mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300/85">
+                    <p className="mt-4 text-base leading-8 text-slate-600 dark:text-slate-300/85">
                       {step.description}
                     </p>
-
-                    <div className="pointer-events-none absolute inset-x-7 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-300/45 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:via-cyan-300/25" />
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
+          </section>
+
+          <div>
+            <TrendingCategories shouldPlayEntrance={shouldPlayHomeEntrance} />
+
+            <PlatformMarquee />
           </div>
         </div>
       </div>
