@@ -194,3 +194,10 @@
     - frontend/src/routes/AppRoutes.tsx
     - frontend/src/routes/__tests__/AppRoutes.test.tsx
     - docs/readme_2607.md
+
+[2026-07-09 13:49] docs(trellis): 更新项目代理说明与本地目录忽略
+  Body: 将 AGENTS 开发准则替换为 Trellis 管理说明，指向 .trellis 工作流、规范、任务和技能目录。同步忽略 .agents 与 .trellis 本地目录，避免代理运行资料进入版本控制。
+  Files:
+    - .gitignore
+    - AGENTS.md
+    - docs/readme_2607.md
