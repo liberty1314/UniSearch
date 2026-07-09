@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import {
+  ArrowUpRight,
   Loader2,
   Radio,
   Zap,
@@ -70,10 +71,7 @@ export const ChannelManagementView: React.FC = () => {
   const activeChannel = controller.activeDetailChannel;
 
   useEffect(() => {
-    if (pagedItems.length === 0) {
-      if (detailChannelId !== null) {
-        setDetailChannelId(null);
-      }
+    if (detailChannelId === null) {
       return;
     }
 
@@ -81,7 +79,7 @@ export const ChannelManagementView: React.FC = () => {
       (channel) => channel.id === detailChannelId
     );
     if (!hasActiveOnCurrentPage) {
-      setDetailChannelId(pagedItems[0].id);
+      setDetailChannelId(null);
     }
   }, [detailChannelId, pagedItems, setDetailChannelId]);
 
@@ -210,13 +208,20 @@ export const ChannelManagementView: React.FC = () => {
                 />
               ) : (
                 <div className="space-y-3">
+                  <div
+                    data-testid="channel-list-header"
+                    className="hidden gap-4 px-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400 xl:grid xl:grid-cols-[minmax(0,1.15fr),minmax(12rem,0.65fr),auto] xl:items-center"
+                  >
+                    <span className="pl-9">频道</span>
+                    <span>最近检查</span>
+                    <span className="text-right">操作</span>
+                  </div>
                   {controller.pagedItems.map((channel) => {
                     return (
                       <article
                         key={channel.id}
                         data-testid={`channel-row-${channel.id}`}
-                        onClick={() => controller.setDetailChannelId(channel.id)}
-                        className="cursor-pointer rounded-[1.3rem] border border-slate-200/70 bg-white/75 p-4 transition hover:border-slate-300 hover:shadow-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:hover:border-cyan-300/[0.24]"
+                        className="rounded-[1.3rem] border border-slate-200/70 bg-white/75 p-4 transition hover:border-slate-300 hover:shadow-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:hover:border-cyan-300/[0.24]"
                       >
                         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr),minmax(12rem,0.65fr),auto] xl:items-center">
                           <div className="flex items-start gap-3">
@@ -255,6 +260,15 @@ export const ChannelManagementView: React.FC = () => {
                             </div>
                           </div>
                           <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
+                            <Button
+                              type="button"
+                              variant="adminIconAction"
+                              size="icon"
+                              onClick={() => controller.setDetailChannelId(channel.id)}
+                              aria-label={`查看频道 ${channel.name} 详情`}
+                            >
+                              <ArrowUpRight className="h-4 w-4" />
+                            </Button>
                             <AdminTestAction
                               compact
                               status={controller.testingStatus[channel.name] || 'idle'}
@@ -313,7 +327,7 @@ export const ChannelManagementView: React.FC = () => {
             testId="channel-management-drawer"
             onClose={() => controller.setDetailChannelId(null)}
             emptyTitle="选择一个频道"
-            emptyDescription="点击左侧频道行查看详细状态、最近错误和可执行操作。"
+            emptyDescription="点击频道行内的详情按钮查看详细状态、最近错误和可执行操作。"
             footer={activeChannel ? (
               <div className="flex flex-wrap justify-end gap-2">
                 <AdminTestAction

@@ -299,10 +299,19 @@ describe('PluginPerformanceDashboard', () => {
     expect(screen.getAllByText('pansearch').length).toBeGreaterThan(0);
     expect(screen.getAllByText('熔断中').length).toBeGreaterThan(0);
 
+    await userEvent.click(screen.getAllByText('sidhub')[0]);
+    expect(screen.queryByTestId('plugin-performance-drawer')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '查看插件 sidhub 详情' }));
     const drawer = await screen.findByTestId('plugin-performance-drawer');
     expect(within(drawer).getByText(/恢复倒计时：/)).toBeInTheDocument();
     expect(within(drawer).getByText('插件搜索超时')).toBeInTheDocument();
     expect(within(drawer).getByText(/耗时 3000 ms/)).toBeInTheDocument();
+
+    await userEvent.click(within(drawer).getByRole('button', { name: '关闭详情抽屉' }));
+    await waitFor(() => {
+      expect(screen.queryByTestId('plugin-performance-drawer')).not.toBeInTheDocument();
+    });
   });
 
   it('刷新页面仅保留刷新令牌时先恢复访问令牌再加载数据', async () => {

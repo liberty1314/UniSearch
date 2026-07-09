@@ -90,10 +90,7 @@ export const PluginManagementView: React.FC = () => {
   );
 
   useEffect(() => {
-    if (pagedItems.length === 0) {
-      if (detailPluginName !== null) {
-        setDetailPluginName(null);
-      }
+    if (detailPluginName === null) {
       return;
     }
 
@@ -101,7 +98,7 @@ export const PluginManagementView: React.FC = () => {
       (plugin) => plugin.name === detailPluginName
     );
     if (!hasActiveOnCurrentPage) {
-      setDetailPluginName(pagedItems[0].name);
+      setDetailPluginName(null);
     }
   }, [
     detailPluginName,
@@ -301,8 +298,7 @@ export const PluginManagementView: React.FC = () => {
                       <article
                         key={plugin.name}
                         data-testid={`plugin-market-card-${plugin.name}`}
-                        onClick={() => controller.handleOpenDetail(plugin)}
-                        className="group cursor-pointer rounded-[1.4rem] border border-slate-200/70 bg-white/75 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:hover:border-cyan-300/[0.24]"
+                        className="group rounded-[1.4rem] border border-slate-200/70 bg-white/75 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:hover:border-cyan-300/[0.24]"
                       >
                         <div className="flex h-full flex-col gap-4">
                           <div className="flex items-start justify-between gap-3">

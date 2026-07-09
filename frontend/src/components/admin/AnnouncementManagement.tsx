@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ApplePagination } from '@/components/admin/ApplePagination';
@@ -35,6 +34,7 @@ import {
   ADMIN_HOVERABLE_BUTTON_CLASSES,
 } from '@/components/admin/adminDesign';
 import {
+  AdminDetailDrawer,
   AdminContentCard,
 } from './AdminWorkspacePageFrame';
 
@@ -363,19 +363,38 @@ export const AnnouncementManagement: React.FC = () => {
         )}
       </AdminContentCard>
 
-      {/* 公告表单对话框 */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {formMode === 'create' ? '创建公告' : '编辑公告'}
-            </DialogTitle>
-            <DialogDescription>
-              配置公告标题、Markdown 内容、生效时间和启用状态，保存后会按生命周期规则向用户展示。
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
+      <AdminDetailDrawer
+        open={isFormOpen}
+        title={formMode === 'create' ? '创建公告' : '编辑公告'}
+        description="配置公告标题、Markdown 内容、生效时间和启用状态，保存后会按生命周期规则向用户展示。"
+        testId="announcement-editor-drawer"
+        onClose={() => setIsFormOpen(false)}
+        emptyTitle="选择公告"
+        emptyDescription="点击创建或编辑后会在这里管理公告内容。"
+        widthClassName="sm:w-[min(92vw,48rem)]"
+        footer={(
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              onClick={() => setIsFormOpen(false)}
+              variant="outline"
+              disabled={isSaving}
+            >
+              取消
+            </Button>
+            <Button onClick={handleSubmit} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  保存中...
+                </>
+              ) : (
+                '保存'
+              )}
+            </Button>
+          </div>
+        )}
+      >
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="title">
                 标题 <span className="text-red-500">*</span>
@@ -486,28 +505,7 @@ export const AnnouncementManagement: React.FC = () => {
               </div>
             </div>
           </div>
-
-          <DialogFooter>
-            <Button
-              onClick={() => setIsFormOpen(false)}
-              variant="outline"
-              disabled={isSaving}
-            >
-              取消
-            </Button>
-            <Button onClick={handleSubmit} disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  保存中...
-                </>
-              ) : (
-                '保存'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </AdminDetailDrawer>
 
       {/* 删除确认对话框 */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

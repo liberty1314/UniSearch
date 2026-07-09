@@ -142,9 +142,17 @@ describe('ChannelPerformancePanel', () => {
     });
 
     await userEvent.click(screen.getAllByText('tg-beta')[0]);
+    expect(screen.queryByTestId('channel-performance-drawer')).not.toBeInTheDocument();
 
-    expect(await screen.findByTestId('channel-performance-drawer')).toBeInTheDocument();
-    expect(screen.getByText('性能摘要')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '查看频道 tg-beta 详情' }));
+
+    const drawer = await screen.findByTestId('channel-performance-drawer');
+    expect(within(drawer).getByText('性能摘要')).toBeInTheDocument();
+
+    await userEvent.click(within(drawer).getByRole('button', { name: '关闭详情抽屉' }));
+    await waitFor(() => {
+      expect(screen.queryByTestId('channel-performance-drawer')).not.toBeInTheDocument();
+    });
   });
 
   it('支持分页浏览频道性能表并切换每页条数', async () => {

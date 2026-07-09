@@ -359,10 +359,10 @@ export function useChannelMetricsController() {
 
   const selectedRow = useMemo(() => {
     if (!selectedChannelName) {
-      return filteredRows[0] ?? rows[0] ?? null;
+      return null;
     }
-    return rows.find((row) => row.channelName === selectedChannelName) ?? filteredRows[0] ?? null;
-  }, [filteredRows, rows, selectedChannelName]);
+    return rows.find((row) => row.channelName === selectedChannelName) ?? null;
+  }, [rows, selectedChannelName]);
 
   const selectedErrorLogs = useMemo(() => {
     if (!selectedRow) {

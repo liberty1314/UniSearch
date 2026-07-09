@@ -230,12 +230,13 @@ describe('AnnouncementManagement', () => {
     expect(screen.getAllByText('已过期').length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole('button', { name: /创建公告/i }));
+    const drawer = await screen.findByTestId('announcement-editor-drawer');
     expect(
-      screen.getByText('配置公告标题、Markdown 内容、生效时间和启用状态，保存后会按生命周期规则向用户展示。')
+      within(drawer).getByText('配置公告标题、Markdown 内容、生效时间和启用状态，保存后会按生命周期规则向用户展示。')
     ).toBeInTheDocument();
-    await user.type(screen.getByLabelText(/内容/), '# 预览标题\n\n**加粗内容**');
+    await user.type(within(drawer).getByLabelText(/内容/), '# 预览标题\n\n**加粗内容**');
 
-    expect(await screen.findByRole('heading', { name: '预览标题' })).toBeInTheDocument();
-    expect(screen.getByText('加粗内容')).toBeInTheDocument();
+    expect(await within(drawer).findByRole('heading', { name: '预览标题' })).toBeInTheDocument();
+    expect(within(drawer).getByText('加粗内容')).toBeInTheDocument();
   });
 });

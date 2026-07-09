@@ -113,12 +113,12 @@ describe('ChannelManagementView', () => {
     expect(screen.getByPlaceholderText('搜索频道名称或错误信息')).toBeInTheDocument();
     expect(screen.getByText('chan-01')).toBeInTheDocument();
     expect(screen.queryByText('chan-11')).not.toBeInTheDocument();
-
-    const initialDrawer = await screen.findByTestId('channel-management-drawer');
-    expect(within(initialDrawer).getByText('chan-12')).toBeInTheDocument();
-    expect(within(initialDrawer).getByText('timeout')).toBeInTheDocument();
+    expect(screen.queryByTestId('channel-management-drawer')).not.toBeInTheDocument();
+    const listHeader = screen.getByTestId('channel-list-header');
+    expect(within(listHeader).getByText('频道')).toBeInTheDocument();
+    expect(within(listHeader).getByText('最近检查')).toBeInTheDocument();
+    expect(within(listHeader).getByText('操作')).toBeInTheDocument();
     expect(screen.getByTestId('channel-row-12')).toHaveClass('dark:bg-slate-950/[0.52]');
-    expect(within(initialDrawer).getByText('timeout').closest('div')).toHaveClass('dark:bg-slate-950/[0.40]');
 
     const pageSizeSelect = screen.getByRole('combobox', { name: '每页条数' });
     await userEvent.click(pageSizeSelect);
@@ -127,12 +127,16 @@ describe('ChannelManagementView', () => {
     expect(await screen.findByText('chan-11')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('channel-row-12'));
+    expect(screen.queryByTestId('channel-management-drawer')).not.toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByTestId('channel-row-12')).getByRole('button', { name: '查看频道 chan-12 详情' }));
 
     const drawer = await screen.findByTestId('channel-management-drawer');
     expect(within(drawer).getByText('chan-12')).toBeInTheDocument();
     expect(within(drawer).getByText('timeout')).toBeInTheDocument();
+    expect(within(drawer).getByText('timeout').closest('div')).toHaveClass('dark:bg-slate-950/[0.40]');
     expect(within(drawer).getByRole('button', { name: '测试' })).toHaveClass('admin-test-action');
-    expect(within(screen.getByTestId('channel-row-12')).queryByRole('button', { name: '详情' })).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('channel-row-12')).getByRole('button', { name: '查看频道 chan-12 详情' })).toBeInTheDocument();
     expect(within(screen.getByTestId('channel-row-12')).queryByText('健康状态')).not.toBeInTheDocument();
     expect(within(screen.getByTestId('channel-row-12')).queryByText('异常')).not.toBeInTheDocument();
     expect(within(screen.getByTestId('channel-row-12')).getByText('2026-05-17 00:20')).toHaveClass('tabular-nums');
@@ -170,6 +174,23 @@ describe('ChannelManagementView', () => {
 
     expect(await screen.findByTestId('channel-row-12')).toBeInTheDocument();
     expect(screen.queryByTestId('channel-row-1')).not.toBeInTheDocument();
+  });
+
+  it('当前详情项被筛选移除时关闭详情抽屉', async () => {
+    render(<ChannelManagementView />);
+
+    await screen.findByText('chan-01');
+    fireEvent.click(within(screen.getByTestId('channel-row-12')).getByRole('button', { name: '查看频道 chan-12 详情' }));
+    expect(await screen.findByTestId('channel-management-drawer')).toBeInTheDocument();
+
+    const statusSelect = screen.getByRole('combobox', { name: '频道状态筛选' });
+    await userEvent.click(statusSelect);
+    const listbox = await screen.findByRole('listbox');
+    await userEvent.click(within(listbox).getByRole('option', { name: '禁用' }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('channel-management-drawer')).not.toBeInTheDocument();
+    });
   });
 
   it('支持在筛选框内直接新增频道标签', async () => {
@@ -255,6 +276,7 @@ describe('ChannelManagementView', () => {
     render(<ChannelManagementView />);
 
     await screen.findByRole('heading', { name: 'Telegram 频道' });
+    fireEvent.click(within(screen.getByTestId('channel-row-12')).getByRole('button', { name: '查看频道 chan-12 详情' }));
     const drawer = await screen.findByTestId('channel-management-drawer');
 
     await userEvent.click(within(drawer).getByRole('button', { name: '频道标签选择器' }));

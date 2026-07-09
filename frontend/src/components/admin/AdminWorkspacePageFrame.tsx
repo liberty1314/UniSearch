@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,14 +37,12 @@ export function AdminWorkspacePageFrame({
     <div className={ADMIN_DENSITY.pageGap}>
       {header}
       {metrics}
-      <div className={cn('grid xl:grid-cols-[minmax(0,1fr)_380px]', ADMIN_DENSITY.contentGap)}>
-        <div className="space-y-4">
-          {filters}
-          {selectionBar}
-          {content}
-        </div>
-        {drawer}
+      <div className="space-y-4">
+        {filters}
+        {selectionBar}
+        {content}
       </div>
+      {drawer}
     </div>
   );
 }
@@ -168,6 +167,7 @@ interface AdminDetailDrawerProps {
   footer?: React.ReactNode;
   emptyTitle: string;
   emptyDescription: string;
+  widthClassName?: string;
 }
 
 export function AdminDetailDrawer({
@@ -178,49 +178,43 @@ export function AdminDetailDrawer({
   onClose,
   children,
   footer,
-  emptyTitle,
-  emptyDescription,
+  widthClassName,
 }: AdminDetailDrawerProps) {
-  return (
+  if (!open || typeof document === 'undefined') {
+    return null;
+  }
+
+  const drawer = (
     <aside
-      data-testid={open ? testId : undefined}
+      data-testid={testId}
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby={`${testId}-title`}
       className={cn(
         ADMIN_PANEL_SURFACE_CLASSES,
-        'sticky top-6 hidden h-fit min-h-[480px] overflow-hidden xl:flex xl:flex-col',
-        !open && 'justify-center'
+        'fixed bottom-0 right-0 top-20 z-50 flex w-full max-w-full flex-col overflow-hidden rounded-none shadow-[0_24px_80px_rgba(15,23,42,0.22)] sm:bottom-5 sm:right-5 sm:top-24 sm:w-[min(92vw,42rem)] sm:rounded-[1.45rem] lg:right-8',
+        widthClassName
       )}
     >
-      {open ? (
-        <>
-          <div className="flex items-start justify-between gap-3 border-b border-slate-200/60 px-5 py-5 dark:border-cyan-300/[0.12]">
-            <div className="min-w-0 space-y-1">
-              <h2 className="truncate text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
-              {description ? <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p> : null}
-            </div>
-            <Button
-              type="button"
-              variant="adminIconAction"
-              size="icon"
-              onClick={onClose}
-              aria-label="关闭详情抽屉"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">{children}</div>
-          {footer ? <div className="border-t border-slate-200/60 px-5 py-4 dark:border-cyan-300/[0.12]">{footer}</div> : null}
-        </>
-      ) : (
-        <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
-          <div className="glass-toolbar flex h-14 w-14 items-center justify-center rounded-[1.35rem] text-slate-500 dark:text-slate-300">
-            <X className="h-5 w-5" />
-          </div>
-          <div className="space-y-2">
-            <p className="text-base font-medium text-slate-800 dark:text-slate-100">{emptyTitle}</p>
-            <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{emptyDescription}</p>
-          </div>
+      <div className="flex items-start justify-between gap-3 border-b border-slate-200/60 px-5 py-5 dark:border-cyan-300/[0.12]">
+        <div className="min-w-0 space-y-1">
+          <h2 id={`${testId}-title`} className="truncate text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
+          {description ? <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p> : null}
         </div>
-      )}
+        <Button
+          type="button"
+          variant="adminIconAction"
+          size="icon"
+          onClick={onClose}
+          aria-label="关闭详情抽屉"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">{children}</div>
+      {footer ? <div className="border-t border-slate-200/60 px-5 py-4 dark:border-cyan-300/[0.12]">{footer}</div> : null}
     </aside>
   );
+
+  return createPortal(drawer, document.body);
 }

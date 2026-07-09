@@ -258,6 +258,7 @@ export function AdminDataTable<T extends object>({
           {sortedData.map((item, index) => {
             const itemKey = rowKey(item);
             const accentClassName = getRowAccentClassName?.(item, index);
+            const rowInteractive = Boolean(onRowClick || renderDesktopOverlay);
 
             return (
               <motion.div
@@ -267,11 +268,12 @@ export function AdminDataTable<T extends object>({
                 exit={shouldReduceMotion ? undefined : { opacity: 0, x: 12, scale: 0.98 }}
                 transition={{ type: 'spring', stiffness: 360, damping: 30, mass: 0.7, delay: shouldReduceMotion ? 0 : index * 0.02 }}
                 className={cn(
-                  'relative cursor-pointer rounded-2xl',
+                  'relative rounded-2xl',
+                  rowInteractive && 'cursor-pointer',
                   activeOverlayItem && itemKey === rowKey(activeOverlayItem) && 'ring-1 ring-cyan-200/70 dark:ring-cyan-700/70',
                   activeOverlayItem && disableInteractionsWhenOverlayOpen && itemKey !== rowKey(activeOverlayItem) && 'opacity-35'
                 )}
-                onClick={() => handleDesktopRowClick(item, index)}
+                onClick={rowInteractive ? () => handleDesktopRowClick(item, index) : undefined}
                 role="row"
               >
                 <motion.div

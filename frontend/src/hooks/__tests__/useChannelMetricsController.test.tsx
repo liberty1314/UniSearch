@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useChannelMetricsController } from '../useChannelMetricsController';
 
@@ -165,6 +165,13 @@ describe('useChannelMetricsController', () => {
       errorCount: 1,
       resultCount: 16,
     });
+    expect(result.current.selectedRow).toBeNull();
+    expect(result.current.selectedErrorLogs).toHaveLength(0);
+
+    act(() => {
+      result.current.setSelectedChannelName('tg-alpha');
+    });
+
     expect(result.current.selectedErrorLogs).toHaveLength(1);
   });
 

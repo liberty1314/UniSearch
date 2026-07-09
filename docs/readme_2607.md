@@ -201,3 +201,24 @@
     - .gitignore
     - AGENTS.md
     - docs/readme_2607.md
+
+[2026-07-09 14:53] fix(admin-ui): 修复后台详情抽屉默认占位交互
+  Body: 将后台详情抽屉改为按需浮层渲染，移除页面右侧默认占位列，并改为通过行内详情按钮打开。同步调整公告编辑、插件管理、频道管理和性能监控面板的详情交互与测试，避免误触整行打开详情。
+  Files:
+    - frontend/src/components/admin/AdminDataTable.tsx
+    - frontend/src/components/admin/AdminWorkspacePageFrame.tsx
+    - frontend/src/components/admin/AnnouncementManagement.tsx
+    - frontend/src/components/admin/ChannelManagementView.tsx
+    - frontend/src/components/admin/ChannelPerformancePanel.tsx
+    - frontend/src/components/admin/PluginManagementView.tsx
+    - frontend/src/components/admin/PluginPerformanceDashboard.tsx
+    - frontend/src/components/admin/__tests__/AdminWorkspacePageFrame.test.tsx
+    - frontend/src/components/admin/__tests__/AnnouncementManagement.test.tsx
+    - frontend/src/components/admin/__tests__/ChannelManagementView.test.tsx
+    - frontend/src/components/admin/__tests__/ChannelPerformancePanel.test.tsx
+    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
+    - frontend/src/components/admin/__tests__/PluginPerformanceDashboard.test.tsx
+    - frontend/src/hooks/__tests__/useChannelMetricsController.test.tsx
+    - frontend/src/hooks/useChannelMetricsController.ts
+    - frontend/src/hooks/usePluginMetricsController.ts
+    - docs/readme_2607.md

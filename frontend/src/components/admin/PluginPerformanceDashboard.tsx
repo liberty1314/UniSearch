@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import {
   Activity,
   AlertTriangle,
+  ArrowUpRight,
   Clock3,
   Gauge,
   LineChart,
@@ -255,7 +256,13 @@ function CircuitMetricCell({ row }: { row: PluginObservabilityRow }) {
   );
 }
 
-function PluginMobileItem({ row }: { row: PluginObservabilityRow }) {
+function PluginMobileItem({
+  row,
+  onOpenDetail,
+}: {
+  row: PluginObservabilityRow;
+  onOpenDetail: () => void;
+}) {
   return (
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-3">
@@ -270,12 +277,27 @@ function PluginMobileItem({ row }: { row: PluginObservabilityRow }) {
         <span className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600 dark:bg-slate-900 dark:text-slate-300">超时 {formatRate(row.timeoutRate)}</span>
         <span className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600 dark:bg-slate-900 dark:text-slate-300">错误 {formatCount(row.errorCount)}</span>
       </div>
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="adminIconAction"
+          size="icon"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenDetail();
+          }}
+          aria-label={`查看插件 ${row.pluginName} 详情（移动端）`}
+        >
+          <ArrowUpRight className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }
 
 export const PluginPerformanceDashboard: React.FC = () => {
   const controller = usePluginMetricsController();
+  const { setSelectedPluginName } = controller;
   const pagination = useAdminClientPagination(controller.filteredRows);
   const { resetPage } = pagination;
 
@@ -324,7 +346,26 @@ export const PluginPerformanceDashboard: React.FC = () => {
       align: 'center',
       render: (row) => <CircuitMetricCell row={row} />,
     },
-  ], []);
+    {
+      key: 'detailAction',
+      title: '详情',
+      align: 'center',
+      render: (row) => (
+        <Button
+          type="button"
+          variant="adminIconAction"
+          size="icon"
+          onClick={(event) => {
+            event.stopPropagation();
+            setSelectedPluginName(row.pluginName);
+          }}
+          aria-label={`查看插件 ${row.pluginName} 详情`}
+        >
+          <ArrowUpRight className="h-4 w-4" />
+        </Button>
+      ),
+    },
+  ], [setSelectedPluginName]);
 
   const drawerOpen = Boolean(controller.selectedRow);
   const selected = controller.selectedRow;
@@ -423,11 +464,15 @@ export const PluginPerformanceDashboard: React.FC = () => {
                 loading={controller.loading}
                 emptyText="没有匹配的插件指标"
                 countLabel="个插件"
-                onRowClick={(row) => controller.setSelectedPluginName(row.pluginName)}
-                renderMobileItem={(row) => <PluginMobileItem row={row} />}
+                renderMobileItem={(row) => (
+                  <PluginMobileItem
+                    row={row}
+                    onOpenDetail={() => setSelectedPluginName(row.pluginName)}
+                  />
+                )}
                 desktopVariant="management-grid"
                 desktopGridGapClassName="gap-2"
-                desktopGridTemplateColumns="minmax(130px,1fr) 86px 88px 94px 42px 104px"
+                desktopGridTemplateColumns="minmax(130px,1fr) 86px 88px 94px 42px 104px 56px"
               />
             )}
           </AdminContentCard>
@@ -454,7 +499,7 @@ export const PluginPerformanceDashboard: React.FC = () => {
           testId="plugin-performance-drawer"
           onClose={() => controller.setSelectedPluginName(null)}
           emptyTitle="选择插件查看详情"
-          emptyDescription="点击表格中的插件后，会展示错误日志、熔断状态和最近健康检查。"
+          emptyDescription="点击表格行内的详情按钮后，会展示错误日志、熔断状态和最近健康检查。"
         >
           {selected ? (
             <div className="space-y-4">

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import {
   Activity,
   AlertTriangle,
+  ArrowUpRight,
   Clock3,
   LineChart,
   Radio,
@@ -195,7 +196,13 @@ function QualityMetricCell({ row }: { row: ChannelObservabilityRow }) {
   );
 }
 
-function ChannelMobileItem({ row }: { row: ChannelObservabilityRow }) {
+function ChannelMobileItem({
+  row,
+  onOpenDetail,
+}: {
+  row: ChannelObservabilityRow;
+  onOpenDetail: () => void;
+}) {
   return (
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-3">
@@ -210,12 +217,27 @@ function ChannelMobileItem({ row }: { row: ChannelObservabilityRow }) {
         <span className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600 dark:bg-slate-900 dark:text-slate-300">结果 {formatCount(row.resultCount)}</span>
         <span className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600 dark:bg-slate-900 dark:text-slate-300">错误 {formatCount(row.errorCount)}</span>
       </div>
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="adminIconAction"
+          size="icon"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenDetail();
+          }}
+          aria-label={`查看频道 ${row.channelName} 详情（移动端）`}
+        >
+          <ArrowUpRight className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }
 
 export const ChannelPerformancePanel: React.FC = () => {
   const controller = useChannelMetricsController();
+  const { setSelectedChannelName } = controller;
   const pagination = useAdminClientPagination(controller.filteredRows);
   const { resetPage } = pagination;
 
@@ -272,7 +294,26 @@ export const ChannelPerformancePanel: React.FC = () => {
         </span>
       ),
     },
-  ], []);
+    {
+      key: 'detailAction',
+      title: '详情',
+      align: 'center',
+      render: (row) => (
+        <Button
+          type="button"
+          variant="adminIconAction"
+          size="icon"
+          onClick={(event) => {
+            event.stopPropagation();
+            setSelectedChannelName(row.channelName);
+          }}
+          aria-label={`查看频道 ${row.channelName} 详情`}
+        >
+          <ArrowUpRight className="h-4 w-4" />
+        </Button>
+      ),
+    },
+  ], [setSelectedChannelName]);
 
   const drawerOpen = Boolean(controller.selectedRow);
   const selected = controller.selectedRow;
@@ -371,11 +412,15 @@ export const ChannelPerformancePanel: React.FC = () => {
                 loading={controller.loading}
                 emptyText="没有匹配的频道指标"
                 countLabel="个频道"
-                onRowClick={(row) => controller.setSelectedChannelName(row.channelName)}
-                renderMobileItem={(row) => <ChannelMobileItem row={row} />}
+                renderMobileItem={(row) => (
+                  <ChannelMobileItem
+                    row={row}
+                    onOpenDetail={() => setSelectedChannelName(row.channelName)}
+                  />
+                )}
                 desktopVariant="management-grid"
                 desktopGridGapClassName="gap-2"
-                desktopGridTemplateColumns="minmax(130px,1fr) 86px 88px 94px 52px 42px"
+                desktopGridTemplateColumns="minmax(130px,1fr) 86px 88px 94px 52px 42px 56px"
               />
             )}
           </AdminContentCard>

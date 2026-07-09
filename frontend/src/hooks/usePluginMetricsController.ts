@@ -359,10 +359,10 @@ export function usePluginMetricsController() {
 
   const selectedRow = useMemo(() => {
     if (!selectedPluginName) {
-      return filteredRows[0] ?? rows[0] ?? null;
+      return null;
     }
-    return rows.find((row) => row.pluginName === selectedPluginName) ?? filteredRows[0] ?? null;
-  }, [filteredRows, rows, selectedPluginName]);
+    return rows.find((row) => row.pluginName === selectedPluginName) ?? null;
+  }, [rows, selectedPluginName]);
 
   const selectedErrorLogs = useMemo(() => {
     if (!selectedRow) {
