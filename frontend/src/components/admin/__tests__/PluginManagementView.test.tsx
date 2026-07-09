@@ -250,17 +250,35 @@ describe('PluginManagementView', () => {
     expect(await screen.findByRole('heading', { name: '插件中心' })).toBeInTheDocument();
     expect(await screen.findByText(/目录版本 2026\.05/)).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: '插件状态筛选' })).toBeInTheDocument();
-    expect(screen.getByTestId('plugin-market-card-builtin-enabled-1')).toBeInTheDocument();
-    expect(screen.queryByTestId('plugin-market-card-builtin-enabled-11')).not.toBeInTheDocument();
-    expect(screen.getByTestId('plugin-market-card-builtin-enabled-1')).toHaveClass('dark:bg-slate-950/[0.52]');
-    expect(within(screen.getByTestId('plugin-market-card-builtin-enabled-1')).getByText('启用')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: '插件分类筛选' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: '插件能力筛选' })).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText('搜索名称、描述或标签')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('搜索名称、描述、能力或标签')).not.toBeInTheDocument();
+    const tableRegion = screen.getByRole('region', { name: '数据表格' });
+    expect(within(tableRegion).getByRole('columnheader', { name: '选择' })).toBeInTheDocument();
+    expect(within(tableRegion).getByRole('columnheader', { name: /插件/ })).toBeInTheDocument();
+    expect(within(tableRegion).getByRole('columnheader', { name: '状态' })).toBeInTheDocument();
+    expect(within(tableRegion).getByRole('columnheader', { name: '健康' })).toBeInTheDocument();
+    expect(within(tableRegion).getByRole('columnheader', { name: '最近检查' })).toBeInTheDocument();
+    expect(within(tableRegion).getByRole('columnheader', { name: '操作' })).toBeInTheDocument();
+    expect(screen.getByTestId('plugin-market-row-builtin-enabled-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('plugin-market-row-builtin-enabled-11')).not.toBeInTheDocument();
+    const firstRow = screen.getByTestId('plugin-market-row-builtin-enabled-1');
+    expect(firstRow).toHaveAttribute('role', 'row');
+    expect(within(firstRow).getByText('启用')).toBeInTheDocument();
+    expect(within(firstRow).getByText('电影')).toBeInTheDocument();
+    expect(within(firstRow).getByText('正常 · 手动测试')).toBeInTheDocument();
+    expect(within(firstRow).getByText('暂无检查时间')).toBeInTheDocument();
+    expect(within(firstRow).queryByText('search')).not.toBeInTheDocument();
+    expect(within(firstRow).queryByText('resource.search')).not.toBeInTheDocument();
+    expect(within(firstRow).queryByText('来源')).not.toBeInTheDocument();
     expect(
-      within(screen.getByTestId('plugin-market-card-builtin-enabled-1')).getByRole('switch', {
+      within(firstRow).getByRole('switch', {
         name: '插件 builtin-enabled-1 当前已启用',
       }),
     ).toHaveClass('admin-status-toggle-action');
     expect(
-      within(screen.getByTestId('plugin-market-card-builtin-enabled-1')).getByRole('button', {
+      within(firstRow).getByRole('button', {
         name: '测试',
       }),
     ).toHaveClass('admin-test-action');
@@ -276,13 +294,13 @@ describe('PluginManagementView', () => {
     expect(within(pageSizeListbox).getByRole('option', { name: '100 条' })).toBeInTheDocument();
 
     await userEvent.click(within(pageSizeListbox).getByRole('option', { name: '20 条' }));
-    expect(await screen.findByTestId('plugin-market-card-builtin-enabled-11')).toBeInTheDocument();
+    expect(await screen.findByTestId('plugin-market-row-builtin-enabled-11')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('plugin-market-card-builtin-enabled-11'));
+    fireEvent.click(screen.getByTestId('plugin-market-row-builtin-enabled-11'));
     expect(screen.queryByTestId('plugin-management-drawer')).not.toBeInTheDocument();
 
     fireEvent.click(
-      within(screen.getByTestId('plugin-market-card-builtin-enabled-11')).getByRole('button', {
+      within(screen.getByTestId('plugin-market-row-builtin-enabled-11')).getByRole('button', {
         name: '查看插件 builtin-enabled-11 详情',
       }),
     );
@@ -290,13 +308,16 @@ describe('PluginManagementView', () => {
     const drawer = await screen.findByTestId('plugin-management-drawer');
     expect(within(drawer).getByText('builtin-enabled-11')).toBeInTheDocument();
     expect(within(drawer).getByText(/内置插件示例 11/)).toBeInTheDocument();
+    expect(within(drawer).getByText('来源')).toBeInTheDocument();
+    expect(within(drawer).getByText('能力与标签')).toBeInTheDocument();
+    expect(within(drawer).getByText('resource.search')).toBeInTheDocument();
   });
 
-  it('插件卡片使用启用状态替代内置徽标', async () => {
+  it('插件表格行使用启用状态替代内置徽标', async () => {
     render(<PluginManagementView />);
 
     await screen.findByRole('heading', { name: '插件中心' });
-    expect(within(screen.getByTestId('plugin-market-card-builtin-enabled-1')).getByText('启用')).toBeInTheDocument();
+    expect(within(screen.getByTestId('plugin-market-row-builtin-enabled-1')).getByText('启用')).toBeInTheDocument();
     expect(screen.queryByText('内置插件')).not.toBeInTheDocument();
 
     const statusSelect = screen.getByRole('combobox', { name: '插件状态筛选' });
@@ -304,25 +325,25 @@ describe('PluginManagementView', () => {
     const listbox = await screen.findByRole('listbox');
     await userEvent.click(within(listbox).getByRole('option', { name: '禁用' }));
 
-    const disabledCard = await screen.findByTestId('plugin-market-card-builtin-disabled');
-    const disabledSwitch = within(disabledCard).getByRole('switch', {
+    const disabledRow = await screen.findByTestId('plugin-market-row-builtin-disabled');
+    const disabledSwitch = within(disabledRow).getByRole('switch', {
       name: '插件 builtin-disabled 当前已停用',
     });
     expect(disabledSwitch).toHaveAttribute('aria-checked', 'false');
     expect(within(disabledSwitch).getByText('已停用')).toBeInTheDocument();
-    expect(within(disabledCard).queryByText('内置插件')).not.toBeInTheDocument();
+    expect(within(disabledRow).queryByText('内置插件')).not.toBeInTheDocument();
 
-    const disabledErrorCard = await screen.findByTestId('plugin-market-card-builtin-disabled-error');
-    const disabledErrorSwitch = within(disabledErrorCard).getByRole('switch', {
+    const disabledErrorRow = await screen.findByTestId('plugin-market-row-builtin-disabled-error');
+    const disabledErrorSwitch = within(disabledErrorRow).getByRole('switch', {
       name: '插件 builtin-disabled-error 当前已停用',
     });
-    expect(within(disabledErrorCard).getByText('异常')).toBeInTheDocument();
+    expect(within(disabledErrorRow).getByText('异常')).toBeInTheDocument();
     expect(disabledErrorSwitch).toHaveAttribute('aria-checked', 'false');
     expect(within(disabledErrorSwitch).getByText('已停用')).toBeInTheDocument();
 
-    fireEvent.click(disabledErrorCard);
+    fireEvent.click(disabledErrorRow);
     expect(screen.queryByTestId('plugin-management-drawer')).not.toBeInTheDocument();
-    fireEvent.click(within(disabledErrorCard).getByRole('button', { name: '查看插件 builtin-disabled-error 详情' }));
+    fireEvent.click(within(disabledErrorRow).getByRole('button', { name: '查看插件 builtin-disabled-error 详情' }));
     const drawer = await screen.findByTestId('plugin-management-drawer');
     const drawerSwitch = within(drawer).getByRole('switch', {
       name: '插件 builtin-disabled-error 当前已停用',
@@ -333,22 +354,24 @@ describe('PluginManagementView', () => {
   it('支持标签筛选并仅匹配任一已选标签', async () => {
     render(<PluginManagementView />);
 
-    await screen.findByText('builtin-enabled-1');
+    await screen.findByTestId('plugin-market-row-builtin-enabled-1');
     await userEvent.click(screen.getByTestId('plugin-tag-filter-trigger'));
     const panel = await screen.findByTestId('plugin-tag-filter-panel');
     await userEvent.click(within(panel).getByText('剧集'));
 
-    expect(await screen.findByTestId('plugin-market-card-builtin-enabled-2')).toBeInTheDocument();
-    expect(screen.queryByTestId('plugin-market-card-builtin-enabled-1')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('plugin-market-row-builtin-enabled-2')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByTestId('plugin-market-row-builtin-enabled-1')).not.toBeInTheDocument();
+    });
   });
 
   it('当前详情项被筛选移除时关闭详情抽屉', async () => {
     render(<PluginManagementView />);
 
-    const firstCard = await screen.findByTestId('plugin-market-card-builtin-enabled-1');
-    fireEvent.click(firstCard);
+    const firstRow = await screen.findByTestId('plugin-market-row-builtin-enabled-1');
+    fireEvent.click(firstRow);
     expect(screen.queryByTestId('plugin-management-drawer')).not.toBeInTheDocument();
-    fireEvent.click(within(firstCard).getByRole('button', { name: '查看插件 builtin-enabled-1 详情' }));
+    fireEvent.click(within(firstRow).getByRole('button', { name: '查看插件 builtin-enabled-1 详情' }));
     expect(await screen.findByTestId('plugin-management-drawer')).toBeInTheDocument();
 
     const statusSelect = screen.getByRole('combobox', { name: '插件状态筛选' });
@@ -389,7 +412,7 @@ describe('PluginManagementView', () => {
   it('选择插件后显示批量操作栏', async () => {
     render(<PluginManagementView />);
 
-    await screen.findByText('builtin-enabled-1');
+    await screen.findByTestId('plugin-market-row-builtin-enabled-1');
     expect(screen.queryByTestId('plugin-selection-bar')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '全选当前筛选' })).not.toBeInTheDocument();
 
@@ -469,13 +492,13 @@ describe('PluginManagementView', () => {
     render(<PluginManagementView />);
 
     await screen.findByRole('heading', { name: '插件中心' });
-    fireEvent.change(screen.getByPlaceholderText('搜索名称、描述、能力或标签'), {
+    fireEvent.change(screen.getByPlaceholderText('搜索名称、描述或标签'), {
       target: { value: 'sidhub' },
     });
-    const sidHubCard = await screen.findByTestId('plugin-market-card-sidhub');
-    fireEvent.click(sidHubCard);
+    const sidHubRow = await screen.findByTestId('plugin-market-row-sidhub');
+    fireEvent.click(sidHubRow);
     expect(screen.queryByTestId('plugin-management-drawer')).not.toBeInTheDocument();
-    fireEvent.click(within(sidHubCard).getByRole('button', { name: '查看插件 sidhub 详情' }));
+    fireEvent.click(within(sidHubRow).getByRole('button', { name: '查看插件 sidhub 详情' }));
 
     const drawer = await screen.findByTestId('plugin-management-drawer');
     expect(within(drawer).getByText('插件配置')).toBeInTheDocument();

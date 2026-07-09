@@ -5,6 +5,7 @@ import { AppleUserTable } from '@/components/admin/AppleUserTable';
 let receivedShowCount: boolean | undefined;
 let receivedDesktopGridGapClassName: string | undefined;
 let receivedDesktopGridTemplateColumns: string | undefined;
+let receivedDesktopGridMinWidth: string | undefined;
 let overlayClose: ReturnType<typeof vi.fn>;
 
 vi.mock('@/components/admin/AdminDataTable', () => ({
@@ -16,6 +17,7 @@ vi.mock('@/components/admin/AdminDataTable', () => ({
     desktopVariant,
     desktopGridGapClassName,
     desktopGridTemplateColumns,
+    desktopGridMinWidth,
     getRowAccentClassName,
     renderMobileItem,
     renderDesktopOverlay,
@@ -32,6 +34,7 @@ vi.mock('@/components/admin/AdminDataTable', () => ({
     desktopVariant?: string;
     desktopGridGapClassName?: string;
     desktopGridTemplateColumns?: string;
+    desktopGridMinWidth?: string;
     getRowAccentClassName?: (item: Record<string, unknown>) => string;
     renderMobileItem?: (item: Record<string, unknown>) => React.ReactNode;
     renderDesktopOverlay?: (item: Record<string, unknown>, close: () => void) => React.ReactNode;
@@ -39,6 +42,7 @@ vi.mock('@/components/admin/AdminDataTable', () => ({
     receivedShowCount = showCount;
     receivedDesktopGridGapClassName = desktopGridGapClassName;
     receivedDesktopGridTemplateColumns = desktopGridTemplateColumns;
+    receivedDesktopGridMinWidth = desktopGridMinWidth;
 
     return (
       <div>
@@ -107,10 +111,11 @@ describe('AppleUserTable', () => {
     expect(markup).not.toContain('apple-purple');
     expect(markup).not.toContain('purple-');
     expect(receivedShowCount).toBe(false);
-    expect(receivedDesktopGridGapClassName).toBe('gap-x-5');
-    expect(receivedDesktopGridTemplateColumns).toContain('minmax(0,0.72fr)');
-    expect(receivedDesktopGridTemplateColumns).toContain('minmax(0,1.45fr)');
-    expect(receivedDesktopGridTemplateColumns).toContain('minmax(0,1.5fr)');
+    expect(receivedDesktopGridGapClassName).toBe('gap-x-6');
+    expect(receivedDesktopGridTemplateColumns).toContain('96px');
+    expect(receivedDesktopGridTemplateColumns).toContain('minmax(180px,1.35fr)');
+    expect(receivedDesktopGridTemplateColumns).toContain('minmax(170px,1.2fr)');
+    expect(receivedDesktopGridMinWidth).toBe('1060px');
     expect(screen.getByTestId('desktop-variant')).toHaveTextContent('management-grid');
     expect(screen.getByTestId('row-accent')).toHaveTextContent('from-green-500/10 to-transparent');
     expect(screen.queryAllByTestId('col-select')).toHaveLength(1);

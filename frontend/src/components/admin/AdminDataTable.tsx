@@ -41,6 +41,7 @@ export interface AdminDataTableProps<T> {
   desktopGridTemplateColumns?: string;
   desktopGridMinWidth?: string;
   getRowAccentClassName?: (item: T, index: number) => string;
+  getRowTestId?: (item: T, index: number) => string;
 }
 
 export function AdminDataTable<T extends object>({
@@ -61,10 +62,11 @@ export function AdminDataTable<T extends object>({
   onOverlayOpenChange,
   disableInteractionsWhenOverlayOpen = true,
   desktopVariant = 'table',
-  desktopGridGapClassName = 'gap-3',
+  desktopGridGapClassName = 'gap-4',
   desktopGridTemplateColumns,
   desktopGridMinWidth,
   getRowAccentClassName,
+  getRowTestId,
 }: AdminDataTableProps<T>) {
   const shouldReduceMotion = useReducedMotion();
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -231,7 +233,7 @@ export function AdminDataTable<T extends object>({
       <div className="overflow-x-auto px-2 pb-2">
         <div className="min-w-full space-y-2" style={desktopGridContentStyle}>
         <div
-          className={cn('grid grid-cols-12 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400', desktopGridGapClassName)}
+          className={cn('grid grid-cols-12 px-5 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400', desktopGridGapClassName)}
           style={desktopGridStyle}
         >
           {columns.map((column) => (
@@ -273,6 +275,7 @@ export function AdminDataTable<T extends object>({
                   activeOverlayItem && itemKey === rowKey(activeOverlayItem) && 'ring-1 ring-cyan-200/70 dark:ring-cyan-700/70',
                   activeOverlayItem && disableInteractionsWhenOverlayOpen && itemKey !== rowKey(activeOverlayItem) && 'opacity-35'
                 )}
+                data-testid={getRowTestId?.(item, index)}
                 onClick={rowInteractive ? () => handleDesktopRowClick(item, index) : undefined}
                 role="row"
               >
@@ -280,7 +283,7 @@ export function AdminDataTable<T extends object>({
                   whileHover={shouldReduceMotion ? undefined : { y: -1 }}
                   transition={{ type: 'spring', stiffness: 380, damping: 26 }}
                   className={cn(
-                    'relative min-h-[72px] overflow-hidden rounded-2xl border border-slate-200/60 bg-white/45 p-4 text-sm shadow-sm backdrop-blur-xl transition-colors dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48]',
+                    'relative min-h-[72px] overflow-hidden rounded-2xl border border-slate-200/60 bg-white/45 px-5 py-4 text-sm shadow-sm backdrop-blur-xl transition-colors dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48]',
                     hoverable && 'hover:bg-white/65 dark:hover:bg-cyan-400/[0.08]'
                   )}
                 >
@@ -370,7 +373,7 @@ export function AdminDataTable<T extends object>({
                 <th
                   key={column.key}
                   className={cn(
-                    'px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400',
+                    'px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400',
                     column.align === 'center' && 'text-center',
                     column.align === 'right' && 'text-right',
                     column.sortable && 'cursor-pointer select-none transition-colors hover:text-slate-800 dark:hover:text-slate-100'
@@ -409,14 +412,15 @@ export function AdminDataTable<T extends object>({
                     hoverable && 'hover:bg-white/60 dark:hover:bg-cyan-400/[0.08]',
                     (onRowClick || renderDesktopOverlay) && 'cursor-pointer'
                   )}
-                  onClick={() => handleDesktopRowClick(item, index)}
+                  data-testid={getRowTestId?.(item, index)}
+                  onClick={(onRowClick || renderDesktopOverlay) ? () => handleDesktopRowClick(item, index) : undefined}
                   role="row"
                 >
                   {columns.map((column) => (
                     <td
                     key={column.key}
                     className={cn(
-                        'border-y border-slate-200/60 px-4 py-4 text-sm text-slate-800 dark:border-white/5 dark:text-slate-100',
+                        'border-y border-slate-200/60 px-5 py-4 text-sm text-slate-800 dark:border-white/5 dark:text-slate-100',
                         'first:rounded-l-2xl first:border-l last:rounded-r-2xl last:border-r',
                         column.align === 'center' && 'text-center',
                         column.align === 'right' && 'text-right'
@@ -451,6 +455,7 @@ export function AdminDataTable<T extends object>({
               'overflow-hidden rounded-2xl border-[0.5px] border-slate-200/50 bg-white/40 px-4 py-4 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48]',
               onRowClick && 'cursor-pointer'
             )}
+            data-testid={getRowTestId ? `${getRowTestId(item, index)}-mobile` : undefined}
             onClick={() => onRowClick?.(item, index)}
             role="article"
           >

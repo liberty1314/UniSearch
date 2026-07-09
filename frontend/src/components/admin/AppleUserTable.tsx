@@ -24,23 +24,23 @@ interface AppleUserTableProps {
   isLoading: boolean;
 }
 
-const USER_TABLE_GRID_GAP_CLASS_NAME = 'gap-x-5';
+const USER_TABLE_GRID_GAP_CLASS_NAME = 'gap-x-6';
 const USER_TABLE_GRID_TEMPLATE_COLUMNS = [
-  'minmax(0,0.72fr)',
-  'minmax(0,1.45fr)',
-  'minmax(0,0.55fr)',
-  'minmax(0,0.78fr)',
-  'minmax(0,0.9fr)',
-  'minmax(0,1.5fr)',
-  'minmax(0,0.75fr)',
+  '96px',
+  'minmax(180px,1.35fr)',
+  '86px',
+  '128px',
+  '132px',
+  'minmax(170px,1.2fr)',
+  '104px',
 ].join(' ');
 const USER_TABLE_GRID_TEMPLATE_COLUMNS_WITHOUT_SELECT = [
-  'minmax(0,1.45fr)',
-  'minmax(0,0.55fr)',
-  'minmax(0,0.78fr)',
-  'minmax(0,0.9fr)',
-  'minmax(0,1.5fr)',
-  'minmax(0,0.75fr)',
+  'minmax(200px,1.4fr)',
+  '86px',
+  '128px',
+  '132px',
+  'minmax(170px,1.2fr)',
+  '104px',
 ].join(' ');
 const RELATIVE_TIME_FORMATTER = new Intl.RelativeTimeFormat('zh-CN', {
   numeric: 'auto',
@@ -524,6 +524,7 @@ export const AppleUserTable: React.FC<AppleUserTableProps> = ({
           ? USER_TABLE_GRID_TEMPLATE_COLUMNS_WITHOUT_SELECT
           : USER_TABLE_GRID_TEMPLATE_COLUMNS
       }
+      desktopGridMinWidth={activeUser ? '860px' : '1060px'}
       getRowAccentClassName={(user) => getStatusConfig(user).gradientClassName}
     />
   );

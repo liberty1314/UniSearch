@@ -419,8 +419,9 @@ export const ChannelPerformancePanel: React.FC = () => {
                   />
                 )}
                 desktopVariant="management-grid"
-                desktopGridGapClassName="gap-2"
-                desktopGridTemplateColumns="minmax(130px,1fr) 86px 88px 94px 52px 42px 56px"
+                desktopGridGapClassName="gap-4"
+                desktopGridTemplateColumns="minmax(220px,1.45fr) 92px 104px 104px 72px 64px 64px"
+                desktopGridMinWidth="920px"
               />
             )}
           </AdminContentCard>

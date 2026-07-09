@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import {
   Activity,
   ArrowUpRight,
   Layers,
-  Loader2,
   Zap,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
@@ -12,12 +11,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ApplePagination } from './ApplePagination';
+import { AdminDataTable, type AdminDataTableColumn } from './AdminDataTable';
 import { AdminTagMultiSelect } from './AdminTagMultiSelect';
 import { AdminStatusToggleAction } from './AdminStatusToggleAction';
 import { AdminTestAction } from './AdminTestAction';
 import {
-  AdminContentCard,
-  AdminCardEmpty,
   AdminDetailDrawer,
   AdminFilterSurface,
   AdminMetricCard,
@@ -28,12 +26,12 @@ import {
   AdminWorkspaceHero,
   AdminWorkspacePageFrame,
 } from './AdminWorkspacePageFrame';
-import { AdminSelectField } from './AdminSelectField';
 import { formatAdminHealthTime } from './adminDateFormat';
 import {
   pluginStatusBadgeClass,
   pluginStatusText,
   resolvePluginStatus,
+  type TestStatus,
 } from './pluginManageDialogShared';
 import type { PluginInfo } from "@/types/plugin";
 const EMPTY_PAGE_PLUGINS: PluginInfo[] = [];
@@ -53,6 +51,120 @@ const healthSourceText = (source?: string) => {
   if (source === 'system') return '系统检查';
   return source || '暂无来源';
 };
+
+function PluginInfoCell({ plugin }: { plugin: PluginInfo }) {
+  return (
+    <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="truncate font-semibold text-slate-900 dark:text-slate-100">{plugin.name}</p>
+        {(plugin.tags || []).slice(0, 1).map((tag) => (
+          <Badge key={tag} variant="outline">{tag}</Badge>
+        ))}
+      </div>
+      <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+        {plugin.description || '暂无描述'}
+      </p>
+    </div>
+  );
+}
+
+function PluginStateCell({ plugin }: { plugin: PluginInfo }) {
+  const status = resolvePluginStatus(plugin);
+  return <Badge className={pluginStatusBadgeClass(status)}>{pluginStatusText(status)}</Badge>;
+}
+
+function PluginHealthCell({ plugin }: { plugin: PluginInfo }) {
+  const healthText = plugin.health
+    ? `${plugin.health.is_healthy ? '正常' : '异常'} · ${healthSourceText(plugin.health.check_source)}`
+    : '未测试';
+
+  return (
+    <div className="min-w-0 text-sm" title={plugin.health?.last_error || healthText}>
+      <p className="truncate font-medium text-slate-700 dark:text-slate-200">{healthText}</p>
+    </div>
+  );
+}
+
+function PluginMobileItem({
+  plugin,
+  selected,
+  testingStatus,
+  isOperationBusy,
+  onSelect,
+  onOpenDetail,
+  onTest,
+  onToggleEnabled,
+}: {
+  plugin: PluginInfo;
+  selected: boolean;
+  testingStatus: TestStatus;
+  isOperationBusy: boolean;
+  onSelect: (checked: boolean) => void;
+  onOpenDetail: () => void;
+  onTest: () => void;
+  onToggleEnabled: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <Checkbox
+            checked={selected}
+            onCheckedChange={(checked) => onSelect(Boolean(checked))}
+            onClick={(event) => event.stopPropagation()}
+            aria-label={`选择插件 ${plugin.name}（移动端）`}
+            className="mt-1"
+          />
+          <PluginInfoCell plugin={plugin} />
+        </div>
+        <PluginStateCell plugin={plugin} />
+      </div>
+      <div className="rounded-xl border border-slate-200/70 bg-slate-50/70 px-3 py-2 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.44]">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-slate-500 dark:text-slate-400">健康</span>
+          <PluginHealthCell plugin={plugin} />
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+          <span className="text-slate-500 dark:text-slate-400">最近检查</span>
+          <span className="text-right text-slate-600 dark:text-slate-300">{formatAdminHealthTime(plugin.health?.last_checked_at)}</span>
+        </div>
+      </div>
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button
+          type="button"
+          variant="adminIconAction"
+          size="icon"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenDetail();
+          }}
+          aria-label={`查看插件 ${plugin.name} 详情（移动端）`}
+        >
+          <ArrowUpRight className="h-4 w-4" />
+        </Button>
+        <AdminTestAction
+          compact
+          status={testingStatus}
+          onClick={(event) => {
+            event.stopPropagation();
+            onTest();
+          }}
+          disabled={isOperationBusy}
+        />
+        <AdminStatusToggleAction
+          compact
+          enabled={plugin.is_enabled}
+          entityLabel={`插件 ${plugin.name}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleEnabled();
+          }}
+          disabled={isOperationBusy}
+        />
+      </div>
+    </div>
+  );
+}
 
 export const PluginManagementView: React.FC = () => {
   const { token } = useAuthStore();
@@ -119,9 +231,21 @@ export const PluginManagementView: React.FC = () => {
     }
   };
 
-  const renderPluginCardActions = (plugin: PluginInfo) => {
+  const renderPluginRowActions = useCallback((plugin: PluginInfo) => {
     return (
       <>
+        <Button
+          type="button"
+          variant="adminIconAction"
+          size="icon"
+          onClick={(event) => {
+            event.stopPropagation();
+            controller.handleOpenDetail(plugin);
+          }}
+          aria-label={`查看插件 ${plugin.name} 详情`}
+        >
+          <ArrowUpRight className="h-4 w-4" />
+        </Button>
         <AdminTestAction
           compact
           status={controller.testingStatus[plugin.name] || 'idle'}
@@ -143,7 +267,63 @@ export const PluginManagementView: React.FC = () => {
         />
       </>
     );
-  };
+  }, [controller]);
+
+  const columns = useMemo<AdminDataTableColumn<PluginInfo>[]>(() => [
+    {
+      key: 'select',
+      title: '选择',
+      align: 'center',
+      render: (plugin) => (
+        <Checkbox
+          checked={controller.selectedPluginNames.has(plugin.name)}
+          onCheckedChange={(checked) => controller.selectKey(plugin.name, Boolean(checked))}
+          onClick={(event) => event.stopPropagation()}
+          aria-label={`选择插件 ${plugin.name}`}
+        />
+      ),
+    },
+    {
+      key: 'name',
+      title: '插件',
+      sortable: true,
+      render: (plugin) => <PluginInfoCell plugin={plugin} />,
+    },
+    {
+      key: 'status',
+      title: '状态',
+      align: 'center',
+      render: (plugin) => <PluginStateCell plugin={plugin} />,
+    },
+    {
+      key: 'health',
+      title: '健康',
+      render: (plugin) => <PluginHealthCell plugin={plugin} />,
+    },
+    {
+      key: 'lastChecked',
+      title: '最近检查',
+      align: 'right',
+      render: (plugin) => (
+        <span className="whitespace-nowrap tabular-nums text-slate-600 dark:text-slate-300">
+          {formatAdminHealthTime(plugin.health?.last_checked_at)}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      title: '操作',
+      align: 'right',
+      render: (plugin) => (
+        <div className="flex flex-nowrap items-center justify-end gap-2 whitespace-nowrap">
+          {renderPluginRowActions(plugin)}
+        </div>
+      ),
+    },
+  ], [
+    controller,
+    renderPluginRowActions,
+  ]);
 
   return (
     <>
@@ -191,30 +371,12 @@ export const PluginManagementView: React.FC = () => {
         )}
         filters={(
           <AdminFilterSurface>
-            <div className="grid gap-3 xl:grid-cols-[minmax(0,0.92fr),minmax(0,0.92fr),minmax(0,0.92fr),minmax(0,1.35fr)]">
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,0.92fr),minmax(0,0.92fr),minmax(0,1.35fr)]">
               <AdminStatusFilter
                 options={PLUGIN_STATUS_OPTIONS}
                 value={controller.statusFilter}
                 onChange={(v) => controller.setStatusFilter(v as typeof controller.statusFilter)}
                 ariaLabel="插件状态筛选"
-              />
-              <AdminSelectField
-                value={controller.categoryFilter}
-                onChange={controller.setCategoryFilter}
-                ariaLabel="插件分类筛选"
-                options={controller.availableCategories.map((item) => ({
-                  value: item,
-                  label: item === 'all' ? '全部分类' : item,
-                }))}
-              />
-              <AdminSelectField
-                value={controller.capabilityFilter}
-                onChange={controller.setCapabilityFilter}
-                ariaLabel="插件能力筛选"
-                options={controller.availableCapabilities.map((item) => ({
-                  value: item,
-                  label: item === 'all' ? '全部能力' : item,
-                }))}
               />
               <AdminTagMultiSelect
                 scope="plugin"
@@ -243,7 +405,7 @@ export const PluginManagementView: React.FC = () => {
               <AdminSearchInput
                 value={controller.searchKeyword}
                 onChange={controller.setSearchKeyword}
-                placeholder="搜索名称、描述、能力或标签"
+                placeholder="搜索名称、描述或标签"
               />
             </div>
           </AdminFilterSurface>
@@ -279,107 +441,31 @@ export const PluginManagementView: React.FC = () => {
         ) : undefined}
         content={(
           <div className="space-y-4">
-            <AdminContentCard padding="sm">
-              {controller.isCatalogLoading ? (
-                <div className="flex min-h-[280px] items-center justify-center">
-                  <Loader2 className="h-7 w-7 animate-spin text-cyan-500" />
-                </div>
-              ) : controller.pagedItems.length === 0 ? (
-                <AdminCardEmpty
-                  icon={<Layers className="h-12 w-12 text-slate-300 dark:text-slate-600" />}
-                  title="没有匹配的插件"
-                  description="调整筛选条件后再查看。"
+            <AdminDataTable
+              data={controller.pagedItems}
+              columns={columns}
+              rowKey={(plugin) => plugin.name}
+              loading={controller.isCatalogLoading}
+              emptyText="没有匹配的插件"
+              countLabel="个插件"
+              desktopVariant="management-grid"
+              desktopGridGapClassName="gap-4"
+              desktopGridTemplateColumns="44px minmax(260px,1.45fr) 76px minmax(150px,0.8fr) 132px 248px"
+              desktopGridMinWidth="980px"
+              getRowTestId={(plugin) => `plugin-market-row-${plugin.name}`}
+              renderMobileItem={(plugin) => (
+                <PluginMobileItem
+                  plugin={plugin}
+                  selected={controller.selectedPluginNames.has(plugin.name)}
+                  testingStatus={controller.testingStatus[plugin.name] || 'idle'}
+                  isOperationBusy={controller.isOperationBusy}
+                  onSelect={(checked) => controller.selectKey(plugin.name, checked)}
+                  onOpenDetail={() => controller.handleOpenDetail(plugin)}
+                  onTest={() => void controller.handleTestPlugin(plugin)}
+                  onToggleEnabled={() => void controller.handleTogglePluginEnabled(plugin)}
                 />
-              ) : (
-                <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-                  {controller.pagedItems.map((plugin) => {
-                    const status = resolvePluginStatus(plugin);
-                    return (
-                      <article
-                        key={plugin.name}
-                        data-testid={`plugin-market-card-${plugin.name}`}
-                        className="group rounded-[1.4rem] border border-slate-200/70 bg-white/75 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52] dark:hover:border-cyan-300/[0.24]"
-                      >
-                        <div className="flex h-full flex-col gap-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-start gap-3">
-                              <Checkbox
-                                checked={controller.selectedPluginNames.has(plugin.name)}
-                                onCheckedChange={(checked) => controller.selectKey(plugin.name, Boolean(checked))}
-                                onClick={(event) => event.stopPropagation()}
-                                aria-label={`选择插件 ${plugin.name}`}
-                                className="mt-1"
-                              />
-                              <div className="space-y-2">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{plugin.name}</h2>
-                                  <Badge className={pluginStatusBadgeClass(status)}>{pluginStatusText(status)}</Badge>
-                                </div>
-                                <p className="line-clamp-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                                  {plugin.description || '暂无描述'}
-                                </p>
-                              </div>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="adminIconAction"
-                              size="icon"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                controller.handleOpenDetail(plugin);
-                              }}
-                              aria-label={`查看插件 ${plugin.name} 详情`}
-                            >
-                              <ArrowUpRight className="h-4 w-4" />
-                            </Button>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2 text-xs">
-                            {plugin.category ? <Badge variant="secondary">{plugin.category}</Badge> : null}
-                            {(plugin.capabilities || []).slice(0, 3).map((capability) => (
-                              <Badge key={capability} variant="outline">{capability}</Badge>
-                            ))}
-                            {(plugin.tags || []).slice(0, 1).map((tag) => (
-                              <Badge key={tag} variant="outline">{tag}</Badge>
-                            ))}
-                          </div>
-
-                          <div className="grid gap-3 rounded-[1.1rem] border border-slate-200/70 bg-slate-50/80 p-3 text-sm dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.44]">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-slate-500 dark:text-slate-400">来源</span>
-                              <span className="font-medium text-slate-700 dark:text-slate-200">
-                                {plugin.resource?.source_label || plugin.source_type || '本地'}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-slate-500 dark:text-slate-400">健康</span>
-                              <span className="text-right font-medium text-slate-700 dark:text-slate-200">
-                                {plugin.health ? `${plugin.health.is_healthy ? '正常' : '异常'} · ${healthSourceText(plugin.health.check_source)}` : '未测试'}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-slate-500 dark:text-slate-400">最近检查</span>
-                              <span className="text-right text-slate-600 dark:text-slate-300">
-                                {formatAdminHealthTime(plugin.health?.last_checked_at)}
-                              </span>
-                            </div>
-                            {plugin.health?.last_error ? (
-                              <p className="line-clamp-2 rounded-xl border border-rose-200/60 bg-rose-50/70 px-3 py-2 text-xs text-rose-700 dark:border-rose-300/20 dark:bg-rose-400/10 dark:text-rose-200">
-                                {plugin.health.last_error}
-                              </p>
-                            ) : null}
-                          </div>
-
-                          <div className="mt-auto flex flex-wrap gap-2">
-                            {renderPluginCardActions(plugin)}
-                          </div>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
               )}
-            </AdminContentCard>
+            />
 
             {controller.filteredItems.length > 0 ? (
               <ApplePagination
@@ -402,7 +488,7 @@ export const PluginManagementView: React.FC = () => {
             testId="plugin-management-drawer"
             onClose={closeDrawer}
             emptyTitle="选择一个插件"
-            emptyDescription="点击左侧卡片查看插件详情。"
+            emptyDescription="点击表格行内的详情按钮查看插件详情。"
             footer={activePlugin ? (
               <div className="flex flex-wrap justify-end gap-2">
                 <AdminTestAction

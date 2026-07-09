@@ -471,8 +471,9 @@ export const PluginPerformanceDashboard: React.FC = () => {
                   />
                 )}
                 desktopVariant="management-grid"
-                desktopGridGapClassName="gap-2"
-                desktopGridTemplateColumns="minmax(130px,1fr) 86px 88px 94px 42px 104px 56px"
+                desktopGridGapClassName="gap-4"
+                desktopGridTemplateColumns="minmax(220px,1.5fr) 92px 104px 104px 64px 116px 64px"
+                desktopGridMinWidth="900px"
               />
             )}
           </AdminContentCard>

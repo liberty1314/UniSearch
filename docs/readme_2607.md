@@ -222,3 +222,15 @@
     - frontend/src/hooks/useChannelMetricsController.ts
     - frontend/src/hooks/usePluginMetricsController.ts
     - docs/readme_2607.md
+
+[2026-07-09 15:53] refactor(admin-ui): 统一插件管理与后台表格布局
+  Body: 将插件管理列表迁移到统一后台数据表格，移除分类和能力筛选，保留状态、标签和搜索筛选。同步调整用户表、插件和频道性能表列宽、行测试标识与相关测试，让后台列表布局更一致。
+  Files:
+    - frontend/src/components/admin/AdminDataTable.tsx
+    - frontend/src/components/admin/AppleUserTable.tsx
+    - frontend/src/components/admin/ChannelPerformancePanel.tsx
+    - frontend/src/components/admin/PluginManagementView.tsx
+    - frontend/src/components/admin/PluginPerformanceDashboard.tsx
+    - frontend/src/components/admin/__tests__/AppleUserTable.test.tsx
+    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
+    - docs/readme_2607.md
