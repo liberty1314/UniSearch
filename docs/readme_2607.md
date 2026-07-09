@@ -234,3 +234,18 @@
     - frontend/src/components/admin/__tests__/AppleUserTable.test.tsx
     - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
     - docs/readme_2607.md
+
+[2026-07-09 15:58] refactor(admin-ui): 统一后台筛选工具栏样式
+  Body: 新增后台筛选工具栏和字段容器，支持搜索、状态、下拉和标签选择的 toolbar 变体。将公告、频道、插件和性能监控页面筛选区改为统一紧凑布局，减少重复样式并保持筛选行为不变。
+  Files:
+    - frontend/src/components/admin/AdminSearchInput.tsx
+    - frontend/src/components/admin/AdminSelectField.tsx
+    - frontend/src/components/admin/AdminStatusFilter.tsx
+    - frontend/src/components/admin/AdminTagMultiSelect.tsx
+    - frontend/src/components/admin/AdminWorkspacePageFrame.tsx
+    - frontend/src/components/admin/AnnouncementManagement.tsx
+    - frontend/src/components/admin/ChannelManagementView.tsx
+    - frontend/src/components/admin/ChannelPerformancePanel.tsx
+    - frontend/src/components/admin/PluginManagementView.tsx
+    - frontend/src/components/admin/PluginPerformanceDashboard.tsx
+    - docs/readme_2607.md

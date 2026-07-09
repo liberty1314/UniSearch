@@ -11,6 +11,7 @@ interface AdminStatusFilterProps {
   value: string;
   onChange: (value: string) => void;
   ariaLabel?: string;
+  variant?: 'default' | 'toolbar';
 }
 
 /**
@@ -21,6 +22,7 @@ export function AdminStatusFilter({
   value,
   onChange,
   ariaLabel = '状态筛选',
+  variant = 'default',
 }: AdminStatusFilterProps) {
   const selectOptions: AdminSelectFieldOption[] = options.map((option) => ({
     value: option.value,
@@ -34,6 +36,7 @@ export function AdminStatusFilter({
       onChange={onChange}
       ariaLabel={ariaLabel}
       placeholder="请选择状态"
+      variant={variant}
     />
   );
 }

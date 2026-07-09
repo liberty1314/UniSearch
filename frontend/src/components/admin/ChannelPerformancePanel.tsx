@@ -20,7 +20,9 @@ import {
   AdminCardEmpty,
   AdminContentCard,
   AdminDetailDrawer,
+  AdminFilterField,
   AdminFilterSurface,
+  AdminFilterToolbar,
   AdminMetricCard,
   AdminMetricGrid,
   AdminSearchInput,
@@ -361,19 +363,25 @@ export const ChannelPerformancePanel: React.FC = () => {
       )}
       filters={(
         <AdminFilterSurface>
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,0.72fr),minmax(0,1fr)]">
-            <AdminStatusFilter
-              options={STATUS_OPTIONS}
-              value={controller.statusFilter}
-              onChange={(value) => controller.setStatusFilter(value as ChannelMetricStatusFilter)}
-              ariaLabel="频道观测状态筛选"
-            />
-            <AdminSearchInput
-              value={controller.searchKeyword}
-              onChange={controller.setSearchKeyword}
-              placeholder="搜索频道名称、标签或错误信息"
-            />
-          </div>
+          <AdminFilterToolbar className="lg:grid-cols-[minmax(12rem,0.7fr),minmax(18rem,1.3fr)] xl:grid-cols-[minmax(12rem,0.7fr),minmax(22rem,1.3fr)]">
+            <AdminFilterField label="状态">
+              <AdminStatusFilter
+                options={STATUS_OPTIONS}
+                value={controller.statusFilter}
+                onChange={(value) => controller.setStatusFilter(value as ChannelMetricStatusFilter)}
+                ariaLabel="频道观测状态筛选"
+                variant="toolbar"
+              />
+            </AdminFilterField>
+            <AdminFilterField label="搜索">
+              <AdminSearchInput
+                value={controller.searchKeyword}
+                onChange={controller.setSearchKeyword}
+                placeholder="搜索频道名称、标签或错误信息"
+                variant="toolbar"
+              />
+            </AdminFilterField>
+          </AdminFilterToolbar>
           {controller.errorMessage ? (
             <div className="mt-3 flex items-start gap-2 rounded-[1.1rem] border border-rose-200/70 bg-rose-50/80 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />

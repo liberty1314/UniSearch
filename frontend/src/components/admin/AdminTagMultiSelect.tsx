@@ -33,6 +33,7 @@ interface AdminTagMultiSelectProps {
   placeholder: string;
   triggerAriaLabel?: string;
   triggerTestId?: string;
+  triggerClassName?: string;
   panelTestId?: string;
   disabled?: boolean;
   loading?: boolean;
@@ -47,6 +48,7 @@ interface AdminTagMultiSelectProps {
   maxSelectedVisible?: number;
   searchPlaceholder?: string;
   emptyMessage?: string;
+  variant?: 'default' | 'toolbar';
   onChange: (nextValue: string[]) => void;
   onCreateTag?: (name: string) => Promise<AdminTagOption | null>;
   onUpdateTag?: (id: number, name: string) => Promise<AdminTagOption | null>;
@@ -62,6 +64,7 @@ export const AdminTagMultiSelect: React.FC<AdminTagMultiSelectProps> = ({
   placeholder,
   triggerAriaLabel,
   triggerTestId,
+  triggerClassName,
   panelTestId,
   disabled = false,
   loading = false,
@@ -76,6 +79,7 @@ export const AdminTagMultiSelect: React.FC<AdminTagMultiSelectProps> = ({
   maxSelectedVisible = 3,
   searchPlaceholder,
   emptyMessage,
+  variant = 'default',
   onChange,
   onCreateTag,
   onUpdateTag,
@@ -577,9 +581,13 @@ export const AdminTagMultiSelect: React.FC<AdminTagMultiSelectProps> = ({
         onClick={() => setOpen((current) => !current)}
         data-testid={triggerTestId || `${scope}-tag-selector-trigger`}
         className={cn(
-          ADMIN_DROPDOWN_TRIGGER_CLASSES,
-          'flex min-h-[44px] items-center justify-between gap-3 text-left',
-          disabled ? 'cursor-not-allowed opacity-60' : 'hover:border-slate-300 dark:hover:border-white/20'
+          variant === 'toolbar'
+            ? 'h-8 w-full rounded-none border-0 bg-transparent px-0 py-0 text-sm text-slate-800 shadow-none focus:outline-none focus:ring-0 focus:ring-offset-0 dark:bg-transparent dark:text-slate-100'
+            : ADMIN_DROPDOWN_TRIGGER_CLASSES,
+          'flex items-center justify-between gap-3 text-left',
+          variant === 'toolbar' ? 'min-h-8' : 'min-h-[44px]',
+          disabled ? 'cursor-not-allowed opacity-60' : variant === 'toolbar' ? 'hover:text-slate-950 dark:hover:text-white' : 'hover:border-slate-300 dark:hover:border-white/20',
+          triggerClassName
         )}
         aria-label={triggerAriaLabel || `${getScopeLabel(scope)}标签选择器`}
         style={triggerWidth > 0 ? { minWidth: triggerWidth } : undefined}

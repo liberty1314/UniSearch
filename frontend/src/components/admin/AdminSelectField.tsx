@@ -23,6 +23,7 @@ interface AdminSelectFieldProps {
   contentClassName?: string;
   itemClassName?: string;
   disabled?: boolean;
+  variant?: 'default' | 'toolbar';
 }
 
 /**
@@ -39,12 +40,18 @@ export function AdminSelectField({
   contentClassName,
   itemClassName,
   disabled = false,
+  variant = 'default',
 }: AdminSelectFieldProps) {
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger
         aria-label={ariaLabel}
-        className={cn(ADMIN_DROPDOWN_TRIGGER_CLASSES, triggerClassName)}
+        className={cn(
+          variant === 'toolbar'
+            ? 'h-8 rounded-none border-0 bg-transparent px-0 py-0 text-sm text-slate-800 shadow-none focus:ring-0 focus:ring-offset-0 dark:bg-transparent dark:text-slate-100 [&>svg]:ml-2'
+            : ADMIN_DROPDOWN_TRIGGER_CLASSES,
+          triggerClassName
+        )}
       >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

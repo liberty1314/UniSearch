@@ -112,9 +112,55 @@ export function AdminMetricCard({ label, value, hint }: AdminMetricItemProps) {
 
 export function AdminFilterSurface({ children }: { children: React.ReactNode }) {
   return (
-    <section className={cn(ADMIN_PANEL_SURFACE_CLASSES, ADMIN_DENSITY.cardPaddingMd)}>
+    <section className={cn(ADMIN_PANEL_SURFACE_CLASSES, 'p-3 sm:p-3.5')}>
       {children}
     </section>
+  );
+}
+
+interface AdminFilterToolbarProps {
+  children: React.ReactNode;
+  actions?: React.ReactNode;
+  className?: string;
+}
+
+export function AdminFilterToolbar({
+  children,
+  actions,
+  className,
+}: AdminFilterToolbarProps) {
+  return (
+    <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+      <div className={cn('grid flex-1 gap-2 sm:grid-cols-2 xl:grid-cols-3', className)}>
+        {children}
+      </div>
+      {actions ? <div className="flex shrink-0 items-center justify-end gap-2">{actions}</div> : null}
+    </div>
+  );
+}
+
+interface AdminFilterFieldProps {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function AdminFilterField({
+  label,
+  children,
+  className,
+}: AdminFilterFieldProps) {
+  return (
+    <div
+      className={cn(
+        'min-w-0 rounded-[1.05rem] border border-slate-200/60 bg-white/55 px-3 py-2 shadow-[0_8px_22px_rgba(15,23,42,0.035)] backdrop-blur-md transition-colors dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.42]',
+        'focus-within:border-cyan-300/80 focus-within:bg-white/80 dark:focus-within:border-cyan-300/[0.34] dark:focus-within:bg-slate-950/[0.62]',
+        className
+      )}
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">{label}</p>
+      <div className="mt-1 min-w-0">{children}</div>
+    </div>
   );
 }
 

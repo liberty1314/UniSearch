@@ -36,6 +36,11 @@ import {
 import {
   AdminDetailDrawer,
   AdminContentCard,
+  AdminFilterField,
+  AdminFilterSurface,
+  AdminFilterToolbar,
+  AdminSearchInput,
+  AdminSelectField,
 } from './AdminWorkspacePageFrame';
 
 const getPriorityLabel = (priority: AnnouncementPriority): string => {
@@ -175,74 +180,71 @@ export const AnnouncementManagement: React.FC = () => {
           </Button>
         </div>
 
-        <div className="mb-5 grid gap-3 rounded-[1.25rem] border-[0.5px] border-slate-200/50 bg-slate-50/60 p-4 dark:border-cyan-300/[0.12] dark:bg-slate-950/[0.40] md:grid-cols-4">
-          <Input
-            value={filters.keyword}
-            onChange={(event) => updateFilters({ keyword: event.target.value })}
-            placeholder="按标题搜索公告"
-            className="bg-white/80 dark:bg-slate-950/40"
-          />
-          <div className="space-y-2">
-            <Label htmlFor="announcement-priority-filter">优先级</Label>
-            <Select
-              value={filters.priority}
-              onValueChange={(value: AnnouncementPriority | 'all') => updateFilters({ priority: value })}
+        <div className="mb-5">
+          <AdminFilterSurface>
+            <AdminFilterToolbar
+              className="xl:grid-cols-[minmax(18rem,1.35fr),minmax(10rem,0.8fr),minmax(10rem,0.8fr),minmax(12rem,0.95fr)]"
+              actions={(
+                <Button
+                  variant="outline"
+                  onClick={resetFilters}
+                  className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'h-11 border-slate-200/50 px-4 text-slate-700 dark:border-cyan-300/[0.14] dark:text-slate-200')}
+                >
+                  重置筛选
+                </Button>
+              )}
             >
-              <SelectTrigger id="announcement-priority-filter" aria-label="优先级筛选">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部优先级</SelectItem>
-                <SelectItem value="high">高优先级</SelectItem>
-                <SelectItem value="medium">中优先级</SelectItem>
-                <SelectItem value="low">低优先级</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="announcement-enabled-filter">启用状态</Label>
-            <Select
-              value={filters.enabledStatus}
-              onValueChange={(value: 'all' | 'enabled' | 'disabled') => updateFilters({ enabledStatus: value })}
-            >
-              <SelectTrigger id="announcement-enabled-filter" aria-label="启用状态">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部状态</SelectItem>
-                <SelectItem value="enabled">仅已启用</SelectItem>
-                <SelectItem value="disabled">仅已禁用</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="announcement-lifecycle-filter">生命周期状态</Label>
-            <Select
-              value={filters.lifecycleStatus}
-              onValueChange={(value: 'all' | 'scheduled' | 'active' | 'expired') =>
-                updateFilters({ lifecycleStatus: value })
-              }
-            >
-              <SelectTrigger id="announcement-lifecycle-filter" aria-label="生命周期状态">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部生命周期</SelectItem>
-                <SelectItem value="active">进行中</SelectItem>
-                <SelectItem value="scheduled">未生效</SelectItem>
-                <SelectItem value="expired">已过期</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="md:col-span-4 flex justify-end">
-            <Button
-              variant="outline"
-              onClick={resetFilters}
-              className={cn(ADMIN_HOVERABLE_BUTTON_CLASSES, 'border-slate-200/50 text-slate-700 dark:border-cyan-300/[0.14] dark:text-slate-200')}
-            >
-              重置筛选
-            </Button>
-          </div>
+              <AdminFilterField label="搜索">
+                <AdminSearchInput
+                  value={filters.keyword}
+                  onChange={(value) => updateFilters({ keyword: value })}
+                  placeholder="按标题搜索公告"
+                  variant="toolbar"
+                />
+              </AdminFilterField>
+              <AdminFilterField label="优先级">
+                <AdminSelectField
+                  value={filters.priority}
+                  onChange={(value) => updateFilters({ priority: value as AnnouncementPriority | 'all' })}
+                  ariaLabel="优先级筛选"
+                  variant="toolbar"
+                  options={[
+                    { value: 'all', label: '全部优先级' },
+                    { value: 'high', label: '高优先级' },
+                    { value: 'medium', label: '中优先级' },
+                    { value: 'low', label: '低优先级' },
+                  ]}
+                />
+              </AdminFilterField>
+              <AdminFilterField label="启用状态">
+                <AdminSelectField
+                  value={filters.enabledStatus}
+                  onChange={(value) => updateFilters({ enabledStatus: value as 'all' | 'enabled' | 'disabled' })}
+                  ariaLabel="启用状态"
+                  variant="toolbar"
+                  options={[
+                    { value: 'all', label: '全部状态' },
+                    { value: 'enabled', label: '仅已启用' },
+                    { value: 'disabled', label: '仅已禁用' },
+                  ]}
+                />
+              </AdminFilterField>
+              <AdminFilterField label="生命周期状态">
+                <AdminSelectField
+                  value={filters.lifecycleStatus}
+                  onChange={(value) => updateFilters({ lifecycleStatus: value as 'all' | 'scheduled' | 'active' | 'expired' })}
+                  ariaLabel="生命周期状态"
+                  variant="toolbar"
+                  options={[
+                    { value: 'all', label: '全部生命周期' },
+                    { value: 'active', label: '进行中' },
+                    { value: 'scheduled', label: '未生效' },
+                    { value: 'expired', label: '已过期' },
+                  ]}
+                />
+              </AdminFilterField>
+            </AdminFilterToolbar>
+          </AdminFilterSurface>
         </div>
 
         {isListLoading ? (

@@ -17,7 +17,9 @@ import { AdminStatusToggleAction } from './AdminStatusToggleAction';
 import { AdminTestAction } from './AdminTestAction';
 import {
   AdminDetailDrawer,
+  AdminFilterField,
   AdminFilterSurface,
+  AdminFilterToolbar,
   AdminMetricCard,
   AdminMetricGrid,
   AdminSearchInput,
@@ -371,43 +373,52 @@ export const PluginManagementView: React.FC = () => {
         )}
         filters={(
           <AdminFilterSurface>
-            <div className="grid gap-3 xl:grid-cols-[minmax(0,0.92fr),minmax(0,0.92fr),minmax(0,1.35fr)]">
-              <AdminStatusFilter
-                options={PLUGIN_STATUS_OPTIONS}
-                value={controller.statusFilter}
-                onChange={(v) => controller.setStatusFilter(v as typeof controller.statusFilter)}
-                ariaLabel="插件状态筛选"
-              />
-              <AdminTagMultiSelect
-                scope="plugin"
-                value={controller.selectedTagFilters}
-                options={controller.tagOptions}
-                loading={controller.isTagOptionsLoading}
-                creating={controller.isCreatingTag}
-                updatingTagId={controller.updatingTagId}
-                deletingTagId={controller.deletingTagId}
-                onChange={controller.setSelectedTagFilters}
-                onCreateTag={controller.handleCreateTag}
-                onUpdateTag={controller.handleUpdateTag}
-                onDeleteTag={controller.handleDeleteTag}
-                allowCreate
-                allowManageOptions
-                showSelectedSummary={false}
-                autoSelectCreatedTag={false}
-                maxSelectedVisible={2}
-                searchPlaceholder="搜索插件标签筛选"
-                emptyMessage="暂无插件标签词库"
-                placeholder="全部标签"
-                triggerAriaLabel="插件标签筛选"
-                triggerTestId="plugin-tag-filter-trigger"
-                panelTestId="plugin-tag-filter-panel"
-              />
-              <AdminSearchInput
-                value={controller.searchKeyword}
-                onChange={controller.setSearchKeyword}
-                placeholder="搜索名称、描述或标签"
-              />
-            </div>
+            <AdminFilterToolbar className="xl:grid-cols-[minmax(12rem,0.75fr),minmax(13rem,0.85fr),minmax(18rem,1.4fr)]">
+              <AdminFilterField label="状态">
+                <AdminStatusFilter
+                  options={PLUGIN_STATUS_OPTIONS}
+                  value={controller.statusFilter}
+                  onChange={(v) => controller.setStatusFilter(v as typeof controller.statusFilter)}
+                  ariaLabel="插件状态筛选"
+                  variant="toolbar"
+                />
+              </AdminFilterField>
+              <AdminFilterField label="标签">
+                <AdminTagMultiSelect
+                  scope="plugin"
+                  value={controller.selectedTagFilters}
+                  options={controller.tagOptions}
+                  loading={controller.isTagOptionsLoading}
+                  creating={controller.isCreatingTag}
+                  updatingTagId={controller.updatingTagId}
+                  deletingTagId={controller.deletingTagId}
+                  onChange={controller.setSelectedTagFilters}
+                  onCreateTag={controller.handleCreateTag}
+                  onUpdateTag={controller.handleUpdateTag}
+                  onDeleteTag={controller.handleDeleteTag}
+                  allowCreate
+                  allowManageOptions
+                  showSelectedSummary={false}
+                  autoSelectCreatedTag={false}
+                  maxSelectedVisible={2}
+                  searchPlaceholder="搜索插件标签筛选"
+                  emptyMessage="暂无插件标签词库"
+                  placeholder="全部标签"
+                  triggerAriaLabel="插件标签筛选"
+                  triggerTestId="plugin-tag-filter-trigger"
+                  panelTestId="plugin-tag-filter-panel"
+                  variant="toolbar"
+                />
+              </AdminFilterField>
+              <AdminFilterField label="搜索">
+                <AdminSearchInput
+                  value={controller.searchKeyword}
+                  onChange={controller.setSearchKeyword}
+                  placeholder="搜索名称、描述或标签"
+                  variant="toolbar"
+                />
+              </AdminFilterField>
+            </AdminFilterToolbar>
           </AdminFilterSurface>
         )}
         selectionBar={controller.selectedCount > 0 ? (
