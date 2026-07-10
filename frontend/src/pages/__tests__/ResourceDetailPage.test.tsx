@@ -164,7 +164,7 @@ describe("ResourceDetailPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("详情内容")).toBeInTheDocument();
     expect((await screen.findAllByRole("button", { name: "打开主资源" })).length).toBe(1);
-    expect(screen.getAllByRole("button", { name: "复制主链接" }).length).toBe(1);
+    expect(screen.queryByRole("button", { name: "复制主链接" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "查看原始详情" })).not.toBeInTheDocument();
     expect(screen.queryByText("PanSearch")).not.toBeInTheDocument();
     expect(screen.queryByText("Telegram 频道")).not.toBeInTheDocument();
@@ -316,7 +316,7 @@ describe("ResourceDetailPage", () => {
     expect(screen.getByTestId("location-probe")).toHaveTextContent('"scrollY":640');
   });
 
-  it("copies the primary link and link passwords from the detail page", async () => {
+  it("does not expose primary link copying from the detail page", async () => {
     renderDetailPage({
       pathname: "/resource/resource-1",
       state: {
@@ -325,11 +325,10 @@ describe("ResourceDetailPage", () => {
       },
     });
 
-    const copyPrimaryButtons = await screen.findAllByRole("button", { name: "复制主链接" });
-    expect(copyPrimaryButtons).toHaveLength(1);
-    fireEvent.click(copyPrimaryButtons[0]);
+    await screen.findByTestId("resource-detail-page");
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("https://example.com/resource");
+    expect(screen.queryByRole("button", { name: "复制主链接" })).not.toBeInTheDocument();
+    expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
   });
 
   it("renders summary and links in a single content column", async () => {
@@ -426,7 +425,6 @@ describe("ResourceDetailPage", () => {
 
     const actionPanel = await screen.findByTestId("resource-detail-action-panel");
     const openPrimaryButton = screen.getByRole("button", { name: "打开主资源" });
-    const copyPrimaryButton = screen.getByRole("button", { name: "复制主链接" });
     const actionHeading = screen.getByRole("heading", { level: 2, name: "资源操作" });
     const summaryHeading = screen.getByRole("heading", { level: 2, name: "资源摘要" });
 
@@ -434,14 +432,13 @@ describe("ResourceDetailPage", () => {
     expect(screen.queryByText("跟随显示")).not.toBeInTheDocument();
     expect(screen.getByText("打开外部资源前，请确认访问方式和提取码状态。")).toBeInTheDocument();
     expect(openPrimaryButton.className).toContain("resource-detail-button-primary");
-    expect(copyPrimaryButton.className).toContain("resource-detail-button-secondary");
     expect(actionHeading.className).toContain("resource-detail-section-title");
     expect(summaryHeading.className).toContain("resource-detail-section-title");
     expect(screen.queryByTestId("resource-detail-gallery")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 2, name: "相关图片" })).not.toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "你的名字 4K 相关图片 1" })).not.toBeInTheDocument();
     expect(openPrimaryButton).toBeInTheDocument();
-    expect(copyPrimaryButton).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "复制主链接" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "查看原始详情" })).not.toBeInTheDocument();
   });
 
@@ -629,6 +626,7 @@ describe("ResourceDetailPage", () => {
 
     const openPrimaryButtons = await screen.findAllByRole("button", { name: "扫码转存" });
     expect(openPrimaryButtons).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "复制主链接" })).not.toBeInTheDocument();
     expect(screen.getByText("需手机扫码")).toBeInTheDocument();
     fireEvent.click(openPrimaryButtons[0]);
 

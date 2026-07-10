@@ -298,3 +298,10 @@
     - frontend/src/lib/__tests__/api.test.ts
     - frontend/src/lib/api.ts
     - docs/readme_2607.md
+
+[2026-07-10 21:47] fix(resource-detail): 移除详情页主链接复制入口
+  Body: 移除资源详情页操作面板中的主链接复制按钮，只保留主资源打开和提取码复制能力。同步更新资源详情页测试，确保扫码转存等场景不再暴露主链接复制入口。
+  Files:
+    - frontend/src/components/resource-detail/ResourceDetailActionPanel.tsx
+    - frontend/src/pages/__tests__/ResourceDetailPage.test.tsx
+    - docs/readme_2607.md

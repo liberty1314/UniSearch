@@ -74,16 +74,6 @@ const ResourceDetailActionPanel: React.FC<ResourceDetailActionPanelProps> = ({
               <ExternalLink className="mr-2 h-4 w-4" />
               {primaryButtonLabel}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onCopyText(primaryTarget?.url || "", "主链接已复制")}
-              disabled={!primaryTarget?.url}
-              className="resource-detail-button-secondary rounded-xl"
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              复制主链接
-            </Button>
             {primaryTarget?.password ? (
               <Button
                 type="button"
