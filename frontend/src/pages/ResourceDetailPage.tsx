@@ -140,23 +140,6 @@ const ResourceDetailPage: React.FC = () => {
     return resource.links[0]?.type || resource.target_type || "unknown";
   }, [resource]);
 
-  const detailTarget = useMemo(() => {
-    const detailUrl = resource?.detail.url?.trim();
-    if (!detailUrl) {
-      return null;
-    }
-
-    return {
-      url: detailUrl,
-      password: "",
-      cloudType: detailUrl.toLowerCase().startsWith("magnet:")
-        ? "magnet"
-        : resource?.target_type || resource?.links[0]?.type || "detail",
-      accessMode: "direct_open" as const,
-      resourceId: resource?.id,
-    };
-  }, [resource]);
-
   const seoDescription = useMemo(() => {
     const description = resource?.description?.trim();
     if (description) {
@@ -381,7 +364,6 @@ const ResourceDetailPage: React.FC = () => {
                   <div className="max-w-[70ch] space-y-4">
                     <h2
                       className="resource-detail-section-title sm:text-[1.85rem]"
-                      style={{ fontFamily: '"Baskerville", "Times New Roman", "Songti SC", "STSong", serif' }}
                     >
                       资源摘要
                     </h2>
@@ -409,7 +391,6 @@ const ResourceDetailPage: React.FC = () => {
 
             <ResourceDetailActionPanel
               primaryTarget={primaryOpenTarget?.target || null}
-              detailTarget={detailTarget}
               onOpenTarget={handlePrimaryOpenTarget}
               onCopyText={(value, successMessage) => {
                 void handleCopyText(value, successMessage);

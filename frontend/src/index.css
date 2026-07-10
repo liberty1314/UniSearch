@@ -1146,17 +1146,15 @@ body {
 }
 
 .resource-detail-hero-meta-tray {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgb(248 250 252);
+  border: 1px solid rgb(226 232 240);
 }
 
 .resource-detail-section-title {
   font-size: 1.3rem;
   font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
+  line-height: 1.25;
+  letter-spacing: 0;
   color: rgb(15 23 42);
 }
 
@@ -1165,27 +1163,25 @@ body {
 }
 
 .resource-detail-hero-pill-primary {
-  border-color: rgba(103, 232, 249, 0.26);
-  background: linear-gradient(180deg, rgba(103, 232, 249, 0.16), rgba(34, 211, 238, 0.1));
-  color: rgb(224 247 255);
+  border-color: rgb(186 230 253);
+  background: rgb(240 249 255);
+  color: rgb(3 105 161);
 }
 
 .resource-detail-hero-pill-primary:hover {
-  background: linear-gradient(180deg, rgba(103, 232, 249, 0.2), rgba(34, 211, 238, 0.12));
+  background: rgb(224 242 254);
 }
 
 .resource-detail-hero-pill-secondary {
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.07);
-  color: rgb(255 255 255);
+  border-color: rgb(226 232 240);
+  background: rgb(255 255 255);
+  color: rgb(51 65 85);
 }
 
 .resource-detail-hero-tag {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgb(226 232 240);
+  background: rgb(241 245 249);
+  color: rgb(71 85 105);
 }
 
 .resource-detail-backbar {
@@ -1203,35 +1199,35 @@ body {
 }
 
 .resource-detail-button-primary {
-  min-height: 42px;
-  border: 1px solid rgba(34, 211, 238, 0.24);
-  background: linear-gradient(180deg, rgba(13, 148, 136, 0.92), rgba(8, 145, 178, 0.9));
-  box-shadow: 0 10px 24px rgba(8, 145, 178, 0.18);
-  letter-spacing: 0.01em;
+  min-height: 44px;
+  border: 1px solid rgb(0 122 255);
+  background: rgb(0 122 255);
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.20);
+  letter-spacing: 0;
 }
 
 .resource-detail-button-primary:hover {
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.96), rgba(14, 116, 144, 0.94));
-  box-shadow: 0 12px 26px rgba(8, 145, 178, 0.22);
+  background: rgb(0 86 204);
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.22);
 }
 
 .dark .resource-detail-button-primary {
-  border-color: rgba(103, 232, 249, 0.16);
-  background: linear-gradient(180deg, rgba(8, 145, 178, 0.9), rgba(14, 116, 144, 0.88));
-  box-shadow: 0 10px 24px rgba(6, 182, 212, 0.16);
+  border-color: rgb(96 165 250);
+  background: rgb(59 130 246);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.20);
 }
 
 .resource-detail-button-secondary {
-  min-height: 42px;
-  border: 1px solid rgba(226, 232, 240, 0.72);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0.46));
+  min-height: 44px;
+  border: 1px solid rgb(226 232 240);
+  background: rgb(255 255 255);
   color: rgb(51 65 85);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  letter-spacing: 0.01em;
+  box-shadow: none;
+  letter-spacing: 0;
 }
 
 .resource-detail-button-secondary:hover {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.58));
+  background: rgb(248 250 252);
   color: rgb(15 23 42);
 }
 
@@ -1259,9 +1255,9 @@ body {
   right: 4%;
   height: 44px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0));
-  filter: blur(22px);
-  opacity: 0.9;
+  background: transparent;
+  filter: none;
+  opacity: 0;
   pointer-events: none;
 }
 
@@ -1287,11 +1283,9 @@ body {
 }
 
 .resource-detail-summary-panel {
-  background: rgba(255, 255, 255, 0.76);
-  border: 1px solid rgba(226, 232, 240, 0.68);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.045);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: rgb(255 255 255);
+  border: 1px solid rgb(226 232 240);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
 .dark .resource-detail-summary-panel {
@@ -1309,11 +1303,9 @@ body {
 }
 
 .resource-detail-action-panel {
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(226, 232, 240, 0.68);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: rgb(255 255 255);
+  border: 1px solid rgb(226 232 240);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 
 .dark .resource-detail-action-panel {

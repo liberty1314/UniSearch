@@ -272,3 +272,16 @@
     - frontend/src/hooks/usePluginMetricsController.ts
     - frontend/src/types/pluginMetrics.ts
     - docs/readme_2607.md
+
+[2026-07-10 20:30] feat(resource-detail): 新增资源详情页柔和界面
+  Body: 将资源详情页从深色玻璃风格调整为柔和浅色卡片布局，简化英雄区、操作面板和空状态样式。同步补充改版计划与开发记录文档，并更新资源详情页测试。
+  Files:
+    - docs/resource-detail-page-soft-ui-redesign-development-plan.md
+    - docs/resource-detail-page-soft-ui-redesign-plan.md
+    - frontend/src/components/resource-detail/ResourceDetailActionPanel.tsx
+    - frontend/src/components/resource-detail/ResourceDetailEmptyState.tsx
+    - frontend/src/components/resource-detail/ResourceDetailHero.tsx
+    - frontend/src/index.css
+    - frontend/src/pages/ResourceDetailPage.tsx
+    - frontend/src/pages/__tests__/ResourceDetailPage.test.tsx
+    - docs/readme_2607.md

@@ -1,19 +1,17 @@
 import React from "react";
-import { Copy, ExternalLink, Link2 } from "lucide-react";
+import { Copy, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ResourceOpenTarget } from "@/utils/resourceDisplay";
 import { isScanTransferTarget, resolveDirectScanTransferUrl } from "@/utils/resourceDisplay";
 
 interface ResourceDetailActionPanelProps {
   primaryTarget: ResourceOpenTarget | null;
-  detailTarget: ResourceOpenTarget | null;
   onOpenTarget: (target: ResourceOpenTarget | null) => void;
   onCopyText: (value: string, successMessage: string) => void;
 }
 
 const ResourceDetailActionPanel: React.FC<ResourceDetailActionPanelProps> = ({
   primaryTarget,
-  detailTarget,
   onOpenTarget,
   onCopyText,
 }) => {
@@ -39,23 +37,18 @@ const ResourceDetailActionPanel: React.FC<ResourceDetailActionPanelProps> = ({
       <div className="xl:sticky xl:top-24">
         <div
           data-testid="resource-detail-action-panel"
-          className="resource-detail-action-panel overflow-hidden rounded-[1.55rem] p-4 sm:p-5"
+          className="resource-detail-action-panel overflow-hidden rounded-2xl p-4 sm:p-5"
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2">
             <div>
-              <h2
-                className="resource-detail-section-title"
-                style={{ fontFamily: '"Baskerville", "Times New Roman", "Songti SC", "STSong", serif' }}
-              >
-                资源操作台
-              </h2>
+              <h2 className="resource-detail-section-title">资源操作</h2>
             </div>
-            <div className="rounded-full border border-slate-200/55 bg-white/45 px-2.5 py-1 text-[10px] font-semibold tracking-[0.08em] text-slate-400 dark:border-white/[0.07] dark:bg-white/[0.025] dark:text-slate-500">
-              跟随显示
-            </div>
+            <p className="text-sm leading-6 text-slate-500 dark:text-slate-300">
+              打开外部资源前，请确认访问方式和提取码状态。
+            </p>
           </div>
 
-          <div className="mt-3.5 rounded-[1.2rem] border border-slate-200/55 bg-white/46 px-4 py-3.5 dark:border-white/[0.08] dark:bg-white/[0.025]">
+          <div className="mt-3.5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 dark:border-white/10 dark:bg-white/[0.04]">
             <div className="flex items-center justify-between gap-3 text-sm">
               <span className="text-slate-500 dark:text-slate-400">主链接状态</span>
               <span className="font-medium text-slate-900 dark:text-slate-100">
@@ -76,7 +69,7 @@ const ResourceDetailActionPanel: React.FC<ResourceDetailActionPanelProps> = ({
               type="button"
               onClick={() => onOpenTarget(primaryTarget)}
               disabled={!primaryTarget}
-              className="resource-detail-button-primary rounded-full"
+              className="resource-detail-button-primary rounded-xl"
             >
               <ExternalLink className="mr-2 h-4 w-4" />
               {primaryButtonLabel}
@@ -86,7 +79,7 @@ const ResourceDetailActionPanel: React.FC<ResourceDetailActionPanelProps> = ({
               variant="outline"
               onClick={() => onCopyText(primaryTarget?.url || "", "主链接已复制")}
               disabled={!primaryTarget?.url}
-              className="resource-detail-button-secondary rounded-full"
+              className="resource-detail-button-secondary rounded-xl"
             >
               <Copy className="mr-2 h-4 w-4" />
               复制主链接
@@ -96,21 +89,10 @@ const ResourceDetailActionPanel: React.FC<ResourceDetailActionPanelProps> = ({
                 type="button"
                 variant="outline"
                 onClick={() => onCopyText(primaryTarget.password, "提取码已复制")}
-                className="resource-detail-button-secondary rounded-full"
+                className="resource-detail-button-secondary rounded-xl"
               >
                 <Copy className="mr-2 h-4 w-4" />
                 复制提取码
-              </Button>
-            ) : null}
-            {detailTarget ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenTarget(detailTarget)}
-                className="resource-detail-button-secondary rounded-full"
-              >
-                <Link2 className="mr-2 h-4 w-4" />
-                查看原始详情
               </Button>
             ) : null}
           </div>

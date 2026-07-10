@@ -165,7 +165,7 @@ describe("ResourceDetailPage", () => {
     expect(screen.getByText("详情内容")).toBeInTheDocument();
     expect((await screen.findAllByRole("button", { name: "打开主资源" })).length).toBe(1);
     expect(screen.getAllByRole("button", { name: "复制主链接" }).length).toBe(1);
-    expect(screen.getByRole("button", { name: "查看原始详情" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "查看原始详情" })).not.toBeInTheDocument();
     expect(screen.queryByText("PanSearch")).not.toBeInTheDocument();
     expect(screen.queryByText("Telegram 频道")).not.toBeInTheDocument();
     expect(screen.queryByText("插件")).not.toBeInTheDocument();
@@ -373,6 +373,9 @@ describe("ResourceDetailPage", () => {
     expect(heroDecisionCard).toHaveTextContent("可直接打开");
     expect(heroDecisionCard).toHaveTextContent("资源体积");
     expect(heroDecisionCard).toHaveTextContent("2.15 GiB");
+    expect(heroDecisionCard).toHaveTextContent("发布时间");
+    expect(heroDecisionCard.className).toContain("bg-slate-50");
+    expect(heroDecisionCard.className).not.toContain("backdrop-blur");
   });
 
   it("shows a stronger empty-image fallback inside the hero visual card", async () => {
@@ -391,7 +394,7 @@ describe("ResourceDetailPage", () => {
     expect(screen.getByText("可先查看摘要、链接数量与资源体积，再决定是否打开。")).toBeInTheDocument();
   });
 
-  it("uses a poster-friendly image container in the hero section", async () => {
+  it("uses a lightweight auxiliary image container in the hero section", async () => {
     renderDetailPage({
       pathname: "/resource/resource-1",
       state: {
@@ -404,11 +407,12 @@ describe("ResourceDetailPage", () => {
     const heroImageCard = screen.getByTestId("resource-detail-hero-image-card");
     expect(heroImage.className).toContain("object-contain");
     expect(heroImage.className).not.toContain("object-cover");
-    expect(heroImageCard.className).not.toContain("border");
-    expect(heroImageCard.className).toContain("rounded-[2.25rem]");
-    expect(heroImageCard.className).toContain("shadow-[0_10px_28px_rgba(15,23,42,0.2)]");
-    expect(heroImage.className).toContain("rounded-[2rem]");
-    expect(heroImage.className).toContain("shadow-[0_8px_24px_rgba(15,23,42,0.18)]");
+    expect(heroImageCard.className).toContain("border");
+    expect(heroImageCard.className).toContain("rounded-2xl");
+    expect(heroImageCard.className).not.toContain("rounded-[2.25rem]");
+    expect(heroImageCard.className).not.toContain("blur");
+    expect(heroImage.className).toContain("rounded-xl");
+    expect(heroImage.className).not.toContain("rounded-[2rem]");
   });
 
   it("keeps the action panel while hiding the related image gallery", async () => {
@@ -423,11 +427,12 @@ describe("ResourceDetailPage", () => {
     const actionPanel = await screen.findByTestId("resource-detail-action-panel");
     const openPrimaryButton = screen.getByRole("button", { name: "打开主资源" });
     const copyPrimaryButton = screen.getByRole("button", { name: "复制主链接" });
-    const actionHeading = screen.getByRole("heading", { level: 2, name: "资源操作台" });
+    const actionHeading = screen.getByRole("heading", { level: 2, name: "资源操作" });
     const summaryHeading = screen.getByRole("heading", { level: 2, name: "资源摘要" });
 
     expect(actionPanel.className).toContain("resource-detail-action-panel");
-    expect(screen.getByText("跟随显示")).toBeInTheDocument();
+    expect(screen.queryByText("跟随显示")).not.toBeInTheDocument();
+    expect(screen.getByText("打开外部资源前，请确认访问方式和提取码状态。")).toBeInTheDocument();
     expect(openPrimaryButton.className).toContain("resource-detail-button-primary");
     expect(copyPrimaryButton.className).toContain("resource-detail-button-secondary");
     expect(actionHeading.className).toContain("resource-detail-section-title");
@@ -437,7 +442,7 @@ describe("ResourceDetailPage", () => {
     expect(screen.queryByRole("img", { name: "你的名字 4K 相关图片 1" })).not.toBeInTheDocument();
     expect(openPrimaryButton).toBeInTheDocument();
     expect(copyPrimaryButton).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "查看原始详情" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "查看原始详情" })).not.toBeInTheDocument();
   });
 
   it("does not render the related image gallery even when multiple images exist", async () => {
@@ -466,7 +471,7 @@ describe("ResourceDetailPage", () => {
     expect(screen.getByRole("img", { name: "你的名字 4K 预览图" })).toBeInTheDocument();
   });
 
-  it("uses a balanced left-side hero layout on desktop", async () => {
+  it("uses a restrained light hero summary layout on desktop", async () => {
     renderDetailPage({
       pathname: "/resource/resource-1",
       state: {
@@ -480,17 +485,19 @@ describe("ResourceDetailPage", () => {
     const heroContent = screen.getByTestId("resource-detail-hero-content");
     const heroMeta = screen.getByTestId("resource-detail-hero-meta");
     const heroTitle = screen.getByRole("heading", { level: 1, name: "你的名字 4K" });
+    const heroSection = heroTitle.closest("section");
 
-    expect(heroContent.className).toContain("xl:flex");
-    expect(heroContent.className).toContain("xl:flex-col");
-    expect(heroContent.className).toContain("xl:justify-between");
-    expect(heroContent.className).toContain("xl:min-h-full");
+    expect(heroSection?.className).toContain("resource-detail-hero-panel");
+    expect(heroSection?.className).toContain("rounded-[20px]");
+    expect(heroSection?.className).not.toContain("bg-slate-950");
+    expect(heroContent.className).toContain("space-y-5");
     expect(heroMeta.className).toContain("resource-detail-hero-meta-tray");
-    expect(heroMeta.className).toContain("rounded-[1.75rem]");
+    expect(heroMeta.className).toContain("rounded-2xl");
     expect(screen.queryByTestId("resource-detail-hero-divider")).not.toBeInTheDocument();
-    expect(heroTitle.className).toContain("xl:text-[4.25rem]");
-    expect(heroTitle.className).toContain("xl:leading-[0.98]");
-    expect(heroTitle.className).toContain("max-w-[14ch]");
+    expect(heroTitle.className).toContain("text-3xl");
+    expect(heroTitle.className).toContain("tracking-normal");
+    expect(heroTitle.className).toContain("max-w-[64ch]");
+    expect(heroTitle).not.toHaveStyle({ fontFamily: '"Baskerville", "Times New Roman", "Songti SC", "STSong", serif' });
     expect(heroMeta).toHaveTextContent("夸克网盘");
     expect(heroMeta).toHaveTextContent("share");
     expect(heroMeta).toHaveTextContent("2.15 GiB");

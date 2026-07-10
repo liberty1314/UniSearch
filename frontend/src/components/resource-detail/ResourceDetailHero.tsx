@@ -27,38 +27,22 @@ const ResourceDetailHero: React.FC<ResourceDetailHeroProps> = ({
   const primaryCloud = getCloudTypeInfo(primaryCloudType);
 
   return (
-    <section className="relative overflow-hidden rounded-[2.4rem] border border-white/60 bg-slate-950 text-white shadow-[0_30px_90px_rgba(15,23,42,0.16)]">
-      {posterImage ? (
-        <>
-          <div
-            className="absolute inset-0 bg-cover bg-center opacity-30"
-            style={{ backgroundImage: `url(${posterImage})` }}
-          />
-          <div
-            className="absolute inset-0 scale-110 blur-3xl"
-            style={{ backgroundImage: `url(${posterImage})`, backgroundSize: "cover", backgroundPosition: "center" }}
-          />
-        </>
-      ) : null}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.24),transparent_28%),radial-gradient(circle_at_80%_20%,rgba(59,130,246,0.2),transparent_26%),linear-gradient(140deg,rgba(2,6,23,0.92),rgba(15,23,42,0.78)_45%,rgba(8,47,73,0.84))]" />
-      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-slate-950 via-slate-950/72 to-transparent" />
-
-      <div className="relative z-10 grid gap-8 px-6 py-6 sm:px-8 sm:py-8 xl:grid-cols-[minmax(0,1fr),380px] xl:gap-10 2xl:grid-cols-[minmax(0,1fr),420px]">
+    <section className="resource-detail-hero-panel overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_2px_8px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-slate-900">
+      <div className="grid gap-6 px-5 py-5 sm:px-6 sm:py-6 xl:grid-cols-[minmax(0,1fr),minmax(240px,320px)] xl:gap-8">
         <div
-          className="space-y-6 xl:flex xl:h-full xl:min-h-full xl:flex-col xl:justify-between xl:space-y-0"
+          className="space-y-5"
           data-testid="resource-detail-hero-content"
         >
           <div className="space-y-3">
             <h1
-              className="resource-hero-title max-w-[14ch] text-3xl font-semibold leading-[1.05] tracking-[-0.05em] text-white sm:text-[4rem] sm:leading-[1.01] xl:text-[4.25rem] xl:leading-[0.98] 2xl:text-[4.75rem]"
-              style={{ fontFamily: '"Baskerville", "Times New Roman", "Songti SC", "STSong", serif' }}
+              className="resource-hero-title max-w-[64ch] text-3xl font-bold leading-[1.15] tracking-normal text-slate-950 dark:text-white sm:text-4xl"
             >
               {displayTitle}
             </h1>
           </div>
 
           <div
-            className="resource-detail-hero-meta-tray space-y-3 rounded-[1.75rem] px-4 py-4 xl:max-w-[36rem]"
+            className="resource-detail-hero-meta-tray space-y-3 rounded-2xl px-4 py-4"
             data-testid="resource-detail-hero-meta"
           >
             <div className="flex flex-wrap items-center gap-2.5">
@@ -98,70 +82,65 @@ const ResourceDetailHero: React.FC<ResourceDetailHeroProps> = ({
 
           <div
             data-testid="resource-detail-hero-decision-card"
-            className="rounded-[1.8rem] border border-white/10 bg-white/10 px-4 py-4 shadow-[0_20px_40px_rgba(2,6,23,0.18)] backdrop-blur-xl xl:max-w-[36rem]"
+            className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-white/10 dark:bg-white/[0.04]"
           >
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-cyan-100">
+              <span className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700 dark:border-cyan-300/20 dark:bg-cyan-400/10 dark:text-cyan-200">
                 打开前速览
               </span>
-              <span className="text-xs text-slate-300">
+              <span className="text-xs text-slate-500 dark:text-slate-300">
                 先看是否值得打开，再决定是否跳转外部资源。
               </span>
             </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 { label: "链接数量", value: linkCountLabel },
                 { label: "访问方式", value: accessLabel },
                 { label: "资源体积", value: sizeLabel || "未提供" },
+                { label: "发布时间", value: publishedAtLabel },
               ].map((item) => (
                 <div
                   key={item.label}
-                  className="rounded-[1.3rem] border border-white/10 bg-slate-950/20 px-4 py-3"
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-slate-950/40"
                 >
-                  <div className="text-[11px] font-semibold tracking-[0.14em] text-slate-300">
+                  <div className="text-xs font-semibold text-slate-500 dark:text-slate-300">
                     {item.label}
                   </div>
-                  <div className="mt-1 text-sm font-semibold text-white">
+                  <div className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
                     {item.value}
                   </div>
                 </div>
               ))}
             </div>
-
-            <div className="mt-4 text-xs leading-6 text-slate-300">
-              发布时间：{publishedAtLabel}
-            </div>
           </div>
         </div>
 
-        <div className="xl:flex xl:items-start xl:justify-end xl:pt-1">
-          <div className="relative w-full">
-            <div className="absolute -right-8 top-6 h-24 w-24 rounded-full bg-cyan-300/16 blur-2xl" />
-            <div className="absolute -left-10 bottom-4 h-32 w-32 rounded-full bg-blue-400/14 blur-3xl" />
+        <div className="xl:flex xl:items-start xl:justify-end">
+          <div className="w-full max-w-sm xl:max-w-none">
             <div
-              className="relative overflow-hidden rounded-[2.25rem] shadow-[0_10px_28px_rgba(15,23,42,0.2)]"
+              className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2 dark:border-white/10 dark:bg-slate-950/40"
               data-testid="resource-detail-hero-image-card"
             >
-                {posterImage ? (
-                  <div className="flex aspect-[4/5] items-center justify-center bg-slate-950/28 p-1 sm:aspect-[5/6] xl:aspect-[4/5] 2xl:aspect-[5/6]">
-                    <img
-                      src={posterImage}
-                      alt={`${displayTitle} 预览图`}
-                      className="h-full w-full rounded-[2rem] object-contain shadow-[0_8px_24px_rgba(15,23,42,0.18)]"
-                    />
+              {posterImage ? (
+                <div className="flex aspect-[4/5] items-center justify-center sm:aspect-[5/6] xl:aspect-[4/5]">
+                  <img
+                    src={posterImage}
+                    alt={`${displayTitle} 预览图`}
+                    className="h-full w-full rounded-xl object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="flex aspect-[4/5] items-center justify-center rounded-xl bg-slate-100 p-4 text-slate-500 dark:bg-slate-950/50 dark:text-slate-300 sm:aspect-[5/6] xl:aspect-[4/5]">
+                  <div className="flex flex-col items-center gap-3">
+                    <ImageIcon className="h-8 w-8" />
+                    <span className="text-sm font-medium">暂无预览图</span>
+                    <span className="max-w-[16rem] text-center text-xs leading-5 text-slate-500 dark:text-slate-400">
+                      可先查看摘要、链接数量与资源体积，再决定是否打开。
+                    </span>
                   </div>
-                ) : (
-                  <div className="flex aspect-[4/5] items-center justify-center rounded-[2rem] bg-slate-900/60 p-1 text-slate-300 sm:aspect-[5/6] xl:aspect-[4/5] 2xl:aspect-[5/6]">
-                    <div className="flex flex-col items-center gap-3">
-                      <ImageIcon className="h-8 w-8" />
-                      <span className="text-sm font-medium">暂无预览图</span>
-                      <span className="max-w-[16rem] text-center text-xs leading-5 text-slate-400">
-                        可先查看摘要、链接数量与资源体积，再决定是否打开。
-                      </span>
-                    </div>
-                  </div>
-                )}
+                </div>
+              )}
             </div>
           </div>
         </div>
