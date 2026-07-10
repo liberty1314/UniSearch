@@ -234,6 +234,34 @@ describe('PasswordModal', () => {
     );
   });
 
+  it('显示 API 客户端标准化后的二维码超时消息', async () => {
+    vi.mocked(SearchService.refreshScanTransfer).mockRejectedValue({
+      code: 504,
+      message: '获取二维码超时，请稍后重试',
+    });
+
+    render(
+      <PasswordModal
+        isOpen
+        onClose={vi.fn()}
+        password=""
+        url="https://www.seedhub.cc/link_start/?redirect_to=quark_scan"
+        cloudType={CloudType.QUARK}
+        resourceId="seedhub-scan-timeout"
+        accessMode="scan_transfer"
+        scanTransfer={{
+          instruction: '请使用手机扫码转存',
+          refreshable: true,
+          refresh_key: 'seedhub:4259:quark:1',
+        }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith('获取二维码超时，请稍后重试');
+    });
+  });
+
   it('可刷新但没有二维码时打开弹窗会自动获取二维码', async () => {
     vi.mocked(SearchService.refreshScanTransfer).mockResolvedValue({
       resource_id: 'seedhub-scan-empty',

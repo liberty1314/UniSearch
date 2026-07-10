@@ -285,3 +285,16 @@
     - frontend/src/pages/ResourceDetailPage.tsx
     - frontend/src/pages/__tests__/ResourceDetailPage.test.tsx
     - docs/readme_2607.md
+
+[2026-07-10 20:49] fix(scan-transfer): 区分扫码刷新超时并轮换会话
+  Body: 区分扫码刷新服务端超时与客户端取消场景，返回更明确的超时错误并让前端展示统一错误文案。同步定期重建 SeedHub Cloudflare 会话，降低扫码刷新和资源解析卡住风险。
+  Files:
+    - backend/api/scan_transfer_handler.go
+    - backend/api/scan_transfer_handler_test.go
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - frontend/src/components/PasswordModal.tsx
+    - frontend/src/components/__tests__/PasswordModal.test.tsx
+    - frontend/src/lib/__tests__/api.test.ts
+    - frontend/src/lib/api.ts
+    - docs/readme_2607.md

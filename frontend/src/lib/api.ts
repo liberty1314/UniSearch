@@ -220,6 +220,8 @@ class ApiClient {
         return '扫码刷新服务暂时不可用';
       case 'SCAN_TRANSFER_REQUEST_CANCELED':
         return '请求已取消';
+      case 'SCAN_TRANSFER_REFRESH_TIMEOUT':
+        return '获取二维码超时，请稍后重试';
       case 'SCAN_TRANSFER_REFRESH_FAILED':
         return '扫码载荷刷新失败，请稍后重试';
       default:

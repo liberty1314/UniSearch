@@ -54,4 +54,19 @@ describe('apiClient handleError', () => {
 
     expect(message).toBe('搜索服务暂时不可用，请稍后重试');
   });
+
+  it('maps scan transfer refresh timeout to an actionable message', () => {
+    const message = callHandleError({
+      response: {
+        status: 504,
+        data: {
+          code: 504,
+          message: '请求失败',
+          error_code: 'SCAN_TRANSFER_REFRESH_TIMEOUT',
+        },
+      } as unknown as AxiosError<ApiResponse>['response'],
+    });
+
+    expect(message).toBe('获取二维码超时，请稍后重试');
+  });
 });

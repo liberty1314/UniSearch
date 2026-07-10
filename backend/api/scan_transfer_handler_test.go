@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -116,6 +117,39 @@ func TestRefreshScanTransferHandlerReturns499WhenRequestCanceled(t *testing.T) {
 
 	if recorder.Code != 499 {
 		t.Fatalf("期望请求取消返回 499，实际为 %d，响应为 %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestRefreshScanTransferHandlerReturnsGatewayTimeoutWhenServerDeadlineExpires(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	releaseFetch := make(chan struct{})
+	defer close(releaseFetch)
+	seedHubPlugin := sidhub.NewSidHubPlugin()
+	seedHubPlugin.SetFetcherForTest(func(_ string) ([]byte, error) {
+		<-releaseFetch
+		return nil, nil
+	})
+
+	pm := plugin.NewPluginManager()
+	pm.RegisterPlugin(seedHubPlugin)
+	SetSearchService(service.NewSearchService(pm, nil, nil))
+
+	router := gin.New()
+	router.POST("/api/resources/scan-transfer/refresh", refreshScanTransferHandler(5*time.Millisecond))
+
+	body := bytes.NewBufferString(`{"link_url":"https://www.seedhub.cc/link_start/?redirect_to=quark_scan","refresh_key":"seedhub:4259:quark:1"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/resources/scan-transfer/refresh", body)
+	req.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusGatewayTimeout {
+		t.Fatalf("期望服务端刷新超时返回 504，实际为 %d，响应为 %s", recorder.Code, recorder.Body.String())
+	}
+	if !bytes.Contains(recorder.Body.Bytes(), []byte(`"error_code":"SCAN_TRANSFER_REFRESH_TIMEOUT"`)) {
+		t.Fatalf("期望响应包含稳定超时错误码，实际为 %s", recorder.Body.String())
 	}
 }
 

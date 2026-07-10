@@ -1270,6 +1270,27 @@ func TestFetchURLRejectsCloudflareChallengeFromInjectedFetcher(t *testing.T) {
 	}
 }
 
+func TestGetScraperRotatesBeforeCloudscraperSessionExpires(t *testing.T) {
+	p := NewSidHubPlugin()
+
+	firstScraper, err := p.getScraper()
+	if err != nil {
+		t.Fatalf("首次创建 SeedHub 抓取器失败: %v", err)
+	}
+
+	p.scraperMu.Lock()
+	p.scraperCreatedAt = time.Now().Add(-seedHubScraperMaxAge)
+	p.scraperMu.Unlock()
+
+	secondScraper, err := p.getScraper()
+	if err != nil {
+		t.Fatalf("轮换 SeedHub 抓取器失败: %v", err)
+	}
+	if firstScraper == secondScraper {
+		t.Fatal("期望在 cloudscraper 内部会话到期前轮换抓取器")
+	}
+}
+
 func TestDecodeSidHubHTTPBodyHandlesGzipPayload(t *testing.T) {
 	original := []byte(`<html><a href="/movies/626957/">铁拳教育</a></html>`)
 	var buffer bytes.Buffer

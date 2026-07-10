@@ -43,6 +43,8 @@ const (
 	defaultDetailTotalBudget           = 4 * time.Second
 	cacheTTL                           = 1 * time.Hour
 	refreshCacheTTL                    = 5 * time.Minute
+	seedHubScraperMaxAge               = 25 * time.Minute
+	seedHubScraperSessionInterval      = 24 * time.Hour
 )
 
 const (
@@ -133,10 +135,10 @@ type sidHubRefreshCall struct {
 // SidHubAsyncPlugin 接入 SidHub / SeedHub 影视资源搜索。
 type SidHubAsyncPlugin struct {
 	*plugin.BaseAsyncPlugin
-	scraper     *cloudscraper.Scraper
-	scraperErr  error
-	scraperOnce sync.Once
-	fetcher     func(string) ([]byte, error)
+	scraper          *cloudscraper.Scraper
+	scraperCreatedAt time.Time
+	scraperMu        sync.Mutex
+	fetcher          func(string) ([]byte, error)
 }
 
 type sidHubMovie struct {
@@ -695,14 +697,21 @@ func finishSeedHubRefreshCall(cacheKey string, call *sidHubRefreshCall, link mod
 }
 
 func (p *SidHubAsyncPlugin) getScraper() (*cloudscraper.Scraper, error) {
-	p.scraperOnce.Do(func() {
-		p.scraper, p.scraperErr = cloudscraper.New(
-			cloudscraper.WithSessionConfig(true, 30*time.Minute, 2),
-		)
-	})
-	if p.scraperErr != nil {
-		return nil, fmt.Errorf("初始化 Cloudflare 会话失败: %w", p.scraperErr)
+	p.scraperMu.Lock()
+	defer p.scraperMu.Unlock()
+
+	if p.scraper != nil && time.Since(p.scraperCreatedAt) < seedHubScraperMaxAge {
+		return p.scraper, nil
 	}
+
+	scraper, err := cloudscraper.New(
+		cloudscraper.WithSessionConfig(true, seedHubScraperSessionInterval, 2),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("初始化 Cloudflare 会话失败: %w", err)
+	}
+	p.scraper = scraper
+	p.scraperCreatedAt = time.Now()
 	return p.scraper, nil
 }
 

@@ -33,44 +33,54 @@ type scanTransferRefreshResponse struct {
 
 // RefreshScanTransferHandler 刷新当前资源的二维码或扫码转存载荷。
 func RefreshScanTransferHandler(c *gin.Context) {
-	var req scanTransferRefreshRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		writeAPIError(c, http.StatusBadRequest, "SCAN_TRANSFER_INVALID_REQUEST", "请求参数无效", nil)
-		return
-	}
+	refreshScanTransferHandler(scanTransferRefreshTimeout)(c)
+}
 
-	req.LinkURL = strings.TrimSpace(req.LinkURL)
-	req.RefreshKey = strings.TrimSpace(req.RefreshKey)
-	if req.LinkURL == "" || req.RefreshKey == "" {
-		writeAPIError(c, http.StatusBadRequest, "SCAN_TRANSFER_INVALID_REQUEST", "请求参数无效", nil)
-		return
-	}
-
-	refresher := resolveScanTransferRefreshPlugin()
-	if refresher == nil {
-		writeAPIError(c, http.StatusServiceUnavailable, "SCAN_TRANSFER_PLUGIN_UNAVAILABLE", "扫码刷新服务暂时不可用", nil)
-		return
-	}
-
-	refreshCtx, cancel := context.WithTimeout(c.Request.Context(), scanTransferRefreshTimeout)
-	defer cancel()
-	refreshedLink, err := refresher.RefreshScanTransfer(refreshCtx, req.LinkURL, req.RefreshKey)
-	if err != nil {
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			writeAPIError(c, 499, "SCAN_TRANSFER_REQUEST_CANCELED", "请求已取消", nil)
+func refreshScanTransferHandler(timeout time.Duration) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req scanTransferRefreshRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			writeAPIError(c, http.StatusBadRequest, "SCAN_TRANSFER_INVALID_REQUEST", "请求参数无效", nil)
 			return
 		}
-		errorCode, message := scanTransferRefreshErrorResponse(err)
-		writeAPIError(c, http.StatusBadRequest, errorCode, message, err)
-		return
-	}
 
-	c.JSON(http.StatusOK, model.NewSuccessResponse(scanTransferRefreshResponse{
-		ResourceID:   strings.TrimSpace(req.ResourceID),
-		LinkURL:      req.LinkURL,
-		AccessMode:   strings.TrimSpace(refreshedLink.AccessMode),
-		ScanTransfer: refreshedLink.ScanTransfer,
-	}))
+		req.LinkURL = strings.TrimSpace(req.LinkURL)
+		req.RefreshKey = strings.TrimSpace(req.RefreshKey)
+		if req.LinkURL == "" || req.RefreshKey == "" {
+			writeAPIError(c, http.StatusBadRequest, "SCAN_TRANSFER_INVALID_REQUEST", "请求参数无效", nil)
+			return
+		}
+
+		refresher := resolveScanTransferRefreshPlugin()
+		if refresher == nil {
+			writeAPIError(c, http.StatusServiceUnavailable, "SCAN_TRANSFER_PLUGIN_UNAVAILABLE", "扫码刷新服务暂时不可用", nil)
+			return
+		}
+
+		refreshCtx, cancel := context.WithTimeout(c.Request.Context(), timeout)
+		defer cancel()
+		refreshedLink, err := refresher.RefreshScanTransfer(refreshCtx, req.LinkURL, req.RefreshKey)
+		if err != nil {
+			if errors.Is(err, context.DeadlineExceeded) && c.Request.Context().Err() == nil {
+				writeAPIError(c, http.StatusGatewayTimeout, "SCAN_TRANSFER_REFRESH_TIMEOUT", "获取二维码超时，请稍后重试", err)
+				return
+			}
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				writeAPIError(c, 499, "SCAN_TRANSFER_REQUEST_CANCELED", "请求已取消", nil)
+				return
+			}
+			errorCode, message := scanTransferRefreshErrorResponse(err)
+			writeAPIError(c, http.StatusBadRequest, errorCode, message, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, model.NewSuccessResponse(scanTransferRefreshResponse{
+			ResourceID:   strings.TrimSpace(req.ResourceID),
+			LinkURL:      req.LinkURL,
+			AccessMode:   strings.TrimSpace(refreshedLink.AccessMode),
+			ScanTransfer: refreshedLink.ScanTransfer,
+		}))
+	}
 }
 
 func resolveScanTransferRefreshPlugin() scanTransferRefreshPlugin {

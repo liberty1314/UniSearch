@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { AppleInput } from "@/components/ui/AppleInput";
 import { Button } from "@/components/ui/button";
+import { getErrorMessage } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import { SearchService } from "@/services/searchService";
 import type { ResourceAccessMode, ScanTransferInfo } from "@/types/resource";
@@ -168,11 +169,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
       if (isAbortLikeError(error) || abortController.signal.aborted) {
         return;
       }
-      const message =
-        error instanceof Error && error.message.trim()
-          ? error.message
-          : "重新获取二维码失败";
-      toast.error(message);
+      toast.error(getErrorMessage(error, "重新获取二维码失败"));
     } finally {
       if (refreshAbortControllerRef.current === abortController) {
         refreshAbortControllerRef.current = null;
