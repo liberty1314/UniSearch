@@ -213,12 +213,29 @@ func TestSidHubPluginManifest(t *testing.T) {
 	if manifest.ManifestStatus != "complete" {
 		t.Fatalf("期望插件清单完整，实际状态为 %q", manifest.ManifestStatus)
 	}
-	if len(manifest.ConfigSchema) != 1 {
-		t.Fatalf("期望 SeedHub 声明 1 个运行配置项，实际为 %#v", manifest.ConfigSchema)
+	if len(manifest.ConfigSchema) != 6 {
+		t.Fatalf("期望 SeedHub 声明 6 个运行配置项，实际为 %#v", manifest.ConfigSchema)
 	}
-	field := manifest.ConfigSchema[0]
-	if field.Key != "pre_resolved_link_start_per_type" || field.Type != "number" || field.Default != float64(0) {
-		t.Fatalf("期望声明每类完整解析数量配置，实际为 %#v", field)
+	fieldsByKey := make(map[string]model.PluginConfigField, len(manifest.ConfigSchema))
+	for _, field := range manifest.ConfigSchema {
+		fieldsByKey[field.Key] = field
+	}
+	expectedFields := map[string]float64{
+		"max_search_cards":                 float64(maxSearchCards),
+		"pre_resolved_link_start_per_type": float64(defaultPreResolvedLinkStartPerType),
+		"detail_concurrency":               float64(defaultDetailConcurrency),
+		"detail_timeout_seconds":           defaultDetailTimeout.Seconds(),
+		"detail_total_budget_seconds":      defaultDetailTotalBudget.Seconds(),
+	}
+	for key, expectedDefault := range expectedFields {
+		field, exists := fieldsByKey[key]
+		if !exists || field.Type != "number" || field.Default != expectedDefault {
+			t.Fatalf("期望声明 %s 配置，实际为 %#v", key, manifest.ConfigSchema)
+		}
+	}
+	baseURLStrategyField, exists := fieldsByKey["base_url_strategy"]
+	if !exists || baseURLStrategyField.Type != "string" || baseURLStrategyField.Default != defaultBaseURLStrategy {
+		t.Fatalf("期望声明 base_url_strategy 字符串配置，实际为 %#v", manifest.ConfigSchema)
 	}
 }
 
@@ -1332,11 +1349,432 @@ func TestSidHubDoSearchBuildsScanTransferResult(t *testing.T) {
 	}
 }
 
-func TestSidHubSearchWithResultWaitsForScanTransferPayload(t *testing.T) {
+func TestSidHubDoSearchWithContextReturnsCanceledBeforeFetching(t *testing.T) {
+	searchCache = sync.Map{}
+	p := NewSidHubPlugin()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		t.Fatalf("context 已取消时不应请求 %s", targetURL)
+		return nil, nil
+	})
+
+	_, err := p.doSearchWithContext(ctx, nil, "取消测试", map[string]interface{}{"sidhub_base_url": "https://www.seedhub.cc"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("期望返回 context.Canceled，实际为 %v", err)
+	}
+}
+
+func TestSidHubDoSearchWithContextStopsBeforeDetailFetchWhenCanceled(t *testing.T) {
+	searchCache = sync.Map{}
+	p := NewSidHubPlugin()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	searchURL := "https://www.seedhub.cc/s/%E5%8F%96%E6%B6%88%E8%AF%A6%E6%83%85/"
+	detailURL := "https://www.seedhub.cc/movies/4259/"
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		if targetURL == detailURL {
+			t.Fatalf("context 取消后不应继续请求详情页 %s", targetURL)
+		}
+		if targetURL != searchURL {
+			return nil, fmt.Errorf("未注册的测试地址: %s", targetURL)
+		}
+		cancel()
+		return []byte(`
+	<article>
+	  <a title="取消详情" class="image" href="/movies/4259/">
+	    <img src="/poster.jpg" />
+	  </a>
+	  <p>2026 / 电影 / 中国大陆 / 汉语普通话</p>
+	</article>`), nil
+	})
+
+	_, err := p.doSearchWithContext(ctx, nil, "取消详情", map[string]interface{}{"sidhub_base_url": "https://www.seedhub.cc"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("期望详情页抓取前返回 context.Canceled，实际为 %v", err)
+	}
+}
+
+func TestSidHubDoSearchWithContextReturnsWhenFetcherBlocks(t *testing.T) {
+	searchCache = sync.Map{}
+	p := NewSidHubPlugin()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
+
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		time.Sleep(50 * time.Millisecond)
+		return []byte("<html></html>"), nil
+	})
+
+	startedAt := time.Now()
+	_, err := p.doSearchWithContext(ctx, nil, "阻塞抓取", map[string]interface{}{"sidhub_base_url": "https://www.seedhub.cc"})
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("期望返回 context deadline exceeded，实际为 %v", err)
+	}
+	if elapsed := time.Since(startedAt); elapsed > 30*time.Millisecond {
+		t.Fatalf("期望阻塞 fetcher 被 context 快速截断，实际耗时 %s", elapsed)
+	}
+}
+
+func TestSidHubSearchCardsOnlyFetchesSearchPage(t *testing.T) {
+	searchCache = sync.Map{}
+	p := NewSidHubPlugin()
+
+	searchURL := "https://www.seedhub.cc/s/%E5%8D%A1%E7%89%87%E6%8B%86%E5%88%86/"
+	detailURL := "https://www.seedhub.cc/movies/4259/"
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		if targetURL == detailURL {
+			t.Fatalf("searchCardsOnly 不应请求详情页 %s", targetURL)
+		}
+		if targetURL != searchURL {
+			return nil, fmt.Errorf("未注册的测试地址: %s", targetURL)
+		}
+		return []byte(`
+	<article>
+	  <a title="卡片拆分" class="image" href="/movies/4259/">
+	    <img src="/poster.jpg" />
+	  </a>
+	  <p>2026 / 电影 / 中国大陆 / 汉语普通话</p>
+	</article>`), nil
+	})
+
+	cards, err := p.searchCardsOnly(context.Background(), "https://www.seedhub.cc", "卡片拆分", maxSearchCards)
+	if err != nil {
+		t.Fatalf("搜索卡片失败: %v", err)
+	}
+	if len(cards) != 1 || cards[0].Title != "卡片拆分" || cards[0].DetailURL != detailURL {
+		t.Fatalf("期望解析搜索页卡片，实际为 %#v", cards)
+	}
+}
+
+func TestSidHubSearchCardsOnlyHonorsMaxSearchCards(t *testing.T) {
+	searchCache = sync.Map{}
+	p := NewSidHubPlugin()
+
+	searchURL := "https://www.seedhub.cc/s/%E5%8D%A1%E7%89%87%E6%95%B0/"
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		if targetURL != searchURL {
+			return nil, fmt.Errorf("未注册的测试地址: %s", targetURL)
+		}
+		return []byte(`
+	<article><a title="卡片数 一" class="image" href="/movies/5001/"><img src="/one.jpg" /></a><p>2026 / 电影</p></article>
+	<article><a title="卡片数 二" class="image" href="/movies/5002/"><img src="/two.jpg" /></a><p>2026 / 电影</p></article>
+	<article><a title="卡片数 三" class="image" href="/movies/5003/"><img src="/three.jpg" /></a><p>2026 / 电影</p></article>`), nil
+	})
+
+	cards, err := p.searchCardsOnly(context.Background(), "https://www.seedhub.cc", "卡片数", 2)
+	if err != nil {
+		t.Fatalf("搜索卡片失败: %v", err)
+	}
+	if len(cards) != 2 {
+		t.Fatalf("期望 max_search_cards 限制为 2 条，实际为 %#v", cards)
+	}
+}
+
+func TestSidHubEnhanceSidHubCardsWithDetailsReturnsFallback(t *testing.T) {
+	searchCache = sync.Map{}
+	p := NewSidHubPlugin()
+
+	card := sidHubMovie{
+		ID:        "4259",
+		Title:     "增强拆分",
+		DetailURL: "https://www.seedhub.cc/movies/4259/",
+		CoverURL:  "https://www.seedhub.cc/poster.jpg",
+		MediaType: "movie",
+		Content:   "2026 / 电影",
+	}
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		return nil, fmt.Errorf("详情页失败: %s", targetURL)
+	})
+
+	results := p.enhanceSidHubCardsWithDetails(context.Background(), "https://www.seedhub.cc", []sidHubMovie{card}, resolveSidHubRuntimeConfig(nil))
+	if len(results) != 1 || len(results[0].Links) != 1 {
+		t.Fatalf("期望详情增强失败时生成 fallback 结果，实际为 %#v", results)
+	}
+	link := results[0].Links[0]
+	if link.Type != "detail" || link.URL != card.DetailURL {
+		t.Fatalf("期望详情 fallback 链接，实际为 %#v", link)
+	}
+}
+
+func TestSidHubDoSearchReturnsDetailFallbackWhenDetailFetchFails(t *testing.T) {
+	searchCache = sync.Map{}
+	p := NewSidHubPlugin()
+
+	searchURL := "https://www.seedhub.cc/s/%E8%AF%A6%E6%83%85%E5%A4%B1%E8%B4%A5/"
+	detailURL := "https://www.seedhub.cc/movies/4259/"
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		switch targetURL {
+		case searchURL:
+			return []byte(`
+	<article>
+	  <a title="详情失败" class="image" href="/movies/4259/">
+	    <img src="/poster.jpg" />
+	  </a>
+	  <p>2026 / 电影 / 中国大陆 / 汉语普通话</p>
+	</article>`), nil
+		case detailURL:
+			return nil, errors.New("详情页超时")
+		default:
+			return nil, fmt.Errorf("未注册的测试地址: %s", targetURL)
+		}
+	})
+
+	results, err := p.doSearch(nil, "详情失败", map[string]interface{}{"sidhub_base_url": "https://www.seedhub.cc"})
+	if err != nil {
+		t.Fatalf("搜索失败: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("期望详情失败时返回 1 条 fallback 结果，实际为 %#v", results)
+	}
+	if len(results[0].Links) != 1 {
+		t.Fatalf("期望 fallback 结果包含详情页链接，实际为 %#v", results[0])
+	}
+	link := results[0].Links[0]
+	if link.Type != "detail" || link.URL != detailURL || link.AccessMode != "direct_open" {
+		t.Fatalf("期望详情页 fallback 链接，实际为 %#v", link)
+	}
+	if results[0].TargetType != "detail" {
+		t.Fatalf("期望 fallback 结果 target_type=detail，实际为 %q", results[0].TargetType)
+	}
+}
+
+func TestSidHubDoSearchFetchesDetailsConcurrently(t *testing.T) {
+	searchCache = sync.Map{}
+	p := NewSidHubPlugin()
+
+	searchURL := "https://www.seedhub.cc/s/%E5%B9%B6%E5%8F%91%E8%AF%A6%E6%83%85/"
+	detailURLs := []string{
+		"https://www.seedhub.cc/movies/1001/",
+		"https://www.seedhub.cc/movies/1002/",
+		"https://www.seedhub.cc/movies/1003/",
+	}
+	searchBody := `
+	<article><a title="并发详情 一" class="image" href="/movies/1001/"><img src="/one.jpg" /></a><p>2026 / 电影</p></article>
+	<article><a title="并发详情 二" class="image" href="/movies/1002/"><img src="/two.jpg" /></a><p>2026 / 电影</p></article>
+	<article><a title="并发详情 三" class="image" href="/movies/1003/"><img src="/three.jpg" /></a><p>2026 / 电影</p></article>`
+	detailBody := `
+	<section id="downloads">
+	  <div class="quark-list">
+	    <ul><li><a href="https://pan.quark.cn/s/concurrent" title="并发详情资源">并发详情资源</a></li></ul>
+	  </div>
+	</section>`
+
+	var mu sync.Mutex
+	activeDetailRequests := 0
+	maxActiveDetailRequests := 0
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		if targetURL == searchURL {
+			return []byte(searchBody), nil
+		}
+		for _, detailURL := range detailURLs {
+			if targetURL == detailURL {
+				mu.Lock()
+				activeDetailRequests++
+				if activeDetailRequests > maxActiveDetailRequests {
+					maxActiveDetailRequests = activeDetailRequests
+				}
+				mu.Unlock()
+
+				time.Sleep(10 * time.Millisecond)
+
+				mu.Lock()
+				activeDetailRequests--
+				mu.Unlock()
+				return []byte(detailBody), nil
+			}
+		}
+		return nil, fmt.Errorf("未注册的测试地址: %s", targetURL)
+	})
+
+	results, err := p.doSearch(nil, "并发详情", map[string]interface{}{"sidhub_base_url": "https://www.seedhub.cc"})
+	if err != nil {
+		t.Fatalf("搜索失败: %v", err)
+	}
+	if len(results) != 3 {
+		t.Fatalf("期望返回 3 条详情结果，实际为 %#v", results)
+	}
+	if maxActiveDetailRequests < 2 {
+		t.Fatalf("期望详情页并发请求，最大并发数为 %d", maxActiveDetailRequests)
+	}
+}
+
+func TestSidHubDoSearchHonorsDetailConcurrencyLimit(t *testing.T) {
+	searchCache = sync.Map{}
+	p := NewSidHubPlugin()
+
+	searchURL := "https://www.seedhub.cc/s/%E5%B9%B6%E5%8F%91%E9%99%90%E5%88%B6/"
+	detailURLs := []string{
+		"https://www.seedhub.cc/movies/3001/",
+		"https://www.seedhub.cc/movies/3002/",
+		"https://www.seedhub.cc/movies/3003/",
+	}
+	searchBody := `
+	<article><a title="并发限制 一" class="image" href="/movies/3001/"><img src="/one.jpg" /></a><p>2026 / 电影</p></article>
+	<article><a title="并发限制 二" class="image" href="/movies/3002/"><img src="/two.jpg" /></a><p>2026 / 电影</p></article>
+	<article><a title="并发限制 三" class="image" href="/movies/3003/"><img src="/three.jpg" /></a><p>2026 / 电影</p></article>`
+	detailBody := `
+	<section id="downloads">
+	  <div class="quark-list">
+	    <ul><li><a href="https://pan.quark.cn/s/limited" title="并发限制资源">并发限制资源</a></li></ul>
+	  </div>
+	</section>`
+
+	var mu sync.Mutex
+	activeDetailRequests := 0
+	maxActiveDetailRequests := 0
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		if targetURL == searchURL {
+			return []byte(searchBody), nil
+		}
+		for _, detailURL := range detailURLs {
+			if targetURL == detailURL {
+				mu.Lock()
+				activeDetailRequests++
+				if activeDetailRequests > maxActiveDetailRequests {
+					maxActiveDetailRequests = activeDetailRequests
+				}
+				mu.Unlock()
+
+				time.Sleep(10 * time.Millisecond)
+
+				mu.Lock()
+				activeDetailRequests--
+				mu.Unlock()
+				return []byte(detailBody), nil
+			}
+		}
+		return nil, fmt.Errorf("未注册的测试地址: %s", targetURL)
+	})
+
+	results, err := p.doSearch(nil, "并发限制", map[string]interface{}{
+		"sidhub_base_url": "https://www.seedhub.cc",
+		"plugin_runtime_config": map[string]interface{}{
+			"detail_concurrency": 1,
+		},
+	})
+	if err != nil {
+		t.Fatalf("搜索失败: %v", err)
+	}
+	if len(results) != 3 {
+		t.Fatalf("期望返回 3 条详情结果，实际为 %#v", results)
+	}
+	if maxActiveDetailRequests > 1 {
+		t.Fatalf("期望详情页最大并发不超过 1，实际为 %d", maxActiveDetailRequests)
+	}
+}
+
+func TestSidHubDoSearchAppliesDetailTimeout(t *testing.T) {
+	searchCache = sync.Map{}
+	p := NewSidHubPlugin()
+
+	searchURL := "https://www.seedhub.cc/s/%E8%AF%A6%E6%83%85%E8%B6%85%E6%97%B6/"
+	detailURL := "https://www.seedhub.cc/movies/4259/"
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		switch targetURL {
+		case searchURL:
+			return []byte(`
+	<article>
+	  <a title="详情超时" class="image" href="/movies/4259/">
+	    <img src="/poster.jpg" />
+	  </a>
+	  <p>2026 / 电影 / 中国大陆 / 汉语普通话</p>
+	</article>`), nil
+		case detailURL:
+			time.Sleep(50 * time.Millisecond)
+			return []byte(`
+	<section id="downloads">
+	  <div class="quark-list">
+	    <ul><li><a href="https://pan.quark.cn/s/slow-detail" title="慢详情资源">慢详情资源</a></li></ul>
+	  </div>
+	</section>`), nil
+		default:
+			return nil, fmt.Errorf("未注册的测试地址: %s", targetURL)
+		}
+	})
+
+	startedAt := time.Now()
+	results, err := p.doSearch(nil, "详情超时", map[string]interface{}{
+		"sidhub_base_url": "https://www.seedhub.cc",
+		"plugin_runtime_config": map[string]interface{}{
+			"detail_timeout_seconds": 0.01,
+		},
+	})
+	if err != nil {
+		t.Fatalf("搜索失败: %v", err)
+	}
+	if elapsed := time.Since(startedAt); elapsed > 40*time.Millisecond {
+		t.Fatalf("期望详情页超时快速降级，实际耗时 %s", elapsed)
+	}
+	if len(results) != 1 || len(results[0].Links) != 1 {
+		t.Fatalf("期望返回 fallback 结果，实际为 %#v", results)
+	}
+	link := results[0].Links[0]
+	if link.Type != "detail" || link.URL != detailURL {
+		t.Fatalf("期望慢详情页降级为详情 fallback，实际为 %#v", link)
+	}
+}
+
+func TestSidHubDoSearchAppliesDetailTotalBudget(t *testing.T) {
+	searchCache = sync.Map{}
+	p := NewSidHubPlugin()
+
+	searchURL := "https://www.seedhub.cc/s/%E6%80%BB%E9%A2%84%E7%AE%97/"
+	searchBody := `
+	<article><a title="总预算 一" class="image" href="/movies/2001/"><img src="/one.jpg" /></a><p>2026 / 电影</p></article>
+	<article><a title="总预算 二" class="image" href="/movies/2002/"><img src="/two.jpg" /></a><p>2026 / 电影</p></article>
+	<article><a title="总预算 三" class="image" href="/movies/2003/"><img src="/three.jpg" /></a><p>2026 / 电影</p></article>`
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		if targetURL == searchURL {
+			return []byte(searchBody), nil
+		}
+		if strings.Contains(targetURL, "/movies/") {
+			time.Sleep(50 * time.Millisecond)
+			return []byte(`
+	<section id="downloads">
+	  <div class="quark-list">
+	    <ul><li><a href="https://pan.quark.cn/s/slow-budget" title="慢预算资源">慢预算资源</a></li></ul>
+	  </div>
+	</section>`), nil
+		}
+		return nil, fmt.Errorf("未注册的测试地址: %s", targetURL)
+	})
+
+	startedAt := time.Now()
+	results, err := p.doSearch(nil, "总预算", map[string]interface{}{
+		"sidhub_base_url": "https://www.seedhub.cc",
+		"plugin_runtime_config": map[string]interface{}{
+			"detail_timeout_seconds":      1,
+			"detail_total_budget_seconds": 0.01,
+		},
+	})
+	if err != nil {
+		t.Fatalf("搜索失败: %v", err)
+	}
+	if elapsed := time.Since(startedAt); elapsed > 40*time.Millisecond {
+		t.Fatalf("期望详情增强总预算快速降级，实际耗时 %s", elapsed)
+	}
+	if len(results) != 3 {
+		t.Fatalf("期望总预算耗尽后仍返回 3 条 fallback 结果，实际为 %#v", results)
+	}
+	for _, result := range results {
+		if len(result.Links) != 1 || result.Links[0].Type != "detail" {
+			t.Fatalf("期望总预算耗尽后返回详情 fallback，实际为 %#v", result)
+		}
+	}
+}
+
+func TestSidHubSearchWithResultReturnsDeferredAndCachesScanTransferPayload(t *testing.T) {
 	searchCache = sync.Map{}
 	oldConfig := config.AppConfig
 	config.AppConfig = &config.Config{
-		AsyncResponseTimeoutDur: time.Millisecond,
+		AsyncResponseTimeoutDur:   time.Millisecond,
+		AsyncMaxBackgroundWorkers: 1,
+		AsyncMaxBackgroundTasks:   10,
+		AsyncCacheTTLHours:        1,
+		PluginTimeout:             100 * time.Millisecond,
 	}
 	defer func() {
 		config.AppConfig = oldConfig
@@ -1379,19 +1817,190 @@ func TestSidHubSearchWithResultWaitsForScanTransferPayload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("搜索扫码转存资源失败: %v", err)
 	}
-	if !result.IsFinal {
-		t.Fatalf("SeedHub 搜索不应被通用异步首包标记为非最终结果，实际为 %#v", result)
+	if result.IsFinal {
+		t.Fatalf("期望慢速 SeedHub 首包标记为非最终结果，实际为 %#v", result)
 	}
-	if len(result.Results) != 1 || len(result.Results[0].Links) != 1 {
-		t.Fatalf("期望同步返回 1 条扫码资源，实际为 %#v", result.Results)
+	if len(result.Results) != 0 {
+		t.Fatalf("期望首包先返回空结果并后台继续，实际为 %#v", result.Results)
 	}
 
-	link := result.Results[0].Links[0]
+	var cachedResult model.PluginSearchResult
+	for i := 0; i < 20; i++ {
+		time.Sleep(5 * time.Millisecond)
+		cachedResult, err = p.SearchWithResult("你的名字", map[string]interface{}{"sidhub_base_url": "https://www.seedhub.cc"})
+		if err != nil {
+			t.Fatalf("读取后台缓存失败: %v", err)
+		}
+		if cachedResult.IsFinal && len(cachedResult.Results) == 1 && len(cachedResult.Results[0].Links) == 1 {
+			break
+		}
+	}
+	if !cachedResult.IsFinal || len(cachedResult.Results) != 1 || len(cachedResult.Results[0].Links) != 1 {
+		t.Fatalf("期望后台完成后缓存 1 条扫码资源，实际为 %#v", cachedResult)
+	}
+
+	link := cachedResult.Results[0].Links[0]
 	if link.AccessMode != "scan_transfer" || link.ScanTransfer == nil {
 		t.Fatalf("期望返回扫码转存载荷，实际为 %#v", link)
 	}
 	if link.ScanTransfer.RefreshKey != "seedhub:4259:quark:1" {
 		t.Fatalf("期望保留稳定刷新键，实际为 %#v", link.ScanTransfer)
+	}
+}
+
+func TestSidHubSearchWithResultUpdatesMainCacheAfterDeferredCompletion(t *testing.T) {
+	searchCache = sync.Map{}
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{
+		AsyncResponseTimeoutDur:   time.Millisecond,
+		AsyncMaxBackgroundWorkers: 1,
+		AsyncMaxBackgroundTasks:   10,
+		AsyncCacheTTLHours:        1,
+		PluginTimeout:             100 * time.Millisecond,
+	}
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	p := NewSidHubPlugin()
+	p.SetMainCacheKey("main-cache-key")
+	p.SetCurrentKeyword("后台缓存")
+
+	var mu sync.Mutex
+	var mainCacheCalls int
+	var mainCacheResults []model.SearchResult
+	var mainCacheFinal bool
+	var mainCacheKeyword string
+	p.SetMainCacheUpdater(func(cacheKey string, results []model.SearchResult, ttl time.Duration, isFinal bool, keyword string) error {
+		mu.Lock()
+		defer mu.Unlock()
+
+		if cacheKey != "main-cache-key" {
+			t.Fatalf("期望主缓存 key 为 main-cache-key，实际为 %q", cacheKey)
+		}
+		if ttl <= 0 {
+			t.Fatalf("期望主缓存 ttl 为正数，实际为 %s", ttl)
+		}
+		mainCacheCalls++
+		mainCacheResults = cloneResults(results)
+		mainCacheFinal = isFinal
+		mainCacheKeyword = keyword
+		return nil
+	})
+
+	searchURL := "https://www.seedhub.cc/s/%E5%90%8E%E5%8F%B0%E7%BC%93%E5%AD%98/"
+	detailURL := "https://www.seedhub.cc/movies/8899/"
+	fixtures := map[string]string{
+		searchURL: `
+<article>
+  <a title="后台缓存" class="image" href="/movies/8899/">
+    <img src="/poster.jpg" />
+  </a>
+  <p>2026 / 电影 / 中国大陆 / 汉语普通话</p>
+</article>`,
+		detailURL: `
+<section id="downloads">
+  <div class="quark-list">
+    <ul><li><a href="https://pan.quark.cn/s/main-cache" title="后台缓存资源">后台缓存资源</a></li></ul>
+  </div>
+</section>`,
+	}
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		time.Sleep(5 * time.Millisecond)
+		body, ok := fixtures[targetURL]
+		if !ok {
+			return nil, fmt.Errorf("未注册的测试地址: %s", targetURL)
+		}
+		return []byte(body), nil
+	})
+
+	result, err := p.SearchWithResult("后台缓存", map[string]interface{}{"sidhub_base_url": "https://www.seedhub.cc"})
+	if err != nil {
+		t.Fatalf("搜索后台缓存失败: %v", err)
+	}
+	if result.IsFinal || len(result.Results) != 0 {
+		t.Fatalf("期望首包 deferred 空结果，实际为 %#v", result)
+	}
+
+	deadline := time.Now().Add(500 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		calls := mainCacheCalls
+		cachedResults := cloneResults(mainCacheResults)
+		isFinal := mainCacheFinal
+		keyword := mainCacheKeyword
+		mu.Unlock()
+
+		if calls > 0 && isFinal && keyword == "后台缓存" && len(cachedResults) == 1 && len(cachedResults[0].Links) == 1 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if mainCacheCalls == 0 || !mainCacheFinal || mainCacheKeyword != "后台缓存" {
+		t.Fatalf("期望后台完成后写入主缓存，calls=%d final=%v keyword=%q", mainCacheCalls, mainCacheFinal, mainCacheKeyword)
+	}
+	if len(mainCacheResults) != 1 || len(mainCacheResults[0].Links) != 1 || mainCacheResults[0].Links[0].URL != "https://pan.quark.cn/s/main-cache" {
+		t.Fatalf("期望主缓存写入增强后的真实资源链接，实际为 %#v", mainCacheResults)
+	}
+
+	cachedResult, err := p.SearchWithResult("后台缓存", map[string]interface{}{"sidhub_base_url": "https://www.seedhub.cc"})
+	if err != nil {
+		t.Fatalf("读取插件后台缓存失败: %v", err)
+	}
+	if !cachedResult.IsFinal || len(cachedResult.Results) != 1 || cachedResult.Results[0].Links[0].URL != "https://pan.quark.cn/s/main-cache" {
+		t.Fatalf("期望插件缓存返回增强后的真实资源链接，实际为 %#v", cachedResult)
+	}
+}
+
+func TestSidHubSearchWithResultRepeatedSlowRequestsDoNotBlock(t *testing.T) {
+	searchCache = sync.Map{}
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{
+		AsyncResponseTimeoutDur:   5 * time.Millisecond,
+		AsyncMaxBackgroundWorkers: 1,
+		AsyncMaxBackgroundTasks:   10,
+		AsyncCacheTTLHours:        1,
+		PluginTimeout:             100 * time.Millisecond,
+	}
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	p := NewSidHubPlugin()
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		time.Sleep(50 * time.Millisecond)
+		if strings.Contains(targetURL, "/s/") {
+			return []byte(`
+	<article>
+	  <a title="连续慢请求" class="image" href="/movies/7788/">
+	    <img src="/poster.jpg" />
+	  </a>
+	  <p>2026 / 电影 / 中国大陆 / 汉语普通话</p>
+	</article>`), nil
+		}
+		return []byte(`
+	<section id="downloads">
+	  <div class="quark-list">
+	    <ul><li><a href="https://pan.quark.cn/s/repeated-slow" title="连续慢请求资源">连续慢请求资源</a></li></ul>
+	  </div>
+	</section>`), nil
+	})
+
+	for i := 0; i < 3; i++ {
+		startedAt := time.Now()
+		result, err := p.SearchWithResult(fmt.Sprintf("连续慢请求-%d", i), map[string]interface{}{"sidhub_base_url": "https://www.seedhub.cc"})
+		if err != nil {
+			t.Fatalf("第 %d 次慢请求不应失败: %v", i+1, err)
+		}
+		if result.IsFinal {
+			t.Fatalf("第 %d 次慢请求首包应为 deferred，实际为 %#v", i+1, result)
+		}
+		if elapsed := time.Since(startedAt); elapsed > 40*time.Millisecond {
+			t.Fatalf("第 %d 次慢请求被前序后台任务阻塞，耗时 %s", i+1, elapsed)
+		}
 	}
 }
 
@@ -1683,19 +2292,33 @@ func TestSidHubHelpersCoverEdgeCases(t *testing.T) {
 		t.Fatal("期望未知媒体类型返回 unknown")
 	}
 
-	baseURLs, err := resolveBaseURLs(map[string]interface{}{"sidhub_base_url": " https://example.test/ "})
+	baseURLs, err := resolveBaseURLs(map[string]interface{}{"sidhub_base_url": " https://example.test/ "}, defaultBaseURLStrategy)
 	if err != nil {
 		t.Fatalf("自定义 baseURL 不应失败: %v", err)
 	}
 	if len(baseURLs) != 1 || baseURLs[0] != "https://example.test" {
 		t.Fatalf("期望自定义 baseURL 被清理，实际为 %#v", baseURLs)
 	}
-	defaultBaseURLs, err := resolveBaseURLs(nil)
+	defaultBaseURLs, err := resolveBaseURLs(nil, defaultBaseURLStrategy)
 	if err != nil {
 		t.Fatalf("默认 baseURL 不应失败: %v", err)
 	}
 	if len(defaultBaseURLs) != 2 {
 		t.Fatal("期望默认 baseURL 包含主站和备用站")
+	}
+	primaryOnlyBaseURLs, err := resolveBaseURLs(nil, "primary_only")
+	if err != nil {
+		t.Fatalf("primary_only 策略不应失败: %v", err)
+	}
+	if len(primaryOnlyBaseURLs) != 1 || primaryOnlyBaseURLs[0] != primaryBaseURL {
+		t.Fatalf("期望 primary_only 只返回主域名，实际为 %#v", primaryOnlyBaseURLs)
+	}
+	fallbackOnlyBaseURLs, err := resolveBaseURLs(nil, "fallback_only")
+	if err != nil {
+		t.Fatalf("fallback_only 策略不应失败: %v", err)
+	}
+	if len(fallbackOnlyBaseURLs) != 1 || fallbackOnlyBaseURLs[0] != fallbackBaseURL {
+		t.Fatalf("期望 fallback_only 只返回备用域名，实际为 %#v", fallbackOnlyBaseURLs)
 	}
 
 	if determineDirectLinkType("https://pan.baidu.com/s/abc") != "baidu" {
@@ -1797,8 +2420,36 @@ func TestResolveBaseURLsRejectsUnsafeCustomBaseURL(t *testing.T) {
 	}
 
 	for _, rawURL := range cases {
-		if _, err := resolveBaseURLs(map[string]interface{}{"sidhub_base_url": rawURL}); err == nil {
+		if _, err := resolveBaseURLs(map[string]interface{}{"sidhub_base_url": rawURL}, defaultBaseURLStrategy); err == nil {
 			t.Fatalf("期望拒绝不安全 baseURL %s", rawURL)
 		}
+	}
+}
+
+func TestResolveSidHubRuntimeConfigClampsSearchCardsAndBaseURLStrategy(t *testing.T) {
+	config := resolveSidHubRuntimeConfig(map[string]interface{}{
+		"plugin_runtime_config": map[string]interface{}{
+			"max_search_cards":  99,
+			"base_url_strategy": "fallback_only",
+		},
+	})
+	if config.MaxSearchCards != maxSearchCards {
+		t.Fatalf("期望 max_search_cards 被限制到 %d，实际为 %d", maxSearchCards, config.MaxSearchCards)
+	}
+	if config.BaseURLStrategy != "fallback_only" {
+		t.Fatalf("期望读取 fallback_only 策略，实际为 %q", config.BaseURLStrategy)
+	}
+
+	fallbackConfig := resolveSidHubRuntimeConfig(map[string]interface{}{
+		"plugin_runtime_config": map[string]interface{}{
+			"max_search_cards":  0,
+			"base_url_strategy": "unknown",
+		},
+	})
+	if fallbackConfig.MaxSearchCards != maxSearchCards {
+		t.Fatalf("期望非法 max_search_cards 回落默认值，实际为 %d", fallbackConfig.MaxSearchCards)
+	}
+	if fallbackConfig.BaseURLStrategy != defaultBaseURLStrategy {
+		t.Fatalf("期望非法 base_url_strategy 回落默认值，实际为 %q", fallbackConfig.BaseURLStrategy)
 	}
 }

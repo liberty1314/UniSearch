@@ -249,3 +249,26 @@
     - frontend/src/components/admin/PluginManagementView.tsx
     - frontend/src/components/admin/PluginPerformanceDashboard.tsx
     - docs/readme_2607.md
+
+[2026-07-10 14:08] feat(sidhub): 新增详情增强降级与指标观测
+  Body: 新增 SeedHub 详情页并发解析、单详情超时、总预算和域名策略配置，并在详情增强失败时返回可打开的详情页 fallback。同步扩展插件指标采集与后台观测展示，记录后台处理中、部分成功、详情成功和 fallback 计数。
+  Files:
+    - backend/model/plugin_metrics.go
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - backend/service/plugin_health_service_test.go
+    - backend/service/plugin_metrics_collector.go
+    - backend/service/plugin_metrics_collector_test.go
+    - backend/service/search_executor.go
+    - backend/service/search_executor_test.go
+    - docs/sidhub-timeout-development-plan.md
+    - docs/sidhub-timeout-optimization-plan.md
+    - frontend/src/components/admin/PluginManageDialog.tsx
+    - frontend/src/components/admin/PluginManagementView.tsx
+    - frontend/src/components/admin/PluginPerformanceDashboard.tsx
+    - frontend/src/components/admin/__tests__/PluginManageDialog.test.tsx
+    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
+    - frontend/src/components/admin/__tests__/PluginPerformanceDashboard.test.tsx
+    - frontend/src/hooks/usePluginMetricsController.ts
+    - frontend/src/types/pluginMetrics.ts
+    - docs/readme_2607.md

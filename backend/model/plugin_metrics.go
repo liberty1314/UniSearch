@@ -11,6 +11,10 @@ type PluginPerformanceMetric struct {
 	RequestCount          int       `gorm:"not null;default:0" json:"request_count"`
 	SuccessCount          int       `gorm:"not null;default:0" json:"success_count"`
 	TimeoutCount          int       `gorm:"not null;default:0" json:"timeout_count"`
+	DeferredCount         int       `gorm:"not null;default:0" json:"deferred_count"`
+	PartialSuccessCount   int       `gorm:"not null;default:0" json:"partial_success_count"`
+	DetailSuccessCount    int       `gorm:"not null;default:0" json:"detail_success_count"`
+	FallbackCount         int       `gorm:"not null;default:0" json:"fallback_count"`
 	ErrorCount            int       `gorm:"not null;default:0" json:"error_count"`
 	CacheHitCount         int       `gorm:"not null;default:0" json:"cache_hit_count"`
 	MaxConcurrentRequests int       `gorm:"not null;default:0" json:"max_concurrent_requests"`
@@ -57,6 +61,10 @@ type PluginMetricsRealtimeItem struct {
 	RequestCount          int     `json:"request_count"`
 	SuccessCount          int     `json:"success_count"`
 	TimeoutCount          int     `json:"timeout_count"`
+	DeferredCount         int     `json:"deferred_count"`
+	PartialSuccessCount   int     `json:"partial_success_count"`
+	DetailSuccessCount    int     `json:"detail_success_count"`
+	FallbackCount         int     `json:"fallback_count"`
 	ErrorCount            int     `json:"error_count"`
 	CacheHitCount         int     `json:"cache_hit_count"`
 	MaxConcurrentRequests int     `json:"max_concurrent_requests"`

@@ -251,6 +251,14 @@ type pluginTaskResult struct {
 	concurrentRequests int
 }
 
+type pluginResultSemantics struct {
+	errorType          string
+	deferred           bool
+	partialSuccess     bool
+	detailSuccessCount int
+	fallbackCount      int
+}
+
 func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRefresh bool, concurrency int, ext map[string]interface{}) (allResults []model.SearchResult, warnings []model.SearchSourceWarning, err error) {
 	startedAt := time.Now()
 	defer func() {
@@ -411,13 +419,19 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 			})
 			continue
 		}
-		e.recordPluginHealth(taskResult.name, true, "", "search_failure")
+		semantics := resolvePluginResultSemantics(taskResult.name, taskResult.results, taskResult.isFinal)
+		e.recordPluginHealth(taskResult.name, true, "", semantics.errorType)
 		e.recordPluginMetric(PluginMetricEvent{
 			PluginName:         taskResult.name,
 			Keyword:            keyword,
 			Duration:           taskResult.duration,
 			Success:            true,
 			ResultCount:        len(taskResult.results),
+			ErrorType:          semantics.errorType,
+			Deferred:           semantics.deferred,
+			PartialSuccess:     semantics.partialSuccess,
+			DetailSuccessCount: semantics.detailSuccessCount,
+			FallbackCount:      semantics.fallbackCount,
 			ConcurrentRequests: taskResult.concurrentRequests,
 			OccurredAt:         time.Now(),
 		})
@@ -438,6 +452,10 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 		for _, currentPlugin := range availablePlugins {
 			pluginName := currentPlugin.Name()
 			if _, ok := completedPluginNames[pluginName]; !ok {
+				warnings = append(warnings, model.SearchSourceWarning{
+					Source:  pluginName,
+					Message: "该搜索源响应超时，已返回其他来源结果",
+				})
 				e.metrics.RecordTimeout("plugin", pluginName, keyword, "插件搜索超时")
 				e.recordPluginHealth(pluginName, false, "插件搜索超时", "timeout")
 				e.recordPluginMetric(PluginMetricEvent{
@@ -455,6 +473,39 @@ func (e *pluginSearchExecutor) Search(keyword string, plugins []string, forceRef
 		}
 	}
 	return allResults, warnings, nil
+}
+
+func resolvePluginResultSemantics(pluginName string, results []model.SearchResult, isFinal bool) pluginResultSemantics {
+	semantics := pluginResultSemantics{}
+	if !isFinal {
+		semantics.errorType = "deferred"
+		semantics.deferred = true
+		return semantics
+	}
+	if normalizePluginName(pluginName) != "sidhub" || len(results) == 0 {
+		return semantics
+	}
+
+	for _, result := range results {
+		if result.TargetType == "detail" {
+			semantics.fallbackCount++
+			continue
+		}
+		if len(result.Links) > 0 {
+			semantics.detailSuccessCount++
+		}
+		for _, link := range result.Links {
+			if link.Type == "detail" {
+				semantics.fallbackCount++
+				break
+			}
+		}
+	}
+	if semantics.fallbackCount > 0 {
+		semantics.errorType = "partial_success"
+		semantics.partialSuccess = true
+	}
+	return semantics
 }
 
 func (e *pluginSearchExecutor) searchPluginWithTimeout(currentPlugin plugin.AsyncSearchPlugin, keyword string, ext map[string]interface{}, cacheKey string, timeout time.Duration) (model.PluginSearchResult, error) {

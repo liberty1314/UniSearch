@@ -29,12 +29,28 @@ const createSidHubItem = () => ({
   manifest_status: 'complete',
   config_schema: [
     {
+      key: 'max_search_cards',
+      label: '搜索卡片数量',
+      type: 'number',
+      required: false,
+      default: 5,
+      description: '搜索卡片数量',
+    },
+    {
       key: 'pre_resolved_link_start_per_type',
       label: '每类完整解析数量',
       type: 'number',
       required: false,
       default: 3,
       description: '每类完整解析数量',
+    },
+    {
+      key: 'base_url_strategy',
+      label: '域名策略',
+      type: 'string',
+      required: false,
+      default: 'fallback',
+      description: 'SeedHub 域名访问策略',
     },
   ],
   health: {
@@ -154,7 +170,9 @@ describe('PluginManagementView', () => {
   beforeEach(() => {
     const runtimeConfigs: Record<string, Record<string, unknown>> = {
       sidhub: {
+        max_search_cards: 5,
         pre_resolved_link_start_per_type: 3,
+        base_url_strategy: 'fallback',
       },
     };
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -488,7 +506,7 @@ describe('PluginManagementView', () => {
     });
   });
 
-  it('页面级详情支持编辑并保存 SeedHub 解析条数', async () => {
+  it('页面级详情支持编辑并保存 SeedHub 数字和字符串配置', async () => {
     render(<PluginManagementView />);
 
     await screen.findByRole('heading', { name: '插件中心' });
@@ -504,6 +522,7 @@ describe('PluginManagementView', () => {
     expect(within(drawer).getByText('插件配置')).toBeInTheDocument();
     const input = await within(drawer).findByLabelText('每类完整解析数量');
     fireEvent.change(input, { target: { value: '5' } });
+    fireEvent.change(within(drawer).getByLabelText('域名策略'), { target: { value: 'primary_only' } });
     fireEvent.click(within(drawer).getByRole('button', { name: '保存配置' }));
 
     await waitFor(() => {
@@ -513,7 +532,9 @@ describe('PluginManagementView', () => {
           method: 'PUT',
           body: JSON.stringify({
             config: {
+              max_search_cards: 5,
               pre_resolved_link_start_per_type: 5,
+              base_url_strategy: 'primary_only',
             },
           }),
         })

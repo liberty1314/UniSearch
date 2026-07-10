@@ -134,6 +134,119 @@ func TestPluginSearchExecutorDoesNotStorePartialPluginResults(t *testing.T) {
 	}
 }
 
+func TestPluginSearchExecutorRecordsDeferredResultWithoutTimeout(t *testing.T) {
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{
+		CacheEnabled:              false,
+		DefaultConcurrency:        1,
+		AsyncMaxBackgroundWorkers: 1,
+		PluginTimeout:             200 * time.Millisecond,
+	}
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	partialPlugin := &pluginResultStateProbe{
+		name:    "deferred-plugin",
+		isFinal: false,
+	}
+
+	pm := plugin.NewPluginManager()
+	pm.RegisterPlugin(partialPlugin)
+
+	collector, _ := newPluginMetricsTestCollector(t)
+	metrics := newSearchMetricsRecorder()
+	selector := newPluginSelector(pm, nil)
+	executor := newPluginSearchExecutorWithMetrics(selector, newSearchCache(nil, metrics), metrics, nil, nil, collector, nil)
+
+	results, warnings, err := executor.Search("后台增强", nil, true, 1, nil)
+	if err != nil {
+		t.Fatalf("unexpected search error: %v", err)
+	}
+	if len(warnings) != 0 {
+		t.Fatalf("deferred 结果不应产生 timeout warning，实际为 %#v", warnings)
+	}
+	if len(results) != 1 {
+		t.Fatalf("期望 deferred 插件结果仍返回给用户，实际为 %#v", results)
+	}
+
+	snapshot := collector.RealtimeSnapshot()
+	if len(snapshot.Items) != 1 {
+		t.Fatalf("期望记录 deferred 插件指标，实际为 %#v", snapshot.Items)
+	}
+	item := snapshot.Items[0]
+	if item.SuccessCount != 1 || item.TimeoutCount != 0 || item.ErrorCount != 0 {
+		t.Fatalf("deferred 不应计入 timeout/error，实际为 %#v", item)
+	}
+
+	collector.mu.Lock()
+	defer collector.mu.Unlock()
+	if len(collector.events) != 1 || collector.events[0].ErrorType != "deferred" || !collector.events[0].Deferred || collector.events[0].Timeout {
+		t.Fatalf("期望 deferred 事件语义，实际为 %#v", collector.events)
+	}
+}
+
+func TestPluginSearchExecutorRecordsSidHubPartialSuccessWithoutTimeout(t *testing.T) {
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{
+		CacheEnabled:              false,
+		DefaultConcurrency:        1,
+		AsyncMaxBackgroundWorkers: 1,
+		PluginTimeout:             200 * time.Millisecond,
+	}
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	sidHubPlugin := &pluginResultStateProbe{
+		name:    "sidhub",
+		isFinal: true,
+		results: []model.SearchResult{{
+			UniqueID:   "sidhub-detail-fallback",
+			Title:      "详情 fallback",
+			TargetType: "detail",
+			Links: []model.Link{{
+				Type: "detail",
+				URL:  "https://www.seedhub.cc/movies/4259/",
+			}},
+		}},
+	}
+
+	pm := plugin.NewPluginManager()
+	pm.RegisterPlugin(sidHubPlugin)
+
+	collector, _ := newPluginMetricsTestCollector(t)
+	metrics := newSearchMetricsRecorder()
+	selector := newPluginSelector(pm, nil)
+	executor := newPluginSearchExecutorWithMetrics(selector, newSearchCache(nil, metrics), metrics, nil, nil, collector, nil)
+
+	results, warnings, err := executor.Search("详情降级", nil, true, 1, nil)
+	if err != nil {
+		t.Fatalf("unexpected search error: %v", err)
+	}
+	if len(warnings) != 0 {
+		t.Fatalf("partial_success 不应产生 timeout warning，实际为 %#v", warnings)
+	}
+	if len(results) != 1 {
+		t.Fatalf("期望 partial_success 结果仍返回给用户，实际为 %#v", results)
+	}
+
+	snapshot := collector.RealtimeSnapshot()
+	if len(snapshot.Items) != 1 {
+		t.Fatalf("期望记录 partial_success 插件指标，实际为 %#v", snapshot.Items)
+	}
+	item := snapshot.Items[0]
+	if item.SuccessCount != 1 || item.TimeoutCount != 0 || item.ErrorCount != 0 {
+		t.Fatalf("partial_success 不应计入 timeout/error，实际为 %#v", item)
+	}
+
+	collector.mu.Lock()
+	defer collector.mu.Unlock()
+	if len(collector.events) != 1 || collector.events[0].ErrorType != "partial_success" || !collector.events[0].PartialSuccess || collector.events[0].FallbackCount != 1 || collector.events[0].Timeout {
+		t.Fatalf("期望 partial_success 事件语义，实际为 %#v", collector.events)
+	}
+}
+
 func TestPluginSearchExecutorRecordsTimedOutPluginName(t *testing.T) {
 	oldConfig := config.AppConfig
 	config.AppConfig = &config.Config{
@@ -546,6 +659,7 @@ func (p *requestStateProbePlugin) SkipServiceFilter() bool {
 type pluginResultStateProbe struct {
 	name    string
 	isFinal bool
+	results []model.SearchResult
 }
 
 func (p *pluginResultStateProbe) Name() string {
@@ -574,15 +688,19 @@ func (p *pluginResultStateProbe) SetMainCacheKey(_ string) {}
 func (p *pluginResultStateProbe) SetCurrentKeyword(_ string) {}
 
 func (p *pluginResultStateProbe) SearchWithResult(keyword string, _ map[string]interface{}) (model.PluginSearchResult, error) {
-	return model.PluginSearchResult{
-		Results: []model.SearchResult{{
+	results := p.results
+	if results == nil {
+		results = []model.SearchResult{{
 			UniqueID: fmt.Sprintf("%s-%s", p.name, keyword),
 			Title:    p.name,
 			Links: []model.Link{{
 				Type: "mock",
 				URL:  "https://example.com/" + p.name,
 			}},
-		}},
+		}}
+	}
+	return model.PluginSearchResult{
+		Results:   results,
 		IsFinal:   p.isFinal,
 		Timestamp: time.Now(),
 		Source:    p.name,

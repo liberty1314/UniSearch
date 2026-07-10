@@ -86,6 +86,31 @@ func TestPluginHealthServiceRecordResultTracksTimeoutStats(t *testing.T) {
 	}
 }
 
+func TestPluginHealthServiceDoesNotCountDeferredOrPartialSuccessAsTimeout(t *testing.T) {
+	service := newPluginHealthTestService(t)
+
+	if err := service.RecordResult("sidhub", true, "", "deferred"); err != nil {
+		t.Fatalf("记录 deferred 失败: %v", err)
+	}
+	if err := service.RecordResult("sidhub", true, "", "partial_success"); err != nil {
+		t.Fatalf("记录 partial_success 失败: %v", err)
+	}
+
+	status, err := service.GetStatus("sidhub")
+	if err != nil {
+		t.Fatalf("查询插件健康状态失败: %v", err)
+	}
+	if status == nil {
+		t.Fatal("期望获取到插件健康状态")
+	}
+	if status.TimeoutCount != 0 || status.TimeoutRate != 0 {
+		t.Fatalf("deferred/partial_success 不应计入超时统计，实际 timeout_count=%d timeout_rate=%v", status.TimeoutCount, status.TimeoutRate)
+	}
+	if !status.IsHealthy || status.ConsecutiveFailures != 0 {
+		t.Fatalf("deferred/partial_success 应保持健康成功语义，实际为 %#v", status)
+	}
+}
+
 func TestPluginHealthServiceRecordResultAutoMigratesSchema(t *testing.T) {
 	service := NewPluginHealthService(newPluginHealthTestDB(t))
 

@@ -565,12 +565,12 @@ export const PluginManagementView: React.FC = () => {
                           <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {field.description || field.key}
                           </p>
-                          {field.type === 'number' ? (
+                          {field.type === 'number' || field.type === 'string' ? (
                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
                               {field.label || field.key}
                               <input
                                 aria-label={field.label || field.key}
-                                type="number"
+                                type={field.type === 'number' ? 'number' : 'text'}
                                 className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                                 value={String(controller.pluginConfigValues[field.key] ?? field.default ?? '')}
                                 disabled={controller.isReadOnly || controller.isPluginConfigLoading || controller.isPluginConfigSaving}

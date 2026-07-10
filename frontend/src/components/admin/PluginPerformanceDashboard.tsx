@@ -60,9 +60,21 @@ const healthSourceText = (source?: string) => {
   if (source === 'search_failure') return '搜索失败';
   if (source === 'search_success') return '搜索成功';
   if (source === 'timeout') return '搜索超时';
+  if (source === 'deferred') return '后台处理中';
+  if (source === 'partial_success') return '部分成功';
   if (source === 'batch_test') return '批量测试';
   if (source === 'system') return '系统检查';
   return source || '暂无来源';
+};
+
+const errorTypeText = (type: string) => {
+  if (type === 'timeout') return '超时';
+  if (type === 'deferred') return '后台处理中';
+  if (type === 'partial_success') return '部分成功';
+  if (type === 'search_failure') return '搜索失败';
+  if (type === 'circuit_open') return '熔断中';
+  if (type === 'error') return '错误';
+  return type || '未知';
 };
 
 const circuitText = (state: string) => {
@@ -229,7 +241,19 @@ function QualityMetricCell({ row }: { row: PluginObservabilityRow }) {
   return (
     <div className="min-w-0">
       <p className={metricValueClassName}>{formatRate(row.successRate)}</p>
-      <p className={metricHintClassName}>超时 {formatRate(row.timeoutRate)}</p>
+      <p className={metricHintClassName}>{row.deferredCount > 0 ? `后台 ${formatCount(row.deferredCount)} · ` : ''}超时 {formatRate(row.timeoutRate)}</p>
+    </div>
+  );
+}
+
+function SidHubDetailMetricCell({ row }: { row: PluginObservabilityRow }) {
+  if (row.pluginName !== 'sidhub') {
+    return <span className="whitespace-nowrap text-xs text-slate-400 dark:text-slate-500">-</span>;
+  }
+  return (
+    <div className="min-w-0">
+      <p className={metricValueClassName}>真实 {formatCount(row.detailSuccessCount)}</p>
+      <p className={metricHintClassName}>fallback {formatCount(row.fallbackCount)} · 部分 {formatCount(row.partialSuccessCount)}</p>
     </div>
   );
 }
@@ -341,6 +365,12 @@ export const PluginPerformanceDashboard: React.FC = () => {
       sortable: true,
       align: 'right',
       render: (row) => <ErrorMetricCell row={row} />,
+    },
+    {
+      key: 'sidhubDetail',
+      title: 'SeedHub增强',
+      align: 'right',
+      render: (row) => <SidHubDetailMetricCell row={row} />,
     },
     {
       key: 'circuitState',
@@ -480,8 +510,8 @@ export const PluginPerformanceDashboard: React.FC = () => {
                 )}
                 desktopVariant="management-grid"
                 desktopGridGapClassName="gap-4"
-                desktopGridTemplateColumns="minmax(220px,1.5fr) 92px 104px 104px 64px 116px 64px"
-                desktopGridMinWidth="900px"
+                desktopGridTemplateColumns="minmax(220px,1.5fr) 92px 104px 120px 64px 132px 116px 64px"
+                desktopGridMinWidth="1040px"
               />
             )}
           </AdminContentCard>
@@ -535,6 +565,10 @@ export const PluginPerformanceDashboard: React.FC = () => {
                     <span>P95：{formatMS(selected.p95ResponseMS)}</span>
                     <span>P99：{formatMS(selected.p99ResponseMS)}</span>
                     <span>最大并发：{formatCount(selected.maxConcurrentRequests)}</span>
+                    <span>后台处理中：{formatCount(selected.deferredCount)}</span>
+                    <span>部分成功：{formatCount(selected.partialSuccessCount)}</span>
+                    <span>详情成功：{formatCount(selected.detailSuccessCount)}</span>
+                    <span>fallback：{formatCount(selected.fallbackCount)}</span>
                   </div>
                 </div>
               </div>
@@ -550,7 +584,7 @@ export const PluginPerformanceDashboard: React.FC = () => {
                     <div key={log.id} className="rounded-[1.1rem] border border-rose-200/60 bg-rose-50/70 p-4 text-sm dark:border-rose-400/20 dark:bg-rose-400/10">
                       <div className="flex items-center justify-between gap-3">
                         <Badge variant="outline" className="rounded-full border-rose-200 bg-white px-2.5 py-1 text-rose-700 dark:border-rose-400/20 dark:bg-slate-950/40 dark:text-rose-200">
-                          {log.error_type}
+                          {errorTypeText(log.error_type)}
                         </Badge>
                         <span className="text-xs text-slate-500 dark:text-slate-400">{formatAdminHealthTime(log.occurred_at)}</span>
                       </div>

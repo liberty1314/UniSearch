@@ -110,12 +110,28 @@ const builtinPlugins: PluginInfo[] = [
     manifest_status: 'complete',
     config_schema: [
       {
+        key: 'max_search_cards',
+        label: '搜索卡片数量',
+        type: 'number',
+        required: false,
+        default: 5,
+        description: '搜索卡片数量',
+      },
+      {
         key: 'pre_resolved_link_start_per_type',
         label: '每类完整解析数量',
         type: 'number',
         required: false,
         default: 3,
         description: '每类完整解析数量',
+      },
+      {
+        key: 'base_url_strategy',
+        label: '域名策略',
+        type: 'string',
+        required: false,
+        default: 'fallback',
+        description: 'SeedHub 域名访问策略',
       },
     ],
   },
@@ -212,7 +228,9 @@ describe('PluginManageDialog', () => {
     catalogItems = clonePlugin(builtinPlugins);
     runtimeConfigs = {
       sidhub: {
+        max_search_cards: 5,
         pre_resolved_link_start_per_type: 3,
+        base_url_strategy: 'fallback',
       },
     };
 
@@ -427,22 +445,23 @@ describe('PluginManageDialog', () => {
     expect(screen.getByText('内置资源')).toBeInTheDocument();
     expect(screen.getByText('movie / tv')).toBeInTheDocument();
     expect(screen.getByText('配置项')).toBeInTheDocument();
-    expect(screen.getByText('接口地址')).toBeInTheDocument();
+    expect(screen.getByLabelText('接口地址')).toBeInTheDocument();
     expect(screen.getByText('UniSearch')).toBeInTheDocument();
     expect(screen.getByText('https://example.com/builtin-enabled')).toBeInTheDocument();
     expect(screen.getByText('健康状态')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '编辑该插件' })).not.toBeInTheDocument();
   });
 
-  it('支持编辑并保存 SeedHub 数字配置项', async () => {
+  it('支持编辑并保存 SeedHub 数字和字符串配置项', async () => {
     renderDialog();
     await waitForCatalogReady();
 
     const sidHubCard = getPluginCard('sidhub');
     fireEvent.click(within(sidHubCard).getByRole('button', { name: /详情/ }));
 
-    const input = await screen.findByLabelText('每类完整解析数量');
-    fireEvent.change(input, { target: { value: '5' } });
+    const preResolveInput = await screen.findByLabelText('每类完整解析数量');
+    fireEvent.change(preResolveInput, { target: { value: '5' } });
+    fireEvent.change(screen.getByLabelText('域名策略'), { target: { value: 'fallback_only' } });
     fireEvent.click(screen.getByRole('button', { name: '保存配置' }));
 
     await waitFor(() => {
@@ -452,7 +471,9 @@ describe('PluginManageDialog', () => {
           method: 'PUT',
           body: JSON.stringify({
             config: {
+              max_search_cards: 5,
               pre_resolved_link_start_per_type: 5,
+              base_url_strategy: 'fallback_only',
             },
           }),
         })

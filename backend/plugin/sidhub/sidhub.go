@@ -35,7 +35,12 @@ const (
 	primaryBaseURL                     = "https://sidhub.cc"
 	fallbackBaseURL                    = "https://www.seedhub.cc"
 	maxSearchCards                     = 5
+	defaultBaseURLStrategy             = "fallback"
 	maxExpandedResultsPerMovie         = 240
+	defaultDetailConcurrency           = 2
+	maxDetailConcurrency               = maxSearchCards
+	defaultDetailTimeout               = 2 * time.Second
+	defaultDetailTotalBudget           = 4 * time.Second
 	cacheTTL                           = 1 * time.Hour
 	refreshCacheTTL                    = 5 * time.Minute
 )
@@ -166,6 +171,11 @@ type sidHubLinkEntry struct {
 
 type sidHubRuntimeConfig struct {
 	PreResolvedLinkStartPerType int
+	MaxSearchCards              int
+	BaseURLStrategy             string
+	DetailConcurrency           int
+	DetailTimeout               time.Duration
+	DetailTotalBudget           time.Duration
 }
 
 func init() {
@@ -187,11 +197,51 @@ func NewSidHubPlugin() *SidHubAsyncPlugin {
 		Permissions:     []string{"network"},
 		ConfigSchema: []model.PluginConfigField{
 			{
+				Key:         "max_search_cards",
+				Label:       "搜索卡片数量",
+				Type:        "number",
+				Default:     float64(maxSearchCards),
+				Description: "SeedHub 搜索页最多解析的影片卡片数。",
+				Group:       "解析性能",
+			},
+			{
 				Key:         "pre_resolved_link_start_per_type",
 				Label:       "每类完整解析数量",
 				Type:        "number",
 				Default:     float64(defaultPreResolvedLinkStartPerType),
 				Description: "SeedHub 每个资源类型前 N 条 link_start 会在搜索阶段尝试完整解析；0 表示点击时再获取扫码载荷。",
+				Group:       "解析性能",
+			},
+			{
+				Key:         "detail_concurrency",
+				Label:       "详情页并发数",
+				Type:        "number",
+				Default:     float64(defaultDetailConcurrency),
+				Description: "SeedHub 详情页资源解析的最大并发数。",
+				Group:       "解析性能",
+			},
+			{
+				Key:         "detail_timeout_seconds",
+				Label:       "单详情页超时",
+				Type:        "number",
+				Default:     defaultDetailTimeout.Seconds(),
+				Description: "SeedHub 单个详情页资源解析的最长等待时间。",
+				Group:       "解析性能",
+			},
+			{
+				Key:         "detail_total_budget_seconds",
+				Label:       "详情增强总预算",
+				Type:        "number",
+				Default:     defaultDetailTotalBudget.Seconds(),
+				Description: "SeedHub 本轮详情页增强的总等待时间，耗尽后返回详情页 fallback。",
+				Group:       "解析性能",
+			},
+			{
+				Key:         "base_url_strategy",
+				Label:       "域名策略",
+				Type:        "string",
+				Default:     defaultBaseURLStrategy,
+				Description: "SeedHub 域名访问策略：fallback、primary_only 或 fallback_only。",
 				Group:       "解析性能",
 			},
 		},
@@ -227,32 +277,41 @@ func (p *SidHubAsyncPlugin) SetFetcherForTest(fetcher func(string) ([]byte, erro
 // Search 执行搜索并返回结果。
 // SearchWithResult 执行搜索并返回带状态的结果。
 func (p *SidHubAsyncPlugin) SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error) {
-	results, err := p.doSearch(p.GetClient(), keyword, ext)
-	if err != nil {
-		return model.PluginSearchResult{}, err
-	}
-
-	return model.PluginSearchResult{
-		Results:   results,
-		IsFinal:   true,
-		Timestamp: time.Now(),
-		Source:    p.Name(),
-		Message:   "搜索完成",
-	}, nil
+	return p.AsyncSearchWithResult(keyword, p.doSearch, p.MainCacheKey, ext)
 }
 
 func (p *SidHubAsyncPlugin) doSearch(client *http.Client, keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
+	return p.doSearchWithContext(context.Background(), client, keyword, ext)
+}
+
+func (p *SidHubAsyncPlugin) doSearchWithContext(ctx context.Context, client *http.Client, keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	trimmedKeyword := strings.TrimSpace(keyword)
 	if trimmedKeyword == "" {
 		return []model.SearchResult{}, nil
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	runtimeConfig := resolveSidHubRuntimeConfig(ext)
-	baseURLs, err := resolveBaseURLs(ext)
+	baseURLs, err := resolveBaseURLs(ext, runtimeConfig.BaseURLStrategy)
 	if err != nil {
 		return nil, err
 	}
-	cacheKey := fmt.Sprintf("%s:%d:%s", strings.ToLower(trimmedKeyword), runtimeConfig.PreResolvedLinkStartPerType, strings.Join(baseURLs, ","))
+	cacheKey := fmt.Sprintf(
+		"%s:%d:%d:%s:%d:%s:%s:%s",
+		strings.ToLower(trimmedKeyword),
+		runtimeConfig.PreResolvedLinkStartPerType,
+		runtimeConfig.MaxSearchCards,
+		runtimeConfig.BaseURLStrategy,
+		runtimeConfig.DetailConcurrency,
+		runtimeConfig.DetailTimeout,
+		runtimeConfig.DetailTotalBudget,
+		strings.Join(baseURLs, ","),
+	)
 	if cached, ok := searchCache.Load(cacheKey); ok {
 		entry, valid := cached.(cachedSearchResult)
 		if valid && time.Now().Before(entry.expiresAt) {
@@ -263,7 +322,10 @@ func (p *SidHubAsyncPlugin) doSearch(client *http.Client, keyword string, ext ma
 
 	var lastErr error
 	for _, baseURL := range baseURLs {
-		results, err := p.searchBaseURL(context.Background(), baseURL, trimmedKeyword, runtimeConfig)
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		results, err := p.searchBaseURL(ctx, baseURL, trimmedKeyword, runtimeConfig)
 		if err != nil {
 			lastErr = err
 			continue
@@ -286,35 +348,97 @@ func (p *SidHubAsyncPlugin) doSearch(client *http.Client, keyword string, ext ma
 }
 
 func (p *SidHubAsyncPlugin) searchBaseURL(ctx context.Context, baseURL string, keyword string, runtimeConfig sidHubRuntimeConfig) ([]model.SearchResult, error) {
+	cards, err := p.searchCardsOnly(ctx, baseURL, keyword, runtimeConfig.MaxSearchCards)
+	if err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return p.enhanceSidHubCardsWithDetails(ctx, baseURL, cards, runtimeConfig), nil
+}
+
+func (p *SidHubAsyncPlugin) searchCardsOnly(ctx context.Context, baseURL string, keyword string, limit int) ([]sidHubMovie, error) {
 	searchURL := buildSearchURL(baseURL, keyword)
 	body, err := p.fetchURL(ctx, searchURL)
 	if err != nil {
 		return nil, err
 	}
 
-	cards, err := parseSearchCards(bytes.NewReader(body), baseURL, maxSearchCards)
+	cards, err := parseSearchCards(bytes.NewReader(body), baseURL, clampSidHubMaxSearchCards(limit))
 	if err != nil {
 		return nil, err
 	}
+	return cards, nil
+}
 
+func (p *SidHubAsyncPlugin) enhanceSidHubCardsWithDetails(ctx context.Context, baseURL string, cards []sidHubMovie, runtimeConfig sidHubRuntimeConfig) []model.SearchResult {
+	entriesByCard := p.fetchDetailEntriesForCards(ctx, baseURL, cards, runtimeConfig)
 	results := make([]model.SearchResult, 0, len(cards))
-	for _, card := range cards {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		entries := []sidHubLinkEntry{}
-		detailBody, detailErr := p.fetchURL(ctx, card.DetailURL)
-		if detailErr == nil {
-			parsedEntries, parseErr := parseDetailLinkEntries(bytes.NewReader(detailBody), baseURL, card.Title)
-			if parseErr == nil {
-				entries, _ = limitExpandedSidHubEntries(p.resolveLinkStartEntries(ctx, parsedEntries, card.ID, runtimeConfig.PreResolvedLinkStartPerType))
-			}
-		}
-
-		results = append(results, buildExpandedResults(card, entries)...)
+	for index, card := range cards {
+		results = append(results, buildExpandedResults(card, entriesByCard[index])...)
 	}
 
-	return results, nil
+	return results
+}
+
+func (p *SidHubAsyncPlugin) fetchDetailEntriesForCards(ctx context.Context, baseURL string, cards []sidHubMovie, runtimeConfig sidHubRuntimeConfig) [][]sidHubLinkEntry {
+	entriesByCard := make([][]sidHubLinkEntry, len(cards))
+	if len(cards) == 0 {
+		return entriesByCard
+	}
+	if runtimeConfig.DetailTotalBudget > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, runtimeConfig.DetailTotalBudget)
+		defer cancel()
+	}
+	concurrency := runtimeConfig.DetailConcurrency
+	if concurrency > len(cards) {
+		concurrency = len(cards)
+	}
+	sem := make(chan struct{}, concurrency)
+	var wg sync.WaitGroup
+
+	for index, card := range cards {
+		index := index
+		card := card
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			select {
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
+			case <-ctx.Done():
+				return
+			}
+
+			detailCtx := ctx
+			var cancel context.CancelFunc
+			if runtimeConfig.DetailTimeout > 0 {
+				detailCtx, cancel = context.WithTimeout(ctx, runtimeConfig.DetailTimeout)
+			}
+			if cancel != nil {
+				defer cancel()
+			}
+
+			if err := detailCtx.Err(); err != nil {
+				return
+			}
+			detailBody, detailErr := p.fetchURL(detailCtx, card.DetailURL)
+			if detailErr != nil {
+				return
+			}
+			parsedEntries, parseErr := parseDetailLinkEntries(bytes.NewReader(detailBody), baseURL, card.Title)
+			if parseErr != nil {
+				return
+			}
+			limitedEntries, _ := limitExpandedSidHubEntries(p.resolveLinkStartEntries(detailCtx, parsedEntries, card.ID, runtimeConfig.PreResolvedLinkStartPerType))
+			entriesByCard[index] = limitedEntries
+		}()
+	}
+
+	wg.Wait()
+	return entriesByCard
 }
 
 func (p *SidHubAsyncPlugin) fetchURL(ctx context.Context, targetURL string) ([]byte, error) {
@@ -1016,7 +1140,14 @@ func cloneSidHubLink(link model.Link) model.Link {
 }
 
 func resolveSidHubRuntimeConfig(ext map[string]interface{}) sidHubRuntimeConfig {
-	config := sidHubRuntimeConfig{PreResolvedLinkStartPerType: defaultPreResolvedLinkStartPerType}
+	config := sidHubRuntimeConfig{
+		PreResolvedLinkStartPerType: defaultPreResolvedLinkStartPerType,
+		MaxSearchCards:              maxSearchCards,
+		BaseURLStrategy:             defaultBaseURLStrategy,
+		DetailConcurrency:           defaultDetailConcurrency,
+		DetailTimeout:               defaultDetailTimeout,
+		DetailTotalBudget:           defaultDetailTotalBudget,
+	}
 	if ext == nil {
 		return config
 	}
@@ -1024,15 +1155,36 @@ func resolveSidHubRuntimeConfig(ext map[string]interface{}) sidHubRuntimeConfig 
 	if !ok {
 		return config
 	}
-	rawValue, exists := rawConfig["pre_resolved_link_start_per_type"]
-	if !exists {
-		return config
+	if rawValue, exists := rawConfig["pre_resolved_link_start_per_type"]; exists {
+		if value, ok := sidHubNumberToInt(rawValue); ok {
+			config.PreResolvedLinkStartPerType = clampSidHubPreResolvedLimit(value)
+		}
 	}
-	value, ok := sidHubNumberToInt(rawValue)
-	if !ok {
-		return config
+	if rawValue, exists := rawConfig["max_search_cards"]; exists {
+		if value, ok := sidHubNumberToInt(rawValue); ok {
+			config.MaxSearchCards = clampSidHubMaxSearchCards(value)
+		}
 	}
-	config.PreResolvedLinkStartPerType = clampSidHubPreResolvedLimit(value)
+	if rawValue, exists := rawConfig["base_url_strategy"]; exists {
+		if value, ok := rawValue.(string); ok {
+			config.BaseURLStrategy = normalizeSidHubBaseURLStrategy(value)
+		}
+	}
+	if rawValue, exists := rawConfig["detail_concurrency"]; exists {
+		if value, ok := sidHubNumberToInt(rawValue); ok {
+			config.DetailConcurrency = clampSidHubDetailConcurrency(value)
+		}
+	}
+	if rawValue, exists := rawConfig["detail_timeout_seconds"]; exists {
+		if value, ok := sidHubNumberToFloat(rawValue); ok {
+			config.DetailTimeout = clampSidHubDurationSeconds(value, defaultDetailTimeout)
+		}
+	}
+	if rawValue, exists := rawConfig["detail_total_budget_seconds"]; exists {
+		if value, ok := sidHubNumberToFloat(rawValue); ok {
+			config.DetailTotalBudget = clampSidHubDurationSeconds(value, defaultDetailTotalBudget)
+		}
+	}
 	return config
 }
 
@@ -1056,6 +1208,26 @@ func sidHubNumberToInt(value interface{}) (int, bool) {
 	}
 }
 
+func sidHubNumberToFloat(value interface{}) (float64, bool) {
+	switch typed := value.(type) {
+	case int:
+		return float64(typed), true
+	case int64:
+		return float64(typed), true
+	case int32:
+		return float64(typed), true
+	case float64:
+		return typed, true
+	case float32:
+		return float64(typed), true
+	case string:
+		parsed, err := strconv.ParseFloat(strings.TrimSpace(typed), 64)
+		return parsed, err == nil
+	default:
+		return 0, false
+	}
+}
+
 func clampSidHubPreResolvedLimit(value int) int {
 	if value < 0 {
 		return defaultPreResolvedLinkStartPerType
@@ -1064,6 +1236,46 @@ func clampSidHubPreResolvedLimit(value int) int {
 		return maxPreResolvedLinkStartPerType
 	}
 	return value
+}
+
+func clampSidHubMaxSearchCards(value int) int {
+	if value <= 0 {
+		return maxSearchCards
+	}
+	if value > maxSearchCards {
+		return maxSearchCards
+	}
+	return value
+}
+
+func normalizeSidHubBaseURLStrategy(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "primary_only", "fallback_only", defaultBaseURLStrategy:
+		return strings.ToLower(strings.TrimSpace(value))
+	default:
+		return defaultBaseURLStrategy
+	}
+}
+
+func clampSidHubDetailConcurrency(value int) int {
+	if value <= 0 {
+		return defaultDetailConcurrency
+	}
+	if value > maxDetailConcurrency {
+		return maxDetailConcurrency
+	}
+	return value
+}
+
+func clampSidHubDurationSeconds(value float64, fallback time.Duration) time.Duration {
+	if value <= 0 {
+		return fallback
+	}
+	duration := time.Duration(value * float64(time.Second))
+	if duration <= 0 {
+		return fallback
+	}
+	return duration
 }
 
 func (p *SidHubAsyncPlugin) resolveQuarkURL(linkURL string) (string, error) {
@@ -1425,7 +1637,7 @@ func buildResult(card sidHubMovie, entries []sidHubLinkEntry) model.SearchResult
 func buildExpandedResults(card sidHubMovie, entries []sidHubLinkEntry) []model.SearchResult {
 	card, entries = fillSidHubTimes(card, entries, time.Now())
 	if len(entries) == 0 {
-		return []model.SearchResult{buildResult(card, nil)}
+		return []model.SearchResult{buildExpandedResult(card, buildSidHubDetailFallbackEntry(card))}
 	}
 
 	results := make([]model.SearchResult, 0, len(entries))
@@ -1438,6 +1650,26 @@ func buildExpandedResults(card sidHubMovie, entries []sidHubLinkEntry) []model.S
 	return results
 }
 
+func buildSidHubDetailFallbackEntry(card sidHubMovie) sidHubLinkEntry {
+	return sidHubLinkEntry{
+		Link: model.Link{
+			Type:       "detail",
+			URL:        card.DetailURL,
+			AccessMode: "direct_open",
+			Datetime:   card.Datetime,
+			WorkTitle:  cleanText(card.Title),
+		},
+		Title:          card.Title,
+		GroupLabel:     "详情页",
+		Index:          1,
+		TitleSource:    "movie_card_fallback",
+		LinkTypeSource: "detail_fallback",
+		Datetime:       card.Datetime,
+		DateText:       card.DateText,
+		DateSource:     card.DateSource,
+	}
+}
+
 func buildExpandedResult(card sidHubMovie, entry sidHubLinkEntry) model.SearchResult {
 	card, entries := fillSidHubTimes(card, []sidHubLinkEntry{entry}, time.Now())
 	entry = entries[0]
@@ -1445,6 +1677,7 @@ func buildExpandedResult(card sidHubMovie, entry sidHubLinkEntry) model.SearchRe
 	if title == "" {
 		title = card.Title
 	}
+	targetType := resolveSidHubTargetType(entry.Link.Type)
 
 	return model.SearchResult{
 		UniqueID:       buildExpandedUniqueID(card.ID, entry),
@@ -1458,12 +1691,12 @@ func buildExpandedResult(card sidHubMovie, entry sidHubLinkEntry) model.SearchRe
 		SourceType:     "plugin",
 		SourceName:     pluginDisplayName,
 		MediaType:      card.MediaType,
-		TargetType:     resolveSidHubTargetType(entry.Link.Type),
+		TargetType:     targetType,
 		DetailURL:      card.DetailURL,
 		Capabilities: model.ResourceCapabilities{
 			Searchable:      true,
 			ShareSearchable: isShareType(entry.Link.Type),
-			Downloadable:    true,
+			Downloadable:    targetType != "detail",
 		},
 		Meta: map[string]interface{}{
 			"sid_hub_movie_id":          card.ID,
@@ -1584,7 +1817,9 @@ func mergeSidHubTags(cardTags []string, badges []string) []string {
 }
 
 func resolveSidHubTargetType(linkType string) string {
-	switch linkType {
+	switch normalizeLinkType(linkType) {
+	case "detail":
+		return "detail"
 	case "magnet", "ed2k", "thunder":
 		return "download"
 	default:
@@ -1610,7 +1845,7 @@ func buildSearchURL(baseURL string, keyword string) string {
 	return fmt.Sprintf("%s/s/%s/", trimmedBase, url.PathEscape(strings.TrimSpace(keyword)))
 }
 
-func resolveBaseURLs(ext map[string]interface{}) ([]string, error) {
+func resolveBaseURLs(ext map[string]interface{}, strategy string) ([]string, error) {
 	if ext != nil {
 		if customBaseURL, ok := ext["sidhub_base_url"].(string); ok && strings.TrimSpace(customBaseURL) != "" {
 			normalized, err := normalizeSeedHubBaseURL(customBaseURL)
@@ -1619,6 +1854,12 @@ func resolveBaseURLs(ext map[string]interface{}) ([]string, error) {
 			}
 			return []string{normalized}, nil
 		}
+	}
+	switch normalizeSidHubBaseURLStrategy(strategy) {
+	case "primary_only":
+		return []string{primaryBaseURL}, nil
+	case "fallback_only":
+		return []string{fallbackBaseURL}, nil
 	}
 	return []string{primaryBaseURL, fallbackBaseURL}, nil
 }
@@ -2103,6 +2344,8 @@ func extractSidHubBadges(row *goquery.Selection) []string {
 func normalizeLinkType(value string) string {
 	normalized := strings.ToLower(strings.TrimSpace(value))
 	switch {
+	case normalized == "detail" || strings.Contains(normalized, "详情"):
+		return "detail"
 	case strings.Contains(normalized, "quark"):
 		return "quark"
 	case strings.Contains(normalized, "baidu"):

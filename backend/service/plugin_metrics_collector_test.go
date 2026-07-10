@@ -97,6 +97,70 @@ func TestPluginMetricsCollectorAggregatesAndFlushesMetrics(t *testing.T) {
 	}
 }
 
+func TestPluginMetricsCollectorAggregatesDeferredPartialAndSidHubDetailCounts(t *testing.T) {
+	collector, db := newPluginMetricsTestCollector(t)
+	now := time.Date(2026, 7, 4, 20, 0, 0, 0, time.UTC)
+
+	collector.RecordEvent(PluginMetricEvent{
+		PluginName:         "sidhub",
+		Keyword:            "后台处理中",
+		Success:            true,
+		Deferred:           true,
+		ErrorType:          "deferred",
+		DetailSuccessCount: 0,
+		FallbackCount:      0,
+		OccurredAt:         now,
+	})
+	collector.RecordEvent(PluginMetricEvent{
+		PluginName:         "sidhub",
+		Keyword:            "部分成功",
+		Success:            true,
+		PartialSuccess:     true,
+		ErrorType:          "partial_success",
+		DetailSuccessCount: 2,
+		FallbackCount:      3,
+		OccurredAt:         now.Add(time.Minute),
+	})
+
+	snapshot := collector.RealtimeSnapshot()
+	if len(snapshot.Items) != 1 {
+		t.Fatalf("期望一个实时指标项，实际为 %#v", snapshot.Items)
+	}
+	item := snapshot.Items[0]
+	if item.DeferredCount != 1 || item.PartialSuccessCount != 1 || item.DetailSuccessCount != 2 || item.FallbackCount != 3 {
+		t.Fatalf("实时 sidhub 语义计数不正确: %#v", item)
+	}
+	if item.TimeoutCount != 0 || item.ErrorCount != 0 {
+		t.Fatalf("deferred/partial_success 不应计入 timeout/error，实际为 %#v", item)
+	}
+
+	if err := collector.Flush(context.Background()); err != nil {
+		t.Fatalf("聚合写入失败: %v", err)
+	}
+
+	var metric model.PluginPerformanceMetric
+	if err := db.Where("plugin_name = ?", "sidhub").First(&metric).Error; err != nil {
+		t.Fatalf("查询 sidhub 聚合指标失败: %v", err)
+	}
+	if metric.DeferredCount != 1 || metric.PartialSuccessCount != 1 || metric.DetailSuccessCount != 2 || metric.FallbackCount != 3 {
+		t.Fatalf("聚合 sidhub 语义计数不正确: %#v", metric)
+	}
+	if metric.TimeoutCount != 0 || metric.ErrorCount != 0 {
+		t.Fatalf("deferred/partial_success 聚合不应计入 timeout/error，实际为 %#v", metric)
+	}
+
+	var logs []model.PluginErrorLog
+	if err := db.Where("plugin_name = ?", "sidhub").Order("error_type ASC").Find(&logs).Error; err != nil {
+		t.Fatalf("查询 sidhub 语义日志失败: %v", err)
+	}
+	if len(logs) != 2 || logs[0].ErrorType != "deferred" || logs[1].ErrorType != "partial_success" {
+		t.Fatalf("期望错误日志可区分 deferred/partial_success，实际为 %#v", logs)
+	}
+	if logs[0].ErrorMessage == "" || logs[1].ErrorMessage == "" {
+		t.Fatalf("deferred/partial_success 日志应包含可读说明，实际为 %#v", logs)
+	}
+}
+
 func TestPluginMetricsCollectorKeepsRingBufferCapacity(t *testing.T) {
 	collector, _ := newPluginMetricsTestCollector(t)
 

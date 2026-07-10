@@ -14,6 +14,10 @@ export interface PluginMetricsRealtimeItem {
   request_count: number;
   success_count: number;
   timeout_count: number;
+  deferred_count?: number;
+  partial_success_count?: number;
+  detail_success_count?: number;
+  fallback_count?: number;
   error_count: number;
   cache_hit_count: number;
   max_concurrent_requests: number;
@@ -34,6 +38,10 @@ export interface PluginPerformanceMetric {
   request_count: number;
   success_count: number;
   timeout_count: number;
+  deferred_count?: number;
+  partial_success_count?: number;
+  detail_success_count?: number;
+  fallback_count?: number;
   error_count: number;
   cache_hit_count: number;
   max_concurrent_requests: number;
@@ -79,6 +87,10 @@ export interface PluginObservabilityRow {
   requestCount: number;
   successRate: number;
   timeoutRate: number;
+  deferredCount: number;
+  partialSuccessCount: number;
+  detailSuccessCount: number;
+  fallbackCount: number;
   errorCount: number;
   avgResponseMS: number;
   p95ResponseMS: number;

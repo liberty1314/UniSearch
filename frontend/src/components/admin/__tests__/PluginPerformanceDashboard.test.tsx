@@ -41,6 +41,10 @@ const mockSuccessfulFetch = (options: { emptyRealtime?: boolean; extraPluginCoun
       request_count: 10,
       success_count: 8,
       timeout_count: 1,
+      deferred_count: 1,
+      partial_success_count: 2,
+      detail_success_count: 3,
+      fallback_count: 4,
       error_count: 2,
       cache_hit_count: 1,
       max_concurrent_requests: 3,
@@ -57,6 +61,10 @@ const mockSuccessfulFetch = (options: { emptyRealtime?: boolean; extraPluginCoun
       request_count: 20,
       success_count: 20,
       timeout_count: 0,
+      deferred_count: 0,
+      partial_success_count: 0,
+      detail_success_count: 0,
+      fallback_count: 0,
       error_count: 0,
       cache_hit_count: 3,
       max_concurrent_requests: 2,
@@ -92,6 +100,10 @@ const mockSuccessfulFetch = (options: { emptyRealtime?: boolean; extraPluginCoun
       request_count: 5,
       success_count: 4,
       timeout_count: 1,
+      deferred_count: 1,
+      partial_success_count: 1,
+      detail_success_count: 2,
+      fallback_count: 3,
       error_count: 1,
       cache_hit_count: 0,
       max_concurrent_requests: 2,
@@ -108,6 +120,10 @@ const mockSuccessfulFetch = (options: { emptyRealtime?: boolean; extraPluginCoun
       request_count: 10,
       success_count: 10,
       timeout_count: 0,
+      deferred_count: 0,
+      partial_success_count: 0,
+      detail_success_count: 0,
+      fallback_count: 0,
       error_count: 0,
       cache_hit_count: 2,
       max_concurrent_requests: 2,
@@ -250,6 +266,24 @@ const mockSuccessfulFetch = (options: { emptyRealtime?: boolean; extraPluginCoun
             duration_ms: 3000,
             occurred_at: '2026-07-04T14:06:00Z',
           },
+          {
+            id: 12,
+            plugin_name: 'sidhub',
+            keyword_hash: 'def456',
+            error_type: 'partial_success',
+            error_message: '插件返回部分结果，详情增强降级',
+            duration_ms: 400,
+            occurred_at: '2026-07-04T14:07:00Z',
+          },
+          {
+            id: 13,
+            plugin_name: 'sidhub',
+            keyword_hash: 'ghi789',
+            error_type: 'deferred',
+            error_message: '插件后台继续处理',
+            duration_ms: 4,
+            occurred_at: '2026-07-04T14:08:00Z',
+          },
         ],
         page: 1,
         page_size: 20,
@@ -306,6 +340,10 @@ describe('PluginPerformanceDashboard', () => {
     const drawer = await screen.findByTestId('plugin-performance-drawer');
     expect(within(drawer).getByText(/恢复倒计时：/)).toBeInTheDocument();
     expect(within(drawer).getByText('插件搜索超时')).toBeInTheDocument();
+    expect(within(drawer).getByText('后台处理中')).toBeInTheDocument();
+    expect(within(drawer).getByText('部分成功')).toBeInTheDocument();
+    expect(within(drawer).getByText('详情成功：3')).toBeInTheDocument();
+    expect(within(drawer).getByText('fallback：4')).toBeInTheDocument();
     expect(within(drawer).getByText(/耗时 3000 ms/)).toBeInTheDocument();
 
     await userEvent.click(within(drawer).getByRole('button', { name: '关闭详情抽屉' }));

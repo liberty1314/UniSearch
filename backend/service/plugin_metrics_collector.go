@@ -30,6 +30,10 @@ type PluginMetricEvent struct {
 	ResultCount        int
 	ErrorType          string
 	ErrorMessage       string
+	Deferred           bool
+	PartialSuccess     bool
+	DetailSuccessCount int
+	FallbackCount      int
 	ConcurrentRequests int
 	OccurredAt         time.Time
 }
@@ -344,6 +348,10 @@ type pluginMetricBucket struct {
 	requestCount          int
 	successCount          int
 	timeoutCount          int
+	deferredCount         int
+	partialSuccessCount   int
+	detailSuccessCount    int
+	fallbackCount         int
 	errorCount            int
 	cacheHitCount         int
 	maxConcurrentRequests int
@@ -375,7 +383,7 @@ func buildPluginMetricRows(events []PluginMetricEvent) ([]model.PluginPerformanc
 			buckets[bucketKey] = bucket
 		}
 		applyPluginMetricEvent(bucket, event)
-		if event.Timeout || event.ErrorMessage != "" {
+		if event.Timeout || event.ErrorMessage != "" || event.ErrorType == "deferred" || event.ErrorType == "partial_success" {
 			logs = append(logs, buildPluginErrorLog(event))
 		}
 	}
@@ -426,6 +434,10 @@ func buildPluginRealtimeItems(events []PluginMetricEvent, active map[string]int)
 			RequestCount:          bucket.requestCount,
 			SuccessCount:          bucket.successCount,
 			TimeoutCount:          bucket.timeoutCount,
+			DeferredCount:         bucket.deferredCount,
+			PartialSuccessCount:   bucket.partialSuccessCount,
+			DetailSuccessCount:    bucket.detailSuccessCount,
+			FallbackCount:         bucket.fallbackCount,
 			ErrorCount:            bucket.errorCount,
 			CacheHitCount:         bucket.cacheHitCount,
 			MaxConcurrentRequests: bucket.maxConcurrentRequests,
@@ -455,6 +467,14 @@ func applyPluginMetricEvent(bucket *pluginMetricBucket, event PluginMetricEvent)
 	if event.Timeout {
 		bucket.timeoutCount++
 	}
+	if event.Deferred || event.ErrorType == "deferred" {
+		bucket.deferredCount++
+	}
+	if event.PartialSuccess || event.ErrorType == "partial_success" {
+		bucket.partialSuccessCount++
+	}
+	bucket.detailSuccessCount += event.DetailSuccessCount
+	bucket.fallbackCount += event.FallbackCount
 	if event.ErrorMessage != "" || event.Timeout {
 		bucket.errorCount++
 		bucket.lastError = event.ErrorMessage
@@ -489,6 +509,10 @@ func (b *pluginMetricBucket) toMetric() model.PluginPerformanceMetric {
 		RequestCount:          b.requestCount,
 		SuccessCount:          b.successCount,
 		TimeoutCount:          b.timeoutCount,
+		DeferredCount:         b.deferredCount,
+		PartialSuccessCount:   b.partialSuccessCount,
+		DetailSuccessCount:    b.detailSuccessCount,
+		FallbackCount:         b.fallbackCount,
 		ErrorCount:            b.errorCount,
 		CacheHitCount:         b.cacheHitCount,
 		MaxConcurrentRequests: b.maxConcurrentRequests,
@@ -531,6 +555,12 @@ func buildPluginErrorLog(event PluginMetricEvent) model.PluginErrorLog {
 	errorMessage := event.ErrorMessage
 	if errorMessage == "" && event.Timeout {
 		errorMessage = "插件搜索超时"
+	}
+	if errorMessage == "" && errorType == "deferred" {
+		errorMessage = "插件后台继续处理"
+	}
+	if errorMessage == "" && errorType == "partial_success" {
+		errorMessage = "插件返回部分结果，详情增强降级"
 	}
 	occurredAt := event.OccurredAt
 	if occurredAt.IsZero() {
