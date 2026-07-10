@@ -305,3 +305,12 @@
     - frontend/src/components/resource-detail/ResourceDetailActionPanel.tsx
     - frontend/src/pages/__tests__/ResourceDetailPage.test.tsx
     - docs/readme_2607.md
+
+[2026-07-10 23:26] fix(search-results): 隐藏普通搜索回退提示
+  Body: 移除搜索结果工具栏中的普通搜索回退状态展示，避免普通用户看到内部搜索降级提示。同步更新搜索结果测试，覆盖 fallback 状态下不展示回退提示的行为。
+  Files:
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/home/SearchResultsToolbar.tsx
+    - frontend/src/components/search-results/SearchResultsHeader.tsx
+    - docs/readme_2607.md

@@ -5,7 +5,6 @@ import { Grid2X2, List } from "lucide-react";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ViewMode = "grid" | "list";
-type ProgressiveStatus = "idle" | "running" | "complete" | "fallback" | "error";
 
 interface SearchResultsToolbarProps {
   /** 全量结果总数 */
@@ -16,8 +15,6 @@ interface SearchResultsToolbarProps {
   onViewModeChange: (mode: ViewMode) => void;
   /** 已有结果上的刷新态 */
   isRefreshing?: boolean;
-  /** 渐进式搜索状态 */
-  progressiveStatus?: ProgressiveStatus;
   /** 已启用高级筛选摘要 */
   activeFilterChips?: Array<{ id: string; label: string }>;
   /** 删除单个筛选条件 */
@@ -41,7 +38,6 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
       viewMode,
       onViewModeChange,
       isRefreshing = false,
-      progressiveStatus = "idle",
       activeFilterChips = [],
       onRemoveFilterChip,
       onClearFilters,
@@ -71,11 +67,6 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
                   {isRefreshing && (
                     <span className="text-[13px] text-cyan-600 dark:text-cyan-400">
                       加载中
-                    </span>
-                  )}
-                  {progressiveStatus === "fallback" && (
-                    <span className="rounded-full border border-amber-200/70 bg-amber-50/80 px-2.5 py-1 text-[12px] font-medium text-amber-700 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-200">
-                      已回退普通搜索
                     </span>
                   )}
                 </div>

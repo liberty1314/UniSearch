@@ -102,7 +102,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     performSearch,
     displayedCount,
     setSearchParams,
-    progressiveStatus,
     updateResourceScanTransfer,
   } = useSearchStore();
   const navigate = useNavigate();
@@ -570,7 +569,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
         isRefreshing={isRefreshing}
-        progressiveStatus={progressiveStatus}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveFilterChip}
         onClearFilters={hasAnyActiveFilters ? handleClearAllFilters : undefined}

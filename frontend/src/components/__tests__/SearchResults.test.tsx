@@ -991,6 +991,18 @@ describe("SearchResults", () => {
     expect(screen.queryByText(/已接收/)).not.toBeInTheDocument();
   });
 
+  it("回退普通搜索时不向普通用户展示回退提示", async () => {
+    searchStoreState = {
+      ...searchStoreState,
+      progressiveStatus: "fallback",
+    };
+
+    renderSearchResults();
+
+    expect(await screen.findByTestId("search-result-grid-card")).toBeInTheDocument();
+    expect(screen.queryByText("已回退普通搜索")).not.toBeInTheDocument();
+  });
+
   it("结果 warning 不向普通用户展示提示、来源名和来源数量", async () => {
     searchStoreState = {
       ...searchStoreState,
