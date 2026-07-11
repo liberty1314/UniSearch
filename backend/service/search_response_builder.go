@@ -1,13 +1,15 @@
 package service
 
 import (
-	"fmt"
-	"hash/fnv"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
 
+	"unisearch/config"
 	"unisearch/model"
 	"unisearch/util"
 )
@@ -50,17 +52,32 @@ var (
 	}
 )
 
-type searchResponseBuilder struct{}
+const (
+	resourcePublicIDPrefix       = "r_v1_"
+	resourcePublicIDDigestLength = 18
+)
 
-func newSearchResponseBuilder() *searchResponseBuilder {
-	return &searchResponseBuilder{}
+type searchResponseBuilder struct {
+	resourcePublicIDSecret string
 }
 
-func (searchResponseBuilder) Build(results []model.SearchResult, request NormalizedSearchRequest) model.SearchResponse {
+func newSearchResponseBuilder() *searchResponseBuilder {
+	secret := ""
+	if config.AppConfig != nil {
+		secret = config.AppConfig.ResourcePublicIDSecret
+	}
+	return newSearchResponseBuilderWithSecret(secret)
+}
+
+func newSearchResponseBuilderWithSecret(resourcePublicIDSecret string) *searchResponseBuilder {
+	return &searchResponseBuilder{resourcePublicIDSecret: strings.TrimSpace(resourcePublicIDSecret)}
+}
+
+func (builder searchResponseBuilder) Build(results []model.SearchResult, request NormalizedSearchRequest) model.SearchResponse {
 	orderedResults := append([]model.SearchResult(nil), results...)
 	sortResultsByTimeAndKeywords(orderedResults)
 
-	resources := buildResourceObjects(orderedResults, request.Keyword, request.CloudTypes)
+	resources := buildResourceObjects(orderedResults, request.Keyword, request.CloudTypes, builder.resourcePublicIDSecret)
 	sortResourceObjects(resources, request.Keyword)
 
 	return model.SearchResponse{
@@ -70,7 +87,7 @@ func (searchResponseBuilder) Build(results []model.SearchResult, request Normali
 	}
 }
 
-func buildResourceObjects(results []model.SearchResult, keyword string, cloudTypes []string) []model.ResourceObject {
+func buildResourceObjects(results []model.SearchResult, keyword string, cloudTypes []string, resourcePublicIDSecret string) []model.ResourceObject {
 	resources := make([]model.ResourceObject, 0, len(results))
 	lowerKeyword := strings.ToLower(strings.TrimSpace(keyword))
 	allowedCloudTypes := buildAllowedCloudTypes(cloudTypes)
@@ -93,7 +110,7 @@ func buildResourceObjects(results []model.SearchResult, keyword string, cloudTyp
 		}
 
 		resource := model.ResourceObject{
-			ID:           resolveResourceID(result),
+			ID:           resolveResourceID(result, resourcePublicIDSecret),
 			Title:        resolveResourceTitle(result, linkTitleMap, lowerKeyword),
 			Description:  buildResourceDescription(result),
 			Source:       buildResourceSource(result),
@@ -102,16 +119,11 @@ func buildResourceObjects(results []model.SearchResult, keyword string, cloudTyp
 			Links:        resourceLinks,
 			Capabilities: resolveResourceCapabilities(result, resourceLinks),
 			Actions:      resolveResourceActions(result, resourceLinks),
-			Detail: model.ResourceDetail{
-				URL:       strings.TrimSpace(result.DetailURL),
-				Content:   result.Content,
-				MessageID: result.MessageID,
-				UniqueID:  result.UniqueID,
-			},
-			Tags:        append([]string(nil), result.Tags...),
-			Images:      append([]string(nil), result.Images...),
-			Meta:        cloneMeta(result.Meta),
-			PublishedAt: result.Datetime,
+			Detail:       model.ResourceDetail{Content: result.Content},
+			Tags:         append([]string(nil), result.Tags...),
+			Images:       append([]string(nil), result.Images...),
+			Meta:         cloneMeta(result.Meta),
+			PublishedAt:  result.Datetime,
 		}
 		resources = append(resources, resource)
 	}
@@ -208,21 +220,70 @@ func normalizeLinkType(explicitType string, url string) string {
 	return linkType
 }
 
-func resolveResourceID(result model.SearchResult) string {
-	if strings.TrimSpace(result.UniqueID) != "" {
-		return strings.TrimSpace(result.UniqueID)
-	}
-	if strings.TrimSpace(result.MessageID) != "" {
-		return strings.TrimSpace(result.MessageID)
+func resolveResourceID(result model.SearchResult, secret string) string {
+	mac := hmac.New(sha256.New, []byte(secret))
+	writeResourcePublicIDField(mac, "resource-public-id")
+	writeResourcePublicIDField(mac, "v1")
+
+	sourceType, sourceID := resolveResourcePublicIdentitySource(result)
+	writeResourcePublicIDField(mac, sourceType)
+	writeResourcePublicIDField(mac, sourceID)
+
+	if internalID := resolveResourceInternalID(result); internalID != "" {
+		writeResourcePublicIDField(mac, "internal")
+		writeResourcePublicIDField(mac, internalID)
+	} else {
+		writeResourcePublicIDField(mac, "fallback")
+		writeResourcePublicIDField(mac, strings.TrimSpace(result.Title))
+		writeResourcePublicIDField(mac, strings.TrimSpace(result.DetailURL))
+		for _, link := range result.Links {
+			writeResourcePublicIDField(mac, strings.TrimSpace(link.URL))
+		}
 	}
 
-	hash := fnv.New32a()
-	_, _ = hash.Write([]byte(result.Title))
-	_, _ = hash.Write([]byte(result.DetailURL))
-	for _, link := range result.Links {
-		_, _ = hash.Write([]byte(link.URL))
+	digest := mac.Sum(nil)
+	return resourcePublicIDPrefix + base64.RawURLEncoding.EncodeToString(digest[:resourcePublicIDDigestLength])
+}
+
+func resolveResourcePublicIdentitySource(result model.SearchResult) (string, string) {
+	sourceType := strings.TrimSpace(result.SourceType)
+	sourceID := strings.TrimSpace(result.SourcePluginID)
+	if result.Channel != "" {
+		if sourceType == "" {
+			sourceType = "tg"
+		}
+		if sourceID == "" {
+			sourceID = strings.TrimSpace(result.Channel)
+		}
 	}
-	return fmt.Sprintf("resource-%08x", hash.Sum32())
+	if sourceType == "" {
+		if sourceID == "" && result.UniqueID != "" && strings.Contains(result.UniqueID, "-") {
+			parts := strings.SplitN(result.UniqueID, "-", 2)
+			sourceID = parts[0]
+		}
+		if sourceID != "" {
+			sourceType = "plugin"
+		} else {
+			sourceType = "unknown"
+		}
+	}
+	if sourceID == "" {
+		sourceID = strings.TrimSpace(result.SourceName)
+	}
+	return sourceType, sourceID
+}
+
+func resolveResourceInternalID(result model.SearchResult) string {
+	if uniqueID := strings.TrimSpace(result.UniqueID); uniqueID != "" {
+		return uniqueID
+	}
+	return strings.TrimSpace(result.MessageID)
+}
+
+func writeResourcePublicIDField(mac interface{ Write([]byte) (int, error) }, field string) {
+	encodedField := base64.RawURLEncoding.EncodeToString([]byte(field))
+	_, _ = mac.Write([]byte(encodedField))
+	_, _ = mac.Write([]byte{0})
 }
 
 func resolveResourceTitle(result model.SearchResult, linkTitleMap map[string]string, lowerKeyword string) string {
@@ -236,9 +297,6 @@ func resolveResourceTitle(result model.SearchResult, linkTitleMap map[string]str
 	}
 	if title != "" {
 		return title
-	}
-	if strings.TrimSpace(result.DetailURL) != "" {
-		return result.DetailURL
 	}
 	return "未命名资源"
 }
@@ -335,13 +393,22 @@ func resolveResourceCapabilities(result model.SearchResult, links []model.Resour
 }
 
 func resolveResourceActions(result model.SearchResult, links []model.ResourceLink) []model.ResourceAction {
+	if len(links) == 0 {
+		return []model.ResourceAction{}
+	}
+
 	if len(result.Actions) > 0 {
-		actions := make([]model.ResourceAction, len(result.Actions))
-		copy(actions, result.Actions)
+		actions := make([]model.ResourceAction, 0, len(result.Actions))
+		for _, action := range result.Actions {
+			if action.Type == "open_detail" {
+				continue
+			}
+			actions = append(actions, action)
+		}
 		return actions
 	}
 
-	actions := make([]model.ResourceAction, 0, len(links)+1)
+	actions := make([]model.ResourceAction, 0, len(links))
 	for _, link := range links {
 		payload := map[string]interface{}{
 			"url":         link.URL,
@@ -362,17 +429,6 @@ func resolveResourceActions(result model.SearchResult, links []model.ResourceLin
 			Type:    "open_link",
 			Style:   "primary",
 			Payload: payload,
-		})
-	}
-
-	if len(actions) == 0 && strings.TrimSpace(result.DetailURL) != "" {
-		actions = append(actions, model.ResourceAction{
-			Key:   "detail.open",
-			Label: "打开详情",
-			Type:  "open_detail",
-			Payload: map[string]interface{}{
-				"url": result.DetailURL,
-			},
 		})
 	}
 
@@ -627,8 +683,6 @@ func collectResourceSearchableFields(resource model.ResourceObject) []string {
 	appendField(resource.Title)
 	appendField(resource.Description)
 	appendField(resource.Detail.Content)
-	appendField(resource.Detail.URL)
-
 	for _, link := range resource.Links {
 		appendField(link.Type)
 		appendField(link.URL)

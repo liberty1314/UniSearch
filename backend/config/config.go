@@ -105,16 +105,17 @@ type Config struct {
 	HotRankingCacheTTLMonth      time.Duration
 	HotRankingCacheTTLYear       time.Duration
 	// 认证相关配置
-	AuthEnabled           bool              // 是否启用认证
-	AuthUsers             map[string]string // 用户名:密码映射
-	AuthTokenExpiry       time.Duration     // Token有效期
-	AuthJWTSecret         string            // JWT签名密钥（向后兼容，优先使用密钥管理服务）
-	AuthUsernameMinLength int               // 用户名最小长度
-	AuthUsernameMaxLength int               // 用户名最大长度
-	AuthPasswordMinLength int               // 密码最小长度
-	AuthPasswordMaxLength int               // 密码最大长度
-	InitialAdminUsername  string            // 首次初始化管理员用户名
-	InitialAdminPassword  string            // 首次初始化管理员密码
+	AuthEnabled            bool              // 是否启用认证
+	AuthUsers              map[string]string // 用户名:密码映射
+	AuthTokenExpiry        time.Duration     // Token有效期
+	AuthJWTSecret          string            // JWT签名密钥（向后兼容，优先使用密钥管理服务）
+	ResourcePublicIDSecret string            // 公开资源 ID 派生密钥
+	AuthUsernameMinLength  int               // 用户名最小长度
+	AuthUsernameMaxLength  int               // 用户名最大长度
+	AuthPasswordMinLength  int               // 密码最小长度
+	AuthPasswordMaxLength  int               // 密码最大长度
+	InitialAdminUsername   string            // 首次初始化管理员用户名
+	InitialAdminPassword   string            // 首次初始化管理员密码
 
 	// 密钥管理配置
 	SecretBackend   string // 密钥后端类型（database 或 environment）
@@ -250,16 +251,17 @@ func InitWithError() error {
 		HotRankingCacheTTLMonth:      getHotRankingCacheTTL("HOT_RANKING_CACHE_TTL_MONTH", 6*time.Hour),
 		HotRankingCacheTTLYear:       getHotRankingCacheTTL("HOT_RANKING_CACHE_TTL_YEAR", 12*time.Hour),
 		// 认证相关配置
-		AuthEnabled:           getAuthEnabled(),
-		AuthUsers:             getAuthUsers(),
-		AuthTokenExpiry:       getAuthTokenExpiry(),
-		AuthJWTSecret:         getAuthJWTSecret(),
-		AuthUsernameMinLength: getAuthUsernameMinLength(),
-		AuthUsernameMaxLength: getAuthUsernameMaxLength(),
-		AuthPasswordMinLength: getAuthPasswordMinLength(),
-		AuthPasswordMaxLength: getAuthPasswordMaxLength(),
-		InitialAdminUsername:  getInitialAdminUsername(),
-		InitialAdminPassword:  getInitialAdminPassword(),
+		AuthEnabled:            getAuthEnabled(),
+		AuthUsers:              getAuthUsers(),
+		AuthTokenExpiry:        getAuthTokenExpiry(),
+		AuthJWTSecret:          getAuthJWTSecret(),
+		ResourcePublicIDSecret: getResourcePublicIDSecret(),
+		AuthUsernameMinLength:  getAuthUsernameMinLength(),
+		AuthUsernameMaxLength:  getAuthUsernameMaxLength(),
+		AuthPasswordMinLength:  getAuthPasswordMinLength(),
+		AuthPasswordMaxLength:  getAuthPasswordMaxLength(),
+		InitialAdminUsername:   getInitialAdminUsername(),
+		InitialAdminPassword:   getInitialAdminPassword(),
 
 		// 密钥管理配置
 		SecretBackend:   getSecretBackend(),
@@ -335,6 +337,7 @@ func validateProductionSecrets(cfg *Config) error {
 
 	requiredSecrets := map[string]string{
 		"AUTH_JWT_SECRET":           cfg.AuthJWTSecret,
+		"RESOURCE_PUBLIC_ID_SECRET": cfg.ResourcePublicIDSecret,
 		"REFRESH_TOKEN_ENCRYPT_KEY": cfg.RefreshTokenEncryptKey,
 		"SECRET_MASTER_KEY":         cfg.SecretMasterKey,
 	}

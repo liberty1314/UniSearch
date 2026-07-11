@@ -182,6 +182,7 @@ DB_NAME=unisearch
 
 # 认证密钥（必须修改为强随机字符串）
 AUTH_JWT_SECRET=你的随机密钥至少32位
+RESOURCE_PUBLIC_ID_SECRET=你的独立公开资源ID密钥至少32位
 SECRET_MASTER_KEY=你的随机主密钥至少32位
 REFRESH_TOKEN_ENCRYPT_KEY=你的32字节加密密钥
 
@@ -200,7 +201,7 @@ TMDB_API_KEY=
 # TMDB_API_KEY=你的_tmdb_api_key
 ```
 
-> 密钥生成方式：`openssl rand -base64 32`
+> 密钥生成方式：`openssl rand -base64 32`。`RESOURCE_PUBLIC_ID_SECRET` 必须独立保存且跨部署稳定；轮换会使已有资源详情 URL 失效。
 
 > 正常配置建议使用 `TMDB_READ_ACCESS_TOKEN`。`TMDB_API_KEY` 仅作为兼容回退方案使用，二者最好只配置一个。
 
@@ -328,6 +329,7 @@ server {
    | `DB_PASSWORD` | `${MYSQL_PASSWORD}` | 引用 Zeabur MySQL 变量 |
    | `DB_NAME` | `unisearch` | 数据库名，首次启动自动创建 |
    | `AUTH_JWT_SECRET` | `你的随机密钥` | `openssl rand -base64 32` |
+   | `RESOURCE_PUBLIC_ID_SECRET` | `你的独立公开资源 ID 密钥` | `openssl rand -base64 32` |
    | `SECRET_MASTER_KEY` | `你的随机主密钥` | `openssl rand -base64 32` |
    | `REFRESH_TOKEN_ENCRYPT_KEY` | `你的加密密钥` | `openssl rand -base64 32` |
 
@@ -465,6 +467,7 @@ bash scripts/local.sh
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
 | `AUTH_JWT_SECRET` | JWT 签名密钥 | — |
+| `RESOURCE_PUBLIC_ID_SECRET` | 公开资源 ID 派生密钥，必须独立于 JWT 密钥 | — |
 | `SECRET_MASTER_KEY` | 密钥管理主密钥 | — |
 | `REFRESH_TOKEN_ENCRYPT_KEY` | 刷新令牌加密密钥 | — |
 | `AUTH_TOKEN_EXPIRY` | JWT 有效期（小时） | `24` |

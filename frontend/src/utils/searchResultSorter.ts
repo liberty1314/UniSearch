@@ -53,7 +53,6 @@ function collectSearchableFields(resource: ResourceObject): string[] {
     resource.title,
     resource.description || "",
     resource.detail.content || "",
-    resource.detail.url || "",
     ...resource.links.flatMap((link) => [link.title || "", link.work_title || ""]),
   ];
 

@@ -69,10 +69,7 @@ export interface ResourceLink {
 }
 
 export interface ResourceDetail {
-  url?: string;
   content?: string;
-  message_id?: string;
-  unique_id?: string;
 }
 
 export interface ResourceFacets {

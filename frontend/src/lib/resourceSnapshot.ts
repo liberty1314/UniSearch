@@ -1,7 +1,9 @@
 import type { ResourceObject } from "@/types/resource";
-import { readJsonStorage, writeJsonStorage } from "@/lib/safeStorage";
+import { readJsonStorage, removeStorage, writeJsonStorage } from "@/lib/safeStorage";
 
 export const RECENT_RESOURCE_SNAPSHOTS_STORAGE_KEY =
+  "unisearch_recent_resource_snapshots_v2";
+const LEGACY_RECENT_RESOURCE_SNAPSHOTS_STORAGE_KEY =
   "unisearch_recent_resource_snapshots";
 
 const MAX_RECENT_RESOURCE_SNAPSHOTS = 20;
@@ -63,10 +65,15 @@ const compactResource = (resource: ResourceObject): ResourceObject => ({
   meta: resource.meta ? { ...resource.meta } : undefined,
 });
 
-export const readRecentResourceSnapshots = (): RecentResourceSnapshot[] =>
-  readJsonStorage<unknown[]>(RECENT_RESOURCE_SNAPSHOTS_STORAGE_KEY, [])
+const clearLegacySnapshots = (): void =>
+  removeStorage(LEGACY_RECENT_RESOURCE_SNAPSHOTS_STORAGE_KEY);
+
+export const readRecentResourceSnapshots = (): RecentResourceSnapshot[] => {
+  clearLegacySnapshots();
+  return readJsonStorage<unknown[]>(RECENT_RESOURCE_SNAPSHOTS_STORAGE_KEY, [])
     .filter(isResourceSnapshot)
     .filter((snapshot) => isFreshSnapshot(snapshot));
+};
 
 export const writeRecentResourceSnapshots = (
   resources: ResourceObject[] = [],

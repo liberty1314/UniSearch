@@ -428,6 +428,7 @@ run_local_container_test() {
         -e REDIS_PORT=6379
         -e REDIS_PASSWORD=test_redis_password
         -e AUTH_JWT_SECRET=test_jwt_secret_key_for_testing_only
+        -e RESOURCE_PUBLIC_ID_SECRET=test_resource_public_id_secret_for_testing_only
         -e SECRET_MASTER_KEY=test_master_key_for_testing_only_32bytes
         -e REFRESH_TOKEN_ENCRYPT_KEY=test_refresh_token_key_32bytes_base64
     )

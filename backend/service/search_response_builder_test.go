@@ -1,8 +1,10 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -224,6 +226,14 @@ func TestSearchResponseBuilderAdaptsSearchResultToResourceProtocol(t *testing.T)
 					Label: "打开分享",
 					Type:  "link",
 				},
+				{
+					Key:   "detail.open",
+					Label: "打开详情",
+					Type:  "open_detail",
+					Payload: map[string]interface{}{
+						"url": "https://example.com/detail/1",
+					},
+				},
 			},
 			Meta: map[string]interface{}{
 				"ranking": float64(1),
@@ -254,8 +264,84 @@ func TestSearchResponseBuilderAdaptsSearchResultToResourceProtocol(t *testing.T)
 	if resource.Meta["ranking"] != float64(1) {
 		t.Fatalf("expected meta to be preserved, got %#v", resource.Meta)
 	}
-	if resource.Detail.URL != "https://example.com/detail/1" {
-		t.Fatalf("expected detail url to be preserved, got %#v", resource.Detail)
+	if resource.Detail.Content != "" {
+		t.Fatalf("expected empty detail content to stay empty, got %#v", resource.Detail)
+	}
+
+	serialized, err := json.Marshal(resource)
+	if err != nil {
+		t.Fatalf("serialize resource response: %v", err)
+	}
+	for _, privateValue := range []string{
+		"https://example.com/detail/1",
+		`"message_id"`,
+		`"unique_id"`,
+		`"open_detail"`,
+	} {
+		if strings.Contains(string(serialized), privateValue) {
+			t.Fatalf("public resource response must not expose %q: %s", privateValue, serialized)
+		}
+	}
+}
+
+func TestSearchResponseBuilderUsesOpaquePublicResourceIDs(t *testing.T) {
+	builder := newSearchResponseBuilderWithSecret("test-resource-public-id-secret-with-at-least-32-chars")
+	request := NormalizedSearchRequest{Keyword: "资源", ResultType: "results"}
+
+	result := model.SearchResult{
+		UniqueID:       "sidhub-4259-quark",
+		SourcePluginID: "sidhub",
+		SourceType:     "plugin",
+		Title:          "资源",
+		Links:          []model.Link{{Type: "quark", URL: "https://pan.quark.cn/s/public-id"}},
+	}
+
+	first := builder.Build([]model.SearchResult{result}, request)
+	second := builder.Build([]model.SearchResult{result}, request)
+	if len(first.Resources) != 1 || len(second.Resources) != 1 {
+		t.Fatalf("expected stable resource output, got first=%#v second=%#v", first, second)
+	}
+
+	resourceID := first.Resources[0].ID
+	if !strings.HasPrefix(resourceID, "r_v1_") {
+		t.Fatalf("expected versioned public resource ID, got %q", resourceID)
+	}
+	if strings.Contains(resourceID, "sidhub") || strings.Contains(resourceID, "4259") {
+		t.Fatalf("public resource ID must not expose internal identity, got %q", resourceID)
+	}
+	if resourceID != second.Resources[0].ID {
+		t.Fatalf("expected stable public resource ID, got %q then %q", resourceID, second.Resources[0].ID)
+	}
+
+	for _, differentResult := range []model.SearchResult{
+		{UniqueID: result.UniqueID, SourcePluginID: "pansearch", SourceType: "plugin", Title: result.Title, Links: result.Links},
+		{UniqueID: "sidhub-4260-quark", SourcePluginID: result.SourcePluginID, SourceType: result.SourceType, Title: result.Title, Links: result.Links},
+	} {
+		response := builder.Build([]model.SearchResult{differentResult}, request)
+		if len(response.Resources) != 1 || response.Resources[0].ID == resourceID {
+			t.Fatalf("different source identity must produce a different public resource ID: %#v", response.Resources)
+		}
+	}
+}
+
+func TestSearchResponseBuilderUsesStableFallbackPublicIDWithoutInternalID(t *testing.T) {
+	builder := newSearchResponseBuilderWithSecret("test-resource-public-id-secret-with-at-least-32-chars")
+	request := NormalizedSearchRequest{Keyword: "资源", ResultType: "results"}
+	result := model.SearchResult{
+		SourcePluginID: "pansearch",
+		SourceType:     "plugin",
+		Title:          "无内部 ID 的资源",
+		DetailURL:      "https://source.example.com/detail/1",
+		Links:          []model.Link{{Type: "quark", URL: "https://pan.quark.cn/s/fallback-id"}},
+	}
+
+	first := builder.Build([]model.SearchResult{result}, request)
+	second := builder.Build([]model.SearchResult{result}, request)
+	if len(first.Resources) != 1 || len(second.Resources) != 1 {
+		t.Fatalf("expected fallback resource output, got first=%#v second=%#v", first, second)
+	}
+	if first.Resources[0].ID != second.Resources[0].ID || !strings.HasPrefix(first.Resources[0].ID, "r_v1_") {
+		t.Fatalf("fallback public resource ID must be stable and versioned, got %q then %q", first.Resources[0].ID, second.Resources[0].ID)
 	}
 }
 
@@ -413,8 +499,19 @@ func TestSearchResponseBuilderKeepsResourceWithoutLinks(t *testing.T) {
 	if len(response.Resources[0].Links) != 0 {
 		t.Fatalf("expected no links, got %#v", response.Resources[0].Links)
 	}
-	if len(response.Resources[0].Actions) != 1 || response.Resources[0].Actions[0].Type != "open_detail" {
-		t.Fatalf("expected generated detail action, got %#v", response.Resources[0].Actions)
+	if len(response.Resources[0].Actions) != 0 {
+		t.Fatalf("expected detail-only resource to have no external actions, got %#v", response.Resources[0].Actions)
+	}
+	if response.Resources[0].Detail.Content != "正文介绍" {
+		t.Fatalf("expected detail-only resource to retain internal detail content, got %#v", response.Resources[0].Detail)
+	}
+
+	serialized, err := json.Marshal(response.Resources[0])
+	if err != nil {
+		t.Fatalf("serialize detail-only resource: %v", err)
+	}
+	if strings.Contains(string(serialized), "https://example.com/detail-only") {
+		t.Fatalf("detail-only response must not expose source URL: %s", serialized)
 	}
 }
 
@@ -447,14 +544,14 @@ func TestSearchResponseBuilderPrioritizesExactPhraseThenTime(t *testing.T) {
 		t.Fatalf("expected 3 resources, got %d", len(response.Resources))
 	}
 
-	if response.Resources[0].ID != "exact-newer" {
-		t.Fatalf("expected newer exact match first, got %q", response.Resources[0].ID)
+	if response.Resources[0].Title != "速度与激情10" {
+		t.Fatalf("expected newer exact match first, got %q", response.Resources[0].Title)
 	}
-	if response.Resources[1].ID != "exact-older" {
-		t.Fatalf("expected older exact match second, got %q", response.Resources[1].ID)
+	if response.Resources[1].Title != "速度与激情8" {
+		t.Fatalf("expected older exact match second, got %q", response.Resources[1].Title)
 	}
-	if response.Resources[2].ID != "fuzzy-newer" {
-		t.Fatalf("expected fuzzy match after exact matches, got %q", response.Resources[2].ID)
+	if response.Resources[2].Title != "速度：激情特别篇" {
+		t.Fatalf("expected fuzzy match after exact matches, got %q", response.Resources[2].Title)
 	}
 }
 
@@ -483,8 +580,8 @@ func TestSearchResponseBuilderFiltersContentOnlyNoise(t *testing.T) {
 	if len(response.Resources) != 1 {
 		t.Fatalf("expected only one high precision resource, got %#v", response.Resources)
 	}
-	if response.Resources[0].ID != "match-1" {
-		t.Fatalf("expected unrelated content-only noise to be filtered, got %q", response.Resources[0].ID)
+	if response.Resources[0].Title != "速度与激情10（2023）" {
+		t.Fatalf("expected unrelated content-only noise to be filtered, got %q", response.Resources[0].Title)
 	}
 }
 

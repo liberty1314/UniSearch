@@ -55,7 +55,7 @@ const resourceFixture: ResourceObject = {
       },
     },
   ],
-  detail: { content: "详情内容", url: "https://example.com/detail" },
+  detail: { content: "详情内容" },
   tags: ["动画", "电影"],
   images: ["https://example.com/cover.jpg"],
   meta: { size: "2.15 GiB", score: 9 },
@@ -189,7 +189,6 @@ describe("ResourceDetailPage", () => {
         "#电影名称：【电影】速度与激情特别行动 4K 描述：洛杉矶的年轻人都热衷于街头赛车 链接：https://example.com/detail",
       detail: {
         content: "洛杉矶的年轻人都热衷于街头赛车，完整剧情说明保留在摘要区域。",
-        url: "https://example.com/detail",
       },
     };
 
@@ -223,7 +222,7 @@ describe("ResourceDetailPage", () => {
       searchResults: null,
     };
     localStorage.setItem(
-      "unisearch_recent_resource_snapshots",
+      "unisearch_recent_resource_snapshots_v2",
       JSON.stringify([
         {
           keyword: "你的名字",
@@ -539,7 +538,7 @@ describe("ResourceDetailPage", () => {
           datetime: "2026-03-15T00:00:00Z",
         },
       ],
-      detail: { content: "磁力详情", url: "https://example.com/detail" },
+      detail: { content: "磁力详情" },
     };
 
     renderDetailPage({

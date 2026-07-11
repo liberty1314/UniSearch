@@ -163,7 +163,7 @@ describe("searchStore", () => {
       .performSearch({ keyword: "你的名字" });
 
     const snapshots = JSON.parse(
-      localStorage.getItem("unisearch_recent_resource_snapshots") || "[]",
+      localStorage.getItem("unisearch_recent_resource_snapshots_v2") || "[]",
     ) as Array<{
       keyword?: string;
       resource?: {
@@ -180,6 +180,41 @@ describe("searchStore", () => {
       },
     });
     expect(snapshots.length).toBeLessThanOrEqual(20);
+  });
+
+  it("使用新的公开资源 ID 更新扫码转存资源", async () => {
+    const { useSearchStore } = await import("@/stores/searchStore");
+    const resourceId = "r_v1_SmQDFVAJ4QziqGAy9YAA4w";
+    const linkUrl = "https://www.seedhub.cc/link_start/?redirect_to=quark_scan";
+    useSearchStore.setState({
+      searchResults: {
+        ...buildSearchResults(),
+        resources: [
+          {
+            ...buildSearchResults().resources[0],
+            id: resourceId,
+            links: [
+              {
+                type: "quark",
+                url: linkUrl,
+                access_mode: "scan_transfer",
+                scan_transfer: { refreshable: true, refresh_key: "seedhub:4259:quark:1" },
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    useSearchStore.getState().updateResourceScanTransfer(resourceId, linkUrl, {
+      qr_code_base64: "data:image/png;base64,new-code",
+      refreshable: true,
+      refresh_key: "seedhub:4259:quark:1",
+    });
+
+    expect(useSearchStore.getState().searchResults?.resources[0]?.links[0]?.scan_transfer).toMatchObject({
+      qr_code_base64: "data:image/png;base64,new-code",
+    });
   });
 
   it("成功搜索且有结果时会写入最近有效搜索", async () => {

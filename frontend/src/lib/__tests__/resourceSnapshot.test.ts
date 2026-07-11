@@ -65,4 +65,30 @@ describe("resourceSnapshot", () => {
     expect(findRecentResourceSnapshot("resource-1")).toBeNull();
     expect(findRecentResourceSnapshot("resource-2")?.title).toBe("测试资源 2");
   });
+
+  it("首次读取时会清理旧版本快照且不恢复旧资源", () => {
+    localStorage.setItem(
+      "unisearch_recent_resource_snapshots",
+      JSON.stringify([
+        {
+          resource: buildResource(1),
+          keyword: "旧搜索",
+          savedAt: Date.now(),
+        },
+      ]),
+    );
+
+    expect(findRecentResourceSnapshot("resource-1")).toBeNull();
+    expect(localStorage.getItem("unisearch_recent_resource_snapshots")).toBeNull();
+  });
+
+  it("使用新的公开资源 ID 恢复 v2 快照", () => {
+    const resource = { ...buildResource(3), id: "r_v1_SmQDFVAJ4QziqGAy9YAA4w" };
+    writeRecentResourceSnapshots([resource], "新资源");
+
+    expect(findRecentResourceSnapshot(resource.id)).toMatchObject({
+      id: resource.id,
+      title: "测试资源 3",
+    });
+  });
 });

@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -201,6 +202,7 @@ func TestInitWithErrorRejectsPlaceholderProductionSecrets(t *testing.T) {
 	t.Setenv("AUTH_JWT_SECRET", "PLEASE_GENERATE_A_STRONG_RANDOM_SECRET_KEY_HERE")
 	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "strong-refresh-token-secret-000001")
 	t.Setenv("SECRET_MASTER_KEY", "strong-secret-master-key-000000001")
+	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", "resource-public-id-secret-with-32-chars")
 
 	if err := InitWithError(); err == nil {
 		t.Fatal("生产环境占位符密钥应拒绝初始化")
@@ -214,6 +216,7 @@ func TestInitWithErrorRejectsDuplicateProductionSecrets(t *testing.T) {
 	t.Setenv("AUTH_JWT_SECRET", duplicate)
 	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", duplicate)
 	t.Setenv("SECRET_MASTER_KEY", "different-secret-master-key-00000001")
+	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", "resource-public-id-secret-with-32-chars")
 
 	if err := InitWithError(); err == nil {
 		t.Fatal("生产环境关键密钥重复时应拒绝初始化")
@@ -227,9 +230,72 @@ func TestInitWithErrorAcceptsDistinctProductionSecrets(t *testing.T) {
 	t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
 	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
 	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
+	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", "resource-public-id-secret-with-32-chars")
 
 	if err := InitWithError(); err != nil {
 		t.Fatalf("生产环境有效密钥应初始化成功: %v", err)
+	}
+}
+
+func TestInitWithErrorRejectsMissingProductionResourcePublicIDSecret(t *testing.T) {
+	preserveProductionSecretEnv(t)
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("ALLOWED_ORIGINS", "https://example.com")
+	t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
+	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
+	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
+	if err := os.Unsetenv("RESOURCE_PUBLIC_ID_SECRET"); err != nil {
+		t.Fatalf("清理 RESOURCE_PUBLIC_ID_SECRET 失败: %v", err)
+	}
+
+	err := InitWithError()
+	if err == nil || !strings.Contains(err.Error(), "RESOURCE_PUBLIC_ID_SECRET") {
+		t.Fatalf("生产环境缺少公开资源 ID 密钥应拒绝初始化，实际错误: %v", err)
+	}
+}
+
+func TestInitWithErrorRejectsResourcePublicIDSecretMatchingJWTSecret(t *testing.T) {
+	preserveProductionSecretEnv(t)
+	duplicate := "same-resource-public-id-secret-at-least-32-chars"
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("ALLOWED_ORIGINS", "https://example.com")
+	t.Setenv("AUTH_JWT_SECRET", duplicate)
+	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
+	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
+	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", duplicate)
+
+	if err := InitWithError(); err == nil {
+		t.Fatal("公开资源 ID 密钥与 JWT 密钥相同应拒绝初始化")
+	}
+}
+
+func TestInitWithErrorRejectsShortProductionResourcePublicIDSecret(t *testing.T) {
+	preserveProductionSecretEnv(t)
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("ALLOWED_ORIGINS", "https://example.com")
+	t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
+	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
+	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
+	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", "too-short")
+
+	err := InitWithError()
+	if err == nil || !strings.Contains(err.Error(), "RESOURCE_PUBLIC_ID_SECRET") {
+		t.Fatalf("生产环境过短公开资源 ID 密钥应拒绝初始化，实际错误: %v", err)
+	}
+}
+
+func TestInitWithErrorRejectsPlaceholderProductionResourcePublicIDSecret(t *testing.T) {
+	preserveProductionSecretEnv(t)
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("ALLOWED_ORIGINS", "https://example.com")
+	t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
+	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
+	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
+	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", "PLEASE_GENERATE_A_STRONG_RESOURCE_PUBLIC_ID_SECRET_HERE")
+
+	err := InitWithError()
+	if err == nil || !strings.Contains(err.Error(), "RESOURCE_PUBLIC_ID_SECRET") {
+		t.Fatalf("生产环境占位公开资源 ID 密钥应拒绝初始化，实际错误: %v", err)
 	}
 }
 
@@ -242,6 +308,7 @@ func TestInitWithErrorRejectsMissingProductionAllowedOrigins(t *testing.T) {
 	t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
 	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
 	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
+	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", "resource-public-id-secret-with-32-chars")
 
 	if err := InitWithError(); err == nil {
 		t.Fatal("生产环境缺少 ALLOWED_ORIGINS 时应拒绝初始化")
@@ -255,6 +322,7 @@ func TestInitWithErrorRejectsWildcardProductionAllowedOrigins(t *testing.T) {
 	t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
 	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
 	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
+	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", "resource-public-id-secret-with-32-chars")
 
 	if err := InitWithError(); err == nil {
 		t.Fatal("生产环境 ALLOWED_ORIGINS 使用通配符时应拒绝初始化")
@@ -273,11 +341,14 @@ func TestInitWithErrorGeneratesDevelopmentSecrets(t *testing.T) {
 	if err := os.Unsetenv("SECRET_MASTER_KEY"); err != nil {
 		t.Fatalf("清理 SECRET_MASTER_KEY 失败: %v", err)
 	}
+	if err := os.Unsetenv("RESOURCE_PUBLIC_ID_SECRET"); err != nil {
+		t.Fatalf("清理 RESOURCE_PUBLIC_ID_SECRET 失败: %v", err)
+	}
 
 	if err := InitWithError(); err != nil {
 		t.Fatalf("开发环境缺少密钥时应生成临时随机值: %v", err)
 	}
-	if AppConfig.AuthJWTSecret == "" || AppConfig.RefreshTokenEncryptKey == "" || AppConfig.SecretMasterKey == "" {
+	if AppConfig.AuthJWTSecret == "" || AppConfig.RefreshTokenEncryptKey == "" || AppConfig.SecretMasterKey == "" || AppConfig.ResourcePublicIDSecret == "" {
 		t.Fatalf("开发环境应生成临时随机密钥，实际配置为 %#v", AppConfig)
 	}
 }
@@ -293,6 +364,7 @@ func preserveProductionSecretEnv(t *testing.T) {
 	preserveEnv(t, "AUTH_JWT_SECRET")
 	preserveEnv(t, "REFRESH_TOKEN_ENCRYPT_KEY")
 	preserveEnv(t, "SECRET_MASTER_KEY")
+	preserveEnv(t, "RESOURCE_PUBLIC_ID_SECRET")
 }
 
 func preserveEnv(t *testing.T, key string) {

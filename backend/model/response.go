@@ -71,12 +71,9 @@ type ResourceLink struct {
 	Datetime     time.Time         `json:"datetime,omitempty" sonic:"datetime,omitempty"`
 }
 
-// ResourceDetail 承载资源详情页和原始内容，避免卡片层直接依赖插件私有字段。
+// ResourceDetail 承载 UniSearch 内部详情页内容，避免公开响应泄露插件私有字段。
 type ResourceDetail struct {
-	URL       string `json:"url,omitempty" sonic:"url,omitempty"`
-	Content   string `json:"content,omitempty" sonic:"content,omitempty"`
-	MessageID string `json:"message_id,omitempty" sonic:"message_id,omitempty"`
-	UniqueID  string `json:"unique_id,omitempty" sonic:"unique_id,omitempty"`
+	Content string `json:"content,omitempty" sonic:"content,omitempty"`
 }
 
 // ResourceFacets 是资源协议的统一筛选计数。

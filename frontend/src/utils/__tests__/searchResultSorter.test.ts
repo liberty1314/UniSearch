@@ -85,7 +85,7 @@ describe("sortResources", () => {
     const result = sortResources([
       makeResource("detail-only", null, "", {
         target_type: "detail",
-        detail: { url: "https://example.com/detail" },
+        detail: { content: "仅详情资源" },
       }),
     ]);
 

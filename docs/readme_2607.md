@@ -314,3 +314,30 @@
     - frontend/src/components/home/SearchResultsToolbar.tsx
     - frontend/src/components/search-results/SearchResultsHeader.tsx
     - docs/readme_2607.md
+
+[2026-07-11 22:01] fix(resource-id): 生成独立公开资源 ID 并隐藏内部详情字段
+  Body: 通过独立密钥为资源对象生成不可反推的公开 ID，并移除公开响应中的内部详情 URL 与插件私有标识。同步更新配置示例、生产密钥脚本与相关前后端测试，避免公开资源链接泄露内部数据。
+  Footer: 破坏性变更: 资源详情响应移除了 URL、message_id、unique_id 等内部字段，且旧公开资源 URL 在资源密钥轮换后会失效。Migration: 生产环境必须配置 RESOURCE_PUBLIC_ID_SECRET，并确保其与 JWT 密钥独立且稳定。
+  Files:
+    - .env.example
+    - README.md
+    - backend/api/filter.go
+    - backend/config/config.go
+    - backend/config/config_auth.go
+    - backend/config/config_test.go
+    - backend/model/response.go
+    - backend/service/search_response_builder.go
+    - backend/service/search_response_builder_test.go
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/lib/__tests__/resourceSnapshot.test.ts
+    - frontend/src/lib/resourceSnapshot.ts
+    - frontend/src/pages/__tests__/ResourceDetailPage.test.tsx
+    - frontend/src/stores/__tests__/searchStore.test.ts
+    - frontend/src/types/resource.ts
+    - frontend/src/utils/__tests__/resourceDisplay.test.ts
+    - frontend/src/utils/__tests__/searchResultSorter.test.ts
+    - frontend/src/utils/resourceDisplay.ts
+    - frontend/src/utils/searchResultSorter.ts
+    - scripts/build.sh
+    - scripts/gen-production-secrets.sh
+    - docs/readme_2607.md

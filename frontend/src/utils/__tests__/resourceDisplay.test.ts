@@ -58,6 +58,23 @@ describe("resolveResourceDisplayTitle", () => {
 });
 
 describe("resource open target resolution", () => {
+  it("does not fall back to an upstream detail URL when the resource has no links", () => {
+    const resource = {
+      ...makeResource("仅详情资源"),
+      target_type: "detail",
+      detail: { content: "仅在 UniSearch 内展示的详情" },
+    };
+    Object.assign(resource.detail, { url: "https://source.example.com/detail/1" });
+
+    expect(
+      resolveResourceOpenTarget({
+        resource,
+        primaryLink: undefined,
+        cloudType: "detail",
+      }),
+    ).toBeNull();
+  });
+
   it("preserves scan transfer payload from primary link targets", () => {
     const resource = {
       ...makeResource("SeedHub 扫码资源"),

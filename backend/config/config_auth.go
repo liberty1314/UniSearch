@@ -250,6 +250,20 @@ func getAuthJWTSecret() string {
 	return secret
 }
 
+// getResourcePublicIDSecret 返回公开资源 ID 的独立派生密钥。
+// 它不得与 JWT 或其他认证密钥复用，以避免资源标识与认证域耦合。
+func getResourcePublicIDSecret() string {
+	secret := strings.TrimSpace(os.Getenv("RESOURCE_PUBLIC_ID_SECRET"))
+	if secret == "" {
+		if getAppEnv() == "production" {
+			return ""
+		}
+		secret = generateEphemeralSecret("resource-public-id")
+		println("警告: RESOURCE_PUBLIC_ID_SECRET 环境变量未设置，开发环境使用临时随机密钥；重启后资源详情 URL 将失效")
+	}
+	return secret
+}
+
 // 从环境变量获取是否启用 API Key 认证，如果未设置则默认关闭
 func getAPIKeyEnabled() bool {
 	enabled := os.Getenv("API_KEY_ENABLED")

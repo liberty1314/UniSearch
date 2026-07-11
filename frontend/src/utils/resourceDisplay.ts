@@ -290,21 +290,7 @@ export const resolveResourceOpenTarget = (
       resourceId: item.resource.id,
     };
   }
-
-  const detailUrl = item.resource.detail.url?.trim();
-  if (!detailUrl) {
-    return null;
-  }
-
-  return {
-    url: detailUrl,
-    password: "",
-    cloudType: isMagnetUrl(detailUrl)
-      ? "magnet"
-      : item.cloudType || item.resource.target_type || "detail",
-    accessMode: resolveLinkAccessMode(item.primaryLink, detailUrl),
-    resourceId: item.resource.id,
-  };
+  return null;
 };
 
 export const resolveResourceActionTarget = (
@@ -330,7 +316,6 @@ export const resolveResourceActionTarget = (
         access_mode: undefined,
         scan_transfer: actionScanTransfer,
       },
-      item.resource.detail.url,
     )
   ) as ResourceAccessMode;
 

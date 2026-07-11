@@ -62,7 +62,6 @@ func buildResourceFilterText(resource model.ResourceObject) string {
 		resource.Source.Name,
 		resource.MediaType,
 		resource.TargetType,
-		resource.Detail.URL,
 		resource.Detail.Content,
 	}
 	parts = append(parts, resource.Tags...)

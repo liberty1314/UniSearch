@@ -22,6 +22,7 @@ gen_hex() { openssl rand -hex 32; }
 echo "# ====== 生产环境强随机密钥（请复制保存，勿提交版本库）======"
 echo "SECRET_MASTER_KEY=$(gen_b64)"
 echo "AUTH_JWT_SECRET=$(gen_b64)"
+echo "RESOURCE_PUBLIC_ID_SECRET=$(gen_b64)"
 echo "REFRESH_TOKEN_ENCRYPT_KEY=$(gen_b64)"
 echo "WATCHTOWER_TOKEN=$(gen_hex)"
 echo
