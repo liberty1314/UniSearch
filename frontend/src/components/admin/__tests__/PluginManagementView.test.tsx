@@ -331,6 +331,22 @@ describe('PluginManagementView', () => {
     expect(within(drawer).getByText('resource.search')).toBeInTheDocument();
   });
 
+  it('统计卡片仅展示总数、启用、停用和启用项异常数', async () => {
+    render(<PluginManagementView />);
+
+    await screen.findByRole('heading', { name: '插件中心' });
+
+    const metricRegion = screen.getByText('源码注册的内置插件').parentElement?.parentElement as HTMLElement;
+    const metricLabels = ['总数', '启用', '停用', '异常'];
+    expect(within(metricRegion).getAllByText(/^(总数|启用|停用|异常)$/).map((node) => node.textContent)).toEqual(metricLabels);
+    expect(within(within(metricRegion).getByText('总数').parentElement as HTMLElement).getByText('15')).toBeInTheDocument();
+    expect(within(within(metricRegion).getByText('启用').parentElement as HTMLElement).getByText('13')).toBeInTheDocument();
+    expect(within(within(metricRegion).getByText('停用').parentElement as HTMLElement).getByText('2')).toBeInTheDocument();
+    expect(within(within(metricRegion).getByText('异常').parentElement as HTMLElement).getByText('0')).toBeInTheDocument();
+    expect(screen.queryByText('目录版本')).not.toBeInTheDocument();
+    expect(screen.queryByText('已安装')).not.toBeInTheDocument();
+  });
+
   it('插件表格行使用启用状态替代内置徽标', async () => {
     render(<PluginManagementView />);
 

@@ -350,3 +350,12 @@
     - backend/plugin/panyq/panyq.go
     - backend/plugin/panyq/panyq_test.go
     - docs/readme_2607.md
+
+[2026-07-12 09:33] fix(admin-ui): 修正插件与频道统计口径
+  Body: 将插件和频道管理页统计卡片统一为总数、启用、停用和异常，并让异常仅统计启用项。同步更新后台管理测试，覆盖停用项不计入异常统计的展示行为。
+  Files:
+    - frontend/src/components/admin/ChannelManagementView.tsx
+    - frontend/src/components/admin/PluginManagementView.tsx
+    - frontend/src/components/admin/__tests__/ChannelManagementView.test.tsx
+    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
+    - docs/readme_2607.md

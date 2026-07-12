@@ -23,12 +23,12 @@ describe('ChannelManagementView', () => {
               return {
                 id,
                 name: `chan-${String(id).padStart(2, '0')}`,
-                is_enabled: true,
+                is_enabled: id !== 11,
                 sort_order: id,
                 tags: id === 12 ? ['影视', '热门'] : ['常规'],
-                health_status: id === 12 ? 'error' : 'healthy',
-                last_error: id === 12 ? 'timeout' : undefined,
-                check_source: id === 12 ? 'manual_test' : 'system',
+                health_status: id >= 11 ? 'error' : 'healthy',
+                last_error: id >= 11 ? 'timeout' : undefined,
+                check_source: id >= 11 ? 'manual_test' : 'system',
                 last_checked_at: id === 12 ? '2026-05-17T00:20:00' : '2026-05-17 00:10:00',
                 created_at: '',
                 updated_at: '',
@@ -151,6 +151,21 @@ describe('ChannelManagementView', () => {
         name: '删除频道 chan-12',
       }),
     ).toHaveClass('admin-delete-action');
+  });
+
+  it('统计卡片仅展示总数、启用、停用和启用项异常数', async () => {
+    render(<ChannelManagementView />);
+
+    await screen.findByRole('heading', { name: 'Telegram 频道' });
+
+    const metricRegion = screen.getByText('已接入后台监控的频道').parentElement?.parentElement as HTMLElement;
+    const metricLabels = ['总数', '启用', '停用', '异常'];
+    expect(within(metricRegion).getAllByText(/^(总数|启用|停用|异常)$/).map((node) => node.textContent)).toEqual(metricLabels);
+    expect(within(within(metricRegion).getByText('总数').parentElement as HTMLElement).getByText('12')).toBeInTheDocument();
+    expect(within(within(metricRegion).getByText('启用').parentElement as HTMLElement).getByText('11')).toBeInTheDocument();
+    expect(within(within(metricRegion).getByText('停用').parentElement as HTMLElement).getByText('1')).toBeInTheDocument();
+    expect(within(within(metricRegion).getByText('异常').parentElement as HTMLElement).getByText('1')).toBeInTheDocument();
+    expect(screen.queryByText('未测试/停用')).not.toBeInTheDocument();
   });
 
   it('支持状态下拉与标签筛选联动', async () => {

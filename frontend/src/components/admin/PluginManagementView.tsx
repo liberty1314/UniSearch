@@ -180,13 +180,15 @@ export const PluginManagementView: React.FC = () => {
   });
 
   const metrics = useMemo(() => {
-    const installedCount = controller.localPlugins.filter((plugin) => plugin.installed || plugin.is_local).length;
-    const enabledCount = controller.localPlugins.filter((plugin) => plugin.is_enabled && (plugin.installed || plugin.is_local)).length;
-    const issueCount = controller.localPlugins.filter((plugin) => resolvePluginStatus(plugin) === 'error').length;
+    const enabledCount = controller.localPlugins.filter((plugin) => plugin.is_enabled).length;
+    const disabledCount = controller.localPlugins.filter((plugin) => !plugin.is_enabled).length;
+    const issueCount = controller.localPlugins.filter(
+      (plugin) => plugin.is_enabled && resolvePluginStatus(plugin) === 'error'
+    ).length;
 
     return {
-      installedCount,
       enabledCount,
+      disabledCount,
       issueCount,
     };
   }, [controller.localPlugins]);
@@ -365,10 +367,10 @@ export const PluginManagementView: React.FC = () => {
         )}
         metrics={(
           <AdminMetricGrid>
-            <AdminMetricCard label="目录版本" value={controller.catalogVersion} hint={`共 ${controller.localPlugins.length} 个条目`} />
-            <AdminMetricCard label="已安装" value={metrics.installedCount} hint="本地可直接配置与测试" />
-            <AdminMetricCard label="已启用" value={metrics.enabledCount} hint="源码注册的内置插件" />
-            <AdminMetricCard label="异常" value={metrics.issueCount} hint="最近测试异常的插件" />
+            <AdminMetricCard label="总数" value={controller.localPlugins.length} hint="源码注册的内置插件" />
+            <AdminMetricCard label="启用" value={metrics.enabledCount} hint="当前参与搜索的插件" />
+            <AdminMetricCard label="停用" value={metrics.disabledCount} hint="当前未参与搜索的插件" />
+            <AdminMetricCard label="异常" value={metrics.issueCount} hint="启用且最近测试异常的插件" />
           </AdminMetricGrid>
         )}
         filters={(

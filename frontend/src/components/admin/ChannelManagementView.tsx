@@ -55,13 +55,15 @@ export const ChannelManagementView: React.FC = () => {
 
   const metrics = useMemo(() => {
     const enabledCount = controller.channels.filter((channel) => channel.is_enabled).length;
-    const errorCount = controller.channels.filter((channel) => normalizeChannelHealth(channel) === 'error').length;
-    const pendingCount = controller.channels.filter((channel) => !channel.is_enabled || normalizeChannelHealth(channel) === 'untested').length;
+    const disabledCount = controller.channels.filter((channel) => !channel.is_enabled).length;
+    const errorCount = controller.channels.filter(
+      (channel) => channel.is_enabled && normalizeChannelHealth(channel) === 'error'
+    ).length;
 
     return {
       enabledCount,
+      disabledCount,
       errorCount,
-      pendingCount,
     };
   }, [controller.channels]);
 
@@ -147,10 +149,10 @@ export const ChannelManagementView: React.FC = () => {
         )}
         metrics={(
           <AdminMetricGrid>
-            <AdminMetricCard label="频道总数" value={controller.channels.length} hint="已接入后台监控的频道" />
-            <AdminMetricCard label="启用中" value={metrics.enabledCount} hint="当前参与搜索的频道" />
-            <AdminMetricCard label="异常" value={metrics.errorCount} hint="最近测试或监控发现异常" />
-            <AdminMetricCard label="未测试/停用" value={metrics.pendingCount} hint="建议后续处理的频道" />
+            <AdminMetricCard label="总数" value={controller.channels.length} hint="已接入后台监控的频道" />
+            <AdminMetricCard label="启用" value={metrics.enabledCount} hint="当前参与搜索的频道" />
+            <AdminMetricCard label="停用" value={metrics.disabledCount} hint="当前未参与搜索的频道" />
+            <AdminMetricCard label="异常" value={metrics.errorCount} hint="启用且最近测试或监控异常" />
           </AdminMetricGrid>
         )}
         filters={(
