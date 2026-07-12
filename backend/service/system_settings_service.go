@@ -10,6 +10,7 @@ import (
 	"time"
 	"unisearch/config"
 	"unisearch/model"
+	"unisearch/plugin"
 	"unisearch/util"
 
 	"gorm.io/gorm"
@@ -411,6 +412,7 @@ func (s *SystemSettingsService) ApplyRuntimeSettings(settings *RuntimeSettings) 
 	config.AppConfig.UseProxy = settings.ProxyEnabled && strings.TrimSpace(settings.ProxyURL) != ""
 	config.AppConfig.ProxyURL = strings.TrimSpace(settings.ProxyURL)
 	config.AppConfig.ProgressiveSearchEnabled = settings.ProgressiveSearchEnabled
+	plugin.SyncConfiguredProxyFromAppConfig()
 }
 
 // GetAnnouncementEnabled 获取公告功能启用状态

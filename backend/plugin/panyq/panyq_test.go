@@ -1,8 +1,12 @@
 package panyq
 
 import (
+	"io"
+	"net/http"
+	"strings"
 	"testing"
 
+	"unisearch/config"
 	"unisearch/plugin"
 	"unisearch/plugin/testutil"
 )
@@ -59,4 +63,68 @@ func TestExtractActionIDsSupportsModernScriptMarkup(t *testing.T) {
 	if len(ids) != 1 || ids[0] != "0123456789abcdef0123456789abcdef01234567" {
 		t.Fatalf("期望从现代脚本标记提取 Action ID，实际为 %#v", ids)
 	}
+}
+
+func TestPanyqClientUsesConfiguredProxy(t *testing.T) {
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{
+		UseProxy: true,
+		ProxyURL: "http://127.0.0.1:18082",
+	}
+	plugin.SyncConfiguredProxyFromAppConfig()
+	t.Cleanup(func() {
+		config.AppConfig = oldConfig
+		plugin.SyncConfiguredProxyFromAppConfig()
+	})
+
+	p := NewPanyqPlugin()
+	transport, ok := p.client.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("期望 panyq 使用统一池化 Transport，实际为 %T", p.client.Transport)
+	}
+	if transport.Proxy == nil {
+		t.Fatal("期望 panyq 客户端继承插件代理配置")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, "https://panyq.com", nil)
+	if err != nil {
+		t.Fatalf("创建测试请求失败：%v", err)
+	}
+	proxyURL, err := transport.Proxy(req)
+	if err != nil {
+		t.Fatalf("读取 panyq 代理配置失败：%v", err)
+	}
+	if proxyURL.String() != "http://127.0.0.1:18082" {
+		t.Fatalf("期望代理地址为 http://127.0.0.1:18082，实际为 %s", proxyURL.String())
+	}
+}
+
+func TestFindPotentialActionIDsReportsUnexpectedHomepage(t *testing.T) {
+	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header: http.Header{
+				"Content-Type": []string{"text/html; charset=utf-8"},
+			},
+			Body:    io.NopCloser(strings.NewReader("Access denied by upstream")),
+			Request: req,
+		}, nil
+	})}
+
+	_, err := NewPanyqPlugin().findPotentialActionIDs(client)
+	if err == nil {
+		t.Fatal("首页不包含 Action ID 时应返回诊断错误")
+	}
+	message := err.Error()
+	for _, expected := range []string{"status=200", "content_type=text/html", "Access denied by upstream"} {
+		if !strings.Contains(message, expected) {
+			t.Fatalf("诊断错误应包含 %q，实际为 %q", expected, message)
+		}
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }

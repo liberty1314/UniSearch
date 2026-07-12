@@ -77,15 +77,21 @@ func init() {
 // NewPanyqPlugin 创建盘友圈插件实例。
 func NewPanyqPlugin() *PanyqPlugin {
 	jar, _ := cookiejar.New(nil)
-	client := &http.Client{
-		Timeout: requestTimeout,
-		Jar:     jar,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 10 {
-				return fmt.Errorf("重定向次数过多")
-			}
-			return nil
-		},
+	client := plugin.NewPooledHTTPClient(plugin.HTTPClientOptions{
+		Timeout:               requestTimeout,
+		MaxIdleConns:          40,
+		MaxIdleConnsPerHost:   20,
+		MaxConnsPerHost:       20,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: time.Second,
+	})
+	client.Jar = jar
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 10 {
+			return fmt.Errorf("重定向次数过多")
+		}
+		return nil
 	}
 
 	basePlugin := plugin.NewBaseAsyncPlugin(pluginName, defaultPriority)
@@ -248,9 +254,25 @@ func (p *PanyqPlugin) findPotentialActionIDs(client *http.Client) ([]string, err
 		}
 	}
 	if len(ids) == 0 {
-		return nil, fmt.Errorf("未找到 Action ID")
+		contentType := strings.TrimSpace(resp.Header.Get("Content-Type"))
+		return nil, fmt.Errorf(
+			"未找到 Action ID: status=%d content_type=%s final_url=%s body=%q",
+			resp.StatusCode,
+			contentType,
+			resp.Request.URL.String(),
+			responseBodySummary(body),
+		)
 	}
 	return ids, nil
+}
+
+func responseBodySummary(body []byte) string {
+	summary := strings.Join(strings.Fields(string(body)), " ")
+	const maxLength = 200
+	if len(summary) > maxLength {
+		return summary[:maxLength] + "..."
+	}
+	return summary
 }
 
 var actionIDPattern = regexp.MustCompile(`["']([a-f0-9]{40})["']`)

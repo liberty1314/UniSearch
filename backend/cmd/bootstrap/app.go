@@ -39,6 +39,7 @@ func Initialize() (*App, error) {
 	if err := config.InitWithError(); err != nil {
 		return nil, fmt.Errorf("配置初始化失败: %w", err)
 	}
+	plugin.SyncConfiguredProxyFromAppConfig()
 
 	log.Println("正在连接数据库...")
 	if err := database.InitDB(); err != nil {
@@ -75,6 +76,7 @@ func Initialize() (*App, error) {
 		log.Printf("⚠️  读取运行配置失败，将继续使用启动配置: %v", err)
 	} else {
 		systemSettingsService.ApplyRuntimeSettings(runtimeSettings)
+		plugin.SyncConfiguredProxyFromAppConfig()
 		util.ReloadHTTPClient()
 	}
 	service.SetGlobalCacheSettingsService(systemSettingsService)

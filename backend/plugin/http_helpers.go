@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"sync/atomic"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -23,6 +24,33 @@ type HTTPClientOptions struct {
 	IdleConnTimeout       time.Duration
 	TLSHandshakeTimeout   time.Duration
 	ExpectContinueTimeout time.Duration
+}
+
+type configuredProxy struct {
+	url *url.URL
+}
+
+var configuredProxyValue atomic.Pointer[configuredProxy]
+
+// SyncConfiguredProxyFromAppConfig snapshots the runtime proxy configuration for HTTP transports.
+// Call it after startup configuration or runtime settings have been applied.
+func SyncConfiguredProxyFromAppConfig() {
+	if config.AppConfig == nil || !config.AppConfig.UseProxy || config.AppConfig.ProxyURL == "" {
+		configuredProxyValue.Store(nil)
+		return
+	}
+
+	proxyURL, err := url.Parse(config.AppConfig.ProxyURL)
+	if err != nil || proxyURL.Scheme == "" {
+		if err == nil {
+			err = fmt.Errorf("代理地址缺少协议: %s", config.AppConfig.ProxyURL)
+		}
+		logger.Warn("plugin_proxy_config_invalid", logger.Any("error", err))
+		configuredProxyValue.Store(nil)
+		return
+	}
+
+	configuredProxyValue.Store(&configuredProxy{url: proxyURL})
 }
 
 func NewPooledHTTPClient(options HTTPClientOptions) *http.Client {
@@ -44,29 +72,44 @@ func NewPooledHTTPClient(options HTTPClientOptions) *http.Client {
 }
 
 func applyConfiguredProxy(transport *http.Transport) {
-	if transport == nil || config.AppConfig == nil || !config.AppConfig.UseProxy {
+	if transport == nil {
 		return
 	}
+	transport.Proxy = configuredHTTPProxy
+	transport.DialContext = configuredDialContext
+}
 
-	proxyURL, err := url.Parse(config.AppConfig.ProxyURL)
+func configuredHTTPProxy(req *http.Request) (*url.URL, error) {
+	proxyURL, enabled, err := currentConfiguredProxy()
+	if err != nil || !enabled || proxyURL.Scheme == "socks5" {
+		return nil, err
+	}
+	return http.ProxyURL(proxyURL)(req)
+}
+
+func configuredDialContext(ctx context.Context, network string, addr string) (net.Conn, error) {
+	proxyURL, enabled, err := currentConfiguredProxy()
 	if err != nil {
-		logger.Warn("plugin_proxy_config_invalid", logger.Any("error", err))
-		return
+		return nil, err
 	}
-
-	if proxyURL.Scheme == "socks5" {
+	if enabled && proxyURL.Scheme == "socks5" {
 		dialer, err := proxy.FromURL(proxyURL, proxy.Direct)
 		if err != nil {
-			logger.Warn("plugin_proxy_socks5_invalid", logger.Any("error", err))
-			return
+			return nil, fmt.Errorf("创建 SOCKS5 代理失败: %w", err)
 		}
-		transport.DialContext = func(_ context.Context, network string, addr string) (net.Conn, error) {
-			return dialer.Dial(network, addr)
-		}
-		return
+		return dialer.Dial(network, addr)
 	}
 
-	transport.Proxy = http.ProxyURL(proxyURL)
+	dialer := &net.Dialer{Timeout: 30 * time.Second, KeepAlive: 30 * time.Second}
+	return dialer.DialContext(ctx, network, addr)
+}
+
+func currentConfiguredProxy() (*url.URL, bool, error) {
+	proxyConfig := configuredProxyValue.Load()
+	if proxyConfig == nil || proxyConfig.url == nil {
+		return nil, false, nil
+	}
+	return proxyConfig.url, true, nil
 }
 
 func ApplyBrowserHeaders(req *http.Request, referer string) {
