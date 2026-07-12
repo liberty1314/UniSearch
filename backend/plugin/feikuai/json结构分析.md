@@ -270,7 +270,7 @@ func parseTime(timeStr string) time.Time {
 
 ## 与其他插件的差异
 
-| 特性 | feikuai | wanou/ouge/zhizhen | huban | 说明 |
+| 特性 | feikuai | zhizhen | huban | 说明 |
 |------|---------|-------------------|-------|------|
 | **链接类型** | 仅磁力链接 | 网盘链接 | 网盘链接 | 专注BT资源 |
 | **多链接** | 一对多 | 多对一 | 多对多 | 一个资源多个种子 |

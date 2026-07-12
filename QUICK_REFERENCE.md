@@ -58,7 +58,7 @@ export API_URL=https://your-app.zeabur.app
 zeabur logs | grep "插件搜索超时"
 
 # 临时禁用问题插件
-ENABLED_PLUGINS=labi,shandian,muou,wanou,hunhepan,pansearch
+ENABLED_PLUGINS=labi,shandian,muou,hunhepan,pansearch
 ```
 
 **性能无改善？**

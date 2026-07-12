@@ -66,7 +66,7 @@ func TestParseSearchRequestSourceTGIgnoresPlugins(t *testing.T) {
 	values := url.Values{
 		"kw":      {"仙逆"},
 		"src":     {"tg"},
-		"plugins": {"pan666,panyq"},
+		"plugins": {"pan666,unknown-plugin"},
 	}
 	req, err := parseSearchRequest(newSearchRequestParserContext(http.MethodGet, "/api/search?"+values.Encode(), ""))
 	if err != nil {
@@ -91,7 +91,7 @@ func TestParseSearchRequestSourcePluginIgnoresChannels(t *testing.T) {
 		"kw":       {"仙逆"},
 		"src":      {"plugin"},
 		"channels": {"tg-a,tg-b"},
-		"plugins":  {"pan666,panyq"},
+		"plugins":  {"pan666,unknown-plugin"},
 	}
 	req, err := parseSearchRequest(newSearchRequestParserContext(http.MethodGet, "/api/search?"+values.Encode(), ""))
 	if err != nil {
@@ -104,7 +104,7 @@ func TestParseSearchRequestSourcePluginIgnoresChannels(t *testing.T) {
 	if req.Channels != nil {
 		t.Fatalf("期望 plugin 来源忽略频道参数，实际为 %#v", req.Channels)
 	}
-	if !reflect.DeepEqual(req.Plugins, []string{"pan666", "panyq"}) {
+	if !reflect.DeepEqual(req.Plugins, []string{"pan666", "unknown-plugin"}) {
 		t.Fatalf("期望保留插件列表，实际为 %#v", req.Plugins)
 	}
 }

@@ -13,6 +13,7 @@ import (
 
 func main() {
 	dropDeprecated := flag.Bool("drop-deprecated", false, "显式删除已经下线的旧表")
+	purgeRemovedPlugins := flag.Bool("purge-removed-plugins", false, "显式清理已下线插件的历史数据")
 	flag.Parse()
 
 	if err := godotenv.Load(); err != nil {
@@ -52,6 +53,25 @@ func main() {
 		}
 	} else {
 		log.Println("跳过废弃表清理；如确认需要删除旧表，请追加 -drop-deprecated")
+	}
+
+	if *purgeRemovedPlugins {
+		log.Printf("正在显式清理已下线插件历史数据: %v", database.RemovedPluginNames())
+		result, err := database.PurgeRemovedPluginData(database.GetDB())
+		if err != nil {
+			log.Fatalf("清理已下线插件历史数据失败: %v", err)
+		}
+		log.Printf(
+			"已下线插件历史数据清理完成: states=%d health=%d runtime_configs=%d metrics=%d error_logs=%d total=%d",
+			result.PluginStatesDeleted,
+			result.PluginHealthStatusesDeleted,
+			result.PluginRuntimeConfigsDeleted,
+			result.PluginPerformanceMetricsDeleted,
+			result.PluginErrorLogsDeleted,
+			result.TotalDeleted(),
+		)
+	} else {
+		log.Println("跳过已下线插件数据清理；如确认需要删除历史数据，请追加 -purge-removed-plugins")
 	}
 
 	fmt.Println("数据库迁移完成")

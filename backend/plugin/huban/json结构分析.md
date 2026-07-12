@@ -283,7 +283,7 @@ func (p *HubanAsyncPlugin) buildContent(item HubanAPIItem) string {
 
 ## 与其他插件的差异
 
-| 特性 | huban | wanou/ouge/zhizhen | 说明 |
+| 特性 | huban | zhizhen | 说明 |
 |------|-------|-------------------|------|
 | **API架构** | 双域名 | 单域名 | 需要容错处理 |
 | **链接格式** | `来源$链接#标题#` | `链接` | 复杂多层分隔 |

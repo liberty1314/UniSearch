@@ -4,7 +4,6 @@ ok  	unisearch/plugin/alupan	0.213s
 ok  	unisearch/plugin/api52	0.348s
 ?   	unisearch/plugin/ash	[no test files]
 ?   	unisearch/plugin/cldi	[no test files]
-?   	unisearch/plugin/clmao	[no test files]
 ok  	unisearch/plugin/daishudj	0.399s
 ?   	unisearch/plugin/djgou	[no test files]
 ok  	unisearch/plugin/duoduo	0.441s
@@ -28,12 +27,9 @@ ok  	unisearch/plugin/mikuclub	1.407s
 ?   	unisearch/plugin/mizixing	[no test files]
 ?   	unisearch/plugin/muou	[no test files]
 ?   	unisearch/plugin/nyaa	[no test files]
-?   	unisearch/plugin/ouge	[no test files]
 ok  	unisearch/plugin/pan666	1.439s
 ok  	unisearch/plugin/pansearch	1.459s
-ok  	unisearch/plugin/panta	1.403s
 ok  	unisearch/plugin/panwiki	1.420s
-ok  	unisearch/plugin/panyq	1.406s
 ok  	unisearch/plugin/parser	1.415s
 ?   	unisearch/plugin/qingying	[no test files]
 ok  	unisearch/plugin/quark4k	1.382s
@@ -45,9 +41,7 @@ ok  	unisearch/plugin/sidhub	1.038s
 ?   	unisearch/plugin/testutil	[no test files]
 ?   	unisearch/plugin/thepiratebay	[no test files]
 ?   	unisearch/plugin/u3c3	[no test files]
-?   	unisearch/plugin/wanou	[no test files]
 ?   	unisearch/plugin/weibo	[no test files]
-?   	unisearch/plugin/xinjuc	[no test files]
 ok  	unisearch/plugin/xuexizhinan	1.148s
 ?   	unisearch/plugin/yiove	[no test files]
 ?   	unisearch/plugin/ypfxw	[no test files]

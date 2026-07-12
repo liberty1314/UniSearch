@@ -13,7 +13,6 @@ import (
 
 	_ "unisearch/plugin/huban"
 	_ "unisearch/plugin/panwiki"
-	_ "unisearch/plugin/panyq"
 )
 
 type smokeScenario struct {
@@ -54,7 +53,7 @@ func main() {
 		"dianying4k", "q_dianshiju", "tgbokee", "ucshare", "godupan", "gokuapan", "gimy115",
 		"WFYSFX03", "peccxin", "Movie888035", "xlwpzy", "zyywpzy", "wydwpzy", "gimy100", "gimy115iso",
 	}
-	newPlugins := []string{"zhizhen", "duoduo", "huban", "jikepan", "qupansou", "panwiki", "pan666", "hdr4k", "panyq"}
+	newPlugins := []string{"zhizhen", "duoduo", "huban", "jikepan", "qupansou", "panwiki", "pan666", "hdr4k"}
 	scenarios := []smokeScenario{
 		{Name: "src=plugin", SourceType: "plugin", Plugins: newPlugins},
 		{Name: "src=tg", SourceType: "tg", Channels: newChannels},

@@ -18,12 +18,11 @@ import (
 
 	_ "unisearch/plugin/huban"
 	_ "unisearch/plugin/panwiki"
-	_ "unisearch/plugin/panyq"
 )
 
 const (
 	defaultKeywords = "仙逆,庆余年,4K,短剧,纪录片"
-	defaultPlugins  = "zhizhen,duoduo,huban,jikepan,qupansou,panwiki,pan666,hdr4k,panyq"
+	defaultPlugins  = "zhizhen,duoduo,huban,jikepan,qupansou,panwiki,pan666,hdr4k"
 	defaultChannels = "tgsearchers6,sbsbsnsqq,kkxlzy,alyp_1,dianyingshare,WFYSFX02,cctv1211,liangxingzhinan,ammmziyuan,cili8888,jzmm_123pan,Q_dianying,domgmingapk,dianying4k,q_dianshiju,tgbokee,ucshare,godupan,gokuapan,gimy115,WFYSFX03,peccxin,Movie888035,xlwpzy,zyywpzy,wydwpzy,gimy100,gimy115iso"
 )
 

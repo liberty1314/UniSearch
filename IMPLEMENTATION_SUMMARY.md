@@ -110,7 +110,7 @@ DEFAULT_CONCURRENCY=5
 ASYNC_MAX_BACKGROUND_WORKERS=20
 
 # 如果某些插件仍然频繁超时，可以临时禁用
-# ENABLED_PLUGINS=labi,shandian,muou,wanou,hunhepan,pansearch,panta,susu,thepiratebay,ouge,clmao,u3c3,jutoushe,nyaa,xinjuc,aikanzy,quark4k,quarksoo,huban,panwiki,panyq
+# ENABLED_PLUGINS=labi,shandian,muou,hunhepan,pansearch,susu,thepiratebay,u3c3,jutoushe,nyaa,aikanzy,quark4k,quarksoo,huban,panwiki,sidhub
 ```
 
 ### 第四步：验证部署效果
