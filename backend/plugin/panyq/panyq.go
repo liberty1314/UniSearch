@@ -230,25 +230,70 @@ func (p *PanyqPlugin) findPotentialActionIDs(client *http.Client) ([]string, err
 		return nil, err
 	}
 
-	jsRegex := regexp.MustCompile(`<script src="(/_next/static/[^"]+\.js)"`)
-	idRegex := regexp.MustCompile(`["']([a-f0-9]{40})["']`)
-	seen := make(map[string]struct{})
-	for _, match := range jsRegex.FindAllStringSubmatch(string(body), -1) {
-		jsURL := baseURL + match[1]
-		ids := p.fetchActionIDsFromJS(client, jsURL, idRegex)
-		for _, id := range ids {
-			seen[id] = struct{}{}
-		}
+	pageHTML := string(body)
+	// Next.js 页面会在不同版本中使用单引号、双引号或带 query 的脚本地址。
+	// 先扫描首页本身，再按页面声明顺序扫描脚本，避免依赖旧的固定 HTML 形态。
+	ids := extractActionIDs(pageHTML)
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		seen[id] = struct{}{}
 	}
-
-	ids := make([]string, 0, len(seen))
-	for id := range seen {
-		ids = append(ids, id)
+	for _, scriptURL := range extractScriptURLs(pageHTML) {
+		for _, id := range p.fetchActionIDsFromJS(client, scriptURL, actionIDPattern) {
+			if _, exists := seen[id]; exists {
+				continue
+			}
+			seen[id] = struct{}{}
+			ids = append(ids, id)
+		}
 	}
 	if len(ids) == 0 {
 		return nil, fmt.Errorf("未找到 Action ID")
 	}
 	return ids, nil
+}
+
+var actionIDPattern = regexp.MustCompile(`["']([a-f0-9]{40})["']`)
+
+// extractActionIDs 从 HTML/JS 文本中按出现顺序提取 Next Server Action ID。
+// 返回有序切片，避免从 map 遍历时导致 action ID 角色随机变化。
+func extractActionIDs(text string) []string {
+	seen := make(map[string]struct{})
+	ids := make([]string, 0)
+	for _, match := range actionIDPattern.FindAllStringSubmatch(text, -1) {
+		if len(match) < 2 {
+			continue
+		}
+		if _, exists := seen[match[1]]; exists {
+			continue
+		}
+		seen[match[1]] = struct{}{}
+		ids = append(ids, match[1])
+	}
+	return ids
+}
+
+func extractScriptURLs(html string) []string {
+	scriptPattern := regexp.MustCompile(`<script[^>]+src=["']([^"']+\.js(?:\?[^"']*)?)["']`)
+	seen := make(map[string]struct{})
+	urls := make([]string, 0)
+	for _, match := range scriptPattern.FindAllStringSubmatch(html, -1) {
+		if len(match) < 2 {
+			continue
+		}
+		scriptURL := match[1]
+		if strings.HasPrefix(scriptURL, "/") {
+			scriptURL = baseURL + scriptURL
+		} else if !strings.HasPrefix(scriptURL, "http://") && !strings.HasPrefix(scriptURL, "https://") {
+			scriptURL = strings.TrimRight(baseURL, "/") + "/" + strings.TrimLeft(scriptURL, "/")
+		}
+		if _, exists := seen[scriptURL]; exists {
+			continue
+		}
+		seen[scriptURL] = struct{}{}
+		urls = append(urls, scriptURL)
+	}
+	return urls
 }
 
 func (p *PanyqPlugin) fetchActionIDsFromJS(client *http.Client, jsURL string, idRegex *regexp.Regexp) []string {

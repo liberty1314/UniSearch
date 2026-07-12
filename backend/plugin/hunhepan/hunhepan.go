@@ -40,6 +40,10 @@ const (
 	DefaultPageSize = 30
 )
 
+// 当前只有混合盘主 API 稳定返回符合协议的 JSON；其他历史聚合端点分别返回
+// 校验失败、404 或 EOF，继续并发调用会把单个失效上游误报为插件整体异常。
+var searchAPISources = []string{HunhepanAPI}
+
 // HunhepanAsyncPlugin 混合盘搜索异步插件
 type HunhepanAsyncPlugin struct {
 	*plugin.BaseAsyncPlugin
@@ -63,56 +67,24 @@ func (p *HunhepanAsyncPlugin) doSearch(client *http.Client, keyword string, ext 
 	debugLog("开始搜索，关键词: %s", keyword)
 
 	// 创建结果通道和错误通道
-	resultChan := make(chan []HunhepanItem, 4)
-	errChan := make(chan error, 4)
+	resultChan := make(chan []HunhepanItem, len(searchAPISources))
+	errChan := make(chan error, len(searchAPISources))
 
 	// 创建等待组
 	var wg sync.WaitGroup
-	wg.Add(4)
-
-	// 并行请求三个API
-	go func() {
-		defer wg.Done()
-		items, err := p.searchAPI(client, HunhepanAPI, keyword)
-		if err != nil {
-			errChan <- fmt.Errorf("hunhepan API error: %w", err)
-			return
-		}
-		resultChan <- items
-	}()
-
-	go func() {
-		defer wg.Done()
-		items, err := p.searchAPI(client, QkpansoAPI, keyword)
-		if err != nil {
-			errChan <- fmt.Errorf("qkpanso API error: %w", err)
-			return
-		}
-		resultChan <- items
-	}()
-
-	go func() {
-		defer wg.Done()
-		items, err := p.searchAPI(client, KuakeAPI, keyword)
-		if err != nil {
-			errChan <- fmt.Errorf("kuake API error: %w", err)
-			return
-		}
-		resultChan <- items
-	}()
-
-	go func() {
-		defer wg.Done()
-		debugLog("调用 misoso API")
-		items, err := p.searchAPI(client, MisosoAPI, keyword)
-		if err != nil {
-			debugLog("misoso API 错误: %v", err)
-			errChan <- fmt.Errorf("misoso API error: %w", err)
-			return
-		}
-		debugLog("misoso API 返回 %d 条结果", len(items))
-		resultChan <- items
-	}()
+	for _, apiURL := range searchAPISources {
+		apiURL := apiURL
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			items, err := p.searchAPI(client, apiURL, keyword)
+			if err != nil {
+				errChan <- fmt.Errorf("%s API error: %w", apiURL, err)
+				return
+			}
+			resultChan <- items
+		}()
+	}
 
 	// 启动一个goroutine等待所有请求完成并关闭通道
 	go func() {
@@ -163,6 +135,8 @@ func (p *HunhepanAsyncPlugin) searchAPI(client *http.Client, apiURL, keyword str
 
 	// 创建等待组，用于等待所有页面请求完成
 	var wg sync.WaitGroup
+	// 混合盘会拦截同一客户端的并发分页请求，限制为单页串行请求。
+	pageSemaphore := make(chan struct{}, 1)
 
 	// 并发请求每一页
 	for page := 1; page <= maxPages; page++ {
@@ -170,6 +144,8 @@ func (p *HunhepanAsyncPlugin) searchAPI(client *http.Client, apiURL, keyword str
 
 		go func(pageNum int) {
 			defer wg.Done()
+			pageSemaphore <- struct{}{}
+			defer func() { <-pageSemaphore }()
 
 			// 构建请求体 - 根据1.txt的实际请求格式
 			reqBody := map[string]interface{}{
@@ -205,7 +181,7 @@ func (p *HunhepanAsyncPlugin) searchAPI(client *http.Client, apiURL, keyword str
 			}
 
 			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+			req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36")
 			req.Header.Set("Accept", "application/json, text/plain, */*")
 			req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
 
@@ -283,8 +259,11 @@ func (p *HunhepanAsyncPlugin) searchAPI(client *http.Client, apiURL, keyword str
 		errors = append(errors, err)
 	}
 
-	// 如果没有获取到任何结果且有错误，则返回第一个错误
-	if len(allItems) == 0 && len(errors) > 0 {
+	// 已拿到部分页面结果时保留结果，单页上游波动不应把插件整体判为失败。
+	if len(allItems) > 0 {
+		return allItems, nil
+	}
+	if len(errors) > 0 {
 		return nil, errors[0]
 	}
 

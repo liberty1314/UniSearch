@@ -341,3 +341,12 @@
     - scripts/build.sh
     - scripts/gen-production-secrets.sh
     - docs/readme_2607.md
+
+[2026-07-12 09:31] fix(plugins): 提升网盘插件搜索稳定性
+  Body: 混合盘改为只调用当前稳定主 API，串行分页请求并在部分页面失败时保留已有结果。盘友圈增强 Next.js 脚本和 Action ID 提取逻辑，减少页面结构变化导致的搜索失败。
+  Files:
+    - backend/plugin/hunhepan/hunhepan.go
+    - backend/plugin/hunhepan/hunhepan_test.go
+    - backend/plugin/panyq/panyq.go
+    - backend/plugin/panyq/panyq_test.go
+    - docs/readme_2607.md

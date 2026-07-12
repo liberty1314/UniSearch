@@ -52,3 +52,11 @@ func TestPanyqTextHelpers(t *testing.T) {
 		t.Fatalf("期望提取百度提取码，实际为 %q", password)
 	}
 }
+
+func TestExtractActionIDsSupportsModernScriptMarkup(t *testing.T) {
+	html := `<script src='/_next/static/chunks/app.js'></script><script>const actionId = "0123456789abcdef0123456789abcdef01234567"</script>`
+	ids := extractActionIDs(html)
+	if len(ids) != 1 || ids[0] != "0123456789abcdef0123456789abcdef01234567" {
+		t.Fatalf("期望从现代脚本标记提取 Action ID，实际为 %#v", ids)
+	}
+}
