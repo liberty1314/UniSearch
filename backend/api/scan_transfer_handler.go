@@ -78,9 +78,20 @@ func refreshScanTransferHandler(timeout time.Duration) gin.HandlerFunc {
 			ResourceID:   strings.TrimSpace(req.ResourceID),
 			LinkURL:      req.LinkURL,
 			AccessMode:   strings.TrimSpace(refreshedLink.AccessMode),
-			ScanTransfer: refreshedLink.ScanTransfer,
+			ScanTransfer: sanitizePublicScanTransferInfo(refreshedLink.ScanTransfer),
 		}))
 	}
+}
+
+func sanitizePublicScanTransferInfo(info *model.ScanTransferInfo) *model.ScanTransferInfo {
+	if info == nil {
+		return nil
+	}
+	cloned := *info
+	cloned.SourcePageURL = ""
+	cloned.Refreshable = false
+	cloned.RefreshKey = ""
+	return &cloned
 }
 
 func resolveScanTransferRefreshPlugin() scanTransferRefreshPlugin {

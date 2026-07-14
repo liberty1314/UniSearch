@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import type { SearchParams, SearchProgressiveEvent, SearchResponse } from "@/types/search";
-import type { ScanTransferInfo } from "@/types/resource";
+import type { ResourceLink, ScanTransferInfo } from "@/types/resource";
 import { SearchService } from "@/services/searchService";
 import { SystemSettingsService } from "@/services/systemSettingsService";
 import { getErrorCode, getErrorMessage } from "@/lib/error";
@@ -88,6 +88,8 @@ interface SearchState {
   loadAvailableOptions: () => Promise<void>;
   loadMore: () => void; // 前端懒加载，不再是异步
   updateResourceScanTransfer: (resourceId: string, linkUrl: string, scanTransfer: ScanTransferInfo) => void;
+  updateResolvedResourceLink: (resourceId: string, linkId: string, resolvedLink: ResourceLink) => void;
+  markResourceLinkInvalid: (resourceId: string, linkId: string) => void;
   reset: () => void;
 }
 
@@ -611,6 +613,79 @@ export const useSearchStore = create<SearchState>()(
               resources: nextResources,
             },
           };
+        });
+      },
+
+      updateResolvedResourceLink: (resourceId, linkId, resolvedLink) => {
+        const trimmedResourceId = resourceId.trim();
+        const trimmedLinkId = linkId.trim();
+        if (!trimmedResourceId || !trimmedLinkId) {
+          return;
+        }
+
+        set((state) => {
+          if (!state.searchResults) {
+            return state;
+          }
+
+          let changed = false;
+          const resources = state.searchResults.resources.map((resource) => {
+            if (resource.id !== trimmedResourceId) {
+              return resource;
+            }
+            let resourceChanged = false;
+            const links = resource.links.map((link) => {
+              if (link.id !== trimmedLinkId) {
+                return link;
+              }
+              resourceChanged = true;
+              changed = true;
+              return { ...resolvedLink, id: trimmedLinkId };
+            });
+            return resourceChanged ? { ...resource, links } : resource;
+          });
+
+          return changed
+            ? { searchResults: { ...state.searchResults, resources } }
+            : state;
+        });
+      },
+
+      markResourceLinkInvalid: (resourceId, linkId) => {
+        const trimmedResourceId = resourceId.trim();
+        const trimmedLinkId = linkId.trim();
+        if (!trimmedResourceId || !trimmedLinkId) {
+          return;
+        }
+
+        set((state) => {
+          if (!state.searchResults) {
+            return state;
+          }
+
+          let changed = false;
+          const resources = state.searchResults.resources.map((resource) => {
+            if (resource.id !== trimmedResourceId) {
+              return resource;
+            }
+            let resourceChanged = false;
+            const links = resource.links.map((link) => {
+              if (link.id !== trimmedLinkId) {
+                return link;
+              }
+              resourceChanged = true;
+              changed = true;
+              return {
+                ...link,
+                resolution: { ...link.resolution, status: "invalid" as const },
+              };
+            });
+            return resourceChanged ? { ...resource, links } : resource;
+          });
+
+          return changed
+            ? { searchResults: { ...state.searchResults, resources } }
+            : state;
         });
       },
 

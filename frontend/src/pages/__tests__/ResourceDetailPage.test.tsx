@@ -288,6 +288,30 @@ describe("ResourceDetailPage", () => {
     expect(screen.getByText("资源详情页未开启")).toBeInTheDocument();
   });
 
+  it("shows unknown time for missing, invalid, and year-one timestamps", async () => {
+	for (const [id, publishedAt] of [
+	  ["missing-time", undefined],
+	  ["invalid-time", "not-a-date"],
+	  ["year-one-time", "0001-01-01T00:00:00Z"],
+	] as const) {
+	  const resource: ResourceObject = {
+		...resourceFixture,
+		id,
+		published_at: publishedAt,
+	  };
+
+	  const rendered = renderDetailPage({
+		pathname: `/resource/${id}`,
+		state: { resource, from: { pathname: "/", keyword: "你的名字" } },
+	  });
+
+	  expect(await screen.findByTestId("resource-detail-hero-decision-card")).toHaveTextContent(
+		"未知时间",
+	  );
+	  rendered.unmount();
+	}
+  });
+
   it("returns to the previous search route with backward transition state", async () => {
     renderDetailPage({
       pathname: "/resource/resource-1",

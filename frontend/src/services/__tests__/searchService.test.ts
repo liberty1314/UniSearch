@@ -127,6 +127,45 @@ describe('SearchService', () => {
     );
   });
 
+  it('resolves an opaque resource candidate and preserves API errors', async () => {
+    const payload = {
+      resource_id: 'r_v1_resource',
+      link_id: 'lnk_v1_link',
+      resolve_token: 'rrt_v1_token',
+    };
+    const response = {
+      resource_id: payload.resource_id,
+      link_id: payload.link_id,
+      resolution_status: 'resolved' as const,
+      link: {
+        id: payload.link_id,
+        type: 'quark',
+        url: 'https://pan.quark.cn/s/resolved',
+        access_mode: 'direct_open' as const,
+      },
+    };
+    const controller = new AbortController();
+    postMock.mockResolvedValueOnce(response);
+
+    await expect(
+      SearchService.resolveResource(payload, { signal: controller.signal }),
+    ).resolves.toBe(response);
+    expect(postMock).toHaveBeenCalledWith(
+      '/resources/resolve',
+      payload,
+      { signal: controller.signal },
+    );
+
+    const apiError = {
+      response: { status: 410, data: { error_code: 'RESOURCE_INVALID' } },
+      data: { error_code: 'RESOURCE_INVALID' },
+    };
+    postMock.mockRejectedValueOnce(apiError);
+    await expect(SearchService.resolveResource(payload)).rejects.toBe(apiError);
+    expect(apiError.response.status).toBe(410);
+    expect(apiError.data.error_code).toBe('RESOURCE_INVALID');
+  });
+
   it('round-trips advanced filters through the search URL codec', () => {
     const url = SearchService.buildSearchUrl({
       keyword: '你的名字',

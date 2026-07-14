@@ -8,7 +8,6 @@ import {
   type ResultItem,
 } from "@/utils/cloudTypeUtils";
 import {
-  resolveDirectScanTransferUrl,
   resolveResourceDisplaySize,
   resolveResourceDisplayTitle,
   resolveResourceSourcePresentation,
@@ -42,14 +41,8 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
     const cloudInfo = getCloudTypeInfo(cloudType);
     const sourceInfo = resolveResourceSourcePresentation(resource);
     const sourceType = resource.source.type?.trim().toLowerCase();
+    const sourceId = String(resource.source.id || "unknown").trim() || "unknown";
     const hasPassword = Boolean(primaryLink?.password?.trim());
-    const directScanTransferUrl = resolveDirectScanTransferUrl({
-      accessMode: primaryLink?.access_mode || (primaryLink?.scan_transfer ? "scan_transfer" : "direct_open"),
-      scanTransfer: primaryLink?.scan_transfer,
-    });
-    const scanTransferMode =
-      (primaryLink?.access_mode === "scan_transfer" || Boolean(primaryLink?.scan_transfer)) &&
-      !directScanTransferUrl;
     const sizeLabel = resolveResourceDisplaySize(item);
     const displayTitle = resolveResourceDisplayTitle(resource);
 
@@ -94,6 +87,8 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
             ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             : "cursor-default",
         )}
+        data-source-id={sourceId}
+        data-resource-id={resource.id}
       >
         {/* 左侧彩色竖条（hover 显示） */}
         <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-blue-400 to-cyan-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300 dark:from-blue-500/50 dark:to-cyan-400/50" />
@@ -160,7 +155,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
                 <span>有码</span>
               </div>
             )}
-            {scanTransferMode && isResolvingResource ? (
+            {isResolvingResource ? (
               <button
                 type="button"
                 onClick={(event) => {

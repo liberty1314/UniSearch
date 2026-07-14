@@ -91,6 +91,7 @@ func buildResourceObjects(results []model.SearchResult, keyword string, cloudTyp
 	resources := make([]model.ResourceObject, 0, len(results))
 	lowerKeyword := strings.ToLower(strings.TrimSpace(keyword))
 	allowedCloudTypes := buildAllowedCloudTypes(cloudTypes)
+	tokenCodec, _ := newResourceResolveTokenCodec(resourcePublicIDSecret)
 
 	for _, result := range results {
 		linkTitleMap := extractLinkTitlePairs(result.Content)
@@ -101,7 +102,8 @@ func buildResourceObjects(results []model.SearchResult, keyword string, cloudTyp
 			continue
 		}
 
-		resourceLinks := buildResourceLinks(result, linkTitleMap, lowerKeyword, allowedCloudTypes)
+		resourceID := resolveResourceID(result, resourcePublicIDSecret)
+		resourceLinks := buildResourceLinks(result, resourceID, linkTitleMap, lowerKeyword, allowedCloudTypes, resourcePublicIDSecret, tokenCodec)
 		if len(resourceLinks) == 0 && strings.TrimSpace(result.DetailURL) == "" {
 			continue
 		}
@@ -110,7 +112,7 @@ func buildResourceObjects(results []model.SearchResult, keyword string, cloudTyp
 		}
 
 		resource := model.ResourceObject{
-			ID:           resolveResourceID(result, resourcePublicIDSecret),
+			ID:           resourceID,
 			Title:        resolveResourceTitle(result, linkTitleMap, lowerKeyword),
 			Description:  buildResourceDescription(result),
 			Source:       buildResourceSource(result),
@@ -122,8 +124,8 @@ func buildResourceObjects(results []model.SearchResult, keyword string, cloudTyp
 			Detail:       model.ResourceDetail{Content: result.Content},
 			Tags:         append([]string(nil), result.Tags...),
 			Images:       append([]string(nil), result.Images...),
-			Meta:         cloneMeta(result.Meta),
-			PublishedAt:  result.Datetime,
+			Meta:         buildPublicResourceMeta(result.Meta),
+			PublishedAt:  optionalTime(result.Datetime),
 		}
 		resources = append(resources, resource)
 	}
@@ -141,7 +143,7 @@ func shouldDisplayResourceResult(result model.SearchResult, lowerKeyword string,
 	return resourceMatchesKeyword(result, lowerKeyword, linkTitleMap)
 }
 
-func buildResourceLinks(result model.SearchResult, linkTitleMap map[string]string, lowerKeyword string, allowedCloudTypes map[string]bool) []model.ResourceLink {
+func buildResourceLinks(result model.SearchResult, resourceID string, linkTitleMap map[string]string, lowerKeyword string, allowedCloudTypes map[string]bool, resourcePublicIDSecret string, tokenCodec *resourceResolveTokenCodec) []model.ResourceLink {
 	type candidateLink struct {
 		link           model.Link
 		title          string
@@ -180,7 +182,7 @@ func buildResourceLinks(result model.SearchResult, linkTitleMap map[string]strin
 	}
 
 	resourceLinks := make([]model.ResourceLink, 0, len(candidates))
-	for _, candidate := range candidates {
+	for index, candidate := range candidates {
 		if matchedSpecificTitleCount > 0 && candidate.hasOwnTitle && !candidate.keywordMatched {
 			continue
 		}
@@ -188,21 +190,64 @@ func buildResourceLinks(result model.SearchResult, linkTitleMap map[string]strin
 			continue
 		}
 		linkType := normalizeLinkType(candidate.link.Type, candidate.link.URL)
+		linkID := resolvePublicLinkID(resourcePublicIDSecret, resourceID, candidate.link, index)
+		if candidate.link.ResolveTarget != nil && candidate.link.ResolveTarget.Status == "deferred" {
+			if tokenCodec == nil {
+				continue
+			}
+			token, err := tokenCodec.Sign(resourceResolveTokenClaims{
+				ResourceID: resourceID,
+				LinkID:     linkID,
+				PluginID:   candidate.link.ResolveTarget.PluginID,
+				Provider:   candidate.link.ResolveTarget.Provider,
+				SourceURL:  candidate.link.URL,
+				MovieID:    candidate.link.ResolveTarget.MovieID,
+				EntryIndex: candidate.link.ResolveTarget.EntryIndex,
+			})
+			if err != nil {
+				continue
+			}
+			expiresAt := tokenCodec.now().Add(resourceResolveTokenLifetime)
+			resourceLinks = append(resourceLinks, model.ResourceLink{
+				ID:         linkID,
+				Type:       linkType,
+				AccessMode: "resolve_required",
+				Resolution: &model.ResourceLinkResolution{
+					Status:    "deferred",
+					Token:     token,
+					ExpiresAt: &expiresAt,
+				},
+			})
+			continue
+		}
 
 		datetime := candidate.link.Datetime
 		if datetime.IsZero() {
 			datetime = result.Datetime
 		}
 
+		scanTransfer := cloneScanTransferInfo(candidate.link.ScanTransfer)
+		var resolution *model.ResourceLinkResolution
+		if candidate.link.ResolveTarget != nil {
+			resolution = &model.ResourceLinkResolution{Status: candidate.link.ResolveTarget.Status}
+			if candidate.link.ResolveTarget.PluginID == "sidhub" && scanTransfer != nil {
+				scanTransfer.SourcePageURL = ""
+				scanTransfer.Refreshable = false
+				scanTransfer.RefreshKey = ""
+			}
+		}
+
 		resourceLinks = append(resourceLinks, model.ResourceLink{
+			ID:           linkID,
 			Type:         linkType,
 			URL:          candidate.link.URL,
 			Password:     candidate.link.Password,
 			AccessMode:   resolveLinkAccessMode(candidate.link),
-			ScanTransfer: cloneScanTransferInfo(candidate.link.ScanTransfer),
+			ScanTransfer: scanTransfer,
+			Resolution:   resolution,
 			Title:        candidate.title,
 			WorkTitle:    candidate.link.WorkTitle,
-			Datetime:     datetime,
+			Datetime:     optionalTime(datetime),
 		})
 	}
 
@@ -467,6 +512,13 @@ func cloneMeta(meta map[string]interface{}) map[string]interface{} {
 	for key, value := range meta {
 		cloned[key] = value
 	}
+	return cloned
+}
+
+func buildPublicResourceMeta(meta map[string]interface{}) map[string]interface{} {
+	cloned := cloneMeta(meta)
+	delete(cloned, "detail_url")
+	delete(cloned, "sid_hub_detail_url")
 	return cloned
 }
 
@@ -870,15 +922,23 @@ func resolveResourceMatchRank(resource model.ResourceObject, lowerKeyword string
 }
 
 func resolveResourcePublishedAt(resource model.ResourceObject) time.Time {
-	if !resource.PublishedAt.IsZero() {
-		return resource.PublishedAt
+	if resource.PublishedAt != nil {
+		return *resource.PublishedAt
 	}
 	for _, link := range resource.Links {
-		if !link.Datetime.IsZero() {
-			return link.Datetime
+		if link.Datetime != nil {
+			return *link.Datetime
 		}
 	}
 	return time.Time{}
+}
+
+func optionalTime(value time.Time) *time.Time {
+	if value.IsZero() {
+		return nil
+	}
+	copy := value
+	return &copy
 }
 
 func sortResourceObjects(resources []model.ResourceObject, keyword string) {

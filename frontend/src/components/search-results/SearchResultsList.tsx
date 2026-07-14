@@ -3,7 +3,10 @@ import { cn } from "@/lib/utils";
 import { SearchResultGridCard } from "@/components/home/SearchResultGridCard";
 import { SearchResultListItem } from "@/components/home/SearchResultListItem";
 import type { ResultItem } from "@/utils/cloudTypeUtils";
-import { resolveResourceOpenTarget } from "@/utils/resourceDisplay";
+import {
+  resolveDeferredResourceLinks,
+  resolveResourceOpenTarget,
+} from "@/utils/resourceDisplay";
 
 type ViewMode = "list" | "grid";
 
@@ -43,7 +46,10 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
           key={item.resource.id}
           item={item}
           index={index}
-          canOpenResource={Boolean(resolveResourceOpenTarget(item))}
+          canOpenResource={
+            Boolean(resolveResourceOpenTarget(item)) ||
+            resolveDeferredResourceLinks(item.resource).length > 0
+          }
           isResolvingResource={resolvingResourceId === item.resource.id}
           showDetailEntry={enableResourceDetailPage}
           showSourceBadge={enableResourceSourceBadges}
@@ -56,7 +62,10 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
           key={item.resource.id}
           item={item}
           index={index}
-          canOpenResource={Boolean(resolveResourceOpenTarget(item))}
+          canOpenResource={
+            Boolean(resolveResourceOpenTarget(item)) ||
+            resolveDeferredResourceLinks(item.resource).length > 0
+          }
           isResolvingResource={resolvingResourceId === item.resource.id}
           onOpenResource={onOpenResource}
           onCancelResolveResource={onCancelResolveResource}

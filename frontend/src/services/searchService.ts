@@ -1,7 +1,7 @@
 import { apiClient } from '@/lib/api';
 import type { HealthResponse } from "@/types/common";
 import type { SearchParams, SearchProgressiveEvent, SearchRequest, SearchResponse, CloudTypeValue, FilterConfig } from "@/types/search";
-import type { ScanTransferRefreshRequest, ScanTransferRefreshResponse } from "@/types/resource";
+import type { ResourceResolveRequest, ResourceResolveResponse, ScanTransferRefreshRequest, ScanTransferRefreshResponse } from "@/types/resource";
 import type { HotRankingItem } from '@/types/hotRanking';
 import { normalizeFilterConfig } from '@/utils/searchFilters';
 import { useAuthStore } from '@/stores/authStore';
@@ -27,6 +27,10 @@ interface ProgressiveSearchHandlers {
 }
 
 interface RefreshScanTransferOptions {
+  signal?: AbortSignal;
+}
+
+interface ResolveResourceOptions {
   signal?: AbortSignal;
 }
 
@@ -184,6 +188,27 @@ export class SearchService {
       console.error('Refresh scan transfer error:', error);
       throw error;
     }
+  }
+
+  static async resolveResource(
+    payload: ResourceResolveRequest,
+    options: ResolveResourceOptions = {},
+  ): Promise<ResourceResolveResponse> {
+    const response = options.signal
+      ? await apiClient.post<ResourceResolveResponse>(
+          "/resources/resolve",
+          payload,
+          { signal: options.signal },
+        )
+      : await apiClient.post<ResourceResolveResponse>(
+          "/resources/resolve",
+          payload,
+        );
+
+    if (!response) {
+      throw new Error("资源解析失败");
+    }
+    return response;
   }
 
   /**

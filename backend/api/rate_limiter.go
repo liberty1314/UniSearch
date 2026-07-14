@@ -31,8 +31,14 @@ func NewRateLimiter(maxAttempts int, window time.Duration) *RateLimiter {
 
 // Allow 检查指定键是否允许继续请求。
 func (rl *RateLimiter) Allow(key string) bool {
+	allowed, _ := rl.AllowWithRetryAfter(key)
+	return allowed
+}
+
+// AllowWithRetryAfter 返回是否允许请求以及被限流时距离窗口释放的时间。
+func (rl *RateLimiter) AllowWithRetryAfter(key string) (bool, time.Duration) {
 	if rl == nil {
-		return true
+		return true, 0
 	}
 
 	rl.mu.Lock()
@@ -50,11 +56,18 @@ func (rl *RateLimiter) Allow(key string) bool {
 
 	if len(validAttempts) >= rl.maxAttempts {
 		rl.attempts[key] = validAttempts
-		return false
+		retryAfter := rl.window
+		if len(validAttempts) > 0 {
+			retryAfter = validAttempts[0].Add(rl.window).Sub(now)
+		}
+		if retryAfter < 0 {
+			retryAfter = 0
+		}
+		return false, retryAfter
 	}
 
 	rl.attempts[key] = append(validAttempts, now)
-	return true
+	return true, 0
 }
 
 var (

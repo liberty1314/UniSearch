@@ -1,12 +1,21 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { SystemSettingsService, type CacheSettingsResponse, type RuntimeSettingsResponse } from '@/services/systemSettingsService';
+import {
+  SystemSettingsService,
+  type CacheSettingsResponse,
+  type RuntimeSettingsResponse,
+} from '@/services/systemSettingsService';
+import {
+  DEFAULT_ENABLE_SEARCH_SOURCE_DIVERSITY,
+  DEFAULT_SEARCH_FIRST_PAGE_MAX_PER_SOURCE,
+  normalizeSearchFirstPageMaxPerSource,
+} from '@/lib/searchSourceDiversity';
 import { useAuthStore } from '@/stores/authStore';
 import { getErrorDataError, getErrorMessage } from '@/lib/error';
 import { resolvePublicSiteUrl } from '@/lib/publicSiteConfig';
 import { DEFAULT_CACHE_SETTINGS, normalizeCacheSettings } from '@/lib/systemSettingsCacheOptions';
 
-export type SavingState = 'auth' | 'login' | 'signup' | 'resource_detail' | 'source_badges' | 'display' | null;
+export type SavingState = 'auth' | 'login' | 'signup' | 'resource_detail' | 'source_badges' | 'source_diversity' | 'display' | null;
 export type TMDBConfigSource = 'secret_manager' | 'env_fallback' | 'unconfigured';
 
 export const DEFAULT_RUNTIME_SETTINGS: RuntimeSettingsResponse = {
@@ -32,6 +41,8 @@ export const useSystemSettingsController = () => {
   const [enableUserSignup, setEnableUserSignup] = useState<boolean>(true);
   const [enableResourceDetailPage, setEnableResourceDetailPage] = useState<boolean>(false);
   const [enableResourceSourceBadges, setEnableResourceSourceBadges] = useState<boolean>(false);
+  const [enableSearchSourceDiversity, setEnableSearchSourceDiversity] = useState<boolean>(DEFAULT_ENABLE_SEARCH_SOURCE_DIVERSITY);
+  const [searchFirstPageMaxPerSource, setSearchFirstPageMaxPerSource] = useState<number>(DEFAULT_SEARCH_FIRST_PAGE_MAX_PER_SOURCE);
   const [publicSiteUrl, setPublicSiteUrl] = useState<string>(resolvePublicSiteUrl());
   const [tmdbReadAccessToken, setTMDBReadAccessToken] = useState<string>('');
   const [tmdbCurrentTokenPreview, setTMDBCurrentTokenPreview] = useState<string>('');
@@ -53,6 +64,8 @@ export const useSystemSettingsController = () => {
     enableUserSignup: true,
     enableResourceDetailPage: false,
     enableResourceSourceBadges: false,
+    enableSearchSourceDiversity: DEFAULT_ENABLE_SEARCH_SOURCE_DIVERSITY,
+    searchFirstPageMaxPerSource: DEFAULT_SEARCH_FIRST_PAGE_MAX_PER_SOURCE,
     publicSiteUrl: resolvePublicSiteUrl(),
   });
 
@@ -67,6 +80,12 @@ export const useSystemSettingsController = () => {
       setEnableUserSignup(settings.enable_user_signup);
       setEnableResourceDetailPage(settings.enable_resource_detail_page);
       setEnableResourceSourceBadges(Boolean(settings.enable_resource_source_badges));
+      const nextEnableSearchSourceDiversity = Boolean(settings.enable_search_source_diversity);
+      const nextSearchFirstPageMaxPerSource = normalizeSearchFirstPageMaxPerSource(
+        settings.search_first_page_max_per_source,
+      );
+      setEnableSearchSourceDiversity(nextEnableSearchSourceDiversity);
+      setSearchFirstPageMaxPerSource(nextSearchFirstPageMaxPerSource);
       setPublicSiteUrl(resolvePublicSiteUrl(settings));
       
       setOriginalValues({
@@ -75,6 +94,8 @@ export const useSystemSettingsController = () => {
         enableUserSignup: settings.enable_user_signup,
         enableResourceDetailPage: settings.enable_resource_detail_page,
         enableResourceSourceBadges: Boolean(settings.enable_resource_source_badges),
+        enableSearchSourceDiversity: nextEnableSearchSourceDiversity,
+        searchFirstPageMaxPerSource: nextSearchFirstPageMaxPerSource,
         publicSiteUrl: resolvePublicSiteUrl(settings),
       });
 
@@ -206,6 +227,37 @@ export const useSystemSettingsController = () => {
     } catch (error) {
       console.error('保存系统设置失败:', error);
       setEnableResourceSourceBadges(originalValues.enableResourceSourceBadges);
+      toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
+    } finally {
+      setIsSaving(null);
+    }
+  };
+
+  const handleSaveSearchSourceDiversitySettings = async () => {
+    if (!token) return;
+
+    setIsSaving('source_diversity');
+    try {
+      const settings = await SystemSettingsService.updateSettings(token, {
+        enable_search_source_diversity: enableSearchSourceDiversity,
+        search_first_page_max_per_source: searchFirstPageMaxPerSource,
+      });
+      const nextEnableSearchSourceDiversity = Boolean(settings.enable_search_source_diversity);
+      const nextSearchFirstPageMaxPerSource = normalizeSearchFirstPageMaxPerSource(
+        settings.search_first_page_max_per_source,
+      );
+      setEnableSearchSourceDiversity(nextEnableSearchSourceDiversity);
+      setSearchFirstPageMaxPerSource(nextSearchFirstPageMaxPerSource);
+      setOriginalValues((prev) => ({
+        ...prev,
+        enableSearchSourceDiversity: nextEnableSearchSourceDiversity,
+        searchFirstPageMaxPerSource: nextSearchFirstPageMaxPerSource,
+      }));
+      toast.success('来源配额设置已更新');
+    } catch (error) {
+      console.error('保存来源配额设置失败:', error);
+      setEnableSearchSourceDiversity(originalValues.enableSearchSourceDiversity);
+      setSearchFirstPageMaxPerSource(originalValues.searchFirstPageMaxPerSource);
       toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
     } finally {
       setIsSaving(null);
@@ -385,6 +437,8 @@ export const useSystemSettingsController = () => {
       enableUserSignup,
       enableResourceDetailPage,
       enableResourceSourceBadges,
+      enableSearchSourceDiversity,
+      searchFirstPageMaxPerSource,
       publicSiteUrl,
       tmdbReadAccessToken,
       tmdbCurrentTokenPreview,
@@ -408,6 +462,9 @@ export const useSystemSettingsController = () => {
       handleToggleSignup,
       handleToggleResourceDetailPage,
       handleToggleResourceSourceBadges,
+      setEnableSearchSourceDiversity,
+      setSearchFirstPageMaxPerSource,
+      handleSaveSearchSourceDiversitySettings,
       handleSaveDisplayConfig,
       handleSaveTMDBConfig,
       handleSaveCacheSettings,

@@ -28,6 +28,17 @@ func TestGeneratePluginCacheKeyInvalidatesV2SearchResultCache(t *testing.T) {
 	}
 }
 
+func TestGeneratePluginCacheKeyInvalidatesV6SearchResultCache(t *testing.T) {
+	pluginsHash := getPluginsHash([]string{"sidhub"})
+	v6Hash := sha256.Sum256([]byte("v6:铁拳教育:" + pluginsHash + ":default"))
+	v6Key := fmt.Sprintf("plugin:search:%x", v6Hash)
+
+	key := GeneratePluginCacheKey("铁拳教育", []string{"sidhub"}, nil)
+	if key == v6Key {
+		t.Fatal("期望时间和语义状态合同变更后插件搜索缓存键避开 v6 旧结果")
+	}
+}
+
 func TestGeneratePluginCacheKeyKeepsPluginOrderStable(t *testing.T) {
 	left := GeneratePluginCacheKey("你的名字", []string{"sidhub", "nyaa"}, nil)
 	right := GeneratePluginCacheKey("你的名字", []string{"nyaa", "sidhub"}, nil)

@@ -2,10 +2,11 @@ import type { ResourceObject } from "@/types/resource";
 import { getCloudTypePriority, type ResultItem } from "./cloudTypeUtils";
 
 type SortableResultItem = ResultItem & {
+  originalIndex: number;
   priority: number;
   matchRank: number;
-  accessRank: number;
-  sidHubResolutionRank: number | null;
+  actionabilityRank: number;
+  hasKnownTime: boolean;
 };
 
 function resolvePrimaryLink(resource: ResourceObject) {
@@ -17,24 +18,33 @@ function resolvePrimaryLink(resource: ResourceObject) {
   ) || resource.links[0];
 }
 
-function resolvePublishedAt(resource: ResourceObject, fallbackLinkType: string) {
-  const timestamp = resource.published_at?.trim()
-    ? new Date(resource.published_at).getTime()
-    : 0;
-  if (Number.isFinite(timestamp) && timestamp > 0) {
+function parseKnownTimestamp(value?: string): number {
+  if (!value?.trim()) {
+    return 0;
+  }
+
+  const parsed = new Date(value);
+  const timestamp = parsed.getTime();
+  if (!Number.isFinite(timestamp) || parsed.getUTCFullYear() <= 1) {
+    return 0;
+  }
+  return timestamp;
+}
+
+function resolvePublishedAt(resource: ResourceObject) {
+  if (resource.meta?.sid_hub_time_source === "synthetic_fetch_time") {
+    return 0;
+  }
+
+  const timestamp = parseKnownTimestamp(resource.published_at);
+  if (timestamp > 0) {
     return timestamp;
   }
 
   const primaryLink = resolvePrimaryLink(resource);
-  const linkTimestamp = primaryLink?.datetime?.trim()
-    ? new Date(primaryLink.datetime).getTime()
-    : 0;
-  if (Number.isFinite(linkTimestamp) && linkTimestamp > 0) {
+  const linkTimestamp = parseKnownTimestamp(primaryLink?.datetime);
+  if (linkTimestamp > 0) {
     return linkTimestamp;
-  }
-
-  if (fallbackLinkType === "detail") {
-    return Number.MAX_SAFE_INTEGER - 1;
   }
 
   return 0;
@@ -94,23 +104,20 @@ function resolveResourceMatchRank(resource: ResourceObject, keyword: string): nu
   return 4;
 }
 
-function resolveResourceAccessRank(resource: ResourceObject): number {
-  const hasScanTransfer = resource.links.some((link) =>
-    link.access_mode === "scan_transfer" || Boolean(link.scan_transfer),
-  );
-  return hasScanTransfer ? 0 : 1;
-}
+function resolveResourceActionabilityRank(resource: ResourceObject): number {
+  const sourceID = resource.source.id || resource.source.plugin_id;
+  if (sourceID !== "sidhub") {
+    return 0;
+  }
 
-function resolveSidHubResolutionRank(resource: ResourceObject): number | null {
-  const rawRank = resource.meta?.sid_hub_resolution_rank;
-  if (typeof rawRank === "number" && Number.isFinite(rawRank)) {
-    return rawRank;
+  const status = resource.meta?.sid_hub_resolution_status;
+  if (status === "resolved") {
+    return 0;
   }
-  if (typeof rawRank === "string" && rawRank.trim() !== "") {
-    const parsed = Number(rawRank);
-    return Number.isFinite(parsed) ? parsed : null;
+  if (status === "invalid") {
+    return 2;
   }
-  return null;
+  return 1;
 }
 
 export const sortResources = (
@@ -121,20 +128,22 @@ export const sortResources = (
     return [];
   }
 
-  const items: SortableResultItem[] = resources.map((resource) => {
+  const items: SortableResultItem[] = resources.map((resource, originalIndex) => {
     const primaryLink = resolvePrimaryLink(resource);
     const cloudType =
       primaryLink?.type || resource.target_type || resource.media_type || "unknown";
+    const datetime = resolvePublishedAt(resource);
 
     return {
       resource,
       primaryLink,
       cloudType,
-      datetime: resolvePublishedAt(resource, cloudType),
+      datetime,
+      originalIndex,
       priority: getCloudTypePriority(cloudType),
       matchRank: resolveResourceMatchRank(resource, keyword),
-      accessRank: resolveResourceAccessRank(resource),
-      sidHubResolutionRank: resolveSidHubResolutionRank(resource),
+      actionabilityRank: resolveResourceActionabilityRank(resource),
+      hasKnownTime: datetime > 0,
     };
   });
 
@@ -142,20 +151,19 @@ export const sortResources = (
     if (a.matchRank !== b.matchRank) {
       return a.matchRank - b.matchRank;
     }
-    if (a.accessRank !== b.accessRank) {
-      return a.accessRank - b.accessRank;
+    if (a.actionabilityRank !== b.actionabilityRank) {
+      return a.actionabilityRank - b.actionabilityRank;
     }
-    if (
-      a.sidHubResolutionRank !== null &&
-      b.sidHubResolutionRank !== null &&
-      a.sidHubResolutionRank !== b.sidHubResolutionRank
-    ) {
-      return a.sidHubResolutionRank - b.sidHubResolutionRank;
+    if (a.hasKnownTime !== b.hasKnownTime) {
+      return a.hasKnownTime ? -1 : 1;
     }
     const timeDiff = b.datetime - a.datetime;
-    if (Math.abs(timeDiff) > 1000) {
+    if (timeDiff !== 0) {
       return timeDiff;
     }
-    return a.priority - b.priority;
+    if (a.priority !== b.priority) {
+      return a.priority - b.priority;
+    }
+    return a.originalIndex - b.originalIndex;
   });
 };

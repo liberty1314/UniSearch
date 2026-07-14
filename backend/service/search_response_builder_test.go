@@ -118,6 +118,117 @@ func TestSearchResponseBuilderBuildsResourceObjectsAndFacets(t *testing.T) {
 	}
 }
 
+func TestBuildResourceObjectsOmitsUnknownTimesFromJSON(t *testing.T) {
+	resources := buildResourceObjects([]model.SearchResult{{
+		UniqueID: "unknown-time",
+		Title:    "无发布时间资源",
+		Links:    []model.Link{{Type: "quark", URL: "https://pan.quark.cn/s/test"}},
+	}}, "无发布时间资源", nil, "test-secret")
+	if len(resources) != 1 {
+		t.Fatalf("expected one resource, got %#v", resources)
+	}
+
+	serialized, err := json.Marshal(resources[0])
+	if err != nil {
+		t.Fatalf("serialize resource: %v", err)
+	}
+	payload := string(serialized)
+	if strings.Contains(payload, `"published_at"`) {
+		t.Fatalf("unknown published_at must be omitted: %s", payload)
+	}
+	if strings.Contains(payload, `"datetime"`) {
+		t.Fatalf("unknown link datetime must be omitted: %s", payload)
+	}
+}
+
+func TestSearchResponseBuilderDeferredLinkHidesSourceURL(t *testing.T) {
+	result := model.SearchResult{
+		UniqueID:       "sidhub-4259-deferred",
+		Title:          "你的名字 4K",
+		SourcePluginID: "sidhub",
+		SourceType:     "plugin",
+		Links: []model.Link{{
+			Type: "quark",
+			URL:  "https://www.seedhub.cc/link_start/?redirect_to=private_4259",
+			ResolveTarget: &model.LinkResolveTarget{
+				PluginID:   "sidhub",
+				Provider:   "quark",
+				MovieID:    "4259",
+				EntryIndex: 1,
+				Status:     "deferred",
+			},
+		}},
+		Meta: map[string]interface{}{
+			"sid_hub_detail_url": "https://www.seedhub.cc/movies/4259/",
+		},
+	}
+
+	resources := buildResourceObjects([]model.SearchResult{result}, "你的名字", nil, testResourceResolveSecret)
+	if len(resources) != 1 || len(resources[0].Links) != 1 {
+		t.Fatalf("expected one deferred public link, got %#v", resources)
+	}
+	link := resources[0].Links[0]
+	if link.ID == "" || link.URL != "" || link.Password != "" || link.AccessMode != "resolve_required" {
+		t.Fatalf("unexpected deferred public link: %#v", link)
+	}
+	if link.Resolution == nil || link.Resolution.Status != "deferred" || link.Resolution.Token == "" || link.Resolution.ExpiresAt == nil {
+		t.Fatalf("missing deferred resolution contract: %#v", link.Resolution)
+	}
+
+	serialized, err := json.Marshal(resources[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := string(serialized)
+	for _, forbidden := range []string{"sidhub.cc", "seedhub.cc", "/link_start/", "sid_hub_detail_url", "source_page_url"} {
+		if strings.Contains(payload, forbidden) {
+			t.Fatalf("public resource leaked %q: %s", forbidden, payload)
+		}
+	}
+
+	codec, err := newResourceResolveTokenCodec(testResourceResolveSecret)
+	if err != nil {
+		t.Fatal(err)
+	}
+	claims, err := codec.Verify(link.Resolution.Token, resources[0].ID, link.ID)
+	if err != nil {
+		t.Fatalf("verify public resolve token: %v", err)
+	}
+	if claims.SourceURL != result.Links[0].URL || claims.MovieID != "4259" {
+		t.Fatalf("unexpected resolve claims: %#v", claims)
+	}
+}
+
+func TestSearchResponseBuilderResolvedSeedHubLinkOmitsSourceURLMetadata(t *testing.T) {
+	result := model.SearchResult{
+		UniqueID:       "sidhub-resolved",
+		Title:          "已解析资源",
+		SourcePluginID: "sidhub",
+		SourceType:     "plugin",
+		Links: []model.Link{{
+			Type:       "quark",
+			URL:        "https://pan.quark.cn/s/resolved",
+			AccessMode: "scan_transfer",
+			ScanTransfer: &model.ScanTransferInfo{
+				QRCodeValue:   "https://pan.quark.cn/s/resolved",
+				SourcePageURL: "https://www.seedhub.cc/link_start/?redirect_to=private",
+				RefreshKey:    "seedhub:4259:quark:1",
+			},
+			ResolveTarget: &model.LinkResolveTarget{PluginID: "sidhub", Status: "resolved"},
+		}},
+	}
+
+	resources := buildResourceObjects([]model.SearchResult{result}, "已解析资源", nil, testResourceResolveSecret)
+	serialized, err := json.Marshal(resources[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := string(serialized)
+	if strings.Contains(payload, "source_page_url") || strings.Contains(payload, "refresh_key") || strings.Contains(payload, "seedhub.cc") {
+		t.Fatalf("resolved public link leaked source metadata: %s", payload)
+	}
+}
+
 func TestSearchResponseBuilderHonorsCloudTypesAndSkipFilterForResources(t *testing.T) {
 	plugin.RegisterGlobalPlugin(&responseBuilderTestPlugin{
 		name:       "builderskip",

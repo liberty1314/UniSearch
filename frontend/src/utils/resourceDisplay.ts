@@ -293,6 +293,14 @@ export const resolveResourceOpenTarget = (
   return null;
 };
 
+export const resolveDeferredResourceLinks = (resource: ResourceObject): ResourceLink[] =>
+  resource.links.filter(
+    (link) =>
+      link.resolution?.status === "deferred" &&
+      Boolean(link.id?.trim()) &&
+      Boolean(link.resolution.token?.trim()),
+  );
+
 export const resolveResourceActionTarget = (
   action: ResourceAction,
   item: Pick<ResultItem, "resource" | "primaryLink" | "cloudType">,

@@ -51,6 +51,7 @@ func registerPublicRoutes(api *gin.RouterGroup, deps RouterDeps) {
 	api.POST("/search", BodySizeLimitMiddleware(searchRequestBodyLimitBytes), SearchJWTMiddleware(), SearchHandler)
 	api.GET("/search", SearchJWTMiddleware(), SearchHandler)
 	api.POST("/search/progressive", BodySizeLimitMiddleware(searchRequestBodyLimitBytes), SearchJWTMiddleware(), SearchProgressiveHandler(deps.SearchService))
+	api.POST("/resources/resolve", BodySizeLimitMiddleware(authRequestBodyLimitBytes), SearchJWTMiddleware(), ResourceResolveHandler)
 	api.POST("/resources/scan-transfer/refresh", BodySizeLimitMiddleware(authRequestBodyLimitBytes), SearchJWTMiddleware(), RefreshScanTransferHandler)
 }
 

@@ -138,6 +138,69 @@ describe('useSystemSettingsController TMDB config', () => {
     expect(result.current.state.enableResourceSourceBadges).toBe(true);
   });
 
+  it('旧后端缺少来源配额字段时使用安全默认值', async () => {
+    const { result } = renderHook(() => useSystemSettingsController());
+
+    await waitFor(() => {
+      expect(result.current.state.isLoading).toBe(false);
+    });
+
+    expect(result.current.state.enableSearchSourceDiversity).toBe(false);
+    expect(result.current.state.searchFirstPageMaxPerSource).toBe(16);
+  });
+
+  it('加载并保存来源配额设置', async () => {
+    getSettingsAdminMock.mockResolvedValueOnce({
+      enable_user_auth: true,
+      enable_user_login: true,
+      enable_user_signup: true,
+      enable_resource_detail_page: false,
+      enable_resource_source_badges: false,
+      enable_search_source_diversity: true,
+      search_first_page_max_per_source: 12,
+      public_site_url: '',
+      default_copy_format_template: '',
+      progressive_search_enabled: true,
+    });
+    updateSettingsMock.mockResolvedValueOnce({
+      enable_user_auth: true,
+      enable_user_login: true,
+      enable_user_signup: true,
+      enable_resource_detail_page: false,
+      enable_resource_source_badges: false,
+      enable_search_source_diversity: false,
+      search_first_page_max_per_source: 10,
+      public_site_url: '',
+      default_copy_format_template: '',
+      progressive_search_enabled: true,
+    });
+
+    const { result } = renderHook(() => useSystemSettingsController());
+
+    await waitFor(() => {
+      expect(result.current.state.isLoading).toBe(false);
+    });
+
+    expect(result.current.state.enableSearchSourceDiversity).toBe(true);
+    expect(result.current.state.searchFirstPageMaxPerSource).toBe(12);
+
+    act(() => {
+      result.current.actions.setEnableSearchSourceDiversity(false);
+      result.current.actions.setSearchFirstPageMaxPerSource(10);
+    });
+    await act(async () => {
+      await result.current.actions.handleSaveSearchSourceDiversitySettings();
+    });
+
+    expect(updateSettingsMock).toHaveBeenCalledWith('test-token', {
+      enable_search_source_diversity: false,
+      search_first_page_max_per_source: 10,
+    });
+    expect(result.current.state.enableSearchSourceDiversity).toBe(false);
+    expect(result.current.state.searchFirstPageMaxPerSource).toBe(10);
+    expect(toastSuccessMock).toHaveBeenCalledWith('来源配额设置已更新');
+  });
+
   it('会更新资源来源标签开关', async () => {
     updateSettingsMock.mockResolvedValue({
       enable_user_auth: true,

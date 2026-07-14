@@ -18,6 +18,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	_ "time/tzdata"
+	"unicode"
 
 	cloudscraper "github.com/Advik-B/cloudscraper/lib"
 	"github.com/PuerkitoBio/goquery"
@@ -48,9 +50,11 @@ const (
 )
 
 const (
+	sidHubResolutionDeferred = "deferred"
 	sidHubResolutionResolved = "resolved"
-	sidHubResolutionFallback = "fallback"
 )
+
+const maxSeedHubResolveRedirects = 10
 
 var (
 	searchCache           sync.Map
@@ -76,18 +80,26 @@ var (
 	groupCountRegex     = regexp.MustCompile(`[（(]\d+[）)]`)
 	sidHubSizeRegex     = regexp.MustCompile(`(?i)\d+(?:\.\d+)?\s*(?:G|GB|M|MB)`)
 	sidHubYearTextRegex = regexp.MustCompile(`20\d{2}年`)
-	sidHubDateTextRegex = regexp.MustCompile(`(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{4}年\d{1,2}月\d{1,2}日?|\d{1,2}[-/]\d{1,2}|\d{1,2}月\d{1,2}日?|今天|昨天|\d+\s*天前)`)
-	sidHubDaysAgoRegex  = regexp.MustCompile(`^(\d+)\s*天前$`)
+	sidHubDateTextRegex = regexp.MustCompile(`(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{4}年\d{1,2}月\d{1,2}日?|\d{1,2}[-/]\d{1,2}|\d{1,2}月\d{1,2}日?|今天|昨天|\d+\s*(?:天|月|年)前)`)
+	sidHubAgoRegex      = regexp.MustCompile(`^(\d+)\s*(天|月|年)前$`)
 	sidHubFullDateRegex = regexp.MustCompile(`^(\d{4})(?:[-/](\d{1,2})[-/](\d{1,2})|年(\d{1,2})月(\d{1,2})日?)$`)
 	sidHubMonthDayRegex = regexp.MustCompile(`^(\d{1,2})(?:[-/](\d{1,2})|月(\d{1,2})日?)$`)
 	linkStartPathPrefix = "/link_start/"
 )
 
 const (
-	sidHubTimeSourceResourceRow    = "resource_row"
-	sidHubTimeSourceMovieCard      = "movie_card"
-	sidHubTimeSourceSyntheticFetch = "synthetic_fetch_time"
+	sidHubTimeSourceResourceRow = "resource_row"
+	sidHubTimeSourceMovieCard   = "movie_card"
+	sidHubTimeSourceUnknown     = "unknown"
 )
+
+var sidHubLocation = func() *time.Location {
+	location, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		panic("load Asia/Shanghai: " + err.Error())
+	}
+	return location
+}()
 
 var scanTransferHintTexts = []string{
 	"手机扫码转存",
@@ -139,6 +151,45 @@ type SidHubAsyncPlugin struct {
 	scraperCreatedAt time.Time
 	scraperMu        sync.Mutex
 	fetcher          func(string) ([]byte, error)
+	lookupIPAddr     seedHubLookupIPAddrFunc
+}
+
+type seedHubLookupIPAddrFunc func(context.Context, string) ([]net.IPAddr, error)
+
+type sidHubDetailEnhancementStats struct {
+	Success      int
+	Timeout      int
+	FetchFailure int
+	ParseFailure int
+}
+
+type ResourceResolveErrorKind string
+
+const (
+	ResolveInvalidRequest ResourceResolveErrorKind = "invalid_request"
+	ResolveTokenExpired   ResourceResolveErrorKind = "token_expired"
+	ResolveInvalid        ResourceResolveErrorKind = "resource_invalid"
+	ResolveParseFailed    ResourceResolveErrorKind = "upstream_parse_failed"
+	ResolveUnavailable    ResourceResolveErrorKind = "resolver_unavailable"
+)
+
+type ResourceResolveError struct {
+	Kind ResourceResolveErrorKind
+	Err  error
+}
+
+func (err *ResourceResolveError) Error() string {
+	if err == nil || err.Err == nil {
+		return "resource resolve failed"
+	}
+	return err.Err.Error()
+}
+
+func (err *ResourceResolveError) Unwrap() error {
+	if err == nil {
+		return nil
+	}
+	return err.Err
 }
 
 type sidHubMovie struct {
@@ -169,6 +220,13 @@ type sidHubLinkEntry struct {
 	Datetime         time.Time
 	DateText         string
 	DateSource       string
+}
+
+type sidHubResultGroup struct {
+	MovieID  string
+	Provider string
+	Title    string
+	Entries  []sidHubLinkEntry
 }
 
 type sidHubRuntimeConfig struct {
@@ -274,6 +332,9 @@ func (p *SidHubAsyncPlugin) DisplayName() string {
 // SetFetcherForTest 注入测试抓取器，便于在单测中固定 link_start 页面样本。
 func (p *SidHubAsyncPlugin) SetFetcherForTest(fetcher func(string) ([]byte, error)) {
 	p.fetcher = fetcher
+	p.lookupIPAddr = func(_ context.Context, _ string) ([]net.IPAddr, error) {
+		return []net.IPAddr{{IP: net.ParseIP("203.0.113.10")}}, nil
+	}
 }
 
 // Search 执行搜索并返回结果。
@@ -350,24 +411,39 @@ func (p *SidHubAsyncPlugin) doSearchWithContext(ctx context.Context, client *htt
 }
 
 func (p *SidHubAsyncPlugin) searchBaseURL(ctx context.Context, baseURL string, keyword string, runtimeConfig sidHubRuntimeConfig) ([]model.SearchResult, error) {
-	cards, err := p.searchCardsOnly(ctx, baseURL, keyword, runtimeConfig.MaxSearchCards)
+	fetchedAt := time.Now().In(sidHubLocation)
+	cards, err := p.searchCardsOnlyAt(ctx, baseURL, keyword, runtimeConfig.MaxSearchCards, fetchedAt)
 	if err != nil {
 		return nil, err
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	return p.enhanceSidHubCardsWithDetails(ctx, baseURL, cards, runtimeConfig), nil
+	startedAt := time.Now()
+	results, stats := p.enhanceSidHubCardsWithDetailsWithStats(ctx, baseURL, cards, runtimeConfig, fetchedAt)
+	plugin.LogEvent(pluginName, "seedhub_detail_enhancement", map[string]interface{}{
+		"card_count":    len(cards),
+		"success":       stats.Success,
+		"timeout":       stats.Timeout,
+		"fetch_failure": stats.FetchFailure,
+		"parse_failure": stats.ParseFailure,
+		"duration_ms":   time.Since(startedAt).Milliseconds(),
+	})
+	return results, nil
 }
 
 func (p *SidHubAsyncPlugin) searchCardsOnly(ctx context.Context, baseURL string, keyword string, limit int) ([]sidHubMovie, error) {
+	return p.searchCardsOnlyAt(ctx, baseURL, keyword, limit, time.Now().In(sidHubLocation))
+}
+
+func (p *SidHubAsyncPlugin) searchCardsOnlyAt(ctx context.Context, baseURL string, keyword string, limit int, fetchedAt time.Time) ([]sidHubMovie, error) {
 	searchURL := buildSearchURL(baseURL, keyword)
 	body, err := p.fetchURL(ctx, searchURL)
 	if err != nil {
 		return nil, err
 	}
 
-	cards, err := parseSearchCards(bytes.NewReader(body), baseURL, clampSidHubMaxSearchCards(limit))
+	cards, err := parseSearchCardsAt(bytes.NewReader(body), baseURL, clampSidHubMaxSearchCards(limit), fetchedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -375,19 +451,29 @@ func (p *SidHubAsyncPlugin) searchCardsOnly(ctx context.Context, baseURL string,
 }
 
 func (p *SidHubAsyncPlugin) enhanceSidHubCardsWithDetails(ctx context.Context, baseURL string, cards []sidHubMovie, runtimeConfig sidHubRuntimeConfig) []model.SearchResult {
-	entriesByCard := p.fetchDetailEntriesForCards(ctx, baseURL, cards, runtimeConfig)
-	results := make([]model.SearchResult, 0, len(cards))
-	for index, card := range cards {
-		results = append(results, buildExpandedResults(card, entriesByCard[index])...)
-	}
+	return p.enhanceSidHubCardsWithDetailsAt(ctx, baseURL, cards, runtimeConfig, time.Now().In(sidHubLocation))
+}
 
+func (p *SidHubAsyncPlugin) enhanceSidHubCardsWithDetailsAt(ctx context.Context, baseURL string, cards []sidHubMovie, runtimeConfig sidHubRuntimeConfig, fetchedAt time.Time) []model.SearchResult {
+	results, _ := p.enhanceSidHubCardsWithDetailsWithStats(ctx, baseURL, cards, runtimeConfig, fetchedAt)
 	return results
 }
 
-func (p *SidHubAsyncPlugin) fetchDetailEntriesForCards(ctx context.Context, baseURL string, cards []sidHubMovie, runtimeConfig sidHubRuntimeConfig) [][]sidHubLinkEntry {
+func (p *SidHubAsyncPlugin) enhanceSidHubCardsWithDetailsWithStats(ctx context.Context, baseURL string, cards []sidHubMovie, runtimeConfig sidHubRuntimeConfig, fetchedAt time.Time) ([]model.SearchResult, sidHubDetailEnhancementStats) {
+	entriesByCard, stats := p.fetchDetailEntriesForCards(ctx, baseURL, cards, runtimeConfig, fetchedAt)
+	results := make([]model.SearchResult, 0, len(cards))
+	for index, card := range cards {
+		results = append(results, buildExpandedResultsAt(card, entriesByCard[index], fetchedAt)...)
+	}
+
+	return results, stats
+}
+
+func (p *SidHubAsyncPlugin) fetchDetailEntriesForCards(ctx context.Context, baseURL string, cards []sidHubMovie, runtimeConfig sidHubRuntimeConfig, fetchedAt time.Time) ([][]sidHubLinkEntry, sidHubDetailEnhancementStats) {
 	entriesByCard := make([][]sidHubLinkEntry, len(cards))
+	outcomes := make([]string, len(cards))
 	if len(cards) == 0 {
-		return entriesByCard
+		return entriesByCard, sidHubDetailEnhancementStats{}
 	}
 	if runtimeConfig.DetailTotalBudget > 0 {
 		var cancel context.CancelFunc
@@ -411,6 +497,7 @@ func (p *SidHubAsyncPlugin) fetchDetailEntriesForCards(ctx context.Context, base
 			case sem <- struct{}{}:
 				defer func() { <-sem }()
 			case <-ctx.Done():
+				outcomes[index] = "timeout"
 				return
 			}
 
@@ -424,31 +511,69 @@ func (p *SidHubAsyncPlugin) fetchDetailEntriesForCards(ctx context.Context, base
 			}
 
 			if err := detailCtx.Err(); err != nil {
+				outcomes[index] = "timeout"
 				return
 			}
 			detailBody, detailErr := p.fetchURL(detailCtx, card.DetailURL)
 			if detailErr != nil {
+				if errors.Is(detailErr, context.DeadlineExceeded) || errors.Is(detailCtx.Err(), context.DeadlineExceeded) {
+					outcomes[index] = "timeout"
+				} else {
+					outcomes[index] = "fetch_failure"
+				}
 				return
 			}
-			parsedEntries, parseErr := parseDetailLinkEntries(bytes.NewReader(detailBody), baseURL, card.Title)
+			parsedEntries, parseErr := parseDetailLinkEntriesAt(bytes.NewReader(detailBody), baseURL, card.Title, fetchedAt)
 			if parseErr != nil {
+				outcomes[index] = "parse_failure"
 				return
 			}
 			limitedEntries, _ := limitExpandedSidHubEntries(p.resolveLinkStartEntries(detailCtx, parsedEntries, card.ID, runtimeConfig.PreResolvedLinkStartPerType))
 			entriesByCard[index] = limitedEntries
+			outcomes[index] = "success"
 		}()
 	}
 
 	wg.Wait()
-	return entriesByCard
+	stats := sidHubDetailEnhancementStats{}
+	for _, outcome := range outcomes {
+		switch outcome {
+		case "success":
+			stats.Success++
+		case "timeout", "":
+			stats.Timeout++
+		case "fetch_failure":
+			stats.FetchFailure++
+		case "parse_failure":
+			stats.ParseFailure++
+		}
+	}
+	return entriesByCard, stats
 }
 
 func (p *SidHubAsyncPlugin) fetchURL(ctx context.Context, targetURL string) ([]byte, error) {
+	return p.fetchURLWithValidator(ctx, targetURL, nil)
+}
+
+func (p *SidHubAsyncPlugin) fetchSeedHubResolveURL(ctx context.Context, targetURL string, baseURL string) ([]byte, error) {
+	validator := func(validationCtx context.Context, candidateURL string) error {
+		_, err := validateSeedHubResolveURL(validationCtx, candidateURL, baseURL, p.seedHubLookupIPAddr())
+		return err
+	}
+	return p.fetchURLWithValidator(ctx, targetURL, validator)
+}
+
+func (p *SidHubAsyncPlugin) fetchURLWithValidator(ctx context.Context, targetURL string, validator func(context.Context, string) error) ([]byte, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, err
+	}
+	if validator != nil {
+		if err := validator(ctx, targetURL); err != nil {
+			return nil, err
+		}
 	}
 	if p.fetcher != nil {
 		type fetchResult struct {
@@ -482,54 +607,106 @@ func (p *SidHubAsyncPlugin) fetchURL(ctx context.Context, targetURL string) ([]b
 		return nil, err
 	}
 
-	type scraperResult struct {
-		resp *http.Response
-		err  error
-	}
-	resultCh := make(chan scraperResult, 1)
-	go func() {
-		resp, err := scraper.Get(targetURL)
-		select {
-		case resultCh <- scraperResult{resp: resp, err: err}:
-		case <-ctx.Done():
-			if resp != nil && resp.Body != nil {
-				_ = resp.Body.Close()
+	currentURL := targetURL
+	for redirectCount := 0; ; redirectCount++ {
+		if validator != nil {
+			if err := validator(ctx, currentURL); err != nil {
+				return nil, err
 			}
 		}
-	}()
 
-	var resp *http.Response
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case result := <-resultCh:
-		if result.err != nil {
-			return nil, fmt.Errorf("请求 %s 失败: %w", targetURL, result.err)
+		type scraperResult struct {
+			resp *http.Response
+			err  error
 		}
-		resp = result.resp
-	}
-	defer resp.Body.Close()
+		resultCh := make(chan scraperResult, 1)
+		go func(requestURL string) {
+			resp, err := scraper.Get(requestURL)
+			select {
+			case resultCh <- scraperResult{resp: resp, err: err}:
+			case <-ctx.Done():
+				if resp != nil && resp.Body != nil {
+					_ = resp.Body.Close()
+				}
+			}
+		}(currentURL)
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("请求 %s 返回状态码 %d", targetURL, resp.StatusCode)
-	}
+		var resp *http.Response
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case result := <-resultCh:
+			if result.err != nil {
+				return nil, fmt.Errorf("请求 %s 失败: %w", currentURL, result.err)
+			}
+			resp = result.resp
+		}
 
-	body, err := io.ReadAll(resp.Body)
+		if validator != nil && isSeedHubRedirectStatus(resp.StatusCode) {
+			location := strings.TrimSpace(resp.Header.Get("Location"))
+			_ = resp.Body.Close()
+			if location == "" || redirectCount >= maxSeedHubResolveRedirects {
+				return nil, fmt.Errorf("SeedHub 重定向无效")
+			}
+			nextURL, err := resolveSeedHubRedirectURL(currentURL, location)
+			if err != nil {
+				return nil, err
+			}
+			if err := validator(ctx, nextURL); err != nil {
+				return nil, err
+			}
+			currentURL = nextURL
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			_ = resp.Body.Close()
+			return nil, fmt.Errorf("请求 %s 返回状态码 %d", currentURL, resp.StatusCode)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if err != nil {
+			return nil, fmt.Errorf("读取 %s 响应失败: %w", currentURL, err)
+		}
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		body, err = decodeSidHubHTTPBody(body, resp.Header.Get("Content-Encoding"))
+		if err != nil {
+			return nil, fmt.Errorf("解压 %s 响应失败: %w", currentURL, err)
+		}
+		if isCloudflareChallenge(body) {
+			return nil, fmt.Errorf("请求 %s 仍返回 Cloudflare 挑战页", currentURL)
+		}
+
+		return body, nil
+	}
+}
+
+func isSeedHubRedirectStatus(statusCode int) bool {
+	switch statusCode {
+	case http.StatusMovedPermanently,
+		http.StatusFound,
+		http.StatusSeeOther,
+		http.StatusTemporaryRedirect,
+		http.StatusPermanentRedirect:
+		return true
+	default:
+		return false
+	}
+}
+
+func resolveSeedHubRedirectURL(currentURL string, location string) (string, error) {
+	current, err := url.Parse(currentURL)
 	if err != nil {
-		return nil, fmt.Errorf("读取 %s 响应失败: %w", targetURL, err)
+		return "", fmt.Errorf("SeedHub 当前地址无效")
 	}
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	body, err = decodeSidHubHTTPBody(body, resp.Header.Get("Content-Encoding"))
+	next, err := url.Parse(location)
 	if err != nil {
-		return nil, fmt.Errorf("解压 %s 响应失败: %w", targetURL, err)
+		return "", fmt.Errorf("SeedHub 重定向地址无效")
 	}
-	if isCloudflareChallenge(body) {
-		return nil, fmt.Errorf("请求 %s 仍返回 Cloudflare 挑战页", targetURL)
-	}
-
-	return body, nil
+	return current.ResolveReference(next).String(), nil
 }
 
 func decodeSidHubHTTPBody(body []byte, contentEncoding string) ([]byte, error) {
@@ -555,6 +732,78 @@ func hasGzipMagicHeader(body []byte) bool {
 	return len(body) >= 2 && body[0] == 0x1f && body[1] == 0x8b
 }
 
+func (p *SidHubAsyncPlugin) seedHubLookupIPAddr() seedHubLookupIPAddrFunc {
+	if p.lookupIPAddr != nil {
+		return p.lookupIPAddr
+	}
+	return net.DefaultResolver.LookupIPAddr
+}
+
+func validateSeedHubResolveURL(ctx context.Context, targetURL string, baseURL string, lookupIPAddr seedHubLookupIPAddrFunc) (*url.URL, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if lookupIPAddr == nil {
+		lookupIPAddr = net.DefaultResolver.LookupIPAddr
+	}
+
+	base, err := url.Parse(strings.TrimSpace(baseURL))
+	if err != nil || !strings.EqualFold(base.Scheme, "https") || strings.TrimSpace(base.Hostname()) == "" {
+		return nil, fmt.Errorf("SeedHub 基址无效")
+	}
+	target, err := url.Parse(strings.TrimSpace(targetURL))
+	if err != nil || target.Opaque != "" || !strings.EqualFold(target.Scheme, "https") {
+		return nil, fmt.Errorf("SeedHub 刷新地址无效")
+	}
+	if target.User != nil || target.Fragment != "" {
+		return nil, fmt.Errorf("SeedHub 刷新地址无效")
+	}
+	if !strings.EqualFold(target.Hostname(), base.Hostname()) || target.Port() != base.Port() {
+		return nil, fmt.Errorf("SeedHub 刷新地址主机无效")
+	}
+	if target.Path != linkStartPathPrefix || target.EscapedPath() != linkStartPathPrefix {
+		return nil, fmt.Errorf("SeedHub 刷新地址路径无效")
+	}
+
+	hostname := target.Hostname()
+	if literalIP := net.ParseIP(hostname); literalIP != nil {
+		if isDisallowedSeedHubIP(literalIP) {
+			return nil, fmt.Errorf("SeedHub 刷新地址解析到非公网 IP")
+		}
+		return target, nil
+	}
+
+	addresses, err := lookupIPAddr(ctx, hostname)
+	if err != nil || len(addresses) == 0 {
+		return nil, fmt.Errorf("SeedHub 刷新地址 DNS 校验失败")
+	}
+	for _, address := range addresses {
+		if isDisallowedSeedHubIP(address.IP) {
+			return nil, fmt.Errorf("SeedHub 刷新地址解析到非公网 IP")
+		}
+	}
+	return target, nil
+}
+
+func validateLegacySeedHubResolveURL(ctx context.Context, targetURL string, lookupIPAddr seedHubLookupIPAddrFunc) (string, error) {
+	parsed, err := url.Parse(strings.TrimSpace(targetURL))
+	if err != nil {
+		return "", fmt.Errorf("无效的 SeedHub 刷新链接")
+	}
+	hostname := strings.ToLower(strings.TrimSpace(parsed.Hostname()))
+	if hostname != "sidhub.cc" && hostname != "www.seedhub.cc" {
+		return "", fmt.Errorf("无效的 SeedHub 刷新链接")
+	}
+	baseURL := "https://" + hostname
+	if _, err := validateSeedHubResolveURL(ctx, targetURL, baseURL, lookupIPAddr); err != nil {
+		return "", fmt.Errorf("无效的 SeedHub 刷新链接: %w", err)
+	}
+	return baseURL, nil
+}
+
 // RefreshScanTransfer 重新抓取当前扫码转存页并返回最新载荷。
 func (p *SidHubAsyncPlugin) RefreshScanTransfer(ctx context.Context, linkURL string, refreshKey string) (model.Link, error) {
 	if ctx == nil {
@@ -569,8 +818,9 @@ func (p *SidHubAsyncPlugin) RefreshScanTransfer(ctx context.Context, linkURL str
 	if refreshTarget.linkURL != "" {
 		trimmedURL = refreshTarget.linkURL
 	}
-	if trimmedURL == "" || !strings.Contains(trimmedURL, linkStartPathPrefix) {
-		return model.Link{}, fmt.Errorf("无效的 SeedHub 刷新链接")
+	baseURL, err := validateLegacySeedHubResolveURL(ctx, trimmedURL, p.seedHubLookupIPAddr())
+	if err != nil {
+		return model.Link{}, err
 	}
 
 	cacheKey := p.buildSeedHubRefreshCacheKey(trimmedURL, refreshKey)
@@ -581,7 +831,7 @@ func (p *SidHubAsyncPlugin) RefreshScanTransfer(ctx context.Context, linkURL str
 	for {
 		call, leader := acquireSeedHubRefreshCall(cacheKey)
 		if leader {
-			refreshedLink, refreshErr := p.refreshScanTransferUncached(ctx, trimmedURL, refreshKey, refreshTarget)
+			refreshedLink, refreshErr := p.refreshScanTransferUncached(ctx, trimmedURL, baseURL, refreshKey, refreshTarget)
 			if refreshErr == nil {
 				storeSeedHubRefreshCache(cacheKey, refreshedLink)
 			}
@@ -606,8 +856,94 @@ func (p *SidHubAsyncPlugin) RefreshScanTransfer(ctx context.Context, linkURL str
 	}
 }
 
-func (p *SidHubAsyncPlugin) refreshScanTransferUncached(ctx context.Context, trimmedURL string, refreshKey string, refreshTarget seedHubRefreshTarget) (model.Link, error) {
-	body, err := p.fetchURL(ctx, trimmedURL)
+// ResolveResource 按 token 中经过认证的内部地址解析单个 SeedHub 候选。
+func (p *SidHubAsyncPlugin) ResolveResource(ctx context.Context, sourceURL string, provider string, movieID string, entryIndex int) (model.Link, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return model.Link{}, err
+	}
+	provider = normalizeLinkType(provider)
+	parsed, err := url.Parse(strings.TrimSpace(sourceURL))
+	if err != nil || provider == "" || !strings.EqualFold(parsed.Scheme, "https") || strings.TrimSpace(parsed.Host) == "" {
+		return model.Link{}, &ResourceResolveError{Kind: ResolveInvalidRequest, Err: fmt.Errorf("SeedHub resolver request invalid")}
+	}
+	baseURL := "https://" + parsed.Host
+	if _, err := validateSeedHubResolveURL(ctx, sourceURL, baseURL, p.seedHubLookupIPAddr()); err != nil {
+		return model.Link{}, &ResourceResolveError{Kind: ResolveInvalidRequest, Err: err}
+	}
+
+	body, err := p.fetchSeedHubResolveURL(ctx, sourceURL, baseURL)
+	if err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return model.Link{}, ctxErr
+		}
+		return model.Link{}, &ResourceResolveError{Kind: ResolveUnavailable, Err: err}
+	}
+	resolved, handled, err := resolveLinkStartLink(model.Link{Type: provider, URL: sourceURL}, body, movieID, entryIndex)
+	if err != nil {
+		return model.Link{}, &ResourceResolveError{Kind: ResolveParseFailed, Err: err}
+	}
+	if handled {
+		resolved.ResolveTarget = &model.LinkResolveTarget{
+			PluginID:   pluginName,
+			Provider:   normalizeLinkType(resolved.Type),
+			MovieID:    movieID,
+			EntryIndex: entryIndex,
+			Status:     sidHubResolutionResolved,
+		}
+		return sanitizeResolvedSeedHubLink(resolved, sourceURL), nil
+	}
+	if containsStableSeedHubInvalidSignal(body) {
+		return model.Link{}, &ResourceResolveError{Kind: ResolveInvalid, Err: fmt.Errorf("SeedHub resource is no longer available")}
+	}
+	return model.Link{}, &ResourceResolveError{Kind: ResolveParseFailed, Err: fmt.Errorf("SeedHub resolver page structure is unsupported")}
+}
+
+func sanitizeResolvedSeedHubLink(link model.Link, sourceURL string) model.Link {
+	resolved := cloneSidHubLink(link)
+	if resolved.ScanTransfer == nil {
+		return resolved
+	}
+	resolved.ScanTransfer.SourcePageURL = ""
+	resolved.ScanTransfer.Refreshable = false
+	resolved.ScanTransfer.RefreshKey = ""
+	if strings.TrimSpace(resolved.URL) == strings.TrimSpace(sourceURL) {
+		resolved.URL = ""
+		for _, candidate := range []string{
+			resolved.ScanTransfer.QRCodeValue,
+			resolved.ScanTransfer.MobileURL,
+		} {
+			candidate = strings.TrimSpace(candidate)
+			if determineDirectLinkType(candidate) != "" || strings.HasPrefix(strings.ToLower(candidate), "http://") || strings.HasPrefix(strings.ToLower(candidate), "https://") {
+				resolved.URL = candidate
+				break
+			}
+		}
+	}
+	return resolved
+}
+
+func containsStableSeedHubInvalidSignal(body []byte) bool {
+	text := cleanText(string(body))
+	for _, signal := range []string{
+		"分享链接已失效",
+		"资源已失效",
+		"分享已取消",
+		"链接不存在",
+		"资源不存在",
+		"资源已被删除",
+	} {
+		if strings.Contains(text, signal) {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *SidHubAsyncPlugin) refreshScanTransferUncached(ctx context.Context, trimmedURL string, baseURL string, refreshKey string, refreshTarget seedHubRefreshTarget) (model.Link, error) {
+	body, err := p.fetchSeedHubResolveURL(ctx, trimmedURL, baseURL)
 	if err != nil {
 		return model.Link{}, fmt.Errorf("获取 SeedHub 刷新页失败: %w", err)
 	}
@@ -732,6 +1068,8 @@ func (p *SidHubAsyncPlugin) resolveLinkStartEntries(ctx context.Context, entries
 		}
 		nextEntry := entry
 		if !shouldResolveSeedHubLinkStart(entry.Link) {
+			nextEntry.ResolutionStatus = sidHubResolutionResolved
+			nextEntry.ResolutionRank = 0
 			resolved = append(resolved, nextEntry)
 			continue
 		}
@@ -751,10 +1089,14 @@ func (p *SidHubAsyncPlugin) resolveLinkStartEntries(ctx context.Context, entries
 					continue
 				}
 			}
-			nextEntry.ResolutionStatus = sidHubResolutionFallback
+			nextEntry.ResolutionStatus = sidHubResolutionDeferred
 			nextEntry.ResolutionRank = 1
 		}
 
+		if nextEntry.ResolutionStatus == "" {
+			nextEntry.ResolutionStatus = sidHubResolutionDeferred
+			nextEntry.ResolutionRank = 1
+		}
 		nextEntry.Link = buildFallbackScanTransferLink(entry.Link, movieID, entry.Index)
 		resolved = append(resolved, nextEntry)
 	}
@@ -817,9 +1159,6 @@ func buildFallbackScanTransferLink(link model.Link, movieID string, entryIndex i
 	}
 
 	if refreshKey := buildSeedHubRefreshKey(movieID, link.Type, entryIndex); refreshKey != "" {
-		resolvedLink.ScanTransfer.Refreshable = true
-		resolvedLink.ScanTransfer.RefreshKey = refreshKey
-	} else if refreshKey := buildSeedHubURLRefreshKey(link.URL, link.Type); refreshKey != "" {
 		resolvedLink.ScanTransfer.Refreshable = true
 		resolvedLink.ScanTransfer.RefreshKey = refreshKey
 	}
@@ -1300,6 +1639,10 @@ func (p *SidHubAsyncPlugin) resolveQuarkURL(linkURL string) (string, error) {
 }
 
 func parseSearchCards(reader io.Reader, baseURL string, limit int) ([]sidHubMovie, error) {
+	return parseSearchCardsAt(reader, baseURL, limit, time.Now().In(sidHubLocation))
+}
+
+func parseSearchCardsAt(reader io.Reader, baseURL string, limit int, fetchedAt time.Time) ([]sidHubMovie, error) {
 	doc, err := goquery.NewDocumentFromReader(reader)
 	if err != nil {
 		return nil, fmt.Errorf("解析 SidHub 搜索页失败: %w", err)
@@ -1334,7 +1677,7 @@ func parseSearchCards(reader io.Reader, baseURL string, limit int) ([]sidHubMovi
 		containerText := cleanText(container.Text())
 		content := buildMovieContent(containerText)
 		dateText := extractSidHubDateText(containerText)
-		datetime := parseSidHubDate(dateText, time.Now())
+		datetime := parseSidHubDate(dateText, fetchedAt)
 
 		cards = append(cards, sidHubMovie{
 			ID:         movieID,
@@ -1420,6 +1763,10 @@ func parseDetailLinks(reader io.Reader, baseURL string, movieTitle string) ([]mo
 }
 
 func parseDetailLinkEntries(reader io.Reader, baseURL string, movieTitle string) ([]sidHubLinkEntry, error) {
+	return parseDetailLinkEntriesAt(reader, baseURL, movieTitle, time.Now().In(sidHubLocation))
+}
+
+func parseDetailLinkEntriesAt(reader io.Reader, baseURL string, movieTitle string, fetchedAt time.Time) ([]sidHubLinkEntry, error) {
 	doc, err := goquery.NewDocumentFromReader(reader)
 	if err != nil {
 		return nil, fmt.Errorf("解析 SidHub 详情页失败: %w", err)
@@ -1427,8 +1774,8 @@ func parseDetailLinkEntries(reader io.Reader, baseURL string, movieTitle string)
 
 	entries := make([]sidHubLinkEntry, 0)
 	seen := make(map[string]struct{})
-	entries = append(entries, parseNativeSidHubDetailEntries(doc, baseURL, movieTitle, seen)...)
-	entries = append(entries, parseTabbedDetailEntries(doc, baseURL, movieTitle, seen)...)
+	entries = append(entries, parseNativeSidHubDetailEntries(doc, baseURL, movieTitle, seen, fetchedAt)...)
+	entries = append(entries, parseTabbedDetailEntries(doc, baseURL, movieTitle, seen, fetchedAt)...)
 
 	doc.Find("a[href]").Each(func(index int, selection *goquery.Selection) {
 		href, _ := selection.Attr("href")
@@ -1452,8 +1799,8 @@ func parseDetailLinkEntries(reader io.Reader, baseURL string, movieTitle string)
 		rowText := cleanText(row.Text())
 		badges := extractSidHubBadges(row)
 		title, titleSource := resolveSidHubEntryTitle(selection, row, movieTitle, badges)
-		dateText := extractSidHubDateText(rowText)
-		datetime := parseSidHubDate(dateText, time.Now())
+		dateText := resolveSidHubEntryDateText(rowText, title)
+		datetime := parseSidHubDate(dateText, fetchedAt)
 		addLinkEntry(&entries, seen, sidHubLinkEntry{
 			Link: model.Link{
 				Type:      linkType,
@@ -1495,7 +1842,7 @@ func parseDetailLinkEntries(reader io.Reader, baseURL string, movieTitle string)
 	return entries, nil
 }
 
-func parseNativeSidHubDetailEntries(doc *goquery.Document, baseURL string, movieTitle string, seen map[string]struct{}) []sidHubLinkEntry {
+func parseNativeSidHubDetailEntries(doc *goquery.Document, baseURL string, movieTitle string, seen map[string]struct{}, fetchedAt time.Time) []sidHubLinkEntry {
 	entries := []sidHubLinkEntry{}
 	groups := []struct {
 		selector string
@@ -1512,14 +1859,14 @@ func parseNativeSidHubDetailEntries(doc *goquery.Document, baseURL string, movie
 
 	for _, group := range groups {
 		doc.Find(group.selector).Each(func(_ int, scope *goquery.Selection) {
-			parseEntriesInScope(scope, baseURL, movieTitle, group.linkType, group.label, &entries, seen)
+			parseEntriesInScope(scope, baseURL, movieTitle, group.linkType, group.label, &entries, seen, fetchedAt)
 		})
 	}
 
 	return entries
 }
 
-func parseTabbedDetailEntries(doc *goquery.Document, baseURL string, movieTitle string, seen map[string]struct{}) []sidHubLinkEntry {
+func parseTabbedDetailEntries(doc *goquery.Document, baseURL string, movieTitle string, seen map[string]struct{}, fetchedAt time.Time) []sidHubLinkEntry {
 	entries := []sidHubLinkEntry{}
 
 	doc.Find("a,button").Each(func(_ int, tab *goquery.Selection) {
@@ -1539,7 +1886,7 @@ func parseTabbedDetailEntries(doc *goquery.Document, baseURL string, movieTitle 
 			return
 		}
 
-		parseEntriesInScope(panel, baseURL, movieTitle, linkType, cleanSidHubGroupLabel(rawLabel), &entries, seen)
+		parseEntriesInScope(panel, baseURL, movieTitle, linkType, cleanSidHubGroupLabel(rawLabel), &entries, seen, fetchedAt)
 	})
 
 	return entries
@@ -1565,7 +1912,7 @@ func resolveTabTargetID(tab *goquery.Selection) string {
 	return ""
 }
 
-func parseEntriesInScope(scope *goquery.Selection, baseURL string, movieTitle string, linkType string, groupLabel string, entries *[]sidHubLinkEntry, seen map[string]struct{}) {
+func parseEntriesInScope(scope *goquery.Selection, baseURL string, movieTitle string, linkType string, groupLabel string, entries *[]sidHubLinkEntry, seen map[string]struct{}, fetchedAt time.Time) {
 	scope.Find("a[href], [data-url], [data-href], [data-clipboard-text], input[value]").Each(func(_ int, selection *goquery.Selection) {
 		rawURL := firstNonEmptyAttr(selection, "href", "data-url", "data-href", "data-clipboard-text", "value")
 		if !isPotentialSidHubResourceURL(rawURL) {
@@ -1580,8 +1927,8 @@ func parseEntriesInScope(scope *goquery.Selection, baseURL string, movieTitle st
 		rowText := cleanText(row.Text())
 		badges := extractSidHubBadges(row)
 		title, titleSource := resolveSidHubEntryTitle(selection, row, movieTitle, badges)
-		dateText := extractSidHubDateText(rowText)
-		datetime := parseSidHubDate(dateText, time.Now())
+		dateText := resolveSidHubEntryDateText(rowText, title)
+		datetime := parseSidHubDate(dateText, fetchedAt)
 		entry := sidHubLinkEntry{
 			Link: model.Link{
 				Type:      linkType,
@@ -1607,7 +1954,7 @@ func parseEntriesInScope(scope *goquery.Selection, baseURL string, movieTitle st
 }
 
 func buildResult(card sidHubMovie, entries []sidHubLinkEntry) model.SearchResult {
-	card, entries = fillSidHubTimes(card, entries, time.Now())
+	card, entries = fillSidHubTimes(card, entries)
 	links := make([]model.Link, 0, len(entries))
 	for _, entry := range entries {
 		links = append(links, entry.Link)
@@ -1644,43 +1991,198 @@ func buildResult(card sidHubMovie, entries []sidHubLinkEntry) model.SearchResult
 }
 
 func buildExpandedResults(card sidHubMovie, entries []sidHubLinkEntry) []model.SearchResult {
-	card, entries = fillSidHubTimes(card, entries, time.Now())
-	if len(entries) == 0 {
-		return []model.SearchResult{buildExpandedResult(card, buildSidHubDetailFallbackEntry(card))}
-	}
+	return buildExpandedResultsAt(card, entries, time.Now().In(sidHubLocation))
+}
 
-	results := make([]model.SearchResult, 0, len(entries))
-	for index, entry := range entries {
-		if entry.Index == 0 {
-			entry.Index = index + 1
+func buildExpandedResultsAt(card sidHubMovie, entries []sidHubLinkEntry, fetchedAt time.Time) []model.SearchResult {
+	card, entries = fillSidHubTimes(card, entries)
+	if len(entries) == 0 {
+		return []model.SearchResult{}
+	}
+	for index := range entries {
+		if entries[index].Index == 0 {
+			entries[index].Index = index + 1
 		}
-		results = append(results, buildExpandedResult(card, entry))
+	}
+	groups := groupSidHubEntries(card, entries)
+	results := make([]model.SearchResult, 0, len(groups))
+	for _, group := range groups {
+		results = append(results, buildSidHubGroupedResultAt(card, group, fetchedAt))
 	}
 	return results
 }
 
-func buildSidHubDetailFallbackEntry(card sidHubMovie) sidHubLinkEntry {
-	return sidHubLinkEntry{
-		Link: model.Link{
-			Type:       "detail",
-			URL:        card.DetailURL,
-			AccessMode: "direct_open",
-			Datetime:   card.Datetime,
-			WorkTitle:  cleanText(card.Title),
-		},
-		Title:          card.Title,
-		GroupLabel:     "详情页",
-		Index:          1,
-		TitleSource:    "movie_card_fallback",
-		LinkTypeSource: "detail_fallback",
-		Datetime:       card.Datetime,
-		DateText:       card.DateText,
-		DateSource:     card.DateSource,
+func groupSidHubEntries(card sidHubMovie, entries []sidHubLinkEntry) []sidHubResultGroup {
+	groups := make([]sidHubResultGroup, 0, len(entries))
+	groupIndexes := make(map[string]int)
+	for index, entry := range entries {
+		if entry.ResolutionStatus == "invalid" {
+			continue
+		}
+		provider := normalizeLinkType(entry.Link.Type)
+		title := cleanText(entry.Title)
+		if title == "" {
+			title = cleanText(card.Title)
+		}
+		key := buildSidHubGroupKey(card.ID, provider, title)
+		if key == "" {
+			key = fmt.Sprintf("single\x00%d\x00%s", index, entry.Link.URL)
+		}
+		groupIndex, exists := groupIndexes[key]
+		if !exists {
+			groupIndex = len(groups)
+			groupIndexes[key] = groupIndex
+			groups = append(groups, sidHubResultGroup{
+				MovieID:  card.ID,
+				Provider: provider,
+				Title:    title,
+			})
+		}
+		groups[groupIndex].Entries = append(groups[groupIndex].Entries, entry)
+	}
+
+	for index := range groups {
+		sort.SliceStable(groups[index].Entries, func(leftIndex int, rightIndex int) bool {
+			left := groups[index].Entries[leftIndex]
+			right := groups[index].Entries[rightIndex]
+			leftRank := sidHubCandidateStatusRank(left.ResolutionStatus)
+			rightRank := sidHubCandidateStatusRank(right.ResolutionStatus)
+			if leftRank != rightRank {
+				return leftRank < rightRank
+			}
+			leftKnown := !left.Datetime.IsZero()
+			rightKnown := !right.Datetime.IsZero()
+			if leftKnown != rightKnown {
+				return leftKnown
+			}
+			if !left.Datetime.Equal(right.Datetime) {
+				return left.Datetime.After(right.Datetime)
+			}
+			return left.Index < right.Index
+		})
+	}
+	return groups
+}
+
+func buildSidHubGroupKey(movieID string, provider string, title string) string {
+	normalizedTitle := normalizeSidHubGroupTitle(title)
+	movieID = strings.TrimSpace(movieID)
+	provider = normalizeLinkType(provider)
+	if movieID == "" || provider == "" || normalizedTitle == "" {
+		return ""
+	}
+	return movieID + "\x00" + provider + "\x00" + normalizedTitle
+}
+
+func normalizeSidHubGroupTitle(title string) string {
+	pairedPunctuation := "【】[]()（）「」『』《》<>"
+	return strings.Map(func(value rune) rune {
+		if unicode.IsSpace(value) || strings.ContainsRune(pairedPunctuation, value) {
+			return -1
+		}
+		return value
+	}, cleanText(title))
+}
+
+func sidHubCandidateStatusRank(status string) int {
+	switch status {
+	case sidHubResolutionResolved:
+		return 0
+	case sidHubResolutionDeferred, "":
+		return 1
+	default:
+		return 2
 	}
 }
 
+func buildSidHubGroupedResultAt(card sidHubMovie, group sidHubResultGroup, fetchedAt time.Time) model.SearchResult {
+	primary := group.Entries[0]
+	links := make([]model.Link, 0, len(group.Entries))
+	badges := append([]string(nil), primary.Badges...)
+	for _, entry := range group.Entries {
+		link := cloneSidHubLink(entry.Link)
+		status := entry.ResolutionStatus
+		if status == "" {
+			if shouldResolveSeedHubLinkStart(link) {
+				status = sidHubResolutionDeferred
+			} else {
+				status = sidHubResolutionResolved
+			}
+		}
+		link.ResolveTarget = &model.LinkResolveTarget{
+			PluginID:   pluginName,
+			Provider:   normalizeLinkType(link.Type),
+			MovieID:    card.ID,
+			EntryIndex: entry.Index,
+			Status:     status,
+		}
+		links = append(links, link)
+		badges = mergeSidHubTags(badges, entry.Badges)
+	}
+	resultTime, resultDateText, resultDateSource := resolveSidHubResultTime(card, group.Entries)
+	targetType := resolveSidHubTargetType(group.Provider)
+	title := group.Title
+	if title == "" {
+		title = card.Title
+	}
+
+	return model.SearchResult{
+		UniqueID:       buildSidHubGroupedUniqueID(group),
+		Datetime:       resultTime,
+		Title:          title,
+		Content:        buildExpandedContent(card, primary),
+		Links:          links,
+		Tags:           mergeSidHubTags(card.Tags, badges),
+		Images:         imagesFromCard(card),
+		SourcePluginID: pluginName,
+		SourceType:     "plugin",
+		SourceName:     pluginDisplayName,
+		MediaType:      card.MediaType,
+		TargetType:     targetType,
+		DetailURL:      card.DetailURL,
+		Capabilities: model.ResourceCapabilities{
+			Searchable:      true,
+			ShareSearchable: isShareType(group.Provider),
+			Downloadable:    targetType != "detail",
+		},
+		Meta: map[string]interface{}{
+			"sid_hub_movie_id":          card.ID,
+			"sid_hub_link_type":         group.Provider,
+			"sid_hub_group_label":       primary.GroupLabel,
+			"sid_hub_size":              primary.Size,
+			"sid_hub_year":              primary.Year,
+			"sid_hub_index":             primary.Index,
+			"sid_hub_candidate_count":   len(links),
+			"sid_hub_title_source":      primary.TitleSource,
+			"sid_hub_link_type_source":  primary.LinkTypeSource,
+			"sid_hub_resolution_status": primary.ResolutionStatus,
+			"sid_hub_resolution_rank":   primary.ResolutionRank,
+			"sid_hub_time_source":       resultDateSource,
+			"sid_hub_time_text":         resultDateText,
+			"sid_hub_fetched_at":        fetchedAt,
+		},
+	}
+}
+
+func buildSidHubGroupedUniqueID(group sidHubResultGroup) string {
+	hash := fnv.New64a()
+	_, _ = hash.Write([]byte(buildSidHubGroupKey(group.MovieID, group.Provider, group.Title)))
+	if group.MovieID == "" && len(group.Entries) > 0 {
+		_, _ = hash.Write([]byte(group.Entries[0].Link.URL))
+		_, _ = hash.Write([]byte(strconv.Itoa(group.Entries[0].Index)))
+	}
+	return fmt.Sprintf("%s-%s-%s-%x", pluginName, strings.TrimSpace(group.MovieID), normalizeLinkType(group.Provider), hash.Sum64())
+}
+
 func buildExpandedResult(card sidHubMovie, entry sidHubLinkEntry) model.SearchResult {
-	card, entries := fillSidHubTimes(card, []sidHubLinkEntry{entry}, time.Now())
+	return buildExpandedResultAt(card, entry, time.Now().In(sidHubLocation))
+}
+
+func buildExpandedResultAt(card sidHubMovie, entry sidHubLinkEntry, fetchedAt time.Time) model.SearchResult {
+	if fetchedAt.IsZero() {
+		fetchedAt = time.Now().In(sidHubLocation)
+	}
+	card, entries := fillSidHubTimes(card, []sidHubLinkEntry{entry})
 	entry = entries[0]
 	title := cleanText(entry.Title)
 	if title == "" {
@@ -1709,7 +2211,6 @@ func buildExpandedResult(card sidHubMovie, entry sidHubLinkEntry) model.SearchRe
 		},
 		Meta: map[string]interface{}{
 			"sid_hub_movie_id":          card.ID,
-			"sid_hub_detail_url":        card.DetailURL,
 			"sid_hub_link_type":         entry.Link.Type,
 			"sid_hub_group_label":       entry.GroupLabel,
 			"sid_hub_size":              entry.Size,
@@ -1721,18 +2222,15 @@ func buildExpandedResult(card sidHubMovie, entry sidHubLinkEntry) model.SearchRe
 			"sid_hub_resolution_rank":   entry.ResolutionRank,
 			"sid_hub_time_source":       entry.DateSource,
 			"sid_hub_time_text":         entry.DateText,
+			"sid_hub_fetched_at":        fetchedAt,
 		},
 	}
 }
 
-func fillSidHubTimes(card sidHubMovie, entries []sidHubLinkEntry, now time.Time) (sidHubMovie, []sidHubLinkEntry) {
-	if now.IsZero() {
-		now = time.Now()
-	}
+func fillSidHubTimes(card sidHubMovie, entries []sidHubLinkEntry) (sidHubMovie, []sidHubLinkEntry) {
 	if card.Datetime.IsZero() {
-		card.Datetime = now
 		card.DateText = ""
-		card.DateSource = sidHubTimeSourceSyntheticFetch
+		card.DateSource = sidHubTimeSourceUnknown
 	} else if card.DateSource == "" {
 		card.DateSource = sidHubTimeSourceMovieCard
 	}
@@ -1740,12 +2238,16 @@ func fillSidHubTimes(card sidHubMovie, entries []sidHubLinkEntry, now time.Time)
 	nextEntries := make([]sidHubLinkEntry, len(entries))
 	for index, entry := range entries {
 		nextEntry := entry
-		if nextEntry.Datetime.IsZero() {
+		if nextEntry.Datetime.IsZero() && !card.Datetime.IsZero() {
 			nextEntry.Datetime = card.Datetime
 			nextEntry.DateText = card.DateText
 			nextEntry.DateSource = card.DateSource
 		} else if nextEntry.DateSource == "" {
 			nextEntry.DateSource = sidHubTimeSourceResourceRow
+		}
+		if nextEntry.Datetime.IsZero() {
+			nextEntry.DateText = ""
+			nextEntry.DateSource = sidHubTimeSourceUnknown
 		}
 		nextEntry.Link.Datetime = nextEntry.Datetime
 		nextEntries[index] = nextEntry
@@ -1905,7 +2407,7 @@ func isDisallowedSeedHubIP(ip net.IP) bool {
 	if ip == nil {
 		return true
 	}
-	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast() {
 		return true
 	}
 	if ip.Equal(net.ParseIP("169.254.169.254")) {
@@ -2180,58 +2682,84 @@ func extractSidHubDateText(text string) string {
 	return cleanText(sidHubDateTextRegex.FindString(text))
 }
 
+func resolveSidHubEntryDateText(rowText string, resolvedTitle string) string {
+	if dateText := extractSidHubDateText(rowText); dateText != "" {
+		return dateText
+	}
+	return extractSidHubDateText(resolvedTitle)
+}
+
 func parseSidHubDate(text string, now time.Time) time.Time {
 	dateText := extractSidHubDateText(text)
 	if dateText == "" {
 		return time.Time{}
 	}
 	if now.IsZero() {
-		now = time.Now()
+		now = time.Now().In(sidHubLocation)
 	}
 
-	location := now.Location()
-	nowInLocation := now.In(location)
+	nowInLocation := now.In(sidHubLocation)
 	normalized := strings.ReplaceAll(dateText, " ", "")
 	switch normalized {
 	case "今天":
-		return sidHubDateAtNoon(nowInLocation.Year(), nowInLocation.Month(), nowInLocation.Day(), location)
+		return sidHubDateAtNoon(nowInLocation.Year(), nowInLocation.Month(), nowInLocation.Day(), sidHubLocation)
 	case "昨天":
-		yesterday := nowInLocation.AddDate(0, 0, -1)
-		return sidHubDateAtNoon(yesterday.Year(), yesterday.Month(), yesterday.Day(), location)
+		return subtractSidHubCalendarDate(nowInLocation, 0, 0, 1)
 	}
 
-	if matches := sidHubDaysAgoRegex.FindStringSubmatch(dateText); len(matches) == 2 {
-		days, err := strconv.Atoi(strings.TrimSpace(matches[1]))
+	if matches := sidHubAgoRegex.FindStringSubmatch(dateText); len(matches) == 3 {
+		amount, err := strconv.Atoi(strings.TrimSpace(matches[1]))
 		if err != nil {
 			return time.Time{}
 		}
-		target := nowInLocation.AddDate(0, 0, -days)
-		return sidHubDateAtNoon(target.Year(), target.Month(), target.Day(), location)
+		switch matches[2] {
+		case "天":
+			return subtractSidHubCalendarDate(nowInLocation, 0, 0, amount)
+		case "月":
+			return subtractSidHubCalendarDate(nowInLocation, 0, amount, 0)
+		case "年":
+			return subtractSidHubCalendarDate(nowInLocation, amount, 0, 0)
+		}
 	}
 
 	if matches := sidHubFullDateRegex.FindStringSubmatch(normalized); len(matches) == 6 {
 		year := parseSidHubDatePart(matches[1])
 		month := parseSidHubDatePart(firstNonEmptyString(matches[2], matches[4]))
 		day := parseSidHubDatePart(firstNonEmptyString(matches[3], matches[5]))
-		return sidHubDateAtNoon(year, time.Month(month), day, location)
+		return sidHubDateAtNoon(year, time.Month(month), day, sidHubLocation)
 	}
 
 	if matches := sidHubMonthDayRegex.FindStringSubmatch(normalized); len(matches) == 4 {
 		year := nowInLocation.Year()
 		month := parseSidHubDatePart(matches[1])
 		day := parseSidHubDatePart(firstNonEmptyString(matches[2], matches[3]))
-		datetime := sidHubDateAtNoon(year, time.Month(month), day, location)
+		datetime := sidHubDateAtNoon(year, time.Month(month), day, sidHubLocation)
 		if datetime.IsZero() {
 			return time.Time{}
 		}
-		today := sidHubDateAtNoon(nowInLocation.Year(), nowInLocation.Month(), nowInLocation.Day(), location)
+		today := sidHubDateAtNoon(nowInLocation.Year(), nowInLocation.Month(), nowInLocation.Day(), sidHubLocation)
 		if datetime.After(today) {
-			datetime = sidHubDateAtNoon(year-1, time.Month(month), day, location)
+			datetime = sidHubDateAtNoon(year-1, time.Month(month), day, sidHubLocation)
 		}
 		return datetime
 	}
 
 	return time.Time{}
+}
+
+func subtractSidHubCalendarDate(now time.Time, years int, months int, days int) time.Time {
+	localNow := now.In(sidHubLocation)
+	firstOfTargetMonth := time.Date(localNow.Year()-years, localNow.Month()-time.Month(months), 1, 12, 0, 0, 0, sidHubLocation)
+	lastDay := time.Date(firstOfTargetMonth.Year(), firstOfTargetMonth.Month()+1, 0, 12, 0, 0, 0, sidHubLocation).Day()
+	day := localNow.Day()
+	if day > lastDay {
+		day = lastDay
+	}
+	target := time.Date(firstOfTargetMonth.Year(), firstOfTargetMonth.Month(), day, 12, 0, 0, 0, sidHubLocation)
+	if days != 0 {
+		target = target.AddDate(0, 0, -days)
+	}
+	return target
 }
 
 func sidHubDateAtNoon(year int, month time.Month, day int, location *time.Location) time.Time {

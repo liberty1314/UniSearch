@@ -123,7 +123,7 @@ describe("sortResources", () => {
     expect(result[0].cloudType).toBe(CloudType.QUARK);
   });
 
-  it("keeps scan transfer resources visible before regular links with the same match rank", () => {
+  it("does not globally prioritize scan transfer over regular resources", () => {
     const result = sortResources(
       [
         makeResource("regular-newer", "2026-06-19T00:00:00.000Z", CloudType.QUARK, {
@@ -148,10 +148,9 @@ describe("sortResources", () => {
     );
 
     expect(result.map((item) => item.resource.id)).toEqual([
-      "scan-older",
       "regular-newer",
+      "scan-older",
     ]);
-    expect(result[0].primaryLink?.access_mode).toBe("scan_transfer");
   });
 
   it("prioritizes resolved SeedHub resources before deferred SeedHub resources", () => {
@@ -159,17 +158,69 @@ describe("sortResources", () => {
       makeResource("deferred", "2026-06-20T00:00:00.000Z", CloudType.QUARK, {
         source: { type: "plugin", id: "sidhub", name: "SeedHub" },
         meta: {
-          sid_hub_resolution_rank: 2,
+          sid_hub_resolution_status: "deferred",
         },
       }),
       makeResource("resolved", "2026-06-10T00:00:00.000Z", CloudType.QUARK, {
         source: { type: "plugin", id: "sidhub", name: "SeedHub" },
         meta: {
-          sid_hub_resolution_rank: 0,
+          sid_hub_resolution_status: "resolved",
         },
       }),
     ]);
 
     expect(result.map((item) => item.resource.id)).toEqual(["resolved", "deferred"]);
+  });
+
+  it("treats SeedHub entries without semantic status as deferred old cache data", () => {
+	const result = sortResources([
+	  makeResource("legacy-newer", "2026-06-20T00:00:00.000Z", CloudType.QUARK, {
+		source: { type: "plugin", id: "sidhub", name: "SeedHub" },
+		meta: {},
+	  }),
+	  makeResource("resolved-older", "2026-06-10T00:00:00.000Z", CloudType.QUARK, {
+		source: { type: "plugin", id: "sidhub", name: "SeedHub" },
+		meta: { sid_hub_resolution_status: "resolved" },
+	  }),
+	]);
+
+	expect(result.map((item) => item.resource.id)).toEqual([
+	  "resolved-older",
+	  "legacy-newer",
+	]);
+  });
+
+  it("treats synthetic SeedHub timestamps as unknown", () => {
+	const result = sortResources([
+	  makeResource("synthetic-newer", "2026-06-20T00:00:00.000Z", CloudType.QUARK, {
+		source: { type: "plugin", id: "sidhub", name: "SeedHub" },
+		meta: {
+		  sid_hub_resolution_status: "resolved",
+		  sid_hub_time_source: "synthetic_fetch_time",
+		},
+	  }),
+	  makeResource("known-older", "2026-06-10T00:00:00.000Z", CloudType.QUARK, {
+		source: { type: "plugin", id: "sidhub", name: "SeedHub" },
+		meta: {
+		  sid_hub_resolution_status: "resolved",
+		  sid_hub_time_source: "resource_row",
+		},
+	  }),
+	]);
+
+	expect(result.map((item) => item.resource.id)).toEqual([
+	  "known-older",
+	  "synthetic-newer",
+	]);
+  });
+
+  it("keeps original order when all ranking fields are equal", () => {
+	const result = sortResources([
+	  makeResource("first", null, CloudType.QUARK),
+	  makeResource("second", null, CloudType.QUARK),
+	  makeResource("third", null, CloudType.QUARK),
+	]);
+
+	expect(result.map((item) => item.resource.id)).toEqual(["first", "second", "third"]);
   });
 });

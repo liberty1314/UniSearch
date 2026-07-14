@@ -51,8 +51,8 @@ func TestRefreshScanTransferHandlerReturnsLatestPayload(t *testing.T) {
 	if !bytes.Contains(recorder.Body.Bytes(), []byte(`"access_mode":"scan_transfer"`)) {
 		t.Fatalf("期望响应包含扫码访问模式，实际为 %s", recorder.Body.String())
 	}
-	if !bytes.Contains(recorder.Body.Bytes(), []byte(`"refresh_key":"seedhub:4259:quark:1"`)) {
-		t.Fatalf("期望响应包含稳定 refresh_key，实际为 %s", recorder.Body.String())
+	if bytes.Contains(recorder.Body.Bytes(), []byte(`"refresh_key"`)) || bytes.Contains(recorder.Body.Bytes(), []byte(`"source_page_url"`)) {
+		t.Fatalf("刷新响应不应公开来源地址或 refresh_key，实际为 %s", recorder.Body.String())
 	}
 }
 
@@ -87,6 +87,48 @@ func TestRefreshScanTransferHandlerRejectsInvalidRefreshKey(t *testing.T) {
 	}
 	if bytes.Contains(recorder.Body.Bytes(), []byte("SeedHub refresh_key")) {
 		t.Fatalf("响应不应泄露内部错误细节，实际为 %s", recorder.Body.String())
+	}
+}
+
+func TestRefreshScanTransferHandlerRejectsUnsafeSeedHubURL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	seedHubPlugin := sidhub.NewSidHubPlugin()
+	seedHubPlugin.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		t.Fatalf("unsafe URL must be rejected before fetch: %s", targetURL)
+		return nil, nil
+	})
+
+	pm := plugin.NewPluginManager()
+	pm.RegisterPlugin(seedHubPlugin)
+	SetSearchService(service.NewSearchService(pm, nil, nil))
+
+	router := gin.New()
+	router.POST("/api/resources/scan-transfer/refresh", RefreshScanTransferHandler)
+
+	unsafeURLs := []string{
+		"http://www.seedhub.cc/link_start/?redirect_to=quark_scan",
+		"https://127.0.0.1/link_start/?redirect_to=quark_scan",
+		"https://user@www.seedhub.cc/link_start/?redirect_to=quark_scan",
+		"https://example.com/x/link_start/y",
+	}
+	for _, unsafeURL := range unsafeURLs {
+		body, err := json.Marshal(map[string]string{
+			"link_url":    unsafeURL,
+			"refresh_key": "seedhub:4259:quark:1",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		req := httptest.NewRequest(http.MethodPost, "/api/resources/scan-transfer/refresh", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		recorder := httptest.NewRecorder()
+
+		router.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusBadRequest {
+			t.Fatalf("expected unsafe URL %q to return 400, got %d: %s", unsafeURL, recorder.Code, recorder.Body.String())
+		}
 	}
 }
 

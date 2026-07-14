@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -147,6 +148,38 @@ func TestGetSystemSettingsHandlerReturnsPublicConfigFields(t *testing.T) {
 	}
 }
 
+func TestGetSystemSettingsHandlerReturnsSourceDiversitySettings(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{}
+	defer func() {
+		config.AppConfig = oldConfig
+	}()
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodGet, "/api/system-settings", nil)
+
+	GetSystemSettingsHandler(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response["enable_search_source_diversity"] != false {
+		t.Fatalf("expected source diversity disabled by default, got %v", response["enable_search_source_diversity"])
+	}
+	if response["search_first_page_max_per_source"] != float64(16) {
+		t.Fatalf("expected max per source 16, got %v", response["search_first_page_max_per_source"])
+	}
+}
+
 func TestUpdateSystemSettingsHandlerSupportsDisplayConfigFields(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	SetSystemSettingsService(newSystemSettingsHandlerService(t))
@@ -236,6 +269,59 @@ func TestUpdateSystemSettingsHandlerSupportsResourceSourceBadgesSwitch(t *testin
 
 	if response["enable_resource_source_badges"] != true {
 		t.Fatalf("expected enable_resource_source_badges to be true, got %v", response["enable_resource_source_badges"])
+	}
+}
+
+func TestUpdateSystemSettingsHandlerSupportsSourceDiversitySettings(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	SetSystemSettingsService(newSystemSettingsHandlerService(t))
+
+	body := bytes.NewBufferString(`{
+		"enable_search_source_diversity":true,
+		"search_first_page_max_per_source":12
+	}`)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodPut, "/api/admin/system-settings", body)
+	context.Request.Header.Set("Content-Type", "application/json")
+
+	UpdateSystemSettingsHandler(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response["enable_search_source_diversity"] != true {
+		t.Fatalf("expected source diversity enabled, got %v", response["enable_search_source_diversity"])
+	}
+	if response["search_first_page_max_per_source"] != float64(12) {
+		t.Fatalf("expected max per source 12, got %v", response["search_first_page_max_per_source"])
+	}
+}
+
+func TestUpdateSystemSettingsHandlerRejectsSourceDiversityLimitOutsideRange(t *testing.T) {
+	for _, maxPerSource := range []int{0, 49} {
+		t.Run(fmt.Sprintf("max_%d", maxPerSource), func(t *testing.T) {
+			gin.SetMode(gin.TestMode)
+			SetSystemSettingsService(newSystemSettingsHandlerService(t))
+
+			body := bytes.NewBufferString(fmt.Sprintf(`{"search_first_page_max_per_source":%d}`, maxPerSource))
+			recorder := httptest.NewRecorder()
+			context, _ := gin.CreateTestContext(recorder)
+			context.Request = httptest.NewRequest(http.MethodPut, "/api/admin/system-settings", body)
+			context.Request.Header.Set("Content-Type", "application/json")
+
+			UpdateSystemSettingsHandler(context)
+
+			if recorder.Code != http.StatusBadRequest {
+				t.Fatalf("expected 400, got %d: %s", recorder.Code, recorder.Body.String())
+			}
+		})
 	}
 }
 

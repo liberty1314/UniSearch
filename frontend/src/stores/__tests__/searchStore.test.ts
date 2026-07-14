@@ -217,6 +217,50 @@ describe("searchStore", () => {
     });
   });
 
+  it("按 resource ID 和 link ID 更新解析结果并标记失效候选", async () => {
+    const { useSearchStore } = await import("@/stores/searchStore");
+    const response = buildSearchResults();
+    response.resources[0].links = [
+      {
+        id: "lnk-primary",
+        type: "quark",
+        access_mode: "resolve_required",
+        resolution: { status: "deferred", token: "rrt-primary" },
+      },
+      {
+        id: "lnk-backup",
+        type: "quark",
+        access_mode: "resolve_required",
+        resolution: { status: "deferred", token: "rrt-backup" },
+      },
+    ];
+    useSearchStore.setState({ searchResults: response });
+
+    useSearchStore.getState().updateResolvedResourceLink("resource-1", "lnk-primary", {
+      type: "quark",
+      url: "https://pan.quark.cn/s/resolved",
+      access_mode: "direct_open",
+      resolution: { status: "resolved" },
+    });
+    useSearchStore.getState().markResourceLinkInvalid("resource-1", "lnk-backup");
+
+    const links = useSearchStore.getState().searchResults?.resources[0].links;
+    expect(links?.[0]).toMatchObject({
+      id: "lnk-primary",
+      url: "https://pan.quark.cn/s/resolved",
+      resolution: { status: "resolved" },
+    });
+    expect(links?.[1].resolution?.status).toBe("invalid");
+
+    const previousState = useSearchStore.getState().searchResults;
+    useSearchStore.getState().updateResolvedResourceLink("wrong-resource", "lnk-primary", {
+      type: "quark",
+      url: "https://pan.quark.cn/s/stale",
+    });
+    useSearchStore.getState().markResourceLinkInvalid("resource-1", "wrong-link");
+    expect(useSearchStore.getState().searchResults).toBe(previousState);
+  });
+
   it("成功搜索且有结果时会写入最近有效搜索", async () => {
     const { useSearchStore } = await import("@/stores/searchStore");
 

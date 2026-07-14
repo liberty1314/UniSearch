@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ResourceObject } from "@/types/resource";
 import {
+  resolveDeferredResourceLinks,
   resolveResourceActionTarget,
   resolveResourceDisplayTitle,
   resolveResourceOpenTarget,
@@ -58,6 +59,27 @@ describe("resolveResourceDisplayTitle", () => {
 });
 
 describe("resource open target resolution", () => {
+
+  it("keeps deferred opaque candidates out of direct open targets", () => {
+    const resource = {
+      ...makeResource("SeedHub deferred"),
+      links: [
+        {
+          id: "lnk-v1",
+          type: "quark",
+          access_mode: "resolve_required" as const,
+          resolution: { status: "deferred" as const, token: "rrt-v1" },
+        },
+      ],
+    };
+
+    expect(resolveResourceOpenTarget({
+      resource,
+      primaryLink: resource.links[0],
+      cloudType: "quark",
+    })).toBeNull();
+    expect(resolveDeferredResourceLinks(resource)).toEqual(resource.links);
+  });
   it("does not fall back to an upstream detail URL when the resource has no links", () => {
     const resource = {
       ...makeResource("仅详情资源"),

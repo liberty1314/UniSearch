@@ -25,19 +25,7 @@ import {
   type ResourceOpenTarget,
   resolveResourceOpenTarget,
 } from "@/utils/resourceDisplay";
-
-const formatDetailTime = (value?: string): string => {
-  if (!value?.trim()) {
-    return "未知时间";
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return parsed.toLocaleString("zh-CN");
-};
+import { formatDetailTime } from "@/utils/resourceTime";
 
 const fallbackCopyText = async (text: string): Promise<void> => {
   const textarea = document.createElement("textarea");

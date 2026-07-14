@@ -17,13 +17,15 @@ import (
 )
 
 type SystemSettingsUpdateInput struct {
-	EnableUserAuth             *bool
-	EnableUserLogin            *bool
-	EnableUserSignup           *bool
-	EnableResourceDetailPage   *bool
-	EnableResourceSourceBadges *bool
-	PublicSiteURL              *string
-	DefaultCopyFormatTemplate  *string
+	EnableUserAuth              *bool
+	EnableUserLogin             *bool
+	EnableUserSignup            *bool
+	EnableResourceDetailPage    *bool
+	EnableResourceSourceBadges  *bool
+	EnableSearchSourceDiversity *bool
+	SearchFirstPageMaxPerSource *int
+	PublicSiteURL               *string
+	DefaultCopyFormatTemplate   *string
 }
 
 type CacheSettings struct {
@@ -132,6 +134,9 @@ const (
 	defaultRuntimeAsyncResponseTimeout      = 4
 	defaultRuntimeAsyncMaxBackgroundWorkers = 20
 	defaultRuntimeAsyncMaxBackgroundTasks   = 100
+	minSearchFirstPageMaxPerSource          = 1
+	maxSearchFirstPageMaxPerSource          = 48
+	defaultSearchFirstPageMaxPerSource      = 16
 )
 
 // SystemSettingsService 系统设置服务
@@ -189,6 +194,8 @@ func (s *SystemSettingsService) GetSettings() (*model.SystemSettings, error) {
 				AnnouncementEnabled:              false, // 默认禁用公告功能（需求 13.5）
 				EnableResourceDetailPage:         false, // 默认关闭资源详情页
 				EnableResourceSourceBadges:       false, // 默认关闭搜索结果来源标签
+				EnableSearchSourceDiversity:      false, // 默认关闭搜索结果首屏来源配额
+				SearchFirstPageMaxPerSource:      defaultSearchFirstPageMaxPerSource,
 				PublicSiteURL:                    "",
 				DefaultCopyFormatTemplate:        "",
 				CacheEnabled:                     cacheDefaults.CacheEnabled,
@@ -229,6 +236,12 @@ func (s *SystemSettingsService) UpdateSettings(input SystemSettingsUpdateInput) 
 	if err != nil {
 		return nil, err
 	}
+	if input.SearchFirstPageMaxPerSource != nil {
+		value := *input.SearchFirstPageMaxPerSource
+		if value < minSearchFirstPageMaxPerSource || value > maxSearchFirstPageMaxPerSource {
+			return nil, fmt.Errorf("首屏单来源上限必须在 %d 到 %d 之间", minSearchFirstPageMaxPerSource, maxSearchFirstPageMaxPerSource)
+		}
+	}
 
 	// 更新主开关
 	if input.EnableUserAuth != nil {
@@ -247,6 +260,12 @@ func (s *SystemSettingsService) UpdateSettings(input SystemSettingsUpdateInput) 
 	}
 	if input.EnableResourceSourceBadges != nil {
 		settings.EnableResourceSourceBadges = *input.EnableResourceSourceBadges
+	}
+	if input.EnableSearchSourceDiversity != nil {
+		settings.EnableSearchSourceDiversity = *input.EnableSearchSourceDiversity
+	}
+	if input.SearchFirstPageMaxPerSource != nil {
+		settings.SearchFirstPageMaxPerSource = *input.SearchFirstPageMaxPerSource
 	}
 	if input.PublicSiteURL != nil {
 		settings.PublicSiteURL = strings.TrimSpace(*input.PublicSiteURL)

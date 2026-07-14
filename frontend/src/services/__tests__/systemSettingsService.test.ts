@@ -1,11 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SystemSettingsService } from '@/services/systemSettingsService';
 
-const { getMock, putMock, postMock, deleteMock } = vi.hoisted(() => ({
+const { axiosGetMock, axiosPutMock, getMock, putMock, postMock, deleteMock } = vi.hoisted(() => ({
+  axiosGetMock: vi.fn(),
+  axiosPutMock: vi.fn(),
   getMock: vi.fn(),
   putMock: vi.fn(),
   postMock: vi.fn(),
   deleteMock: vi.fn(),
+}));
+
+vi.mock('axios', () => ({
+  default: {
+    get: axiosGetMock,
+    put: axiosPutMock,
+  },
 }));
 
 vi.mock('@/lib/api', () => ({
@@ -16,6 +25,87 @@ vi.mock('@/lib/api', () => ({
     delete: deleteMock,
   },
 }));
+
+describe('SystemSettingsService search source diversity settings', () => {
+  beforeEach(() => {
+    axiosGetMock.mockReset();
+    axiosPutMock.mockReset();
+  });
+
+  it('旧后端缺少来源配额字段时使用关闭和 16 的安全默认值', async () => {
+    axiosGetMock.mockResolvedValue({
+      data: {
+        enable_user_auth: true,
+        enable_user_login: true,
+        enable_user_signup: true,
+        enable_resource_detail_page: false,
+        enable_resource_source_badges: false,
+        public_site_url: '',
+        default_copy_format_template: '',
+        progressive_search_enabled: true,
+      },
+    });
+
+    const settings = await SystemSettingsService.getSettings();
+
+    expect(settings.enable_search_source_diversity).toBe(false);
+    expect(settings.search_first_page_max_per_source).toBe(16);
+  });
+
+  it('保留后端返回的来源配额设置', async () => {
+    axiosGetMock.mockResolvedValue({
+      data: {
+        enable_user_auth: true,
+        enable_user_login: true,
+        enable_user_signup: true,
+        enable_resource_detail_page: false,
+        enable_resource_source_badges: false,
+        enable_search_source_diversity: true,
+        search_first_page_max_per_source: 12,
+        public_site_url: '',
+        default_copy_format_template: '',
+        progressive_search_enabled: true,
+      },
+    });
+
+    const settings = await SystemSettingsService.getSettingsAdmin('token');
+
+    expect(settings.enable_search_source_diversity).toBe(true);
+    expect(settings.search_first_page_max_per_source).toBe(12);
+  });
+
+  it('通过系统设置更新入口保存来源配额', async () => {
+    axiosPutMock.mockResolvedValue({
+      data: {
+        enable_user_auth: true,
+        enable_user_login: true,
+        enable_user_signup: true,
+        enable_resource_detail_page: false,
+        enable_resource_source_badges: false,
+        enable_search_source_diversity: true,
+        search_first_page_max_per_source: 10,
+        public_site_url: '',
+        default_copy_format_template: '',
+        progressive_search_enabled: true,
+      },
+    });
+
+    const settings = await SystemSettingsService.updateSettings('token', {
+      enable_search_source_diversity: true,
+      search_first_page_max_per_source: 10,
+    });
+
+    expect(axiosPutMock).toHaveBeenCalledWith(
+      expect.stringContaining('/admin/system-settings'),
+      {
+        enable_search_source_diversity: true,
+        search_first_page_max_per_source: 10,
+      },
+      expect.any(Object),
+    );
+    expect(settings.search_first_page_max_per_source).toBe(10);
+  });
+});
 
 describe('SystemSettingsService TMDB admin api', () => {
   beforeEach(() => {

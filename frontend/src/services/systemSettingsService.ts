@@ -1,5 +1,9 @@
 import axios from 'axios';
 import { apiClient } from '@/lib/api';
+import {
+    DEFAULT_ENABLE_SEARCH_SOURCE_DIVERSITY,
+    normalizeSearchFirstPageMaxPerSource,
+} from '@/lib/searchSourceDiversity';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const PUBLIC_SETTINGS_CACHE_TTL_MS = 30000;
@@ -22,10 +26,34 @@ export interface SystemSettingsResponse {
     auth_password_max_length?: number; // 密码最大长度
     enable_resource_detail_page: boolean; // 是否启用资源详情页展示
     enable_resource_source_badges: boolean; // 是否展示搜索结果来源标签
+    enable_search_source_diversity: boolean; // 是否启用首屏来源配额
+    search_first_page_max_per_source: number; // 首屏每个来源最多展示条数
     public_site_url: string;        // 公开站点 URL（为空时由前端环境变量兜底）
     default_copy_format_template: string; // API Key 复制默认模板
     progressive_search_enabled: boolean; // 是否启用渐进式搜索
 }
+
+type SystemSettingsWireResponse = Omit<
+    SystemSettingsResponse,
+    'enable_search_source_diversity' | 'search_first_page_max_per_source'
+> & Partial<Pick<
+    SystemSettingsResponse,
+    'enable_search_source_diversity' | 'search_first_page_max_per_source'
+>>;
+
+const normalizeSystemSettingsResponse = (
+    settings: SystemSettingsWireResponse,
+): SystemSettingsResponse => {
+    return {
+        ...settings,
+        enable_search_source_diversity:
+            settings.enable_search_source_diversity
+            ?? DEFAULT_ENABLE_SEARCH_SOURCE_DIVERSITY,
+        search_first_page_max_per_source: normalizeSearchFirstPageMaxPerSource(
+            settings.search_first_page_max_per_source,
+        ),
+    };
+};
 
 export interface TMDBAdminSettingsResponse {
     configured: boolean;
@@ -108,8 +136,8 @@ export class SystemSettingsService {
      * 获取系统设置（公开接口）
      */
     static async getSettings(): Promise<SystemSettingsResponse> {
-        const response = await axios.get<SystemSettingsResponse>(`${API_BASE_URL}/system-settings`);
-        return response.data;
+        const response = await axios.get<SystemSettingsWireResponse>(`${API_BASE_URL}/system-settings`);
+        return normalizeSystemSettingsResponse(response.data);
     }
 
     static async getSettingsCached(force = false): Promise<SystemSettingsResponse> {
@@ -135,12 +163,12 @@ export class SystemSettingsService {
      * 获取系统设置（管理员接口）
      */
     static async getSettingsAdmin(token: string): Promise<SystemSettingsResponse> {
-        const response = await axios.get<SystemSettingsResponse>(`${API_BASE_URL}/admin/system-settings`, {
+        const response = await axios.get<SystemSettingsWireResponse>(`${API_BASE_URL}/admin/system-settings`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
         });
-        return response.data;
+        return normalizeSystemSettingsResponse(response.data);
     }
 
     /**
@@ -156,11 +184,13 @@ export class SystemSettingsService {
             enable_user_signup?: boolean;
             enable_resource_detail_page?: boolean;
             enable_resource_source_badges?: boolean;
+            enable_search_source_diversity?: boolean;
+            search_first_page_max_per_source?: number;
             public_site_url?: string;
             default_copy_format_template?: string;
         }
     ): Promise<SystemSettingsResponse> {
-        const response = await axios.put<SystemSettingsResponse>(
+        const response = await axios.put<SystemSettingsWireResponse>(
             `${API_BASE_URL}/admin/system-settings`,
             settings,
             {
@@ -170,11 +200,12 @@ export class SystemSettingsService {
                 },
             }
         );
+        const normalizedSettings = normalizeSystemSettingsResponse(response.data);
         publicSettingsCache = {
-            value: response.data,
+            value: normalizedSettings,
             expiresAt: Date.now() + PUBLIC_SETTINGS_CACHE_TTL_MS,
         };
-        return response.data;
+        return normalizedSettings;
     }
 
     static async getTMDBSettings(unusedToken: string): Promise<TMDBAdminSettingsResponse> {

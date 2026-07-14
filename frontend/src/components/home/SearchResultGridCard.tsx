@@ -8,7 +8,6 @@ import {
   type ResultItem,
 } from "@/utils/cloudTypeUtils";
 import {
-  resolveDirectScanTransferUrl,
   resolveResourceDisplaySize,
   resolveResourceDisplayTitle,
   resolveResourceSourcePresentation,
@@ -46,14 +45,8 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
     const cloudInfo = getCloudTypeInfo(cloudType);
     const sourceInfo = resolveResourceSourcePresentation(resource);
     const sourceType = resource.source.type?.trim().toLowerCase();
+    const sourceId = String(resource.source.id || "unknown").trim() || "unknown";
     const hasPassword = Boolean(primaryLink?.password?.trim());
-    const directScanTransferUrl = resolveDirectScanTransferUrl({
-      accessMode: primaryLink?.access_mode || (primaryLink?.scan_transfer ? "scan_transfer" : "direct_open"),
-      scanTransfer: primaryLink?.scan_transfer,
-    });
-    const scanTransferMode =
-      (primaryLink?.access_mode === "scan_transfer" || Boolean(primaryLink?.scan_transfer)) &&
-      !directScanTransferUrl;
     const sizeLabel = resolveResourceDisplaySize(item);
     const displayTitle = resolveResourceDisplayTitle(resource);
 
@@ -104,6 +97,8 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
         onClick={canOpenResource ? handleClick : undefined}
         onKeyDown={canOpenResource ? handleKeyDown : undefined}
         data-testid="search-result-grid-card-wrapper"
+        data-source-id={sourceId}
+        data-resource-id={resource.id}
       >
         {/* 发光底座 */}
         <div className="absolute inset-x-8 -bottom-4 h-12 rounded-full bg-slate-900/5 blur-xl opacity-0 transition-all duration-500 group-hover:translate-y-2 group-hover:opacity-100 dark:bg-black/40" />
@@ -189,7 +184,7 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
                   <span>有码</span>
                 </div>
               )}
-              {scanTransferMode && isResolvingResource ? (
+              {isResolvingResource ? (
                 <button
                   type="button"
                   onClick={(event) => {

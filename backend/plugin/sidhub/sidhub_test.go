@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"reflect"
 	"strings"
@@ -352,21 +354,21 @@ func TestParseSearchCardsUsesImageAltAndContainerTitleFallback(t *testing.T) {
 }
 
 func TestParseSidHubDateSupportsRelativeAndAbsoluteFormats(t *testing.T) {
-	now := time.Date(2026, 6, 27, 18, 30, 0, 0, time.Local)
+	now := time.Date(2026, 6, 27, 18, 30, 0, 0, sidHubLocation)
 	cases := []struct {
 		name     string
 		text     string
 		expected time.Time
 	}{
-		{name: "今天", text: "今天", expected: time.Date(2026, 6, 27, 12, 0, 0, 0, time.Local)},
-		{name: "昨天", text: "昨天", expected: time.Date(2026, 6, 26, 12, 0, 0, 0, time.Local)},
-		{name: "三天前", text: "3 天前", expected: time.Date(2026, 6, 24, 12, 0, 0, 0, time.Local)},
-		{name: "短横线完整日期", text: "更新于 2026-06-20", expected: time.Date(2026, 6, 20, 12, 0, 0, 0, time.Local)},
-		{name: "斜线完整日期", text: "2026/06/20", expected: time.Date(2026, 6, 20, 12, 0, 0, 0, time.Local)},
-		{name: "中文完整日期", text: "2026年6月20日", expected: time.Date(2026, 6, 20, 12, 0, 0, 0, time.Local)},
-		{name: "当年月日", text: "06-20", expected: time.Date(2026, 6, 20, 12, 0, 0, 0, time.Local)},
-		{name: "未来月日回退上一年", text: "06-28", expected: time.Date(2025, 6, 28, 12, 0, 0, 0, time.Local)},
-		{name: "中文月日", text: "6月20日", expected: time.Date(2026, 6, 20, 12, 0, 0, 0, time.Local)},
+		{name: "今天", text: "今天", expected: time.Date(2026, 6, 27, 12, 0, 0, 0, sidHubLocation)},
+		{name: "昨天", text: "昨天", expected: time.Date(2026, 6, 26, 12, 0, 0, 0, sidHubLocation)},
+		{name: "三天前", text: "3 天前", expected: time.Date(2026, 6, 24, 12, 0, 0, 0, sidHubLocation)},
+		{name: "短横线完整日期", text: "更新于 2026-06-20", expected: time.Date(2026, 6, 20, 12, 0, 0, 0, sidHubLocation)},
+		{name: "斜线完整日期", text: "2026/06/20", expected: time.Date(2026, 6, 20, 12, 0, 0, 0, sidHubLocation)},
+		{name: "中文完整日期", text: "2026年6月20日", expected: time.Date(2026, 6, 20, 12, 0, 0, 0, sidHubLocation)},
+		{name: "当年月日", text: "06-20", expected: time.Date(2026, 6, 20, 12, 0, 0, 0, sidHubLocation)},
+		{name: "未来月日回退上一年", text: "06-28", expected: time.Date(2025, 6, 28, 12, 0, 0, 0, sidHubLocation)},
+		{name: "中文月日", text: "6月20日", expected: time.Date(2026, 6, 20, 12, 0, 0, 0, sidHubLocation)},
 	}
 
 	for _, tc := range cases {
@@ -376,6 +378,60 @@ func TestParseSidHubDateSupportsRelativeAndAbsoluteFormats(t *testing.T) {
 				t.Fatalf("期望解析为 %s，实际为 %s", tc.expected, actual)
 			}
 		})
+	}
+}
+
+func TestParseSidHubDateUsesCalendarArithmetic(t *testing.T) {
+	location, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		name string
+		now  time.Time
+		text string
+		want time.Time
+	}{
+		{
+			name: "clamps relative month to target month end",
+			now:  time.Date(2026, 3, 31, 18, 0, 0, 0, location),
+			text: "1月前",
+			want: time.Date(2026, 2, 28, 12, 0, 0, 0, location),
+		},
+		{
+			name: "clamps leap day to previous non leap year",
+			now:  time.Date(2024, 2, 29, 18, 0, 0, 0, location),
+			text: "1年前",
+			want: time.Date(2023, 2, 28, 12, 0, 0, 0, location),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := parseSidHubDate(tc.text, tc.now); !got.Equal(tc.want) {
+				t.Fatalf("parseSidHubDate(%q) = %s, want %s", tc.text, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestParseDetailLinkEntriesReadsDateFromResolvedTitle(t *testing.T) {
+	html := `
+<section class="quark-list">
+  <div class="resource-row">
+    <a href="/link_start/?redirect_to=quark_1" title="沧元图 2月前">夸克</a>
+  </div>
+</section>`
+
+	entries, err := parseDetailLinkEntries(strings.NewReader(html), "https://www.seedhub.cc", "沧元图")
+	if err != nil {
+		t.Fatalf("parse detail entries: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected one entry, got %#v", entries)
+	}
+	if entries[0].DateText != "2月前" || entries[0].Datetime.IsZero() {
+		t.Fatalf("expected title date to be parsed, got %#v", entries[0])
 	}
 }
 
@@ -517,6 +573,107 @@ func TestSidHubBuildsOneResultPerDownloadEntry(t *testing.T) {
 	}
 }
 
+func TestBuildSidHubGroupsDuplicateCandidatesAndKeepsAllLinks(t *testing.T) {
+	card := sidHubMovie{ID: "4259", Title: "你的名字。", MediaType: "anime"}
+	newer := time.Date(2026, 7, 10, 12, 0, 0, 0, sidHubLocation)
+	entries := []sidHubLinkEntry{
+		{
+			Link:             model.Link{Type: "quark", URL: "https://www.seedhub.cc/link_start/?redirect_to=first"},
+			Title:            "【你的名字 4K】",
+			Index:            1,
+			ResolutionStatus: sidHubResolutionDeferred,
+			Datetime:         newer,
+		},
+		{
+			Link:             model.Link{Type: "quark", URL: "https://pan.quark.cn/s/resolved"},
+			Title:            "你的名字4K",
+			Index:            2,
+			ResolutionStatus: sidHubResolutionResolved,
+		},
+	}
+
+	results := buildExpandedResults(card, entries)
+	if len(results) != 1 || len(results[0].Links) != 2 {
+		t.Fatalf("expected one group with both candidates, got %#v", results)
+	}
+	if results[0].Links[0].URL != "https://pan.quark.cn/s/resolved" {
+		t.Fatalf("resolved candidate must be first, got %#v", results[0].Links)
+	}
+	if results[0].Links[1].ResolveTarget == nil || results[0].Links[1].ResolveTarget.Status != sidHubResolutionDeferred {
+		t.Fatalf("deferred candidate must retain resolver target, got %#v", results[0].Links[1])
+	}
+	if results[0].Meta["sid_hub_candidate_count"] != 2 {
+		t.Fatalf("expected candidate count metadata, got %#v", results[0].Meta)
+	}
+}
+
+func TestBuildSidHubGroupsKeepDistinctProviderEpisodeQualityAndMovie(t *testing.T) {
+	baseTitle := "沧元图 第12集 4K"
+	if buildSidHubGroupKey("1", "quark", baseTitle) == buildSidHubGroupKey("1", "baidu", baseTitle) {
+		t.Fatal("different providers must not merge")
+	}
+	if buildSidHubGroupKey("1", "quark", baseTitle) == buildSidHubGroupKey("1", "quark", "沧元图 第13集 4K") {
+		t.Fatal("different episodes must not merge")
+	}
+	if buildSidHubGroupKey("1", "quark", baseTitle) == buildSidHubGroupKey("1", "quark", "沧元图 第12集 1080P") {
+		t.Fatal("different qualities must not merge")
+	}
+	if buildSidHubGroupKey("1", "quark", baseTitle) == buildSidHubGroupKey("2", "quark", baseTitle) {
+		t.Fatal("different movie IDs must not merge")
+	}
+}
+
+func TestBuildSidHubGroupsDoNotMergeCandidatesWithoutMovieID(t *testing.T) {
+	card := sidHubMovie{Title: "无编号影片"}
+	entries := []sidHubLinkEntry{
+		{Link: model.Link{Type: "quark", URL: "https://example.com/1"}, Title: "同名资源", Index: 1, ResolutionStatus: sidHubResolutionResolved},
+		{Link: model.Link{Type: "quark", URL: "https://example.com/2"}, Title: "同名资源", Index: 2, ResolutionStatus: sidHubResolutionResolved},
+	}
+
+	results := buildExpandedResults(card, entries)
+	if len(results) != 2 {
+		t.Fatalf("candidates without movie ID must remain separate, got %#v", results)
+	}
+}
+
+func TestBuildSidHubGroupsDropInvalidCandidateButKeepBackup(t *testing.T) {
+	card := sidHubMovie{ID: "4259", Title: "你的名字。"}
+	entries := []sidHubLinkEntry{
+		{Link: model.Link{Type: "quark", URL: "https://example.com/invalid"}, Title: "你的名字 4K", Index: 1, ResolutionStatus: "invalid"},
+		{Link: model.Link{Type: "quark", URL: "https://example.com/backup"}, Title: "你的名字 4K", Index: 2, ResolutionStatus: sidHubResolutionDeferred},
+	}
+
+	results := buildExpandedResults(card, entries)
+	if len(results) != 1 || len(results[0].Links) != 1 || results[0].Links[0].URL != "https://example.com/backup" {
+		t.Fatalf("invalid candidate must not remove its backup, got %#v", results)
+	}
+}
+
+func TestSidHubResolveTargetSurvivesSearchCacheJSONRoundTrip(t *testing.T) {
+	card := sidHubMovie{ID: "4259", Title: "你的名字。"}
+	results := buildExpandedResults(card, []sidHubLinkEntry{{
+		Link:             model.Link{Type: "quark", URL: "https://www.seedhub.cc/link_start/?redirect_to=private"},
+		Title:            "你的名字 4K",
+		Index:            3,
+		ResolutionStatus: sidHubResolutionDeferred,
+	}})
+	payload, err := json.Marshal(results)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var restored []model.SearchResult
+	if err := json.Unmarshal(payload, &restored); err != nil {
+		t.Fatal(err)
+	}
+	if len(restored) != 1 || len(restored[0].Links) != 1 || restored[0].Links[0].ResolveTarget == nil {
+		t.Fatalf("missing resolver target after round trip: %#v", restored)
+	}
+	target := restored[0].Links[0].ResolveTarget
+	if target.PluginID != "sidhub" || target.Provider != "quark" || target.MovieID != "4259" || target.EntryIndex != 3 || target.Status != sidHubResolutionDeferred {
+		t.Fatalf("resolver target changed after round trip: %#v", target)
+	}
+}
+
 func TestBuildResultUsesLatestEntryTime(t *testing.T) {
 	older := time.Date(2026, 6, 20, 12, 0, 0, 0, time.Local)
 	newer := time.Date(2026, 6, 22, 12, 0, 0, 0, time.Local)
@@ -557,8 +714,7 @@ func TestBuildResultUsesLatestEntryTime(t *testing.T) {
 	}
 }
 
-func TestBuildExpandedResultBackfillsSyntheticTimeWhenPageHasNoDate(t *testing.T) {
-	before := time.Now()
+func TestBuildExpandedResultKeepsUnknownTimeEmpty(t *testing.T) {
 	card := sidHubMovie{
 		ID:        "120138",
 		Title:     "大濛",
@@ -573,15 +729,14 @@ func TestBuildExpandedResultBackfillsSyntheticTimeWhenPageHasNoDate(t *testing.T
 	}
 
 	result := buildExpandedResult(card, entry)
-	after := time.Now()
-	if result.Datetime.IsZero() || result.Datetime.Before(before) || result.Datetime.After(after) {
-		t.Fatalf("期望无页面时间时写入当前解析时间，实际为 %s，范围 %s - %s", result.Datetime, before, after)
+	if !result.Datetime.IsZero() {
+		t.Fatalf("unknown published time must stay empty, got %s", result.Datetime)
 	}
-	if result.Meta["sid_hub_time_source"] != sidHubTimeSourceSyntheticFetch || result.Meta["sid_hub_time_text"] != "" {
-		t.Fatalf("期望标记合成时间来源，实际为 %#v", result.Meta)
+	if result.Meta["sid_hub_time_source"] != "unknown" || result.Meta["sid_hub_time_text"] != "" {
+		t.Fatalf("expected unknown time source, got %#v", result.Meta)
 	}
-	if len(result.Links) != 1 || !result.Links[0].Datetime.Equal(result.Datetime) {
-		t.Fatalf("期望链接时间与结果时间一致，实际为 %#v", result.Links)
+	if len(result.Links) != 1 || !result.Links[0].Datetime.IsZero() {
+		t.Fatalf("unknown link time must stay empty, got %#v", result.Links)
 	}
 }
 
@@ -1170,9 +1325,151 @@ func TestResolveLinkStartEntriesHonorsZeroBudget(t *testing.T) {
 	if link.ScanTransfer.RefreshKey != "seedhub:626957:baidu:1" {
 		t.Fatalf("期望 N=0 时保留 refresh_key，实际为 %#v", link.ScanTransfer)
 	}
+	if resolved[0].ResolutionStatus != "deferred" {
+		t.Fatalf("expected explicit deferred status, got %#v", resolved[0])
+	}
 }
 
-func TestResolveLinkStartEntriesUsesURLRefreshKeyWithoutMovieID(t *testing.T) {
+func TestValidateSeedHubResolveURL(t *testing.T) {
+	publicLookup := func(_ context.Context, _ string) ([]net.IPAddr, error) {
+		return []net.IPAddr{{IP: net.ParseIP("203.0.113.10")}}, nil
+	}
+	privateLookup := func(_ context.Context, _ string) ([]net.IPAddr, error) {
+		return []net.IPAddr{{IP: net.ParseIP("169.254.169.254")}}, nil
+	}
+
+	tests := []struct {
+		name      string
+		targetURL string
+		baseURL   string
+		lookup    seedHubLookupIPAddrFunc
+		wantErr   bool
+	}{
+		{
+			name:      "allows exact production URL",
+			targetURL: "https://www.seedhub.cc/link_start/?redirect_to=quark_1",
+			baseURL:   "https://www.seedhub.cc",
+			lookup:    publicLookup,
+		},
+		{
+			name:      "rejects HTTP",
+			targetURL: "http://www.seedhub.cc/link_start/?redirect_to=quark_1",
+			baseURL:   "https://www.seedhub.cc",
+			lookup:    publicLookup,
+			wantErr:   true,
+		},
+		{
+			name:      "rejects userinfo",
+			targetURL: "https://user@www.seedhub.cc/link_start/?redirect_to=quark_1",
+			baseURL:   "https://www.seedhub.cc",
+			lookup:    publicLookup,
+			wantErr:   true,
+		},
+		{
+			name:      "rejects path containing link start",
+			targetURL: "https://www.seedhub.cc/x/link_start/y",
+			baseURL:   "https://www.seedhub.cc",
+			lookup:    publicLookup,
+			wantErr:   true,
+		},
+		{
+			name:      "rejects loopback host",
+			targetURL: "https://127.0.0.1/link_start/",
+			baseURL:   "https://127.0.0.1",
+			lookup: func(_ context.Context, _ string) ([]net.IPAddr, error) {
+				return []net.IPAddr{{IP: net.ParseIP("127.0.0.1")}}, nil
+			},
+			wantErr: true,
+		},
+		{
+			name:      "rejects private DNS result including redirect target",
+			targetURL: "https://www.seedhub.cc/link_start/?redirect_to=internal",
+			baseURL:   "https://www.seedhub.cc",
+			lookup:    privateLookup,
+			wantErr:   true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := validateSeedHubResolveURL(context.Background(), tc.targetURL, tc.baseURL, tc.lookup)
+			if tc.wantErr && err == nil {
+				t.Fatalf("expected %q to be rejected", tc.targetURL)
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("expected %q to be accepted: %v", tc.targetURL, err)
+			}
+		})
+	}
+}
+
+func TestSidHubResolveResourceReturnsDirectLink(t *testing.T) {
+	p := NewSidHubPlugin()
+	sourceURL := "https://www.seedhub.cc/link_start/?redirect_to=quark_1"
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		if targetURL != sourceURL {
+			t.Fatalf("unexpected resolver URL: %s", targetURL)
+		}
+		return []byte(`<a href="https://pan.quark.cn/s/resolved123">打开资源</a>`), nil
+	})
+
+	link, err := p.ResolveResource(context.Background(), sourceURL, "quark", "4259", 1)
+	if err != nil {
+		t.Fatalf("resolve resource: %v", err)
+	}
+	if link.URL != "https://pan.quark.cn/s/resolved123" || link.AccessMode != "direct_open" {
+		t.Fatalf("unexpected resolved link: %#v", link)
+	}
+}
+
+func TestSidHubResolveResourceClassifiesInvalidSignal(t *testing.T) {
+	p := NewSidHubPlugin()
+	p.SetFetcherForTest(func(_ string) ([]byte, error) {
+		return []byte(`<html><body>该分享链接已失效</body></html>`), nil
+	})
+
+	_, err := p.ResolveResource(context.Background(), "https://www.seedhub.cc/link_start/?redirect_to=invalid", "quark", "4259", 1)
+	var resolveErr *ResourceResolveError
+	if !errors.As(err, &resolveErr) || resolveErr.Kind != ResolveInvalid {
+		t.Fatalf("expected permanent invalid error, got %v", err)
+	}
+}
+
+func TestSidHubResolveResourceSeparatesParseAndNetworkFailures(t *testing.T) {
+	p := NewSidHubPlugin()
+	sourceURL := "https://www.seedhub.cc/link_start/?redirect_to=changed"
+	p.SetFetcherForTest(func(_ string) ([]byte, error) {
+		return []byte(`<html><body>页面结构已变化</body></html>`), nil
+	})
+
+	_, err := p.ResolveResource(context.Background(), sourceURL, "quark", "4259", 1)
+	var resolveErr *ResourceResolveError
+	if !errors.As(err, &resolveErr) || resolveErr.Kind != ResolveParseFailed {
+		t.Fatalf("expected parse failure, got %v", err)
+	}
+
+	p.SetFetcherForTest(func(_ string) ([]byte, error) { return nil, errors.New("upstream unavailable") })
+	_, err = p.ResolveResource(context.Background(), sourceURL, "quark", "4259", 1)
+	if !errors.As(err, &resolveErr) || resolveErr.Kind != ResolveUnavailable {
+		t.Fatalf("expected unavailable failure, got %v", err)
+	}
+}
+
+func TestSidHubResolveResourceRejectsInvalidSourceURL(t *testing.T) {
+	p := NewSidHubPlugin()
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		t.Fatalf("invalid source must not be fetched: %s", targetURL)
+		return nil, nil
+	})
+
+	_, err := p.ResolveResource(context.Background(), "https://127.0.0.1/link_start/", "quark", "4259", 1)
+	var resolveErr *ResourceResolveError
+	if !errors.As(err, &resolveErr) || resolveErr.Kind != ResolveInvalidRequest {
+		t.Fatalf("expected invalid request, got %v", err)
+	}
+}
+
+func TestResolveLinkStartEntriesDoesNotExposeURLRefreshKeyWithoutMovieID(t *testing.T) {
 	p := NewSidHubPlugin()
 	linkStartURL := "https://sidhub.cc/link_start/?movie_title=%E9%93%81%E6%8B%B3%E6%95%99%E8%82%B2&redirect_to=pan_id_660573"
 	p.fetcher = func(targetURL string) ([]byte, error) {
@@ -1192,8 +1489,8 @@ func TestResolveLinkStartEntriesUsesURLRefreshKeyWithoutMovieID(t *testing.T) {
 	if link.AccessMode != "scan_transfer" || link.ScanTransfer == nil {
 		t.Fatalf("期望无 movieID 时返回扫码兜底载荷，实际为 %#v", link)
 	}
-	if !link.ScanTransfer.Refreshable || !strings.HasPrefix(link.ScanTransfer.RefreshKey, "seedhub-url:baidu:") {
-		t.Fatalf("期望无 movieID 时生成 URL 型 refresh_key，实际为 %#v", link.ScanTransfer)
+	if link.ScanTransfer.Refreshable || link.ScanTransfer.RefreshKey != "" {
+		t.Fatalf("期望无 movieID 时不再生成 URL 型 refresh_key，实际为 %#v", link.ScanTransfer)
 	}
 }
 
@@ -1494,7 +1791,7 @@ func TestSidHubSearchCardsOnlyHonorsMaxSearchCards(t *testing.T) {
 	}
 }
 
-func TestSidHubEnhanceSidHubCardsWithDetailsReturnsFallback(t *testing.T) {
+func TestSidHubEnhanceSidHubCardsWithDetailsOmitsFailedDetails(t *testing.T) {
 	searchCache = sync.Map{}
 	p := NewSidHubPlugin()
 
@@ -1511,16 +1808,12 @@ func TestSidHubEnhanceSidHubCardsWithDetailsReturnsFallback(t *testing.T) {
 	})
 
 	results := p.enhanceSidHubCardsWithDetails(context.Background(), "https://www.seedhub.cc", []sidHubMovie{card}, resolveSidHubRuntimeConfig(nil))
-	if len(results) != 1 || len(results[0].Links) != 1 {
-		t.Fatalf("期望详情增强失败时生成 fallback 结果，实际为 %#v", results)
-	}
-	link := results[0].Links[0]
-	if link.Type != "detail" || link.URL != card.DetailURL {
-		t.Fatalf("期望详情 fallback 链接，实际为 %#v", link)
+	if len(results) != 0 {
+		t.Fatalf("expected failed details to produce no resource, got %#v", results)
 	}
 }
 
-func TestSidHubDoSearchReturnsDetailFallbackWhenDetailFetchFails(t *testing.T) {
+func TestSidHubDoSearchOmitsResourceWhenDetailFetchFails(t *testing.T) {
 	searchCache = sync.Map{}
 	p := NewSidHubPlugin()
 
@@ -1547,18 +1840,8 @@ func TestSidHubDoSearchReturnsDetailFallbackWhenDetailFetchFails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("搜索失败: %v", err)
 	}
-	if len(results) != 1 {
-		t.Fatalf("期望详情失败时返回 1 条 fallback 结果，实际为 %#v", results)
-	}
-	if len(results[0].Links) != 1 {
-		t.Fatalf("期望 fallback 结果包含详情页链接，实际为 %#v", results[0])
-	}
-	link := results[0].Links[0]
-	if link.Type != "detail" || link.URL != detailURL || link.AccessMode != "direct_open" {
-		t.Fatalf("期望详情页 fallback 链接，实际为 %#v", link)
-	}
-	if results[0].TargetType != "detail" {
-		t.Fatalf("期望 fallback 结果 target_type=detail，实际为 %q", results[0].TargetType)
+	if len(results) != 0 {
+		t.Fatalf("expected failed detail fetch to produce no resource, got %#v", results)
 	}
 }
 
@@ -1729,12 +2012,8 @@ func TestSidHubDoSearchAppliesDetailTimeout(t *testing.T) {
 	if elapsed := time.Since(startedAt); elapsed > 40*time.Millisecond {
 		t.Fatalf("期望详情页超时快速降级，实际耗时 %s", elapsed)
 	}
-	if len(results) != 1 || len(results[0].Links) != 1 {
-		t.Fatalf("期望返回 fallback 结果，实际为 %#v", results)
-	}
-	link := results[0].Links[0]
-	if link.Type != "detail" || link.URL != detailURL {
-		t.Fatalf("期望慢详情页降级为详情 fallback，实际为 %#v", link)
+	if len(results) != 0 {
+		t.Fatalf("期望详情超时且无候选时不返回资源，实际为 %#v", results)
 	}
 }
 
@@ -1777,13 +2056,8 @@ func TestSidHubDoSearchAppliesDetailTotalBudget(t *testing.T) {
 	if elapsed := time.Since(startedAt); elapsed > 40*time.Millisecond {
 		t.Fatalf("期望详情增强总预算快速降级，实际耗时 %s", elapsed)
 	}
-	if len(results) != 3 {
-		t.Fatalf("期望总预算耗尽后仍返回 3 条 fallback 结果，实际为 %#v", results)
-	}
-	for _, result := range results {
-		if len(result.Links) != 1 || result.Links[0].Type != "detail" {
-			t.Fatalf("期望总预算耗尽后返回详情 fallback，实际为 %#v", result)
-		}
+	if len(results) != 0 {
+		t.Fatalf("期望总预算耗尽且无候选时不返回资源，实际为 %#v", results)
 	}
 }
 

@@ -19,13 +19,23 @@ type ScanTransferInfo struct {
 
 // Link 网盘链接
 type Link struct {
-	Type         string            `json:"type" sonic:"type"`
-	URL          string            `json:"url" sonic:"url"`
-	Password     string            `json:"password" sonic:"password"`
-	AccessMode   string            `json:"access_mode,omitempty" sonic:"access_mode,omitempty"`
-	ScanTransfer *ScanTransferInfo `json:"scan_transfer,omitempty" sonic:"scan_transfer,omitempty"`
-	Datetime     time.Time         `json:"datetime,omitempty" sonic:"datetime,omitempty"`     // 链接更新时间（可选）
-	WorkTitle    string            `json:"work_title,omitempty" sonic:"work_title,omitempty"` // 作品标题（用于区分同一消息中多个作品的链接）
+	Type          string             `json:"type" sonic:"type"`
+	URL           string             `json:"url" sonic:"url"`
+	Password      string             `json:"password" sonic:"password"`
+	AccessMode    string             `json:"access_mode,omitempty" sonic:"access_mode,omitempty"`
+	ScanTransfer  *ScanTransferInfo  `json:"scan_transfer,omitempty" sonic:"scan_transfer,omitempty"`
+	Datetime      time.Time          `json:"datetime,omitempty" sonic:"datetime,omitempty"`     // 链接更新时间（可选）
+	WorkTitle     string             `json:"work_title,omitempty" sonic:"work_title,omitempty"` // 作品标题（用于区分同一消息中多个作品的链接）
+	ResolveTarget *LinkResolveTarget `json:"resolve_target,omitempty" sonic:"resolve_target,omitempty"`
+}
+
+// LinkResolveTarget 是仅供服务端缓存和按需解析使用的内部描述符。
+type LinkResolveTarget struct {
+	PluginID   string `json:"plugin_id" sonic:"plugin_id"`
+	Provider   string `json:"provider" sonic:"provider"`
+	MovieID    string `json:"movie_id,omitempty" sonic:"movie_id,omitempty"`
+	EntryIndex int    `json:"entry_index,omitempty" sonic:"entry_index,omitempty"`
+	Status     string `json:"status" sonic:"status"`
 }
 
 // SearchResult 搜索结果
@@ -61,14 +71,23 @@ type ResourceSource struct {
 
 // ResourceLink 描述资源对象内的单个可访问链接。
 type ResourceLink struct {
-	Type         string            `json:"type" sonic:"type"`
-	URL          string            `json:"url" sonic:"url"`
-	Password     string            `json:"password,omitempty" sonic:"password,omitempty"`
-	AccessMode   string            `json:"access_mode,omitempty" sonic:"access_mode,omitempty"`
-	ScanTransfer *ScanTransferInfo `json:"scan_transfer,omitempty" sonic:"scan_transfer,omitempty"`
-	Title        string            `json:"title,omitempty" sonic:"title,omitempty"`
-	WorkTitle    string            `json:"work_title,omitempty" sonic:"work_title,omitempty"`
-	Datetime     time.Time         `json:"datetime,omitempty" sonic:"datetime,omitempty"`
+	ID           string                  `json:"id,omitempty" sonic:"id,omitempty"`
+	Type         string                  `json:"type" sonic:"type"`
+	URL          string                  `json:"url,omitempty" sonic:"url,omitempty"`
+	Password     string                  `json:"password,omitempty" sonic:"password,omitempty"`
+	AccessMode   string                  `json:"access_mode,omitempty" sonic:"access_mode,omitempty"`
+	ScanTransfer *ScanTransferInfo       `json:"scan_transfer,omitempty" sonic:"scan_transfer,omitempty"`
+	Resolution   *ResourceLinkResolution `json:"resolution,omitempty" sonic:"resolution,omitempty"`
+	Title        string                  `json:"title,omitempty" sonic:"title,omitempty"`
+	WorkTitle    string                  `json:"work_title,omitempty" sonic:"work_title,omitempty"`
+	Datetime     *time.Time              `json:"datetime,omitempty" sonic:"datetime,omitempty"`
+}
+
+// ResourceLinkResolution 描述公开候选是否需要按需解析。
+type ResourceLinkResolution struct {
+	Status    string     `json:"status" sonic:"status"`
+	Token     string     `json:"token,omitempty" sonic:"token,omitempty"`
+	ExpiresAt *time.Time `json:"expires_at,omitempty" sonic:"expires_at,omitempty"`
 }
 
 // ResourceDetail 承载 UniSearch 内部详情页内容，避免公开响应泄露插件私有字段。
@@ -101,7 +120,7 @@ type ResourceObject struct {
 	Tags         []string               `json:"tags,omitempty" sonic:"tags,omitempty"`
 	Images       []string               `json:"images,omitempty" sonic:"images,omitempty"`
 	Meta         map[string]interface{} `json:"meta,omitempty" sonic:"meta,omitempty"`
-	PublishedAt  time.Time              `json:"published_at,omitempty" sonic:"published_at,omitempty"`
+	PublishedAt  *time.Time             `json:"published_at,omitempty" sonic:"published_at,omitempty"`
 }
 
 // SearchSourceWarning 描述搜索源级别的非致命失败。

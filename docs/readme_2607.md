@@ -359,3 +359,66 @@
     - frontend/src/components/admin/__tests__/ChannelManagementView.test.tsx
     - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
     - docs/readme_2607.md
+
+[2026-07-14 19:59] feat(search): 完成 SeedHub 搜索质量治理与按需解析
+  Body: 修正 SeedHub 时间与解析状态，使用加密 token 提供点击按需解析，并在首屏应用可配置来源配额。补充限流、并发、缓存、指标、前端交互以及确定性和真实后端验收，确保响应不暴露来源地址。
+  Footer: 破坏性变更: SeedHub deferred 候选不再返回来源地址，改为 `link_id` 与 `resolve_token`。
+  Migration: 客户端需在用户点击时调用 `/api/resources/resolve` 获取真实目标；来源配额需在前后端联合发布后由管理员启用。
+  Files:
+    - backend/api/rate_limiter.go
+    - backend/api/resource_resolve_handler.go
+    - backend/api/resource_resolve_handler_test.go
+    - backend/api/resource_resolve_metrics_handler.go
+    - backend/api/router.go
+    - backend/api/router_admin.go
+    - backend/api/scan_transfer_handler.go
+    - backend/api/scan_transfer_handler_test.go
+    - backend/api/system_settings_handler.go
+    - backend/api/system_settings_handler_test.go
+    - backend/model/response.go
+    - backend/model/system_settings.go
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - backend/service/resource_resolve_metrics.go
+    - backend/service/resource_resolve_metrics_test.go
+    - backend/service/resource_resolve_token.go
+    - backend/service/resource_resolve_token_test.go
+    - backend/service/search_response_builder.go
+    - backend/service/search_response_builder_test.go
+    - backend/service/system_settings_service.go
+    - backend/service/system_settings_service_test.go
+    - backend/util/cache/cache_key.go
+    - backend/util/cache/cache_key_test.go
+    - docs/readme_2607.md
+    - docs/seedhub-search-quality-development-plan.md
+    - frontend/e2e/real-backend.spec.ts
+    - frontend/e2e/search-quality.spec.ts
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/admin/SystemSettingsView.tsx
+    - frontend/src/components/admin/__tests__/SystemSettingsView.test.tsx
+    - frontend/src/components/admin/system-settings/SearchExperienceSettingsPanel.tsx
+    - frontend/src/components/home/SearchResultGridCard.tsx
+    - frontend/src/components/home/SearchResultListItem.tsx
+    - frontend/src/components/resource-detail/ResourceDetailLinksSection.tsx
+    - frontend/src/components/search-results/SearchResultsList.tsx
+    - frontend/src/components/search-results/searchResultsPresentation.test.ts
+    - frontend/src/components/search-results/searchResultsPresentation.ts
+    - frontend/src/components/search-results/useSearchResultsPresentation.ts
+    - frontend/src/hooks/__tests__/useSystemSettingsController.test.tsx
+    - frontend/src/hooks/useSystemSettingsController.ts
+    - frontend/src/lib/searchSourceDiversity.ts
+    - frontend/src/pages/ResourceDetailPage.tsx
+    - frontend/src/pages/__tests__/ResourceDetailPage.test.tsx
+    - frontend/src/services/__tests__/searchService.test.ts
+    - frontend/src/services/__tests__/systemSettingsService.test.ts
+    - frontend/src/services/searchService.ts
+    - frontend/src/services/systemSettingsService.ts
+    - frontend/src/stores/__tests__/searchStore.test.ts
+    - frontend/src/stores/searchStore.ts
+    - frontend/src/types/resource.ts
+    - frontend/src/utils/__tests__/resourceDisplay.test.ts
+    - frontend/src/utils/__tests__/searchResultSorter.test.ts
+    - frontend/src/utils/resourceDisplay.ts
+    - frontend/src/utils/resourceTime.ts
+    - frontend/src/utils/searchResultSorter.ts

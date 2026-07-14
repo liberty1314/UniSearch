@@ -38,6 +38,8 @@ export const SystemSettingsView: React.FC = () => {
     enableUserSignup,
     enableResourceDetailPage,
     enableResourceSourceBadges,
+    enableSearchSourceDiversity,
+    searchFirstPageMaxPerSource,
     publicSiteUrl,
     tmdbReadAccessToken,
     tmdbCurrentTokenPreview,
@@ -92,11 +94,16 @@ export const SystemSettingsView: React.FC = () => {
           <SearchExperienceSettingsPanel
             enableResourceDetailPage={enableResourceDetailPage}
             enableResourceSourceBadges={enableResourceSourceBadges}
+            enableSearchSourceDiversity={enableSearchSourceDiversity}
+            searchFirstPageMaxPerSource={searchFirstPageMaxPerSource}
             runtimeSettings={runtimeSettings}
             isSaving={isSaving}
             isSavingRuntime={isSavingRuntime}
             onToggleResourceDetailPage={actions.handleToggleResourceDetailPage}
             onToggleResourceSourceBadges={actions.handleToggleResourceSourceBadges}
+            onEnableSearchSourceDiversityChange={actions.setEnableSearchSourceDiversity}
+            onSearchFirstPageMaxPerSourceChange={actions.setSearchFirstPageMaxPerSource}
+            onSaveSearchSourceDiversitySettings={actions.handleSaveSearchSourceDiversitySettings}
             onUpdateRuntimeField={actions.updateRuntimeField}
             onSaveRuntimeSettings={actions.handleSaveRuntimeSettings}
           />

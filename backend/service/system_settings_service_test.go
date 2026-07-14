@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -94,6 +95,58 @@ func TestSystemSettingsServiceGetSettingsCreatesDefaults(t *testing.T) {
 
 	if !settings.RuntimeProgressiveSearchEnabled {
 		t.Fatalf("expected progressive search to be enabled by default, got %+v", settings)
+	}
+}
+
+func TestSystemSettingsServiceSourceDiversityDefaults(t *testing.T) {
+	service := NewSystemSettingsService(newSystemSettingsTestDB(t))
+
+	settings, err := service.GetSettings()
+	if err != nil {
+		t.Fatalf("GetSettings returned error: %v", err)
+	}
+
+	if settings.EnableSearchSourceDiversity {
+		t.Fatal("expected source diversity to be disabled by default")
+	}
+	if settings.SearchFirstPageMaxPerSource != 16 {
+		t.Fatalf("expected max per source default 16, got %d", settings.SearchFirstPageMaxPerSource)
+	}
+}
+
+func TestSystemSettingsServiceUpdatesSourceDiversitySettings(t *testing.T) {
+	service := NewSystemSettingsService(newSystemSettingsTestDB(t))
+	enabled := true
+	maxPerSource := 12
+
+	settings, err := service.UpdateSettings(SystemSettingsUpdateInput{
+		EnableSearchSourceDiversity: &enabled,
+		SearchFirstPageMaxPerSource: &maxPerSource,
+	})
+	if err != nil {
+		t.Fatalf("UpdateSettings returned error: %v", err)
+	}
+
+	if !settings.EnableSearchSourceDiversity {
+		t.Fatal("expected source diversity to be enabled")
+	}
+	if settings.SearchFirstPageMaxPerSource != 12 {
+		t.Fatalf("expected max per source 12, got %d", settings.SearchFirstPageMaxPerSource)
+	}
+}
+
+func TestSystemSettingsServiceRejectsSourceDiversityLimitOutsideRange(t *testing.T) {
+	for _, maxPerSource := range []int{0, 49} {
+		t.Run(fmt.Sprintf("max_%d", maxPerSource), func(t *testing.T) {
+			service := NewSystemSettingsService(newSystemSettingsTestDB(t))
+
+			_, err := service.UpdateSettings(SystemSettingsUpdateInput{
+				SearchFirstPageMaxPerSource: &maxPerSource,
+			})
+			if err == nil {
+				t.Fatalf("expected max per source %d to be rejected", maxPerSource)
+			}
+		})
 	}
 }
 

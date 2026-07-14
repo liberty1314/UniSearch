@@ -28,7 +28,16 @@ export interface ResourceSource {
 export type ResourceAccessMode =
   | "direct_open"
   | "password_open"
-  | "scan_transfer";
+  | "scan_transfer"
+  | "resolve_required";
+
+export type ResourceResolutionStatus = "deferred" | "resolved" | "invalid";
+
+export interface ResourceLinkResolution {
+  status: ResourceResolutionStatus;
+  token?: string;
+  expires_at?: string;
+}
 
 export interface ScanTransferInfo {
   provider?: string;
@@ -58,14 +67,29 @@ export interface ScanTransferRefreshResponse {
 }
 
 export interface ResourceLink {
+  id?: string;
   type: string;
-  url: string;
+  url?: string;
   password?: string;
   access_mode?: ResourceAccessMode;
   scan_transfer?: ScanTransferInfo;
   title?: string;
   work_title?: string;
   datetime?: string;
+  resolution?: ResourceLinkResolution;
+}
+
+export interface ResourceResolveRequest {
+  resource_id: string;
+  link_id: string;
+  resolve_token: string;
+}
+
+export interface ResourceResolveResponse {
+  resource_id: string;
+  link_id: string;
+  resolution_status: "resolved";
+  link: ResourceLink;
 }
 
 export interface ResourceDetail {

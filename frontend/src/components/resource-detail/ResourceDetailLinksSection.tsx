@@ -6,12 +6,12 @@ import { cn } from "@/lib/utils";
 import { getCloudTypeInfo, getCloudTypePriority } from "@/utils/cloudTypeUtils";
 import type { ResourceLink } from "@/types/resource";
 import { resolveDirectScanTransferUrl, type ResourceOpenTarget } from "@/utils/resourceDisplay";
+import { formatDetailTime } from "@/utils/resourceTime";
 
 interface ResourceDetailLinksSectionProps {
   resourceTitle: string;
   links: ResourceLink[];
   primaryLinkUrl?: string | null;
-  formatDetailTime: (value?: string) => string;
   onOpenTarget: (target: ResourceOpenTarget | null) => void;
   onCopyText: (value: string, successMessage: string) => void;
 }
@@ -44,7 +44,6 @@ const ResourceDetailLinksSection: React.FC<ResourceDetailLinksSectionProps> = ({
   resourceTitle,
   links,
   primaryLinkUrl,
-  formatDetailTime,
   onOpenTarget,
   onCopyText,
 }) => {

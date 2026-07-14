@@ -22,11 +22,17 @@ import {
 import type { ResultItem } from "@/utils/cloudTypeUtils";
 import { SystemSettingsService } from "@/services/systemSettingsService";
 import {
+  DEFAULT_ENABLE_SEARCH_SOURCE_DIVERSITY,
+  DEFAULT_SEARCH_FIRST_PAGE_MAX_PER_SOURCE,
+  normalizeSearchFirstPageMaxPerSource,
+} from "@/lib/searchSourceDiversity";
+import {
   buildResourceDetailRouteState,
   isMagnetTarget,
   isScanTransferTarget,
   normalizeExternalUrl,
   resolveDirectScanTransferUrl,
+  resolveDeferredResourceLinks,
   type ResourceOpenTarget,
   resolveResourceOpenTarget,
 } from "@/utils/resourceDisplay";
@@ -34,6 +40,7 @@ import { removeActiveFilterChip } from "@/utils/searchFilters";
 import { SearchService } from "@/services/searchService";
 import { readJsonStorage, writeJsonStorage } from "@/lib/safeStorage";
 import { SEARCH_RESULTS_VIEW_MODE_KEY } from "@/lib/accountPreferences";
+import { getErrorDataCode, getErrorMessage } from "@/lib/error";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,28 +56,6 @@ const readStoredViewMode = (): SearchResultsViewMode | null => {
   const value = readJsonStorage<unknown>(SEARCH_RESULTS_VIEW_MODE_KEY, null);
   return isSearchResultsViewMode(value) ? value : null;
 };
-
-const hasScanTransferPayload = (target: ResourceOpenTarget): boolean => {
-  const scanTransfer = target.scanTransfer;
-  return Boolean(
-    scanTransfer?.qr_code_base64 ||
-      scanTransfer?.qr_code_image_url ||
-      scanTransfer?.qr_code_value ||
-      scanTransfer?.mobile_url ||
-      scanTransfer?.transfer_code,
-  );
-};
-
-const seedHubPrewarmLimit = 6;
-const seedHubPrewarmConcurrency = 2;
-const seedHubPrewarmTimeoutMs = 8000;
-
-interface ScanTransferPrewarmCandidate {
-  key: string;
-  resourceId: string;
-  linkUrl: string;
-  refreshKey: string;
-}
 
 const isAbortLikeError = (error: unknown): boolean => {
   if (error instanceof DOMException && error.name === "AbortError") {
@@ -102,7 +87,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     performSearch,
     displayedCount,
     setSearchParams,
-    updateResourceScanTransfer,
+    updateResolvedResourceLink,
+    markResourceLinkInvalid,
   } = useSearchStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -160,11 +146,13 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
   const [resolvingResourceId, setResolvingResourceId] = useState<string | null>(null);
   const [enableResourceDetailPage, setEnableResourceDetailPage] = useState(true);
   const [enableResourceSourceBadges, setEnableResourceSourceBadges] = useState(false);
+  const [enableSearchSourceDiversity, setEnableSearchSourceDiversity] = useState(
+    DEFAULT_ENABLE_SEARCH_SOURCE_DIVERSITY,
+  );
+  const [searchFirstPageMaxPerSource, setSearchFirstPageMaxPerSource] = useState(
+    DEFAULT_SEARCH_FIRST_PAGE_MAX_PER_SOURCE,
+  );
   const resolveAbortControllerRef = useRef<AbortController | null>(null);
-  const prewarmAttemptedKeysRef = useRef<Set<string>>(new Set());
-  const prewarmQueueRef = useRef<ScanTransferPrewarmCandidate[]>([]);
-  const prewarmAbortControllersRef = useRef<Map<string, AbortController>>(new Map());
-  const drainPrewarmQueueRef = useRef<() => void>(() => undefined);
 
   // ── 无限滚动观察器 ─────────────────────────────────────────────────────────
 
@@ -212,6 +200,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         }
         setEnableResourceDetailPage(settings.enable_resource_detail_page);
         setEnableResourceSourceBadges(Boolean(settings.enable_resource_source_badges));
+        setEnableSearchSourceDiversity(Boolean(settings.enable_search_source_diversity));
+        setSearchFirstPageMaxPerSource(
+          normalizeSearchFirstPageMaxPerSource(
+            settings.search_first_page_max_per_source,
+          ),
+        );
       })
       .catch(() => {
         if (!isMounted) {
@@ -219,6 +213,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
         }
         setEnableResourceDetailPage(true);
         setEnableResourceSourceBadges(false);
+        setEnableSearchSourceDiversity(DEFAULT_ENABLE_SEARCH_SOURCE_DIVERSITY);
+        setSearchFirstPageMaxPerSource(DEFAULT_SEARCH_FIRST_PAGE_MAX_PER_SOURCE);
       });
 
     return () => {
@@ -230,9 +226,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     () => () => {
       resolveAbortControllerRef.current?.abort();
       resolveAbortControllerRef.current = null;
-      prewarmAbortControllersRef.current.forEach((controller) => controller.abort());
-      prewarmAbortControllersRef.current.clear();
-      prewarmQueueRef.current = [];
     },
     [],
   );
@@ -246,14 +239,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     searchResults,
     searchParams,
     displayedCount,
+    enableSourceDiversity: enableSearchSourceDiversity,
+    maxPerSource: searchFirstPageMaxPerSource,
   });
-
-  useEffect(() => {
-    prewarmAbortControllersRef.current.forEach((controller) => controller.abort());
-    prewarmAbortControllersRef.current.clear();
-    prewarmQueueRef.current = [];
-    prewarmAttemptedKeysRef.current.clear();
-  }, [searchParams.keyword]);
 
   // ── 回调（useCallback 保持引用稳定，配合卡片的 React.memo）───────────────
 
@@ -275,117 +263,21 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
     setResolvingResourceId(null);
   }, []);
 
-  const cancelPrewarmCandidate = useCallback((candidateKey: string) => {
-    const controller = prewarmAbortControllersRef.current.get(candidateKey);
-    controller?.abort();
-    prewarmQueueRef.current = prewarmQueueRef.current.filter((item) => item.key !== candidateKey);
-  }, []);
-
-  const runPrewarmCandidate = useCallback(
-    async (candidate: ScanTransferPrewarmCandidate) => {
-      const abortController = new AbortController();
-      prewarmAbortControllersRef.current.set(candidate.key, abortController);
-      const timeoutId = window.setTimeout(() => {
-        abortController.abort();
-      }, seedHubPrewarmTimeoutMs);
-
-      try {
-        const response = await SearchService.refreshScanTransfer(
-          {
-            resource_id: candidate.resourceId,
-            link_url: candidate.linkUrl,
-            refresh_key: candidate.refreshKey,
-          },
-          { signal: abortController.signal },
-        );
-        if (!abortController.signal.aborted && response.scan_transfer) {
-          updateResourceScanTransfer(candidate.resourceId, candidate.linkUrl, response.scan_transfer);
-        }
-      } catch {
-        // 预热是静默优化，失败后仍保留用户点击时的手动获取路径。
-      } finally {
-        window.clearTimeout(timeoutId);
-        prewarmAbortControllersRef.current.delete(candidate.key);
-        drainPrewarmQueueRef.current();
-      }
-    },
-    [updateResourceScanTransfer],
-  );
-
-  const drainPrewarmQueue = useCallback(() => {
-    while (
-      prewarmAbortControllersRef.current.size < seedHubPrewarmConcurrency &&
-      prewarmQueueRef.current.length > 0
-    ) {
-      const candidate = prewarmQueueRef.current.shift();
-      if (!candidate) {
+  const openResolvedTarget = useCallback(
+    (target: ResourceOpenTarget): void => {
+      const directScanTransferUrl = resolveDirectScanTransferUrl(target);
+      if (directScanTransferUrl) {
+        openExternalResource(directScanTransferUrl);
         return;
       }
-      void runPrewarmCandidate(candidate);
-    }
-  }, [runPrewarmCandidate]);
-
-  useEffect(() => {
-    drainPrewarmQueueRef.current = drainPrewarmQueue;
-  }, [drainPrewarmQueue]);
-
-  useEffect(() => {
-    const candidates = displayedResults
-      .map((item): ScanTransferPrewarmCandidate | null => {
-        const resource = item.resource;
-        const sourceValues = [
-          resource.source.id,
-          resource.source.name,
-          resource.source.plugin_id,
-          resource.meta?.sid_hub_movie_id,
-        ]
-          .map((value) => String(value || "").trim().toLowerCase())
-          .filter(Boolean);
-        const isSeedHub = sourceValues.some((value) => value.includes("sidhub") || value.includes("seedhub"));
-        if (!isSeedHub || !item.primaryLink) {
-          return null;
-        }
-
-        const scanTransfer = item.primaryLink.scan_transfer;
-        const openTarget = resolveResourceOpenTarget(item);
-        if (
-          !scanTransfer?.refreshable ||
-          !scanTransfer.refresh_key?.trim() ||
-          !openTarget ||
-          hasScanTransferPayload(openTarget)
-        ) {
-          return null;
-        }
-
-        const linkUrl = item.primaryLink.url.trim();
-        const refreshKey = scanTransfer.refresh_key.trim();
-        if (!linkUrl) {
-          return null;
-        }
-
-        return {
-          key: `${resource.id}|${linkUrl}|${refreshKey}`,
-          resourceId: resource.id,
-          linkUrl,
-          refreshKey,
-        };
-      })
-      .filter((candidate): candidate is ScanTransferPrewarmCandidate => Boolean(candidate))
-      .slice(0, seedHubPrewarmLimit);
-
-    for (const candidate of candidates) {
-      if (
-        prewarmAttemptedKeysRef.current.has(candidate.key) ||
-        prewarmAbortControllersRef.current.has(candidate.key) ||
-        prewarmQueueRef.current.some((item) => item.key === candidate.key)
-      ) {
-        continue;
+      if (target.password || isMagnetTarget(target) || isScanTransferTarget(target)) {
+        setPasswordModalTarget(target);
+        return;
       }
-      prewarmAttemptedKeysRef.current.add(candidate.key);
-      prewarmQueueRef.current.push(candidate);
-    }
-    drainPrewarmQueue();
-  }, [displayedResults, drainPrewarmQueue]);
+      openExternalResource(target.url);
+    },
+    [openExternalResource],
+  );
 
   const handleOpenResource = useCallback(
     async (item: ResultItem) => {
@@ -394,82 +286,79 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       }
 
       const openTarget = resolveResourceOpenTarget(item);
-      if (!openTarget) {
+      if (openTarget) {
+        openResolvedTarget(openTarget);
         return;
       }
 
-      const directScanTransferUrl = resolveDirectScanTransferUrl(openTarget);
-      if (directScanTransferUrl) {
-        openExternalResource(directScanTransferUrl);
+      const candidates = resolveDeferredResourceLinks(item.resource).slice(0, 2);
+      if (candidates.length === 0) {
         return;
       }
 
-      const refreshKey = openTarget.scanTransfer?.refresh_key?.trim();
-      if (
-        isScanTransferTarget(openTarget) &&
-        openTarget.scanTransfer?.refreshable &&
-        refreshKey &&
-        !hasScanTransferPayload(openTarget)
-      ) {
-        const resourceKey = openTarget.resourceId || openTarget.url;
-        cancelPrewarmCandidate(`${openTarget.resourceId}|${openTarget.url.trim()}|${refreshKey}`);
-        resolveAbortControllerRef.current?.abort();
-        const abortController = new AbortController();
-        resolveAbortControllerRef.current = abortController;
-        setResolvingResourceId(resourceKey);
-        try {
-          const response = await SearchService.refreshScanTransfer({
-            resource_id: openTarget.resourceId,
-            link_url: openTarget.url,
-            refresh_key: refreshKey,
-          }, {
-            signal: abortController.signal,
-          });
-          if (abortController.signal.aborted) {
+      resolveAbortControllerRef.current?.abort();
+      const abortController = new AbortController();
+      resolveAbortControllerRef.current = abortController;
+      setResolvingResourceId(item.resource.id);
+      try {
+        for (let index = 0; index < candidates.length; index += 1) {
+          const candidate = candidates[index];
+          const linkId = candidate.id?.trim();
+          const resolveToken = candidate.resolution?.token?.trim();
+          if (!linkId || !resolveToken) {
+            continue;
+          }
+          try {
+            const response = await SearchService.resolveResource(
+              {
+                resource_id: item.resource.id,
+                link_id: linkId,
+                resolve_token: resolveToken,
+              },
+              { signal: abortController.signal },
+            );
+            if (abortController.signal.aborted) {
+              return;
+            }
+            if (
+              response.resource_id !== item.resource.id ||
+              response.link_id !== linkId
+            ) {
+              return;
+            }
+            updateResolvedResourceLink(item.resource.id, linkId, response.link);
+            const resolvedTarget = resolveResourceOpenTarget({
+              resource: item.resource,
+              primaryLink: { ...response.link, id: linkId },
+              cloudType: response.link.type || item.cloudType,
+            });
+            if (resolvedTarget) {
+              openResolvedTarget(resolvedTarget);
+            }
             return;
-          }
-          if (!response.scan_transfer) {
-            throw new Error("当前资源未返回新的扫码载荷");
-          }
-          const refreshedDirectUrl = resolveDirectScanTransferUrl({
-            accessMode: "scan_transfer",
-            scanTransfer: response.scan_transfer,
-          });
-          if (refreshedDirectUrl) {
-            openExternalResource(refreshedDirectUrl);
+          } catch (error) {
+            if (isAbortLikeError(error) || abortController.signal.aborted) {
+              return;
+            }
+            const errorCode = getErrorDataCode(error);
+            if (errorCode === "RESOURCE_INVALID") {
+              markResourceLinkInvalid(item.resource.id, linkId);
+              if (index + 1 < candidates.length) {
+                continue;
+              }
+            }
+            toast.error(getErrorMessage(error, "资源解析失败，请稍后重试"));
             return;
-          }
-          setPasswordModalTarget({
-            ...openTarget,
-            accessMode: "scan_transfer",
-            scanTransfer: response.scan_transfer,
-          });
-        } catch (error) {
-          if (isAbortLikeError(error) || abortController.signal.aborted) {
-            return;
-          }
-          const message =
-            error instanceof Error && error.message.trim()
-              ? error.message
-              : "获取二维码失败";
-          toast.error(message);
-        } finally {
-          if (resolveAbortControllerRef.current === abortController) {
-            resolveAbortControllerRef.current = null;
-            setResolvingResourceId(null);
           }
         }
-        return;
+      } finally {
+        if (resolveAbortControllerRef.current === abortController) {
+          resolveAbortControllerRef.current = null;
+          setResolvingResourceId(null);
+        }
       }
-
-      if (openTarget.password || isMagnetTarget(openTarget) || isScanTransferTarget(openTarget)) {
-        setPasswordModalTarget(openTarget);
-        return;
-      }
-
-      openExternalResource(openTarget.url);
     },
-    [cancelPrewarmCandidate, openExternalResource, resolvingResourceId],
+    [markResourceLinkInvalid, openResolvedTarget, resolvingResourceId, updateResolvedResourceLink],
   );
 
   const handlePasswordModalClose = useCallback(() => {

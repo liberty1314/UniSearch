@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SystemSettingsView } from '../SystemSettingsView';
@@ -47,6 +47,8 @@ const controllerState = {
   enableUserSignup: true,
   enableResourceDetailPage: false,
   enableResourceSourceBadges: false,
+  enableSearchSourceDiversity: false,
+  searchFirstPageMaxPerSource: 16,
   publicSiteUrl: '',
   tmdbReadAccessToken: '',
   tmdbCurrentTokenPreview: 'tmdb-token-preview',
@@ -71,6 +73,9 @@ const actions = {
   handleToggleSignup: vi.fn(),
   handleToggleResourceDetailPage: vi.fn(),
   handleToggleResourceSourceBadges: vi.fn(),
+  setEnableSearchSourceDiversity: vi.fn(),
+  setSearchFirstPageMaxPerSource: vi.fn(),
+  handleSaveSearchSourceDiversitySettings: vi.fn(),
   handleSaveDisplayConfig: vi.fn(),
   handleSaveTMDBConfig: vi.fn(),
   handleSaveCacheSettings: vi.fn(),
@@ -155,6 +160,30 @@ describe('SystemSettingsView TMDB section', () => {
     await user.click(screen.getByRole('button', { name: '保存搜索体验配置' }));
 
     expect(actions.handleSaveRuntimeSettings).toHaveBeenCalled();
+  });
+
+  it('在搜索体验中配置首屏来源配额', async () => {
+    const user = userEvent.setup();
+    render(<SystemSettingsView />);
+
+    await user.click(screen.getByRole('tab', { name: '搜索体验' }));
+
+    const diversitySwitch = screen.getByRole('switch', { name: '启用首屏来源配额' });
+    const maxPerSourceInput = screen.getByRole('spinbutton', { name: '首屏单来源上限' });
+
+    expect(diversitySwitch).not.toBeChecked();
+    expect(maxPerSourceInput).toHaveValue(16);
+    expect(maxPerSourceInput).toHaveAttribute('min', '1');
+    expect(maxPerSourceInput).toHaveAttribute('max', '48');
+    expect(maxPerSourceInput).toHaveAttribute('step', '1');
+
+    await user.click(diversitySwitch);
+    fireEvent.change(maxPerSourceInput, { target: { value: '12' } });
+    await user.click(screen.getByRole('button', { name: '保存来源配额' }));
+
+    expect(actions.setEnableSearchSourceDiversity).toHaveBeenCalledWith(true);
+    expect(actions.setSearchFirstPageMaxPerSource).toHaveBeenCalledWith(12);
+    expect(actions.handleSaveSearchSourceDiversitySettings).toHaveBeenCalled();
   });
 
   it('展示单输入框令牌配置并允许查看当前令牌', async () => {

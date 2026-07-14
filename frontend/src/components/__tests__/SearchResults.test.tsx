@@ -11,6 +11,7 @@ import {
 import SearchResults from "@/components/SearchResults";
 import { SearchService } from "@/services/searchService";
 import type { SearchParams, SearchResponse } from "@/types/search";
+import type { ResourceLink } from "@/types/resource";
 
 type SearchStoreState = {
   searchResults: SearchResponse | null;
@@ -28,6 +29,8 @@ type SearchStoreState = {
   totalSources: number;
   receivedBatches: number;
   updateResourceScanTransfer: ReturnType<typeof vi.fn>;
+  updateResolvedResourceLink: ReturnType<typeof vi.fn>;
+  markResourceLinkInvalid: ReturnType<typeof vi.fn>;
 };
 
 let searchStoreState: SearchStoreState = {
@@ -92,9 +95,13 @@ let searchStoreState: SearchStoreState = {
   totalSources: 0,
   receivedBatches: 0,
   updateResourceScanTransfer: vi.fn(),
+  updateResolvedResourceLink: vi.fn(),
+  markResourceLinkInvalid: vi.fn(),
 };
 let enableResourceDetailPage = true;
 let enableResourceSourceBadges = false;
+let enableSearchSourceDiversity = false;
+let searchFirstPageMaxPerSource = 16;
 
 vi.mock("@/stores/searchStore", () => ({
   useSearchStore: () => searchStoreState,
@@ -107,6 +114,7 @@ vi.mock("@/services/searchService", () => ({
       return `/search${keyword}`;
     }),
     refreshScanTransfer: vi.fn(),
+    resolveResource: vi.fn(),
   },
 }));
 
@@ -118,6 +126,8 @@ vi.mock("@/services/systemSettingsService", () => ({
       enable_user_signup: true,
       enable_resource_detail_page: enableResourceDetailPage,
       enable_resource_source_badges: enableResourceSourceBadges,
+      enable_search_source_diversity: enableSearchSourceDiversity,
+      search_first_page_max_per_source: searchFirstPageMaxPerSource,
       public_site_url: "",
       default_copy_format_template: "",
     })),
@@ -291,9 +301,47 @@ describe("SearchResults", () => {
           ),
         };
       }),
+      updateResolvedResourceLink: vi.fn((resourceId: string, linkId: string, resolvedLink: ResourceLink) => {
+        const results = searchStoreState.searchResults;
+        if (!results) return;
+        searchStoreState.searchResults = {
+          ...results,
+          resources: results.resources.map((resource) =>
+            resource.id === resourceId
+              ? {
+                  ...resource,
+                  links: resource.links.map((link) =>
+                    link.id === linkId ? { ...resolvedLink, id: linkId } : link,
+                  ),
+                }
+              : resource,
+          ),
+        };
+      }),
+      markResourceLinkInvalid: vi.fn((resourceId: string, linkId: string) => {
+        const results = searchStoreState.searchResults;
+        if (!results) return;
+        searchStoreState.searchResults = {
+          ...results,
+          resources: results.resources.map((resource) =>
+            resource.id === resourceId
+              ? {
+                  ...resource,
+                  links: resource.links.map((link) =>
+                    link.id === linkId
+                      ? { ...link, resolution: { ...link.resolution, status: "invalid" } }
+                      : link,
+                  ),
+                }
+              : resource,
+          ),
+        };
+      }),
     };
     enableResourceDetailPage = true;
     enableResourceSourceBadges = false;
+    enableSearchSourceDiversity = false;
+    searchFirstPageMaxPerSource = 16;
 
     class MockIntersectionObserver {
       observe = vi.fn();
@@ -303,6 +351,7 @@ describe("SearchResults", () => {
 
     vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
     vi.mocked(SearchService.refreshScanTransfer).mockReset();
+    vi.mocked(SearchService.resolveResource).mockReset();
     vi.mocked(SearchService.buildSearchUrl).mockClear();
     Object.defineProperty(window, "innerWidth", {
       configurable: true,
@@ -338,6 +387,29 @@ describe("SearchResults", () => {
     expect(card).toHaveTextContent("PanSearch");
     expect(sourceBadge).toHaveTextContent("PanSearch");
     expect(sourceBadge.className).toContain("text-violet");
+  });
+
+  it("passes public source diversity settings into the first-page presentation", async () => {
+    enableSearchSourceDiversity = true;
+    searchFirstPageMaxPerSource = 1;
+    const baseResource = searchStoreState.searchResults.resources[0];
+    searchStoreState.searchResults = {
+      ...searchStoreState.searchResults,
+      total: 3,
+      resources: [
+        { ...baseResource, id: "a-new", title: "A 新", source: { ...baseResource.source, id: "source-a", name: "Source A" }, published_at: "2026-03-20T00:00:00Z" },
+        { ...baseResource, id: "a-old", title: "A 旧", source: { ...baseResource.source, id: "source-a", name: "Source A" }, published_at: "2026-03-10T00:00:00Z" },
+        { ...baseResource, id: "b-old", title: "B 旧", source: { ...baseResource.source, id: "source-b", name: "Source B" }, published_at: "2026-03-01T00:00:00Z" },
+      ],
+    };
+
+    renderSearchResults();
+
+    const stage = await screen.findByTestId("search-results-stage");
+    const titles = [screen.getByText("A 新"), screen.getByText("B 旧"), screen.getByText("A 旧")];
+    expect(titles[0].compareDocumentPosition(titles[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(titles[1].compareDocumentPosition(titles[2]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(stage).toHaveTextContent("A 新");
   });
 
   it("keeps cloud type, password badge and detail entry on a single footer row", async () => {
@@ -465,112 +537,94 @@ describe("SearchResults", () => {
     expect(openSpy).not.toHaveBeenCalled();
   });
 
-  it("点击无二维码的扫码资源时先刷新，成功后再打开弹窗", async () => {
-    searchStoreState.searchResults.resources[0].links[0] = {
+  it("点击 deferred 扫码候选后解析并打开弹窗", async () => {
+    searchStoreState.searchResults.resources[0].links = [{
+      id: "lnk-primary",
       type: "quark",
-      url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
-      password: "",
-      access_mode: "scan_transfer",
-      scan_transfer: {
-        refreshable: true,
-        refresh_key: "seedhub:4259:quark:1",
-      },
-      title: "你的名字 待解析扫码资源",
-      datetime: "2026-03-15T00:00:00Z",
-    };
-    vi.mocked(SearchService.refreshScanTransfer).mockResolvedValue({
+      access_mode: "resolve_required",
+      resolution: { status: "deferred", token: "rrt-primary" },
+    }];
+    vi.mocked(SearchService.resolveResource).mockResolvedValue({
       resource_id: "resource-1",
-      link_url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
-      access_mode: "scan_transfer",
-      scan_transfer: {
-        qr_code_base64: "data:image/png;base64,new123",
-        refreshable: true,
-        refresh_key: "seedhub:4259:quark:1",
+      link_id: "lnk-primary",
+      resolution_status: "resolved",
+      link: {
+        id: "lnk-primary",
+        type: "quark",
+        url: "https://pan.quark.cn/s/resolved-scan",
+        access_mode: "scan_transfer",
+        scan_transfer: { qr_code_base64: "data:image/png;base64,new123" },
       },
     });
 
     renderSearchResults();
-    await screen.findByTestId("search-result-grid-card-wrapper");
+    fireEvent.click(await screen.findByTestId("search-result-grid-card-wrapper"));
 
-    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
-
-    expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();
-    expect(screen.getByText("取消获取")).toBeInTheDocument();
-    await waitFor(() =>
-      expect(SearchService.refreshScanTransfer).toHaveBeenCalledWith(
-        {
-          resource_id: "resource-1",
-          link_url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
-          refresh_key: "seedhub:4259:quark:1",
-        },
-        { signal: expect.any(Object) },
-      ),
-    );
-    await waitFor(() =>
-      expect(screen.getByTestId("password-modal")).toHaveTextContent(
-        "|https://www.seedhub.cc/link_start/?redirect_to=quark_scan|quark",
-      ),
+    await waitFor(() => expect(SearchService.resolveResource).toHaveBeenCalledWith(
+      { resource_id: "resource-1", link_id: "lnk-primary", resolve_token: "rrt-primary" },
+      { signal: expect.any(Object) },
+    ));
+    expect(await screen.findByTestId("password-modal")).toHaveTextContent(
+      "|https://pan.quark.cn/s/resolved-scan|quark",
     );
   });
 
-  it("点击无二维码的扫码资源刷新出二维码内容链接时直接打开链接", async () => {
-    searchStoreState.searchResults.resources[0].links[0] = {
-      type: "baidu",
-      url: "https://www.seedhub.cc/link_start/?redirect_to=baidu_scan",
-      password: "",
-      access_mode: "scan_transfer",
-      scan_transfer: {
-        refreshable: true,
-        refresh_key: "seedhub:4259:baidu:1",
-      },
-      title: "你的名字 待直跳扫码资源",
-      datetime: "2026-03-15T00:00:00Z",
-    };
-    vi.mocked(SearchService.refreshScanTransfer).mockResolvedValue({
+  it("解析出 HTTP 目标后直接打开", async () => {
+    const openSpy = vi.spyOn(window, "open").mockReturnValue({ opener: null } as Window);
+    searchStoreState.searchResults.resources[0].links = [{
+      id: "lnk-http",
+      type: "quark",
+      access_mode: "resolve_required",
+      resolution: { status: "deferred", token: "rrt-http" },
+    }];
+    vi.mocked(SearchService.resolveResource).mockResolvedValue({
       resource_id: "resource-1",
-      link_url: "https://www.seedhub.cc/link_start/?redirect_to=baidu_scan",
-      access_mode: "scan_transfer",
-      scan_transfer: {
-        qr_code_value: "https://pan.baidu.com/s/1XG5rTVKw14x2axO6pBabc",
-        refreshable: true,
-        refresh_key: "seedhub:4259:baidu:1",
-      },
+      link_id: "lnk-http",
+      resolution_status: "resolved",
+      link: { id: "lnk-http", type: "quark", url: "https://pan.quark.cn/s/http", access_mode: "direct_open" },
     });
-    const openSpy = vi.spyOn(window, "open").mockReturnValue({
-      opener: null,
-    } as Window);
 
     renderSearchResults();
-    await screen.findByTestId("search-result-grid-card-wrapper");
-
-    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
-
-    expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();
-    expect(screen.getByText("取消获取")).toBeInTheDocument();
-    await waitFor(() =>
-      expect(openSpy).toHaveBeenCalledWith(
-        "https://pan.baidu.com/s/1XG5rTVKw14x2axO6pBabc",
-        "_blank",
-      ),
-    );
-    expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByTestId("search-result-grid-card-wrapper"));
+    await waitFor(() => expect(openSpy).toHaveBeenCalledWith("https://pan.quark.cn/s/http", "_blank"));
   });
 
-  it("点击取消获取会中止无二维码扫码资源刷新", async () => {
-    searchStoreState.searchResults.resources[0].links[0] = {
-      type: "quark",
-      url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
-      password: "",
-      access_mode: "scan_transfer",
-      scan_transfer: {
-        refreshable: true,
-        refresh_key: "seedhub:4259:quark:1",
+  it("解析出 magnet 目标后打开统一访问弹窗", async () => {
+    searchStoreState.searchResults.resources[0].links = [{
+      id: "lnk-magnet",
+      type: "magnet",
+      access_mode: "resolve_required",
+      resolution: { status: "deferred", token: "rrt-magnet" },
+    }];
+    vi.mocked(SearchService.resolveResource).mockResolvedValue({
+      resource_id: "resource-1",
+      link_id: "lnk-magnet",
+      resolution_status: "resolved",
+      link: {
+        id: "lnk-magnet",
+        type: "magnet",
+        url: "magnet:?xt=urn:btih:resolved",
+        access_mode: "direct_open",
       },
-      title: "你的名字 可取消扫码资源",
-      datetime: "2026-03-15T00:00:00Z",
-    };
+    });
+
+    renderSearchResults();
+    fireEvent.click(await screen.findByTestId("search-result-grid-card-wrapper"));
+
+    expect(await screen.findByTestId("password-modal")).toHaveTextContent(
+      "|magnet:?xt=urn:btih:resolved|magnet",
+    );
+  });
+
+  it("取消 deferred 解析会中止请求且不更新候选", async () => {
+    searchStoreState.searchResults.resources[0].links = [{
+      id: "lnk-cancel",
+      type: "quark",
+      access_mode: "resolve_required",
+      resolution: { status: "deferred", token: "rrt-cancel" },
+    }];
     let capturedSignal: AbortSignal | undefined;
-    vi.mocked(SearchService.refreshScanTransfer).mockImplementation((_, options?: { signal?: AbortSignal }) => {
+    vi.mocked(SearchService.resolveResource).mockImplementation((_, options) => {
       capturedSignal = options?.signal;
       return new Promise((_, reject) => {
         options?.signal?.addEventListener("abort", () => {
@@ -583,113 +637,92 @@ describe("SearchResults", () => {
     });
 
     renderSearchResults();
-    await screen.findByTestId("search-result-grid-card-wrapper");
-
-    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
-    const cancelButton = await screen.findByRole("button", { name: "取消获取" });
-    fireEvent.click(cancelButton);
+    fireEvent.click(await screen.findByTestId("search-result-grid-card-wrapper"));
+    fireEvent.click(await screen.findByRole("button", { name: "取消获取" }));
 
     await waitFor(() => expect(capturedSignal?.aborted).toBe(true));
-    expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();
+    expect(searchStoreState.updateResolvedResourceLink).not.toHaveBeenCalled();
+    expect(searchStoreState.markResourceLinkInvalid).not.toHaveBeenCalled();
   });
 
-  it("只预热前 6 条 SeedHub 待解析扫码资源", async () => {
-    searchStoreState.searchResults = {
-      ...searchStoreState.searchResults!,
-      total: 8,
-      resources: Array.from({ length: 8 }, (_, index) => ({
-        ...searchStoreState.searchResults!.resources[0],
-        id: `seedhub-resource-${index + 1}`,
-        title: `SeedHub 资源 ${index + 1}`,
-        source: { type: "plugin", id: "sidhub", name: "SeedHub" },
-        links: [
-          {
-            type: "quark",
-            url: `https://www.seedhub.cc/link_start/?redirect_to=quark_scan_${index + 1}`,
-            password: "",
-            access_mode: "scan_transfer" as const,
-            scan_transfer: {
-              refreshable: true,
-              refresh_key: `seedhub:4259:quark:${index + 1}`,
-            },
-            title: `SeedHub 资源 ${index + 1}`,
-            datetime: "2026-03-15T00:00:00Z",
-          },
-        ],
-        meta: { sid_hub_movie_id: "4259" },
-      })),
-    };
-    vi.mocked(SearchService.refreshScanTransfer).mockResolvedValue({
-      access_mode: "scan_transfer",
-      link_url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
-      scan_transfer: {
-        qr_code_base64: "data:image/png;base64,prewarm",
-      },
-    });
+  it("页面加载时不会预热 deferred 候选", async () => {
+    searchStoreState.searchResults.resources[0].links = [{
+      id: "lnk-no-prewarm",
+      type: "quark",
+      access_mode: "resolve_required",
+      resolution: { status: "deferred", token: "rrt-no-prewarm" },
+    }];
 
     renderSearchResults();
-    await screen.findByText("SeedHub 资源 1");
+    await screen.findByTestId("search-result-grid-card-wrapper");
 
-    await waitFor(() => expect(SearchService.refreshScanTransfer).toHaveBeenCalledTimes(6));
-    expect(SearchService.refreshScanTransfer).not.toHaveBeenCalledWith(
-      expect.objectContaining({ refresh_key: "seedhub:4259:quark:7" }),
+    expect(SearchService.resolveResource).not.toHaveBeenCalled();
+    expect(SearchService.refreshScanTransfer).not.toHaveBeenCalled();
+  });
+
+  it("主候选 RESOURCE_INVALID 后只尝试一个备用候选", async () => {
+    searchStoreState.searchResults.resources[0].links = [
+      { id: "lnk-primary", type: "quark", access_mode: "resolve_required", resolution: { status: "deferred", token: "rrt-primary" } },
+      { id: "lnk-backup", type: "quark", access_mode: "resolve_required", resolution: { status: "deferred", token: "rrt-backup" } },
+      { id: "lnk-third", type: "quark", access_mode: "resolve_required", resolution: { status: "deferred", token: "rrt-third" } },
+    ];
+    vi.mocked(SearchService.resolveResource)
+      .mockRejectedValueOnce({ response: { status: 410, data: { error_code: "RESOURCE_INVALID" } } })
+      .mockResolvedValueOnce({
+        resource_id: "resource-1",
+        link_id: "lnk-backup",
+        resolution_status: "resolved",
+        link: { id: "lnk-backup", type: "quark", url: "https://pan.quark.cn/s/backup", access_mode: "direct_open" },
+      });
+    const openSpy = vi.spyOn(window, "open").mockReturnValue({ opener: null } as Window);
+
+    renderSearchResults();
+    fireEvent.click(await screen.findByTestId("search-result-grid-card-wrapper"));
+
+    await waitFor(() => expect(SearchService.resolveResource).toHaveBeenCalledTimes(2));
+    expect(searchStoreState.markResourceLinkInvalid).toHaveBeenCalledWith("resource-1", "lnk-primary");
+    expect(openSpy).toHaveBeenCalledWith("https://pan.quark.cn/s/backup", "_blank");
+    expect(SearchService.resolveResource).not.toHaveBeenCalledWith(
+      expect.objectContaining({ link_id: "lnk-third" }),
       expect.anything(),
     );
   });
 
-  it("预热成功后点击资源会直接使用已回写的二维码链接", async () => {
-    searchStoreState.searchResults.resources[0] = {
-      ...searchStoreState.searchResults.resources[0],
-      source: { type: "plugin", id: "sidhub", name: "SeedHub" },
-      links: [
-        {
-          type: "quark",
-          url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
-          password: "",
-          access_mode: "scan_transfer",
-          scan_transfer: {
-            refreshable: true,
-            refresh_key: "seedhub:4259:quark:1",
-          },
-          title: "你的名字 待预热扫码资源",
-          datetime: "2026-03-15T00:00:00Z",
-        },
-      ],
-      meta: { sid_hub_movie_id: "4259" },
-    };
-    vi.mocked(SearchService.refreshScanTransfer).mockResolvedValue({
-      resource_id: "resource-1",
-      link_url: "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
-      access_mode: "scan_transfer",
-      scan_transfer: {
-        qr_code_value: "https://pan.quark.cn/s/prewarmed",
-        refreshable: true,
-        refresh_key: "seedhub:4259:quark:1",
-      },
+  it.each([
+    ["RESOURCE_RESOLVE_TOKEN_EXPIRED", 410],
+    ["RESOURCE_RESOLVE_TIMEOUT", 504],
+  ])("%s 不淘汰候选也不尝试备用", async (errorCode, status) => {
+    searchStoreState.searchResults.resources[0].links = [
+      { id: "lnk-primary", type: "quark", access_mode: "resolve_required", resolution: { status: "deferred", token: "rrt-primary" } },
+      { id: "lnk-backup", type: "quark", access_mode: "resolve_required", resolution: { status: "deferred", token: "rrt-backup" } },
+    ];
+    vi.mocked(SearchService.resolveResource).mockRejectedValue({
+      message: "解析失败",
+      response: { status, data: { error_code: errorCode } },
     });
-    const openSpy = vi.spyOn(window, "open").mockReturnValue({
-      opener: null,
-    } as Window);
 
-    const view = renderSearchResults();
-    await waitFor(() =>
-      expect(searchStoreState.updateResourceScanTransfer).toHaveBeenCalledWith(
-        "resource-1",
-        "https://www.seedhub.cc/link_start/?redirect_to=quark_scan",
-        expect.objectContaining({ qr_code_value: "https://pan.quark.cn/s/prewarmed" }),
-      ),
-    );
-    view.rerender(
-      <MemoryRouter initialEntries={["/search?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97"]}>
-        <Routes>
-          <Route path="/search" element={<SearchResults />} />
-          <Route path="/resource/:resourceId" element={<DetailRouteProbe />} />
-        </Routes>
-      </MemoryRouter>,
-    );
-
+    renderSearchResults();
     fireEvent.click(await screen.findByTestId("search-result-grid-card-wrapper"));
-    expect(openSpy).toHaveBeenCalledWith("https://pan.quark.cn/s/prewarmed", "_blank");
+
+    await waitFor(() => expect(SearchService.resolveResource).toHaveBeenCalledTimes(1));
+    expect(searchStoreState.markResourceLinkInvalid).not.toHaveBeenCalled();
+  });
+
+  it("两个候选均失效时最多调用 resolver 两次", async () => {
+    searchStoreState.searchResults.resources[0].links = [
+      { id: "lnk-1", type: "quark", access_mode: "resolve_required", resolution: { status: "deferred", token: "rrt-1" } },
+      { id: "lnk-2", type: "quark", access_mode: "resolve_required", resolution: { status: "deferred", token: "rrt-2" } },
+      { id: "lnk-3", type: "quark", access_mode: "resolve_required", resolution: { status: "deferred", token: "rrt-3" } },
+    ];
+    vi.mocked(SearchService.resolveResource).mockRejectedValue({
+      response: { status: 410, data: { error_code: "RESOURCE_INVALID" } },
+    });
+
+    renderSearchResults();
+    fireEvent.click(await screen.findByTestId("search-result-grid-card-wrapper"));
+
+    await waitFor(() => expect(SearchService.resolveResource).toHaveBeenCalledTimes(2));
+    expect(searchStoreState.markResourceLinkInvalid).toHaveBeenCalledTimes(2);
   });
 
   it("opens the scan transfer QR code value directly when it is a URL", async () => {
