@@ -422,3 +422,25 @@
     - frontend/src/utils/resourceDisplay.ts
     - frontend/src/utils/resourceTime.ts
     - frontend/src/utils/searchResultSorter.ts
+
+- [2026-07-15 09:50] feat(sidhub): 完善每类资源限量与同名去重
+  - Body: 新增 SeedHub 每类资源数量配置、同名最新候选选择和缓存隔离，并在插件详情窗口提供统一校验。
+  - Footer: 破坏性变更: SeedHub 同名资源不再返回多个备用候选，且每种资源类型默认仅保留前 10 条。
+  - Footer: Migration: 如需更多候选，请在插件详情窗口调整每类资源获取数量并重新搜索。
+  - Files:
+    - backend/api/plugin_runtime_config_handler_test.go
+    - backend/go.mod
+    - backend/model/plugin_manifest.go
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - backend/service/plugin_runtime_config_service.go
+    - backend/service/plugin_runtime_config_service_test.go
+    - docs/seedhub-per-type-limit-and-latest-dedup-development-plan.md
+    - frontend/src/components/admin/PluginManageDialog.tsx
+    - frontend/src/components/admin/PluginManagementView.tsx
+    - frontend/src/components/admin/__tests__/PluginManageDialog.test.tsx
+    - frontend/src/components/admin/__tests__/PluginManagementView.test.tsx
+    - frontend/src/components/admin/pluginRuntimeConfig.test.ts
+    - frontend/src/components/admin/pluginRuntimeConfig.ts
+    - frontend/src/hooks/usePluginManageController.ts
+    - frontend/src/types/plugin.ts

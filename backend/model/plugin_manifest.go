@@ -2,14 +2,18 @@ package model
 
 // PluginConfigField 描述插件运行配置项，供后台插件中心生成说明和表单。
 type PluginConfigField struct {
-	Key         string      `json:"key" sonic:"key"`
-	Label       string      `json:"label" sonic:"label"`
-	Type        string      `json:"type" sonic:"type"`
-	Required    bool        `json:"required" sonic:"required"`
-	Default     interface{} `json:"default,omitempty" sonic:"default,omitempty"`
-	Description string      `json:"description,omitempty" sonic:"description,omitempty"`
-	Secret      bool        `json:"secret" sonic:"secret"`
-	Group       string      `json:"group,omitempty" sonic:"group,omitempty"`
+	Key               string      `json:"key" sonic:"key"`
+	Label             string      `json:"label" sonic:"label"`
+	Type              string      `json:"type" sonic:"type"`
+	Required          bool        `json:"required" sonic:"required"`
+	Default           interface{} `json:"default,omitempty" sonic:"default,omitempty"`
+	Description       string      `json:"description,omitempty" sonic:"description,omitempty"`
+	Secret            bool        `json:"secret" sonic:"secret"`
+	Group             string      `json:"group,omitempty" sonic:"group,omitempty"`
+	Minimum           *float64    `json:"minimum,omitempty" sonic:"minimum,omitempty"`
+	Maximum           *float64    `json:"maximum,omitempty" sonic:"maximum,omitempty"`
+	Integer           bool        `json:"integer,omitempty" sonic:"integer,omitempty"`
+	LessThanOrEqualTo string      `json:"less_than_or_equal_to,omitempty" sonic:"less_than_or_equal_to,omitempty"`
 }
 
 // ResourceDescriptor 描述插件产出的资源来源和目标形态。

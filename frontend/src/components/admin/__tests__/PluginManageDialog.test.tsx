@@ -118,11 +118,26 @@ const builtinPlugins: PluginInfo[] = [
         description: '搜索卡片数量',
       },
       {
+        key: 'max_resource_entries_per_type',
+        label: '每类资源获取数量',
+        type: 'number',
+        required: false,
+        default: 10,
+        minimum: 1,
+        maximum: 40,
+        integer: true,
+        description: '每类资源获取数量',
+      },
+      {
         key: 'pre_resolved_link_start_per_type',
         label: '每类完整解析数量',
         type: 'number',
         required: false,
         default: 3,
+        minimum: 0,
+        maximum: 20,
+        integer: true,
+        less_than_or_equal_to: 'max_resource_entries_per_type',
         description: '每类完整解析数量',
       },
       {
@@ -460,6 +475,7 @@ describe('PluginManageDialog', () => {
     fireEvent.click(within(sidHubCard).getByRole('button', { name: /详情/ }));
 
     const preResolveInput = await screen.findByLabelText('每类完整解析数量');
+    fireEvent.change(screen.getByLabelText('每类资源获取数量'), { target: { value: '10' } });
     fireEvent.change(preResolveInput, { target: { value: '5' } });
     fireEvent.change(screen.getByLabelText('域名策略'), { target: { value: 'fallback_only' } });
     fireEvent.click(screen.getByRole('button', { name: '保存配置' }));
@@ -472,11 +488,36 @@ describe('PluginManageDialog', () => {
           body: JSON.stringify({
             config: {
               max_search_cards: 5,
+              max_resource_entries_per_type: 10,
               pre_resolved_link_start_per_type: 5,
               base_url_strategy: 'fallback_only',
             },
           }),
         })
+      );
+    });
+  });
+
+  it('展示每类资源数量边界并拦截无效的预解析数量', async () => {
+    renderDialog();
+    await waitForCatalogReady();
+
+    const sidHubCard = getPluginCard('sidhub');
+    fireEvent.click(within(sidHubCard).getByRole('button', { name: /详情/ }));
+
+    const resourceLimitInput = await screen.findByLabelText('每类资源获取数量');
+    expect(resourceLimitInput).toHaveAttribute('min', '1');
+    expect(resourceLimitInput).toHaveAttribute('max', '40');
+    expect(resourceLimitInput).toHaveAttribute('step', '1');
+
+    fireEvent.change(resourceLimitInput, { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText('每类完整解析数量'), { target: { value: '11' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存配置' }));
+
+    await waitFor(() => {
+      expect(global.fetch).not.toHaveBeenCalledWith(
+        '/api/admin/plugins/sidhub/config',
+        expect.objectContaining({ method: 'PUT' }),
       );
     });
   });

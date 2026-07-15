@@ -215,8 +215,8 @@ func TestSidHubPluginManifest(t *testing.T) {
 	if manifest.ManifestStatus != "complete" {
 		t.Fatalf("期望插件清单完整，实际状态为 %q", manifest.ManifestStatus)
 	}
-	if len(manifest.ConfigSchema) != 6 {
-		t.Fatalf("期望 SeedHub 声明 6 个运行配置项，实际为 %#v", manifest.ConfigSchema)
+	if len(manifest.ConfigSchema) != 7 {
+		t.Fatalf("期望 SeedHub 声明 7 个运行配置项，实际为 %#v", manifest.ConfigSchema)
 	}
 	fieldsByKey := make(map[string]model.PluginConfigField, len(manifest.ConfigSchema))
 	for _, field := range manifest.ConfigSchema {
@@ -224,6 +224,7 @@ func TestSidHubPluginManifest(t *testing.T) {
 	}
 	expectedFields := map[string]float64{
 		"max_search_cards":                 float64(maxSearchCards),
+		"max_resource_entries_per_type":    float64(defaultMaxResourceEntriesPerType),
 		"pre_resolved_link_start_per_type": float64(defaultPreResolvedLinkStartPerType),
 		"detail_concurrency":               float64(defaultDetailConcurrency),
 		"detail_timeout_seconds":           defaultDetailTimeout.Seconds(),
@@ -234,6 +235,14 @@ func TestSidHubPluginManifest(t *testing.T) {
 		if !exists || field.Type != "number" || field.Default != expectedDefault {
 			t.Fatalf("期望声明 %s 配置，实际为 %#v", key, manifest.ConfigSchema)
 		}
+	}
+	resourceLimitField, exists := fieldsByKey["max_resource_entries_per_type"]
+	if !exists || resourceLimitField.Minimum == nil || *resourceLimitField.Minimum != 1 || resourceLimitField.Maximum == nil || *resourceLimitField.Maximum != maxResourceEntriesPerType || !resourceLimitField.Integer {
+		t.Fatalf("期望声明每类资源数量约束，实际为 %#v", resourceLimitField)
+	}
+	preResolveField := fieldsByKey["pre_resolved_link_start_per_type"]
+	if preResolveField.Minimum == nil || *preResolveField.Minimum != 0 || preResolveField.Maximum == nil || *preResolveField.Maximum != maxPreResolvedLinkStartPerType || !preResolveField.Integer || preResolveField.LessThanOrEqualTo != "max_resource_entries_per_type" {
+		t.Fatalf("期望声明预解析数量约束，实际为 %#v", preResolveField)
 	}
 	baseURLStrategyField, exists := fieldsByKey["base_url_strategy"]
 	if !exists || baseURLStrategyField.Type != "string" || baseURLStrategyField.Default != defaultBaseURLStrategy {
@@ -573,37 +582,120 @@ func TestSidHubBuildsOneResultPerDownloadEntry(t *testing.T) {
 	}
 }
 
-func TestBuildSidHubGroupsDuplicateCandidatesAndKeepsAllLinks(t *testing.T) {
+func TestBuildSidHubGroupsKeepOnlyNewestCandidate(t *testing.T) {
 	card := sidHubMovie{ID: "4259", Title: "你的名字。", MediaType: "anime"}
 	newer := time.Date(2026, 7, 10, 12, 0, 0, 0, sidHubLocation)
+	older := time.Date(2026, 7, 8, 12, 0, 0, 0, sidHubLocation)
 	entries := []sidHubLinkEntry{
 		{
-			Link:             model.Link{Type: "quark", URL: "https://www.seedhub.cc/link_start/?redirect_to=first"},
+			Link:             model.Link{Type: "quark", URL: "https://pan.quark.cn/s/older"},
 			Title:            "【你的名字 4K】",
 			Index:            1,
-			ResolutionStatus: sidHubResolutionDeferred,
-			Datetime:         newer,
+			ResolutionStatus: sidHubResolutionResolved,
+			Datetime:         older,
 		},
 		{
-			Link:             model.Link{Type: "quark", URL: "https://pan.quark.cn/s/resolved"},
-			Title:            "你的名字4K",
+			Link:             model.Link{Type: "quark", URL: "https://www.seedhub.cc/link_start/?redirect_to=newer"},
+			Title:            "你的名字 [4k]",
 			Index:            2,
-			ResolutionStatus: sidHubResolutionResolved,
+			ResolutionStatus: sidHubResolutionDeferred,
+			Datetime:         newer,
 		},
 	}
 
 	results := buildExpandedResults(card, entries)
-	if len(results) != 1 || len(results[0].Links) != 2 {
-		t.Fatalf("expected one group with both candidates, got %#v", results)
+	if len(results) != 1 || len(results[0].Links) != 1 {
+		t.Fatalf("期望同名只保留一个候选，实际为 %#v", results)
 	}
-	if results[0].Links[0].URL != "https://pan.quark.cn/s/resolved" {
-		t.Fatalf("resolved candidate must be first, got %#v", results[0].Links)
+	if results[0].Links[0].URL != entries[1].Link.URL {
+		t.Fatalf("最新候选应优先于已解析旧候选，实际为 %#v", results[0].Links)
 	}
-	if results[0].Links[1].ResolveTarget == nil || results[0].Links[1].ResolveTarget.Status != sidHubResolutionDeferred {
-		t.Fatalf("deferred candidate must retain resolver target, got %#v", results[0].Links[1])
+	if results[0].Links[0].ResolveTarget == nil || results[0].Links[0].ResolveTarget.Status != sidHubResolutionDeferred {
+		t.Fatalf("待解析最新候选必须保留 resolver target，实际为 %#v", results[0].Links[0])
 	}
-	if results[0].Meta["sid_hub_candidate_count"] != 2 {
-		t.Fatalf("expected candidate count metadata, got %#v", results[0].Meta)
+	if results[0].Meta["sid_hub_candidate_count"] != 1 {
+		t.Fatalf("同名结果候选数必须为一，实际为 %#v", results[0].Meta)
+	}
+}
+
+func TestNormalizeSidHubGroupTitleHandlesWidthCaseAndVersionBoundaries(t *testing.T) {
+	tests := []struct {
+		left  string
+		right string
+		equal bool
+	}{
+		{left: "凡人修仙传【4K】", right: "凡人修仙传 [4k]", equal: true},
+		{left: "ＦＡＮＲＥＮ ４Ｋ", right: "fanren4k", equal: true},
+		{left: "凡人修仙传 更新176集", right: "凡人修仙传 更新175集", equal: false},
+		{left: "凡人修仙传 4K", right: "凡人修仙传 1080P", equal: false},
+	}
+
+	for _, tc := range tests {
+		actual := normalizeSidHubGroupTitle(tc.left) == normalizeSidHubGroupTitle(tc.right)
+		if actual != tc.equal {
+			t.Fatalf("标题 %q 与 %q 的归一化相等性为 %v", tc.left, tc.right, actual)
+		}
+	}
+}
+
+func TestSelectLatestSidHubEntriesDoesNotBackfillPastPerTypeLimit(t *testing.T) {
+	entries := make([]sidHubLinkEntry, 0, 11)
+	for index := 1; index <= 11; index++ {
+		title := fmt.Sprintf("凡人修仙传 第%d集", index)
+		if index == 2 {
+			title = "凡人修仙传 第1集"
+		}
+		entries = append(entries, sidHubLinkEntry{
+			Link:     model.Link{Type: "quark", URL: fmt.Sprintf("https://pan.quark.cn/s/%02d", index)},
+			Title:    title,
+			Index:    index,
+			Datetime: time.Date(2026, 7, index, 12, 0, 0, 0, sidHubLocation),
+		})
+	}
+
+	selected := selectLatestSidHubEntries("4259", limitSidHubEntriesPerType(entries, 10))
+	if len(selected) != 9 {
+		t.Fatalf("前 10 条去重后应只剩 9 条，实际为 %#v", selected)
+	}
+	for _, entry := range selected {
+		if strings.HasSuffix(entry.Link.URL, "/11") {
+			t.Fatalf("去重后不应从第 11 条补位，实际为 %#v", selected)
+		}
+	}
+}
+
+func TestSelectLatestSidHubEntriesUsesOriginalOrderWhenTimesAreUnknown(t *testing.T) {
+	entries := []sidHubLinkEntry{
+		{Link: model.Link{Type: "quark", URL: "https://pan.quark.cn/s/first"}, Title: "凡人修仙传 4K", Index: 1},
+		{Link: model.Link{Type: "quark", URL: "https://pan.quark.cn/s/second"}, Title: "凡人修仙传 [4k]", Index: 2},
+	}
+
+	selected := selectLatestSidHubEntries("4259", entries)
+	if len(selected) != 1 || selected[0].Link.URL != entries[0].Link.URL {
+		t.Fatalf("未知时间应保留原始顺序更靠前的候选，实际为 %#v", selected)
+	}
+}
+
+func TestSelectLatestSidHubEntriesSkipsKnownInvalidCandidate(t *testing.T) {
+	entries := []sidHubLinkEntry{
+		{
+			Link:             model.Link{Type: "quark", URL: "https://pan.quark.cn/s/invalid"},
+			Title:            "凡人修仙传 4K",
+			Index:            1,
+			ResolutionStatus: "invalid",
+			Datetime:         time.Date(2026, 7, 14, 12, 0, 0, 0, sidHubLocation),
+		},
+		{
+			Link:     model.Link{Type: "quark", URL: "https://pan.quark.cn/s/available"},
+			Title:    "凡人修仙传 [4k]",
+			Index:    2,
+			Datetime: time.Date(2026, 7, 13, 12, 0, 0, 0, sidHubLocation),
+		},
+	}
+
+	selected := selectLatestSidHubEntries("4259", entries)
+	if len(selected) != 1 || selected[0].Link.URL != entries[1].Link.URL {
+		t.Fatalf("已知失效候选应被排除，实际为 %#v", selected)
 	}
 }
 
@@ -2746,5 +2838,125 @@ func TestResolveSidHubRuntimeConfigClampsSearchCardsAndBaseURLStrategy(t *testin
 	}
 	if fallbackConfig.BaseURLStrategy != defaultBaseURLStrategy {
 		t.Fatalf("期望非法 base_url_strategy 回落默认值，实际为 %q", fallbackConfig.BaseURLStrategy)
+	}
+}
+
+func TestResolveSidHubRuntimeConfigAppliesPerTypeResourceLimit(t *testing.T) {
+	defaults := resolveSidHubRuntimeConfig(nil)
+	if defaults.MaxResourceEntriesPerType != defaultMaxResourceEntriesPerType {
+		t.Fatalf("期望每类资源数量默认值为 %d，实际为 %d", defaultMaxResourceEntriesPerType, defaults.MaxResourceEntriesPerType)
+	}
+
+	clamped := resolveSidHubRuntimeConfig(map[string]interface{}{
+		"plugin_runtime_config": map[string]interface{}{
+			"max_resource_entries_per_type":    99,
+			"pre_resolved_link_start_per_type": 20,
+		},
+	})
+	if clamped.MaxResourceEntriesPerType != maxResourceEntriesPerType || clamped.PreResolvedLinkStartPerType != maxPreResolvedLinkStartPerType {
+		t.Fatalf("期望上限配置被收敛，实际为 %#v", clamped)
+	}
+
+	legacy := resolveSidHubRuntimeConfig(map[string]interface{}{
+		"plugin_runtime_config": map[string]interface{}{
+			"max_resource_entries_per_type":    10,
+			"pre_resolved_link_start_per_type": 20,
+		},
+	})
+	if legacy.MaxResourceEntriesPerType != 10 || legacy.PreResolvedLinkStartPerType != 10 {
+		t.Fatalf("期望历史预解析值在运行时不超过资源数量，实际为 %#v", legacy)
+	}
+
+	invalid := resolveSidHubRuntimeConfig(map[string]interface{}{
+		"plugin_runtime_config": map[string]interface{}{
+			"max_resource_entries_per_type": 0,
+		},
+	})
+	if invalid.MaxResourceEntriesPerType != defaultMaxResourceEntriesPerType {
+		t.Fatalf("期望非法数量回落默认值，实际为 %#v", invalid)
+	}
+}
+
+func TestBuildSidHubSearchCacheKeyIncludesPerTypeResourceLimit(t *testing.T) {
+	baseURLs := []string{"https://sidhub.cc", "https://www.seedhub.cc"}
+	baseConfig := sidHubRuntimeConfig{
+		PreResolvedLinkStartPerType: 0,
+		MaxResourceEntriesPerType:   10,
+		MaxSearchCards:              maxSearchCards,
+		BaseURLStrategy:             defaultBaseURLStrategy,
+		DetailConcurrency:           defaultDetailConcurrency,
+		DetailTimeout:               defaultDetailTimeout,
+		DetailTotalBudget:           defaultDetailTotalBudget,
+	}
+	keyWithTen := buildSidHubSearchCacheKey("凡人修仙传", baseConfig, baseURLs)
+	keyWithTenAgain := buildSidHubSearchCacheKey("凡人修仙传", baseConfig, baseURLs)
+	if keyWithTen != keyWithTenAgain {
+		t.Fatalf("相同配置应生成同一缓存键，实际为 %q 和 %q", keyWithTen, keyWithTenAgain)
+	}
+
+	baseConfig.MaxResourceEntriesPerType = 5
+	keyWithFive := buildSidHubSearchCacheKey("凡人修仙传", baseConfig, baseURLs)
+	if keyWithFive == keyWithTen {
+		t.Fatalf("不同每类资源数量不得复用缓存键，实际为 %q", keyWithFive)
+	}
+}
+
+func TestLimitSidHubEntriesPerTypeKeepsOnlyLeadingEntriesOfEachType(t *testing.T) {
+	entries := make([]sidHubLinkEntry, 0, 27)
+	for index := 1; index <= 12; index++ {
+		entries = append(entries, sidHubLinkEntry{
+			Link:  model.Link{Type: "quark", URL: fmt.Sprintf("https://www.seedhub.cc/link_start/?redirect_to=quark_%02d", index)},
+			Index: index,
+		})
+	}
+	for index := 1; index <= 12; index++ {
+		entries = append(entries, sidHubLinkEntry{
+			Link:  model.Link{Type: "baidu", URL: fmt.Sprintf("https://www.seedhub.cc/link_start/?redirect_to=baidu_%02d", index)},
+			Index: 12 + index,
+		})
+	}
+	for index := 1; index <= 3; index++ {
+		entries = append(entries, sidHubLinkEntry{
+			Link:  model.Link{Type: "magnet", URL: fmt.Sprintf("magnet:?xt=urn:btih:%040d", index)},
+			Index: 24 + index,
+		})
+	}
+
+	limited := limitSidHubEntriesPerType(entries, 10)
+	counts := countSidHubEntryTypes(limited)
+	if counts["quark"] != 10 || counts["baidu"] != 10 || counts["magnet"] != 3 {
+		t.Fatalf("期望各类型独立限制，实际为 %#v", counts)
+	}
+	for _, entry := range limited {
+		if strings.Contains(entry.Link.URL, "_11") || strings.Contains(entry.Link.URL, "_12") {
+			t.Fatalf("限制范围外条目不应保留，实际为 %#v", entry)
+		}
+	}
+}
+
+func TestLimitSidHubEntriesPerTypeRunsBeforePreResolve(t *testing.T) {
+	p := NewSidHubPlugin()
+	entries := make([]sidHubLinkEntry, 0, 12)
+	for index := 1; index <= 12; index++ {
+		entries = append(entries, sidHubLinkEntry{
+			Link:  model.Link{Type: "quark", URL: fmt.Sprintf("https://www.seedhub.cc/link_start/?redirect_to=quark_%02d", index)},
+			Index: index,
+		})
+	}
+
+	fetchedURLs := make([]string, 0, 10)
+	p.SetFetcherForTest(func(targetURL string) ([]byte, error) {
+		fetchedURLs = append(fetchedURLs, targetURL)
+		return []byte(`<a href="https://pan.quark.cn/s/resolved">打开</a>`), nil
+	})
+
+	resolved := p.resolveLinkStartEntries(context.Background(), limitSidHubEntriesPerType(entries, 10), "4259", 10)
+	if len(resolved) != 10 || len(fetchedURLs) != 10 {
+		t.Fatalf("期望只预解析前 10 条，结果=%d 请求=%d", len(resolved), len(fetchedURLs))
+	}
+	for _, targetURL := range fetchedURLs {
+		if strings.Contains(targetURL, "_11") || strings.Contains(targetURL, "_12") {
+			t.Fatalf("限制范围外链接不应预解析：%s", targetURL)
+		}
 	}
 }

@@ -246,6 +246,9 @@ export function PluginManageSurface({
                               <input
                                 aria-label={field.label || field.key}
                                 type={field.type === 'number' ? 'number' : 'text'}
+                                min={field.type === 'number' ? field.minimum : undefined}
+                                max={field.type === 'number' ? field.maximum : undefined}
+                                step={field.type === 'number' && field.integer ? 1 : undefined}
                                 className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                                 value={String(controller.pluginConfigValues[field.key] ?? field.default ?? '')}
                                 disabled={controller.isReadOnly || controller.isPluginConfigLoading || controller.isPluginConfigSaving}

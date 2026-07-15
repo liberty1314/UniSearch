@@ -37,11 +37,26 @@ const createSidHubItem = () => ({
       description: '搜索卡片数量',
     },
     {
+      key: 'max_resource_entries_per_type',
+      label: '每类资源获取数量',
+      type: 'number',
+      required: false,
+      default: 10,
+      minimum: 1,
+      maximum: 40,
+      integer: true,
+      description: '每类资源获取数量',
+    },
+    {
       key: 'pre_resolved_link_start_per_type',
       label: '每类完整解析数量',
       type: 'number',
       required: false,
       default: 3,
+      minimum: 0,
+      maximum: 20,
+      integer: true,
+      less_than_or_equal_to: 'max_resource_entries_per_type',
       description: '每类完整解析数量',
     },
     {
@@ -537,6 +552,7 @@ describe('PluginManagementView', () => {
     const drawer = await screen.findByTestId('plugin-management-drawer');
     expect(within(drawer).getByText('插件配置')).toBeInTheDocument();
     const input = await within(drawer).findByLabelText('每类完整解析数量');
+    fireEvent.change(within(drawer).getByLabelText('每类资源获取数量'), { target: { value: '10' } });
     fireEvent.change(input, { target: { value: '5' } });
     fireEvent.change(within(drawer).getByLabelText('域名策略'), { target: { value: 'primary_only' } });
     fireEvent.click(within(drawer).getByRole('button', { name: '保存配置' }));
@@ -549,11 +565,40 @@ describe('PluginManagementView', () => {
           body: JSON.stringify({
             config: {
               max_search_cards: 5,
+              max_resource_entries_per_type: 10,
               pre_resolved_link_start_per_type: 5,
               base_url_strategy: 'primary_only',
             },
           }),
         })
+      );
+    });
+  });
+
+  it('页面级详情展示边界并阻止无效 SeedHub 配置保存', async () => {
+    render(<PluginManagementView />);
+
+    await screen.findByRole('heading', { name: '插件中心' });
+    fireEvent.change(screen.getByPlaceholderText('搜索名称、描述或标签'), {
+      target: { value: 'sidhub' },
+    });
+    const sidHubRow = await screen.findByTestId('plugin-market-row-sidhub');
+    fireEvent.click(within(sidHubRow).getByRole('button', { name: '查看插件 sidhub 详情' }));
+
+    const drawer = await screen.findByTestId('plugin-management-drawer');
+    const resourceLimitInput = await within(drawer).findByLabelText('每类资源获取数量');
+    expect(resourceLimitInput).toHaveAttribute('min', '1');
+    expect(resourceLimitInput).toHaveAttribute('max', '40');
+    expect(resourceLimitInput).toHaveAttribute('step', '1');
+
+    fireEvent.change(resourceLimitInput, { target: { value: '10' } });
+    fireEvent.change(within(drawer).getByLabelText('每类完整解析数量'), { target: { value: '11' } });
+    fireEvent.click(within(drawer).getByRole('button', { name: '保存配置' }));
+
+    await waitFor(() => {
+      expect(fetch).not.toHaveBeenCalledWith(
+        '/api/admin/plugins/sidhub/config',
+        expect.objectContaining({ method: 'PUT' }),
       );
     });
   });

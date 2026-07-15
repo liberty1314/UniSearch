@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -76,6 +77,9 @@ func (s *PluginRuntimeConfigService) SaveConfig(pluginName string, manifest mode
 	if err != nil {
 		return nil, err
 	}
+	if err := validatePluginRuntimeConfig(manifest.ConfigSchema, normalized); err != nil {
+		return nil, err
+	}
 	if s == nil || s.db == nil {
 		return normalized, nil
 	}
@@ -108,6 +112,66 @@ func (s *PluginRuntimeConfigService) SaveConfig(pluginName string, manifest mode
 
 	record.ConfigJSON = string(payload)
 	return normalized, s.db.Save(&record).Error
+}
+
+func validatePluginRuntimeConfig(schema []model.PluginConfigField, config map[string]interface{}) error {
+	fieldsByKey := make(map[string]model.PluginConfigField, len(schema))
+	for _, field := range schema {
+		key := strings.TrimSpace(field.Key)
+		if key == "" {
+			continue
+		}
+		fieldsByKey[key] = field
+		if strings.ToLower(strings.TrimSpace(field.Type)) != "number" {
+			continue
+		}
+
+		value, ok := config[key].(float64)
+		if !ok {
+			continue
+		}
+		label := strings.TrimSpace(field.Label)
+		if label == "" {
+			label = key
+		}
+		if math.IsNaN(value) || math.IsInf(value, 0) {
+			return fmt.Errorf("%s必须是有限数字", label)
+		}
+		if field.Integer && math.Trunc(value) != value {
+			return fmt.Errorf("%s必须是整数", label)
+		}
+		if field.Minimum != nil && value < *field.Minimum {
+			return fmt.Errorf("%s不能小于 %v", label, *field.Minimum)
+		}
+		if field.Maximum != nil && value > *field.Maximum {
+			return fmt.Errorf("%s不能大于 %v", label, *field.Maximum)
+		}
+	}
+
+	for _, field := range schema {
+		key := strings.TrimSpace(field.Key)
+		otherKey := strings.TrimSpace(field.LessThanOrEqualTo)
+		if key == "" || otherKey == "" {
+			continue
+		}
+		left, leftOK := config[key].(float64)
+		right, rightOK := config[otherKey].(float64)
+		if !leftOK || !rightOK || left <= right {
+			continue
+		}
+
+		label := strings.TrimSpace(field.Label)
+		if label == "" {
+			label = key
+		}
+		otherLabel := strings.TrimSpace(fieldsByKey[otherKey].Label)
+		if otherLabel == "" {
+			otherLabel = otherKey
+		}
+		return fmt.Errorf("%s不能大于%s", label, otherLabel)
+	}
+
+	return nil
 }
 
 func (s *PluginRuntimeConfigService) GetConfigMap(pluginManifests map[string]model.PluginManifest) (map[string]map[string]interface{}, error) {

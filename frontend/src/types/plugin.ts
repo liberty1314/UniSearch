@@ -80,6 +80,10 @@ export interface PluginConfigField {
   description?: string;
   secret?: boolean;
   group?: string;
+  minimum?: number;
+  maximum?: number;
+  integer?: boolean;
+  less_than_or_equal_to?: string;
 }
 
 export interface ResourceDescriptor {

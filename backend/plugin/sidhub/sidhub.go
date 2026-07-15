@@ -23,6 +23,7 @@ import (
 
 	cloudscraper "github.com/Advik-B/cloudscraper/lib"
 	"github.com/PuerkitoBio/goquery"
+	"golang.org/x/text/unicode/norm"
 
 	"unisearch/model"
 	"unisearch/plugin"
@@ -34,6 +35,8 @@ const (
 	defaultPriority                    = 3
 	defaultPreResolvedLinkStartPerType = 0
 	maxPreResolvedLinkStartPerType     = 20
+	defaultMaxResourceEntriesPerType   = 10
+	maxResourceEntriesPerType          = 40
 	primaryBaseURL                     = "https://sidhub.cc"
 	fallbackBaseURL                    = "https://www.seedhub.cc"
 	maxSearchCards                     = 5
@@ -231,11 +234,16 @@ type sidHubResultGroup struct {
 
 type sidHubRuntimeConfig struct {
 	PreResolvedLinkStartPerType int
+	MaxResourceEntriesPerType   int
 	MaxSearchCards              int
 	BaseURLStrategy             string
 	DetailConcurrency           int
 	DetailTimeout               time.Duration
 	DetailTotalBudget           time.Duration
+}
+
+func sidHubConfigNumber(value float64) *float64 {
+	return &value
 }
 
 func init() {
@@ -265,12 +273,27 @@ func NewSidHubPlugin() *SidHubAsyncPlugin {
 				Group:       "解析性能",
 			},
 			{
-				Key:         "pre_resolved_link_start_per_type",
-				Label:       "每类完整解析数量",
+				Key:         "max_resource_entries_per_type",
+				Label:       "每类资源获取数量",
 				Type:        "number",
-				Default:     float64(defaultPreResolvedLinkStartPerType),
-				Description: "SeedHub 每个资源类型前 N 条 link_start 会在搜索阶段尝试完整解析；0 表示点击时再获取扫码载荷。",
+				Default:     float64(defaultMaxResourceEntriesPerType),
+				Description: "SeedHub 每种资源类型只读取原始列表前 N 条；同名去重后不补位。",
 				Group:       "解析性能",
+				Minimum:     sidHubConfigNumber(1),
+				Maximum:     sidHubConfigNumber(maxResourceEntriesPerType),
+				Integer:     true,
+			},
+			{
+				Key:               "pre_resolved_link_start_per_type",
+				Label:             "每类完整解析数量",
+				Type:              "number",
+				Default:           float64(defaultPreResolvedLinkStartPerType),
+				Description:       "SeedHub 每个资源类型前 N 条 link_start 会在搜索阶段尝试完整解析；0 表示点击时再获取扫码载荷。",
+				Group:             "解析性能",
+				Minimum:           sidHubConfigNumber(0),
+				Maximum:           sidHubConfigNumber(maxPreResolvedLinkStartPerType),
+				Integer:           true,
+				LessThanOrEqualTo: "max_resource_entries_per_type",
 			},
 			{
 				Key:         "detail_concurrency",
@@ -364,17 +387,7 @@ func (p *SidHubAsyncPlugin) doSearchWithContext(ctx context.Context, client *htt
 	if err != nil {
 		return nil, err
 	}
-	cacheKey := fmt.Sprintf(
-		"%s:%d:%d:%s:%d:%s:%s:%s",
-		strings.ToLower(trimmedKeyword),
-		runtimeConfig.PreResolvedLinkStartPerType,
-		runtimeConfig.MaxSearchCards,
-		runtimeConfig.BaseURLStrategy,
-		runtimeConfig.DetailConcurrency,
-		runtimeConfig.DetailTimeout,
-		runtimeConfig.DetailTotalBudget,
-		strings.Join(baseURLs, ","),
-	)
+	cacheKey := buildSidHubSearchCacheKey(trimmedKeyword, runtimeConfig, baseURLs)
 	if cached, ok := searchCache.Load(cacheKey); ok {
 		entry, valid := cached.(cachedSearchResult)
 		if valid && time.Now().Before(entry.expiresAt) {
@@ -528,7 +541,10 @@ func (p *SidHubAsyncPlugin) fetchDetailEntriesForCards(ctx context.Context, base
 				outcomes[index] = "parse_failure"
 				return
 			}
-			limitedEntries, _ := limitExpandedSidHubEntries(p.resolveLinkStartEntries(detailCtx, parsedEntries, card.ID, runtimeConfig.PreResolvedLinkStartPerType))
+			perTypeEntries := limitSidHubEntriesPerType(parsedEntries, runtimeConfig.MaxResourceEntriesPerType)
+			_, perTypeEntries = fillSidHubTimes(card, perTypeEntries)
+			selectedEntries := selectLatestSidHubEntries(card.ID, perTypeEntries)
+			limitedEntries, _ := limitExpandedSidHubEntries(p.resolveLinkStartEntries(detailCtx, selectedEntries, card.ID, runtimeConfig.PreResolvedLinkStartPerType))
 			entriesByCard[index] = limitedEntries
 			outcomes[index] = "success"
 		}()
@@ -1490,6 +1506,7 @@ func cloneSidHubLink(link model.Link) model.Link {
 func resolveSidHubRuntimeConfig(ext map[string]interface{}) sidHubRuntimeConfig {
 	config := sidHubRuntimeConfig{
 		PreResolvedLinkStartPerType: defaultPreResolvedLinkStartPerType,
+		MaxResourceEntriesPerType:   defaultMaxResourceEntriesPerType,
 		MaxSearchCards:              maxSearchCards,
 		BaseURLStrategy:             defaultBaseURLStrategy,
 		DetailConcurrency:           defaultDetailConcurrency,
@@ -1502,6 +1519,11 @@ func resolveSidHubRuntimeConfig(ext map[string]interface{}) sidHubRuntimeConfig 
 	rawConfig, ok := ext["plugin_runtime_config"].(map[string]interface{})
 	if !ok {
 		return config
+	}
+	if rawValue, exists := rawConfig["max_resource_entries_per_type"]; exists {
+		if value, ok := sidHubNumberToInt(rawValue); ok {
+			config.MaxResourceEntriesPerType = clampSidHubResourceEntryLimit(value)
+		}
 	}
 	if rawValue, exists := rawConfig["pre_resolved_link_start_per_type"]; exists {
 		if value, ok := sidHubNumberToInt(rawValue); ok {
@@ -1533,7 +1555,25 @@ func resolveSidHubRuntimeConfig(ext map[string]interface{}) sidHubRuntimeConfig 
 			config.DetailTotalBudget = clampSidHubDurationSeconds(value, defaultDetailTotalBudget)
 		}
 	}
+	if config.PreResolvedLinkStartPerType > config.MaxResourceEntriesPerType {
+		config.PreResolvedLinkStartPerType = config.MaxResourceEntriesPerType
+	}
 	return config
+}
+
+func buildSidHubSearchCacheKey(keyword string, config sidHubRuntimeConfig, baseURLs []string) string {
+	return fmt.Sprintf(
+		"v2:%s:%d:%d:%d:%s:%d:%s:%s:%s",
+		strings.ToLower(strings.TrimSpace(keyword)),
+		config.PreResolvedLinkStartPerType,
+		config.MaxResourceEntriesPerType,
+		config.MaxSearchCards,
+		config.BaseURLStrategy,
+		config.DetailConcurrency,
+		config.DetailTimeout,
+		config.DetailTotalBudget,
+		strings.Join(baseURLs, ","),
+	)
 }
 
 func sidHubNumberToInt(value interface{}) (int, bool) {
@@ -1582,6 +1622,16 @@ func clampSidHubPreResolvedLimit(value int) int {
 	}
 	if value > maxPreResolvedLinkStartPerType {
 		return maxPreResolvedLinkStartPerType
+	}
+	return value
+}
+
+func clampSidHubResourceEntryLimit(value int) int {
+	if value < 1 {
+		return defaultMaxResourceEntriesPerType
+	}
+	if value > maxResourceEntriesPerType {
+		return maxResourceEntriesPerType
 	}
 	return value
 }
@@ -2004,6 +2054,7 @@ func buildExpandedResultsAt(card sidHubMovie, entries []sidHubLinkEntry, fetched
 			entries[index].Index = index + 1
 		}
 	}
+	entries = selectLatestSidHubEntries(card.ID, entries)
 	groups := groupSidHubEntries(card, entries)
 	results := make([]model.SearchResult, 0, len(groups))
 	for _, group := range groups {
@@ -2045,23 +2096,68 @@ func groupSidHubEntries(card sidHubMovie, entries []sidHubLinkEntry) []sidHubRes
 		sort.SliceStable(groups[index].Entries, func(leftIndex int, rightIndex int) bool {
 			left := groups[index].Entries[leftIndex]
 			right := groups[index].Entries[rightIndex]
-			leftRank := sidHubCandidateStatusRank(left.ResolutionStatus)
-			rightRank := sidHubCandidateStatusRank(right.ResolutionStatus)
-			if leftRank != rightRank {
-				return leftRank < rightRank
-			}
-			leftKnown := !left.Datetime.IsZero()
-			rightKnown := !right.Datetime.IsZero()
-			if leftKnown != rightKnown {
-				return leftKnown
-			}
-			if !left.Datetime.Equal(right.Datetime) {
-				return left.Datetime.After(right.Datetime)
-			}
-			return left.Index < right.Index
+			return sidHubEntryIsNewer(left, right)
 		})
+		groups[index].Entries = groups[index].Entries[:1]
 	}
+	sort.SliceStable(groups, func(leftIndex int, rightIndex int) bool {
+		return groups[leftIndex].Entries[0].Index < groups[rightIndex].Entries[0].Index
+	})
 	return groups
+}
+
+func selectLatestSidHubEntries(movieID string, entries []sidHubLinkEntry) []sidHubLinkEntry {
+	if strings.TrimSpace(movieID) == "" {
+		selected := make([]sidHubLinkEntry, 0, len(entries))
+		for _, entry := range entries {
+			if entry.ResolutionStatus != "invalid" {
+				selected = append(selected, entry)
+			}
+		}
+		return selected
+	}
+
+	selectedByKey := make(map[string]sidHubLinkEntry, len(entries))
+	for index, entry := range entries {
+		if entry.ResolutionStatus == "invalid" {
+			continue
+		}
+		provider := normalizeLinkType(entry.Link.Type)
+		title := normalizeSidHubGroupTitle(entry.Title)
+		key := ""
+		if provider != "" && title != "" {
+			key = buildSidHubGroupKey(movieID, provider, entry.Title)
+		}
+		if key == "" {
+			key = fmt.Sprintf("single\x00%d\x00%s", index, entry.Link.URL)
+		}
+
+		current, exists := selectedByKey[key]
+		if !exists || sidHubEntryIsNewer(entry, current) {
+			selectedByKey[key] = entry
+		}
+	}
+
+	selected := make([]sidHubLinkEntry, 0, len(selectedByKey))
+	for _, entry := range selectedByKey {
+		selected = append(selected, entry)
+	}
+	sort.SliceStable(selected, func(leftIndex int, rightIndex int) bool {
+		return selected[leftIndex].Index < selected[rightIndex].Index
+	})
+	return selected
+}
+
+func sidHubEntryIsNewer(candidate sidHubLinkEntry, current sidHubLinkEntry) bool {
+	candidateKnown := !candidate.Datetime.IsZero()
+	currentKnown := !current.Datetime.IsZero()
+	if candidateKnown != currentKnown {
+		return candidateKnown
+	}
+	if candidateKnown && !candidate.Datetime.Equal(current.Datetime) {
+		return candidate.Datetime.After(current.Datetime)
+	}
+	return candidate.Index < current.Index
 }
 
 func buildSidHubGroupKey(movieID string, provider string, title string) string {
@@ -2075,24 +2171,14 @@ func buildSidHubGroupKey(movieID string, provider string, title string) string {
 }
 
 func normalizeSidHubGroupTitle(title string) string {
+	normalized := strings.ToLower(norm.NFKC.String(cleanText(title)))
 	pairedPunctuation := "【】[]()（）「」『』《》<>"
 	return strings.Map(func(value rune) rune {
 		if unicode.IsSpace(value) || strings.ContainsRune(pairedPunctuation, value) {
 			return -1
 		}
 		return value
-	}, cleanText(title))
-}
-
-func sidHubCandidateStatusRank(status string) int {
-	switch status {
-	case sidHubResolutionResolved:
-		return 0
-	case sidHubResolutionDeferred, "":
-		return 1
-	default:
-		return 2
-	}
+	}, normalized)
 }
 
 func buildSidHubGroupedResultAt(card sidHubMovie, group sidHubResultGroup, fetchedAt time.Time) model.SearchResult {
@@ -3057,6 +3143,27 @@ func limitLinkEntries(entries []sidHubLinkEntry, limit int) []sidHubLinkEntry {
 	}
 	limited := make([]sidHubLinkEntry, limit)
 	copy(limited, entries[:limit])
+	return limited
+}
+
+func limitSidHubEntriesPerType(entries []sidHubLinkEntry, limit int) []sidHubLinkEntry {
+	if limit <= 0 {
+		return append([]sidHubLinkEntry(nil), entries...)
+	}
+
+	counts := make(map[string]int)
+	limited := make([]sidHubLinkEntry, 0, len(entries))
+	for _, entry := range entries {
+		linkType := normalizeLinkType(entry.Link.Type)
+		if linkType == "" {
+			linkType = strings.TrimSpace(entry.Link.Type)
+		}
+		if counts[linkType] >= limit {
+			continue
+		}
+		counts[linkType]++
+		limited = append(limited, entry)
+	}
 	return limited
 }
 

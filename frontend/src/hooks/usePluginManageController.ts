@@ -34,6 +34,7 @@ import {
   replaceSelectedKeys,
 } from '@/components/admin/workspaceSelection';
 import { type TestStatus } from '@/components/admin/pluginManageDialogShared';
+import { buildPluginRuntimeConfig } from '@/components/admin/pluginRuntimeConfig';
 import { usePluginManageDialogState } from './usePluginManageDialogState';
 import { useWorkspaceTestStatus } from './useWorkspaceTestStatus';
 
@@ -595,15 +596,12 @@ export function usePluginManageController({
       return;
     }
 
-    const config = Object.fromEntries(
-      plugin.config_schema.map((field) => {
-        const value = pluginConfigValues[field.key] ?? field.default;
-        if (field.type === 'number') {
-          return [field.key, Number(value)];
-        }
-        return [field.key, value];
-      })
-    );
+    const result = buildPluginRuntimeConfig(plugin.config_schema, pluginConfigValues);
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    const config = result.config;
 
     setIsPluginConfigSaving(true);
     try {
