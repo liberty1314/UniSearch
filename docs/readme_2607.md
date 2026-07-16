@@ -444,3 +444,10 @@
     - frontend/src/components/admin/pluginRuntimeConfig.ts
     - frontend/src/hooks/usePluginManageController.ts
     - frontend/src/types/plugin.ts
+
+- [2026-07-16 16:52] fix(search): 修复同匹配层级结果未按可信时间优先排序
+  - Body: 调整搜索结果排序顺序，在匹配等级相同时先比较可信时间，再以 SeedHub 可操作状态作为兜底；补充新旧 SeedHub 结果的回归用例。
+  - Files:
+    - docs/readme_2607.md
+    - frontend/src/utils/__tests__/searchResultSorter.test.ts
+    - frontend/src/utils/searchResultSorter.ts

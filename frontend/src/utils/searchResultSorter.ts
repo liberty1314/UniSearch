@@ -151,15 +151,15 @@ export const sortResources = (
     if (a.matchRank !== b.matchRank) {
       return a.matchRank - b.matchRank;
     }
-    if (a.actionabilityRank !== b.actionabilityRank) {
-      return a.actionabilityRank - b.actionabilityRank;
-    }
     if (a.hasKnownTime !== b.hasKnownTime) {
       return a.hasKnownTime ? -1 : 1;
     }
     const timeDiff = b.datetime - a.datetime;
     if (timeDiff !== 0) {
       return timeDiff;
+    }
+    if (a.actionabilityRank !== b.actionabilityRank) {
+      return a.actionabilityRank - b.actionabilityRank;
     }
     if (a.priority !== b.priority) {
       return a.priority - b.priority;

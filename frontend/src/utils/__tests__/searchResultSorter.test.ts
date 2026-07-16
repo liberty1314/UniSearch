@@ -153,6 +153,28 @@ describe("sortResources", () => {
     ]);
   });
 
+  it("sorts a newer deferred SeedHub result ahead of an older actionable result in the same match tier", () => {
+    const result = sortResources(
+      [
+        makeResource("jutoushe-2024", "2024-03-11T00:00:00.000Z", CloudType.QUARK, {
+          title: "蜘蛛侠.全系列",
+          source: { type: "plugin", id: "jutoushe", name: "剧透社" },
+        }),
+        makeResource("sidhub-deferred-2026", "2026-07-16T00:00:00.000Z", CloudType.QUARK, {
+          title: "蜘蛛侠",
+          source: { type: "plugin", id: "sidhub", name: "SeedHub" },
+          meta: { sid_hub_resolution_status: "deferred" },
+        }),
+      ],
+      "蜘蛛侠",
+    );
+
+    expect(result.map((item) => item.resource.id)).toEqual([
+      "sidhub-deferred-2026",
+      "jutoushe-2024",
+    ]);
+  });
+
   it("prioritizes resolved SeedHub resources before deferred SeedHub resources", () => {
     const result = sortResources([
       makeResource("deferred", "2026-06-20T00:00:00.000Z", CloudType.QUARK, {
@@ -161,7 +183,7 @@ describe("sortResources", () => {
           sid_hub_resolution_status: "deferred",
         },
       }),
-      makeResource("resolved", "2026-06-10T00:00:00.000Z", CloudType.QUARK, {
+      makeResource("resolved", "2026-06-20T00:00:00.000Z", CloudType.QUARK, {
         source: { type: "plugin", id: "sidhub", name: "SeedHub" },
         meta: {
           sid_hub_resolution_status: "resolved",
@@ -172,7 +194,7 @@ describe("sortResources", () => {
     expect(result.map((item) => item.resource.id)).toEqual(["resolved", "deferred"]);
   });
 
-  it("treats SeedHub entries without semantic status as deferred old cache data", () => {
+  it("sorts legacy deferred SeedHub resources by trusted date before resolution status", () => {
 	const result = sortResources([
 	  makeResource("legacy-newer", "2026-06-20T00:00:00.000Z", CloudType.QUARK, {
 		source: { type: "plugin", id: "sidhub", name: "SeedHub" },
@@ -185,8 +207,8 @@ describe("sortResources", () => {
 	]);
 
 	expect(result.map((item) => item.resource.id)).toEqual([
-	  "resolved-older",
 	  "legacy-newer",
+	  "resolved-older",
 	]);
   });
 
