@@ -63,13 +63,20 @@ describe("HotToolbar", () => {
     expect(activeButton.className).not.toContain("from-blue-600");
   });
 
-  it("控制台卡片使用非等宽列给时间和分类保留完整宽度", () => {
+  it("控制台使用单层控制轨道并移除筛选卡片嵌套", () => {
     render(<HotToolbar {...baseProps} />);
 
-    const filterGrid = screen.getByTestId("hot-toolbar-filter-grid");
+    const controlRail = screen.getByTestId("hot-toolbar-control-rail");
 
-    expect(filterGrid.className).toContain("minmax(18rem,1.2fr)");
-    expect(filterGrid.className).toContain("minmax(21rem,1.45fr)");
+    expect(controlRail).toBeInTheDocument();
+    expect(controlRail.querySelectorAll(".surface-card")).toHaveLength(0);
+    expect(controlRail.className).toContain("divide");
+  });
+
+  it("始终展示当前榜单口径", () => {
+    render(<HotToolbar {...baseProps} />);
+
+    expect(screen.getByTestId("hot-toolbar-current-context")).toHaveTextContent(/趋势榜.*每日.*全部/);
   });
 
   it("不展示后端返回的榜单说明文案", () => {

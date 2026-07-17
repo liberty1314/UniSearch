@@ -464,3 +464,11 @@
     - frontend/src/pages/Home.tsx
     - frontend/src/pages/__tests__/Home.test.tsx
     - docs/readme_2607.md
+
+[2026-07-17 19:03] feat(home): 优化热榜控制台布局与状态展示
+  Body: 将热榜筛选项统一收拢到单层控制轨道，补充当前榜单模式、时间维度和内容分类的口径摘要，并优化移动端调整入口与重置按钮。同步增加热榜控制台和分区摘要的回归测试。
+  Files:
+    - frontend/src/components/trending/HotToolbar.tsx
+    - frontend/src/components/trending/__tests__/HotSectionSummary.test.tsx
+    - frontend/src/components/trending/__tests__/HotToolbar.test.tsx
+    - docs/readme_2607.md

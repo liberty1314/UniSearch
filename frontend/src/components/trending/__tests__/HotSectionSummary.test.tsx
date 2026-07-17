@@ -77,6 +77,24 @@ describe("HotSectionSummary", () => {
     expect(screen.getByRole("button", { name: "打开排序菜单" })).toHaveTextContent("近期高分");
   });
 
+  it("展示分区说明、条目数量和紧凑工具组", () => {
+    render(
+      <HotSectionSummary
+        section={{
+          ...section,
+          description: "按热门趋势整理的电影内容",
+          items: Array.from({ length: 12 }, (_, index) => ({ id: index } as never)),
+        }}
+        showSortControl
+        sortBy="popularity.desc"
+      />,
+    );
+
+    expect(screen.getByTestId("hot-section-description")).toHaveTextContent("按热门趋势整理的电影内容");
+    expect(screen.getByTestId("hot-section-count")).toHaveTextContent("12 条内容");
+    expect(screen.getByTestId("hot-section-tools")).toBeInTheDocument();
+  });
+
   it("保留布局切换按钮", async () => {
     const user = userEvent.setup();
     const onLayoutModeChange = vi.fn();
