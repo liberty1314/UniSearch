@@ -44,6 +44,8 @@ vi.mock('framer-motion', () => {
         return React.createElement(tagName, {
           ...restProps,
           'data-motion-initial': serializeMotionProp(initial),
+          'data-motion-transition': serializeMotionProp(transition),
+          'data-motion-while-hover': serializeMotionProp(whileHover),
         }, children);
       };
 
@@ -417,6 +419,53 @@ describe('Home', () => {
       expect(card).toHaveAttribute('data-motion-initial');
       expect(card.getAttribute('data-motion-initial')).toBe(JSON.stringify({ opacity: 0, y: 34, rotateX: 6 }));
       expect(card).toHaveClass('[transform-style:preserve-3d]');
+    });
+  });
+
+  it('将功能卡片的入场与无延迟悬浮过渡隔离在不同动画层', () => {
+    renderHome();
+
+    const featureCards = screen.getAllByTestId('home-feature-card');
+    const hoverLayers = screen.getAllByTestId('home-feature-card-hover-layer');
+
+    featureCards.forEach((card) => {
+      expect(card).not.toHaveAttribute('data-motion-while-hover');
+    });
+
+    expect(hoverLayers).toHaveLength(3);
+    hoverLayers.forEach((hoverLayer) => {
+      const whileHover = hoverLayer.getAttribute('data-motion-while-hover');
+      const transition = hoverLayer.getAttribute('data-motion-transition');
+
+      expect(whileHover).not.toBeNull();
+      expect(JSON.parse(whileHover!)).toMatchObject({
+        y: -8,
+        rotateX: 1.5,
+        scale: 1.015,
+      });
+      expect(transition).not.toBeNull();
+      expect(JSON.parse(transition!)).toEqual({ duration: 0.2, ease: 'easeOut' });
+    });
+  });
+
+  it('为使用建议卡片提供与功能卡片一致的即时悬浮过渡', () => {
+    renderHome();
+
+    const hoverLayers = screen.getAllByTestId('home-usage-card-hover-layer');
+
+    expect(hoverLayers).toHaveLength(3);
+    hoverLayers.forEach((hoverLayer) => {
+      const whileHover = hoverLayer.getAttribute('data-motion-while-hover');
+      const transition = hoverLayer.getAttribute('data-motion-transition');
+
+      expect(whileHover).not.toBeNull();
+      expect(JSON.parse(whileHover!)).toMatchObject({
+        y: -8,
+        rotateX: 1.5,
+        scale: 1.015,
+      });
+      expect(transition).not.toBeNull();
+      expect(JSON.parse(transition!)).toEqual({ duration: 0.2, ease: 'easeOut' });
     });
   });
 

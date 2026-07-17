@@ -41,6 +41,7 @@ docs/superpowers/
 .shared/
 .playwright-mcp/
 .impeccable/
+openspec/
 .vercel/
 testsprite_tests/
 # ----- 临时文件 -----

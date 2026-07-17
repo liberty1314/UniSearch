@@ -451,3 +451,16 @@
     - docs/readme_2607.md
     - frontend/src/utils/__tests__/searchResultSorter.test.ts
     - frontend/src/utils/searchResultSorter.ts
+
+[2026-07-17 16:49] feat(home): 优化首页卡片即时悬浮动画
+  Body: 为首页功能卡片、使用建议和热门分类入口抽取统一悬浮动画配置，将入场动画与悬浮层分离，减少 hover 延迟并保持动效一致。同步更新首页相关测试，并补充 AGENTS 开发准则与 openspec 本地目录忽略。
+  Files:
+    - .gitignore
+    - AGENTS.md
+    - frontend/src/components/home/FeatureCard.tsx
+    - frontend/src/components/home/TrendingCategories.tsx
+    - frontend/src/components/home/__tests__/TrendingCategories.test.tsx
+    - frontend/src/components/home/homeCardHoverMotion.ts
+    - frontend/src/pages/Home.tsx
+    - frontend/src/pages/__tests__/Home.test.tsx
+    - docs/readme_2607.md

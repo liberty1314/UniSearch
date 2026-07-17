@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Layers, Sparkles, Activity } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import GradientText from "@/components/GradientText";
@@ -11,6 +11,10 @@ import PlatformMarquee from "@/components/home/PlatformMarquee";
 import TrendingCategories from "@/components/home/TrendingCategories";
 import HomeSectionHeader from "@/components/home/HomeSectionHeader";
 import FeatureCard from "@/components/home/FeatureCard";
+import {
+  homeCardHoverState,
+  homeCardHoverTransition,
+} from "@/components/home/homeCardHoverMotion";
 
 const HOME_ENTRANCE_SESSION_KEY = "unisearch_home_entrance_seen";
 
@@ -79,6 +83,7 @@ const Home: React.FC = () => {
   const { status: searchAccessStatus } = useSearchAccessStatus();
   const showSearchAccessHint = searchAccessStatus === "anonymous";
   const location = useLocation();
+  const shouldReduceMotion = useReducedMotion();
   const skipHomeEntrance = Boolean(
     (location.state as { skipHomeEntrance?: boolean } | null)?.skipHomeEntrance,
   );
@@ -297,28 +302,33 @@ const Home: React.FC = () => {
               如何更快找到想要的资源
             </div>
 
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-3 [perspective:1600px]">
               {usageSteps.map((step, index) => (
-                <div
+                <motion.div
                   key={step.title}
-                  className="surface-card group relative flex min-h-[12rem] flex-col justify-between gap-5 p-6 text-left sm:min-h-[13rem] sm:p-7"
+                  whileHover={shouldReduceMotion ? undefined : homeCardHoverState}
+                  transition={homeCardHoverTransition}
+                  className="h-full [transform-style:preserve-3d]"
+                  data-testid="home-usage-card-hover-layer"
                 >
-                  <div
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] bg-gradient-to-br ${step.badgeGradient} text-base font-bold text-white shadow-[0_14px_28px_rgba(14,165,233,0.18)]`}
-                  >
-                    {index + 1}
-                  </div>
-                  <div className="min-w-0">
-                    <h3
-                      className={`text-xl font-semibold tracking-tight text-slate-900 transition-colors duration-300 dark:text-slate-50 ${step.accent}`}
+                  <div className="surface-card group relative flex h-full min-h-[12rem] flex-col justify-between gap-5 p-6 text-left sm:min-h-[13rem] sm:p-7">
+                    <div
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] bg-gradient-to-br ${step.badgeGradient} text-base font-bold text-white shadow-[0_14px_28px_rgba(14,165,233,0.18)]`}
                     >
-                      {step.title}
-                    </h3>
-                    <p className="mt-4 text-base leading-8 text-slate-600 dark:text-slate-300/85">
-                      {step.description}
-                    </p>
+                      {index + 1}
+                    </div>
+                    <div className="min-w-0">
+                      <h3
+                        className={`text-xl font-semibold tracking-tight text-slate-900 transition-colors duration-300 dark:text-slate-50 ${step.accent}`}
+                      >
+                        {step.title}
+                      </h3>
+                      <p className="mt-4 text-base leading-8 text-slate-600 dark:text-slate-300/85">
+                        {step.description}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </section>
