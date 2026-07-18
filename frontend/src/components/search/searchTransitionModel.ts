@@ -5,6 +5,8 @@ export type SearchProgressiveStatus =
   | "fallback"
   | "error";
 
+export const SEARCH_QUERY_LAYOUT_ID = "search-query-surface";
+
 export type SearchVisualPhase =
   | "idle"
   | "submitting"
