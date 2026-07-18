@@ -217,13 +217,20 @@ const SearchFragmentField: React.FC<SearchFragmentFieldProps> = ({
                       : 0.52,
                 }}
             exit={shouldReduceMotion
-              ? { opacity: 0 }
+              ? {
+                  opacity: 0,
+                  transition: { duration: 0 },
+                }
               : {
                   x: fragment.x,
                   y: fragment.y,
                   rotate: fragment.rotate,
                   scale: 0.9,
                   opacity: 0,
+                  transition: {
+                    duration: 0.32,
+                    ease: [0.22, 1, 0.36, 1],
+                  },
                 }}
             transition={isActive || focused
               ? {

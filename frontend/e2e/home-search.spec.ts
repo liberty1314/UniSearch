@@ -11,4 +11,7 @@ test('首页搜索会进入搜索页并展示结果', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/search\?q=/);
   await expect(page.getByText('流浪地球 资源合集')).toBeVisible();
+  await expect(page.getByTestId('search-query-dock')).toBeVisible();
+  await expect(page.getByTestId('search-results-stage')).toBeVisible();
+  await expect(page.getByText('搜索启动台')).toHaveCount(0);
 });
