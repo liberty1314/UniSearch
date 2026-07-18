@@ -141,17 +141,27 @@ describe("SearchUnifiedFilterCard", () => {
     vi.useRealTimers();
   });
 
-  it("默认只展示统一筛选卡片与网盘筛选摘要", () => {
+  it("默认渲染紧凑水平筛选轨道", () => {
     render(
       <MemoryRouter>
         <SearchUnifiedFilterCard />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("heading", { name: "筛选条件" })).toBeInTheDocument();
-    expect(screen.getByText("网盘筛选")).toBeInTheDocument();
-    expect(screen.queryByText("已生效条件")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("search-unified-filter-advanced")).not.toBeInTheDocument();
+    const rail = screen.getByTestId("search-filter-rail");
+    expect(rail).toHaveClass("flex-nowrap", "overflow-x-auto");
+    expect(screen.getByRole("button", {
+      name: "展开高级条件",
+    })).toBeInTheDocument();
+    expect(screen.getByRole("button", {
+      name: /取消全选所有网盘类型/,
+    })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", {
+      name: "筛选条件",
+    })).not.toBeInTheDocument();
+    expect(screen.queryByText(
+      "先选网盘，再根据需要按关键词继续收窄结果",
+    )).not.toBeInTheDocument();
   });
 
   it("收起状态下保留启用计数和清空操作，但不再展示摘要区", () => {
@@ -220,7 +230,7 @@ describe("SearchUnifiedFilterCard", () => {
     expect(screen.getByRole("button", { name: "4k" }).className).toContain("max-w-[70vw]");
   });
 
-  it("收起状态下提供长按聚焦来源的交互提示", () => {
+  it("筛选轨道的来源按钮保持长按操作语义", () => {
     render(
       <MemoryRouter>
         <SearchUnifiedFilterCard />
@@ -228,7 +238,9 @@ describe("SearchUnifiedFilterCard", () => {
     );
 
     expect(
-      screen.getByText("点击切换来源，长按可仅看单个来源"),
+      screen.getByRole("button", {
+        name: /夸克网盘.*长按打开来源操作/,
+      }),
     ).toBeInTheDocument();
   });
 
