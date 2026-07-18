@@ -57,13 +57,29 @@ const HotSectionSummary: React.FC<HotSectionSummaryProps> = ({
   };
 
   return (
-    <div className="flex items-center justify-between gap-4">
-      <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
-        {section.title}
-      </h2>
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0 flex-1">
+        <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
+          {section.title}
+        </h2>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
+          <p data-testid="hot-section-description" className="min-w-0">
+            {section.description}
+          </p>
+          <span
+            data-testid="hot-section-count"
+            className="shrink-0 text-xs font-medium text-slate-400 dark:text-slate-500"
+          >
+            {section.items.length} 条内容
+          </span>
+        </div>
+      </div>
 
       {showSortControl ? (
-        <div className="flex shrink-0 items-center gap-2">
+        <div
+          data-testid="hot-section-tools"
+          className="flex shrink-0 items-center gap-2"
+        >
           <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
             <DropdownMenuTrigger asChild>
               <button
