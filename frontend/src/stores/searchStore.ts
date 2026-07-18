@@ -18,15 +18,11 @@ import {
   isLatestSearchRequest,
 } from "@/stores/searchRequestGuard";
 import { normalizeFilterConfig, normalizeFilterValues } from "@/utils/searchFilters";
-import type { RecentEffectiveSearch } from "@/components/search/searchLaunchpadTypes";
 
 /**
  * 搜索历史最大保存条数（同时作为 UI 展示上限）
  */
 export const MAX_SEARCH_HISTORY = 8;
-export const MAX_RECENT_EFFECTIVE_SEARCHES = 5;
-export const RECENT_EFFECTIVE_SEARCHES_STORAGE_KEY =
-  "unisearch_recent_effective_searches";
 const initialDisplayCount = 48;
 const loadMoreIncrement = 24;
 
@@ -57,7 +53,6 @@ interface SearchState {
 
   // 搜索历史
   searchHistory: string[];
-  recentEffectiveSearches: RecentEffectiveSearch[];
 
   // 可用选项
   availableChannels: string[];
@@ -83,8 +78,6 @@ interface SearchState {
   addToHistory: (keyword: string) => void;
   clearHistory: () => void;
   removeFromHistory: (keyword: string) => void;
-  removeRecentEffectiveSearch: (id: string) => void;
-  clearRecentEffectiveSearches: () => void;
   loadAvailableOptions: () => Promise<void>;
   loadMore: () => void; // 前端懒加载，不再是异步
   updateResourceScanTransfer: (resourceId: string, linkUrl: string, scanTransfer: ScanTransferInfo) => void;
@@ -143,45 +136,6 @@ const areSearchParamsEqual = (
     JSON.stringify(normalizeSearchParams(right));
 };
 
-const isRecentEffectiveSearch = (
-  value: unknown,
-): value is RecentEffectiveSearch => {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const snapshot = value as Partial<RecentEffectiveSearch>;
-  return Boolean(
-    typeof snapshot.id === "string" &&
-      typeof snapshot.keyword === "string" &&
-      typeof snapshot.total === "number" &&
-      typeof snapshot.searchedAt === "string" &&
-      snapshot.params &&
-      typeof snapshot.params.keyword === "string",
-  );
-};
-
-const readRecentEffectiveSearches = () =>
-  readJsonStorage<unknown[]>(RECENT_EFFECTIVE_SEARCHES_STORAGE_KEY, []).filter(
-    isRecentEffectiveSearch,
-  );
-
-const writeRecentEffectiveSearches = (searches: RecentEffectiveSearch[]) => {
-  writeJsonStorage(RECENT_EFFECTIVE_SEARCHES_STORAGE_KEY, searches);
-};
-
-const buildRecentEffectiveSearch = (
-  params: SearchParams,
-  total: number,
-): RecentEffectiveSearch => ({
-  id: `${params.keyword.trim().toLocaleLowerCase()}::${Date.now()}`,
-  keyword: params.keyword.trim(),
-  total,
-  cloudTypes: sortStringValues(params.cloudTypes),
-  searchedAt: new Date().toISOString(),
-  params: normalizeSearchParams(params),
-});
-
 const emptyFacets = {
   cloud_types: {},
   source_types: {},
@@ -220,7 +174,6 @@ export const useSearchStore = create<SearchState>()(
         "unisearch_search_history",
         [],
       ),
-      recentEffectiveSearches: readRecentEffectiveSearches(),
       availableChannels: [],
       availablePlugins: [],
       displayedCount: initialDisplayCount,
@@ -288,25 +241,6 @@ export const useSearchStore = create<SearchState>()(
 
           if (finalParams.keyword) {
             get().addToHistory(finalParams.keyword);
-          }
-
-          if (finalParams.keyword && totalCount > 0) {
-            const currentState = get();
-            const recentSearch = buildRecentEffectiveSearch(finalParams, totalCount);
-            const dedupedRecentSearches = currentState.recentEffectiveSearches.filter(
-              (item) =>
-                JSON.stringify(normalizeSearchParams(item.params)) !==
-                JSON.stringify(normalizeSearchParams(recentSearch.params)),
-            );
-            const nextRecentSearches = [recentSearch, ...dedupedRecentSearches].slice(
-              0,
-              MAX_RECENT_EFFECTIVE_SEARCHES,
-            );
-
-            set({
-              recentEffectiveSearches: nextRecentSearches,
-            });
-            writeRecentEffectiveSearches(nextRecentSearches);
           }
         };
 
@@ -507,31 +441,6 @@ export const useSearchStore = create<SearchState>()(
       },
 
       /**
-       * 从最近有效搜索中删除单条记录
-       */
-      removeRecentEffectiveSearch: (id) => {
-        const state = get();
-        const nextRecentSearches = state.recentEffectiveSearches.filter(
-          (item) => item.id !== id,
-        );
-
-        set({ recentEffectiveSearches: nextRecentSearches });
-        if (nextRecentSearches.length > 0) {
-          writeRecentEffectiveSearches(nextRecentSearches);
-        } else {
-          removeStorage(RECENT_EFFECTIVE_SEARCHES_STORAGE_KEY);
-        }
-      },
-
-      /**
-       * 清空最近有效搜索
-       */
-      clearRecentEffectiveSearches: () => {
-        set({ recentEffectiveSearches: [] });
-        removeStorage(RECENT_EFFECTIVE_SEARCHES_STORAGE_KEY);
-      },
-
-      /**
        * 加载可用选项
        */
       loadAvailableOptions: async () => {
@@ -727,8 +636,6 @@ export const useSearchLoading = () =>
 export const useSearchError = () => useSearchStore((state) => state.error);
 export const useSearchHistory = () =>
   useSearchStore((state) => state.searchHistory);
-export const useRecentEffectiveSearches = () =>
-  useSearchStore((state) => state.recentEffectiveSearches);
 export const useAvailableOptions = () =>
   useSearchStore((state) => ({
     channels: state.availableChannels,

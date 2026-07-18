@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SearchResponse } from "@/types/search";
-import type { RecentEffectiveSearch } from "@/components/search/searchLaunchpadTypes";
 
 const searchMock = vi.fn();
 const searchProgressiveMock = vi.fn();
@@ -261,7 +260,7 @@ describe("searchStore", () => {
     expect(useSearchStore.getState().searchResults).toBe(previousState);
   });
 
-  it("成功搜索且有结果时会写入最近有效搜索", async () => {
+  it("成功搜索只记录普通搜索历史，不再写入启动台快照", async () => {
     const { useSearchStore } = await import("@/stores/searchStore");
 
     searchMock.mockResolvedValueOnce(buildSearchResults("沙丘 2 4K"));
@@ -269,32 +268,15 @@ describe("searchStore", () => {
     await useSearchStore.getState().performSearch({
       keyword: "沙丘 2 4K",
       cloudTypes: ["quark", "aliyun"],
-      filter: {
-        include: ["4K"],
-        exclude: ["枪版"],
-      },
     });
 
-    expect(useSearchStore.getState().recentEffectiveSearches[0]).toMatchObject({
-      keyword: "沙丘 2 4K",
-      total: 1,
-      cloudTypes: ["aliyun", "quark"],
-      params: {
-        keyword: "沙丘 2 4K",
-        cloudTypes: ["aliyun", "quark"],
-        filter: {
-          include: ["4K"],
-          exclude: ["枪版"],
-        },
-      },
-    });
-
+    expect(useSearchStore.getState().searchHistory[0]).toBe("沙丘 2 4K");
     expect(
-      JSON.parse(localStorage.getItem("unisearch_recent_effective_searches") || "[]")[0],
-    ).toMatchObject({
-      keyword: "沙丘 2 4K",
-      total: 1,
-    });
+      localStorage.getItem("unisearch_recent_effective_searches"),
+    ).toBeNull();
+    expect(useSearchStore.getState()).not.toHaveProperty(
+      "recentEffectiveSearches",
+    );
   });
 
   it("渐进式首批结果返回后会立即展示并更新来源进度", async () => {
@@ -427,85 +409,6 @@ describe("searchStore", () => {
 
     useSearchStore.getState().loadMore();
     expect(useSearchStore.getState().displayedCount).toBe(96);
-  });
-
-  it("支持删除单条最近有效搜索并同步本地存储", async () => {
-    const { useSearchStore } = await import("@/stores/searchStore");
-
-    const searches: RecentEffectiveSearch[] = [
-      {
-        id: "recent-1",
-        keyword: "三体 4K",
-        total: 12,
-        cloudTypes: ["quark"],
-        searchedAt: "2026-06-14T15:00:00.000Z",
-        params: {
-          ...useSearchStore.getState().searchParams,
-          keyword: "三体 4K",
-          cloudTypes: ["quark"],
-        },
-      },
-      {
-        id: "recent-2",
-        keyword: "大濛",
-        total: 3,
-        cloudTypes: [],
-        searchedAt: "2026-06-14T16:00:00.000Z",
-        params: {
-          ...useSearchStore.getState().searchParams,
-          keyword: "大濛",
-        },
-      },
-    ];
-
-    useSearchStore.setState({ recentEffectiveSearches: searches });
-    localStorage.setItem(
-      "unisearch_recent_effective_searches",
-      JSON.stringify(searches),
-    );
-
-    useSearchStore.getState().removeRecentEffectiveSearch("recent-1");
-
-    expect(useSearchStore.getState().recentEffectiveSearches).toHaveLength(1);
-    expect(useSearchStore.getState().recentEffectiveSearches[0].id).toBe("recent-2");
-    expect(
-      JSON.parse(localStorage.getItem("unisearch_recent_effective_searches") || "[]"),
-    ).toEqual([expect.objectContaining({ id: "recent-2" })]);
-
-    useSearchStore.getState().removeRecentEffectiveSearch("recent-2");
-
-    expect(useSearchStore.getState().recentEffectiveSearches).toHaveLength(0);
-    expect(localStorage.getItem("unisearch_recent_effective_searches")).toBeNull();
-  });
-
-  it("支持清空最近有效搜索并移除本地存储", async () => {
-    const { useSearchStore } = await import("@/stores/searchStore");
-
-    const searches: RecentEffectiveSearch[] = [
-      {
-        id: "recent-clear-1",
-        keyword: "三体 4K",
-        total: 12,
-        cloudTypes: ["quark"],
-        searchedAt: "2026-06-14T15:00:00.000Z",
-        params: {
-          ...useSearchStore.getState().searchParams,
-          keyword: "三体 4K",
-          cloudTypes: ["quark"],
-        },
-      },
-    ];
-
-    useSearchStore.setState({ recentEffectiveSearches: searches });
-    localStorage.setItem(
-      "unisearch_recent_effective_searches",
-      JSON.stringify(searches),
-    );
-
-    useSearchStore.getState().clearRecentEffectiveSearches();
-
-    expect(useSearchStore.getState().recentEffectiveSearches).toEqual([]);
-    expect(localStorage.getItem("unisearch_recent_effective_searches")).toBeNull();
   });
 
   it("清空结果会作废尚未完成的搜索请求", async () => {

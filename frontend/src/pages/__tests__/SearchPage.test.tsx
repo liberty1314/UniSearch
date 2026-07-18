@@ -1,79 +1,79 @@
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { HelmetProvider } from "react-helmet-async";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import SearchPage from "@/pages/SearchPage";
+import type { SearchParams } from "@/types/search";
 
 const {
   performSearchMock,
   setSearchParamsMock,
   clearResultsMock,
   canReuseCurrentSearchMock,
-  removeRecentEffectiveSearchMock,
-  clearRecentEffectiveSearchesMock,
-  getHotRankingsMock,
 } = vi.hoisted(() => ({
   performSearchMock: vi.fn(),
   setSearchParamsMock: vi.fn(),
   clearResultsMock: vi.fn(),
   canReuseCurrentSearchMock: vi.fn(),
-  removeRecentEffectiveSearchMock: vi.fn(),
-  clearRecentEffectiveSearchesMock: vi.fn(),
-  getHotRankingsMock: vi.fn(),
 }));
 
-let locationState: unknown = undefined;
+type ProgressiveStatus = "idle" | "running" | "complete" | "fallback" | "error";
+
+interface SearchStoreTestState {
+  searchParams: SearchParams;
+  searchResults: null | { resources: Array<{ id: string }> };
+  isLoading: boolean;
+  isRefreshing: boolean;
+  progressiveStatus: ProgressiveStatus;
+  completedSources: number;
+  totalSources: number;
+  receivedBatches: number;
+  error: string | null;
+}
+
+const buildSearchParams = (): SearchParams => ({
+  keyword: "",
+  source: "all",
+  resultType: "merge",
+  cloudTypes: [],
+  channels: [],
+  plugins: [],
+  concurrency: 5,
+  refresh: false,
+  ext: {},
+  filter: undefined,
+});
+
+const buildSearchStoreState = (): SearchStoreTestState => ({
+  searchParams: buildSearchParams(),
+  searchResults: null,
+  isLoading: false,
+  isRefreshing: false,
+  progressiveStatus: "idle",
+  completedSources: 0,
+  totalSources: 0,
+  receivedBatches: 0,
+  error: null,
+});
+
 let searchAccessStatus: "anonymous" | "authenticated" = "authenticated";
-let searchStoreState = {
-  searchParams: {
-    keyword: "",
-    source: "all" as const,
-    resultType: "merge" as const,
-    cloudTypes: [] as string[],
-    channels: [] as string[],
-    plugins: [] as string[],
-    concurrency: 5,
-    refresh: false,
-    ext: {},
-    filter: undefined,
-  },
-  searchResults: null as null | { resources: Array<{ id: string }> },
-  searchHistory: [] as string[],
-  recentEffectiveSearches: [] as Array<{
-    id: string;
-    keyword: string;
-    total: number;
-    cloudTypes: string[];
-    searchedAt: string;
-    params: {
-      keyword: string;
-      source: "all";
-      resultType: "merge";
-      cloudTypes: string[];
-      channels: string[];
-      plugins: string[];
-      concurrency: number;
-      refresh: boolean;
-      ext: Record<string, never>;
-      filter?: {
-        include?: string[];
-        exclude?: string[];
-        mediaTypes?: string[];
-      };
-    };
-  }>,
-};
-
-vi.mock("@/services/hotRankingService", () => ({
-  hotRankingService: {
-    getHotRankings: getHotRankingsMock,
-  },
-}));
+let searchStoreState = buildSearchStoreState();
 
 vi.mock("@/components/SearchBox", () => ({
   __esModule: true,
-  default: ({ accessHint, autoFocus }: { accessHint?: string; autoFocus?: boolean }) => (
+  default: ({
+    accessHint,
+    autoFocus,
+  }: {
+    accessHint?: string;
+    autoFocus?: boolean;
+  }) => (
     <div>
       search-box
       {autoFocus ? <span>auto-focus-on</span> : null}
@@ -99,8 +99,6 @@ vi.mock("@/stores/searchStore", () => ({
     setSearchParams: setSearchParamsMock,
     clearResults: clearResultsMock,
     canReuseCurrentSearch: canReuseCurrentSearchMock,
-    removeRecentEffectiveSearch: removeRecentEffectiveSearchMock,
-    clearRecentEffectiveSearches: clearRecentEffectiveSearchesMock,
   }),
 }));
 
@@ -133,41 +131,43 @@ const LocationProbe = () => {
 const renderSearchPage = (
   initialEntry: string,
   options?: {
-    initialEntries?: Array<{ pathname: string; search?: string; state?: unknown }>;
+    initialEntries?: Array<{
+      pathname: string;
+      search?: string;
+      state?: unknown;
+    }>;
     initialIndex?: number;
   },
-) =>
-  render(
-    <HelmetProvider>
-      <MemoryRouter
-        initialEntries={
-          options?.initialEntries ?? [
-            {
-              pathname: initialEntry.split("?")[0],
-              search: initialEntry.includes("?") ? `?${initialEntry.split("?")[1]}` : "",
-              state: locationState,
-            },
-          ]
-        }
-        initialIndex={options?.initialIndex}
-      >
-        <Routes>
-          <Route path="/" element={<LocationProbe />} />
-          <Route path="/trending" element={<LocationProbe />} />
-          <Route path="/login" element={<LocationProbe />} />
-          <Route
-            path="/search"
-            element={(
-              <>
-                <SearchPage />
-                <LocationProbe />
-              </>
-            )}
-          />
-        </Routes>
-      </MemoryRouter>
-    </HelmetProvider>
-  );
+) => render(
+  <HelmetProvider>
+    <MemoryRouter
+      initialEntries={options?.initialEntries ?? [
+        {
+          pathname: initialEntry.split("?")[0],
+          search: initialEntry.includes("?")
+            ? `?${initialEntry.split("?")[1]}`
+            : "",
+        },
+      ]}
+      initialIndex={options?.initialIndex}
+    >
+      <Routes>
+        <Route path="/" element={<LocationProbe />} />
+        <Route path="/trending" element={<LocationProbe />} />
+        <Route path="/login" element={<LocationProbe />} />
+        <Route
+          path="/search"
+          element={(
+            <>
+              <SearchPage />
+              <LocationProbe />
+            </>
+          )}
+        />
+      </Routes>
+    </MemoryRouter>
+  </HelmetProvider>,
+);
 
 describe("SearchPage", () => {
   beforeEach(() => {
@@ -177,34 +177,11 @@ describe("SearchPage", () => {
     clearResultsMock.mockReset();
     canReuseCurrentSearchMock.mockReset();
     canReuseCurrentSearchMock.mockReturnValue(false);
-    removeRecentEffectiveSearchMock.mockReset();
-    clearRecentEffectiveSearchesMock.mockReset();
-    locationState = undefined;
     searchAccessStatus = "authenticated";
-    searchStoreState = {
-      searchParams: {
-        keyword: "",
-        source: "all",
-        resultType: "merge",
-        cloudTypes: [],
-        channels: [],
-        plugins: [],
-        concurrency: 5,
-        refresh: false,
-        ext: {},
-        filter: undefined,
-      },
-      searchResults: null,
-      searchHistory: [],
-      recentEffectiveSearches: [],
-    };
-    getHotRankingsMock.mockReset();
-    getHotRankingsMock.mockResolvedValue({
-      sections: [],
-    });
+    searchStoreState = buildSearchStoreState();
   });
 
-  it("syncs URL params into the search store and triggers a search on the standalone page", async () => {
+  it("将 URL 参数同步到搜索状态并触发独立页搜索", async () => {
     searchStoreState.searchParams.keyword = "电影";
 
     renderSearchPage("/search?q=%E7%94%B5%E5%BD%B1&types=quark");
@@ -216,10 +193,9 @@ describe("SearchPage", () => {
         expect.objectContaining({
           keyword: "电影",
           cloudTypes: ["quark"],
-        })
+        }),
       );
     });
-
     expect(performSearchMock).toHaveBeenCalledWith(
       expect.objectContaining({
         keyword: "电影",
@@ -227,11 +203,11 @@ describe("SearchPage", () => {
         resultType: "merge",
         cloudTypes: ["quark"],
       }),
-      { preserveResults: false }
+      { preserveResults: false },
     );
   });
 
-  it("uses account default cloud filters when the search URL has no explicit type filter", async () => {
+  it("URL 未指定来源时使用账户默认来源", async () => {
     localStorage.setItem(
       "unisearch_account_preferences",
       JSON.stringify({
@@ -252,25 +228,19 @@ describe("SearchPage", () => {
         }),
       );
     });
-
     expect(performSearchMock).toHaveBeenCalledWith(
       expect.objectContaining({
         keyword: "电影",
-        source: "all",
-        resultType: "merge",
         cloudTypes: ["aliyun", "quark"],
       }),
       { preserveResults: false },
     );
   });
 
-  it("匿名访问搜索页时展示搜索准入提示", async () => {
+  it("匿名访问空搜索页时展示准入提示且不展示结果", async () => {
     searchAccessStatus = "anonymous";
-    searchStoreState = {
-      ...searchStoreState,
-      searchResults: {
-        resources: [{ id: "resource-1" }],
-      },
+    searchStoreState.searchResults = {
+      resources: [{ id: "resource-1" }],
     };
 
     renderSearchPage("/search");
@@ -280,15 +250,13 @@ describe("SearchPage", () => {
     });
     expect(performSearchMock).not.toHaveBeenCalled();
     expect(screen.getByText("search-box")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "搜索结果需要登录后查看，您可以先输入关键词，系统会保留本次搜索意图。",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText(
+      "搜索结果需要登录后查看，您可以先输入关键词，系统会保留本次搜索意图。",
+    )).toBeInTheDocument();
     expect(screen.queryByText("search-results")).not.toBeInTheDocument();
   });
 
-  it("登录后不展示搜索页准入提示", async () => {
+  it("登录后不展示搜索准入提示", async () => {
     renderSearchPage("/search");
 
     await waitFor(() => {
@@ -300,93 +268,54 @@ describe("SearchPage", () => {
     expect(screen.getByText("search-box")).toBeInTheDocument();
   });
 
-  it("无关键词时展示最近有效搜索和热榜直搜，不展示精准模板", async () => {
-    searchStoreState.recentEffectiveSearches = [
-      {
-        id: "recent-1",
-        keyword: "三体 4K",
-        total: 12,
-        cloudTypes: ["quark", "aliyun"],
-        searchedAt: "2026-06-14T15:00:00.000Z",
-        params: {
-          keyword: "三体 4K",
-          source: "all",
-          resultType: "merge",
-          cloudTypes: ["quark", "aliyun"],
-          channels: [],
-          plugins: [],
-          concurrency: 5,
-          refresh: false,
-          ext: {},
-          filter: {
-            include: ["4K"],
-            exclude: ["枪版"],
-          },
-        },
-      },
-    ];
-    getHotRankingsMock.mockResolvedValue({
-      sections: [
-        {
-          category: "movie",
-          title: "电影热榜",
-          description: "desc",
-          items: [
-            {
-              id: 1,
-              tmdb_id: 1,
-              media_type: "movie",
-              ranking_category: "movie",
-              title: "沙丘 2",
-              original_title: "Dune: Part Two",
-              overview: "desc",
-              poster_url: "",
-              backdrop_url: "",
-              vote_average: 8.8,
-              vote_count: 1000,
-              popularity: 999,
-              release_date: "2026-01-01",
-              genre_names: ["科幻"],
-              tmdb_url: "https://example.com",
-            },
-          ],
-        },
-      ],
-    });
-
+  it("无关键词时只展示碎片搜索画布", async () => {
     renderSearchPage("/search");
 
-    expect(screen.getByTestId("search-empty-workbench")).toBeInTheDocument();
-    expect(screen.getByText("搜索启动台")).toBeInTheDocument();
-    expect(screen.getByText("最近有效搜索")).toBeInTheDocument();
-    expect(screen.queryByText("精准模板")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "恢复搜索 三体 4K" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "删除最近有效搜索 三体 4K" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "清空最近有效搜索" })).toBeInTheDocument();
-    expect(screen.getByText("12 条结果 · 夸克 / 阿里")).toBeInTheDocument();
-    const hotRankingLink = screen.getByRole("link", { name: /查看热门榜单/ });
-    expect(hotRankingLink).toHaveAttribute("href", "/trending");
-    expect(hotRankingLink.className).not.toContain("bg-gradient-to-r");
-    expect(screen.getByText("auto-focus-on")).toBeInTheDocument();
-    expect(screen.queryByText("还没有想法？")).not.toBeInTheDocument();
-    expect(screen.queryByText("search-results")).not.toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText("热榜直搜")).toBeInTheDocument();
+      expect(clearResultsMock).toHaveBeenCalled();
     });
-    expect(screen.getByText("沙丘 2")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "搜 4K 沙丘 2" })).toBeInTheDocument();
-    expect(screen.queryByText("电影 4K")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "按模板搜索 电影 4K" })).not.toBeInTheDocument();
+
+    expect(screen.getByTestId("search-stage")).toBeInTheDocument();
+    expect(screen.getByText("输入资源名称，其他交给聚合")).toBeInTheDocument();
+    expect(screen.getByText("auto-focus-on")).toBeInTheDocument();
+    expect(screen.queryByText("搜索启动台")).not.toBeInTheDocument();
+    expect(screen.queryByText("最近有效搜索")).not.toBeInTheDocument();
+    expect(screen.queryByText("热榜直搜")).not.toBeInTheDocument();
+    expect(screen.queryByText("search-results")).not.toBeInTheDocument();
+  });
+
+  it("渐进式搜索时查询条展示真实来源进度", () => {
+    searchStoreState = {
+      ...searchStoreState,
+      searchParams: {
+        ...searchStoreState.searchParams,
+        keyword: "电影",
+      },
+      isLoading: true,
+      isRefreshing: false,
+      progressiveStatus: "running",
+      completedSources: 2,
+      totalSources: 5,
+      receivedBatches: 1,
+      error: null,
+    };
+
+    renderSearchPage("/search?q=%E7%94%B5%E5%BD%B1");
+
+    expect(screen.getByTestId("search-query-dock")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("已完成 2/5 个来源");
+    expect(screen.getByText("unified-filter-card")).toBeInTheDocument();
+    expect(screen.getByText("search-results")).toBeInTheDocument();
   });
 
   it("从热门榜单进入时展示来源提示", () => {
     searchStoreState.searchParams.keyword = "沙丘 2";
 
-    renderSearchPage("/search?q=%E6%B2%99%E4%B8%98%202&include=4K&exclude=%E9%A2%84%E5%91%8A%2C%E6%9E%AA%E7%89%88", {
+    renderSearchPage("/search?q=%E6%B2%99%E4%B8%98%202", {
       initialEntries: [
         {
           pathname: "/search",
-          search: "?q=%E6%B2%99%E4%B8%98%202&include=4K&exclude=%E9%A2%84%E5%91%8A%2C%E6%9E%AA%E7%89%88",
+          search: "?q=%E6%B2%99%E4%B8%98%202",
           state: {
             fromTrending: {
               title: "沙丘 2",
@@ -401,243 +330,17 @@ describe("SearchPage", () => {
     expect(screen.getByText("来自热门榜单：沙丘 2")).toBeInTheDocument();
   });
 
-  it("精准模板标签不再作为空状态入口渲染", async () => {
-    renderSearchPage("/search");
-
-    await waitFor(() => {
-      expect(screen.getByTestId("search-empty-workbench")).toBeInTheDocument();
-    });
-
-    expect(screen.queryByText("精准模板")).not.toBeInTheDocument();
-    expect(screen.queryByText("电影 4K")).not.toBeInTheDocument();
-    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
-    expect(screen.getByTestId("location-probe")).toHaveTextContent('"search":""');
-    expect(screen.getByTestId("location-probe")).not.toHaveTextContent("forceSkeleton");
-    expect(screen.getByTestId("location-probe")).not.toHaveTextContent("skipSearchSync");
-    expect(screen.getByTestId("location-probe")).not.toHaveTextContent("mediaTypes=");
-  });
-
-  it("匿名访问空搜索页时不渲染精准模板入口", async () => {
-    searchAccessStatus = "anonymous";
-
-    renderSearchPage("/search");
-
-    await waitFor(() => {
-      expect(screen.getByTestId("search-empty-workbench")).toBeInTheDocument();
-    });
-
-    performSearchMock.mockClear();
-
-    expect(screen.queryByText("精准模板")).not.toBeInTheDocument();
-    expect(screen.queryByText("电影 4K")).not.toBeInTheDocument();
-    expect(performSearchMock).not.toHaveBeenCalled();
-    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/search"');
-    expect(screen.getByTestId("location-probe")).not.toHaveTextContent('"pendingSearch"');
-    expect(screen.getByTestId("location-probe")).not.toHaveTextContent('"cloudTypes":["quark","aliyun"]');
-    expect(screen.getByTestId("location-probe")).not.toHaveTextContent('"include":["4K"]');
-    expect(screen.getByTestId("location-probe")).not.toHaveTextContent('"mediaTypes"');
-  });
-
-  it("点击热榜 4K 搜索不会注入隐藏媒体类型筛选", async () => {
-    getHotRankingsMock.mockResolvedValue({
-      sections: [
-        {
-          category: "movie",
-          title: "电影热榜",
-          description: "desc",
-          items: [
-            {
-              id: 1,
-              tmdb_id: 1,
-              media_type: "movie",
-              ranking_category: "movie",
-              title: "沙丘 2",
-              original_title: "Dune: Part Two",
-              overview: "desc",
-              poster_url: "",
-              backdrop_url: "",
-              vote_average: 8.8,
-              vote_count: 1000,
-              popularity: 999,
-              release_date: "2026-01-01",
-              genre_names: ["科幻"],
-              tmdb_url: "https://example.com",
-            },
-          ],
-        },
-      ],
-    });
-
-    renderSearchPage("/search");
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "搜 4K 沙丘 2" })).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "搜 4K 沙丘 2" }));
-
-    await waitFor(() => {
-      expect(setSearchParamsMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          keyword: "沙丘 2",
-          filter: {
-            include: ["4K"],
-            exclude: ["预告", "枪版"],
-          },
-        }),
-      );
-    });
-    await waitFor(() => {
-      expect(performSearchMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          keyword: "沙丘 2",
-          filter: {
-            include: ["4K"],
-            exclude: ["预告", "枪版"],
-          },
-        }),
-        { preserveResults: false },
-      );
-    });
-    expect(screen.getByTestId("location-probe")).toHaveTextContent('"search":"?q=%E6%B2%99%E4%B8%98+2&include=4K');
-    await waitFor(() => {
-      expect(screen.getByTestId("location-probe")).not.toHaveTextContent("forceSkeleton");
-    });
-    expect(screen.getByTestId("location-probe")).not.toHaveTextContent("skipSearchSync");
-    expect(screen.getByTestId("location-probe")).not.toHaveTextContent("mediaTypes=");
-  });
-
-  it("点击最近有效搜索会恢复完整搜索参数", async () => {
-    searchStoreState.recentEffectiveSearches = [
-      {
-        id: "recent-restore-1",
-        keyword: "三体 4K",
-        total: 12,
-        cloudTypes: ["quark", "aliyun"],
-        searchedAt: "2026-06-14T15:00:00.000Z",
-        params: {
-          keyword: "三体 4K",
-          source: "all",
-          resultType: "merge",
-          cloudTypes: ["quark", "aliyun"],
-          channels: [],
-          plugins: [],
-          concurrency: 5,
-          refresh: false,
-          ext: {},
-          filter: {
-            include: ["4K"],
-            exclude: ["枪版"],
-          },
-        },
-      },
-    ];
-
-    renderSearchPage("/search");
-
-    fireEvent.click(await screen.findByRole("button", { name: "恢复搜索 三体 4K" }));
-
-    expect(setSearchParamsMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        keyword: "三体 4K",
-        cloudTypes: ["quark", "aliyun"],
-        filter: {
-          include: ["4K"],
-          exclude: ["枪版"],
-        },
-      }),
-    );
-    expect(performSearchMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        keyword: "三体 4K",
-        cloudTypes: ["quark", "aliyun"],
-        filter: {
-          include: ["4K"],
-          exclude: ["枪版"],
-        },
-      }),
-      { preserveResults: false },
-    );
-  });
-
-  it("点击最近有效搜索的删除按钮只清除当前记录", async () => {
-    searchStoreState.recentEffectiveSearches = [
-      {
-        id: "recent-remove-1",
-        keyword: "三体 4K",
-        total: 12,
-        cloudTypes: ["quark", "aliyun"],
-        searchedAt: "2026-06-14T15:00:00.000Z",
-        params: {
-          keyword: "三体 4K",
-          source: "all",
-          resultType: "merge",
-          cloudTypes: ["quark", "aliyun"],
-          channels: [],
-          plugins: [],
-          concurrency: 5,
-          refresh: false,
-          ext: {},
-          filter: {
-            include: ["4K"],
-            exclude: ["枪版"],
-          },
-        },
-      },
-    ];
-
-    renderSearchPage("/search");
-
-    fireEvent.click(await screen.findByRole("button", { name: "删除最近有效搜索 三体 4K" }));
-
-    expect(removeRecentEffectiveSearchMock).toHaveBeenCalledWith("recent-remove-1");
-    expect(setSearchParamsMock).not.toHaveBeenCalled();
-    expect(performSearchMock).not.toHaveBeenCalled();
-  });
-
-  it("点击最近有效搜索的清空按钮只清空记录", async () => {
-    searchStoreState.recentEffectiveSearches = [
-      {
-        id: "recent-clear-1",
-        keyword: "三体 4K",
-        total: 12,
-        cloudTypes: ["quark", "aliyun"],
-        searchedAt: "2026-06-14T15:00:00.000Z",
-        params: {
-          keyword: "三体 4K",
-          source: "all",
-          resultType: "merge",
-          cloudTypes: ["quark", "aliyun"],
-          channels: [],
-          plugins: [],
-          concurrency: 5,
-          refresh: false,
-          ext: {},
-          filter: {
-            include: ["4K"],
-            exclude: ["枪版"],
-          },
-        },
-      },
-    ];
-
-    renderSearchPage("/search");
-
-    fireEvent.click(await screen.findByRole("button", { name: "清空最近有效搜索" }));
-
-    expect(clearRecentEffectiveSearchesMock).toHaveBeenCalledTimes(1);
-    expect(setSearchParamsMock).not.toHaveBeenCalled();
-    expect(performSearchMock).not.toHaveBeenCalled();
-  });
-
-  it("returns to the homepage when the standalone search page has no previous history", async () => {
+  it("无历史记录时返回首页并保留返回过渡状态", async () => {
+    searchStoreState.searchParams.keyword = "电影";
     renderSearchPage("/search?q=%E7%94%B5%E5%BD%B1");
 
     fireEvent.click(await screen.findByRole("button", { name: "返回" }));
 
     expect(clearResultsMock).toHaveBeenCalled();
     expect(setSearchParamsMock).toHaveBeenCalledWith({ keyword: "" });
-    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/"');
+    expect(screen.getByTestId("location-probe")).toHaveTextContent(
+      '"pathname":"/"',
+    );
     expect(screen.getByTestId("location-probe")).toHaveTextContent(
       '"skipHomeEntrance":true',
     );
@@ -649,7 +352,8 @@ describe("SearchPage", () => {
     );
   });
 
-  it("returns to the previous page when entering search from the trending page", async () => {
+  it("从热门页进入搜索时返回上一页", async () => {
+    searchStoreState.searchParams.keyword = "电影";
     renderSearchPage("/search?q=%E7%94%B5%E5%BD%B1", {
       initialEntries: [
         { pathname: "/trending" },
@@ -662,6 +366,8 @@ describe("SearchPage", () => {
 
     expect(clearResultsMock).toHaveBeenCalled();
     expect(setSearchParamsMock).toHaveBeenCalledWith({ keyword: "" });
-    expect(screen.getByTestId("location-probe")).toHaveTextContent('"pathname":"/trending"');
+    expect(screen.getByTestId("location-probe")).toHaveTextContent(
+      '"pathname":"/trending"',
+    );
   });
 });
