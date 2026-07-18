@@ -1,11 +1,12 @@
 import React from "react";
-import { X } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 interface SearchInputProps {
   inputRef: React.RefObject<HTMLInputElement>;
   value: string;
   placeholder?: string;
   onChange: (value: string) => void;
+  onInputCommitted?: (value: string) => void;
   onSubmit: () => void;
   onFocus: () => void;
   onBlur: () => void;
@@ -21,6 +22,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
   value,
   placeholder,
   onChange,
+  onInputCommitted,
   onSubmit,
   onFocus,
   onBlur,
@@ -30,6 +32,39 @@ const SearchInput: React.FC<SearchInputProps> = ({
   onHistorySubmit,
   onHistoryRemove,
 }) => {
+  const composingRef = React.useRef(false);
+  const skipCommittedChangeRef = React.useRef<string | null>(null);
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue = event.target.value;
+    onChange(nextValue);
+
+    if (composingRef.current) {
+      return;
+    }
+
+    if (skipCommittedChangeRef.current === nextValue) {
+      skipCommittedChangeRef.current = null;
+      return;
+    }
+
+    skipCommittedChangeRef.current = null;
+    onInputCommitted?.(nextValue);
+  };
+
+  const handleCompositionStart = () => {
+    composingRef.current = true;
+    skipCommittedChangeRef.current = null;
+  };
+
+  const handleCompositionEnd = (
+    event: React.CompositionEvent<HTMLInputElement>,
+  ) => {
+    composingRef.current = false;
+    skipCommittedChangeRef.current = event.currentTarget.value;
+    onInputCommitted?.(event.currentTarget.value);
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     const isComposing =
       event.nativeEvent.isComposing || event.keyCode === 229;
@@ -70,24 +105,17 @@ const SearchInput: React.FC<SearchInputProps> = ({
 
   return (
     <>
-      <svg
+      <Search
+        aria-hidden="true"
         className="absolute left-6 top-1/2 z-20 h-6 w-6 -translate-y-1/2 text-blue-500 transition-colors duration-300 group-focus-within:text-blue-600 dark:text-cyan-300 dark:group-focus-within:text-cyan-200"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-        />
-      </svg>
+      />
       <input
         ref={inputRef}
         type="text"
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={handleChange}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
         onKeyDown={handleKeyDown}
         onFocus={onFocus}
         onBlur={onBlur}

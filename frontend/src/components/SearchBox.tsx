@@ -15,6 +15,9 @@ interface SearchBoxProps {
   autoFocus?: boolean;
   accessHint?: string;
   onSearch?: (keyword: string) => void;
+  onFocusChange?: (focused: boolean) => void;
+  onInputCommitted?: (value: string) => void;
+  appearance?: "default" | "canvas";
 }
 
 export const SearchBox: React.FC<SearchBoxProps> = ({
@@ -23,6 +26,9 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   autoFocus = false,
   accessHint,
   onSearch,
+  onFocusChange,
+  onInputCommitted,
+  appearance = "default",
 }) => {
   const controller = useSearchBoxController({ autoFocus, onSearch });
 
@@ -45,16 +51,29 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
         />
         <div
           data-testid="search-box-surface"
-          className="relative z-10 overflow-hidden rounded-[2rem] border-[0.5px] border-slate-200/70 bg-white/75 shadow-sm backdrop-blur-xl transition-all duration-300 group-focus-within:border-blue-300/70 group-focus-within:bg-white/[0.85] group-focus-within:shadow-md dark:border-white/[0.08] dark:bg-slate-950/[0.55] dark:shadow-[0_10px_24px_rgba(0,0,0,0.24)] dark:group-focus-within:border-white/[0.15] dark:group-focus-within:bg-slate-800/[0.55]"
+          data-appearance={appearance}
+          className={cn(
+            "relative z-10 overflow-hidden border-[0.5px] transition-all duration-300",
+            appearance === "canvas"
+              ? "rounded-[22px] border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.07)] group-focus-within:border-[#246BFD] group-focus-within:ring-4 group-focus-within:ring-[#246BFD]/10 dark:border-[#253142] dark:bg-[#111722] dark:group-focus-within:border-[#6F8BFF]"
+              : "rounded-[2rem] border-slate-200/70 bg-white/75 shadow-sm backdrop-blur-xl group-focus-within:border-blue-300/70 group-focus-within:bg-white/[0.85] group-focus-within:shadow-md dark:border-white/[0.08] dark:bg-slate-950/[0.55] dark:shadow-[0_10px_24px_rgba(0,0,0,0.24)] dark:group-focus-within:border-white/[0.15] dark:group-focus-within:bg-slate-800/[0.55]",
+          )}
         >
           <SearchInput
             inputRef={controller.inputRef}
             value={controller.inputValue}
             placeholder={placeholder}
             onChange={controller.setInputValue}
+            onInputCommitted={onInputCommitted}
             onSubmit={handleSearch}
-            onFocus={controller.handleInputFocus}
-            onBlur={controller.handleInputBlur}
+            onFocus={() => {
+              controller.handleInputFocus();
+              onFocusChange?.(true);
+            }}
+            onBlur={() => {
+              controller.handleInputBlur();
+              onFocusChange?.(false);
+            }}
             onEscape={() => {
               controller.setShowHistory(false);
             }}
@@ -68,6 +87,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
             buttonRef={controller.buttonRef}
             onSearch={handleSearch}
             disabled={!controller.inputValue.trim() || controller.isLoading}
+            appearance={appearance}
           />
         </div>
 

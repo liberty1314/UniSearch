@@ -1076,4 +1076,54 @@ describe("SearchBox", () => {
       }),
     );
   });
+
+  it("向搜索画布报告焦点变化", async () => {
+    currentLocation.pathname = "/search";
+    const onFocusChange = vi.fn();
+
+    render(<SearchBox onFocusChange={onFocusChange} />);
+    const input = screen.getByPlaceholderText("搜索网盘资源...");
+
+    await userEvent.click(input);
+    expect(onFocusChange).toHaveBeenLastCalledWith(true);
+
+    fireEvent.blur(input);
+    expect(onFocusChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("中文组合输入结束后只报告一次视觉输入", () => {
+    currentLocation.pathname = "/search";
+    const onInputCommitted = vi.fn();
+
+    render(<SearchBox onInputCommitted={onInputCommitted} />);
+    const input = screen.getByPlaceholderText("搜索网盘资源...");
+
+    fireEvent.compositionStart(input);
+    fireEvent.change(input, { target: { value: "liu" } });
+    fireEvent.change(input, { target: { value: "流浪" } });
+    expect(onInputCommitted).not.toHaveBeenCalled();
+
+    fireEvent.compositionEnd(input);
+    expect(onInputCommitted).toHaveBeenCalledTimes(1);
+    expect(onInputCommitted).toHaveBeenCalledWith("流浪");
+  });
+
+  it("搜索画布使用纯色行动按钮且不影响默认外观", () => {
+    currentLocation.pathname = "/search";
+    const { rerender } = render(<SearchBox appearance="canvas" />);
+
+    expect(screen.getByTestId("search-box-surface")).toHaveAttribute(
+      "data-appearance",
+      "canvas",
+    );
+    expect(screen.getByRole("button", { name: "搜索" }).className).toContain(
+      "bg-[#FF7A59]",
+    );
+
+    rerender(<SearchBox />);
+    expect(screen.getByTestId("search-box-surface")).toHaveAttribute(
+      "data-appearance",
+      "default",
+    );
+  });
 });
