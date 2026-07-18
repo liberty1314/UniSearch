@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ChevronRight, Clock3, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -15,7 +15,7 @@ import {
 
 interface SearchResultListItemProps {
   item: ResultItem;
-  index: number;
+  entranceDelay?: number;
   canOpenResource: boolean;
   isResolvingResource?: boolean;
   showDetailEntry?: boolean;
@@ -28,7 +28,7 @@ interface SearchResultListItemProps {
 export const SearchResultListItem = React.memo<SearchResultListItemProps>(
   ({
     item,
-    index,
+    entranceDelay = 0,
     canOpenResource,
     isResolvingResource = false,
     showDetailEntry = true,
@@ -37,6 +37,8 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
     onCancelResolveResource,
     onOpenDetail,
   }) => {
+    const shouldReduceMotion = useReducedMotion();
+    const resolvedEntranceDelay = shouldReduceMotion ? 0 : entranceDelay;
     const { resource, primaryLink, cloudType, datetime } = item;
     const cloudInfo = getCloudTypeInfo(cloudType);
     const sourceInfo = resolveResourceSourcePresentation(resource);
@@ -71,14 +73,18 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
         tabIndex={canOpenResource ? 0 : undefined}
         aria-label={`${cloudInfo.name}资源：${displayTitle || "未命名资源"}${hasPassword ? "（需要访问码）" : ""}`}
         aria-busy={isResolvingResource || undefined}
-        initial={{ opacity: 0, x: -8 }}
-        animate={{ opacity: 1, x: 0 }}
+        initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{
-          delay: Math.min(index % 48, 20) * 0.03,
-          duration: 0.35,
+          delay: resolvedEntranceDelay,
+          duration: shouldReduceMotion ? 0 : 0.22,
           ease: [0.22, 1, 0.36, 1],
         }}
-        whileHover={canOpenResource ? { x: 4 } : undefined}
+        whileHover={shouldReduceMotion
+          ? undefined
+          : canOpenResource
+            ? { x: 4 }
+            : undefined}
         onClick={canOpenResource ? handleClick : undefined}
         onKeyDown={canOpenResource ? handleKeyDown : undefined}
         className={cn(

@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ChevronRight, Clock3, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -13,12 +13,11 @@ import {
   resolveResourceSourcePresentation,
 } from "@/utils/resourceDisplay";
 
-// ─── Props ────────────────────────────────────────────────────────────────────
+// ─── 属性 ─────────────────────────────────────────────────────────────────────
 
 interface SearchResultGridCardProps {
   item: ResultItem;
-  /** 在当前已渲染列表中的绝对下标，用于错落入场延迟 */
-  index: number;
+  entranceDelay?: number;
   canOpenResource: boolean;
   isResolvingResource?: boolean;
   showDetailEntry: boolean;
@@ -33,14 +32,12 @@ interface SearchResultGridCardProps {
 /**
  * 搜索结果网格卡片（React.memo）
  *
- * 动画设计：
- * - 首次挂载时执行 fade+slide 入场，delay 基于 `index % 48`
- *   使得每批次（初始加载 / loadMore）最多交错 48 帧，视觉流畅。
- * - 由于组件被 React.memo 包裹，loadMore 时旧卡片不会重渲染，
- *   因此旧卡片不会重放入场动画，只有新挂载的卡片会动画进入。
+ * 入场延迟由结果列表显式传入，减少动态效果时不执行位移动画。
  */
 export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
-  ({ item, index, canOpenResource, isResolvingResource = false, showDetailEntry, showSourceBadge, onOpenResource, onCancelResolveResource, onOpenDetail }) => {
+  ({ item, entranceDelay = 0, canOpenResource, isResolvingResource = false, showDetailEntry, showSourceBadge, onOpenResource, onCancelResolveResource, onOpenDetail }) => {
+    const shouldReduceMotion = useReducedMotion();
+    const resolvedEntranceDelay = shouldReduceMotion ? 0 : entranceDelay;
     const { resource, primaryLink, cloudType, datetime } = item;
     const cloudInfo = getCloudTypeInfo(cloudType);
     const sourceInfo = resolveResourceSourcePresentation(resource);
@@ -75,16 +72,20 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
 
     return (
       <motion.div
-        // 入场动画：只在首次挂载时触发
-        initial={{ opacity: 0, y: 20, scale: 0.96 }}
+        initial={shouldReduceMotion
+          ? false
+          : { opacity: 0, y: 8, scale: 0.985 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{
-          // 每批次最多交错 20 项（0.04s × 20 = 0.8s），避免延迟过长
-          delay: Math.min(index % 48, 20) * 0.04,
-          duration: 0.4,
+          delay: resolvedEntranceDelay,
+          duration: shouldReduceMotion ? 0 : 0.22,
           ease: [0.22, 1, 0.36, 1],
         }}
-        whileHover={canOpenResource ? { y: -4, scale: 1.01 } : { y: -2 }}
+        whileHover={shouldReduceMotion
+          ? undefined
+          : canOpenResource
+            ? { y: -4, scale: 1.01 }
+            : { y: -2 }}
         role={canOpenResource ? "button" : undefined}
         tabIndex={canOpenResource ? 0 : undefined}
         aria-label={ariaLabel}

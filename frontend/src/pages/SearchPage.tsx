@@ -126,7 +126,7 @@ const SearchPage: React.FC = () => {
             <div className="max-w-5xl">
               <SearchUnifiedFilterCard />
             </div>
-            <SearchResults />
+            <SearchResults revealActive={viewState.phase === "revealing"} />
           </div>
         )}
       />

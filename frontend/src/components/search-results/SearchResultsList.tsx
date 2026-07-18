@@ -7,12 +7,14 @@ import {
   resolveDeferredResourceLinks,
   resolveResourceOpenTarget,
 } from "@/utils/resourceDisplay";
+import { resolveSearchResultEntranceDelay } from "@/components/search-results/searchResultReveal";
 
 type ViewMode = "list" | "grid";
 
 interface SearchResultsListProps {
   resources: ResultItem[];
   viewMode: ViewMode;
+  revealActive?: boolean;
   enableResourceDetailPage: boolean;
   enableResourceSourceBadges: boolean;
   resolvingResourceId?: string | null;
@@ -24,6 +26,7 @@ interface SearchResultsListProps {
 const SearchResultsList: React.FC<SearchResultsListProps> = ({
   resources,
   viewMode,
+  revealActive = false,
   enableResourceDetailPage,
   enableResourceSourceBadges,
   resolvingResourceId,
@@ -40,16 +43,20 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
         : "flex flex-col gap-4",
     )}
   >
-    {resources.map((item, index) =>
-      viewMode === "grid" ? (
+    {resources.map((item, index) => {
+      const entranceDelay = resolveSearchResultEntranceDelay(
+        index,
+        revealActive,
+      );
+      const canOpenResource = Boolean(resolveResourceOpenTarget(item)) ||
+        resolveDeferredResourceLinks(item.resource).length > 0;
+
+      return viewMode === "grid" ? (
         <SearchResultGridCard
           key={item.resource.id}
           item={item}
-          index={index}
-          canOpenResource={
-            Boolean(resolveResourceOpenTarget(item)) ||
-            resolveDeferredResourceLinks(item.resource).length > 0
-          }
+          entranceDelay={entranceDelay}
+          canOpenResource={canOpenResource}
           isResolvingResource={resolvingResourceId === item.resource.id}
           showDetailEntry={enableResourceDetailPage}
           showSourceBadge={enableResourceSourceBadges}
@@ -61,11 +68,8 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
         <SearchResultListItem
           key={item.resource.id}
           item={item}
-          index={index}
-          canOpenResource={
-            Boolean(resolveResourceOpenTarget(item)) ||
-            resolveDeferredResourceLinks(item.resource).length > 0
-          }
+          entranceDelay={entranceDelay}
+          canOpenResource={canOpenResource}
           isResolvingResource={resolvingResourceId === item.resource.id}
           onOpenResource={onOpenResource}
           onCancelResolveResource={onCancelResolveResource}
@@ -73,8 +77,8 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
           showDetailEntry={enableResourceDetailPage}
           showSourceBadge={enableResourceSourceBadges}
         />
-      ),
-    )}
+      );
+    })}
   </div>
 );
 

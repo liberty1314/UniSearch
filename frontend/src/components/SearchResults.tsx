@@ -46,6 +46,7 @@ import { getErrorDataCode, getErrorMessage } from "@/lib/error";
 
 interface SearchResultsProps {
   className?: string;
+  revealActive?: boolean;
 }
 
 const isSearchResultsViewMode = (
@@ -75,7 +76,10 @@ const isAbortLikeError = (error: unknown): boolean => {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
+const SearchResults: React.FC<SearchResultsProps> = ({
+  className,
+  revealActive = false,
+}) => {
   const {
     searchResults,
     isLoading,
@@ -469,6 +473,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ className }) => {
       <SearchResultsList
         resources={displayedResults}
         viewMode={viewMode}
+        revealActive={revealActive}
         enableResourceDetailPage={enableResourceDetailPage}
         enableResourceSourceBadges={enableResourceSourceBadges}
         resolvingResourceId={resolvingResourceId}

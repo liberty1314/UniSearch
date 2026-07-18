@@ -162,6 +162,7 @@ vi.mock("@/components/LoadingState", () => ({
 }));
 
 vi.mock("framer-motion", () => ({
+  useReducedMotion: () => false,
   motion: {
     div: ({
       children,
