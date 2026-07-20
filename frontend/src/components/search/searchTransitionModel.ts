@@ -7,6 +7,31 @@ export type SearchProgressiveStatus =
 
 export const SEARCH_QUERY_LAYOUT_ID = "search-query-surface";
 
+export type SearchTransitionView = "idle" | "results";
+export type SearchTransitionDirection = "forward" | "backward" | "steady";
+
+export const resolveSearchTransitionDirection = (
+  previousView: SearchTransitionView,
+  nextView: SearchTransitionView,
+): SearchTransitionDirection => {
+  if (previousView === "idle" && nextView === "results") {
+    return "forward";
+  }
+
+  if (previousView === "results" && nextView === "idle") {
+    return "backward";
+  }
+
+  return "steady";
+};
+
+export const shouldShareSearchQueryLayout = (
+  view: SearchTransitionView,
+  direction: SearchTransitionDirection,
+): boolean => view === "idle"
+  ? direction !== "backward"
+  : direction === "forward";
+
 export type SearchVisualPhase =
   | "idle"
   | "submitting"

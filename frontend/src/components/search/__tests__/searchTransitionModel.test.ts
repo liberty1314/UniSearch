@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   deriveSearchTransitionState,
+  resolveSearchTransitionDirection,
+  shouldShareSearchQueryLayout,
   type SearchTransitionSnapshot,
 } from "@/components/search/searchTransitionModel";
 
@@ -100,5 +102,20 @@ describe("deriveSearchTransitionState", () => {
       phase: "collecting",
       progressLabel: "已完成 3/3 个来源",
     });
+  });
+});
+
+describe("搜索过渡方向", () => {
+  it("按视图变化区分正向、反向和静置状态", () => {
+    expect(resolveSearchTransitionDirection("idle", "results")).toBe("forward");
+    expect(resolveSearchTransitionDirection("results", "idle")).toBe("backward");
+    expect(resolveSearchTransitionDirection("idle", "idle")).toBe("steady");
+  });
+
+  it("只在正向接管时启用查询框共享布局", () => {
+    expect(shouldShareSearchQueryLayout("idle", "steady")).toBe(true);
+    expect(shouldShareSearchQueryLayout("results", "forward")).toBe(true);
+    expect(shouldShareSearchQueryLayout("idle", "backward")).toBe(false);
+    expect(shouldShareSearchQueryLayout("results", "steady")).toBe(false);
   });
 });

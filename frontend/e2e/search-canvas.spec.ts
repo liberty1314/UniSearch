@@ -47,6 +47,30 @@ test('提交搜索后查询条接管并展示结果', async ({ page }, testInfo)
   });
 });
 
+test('结果视图挂载时不被退出的空态画布推到下方', async ({ page }) => {
+  await mockPublicApis(page);
+  await signIn(page);
+  await page.goto('/search');
+
+  await page.getByPlaceholder('搜索电影、课程、软件或资料...').fill('流浪地球');
+  await page.getByRole('button', { name: '搜索' }).click();
+
+  const resultView = page.locator(
+    '[data-testid="search-transition-view"][data-view="results"]',
+  );
+  await expect(resultView).toHaveCount(1);
+  const offset = await resultView.evaluate((element) => {
+    const shell = element.closest('[data-testid="search-transition-shell"]');
+    if (!shell) {
+      throw new Error('缺少搜索过渡壳');
+    }
+
+    return element.getBoundingClientRect().top - shell.getBoundingClientRect().top;
+  });
+
+  expect(offset).toBeLessThan(120);
+});
+
 test('移动端只显示 6 个碎片并支持减少动态效果', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: 'reduce' });

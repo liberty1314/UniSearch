@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import SearchBox from "@/components/SearchBox";
 import SearchFragmentField from "@/components/search/SearchFragmentField";
+import { useSearchTransitionLayout } from "@/components/search/searchTransitionContext";
 import {
   SEARCH_QUERY_LAYOUT_ID,
   type SearchTransitionViewState,
@@ -28,6 +29,7 @@ const SearchStage: React.FC<SearchStageProps> = ({
 }) => {
   const [focused, setFocused] = useState(false);
   const [inputSignal, setInputSignal] = useState(0);
+  const { shouldShareQueryLayout } = useSearchTransitionLayout();
 
   return (
     <section
@@ -63,7 +65,8 @@ const SearchStage: React.FC<SearchStageProps> = ({
         </h1>
 
         <motion.div
-          layoutId={SEARCH_QUERY_LAYOUT_ID}
+          layoutId={shouldShareQueryLayout ? SEARCH_QUERY_LAYOUT_ID : undefined}
+          data-shared-query-layout={shouldShareQueryLayout}
           className="relative z-30 mx-auto mt-8 w-full max-w-3xl"
         >
           <SearchBox
