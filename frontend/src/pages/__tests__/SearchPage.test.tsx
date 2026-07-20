@@ -284,7 +284,7 @@ describe("SearchPage", () => {
     expect(screen.queryByText("search-results")).not.toBeInTheDocument();
   });
 
-  it("渐进式搜索时查询条展示真实来源进度", () => {
+  it("渐进式搜索时查询条不重复展示来源进度", () => {
     searchStoreState = {
       ...searchStoreState,
       searchParams: {
@@ -303,7 +303,7 @@ describe("SearchPage", () => {
     renderSearchPage("/search?q=%E7%94%B5%E5%BD%B1");
 
     expect(screen.getByTestId("search-query-dock")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("已完成 2/5 个来源");
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.getByText("unified-filter-card")).toBeInTheDocument();
     expect(screen.getByText("search-results")).toBeInTheDocument();
   });

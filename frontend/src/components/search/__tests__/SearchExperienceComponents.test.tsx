@@ -58,21 +58,16 @@ describe("搜索体验组件", () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it("结果查询条显示真实进度和榜单来源", () => {
+  it("结果查询条不重复显示进度并展示榜单来源", () => {
     render(
       <SearchQueryDock
-        viewState={{
-          phase: "collecting",
-          progressLabel: "已完成 2/5 个来源",
-          resultCount: 0,
-        }}
         fromTrendingLabel="沙丘 2"
         onBack={vi.fn()}
       />,
     );
 
     expect(screen.getByTestId("search-query-dock")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("已完成 2/5 个来源");
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.getByText("来自热门榜单：沙丘 2")).toBeInTheDocument();
   });
 

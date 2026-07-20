@@ -119,7 +119,6 @@ const SearchPage: React.FC = () => {
         results={(
           <div className="mx-auto w-full max-w-6xl space-y-5 sm:space-y-6">
             <SearchQueryDock
-              viewState={viewState}
               fromTrendingLabel={fromTrendingLabel}
               onBack={handleBack}
             />

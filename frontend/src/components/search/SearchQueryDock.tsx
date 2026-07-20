@@ -3,20 +3,15 @@ import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import SearchBox from "@/components/SearchBox";
 import { useSearchTransitionLayout } from "@/components/search/searchTransitionContext";
-import {
-  SEARCH_QUERY_LAYOUT_ID,
-  type SearchTransitionViewState,
-} from "@/components/search/searchTransitionModel";
+import { SEARCH_QUERY_LAYOUT_ID } from "@/components/search/searchTransitionModel";
 import { Button } from "@/components/ui/button";
 
 interface SearchQueryDockProps {
-  viewState: SearchTransitionViewState;
   fromTrendingLabel?: string;
   onBack: () => void;
 }
 
 const SearchQueryDock: React.FC<SearchQueryDockProps> = ({
-  viewState,
   fromTrendingLabel,
   onBack,
 }) => {
@@ -50,14 +45,6 @@ const SearchQueryDock: React.FC<SearchQueryDockProps> = ({
             appearance="canvas"
           />
         </motion.div>
-
-        <span
-          role="status"
-          aria-live="polite"
-          className="sr-only shrink-0 font-mono text-xs text-slate-500 dark:text-slate-300 sm:not-sr-only"
-        >
-          {viewState.progressLabel}
-        </span>
       </div>
 
       {fromTrendingLabel ? (
