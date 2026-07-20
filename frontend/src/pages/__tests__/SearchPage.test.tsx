@@ -276,6 +276,8 @@ describe("SearchPage", () => {
     });
 
     expect(screen.getByTestId("search-stage")).toBeInTheDocument();
+    expect(screen.queryByText("多源索引 / 就绪")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.queryByText("从一个关键词，找到更多可能")).not.toBeInTheDocument();
     expect(screen.getByText("auto-focus-on")).toBeInTheDocument();
     expect(screen.queryByText("搜索启动台")).not.toBeInTheDocument();

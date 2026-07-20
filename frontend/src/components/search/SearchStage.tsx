@@ -57,13 +57,10 @@ const SearchStage: React.FC<SearchStageProps> = ({
       />
 
       <div className="relative z-20 w-full max-w-4xl text-center">
-        <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400 sm:text-xs">
-          多源索引 / 就绪
-        </p>
         <motion.div
           layoutId={shouldShareQueryLayout ? SEARCH_QUERY_LAYOUT_ID : undefined}
           data-shared-query-layout={shouldShareQueryLayout}
-          className="relative z-30 mx-auto mt-8 w-full max-w-3xl"
+          className="relative z-30 mx-auto w-full max-w-3xl"
         >
           <SearchBox
             className="max-w-none"
@@ -75,14 +72,6 @@ const SearchStage: React.FC<SearchStageProps> = ({
             onInputCommitted={() => setInputSignal((value) => value + 1)}
           />
         </motion.div>
-
-        <span
-          role="status"
-          aria-live="polite"
-          className="mt-5 block text-xs text-slate-500 dark:text-slate-400"
-        >
-          {viewState.progressLabel}
-        </span>
       </div>
     </section>
   );

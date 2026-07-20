@@ -14,6 +14,8 @@ test('空搜索页只展示碎片画布且不请求热榜', async ({ page }, tes
   await page.goto('/search');
 
   await expect(page.getByTestId('search-stage')).toBeVisible();
+  await expect(page.getByText('多源索引 / 就绪')).toHaveCount(0);
+  await expect(page.getByRole('status')).toHaveCount(0);
   await expect(page.getByRole('heading', {
     name: '从一个关键词，找到更多可能',
   })).toHaveCount(0);
