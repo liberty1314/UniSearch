@@ -276,7 +276,7 @@ describe("SearchPage", () => {
     });
 
     expect(screen.getByTestId("search-stage")).toBeInTheDocument();
-    expect(screen.getByText("从一个关键词，找到更多可能")).toBeInTheDocument();
+    expect(screen.queryByText("从一个关键词，找到更多可能")).not.toBeInTheDocument();
     expect(screen.getByText("auto-focus-on")).toBeInTheDocument();
     expect(screen.queryByText("搜索启动台")).not.toBeInTheDocument();
     expect(screen.queryByText("最近有效搜索")).not.toBeInTheDocument();

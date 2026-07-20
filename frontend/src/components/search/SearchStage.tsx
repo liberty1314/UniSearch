@@ -60,10 +60,6 @@ const SearchStage: React.FC<SearchStageProps> = ({
         <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400 sm:text-xs">
           多源索引 / 就绪
         </p>
-        <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950 dark:text-slate-50 sm:text-4xl lg:text-5xl">
-          从一个关键词，找到更多可能
-        </h1>
-
         <motion.div
           layoutId={shouldShareQueryLayout ? SEARCH_QUERY_LAYOUT_ID : undefined}
           data-shared-query-layout={shouldShareQueryLayout}

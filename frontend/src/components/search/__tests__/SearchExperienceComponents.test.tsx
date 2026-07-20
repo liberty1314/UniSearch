@@ -47,9 +47,9 @@ describe("搜索体验组件", () => {
     );
 
     expect(screen.getByTestId("search-stage")).toBeInTheDocument();
-    expect(screen.getByRole("heading", {
+    expect(screen.queryByRole("heading", {
       name: "从一个关键词，找到更多可能",
-    })).toBeInTheDocument();
+    })).not.toBeInTheDocument();
     expect(screen.queryByText("搜索启动台")).not.toBeInTheDocument();
     expect(screen.queryByText("最近有效搜索")).not.toBeInTheDocument();
     expect(screen.queryByText("热榜直搜")).not.toBeInTheDocument();
