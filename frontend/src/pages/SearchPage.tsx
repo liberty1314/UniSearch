@@ -122,7 +122,7 @@ const SearchPage: React.FC = () => {
               fromTrendingLabel={fromTrendingLabel}
               onBack={handleBack}
             />
-            <div className="max-w-5xl">
+            <div className="mx-auto w-full max-w-5xl">
               <SearchUnifiedFilterCard />
             </div>
             <SearchResults revealActive={viewState.phase === "revealing"} />

@@ -49,6 +49,31 @@ test('提交搜索后查询条接管并展示结果', async ({ page }, testInfo)
   });
 });
 
+test('结果态筛选卡片在内容轨道内居中且移动端不溢出', async ({ page }) => {
+  await mockPublicApis(page);
+  await signIn(page);
+  await page.goto('/search');
+
+  await page.getByPlaceholder('搜索电影、课程、软件或资料...').fill('流浪地球');
+  await page.getByRole('button', { name: '搜索' }).click();
+
+  const filterCard = page.getByTestId('search-unified-filter-card');
+  await expect(filterCard).toBeVisible();
+  await expect(filterCard.locator('..')).toHaveClass(/mx-auto/);
+
+  const geometry = await filterCard.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      center: rect.left + rect.width / 2,
+      viewport: window.innerWidth,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+
+  expect(Math.abs(geometry.center - geometry.viewport / 2)).toBeLessThanOrEqual(1);
+  expect(geometry.overflow).toBeLessThanOrEqual(1);
+});
+
 test('结果视图挂载时不被退出的空态画布推到下方', async ({ page }) => {
   await mockPublicApis(page);
   await signIn(page);

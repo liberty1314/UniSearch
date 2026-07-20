@@ -186,7 +186,9 @@ describe("SearchPage", () => {
 
     renderSearchPage("/search?q=%E7%94%B5%E5%BD%B1&types=quark");
 
-    expect(screen.getByText("unified-filter-card")).toBeInTheDocument();
+    const filterCard = screen.getByText("unified-filter-card");
+    expect(filterCard).toBeInTheDocument();
+    expect(filterCard.parentElement).toHaveClass("mx-auto", "w-full", "max-w-5xl");
 
     await waitFor(() => {
       expect(setSearchParamsMock).toHaveBeenCalledWith(
