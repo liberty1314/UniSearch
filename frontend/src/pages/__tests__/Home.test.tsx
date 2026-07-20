@@ -24,6 +24,7 @@ vi.mock('framer-motion', () => {
           animate,
           transition,
           whileHover,
+          variants,
           whileInView,
           viewport,
           ...restProps
@@ -32,12 +33,14 @@ vi.mock('framer-motion', () => {
         animate?: unknown;
         transition?: unknown;
         whileHover?: unknown;
+        variants?: unknown;
         whileInView?: unknown;
         viewport?: unknown;
       }) => {
         void animate;
         void transition;
         void whileHover;
+        void variants;
         void whileInView;
         void viewport;
 
@@ -46,6 +49,7 @@ vi.mock('framer-motion', () => {
           'data-motion-initial': serializeMotionProp(initial),
           'data-motion-transition': serializeMotionProp(transition),
           'data-motion-while-hover': serializeMotionProp(whileHover),
+          'data-motion-variants': serializeMotionProp(variants),
         }, children);
       };
 
@@ -422,26 +426,32 @@ describe('Home', () => {
     });
   });
 
-  it('将功能卡片的入场与无延迟悬浮过渡隔离在不同动画层', () => {
+  it('将功能卡片的悬浮手势绑定到稳定外层并隔离视觉变换', () => {
     renderHome();
 
     const featureCards = screen.getAllByTestId('home-feature-card');
     const hoverLayers = screen.getAllByTestId('home-feature-card-hover-layer');
 
     featureCards.forEach((card) => {
-      expect(card).not.toHaveAttribute('data-motion-while-hover');
+      expect(card).toHaveAttribute(
+        'data-motion-while-hover',
+        JSON.stringify('home-feature-card-hover'),
+      );
     });
 
     expect(hoverLayers).toHaveLength(3);
     hoverLayers.forEach((hoverLayer) => {
-      const whileHover = hoverLayer.getAttribute('data-motion-while-hover');
+      const variants = hoverLayer.getAttribute('data-motion-variants');
       const transition = hoverLayer.getAttribute('data-motion-transition');
 
-      expect(whileHover).not.toBeNull();
-      expect(JSON.parse(whileHover!)).toMatchObject({
-        y: -8,
-        rotateX: 1.5,
-        scale: 1.015,
+      expect(hoverLayer).not.toHaveAttribute('data-motion-while-hover');
+      expect(variants).not.toBeNull();
+      expect(JSON.parse(variants!)).toMatchObject({
+        'home-feature-card-hover': {
+          y: -8,
+          rotateX: 1.5,
+          scale: 1.015,
+        },
       });
       expect(transition).not.toBeNull();
       expect(JSON.parse(transition!)).toEqual({ duration: 0.2, ease: 'easeOut' });

@@ -31,13 +31,14 @@ const FeatureCard: React.FC<FeatureCardProps> = ({
     <motion.div
       initial={shouldAnimateEntrance ? { opacity: 0, y: 34, rotateX: 6 } : false}
       animate={{ opacity: 1, y: 0 }}
+      whileHover={shouldReduceMotion ? undefined : "home-feature-card-hover"}
       transition={{ delay: 1 + index * 0.1, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
       className="group relative h-full cursor-pointer [transform-style:preserve-3d]"
       data-testid="home-feature-card"
     >
-      {/* 将悬浮状态置于独立层，避免继承外层错落入场延迟。 */}
+      {/* 外层固定悬浮命中区域，内层只承载视觉变换，避免变形元素反复触发进入/离开。 */}
       <motion.div
-        whileHover={shouldReduceMotion ? undefined : homeCardHoverState}
+        variants={{ "home-feature-card-hover": homeCardHoverState }}
         transition={homeCardHoverTransition}
         className="h-full [transform-style:preserve-3d]"
         data-testid="home-feature-card-hover-layer"
