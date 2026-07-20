@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SlidersHorizontal, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, Circle, SlidersHorizontal, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,6 @@ import {
 
 interface SourceChipProps {
   config: PlatformTheme;
-  compact: boolean;
   isSelected: boolean;
   onToggle: (type: CloudTypeValue) => void;
   onOpenFocusMenu: (
@@ -43,13 +42,7 @@ const splitKeywordInput = (value: string): string[] =>
     .filter(Boolean);
 
 const SourceChip = memo(
-  ({
-    config,
-    compact,
-    isSelected,
-    onToggle,
-    onOpenFocusMenu,
-  }: SourceChipProps) => {
+  ({ config, isSelected, onToggle, onOpenFocusMenu }: SourceChipProps) => {
     const longPressTimerRef = useRef<number | null>(null);
     const longPressTriggeredRef = useRef(false);
 
@@ -132,11 +125,10 @@ const SourceChip = memo(
         aria-pressed={isSelected}
         aria-label={`${config.name}${isSelected ? "（已选中，点击取消，长按打开来源操作）" : "（未选中，点击选择，长按打开来源操作）"}`}
         className={cn(
-          "relative flex shrink-0 items-center border text-[13px] font-semibold transition-colors transition-shadow duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#246BFD] focus-visible:ring-offset-2",
-          compact ? "rounded-xl px-3 py-2" : "rounded-[1rem] px-5 py-2.5",
+          "relative flex items-center rounded-[1rem] border px-5 py-2.5 text-[13.5px] font-semibold transition-colors transition-shadow duration-300 box-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2",
           isSelected
-            ? "border-[#246BFD] bg-[#246BFD] text-white shadow-[0_6px_16px_rgba(36,107,253,0.18)] dark:border-[#6F8BFF] dark:bg-[#6F8BFF] dark:text-[#080B12]"
-            : "border-slate-200 bg-white text-slate-600 hover:border-[#20C7B5] hover:text-slate-900 dark:border-[#253142] dark:bg-[#111722] dark:text-slate-300 dark:hover:border-[#4ED9C8] dark:hover:text-white",
+            ? `bg-gradient-to-br ${config.color} text-white border-transparent ${config.shadow} shadow-[0_8px_20px_rgba(14,165,233,0.2)] dark:shadow-none ring-[0.5px] ring-white/50 dark:ring-white/10`
+            : "bg-white/40 text-slate-600 border-[0.5px] border-slate-200/50 shadow-sm backdrop-blur-md hover:bg-white/60 hover:shadow-md dark:bg-slate-800/40 dark:text-slate-300 dark:border-white/10 dark:hover:bg-slate-700/40",
         )}
       >
         <span>{config.name}</span>
@@ -353,78 +345,69 @@ const SearchUnifiedFilterCard: React.FC = () => {
 
   return (
     <motion.section
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       data-testid="search-unified-filter-card"
-      className="w-full rounded-[18px] border border-slate-200 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.045)] dark:border-[#253142] dark:bg-[#111722]"
+      className="w-full max-w-5xl rounded-[2rem] border-[0.5px] border-white/60 bg-white/60 p-6 shadow-[0_12px_40px_rgba(15,23,42,0.04)] backdrop-blur-3xl dark:border-white/[0.06] dark:bg-slate-950/40 sm:p-8"
     >
-      <div className="flex flex-col gap-3">
-        <div
-          data-testid="search-filter-rail"
-          className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => setExpanded((current) => !current)}
-            aria-label={expanded ? "收起高级条件" : "展开高级条件"}
-            title={expanded ? "收起高级条件" : "展开高级条件"}
-            className="shrink-0 rounded-xl"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-          </Button>
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-[1.2rem] border-[0.5px] border-slate-200/50 bg-white/40 text-slate-700 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200">
+              <SlidersHorizontal className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100">
+                筛选条件
+              </h3>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                先选网盘，再根据需要按关键词继续收窄结果
+              </p>
+            </div>
+          </div>
 
-          <Button
-            type="button"
-            variant={isAllSelected ? "default" : "outline"}
-            onClick={handleSelectAll}
-            aria-pressed={isAllSelected}
-            aria-label={isAllSelected ? "取消全选所有网盘类型" : "全选所有网盘类型"}
-            className="h-9 shrink-0 rounded-xl px-3 text-xs"
-          >
-            全部
-          </Button>
-
-          {platformThemes.map((config) => (
-            <SourceChip
-              key={config.type}
-              config={config}
-              compact
-              isSelected={effectiveSelectedTypes.includes(config.type)}
-              onToggle={handleTypeToggle}
-              onOpenFocusMenu={handleOpenSourceFocusMenu}
-            />
-          ))}
-
-          {activeConditionCount > 0 ? (
-            <span className="shrink-0 rounded-full bg-[#20C7B5]/[0.12] px-3 py-1.5 text-xs font-semibold text-teal-800 dark:text-[#4ED9C8]">
-              已启用 {activeConditionCount} 项
-            </span>
-          ) : null}
-
-          {activeConditionCount > 0 ? (
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            {activeConditionCount > 0 ? (
+              <span className="rounded-full bg-cyan-500/12 px-3 py-1 text-xs font-semibold text-cyan-700 dark:bg-cyan-400/12 dark:text-cyan-200">
+                已启用 {activeConditionCount} 项
+              </span>
+            ) : null}
+            {activeConditionCount > 0 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleClearAllFilters}
+                className="rounded-full text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+              >
+                清空全部筛选
+              </Button>
+            ) : null}
             <Button
               type="button"
-              variant="ghost"
-              onClick={handleClearAllFilters}
-              aria-label="清空全部筛选"
-              className="h-9 shrink-0 rounded-xl px-3 text-xs text-slate-500"
+              variant="outline"
+              onClick={() => setExpanded((prev) => !prev)}
+              className="rounded-full"
             >
-              清空
+              <span>{expanded ? "收起高级条件" : "展开高级条件"}</span>
+              <ChevronDown
+                className={cn("h-4 w-4 transition-transform duration-300", expanded && "rotate-180")}
+              />
             </Button>
-          ) : null}
+          </div>
         </div>
 
         {!expanded && collapsedSummaryChips.length > 0 ? (
           <div
             data-testid="search-unified-filter-collapsed-summary"
-            className="flex flex-nowrap items-center gap-2 overflow-x-auto border-t border-slate-100 pt-3 text-xs dark:border-[#253142]"
+            className="flex flex-nowrap items-center gap-2 overflow-x-auto rounded-[1.4rem] border border-cyan-200/60 bg-cyan-50/70 px-4 py-3 text-sm text-cyan-900 dark:border-cyan-400/15 dark:bg-cyan-400/10 dark:text-cyan-50"
           >
+            <span className="shrink-0 text-xs font-semibold tracking-[0.08em] text-cyan-700 dark:text-cyan-200">
+              已生效条件
+            </span>
             {collapsedSummaryChips.map((chip) => (
               <span
                 key={chip.id}
-                className="inline-flex max-w-[70vw] shrink-0 items-center rounded-full border border-[#20C7B5]/[0.30] bg-[#20C7B5]/[0.08] px-3 py-1 text-teal-800 dark:text-[#4ED9C8]"
+                className="inline-flex max-w-[70vw] shrink-0 items-center rounded-full border border-cyan-300/35 bg-white/75 px-3 py-1 text-xs font-medium text-cyan-800 dark:border-cyan-300/20 dark:bg-slate-950/45 dark:text-cyan-100"
                 title={chip.label}
               >
                 <span className="truncate whitespace-nowrap">{chip.label}</span>
@@ -432,6 +415,59 @@ const SearchUnifiedFilterCard: React.FC = () => {
             ))}
           </div>
         ) : null}
+
+        <div className="rounded-[1.6rem] border border-slate-200/70 bg-white/50 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                网盘筛选
+              </h4>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                点击切换来源，长按可仅看单个来源
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant={isAllSelected ? "default" : "outline"}
+              onClick={handleSelectAll}
+              aria-pressed={isAllSelected}
+              aria-label={isAllSelected ? "取消全选所有网盘类型" : "全选所有网盘类型"}
+              className="rounded-[1rem] px-4 py-2 text-sm font-semibold"
+            >
+              {isAllSelected ? (
+                <CheckCircle2 className="h-5 w-5" />
+              ) : (
+                <Circle className="h-5 w-5" />
+              )}
+              <span>{isAllSelected ? "全选状态" : "选择全部"}</span>
+            </Button>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <div className="flex w-full flex-wrap justify-center gap-3">
+              {platformThemes.slice(0, 6).map((config) => (
+                <SourceChip
+                  key={config.type}
+                  config={config}
+                  isSelected={effectiveSelectedTypes.includes(config.type)}
+                  onToggle={handleTypeToggle}
+                  onOpenFocusMenu={handleOpenSourceFocusMenu}
+                />
+              ))}
+            </div>
+            <div className="flex w-full flex-wrap justify-center gap-3">
+              {platformThemes.slice(6).map((config) => (
+                <SourceChip
+                  key={config.type}
+                  config={config}
+                  isSelected={effectiveSelectedTypes.includes(config.type)}
+                  onToggle={handleTypeToggle}
+                  onOpenFocusMenu={handleOpenSourceFocusMenu}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
 
         {expanded ? (
           <div className="space-y-6" data-testid="search-unified-filter-advanced">
