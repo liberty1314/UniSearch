@@ -61,7 +61,7 @@ const SearchStage: React.FC<SearchStageProps> = ({
           多源索引 / 就绪
         </p>
         <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950 dark:text-slate-50 sm:text-4xl lg:text-5xl">
-          输入资源名称，其他交给聚合
+          从一个关键词，找到更多可能
         </h1>
 
         <motion.div

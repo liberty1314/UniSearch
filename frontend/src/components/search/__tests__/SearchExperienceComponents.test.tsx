@@ -28,7 +28,7 @@ vi.mock("@/components/SearchBox", () => ({
 
 const idleState: SearchTransitionViewState = {
   phase: "idle",
-  progressLabel: "多来源聚合已准备",
+  progressLabel: "多来源已就绪",
   resultCount: 0,
 };
 
@@ -48,7 +48,7 @@ describe("搜索体验组件", () => {
 
     expect(screen.getByTestId("search-stage")).toBeInTheDocument();
     expect(screen.getByRole("heading", {
-      name: "输入资源名称，其他交给聚合",
+      name: "从一个关键词，找到更多可能",
     })).toBeInTheDocument();
     expect(screen.queryByText("搜索启动台")).not.toBeInTheDocument();
     expect(screen.queryByText("最近有效搜索")).not.toBeInTheDocument();

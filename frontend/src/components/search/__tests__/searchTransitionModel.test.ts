@@ -25,7 +25,7 @@ describe("deriveSearchTransitionState", () => {
   it("无关键词时返回静置画布", () => {
     expect(deriveSearchTransitionState(buildSnapshot())).toEqual({
       phase: "idle",
-      progressLabel: "多来源聚合已准备",
+      progressLabel: "多来源已就绪",
       resultCount: 0,
     });
   });

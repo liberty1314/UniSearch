@@ -71,7 +71,7 @@ export function deriveSearchTransitionState(
   if (!keyword) {
     return {
       phase: "idle",
-      progressLabel: "多来源聚合已准备",
+      progressLabel: "多来源已就绪",
       resultCount,
     };
   }
