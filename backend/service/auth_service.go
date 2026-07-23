@@ -18,7 +18,8 @@ import (
 // AuthService 用户认证服务
 // 提供用户注册、登录、Token验证等功能
 type AuthService struct {
-	db *gorm.DB
+	db                    *gorm.DB
+	systemSettingsService *SystemSettingsService
 }
 
 func isAuthDuplicateEntryError(err error) bool {
@@ -34,6 +35,11 @@ func NewAuthService() *AuthService {
 	return &AuthService{
 		db: database.GetDB(),
 	}
+}
+
+// SetSystemSettingsService 注入系统设置服务，用于在注册时校验开关状态
+func (s *AuthService) SetSystemSettingsService(systemSettingsService *SystemSettingsService) {
+	s.systemSettingsService = systemSettingsService
 }
 
 func (s *AuthService) recordDailyLogin(userID uint, now time.Time) error {
@@ -92,6 +98,16 @@ func (s *AuthService) ensureDailyActivity(userID uint, now time.Time) error {
 //
 // 验证需求：4.1-4.6
 func (s *AuthService) Register(username, password string) (*model.User, error) {
+	if s.systemSettingsService != nil {
+		settings, err := s.systemSettingsService.GetSettings()
+		if err != nil {
+			return nil, fmt.Errorf("查询系统设置失败: %w", err)
+		}
+		if !settings.EnableUserAuth || !settings.EnableUserSignup {
+			return nil, ErrSignupDisabled
+		}
+	}
+
 	// 验证参数非空
 	username = strings.TrimSpace(username)
 

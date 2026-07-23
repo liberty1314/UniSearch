@@ -147,6 +147,16 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 			return
 		}
 
+		if errors.Is(err, service.ErrSignupDisabled) {
+			log.Printf("✗ 注册失败: 用户注册功能已关闭 - %s", req.Username)
+			c.JSON(403, LoginResponse{
+				Code:    403,
+				Message: "用户注册功能已关闭",
+				Data:    nil,
+			})
+			return
+		}
+
 		// 其他错误（数据库错误等）
 		log.Printf("✗ 注册失败: %v", err)
 		c.JSON(500, LoginResponse{

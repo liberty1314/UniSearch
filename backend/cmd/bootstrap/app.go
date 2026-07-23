@@ -80,6 +80,7 @@ func Initialize() (*App, error) {
 		util.ReloadHTTPClient()
 	}
 	service.SetGlobalCacheSettingsService(systemSettingsService)
+	authService.SetSystemSettingsService(systemSettingsService)
 	fmt.Println("SystemSettings 服务已启动（系统设置功能已启用）")
 
 	announcementService := service.NewAnnouncementService(database.GetDB())

@@ -491,3 +491,12 @@
     - docs/sidhub-timeout-optimization-plan.md
     - docs/superpowers/specs/2026-07-18-search-prism-design.md
     - docs/superpowers/specs/2026-07-19-search-transition-continuity-design.md
+
+- [2026-07-23 16:42] feat(auth): 增加用户注册功能的开关校验与控制
+  - Body: 在 AuthService 注册入口注入 SystemSettingsService，校验系统设置中的注册开关与用户认证开关状态，若关闭则禁止注册并返回 403 错误。
+  - Files:
+    - backend/api/controller/auth_controller.go
+    - backend/cmd/bootstrap/app.go
+    - backend/service/auth_errors.go
+    - backend/service/auth_service.go
+    - docs/readme_2607.md
