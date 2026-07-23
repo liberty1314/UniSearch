@@ -472,3 +472,22 @@
     - frontend/src/components/trending/__tests__/HotSectionSummary.test.tsx
     - frontend/src/components/trending/__tests__/HotToolbar.test.tsx
     - docs/readme_2607.md
+
+- [2026-07-23 16:41] docs(docs): 清理已过时的开发计划与设计规格文档
+  - Body: 清理 docs 目录中已完成或过期的历史开发计划与设计规格文件，保持文档目录整洁。
+  - Files:
+    - docs/channel-observability-development-plan.md
+    - docs/channel-observability-plan.md
+    - docs/frontend-ui-optimization-development-plan.md
+    - docs/frontend-ui-optimization-plan.md
+    - docs/plugin-development-plan.md
+    - docs/plugin.md
+    - docs/readme_2607.md
+    - docs/resource-detail-page-soft-ui-redesign-development-plan.md
+    - docs/resource-detail-page-soft-ui-redesign-plan.md
+    - docs/seedhub-per-type-limit-and-latest-dedup-development-plan.md
+    - docs/seedhub-search-quality-development-plan.md
+    - docs/sidhub-timeout-development-plan.md
+    - docs/sidhub-timeout-optimization-plan.md
+    - docs/superpowers/specs/2026-07-18-search-prism-design.md
+    - docs/superpowers/specs/2026-07-19-search-transition-continuity-design.md
