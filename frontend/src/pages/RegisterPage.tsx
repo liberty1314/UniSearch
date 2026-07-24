@@ -22,6 +22,7 @@ import {
   Loader2,
 } from "lucide-react";
 import AuthBackground from "@/components/auth/AuthBackground";
+import TurnstileWidget from "@/components/auth/TurnstileWidget";
 import AuthCardShell from "@/components/auth/AuthCardShell";
 import AuthInput from "@/components/auth/AuthInput";
 import {
@@ -113,6 +114,17 @@ const RegisterPage: React.FC = () => {
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [authPolicy, setAuthPolicy] = useState(DEFAULT_AUTH_POLICY);
 
+  // Captcha State
+  const [captchaEnabled, setCaptchaEnabled] = useState(false);
+  const [captchaProvider, setCaptchaProvider] = useState("turnstile");
+  const [captchaSiteKey, setCaptchaSiteKey] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
+
+  // 人机验证仅在开关开启、provider 为 turnstile 且站点公钥已配置时才真正生效。
+  // 缺少 site key 时无法渲染验证组件，此时不得强制校验，否则用户永远无法提交。
+  const captchaActive =
+    captchaEnabled && captchaProvider === "turnstile" && Boolean(captchaSiteKey);
+
   const normalizePasswordInput = (value: string) => {
     if (!hasPasswordWhitespace(value)) {
       return value;
@@ -137,6 +149,9 @@ const RegisterPage: React.FC = () => {
       try {
         const settings = await SystemSettingsService.getSettings();
         setAuthPolicy(resolveAuthPolicy(settings));
+        setCaptchaEnabled(Boolean(settings.enable_signup_captcha));
+        setCaptchaProvider(settings.signup_captcha_provider || "turnstile");
+        setCaptchaSiteKey(settings.signup_captcha_site_key || "");
 
         if (!settings.enable_user_auth || !settings.enable_user_signup) {
           toast.error("用户注册功能已关闭");
@@ -220,9 +235,18 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
+    if (captchaActive && !captchaToken) {
+      toast.error("请先完成人机验证");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const response = await AuthService.register(username.trim(), password);
+      const response = await AuthService.register(
+        username.trim(),
+        password,
+        captchaActive ? captchaToken : undefined,
+      );
       if (response && response.access_token) {
         setToken(
           response.access_token,
@@ -238,6 +262,10 @@ const RegisterPage: React.FC = () => {
       }
     } catch (error) {
       console.error("Register failed:", error);
+      // Turnstile 令牌为一次性，注册失败后需要重新验证
+      if (captchaActive) {
+        setCaptchaToken("");
+      }
       const dataError = getErrorDataError(error);
       if (dataError) {
         toast.error(dataError);
@@ -470,6 +498,17 @@ const RegisterPage: React.FC = () => {
                     </button>
                   }
                 />
+
+                {captchaActive && (
+                  <div className="flex justify-center">
+                    <TurnstileWidget
+                      siteKey={captchaSiteKey}
+                      onVerify={setCaptchaToken}
+                      onExpire={() => setCaptchaToken("")}
+                      onError={() => setCaptchaToken("")}
+                    />
+                  </div>
+                )}
 
                 <Button
                   type="submit"

@@ -1,8 +1,12 @@
 package api
 
-import "unisearch/service"
+import (
+	"unisearch/service"
+	"unisearch/util/cache"
+)
 
 type RouterDeps struct {
+	RedisCache                *cache.RedisCache
 	SearchService             *service.SearchService
 	APIKeyService             *service.APIKeyService
 	AuthService               *service.AuthService
@@ -19,4 +23,5 @@ type RouterDeps struct {
 	TGChannelHealthService    *service.TGChannelHealthService
 	AdminTagService           *service.AdminTagService
 	HotRankingService         *service.HotRankingService
+	BannedIPService           *service.BannedIPService
 }

@@ -58,6 +58,64 @@ func getAllowedOrigins() []string {
 	}
 }
 
+// getTrustedProxies 返回可信反向代理网段（CIDR 或 IP）列表。
+// 用于 Gin SetTrustedProxies，确保 c.ClientIP() 解析出真实客户端 IP 而非反代 IP。
+// 未配置时返回 nil：调用方据此决定信任策略（生产建议显式配置内网反代网段）。
+func getTrustedProxies() []string {
+	return parseTrimmedUniqueEnvList(os.Getenv("TRUSTED_PROXIES"))
+}
+
+// getSignupIPLimitPerMin 返回单 IP 每分钟注册请求上限（默认 5）。
+func getSignupIPLimitPerMin() int {
+	return getPositiveIntEnv("SIGNUP_IP_LIMIT_PER_MIN", 5)
+}
+
+// getSignupIPLimitPerHour 返回单 IP 每小时注册请求上限（默认 20）。
+func getSignupIPLimitPerHour() int {
+	return getPositiveIntEnv("SIGNUP_IP_LIMIT_PER_HOUR", 20)
+}
+
+// getSignupRateLimitUseRedis 返回是否将注册限流/自动封禁计数落到 Redis（默认启用）。
+// Redis 不可用时运行期自动降级到内存实现。
+func getSignupRateLimitUseRedis() bool {
+	val := strings.TrimSpace(os.Getenv("SIGNUP_RATE_LIMIT_USE_REDIS"))
+	if val == "" {
+		return true
+	}
+	return val != "false" && val != "0"
+}
+
+// getSignupGlobalLimitPerHour 返回全站每小时注册成功总量上限（默认 0=关闭熔断）。
+func getSignupGlobalLimitPerHour() int {
+	val := strings.TrimSpace(os.Getenv("SIGNUP_GLOBAL_LIMIT_PER_HOUR"))
+	if val == "" {
+		return 0
+	}
+	n, err := strconv.Atoi(val)
+	if err != nil || n < 0 {
+		return 0
+	}
+	return n
+}
+
+// getSignupCircuitBreakMin 返回触发全局熔断后拒绝新注册的持续时长（分钟，默认 10）。
+func getSignupCircuitBreakMin() int {
+	return getPositiveIntEnv("SIGNUP_CIRCUIT_BREAK_MIN", 10)
+}
+
+// getPositiveIntEnv 读取正整数环境变量，非法或非正时返回默认值。
+func getPositiveIntEnv(key string, def int) int {
+	val := strings.TrimSpace(os.Getenv(key))
+	if val == "" {
+		return def
+	}
+	n, err := strconv.Atoi(val)
+	if err != nil || n <= 0 {
+		return def
+	}
+	return n
+}
+
 // 从环境变量获取默认频道列表，如果未设置则使用默认值
 func getDefaultChannels() []string {
 	channels := parseTrimmedUniqueEnvList(os.Getenv("CHANNELS"))

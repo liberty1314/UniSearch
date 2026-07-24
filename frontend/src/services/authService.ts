@@ -3,8 +3,11 @@ import type { AdminLoginRequest, AdminLoginResponse, CurrentUserResponse, LoginR
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 
 export class AuthService {
-  static async register(username: string, password: string): Promise<LoginWithRememberResponse> {
+  static async register(username: string, password: string, captchaToken?: string): Promise<LoginWithRememberResponse> {
     const request: RegisterRequest = { username, password };
+    if (captchaToken) {
+      request.captcha_token = captchaToken;
+    }
     return apiClient.post<LoginWithRememberResponse>('/auth/register', request);
   }
 

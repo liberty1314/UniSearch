@@ -48,6 +48,15 @@ type Config struct {
 	AppEnv string
 	// CORS 允许来源。生产环境必须显式配置，开发环境使用 localhost 默认值。
 	AllowedOrigins []string
+	// 可信反向代理网段（CIDR 或 IP）。用于 Gin SetTrustedProxies，保证 c.ClientIP() 取到真实客户端 IP。
+	TrustedProxies []string
+
+	// 注册防刷：IP 维度限流阈值
+	SignupIPLimitPerMin      int  // 单 IP 每分钟注册请求上限
+	SignupIPLimitPerHour     int  // 单 IP 每小时注册请求上限
+	SignupRateLimitUseRedis  bool // 限流/自动封禁计数是否使用 Redis 后端（多实例共享）
+	SignupGlobalLimitPerHour int  // 全站每小时注册成功总量上限（0=关闭熔断）
+	SignupCircuitBreakMin    int  // 触发全局熔断后拒绝新注册的持续时长（分钟）
 
 	DefaultChannels    []string
 	DefaultConcurrency int
@@ -193,6 +202,13 @@ func InitWithError() error {
 	AppConfig = &Config{
 		AppEnv:         getAppEnv(),
 		AllowedOrigins: getAllowedOrigins(),
+		TrustedProxies: getTrustedProxies(),
+
+		SignupIPLimitPerMin:      getSignupIPLimitPerMin(),
+		SignupIPLimitPerHour:     getSignupIPLimitPerHour(),
+		SignupRateLimitUseRedis:  getSignupRateLimitUseRedis(),
+		SignupGlobalLimitPerHour: getSignupGlobalLimitPerHour(),
+		SignupCircuitBreakMin:    getSignupCircuitBreakMin(),
 
 		DefaultChannels:    getDefaultChannels(),
 		DefaultConcurrency: getDefaultConcurrency(),

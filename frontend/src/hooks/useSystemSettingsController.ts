@@ -2,6 +2,11 @@ import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
   SystemSettingsService,
+  DEFAULT_SIGNUP_AUTOBAN_ENABLED,
+  DEFAULT_SIGNUP_AUTOBAN_THRESHOLD,
+  DEFAULT_SIGNUP_AUTOBAN_WINDOW_MIN,
+  DEFAULT_SIGNUP_AUTOBAN_DURATION_MIN,
+  DEFAULT_ENABLE_SIGNUP_CAPTCHA,
   type CacheSettingsResponse,
   type RuntimeSettingsResponse,
 } from '@/services/systemSettingsService';
@@ -15,7 +20,7 @@ import { getErrorDataError, getErrorMessage } from '@/lib/error';
 import { resolvePublicSiteUrl } from '@/lib/publicSiteConfig';
 import { DEFAULT_CACHE_SETTINGS, normalizeCacheSettings } from '@/lib/systemSettingsCacheOptions';
 
-export type SavingState = 'auth' | 'login' | 'signup' | 'resource_detail' | 'source_badges' | 'source_diversity' | 'display' | null;
+export type SavingState = 'auth' | 'login' | 'signup' | 'signup_autoban' | 'signup_captcha' | 'resource_detail' | 'source_badges' | 'source_diversity' | 'display' | null;
 export type TMDBConfigSource = 'secret_manager' | 'env_fallback' | 'unconfigured';
 
 export const DEFAULT_RUNTIME_SETTINGS: RuntimeSettingsResponse = {
@@ -48,7 +53,12 @@ export const useSystemSettingsController = () => {
   const [tmdbCurrentTokenPreview, setTMDBCurrentTokenPreview] = useState<string>('');
   const [cacheSettings, setCacheSettings] = useState<CacheSettingsResponse>(DEFAULT_CACHE_SETTINGS);
   const [runtimeSettings, setRuntimeSettings] = useState<RuntimeSettingsResponse>(DEFAULT_RUNTIME_SETTINGS);
-  
+  const [signupAutobanEnabled, setSignupAutobanEnabled] = useState<boolean>(DEFAULT_SIGNUP_AUTOBAN_ENABLED);
+  const [signupAutobanThreshold, setSignupAutobanThreshold] = useState<number>(DEFAULT_SIGNUP_AUTOBAN_THRESHOLD);
+  const [signupAutobanWindowMin, setSignupAutobanWindowMin] = useState<number>(DEFAULT_SIGNUP_AUTOBAN_WINDOW_MIN);
+  const [signupAutobanDurationMin, setSignupAutobanDurationMin] = useState<number>(DEFAULT_SIGNUP_AUTOBAN_DURATION_MIN);
+  const [enableSignupCaptcha, setEnableSignupCaptcha] = useState<boolean>(DEFAULT_ENABLE_SIGNUP_CAPTCHA);
+
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<SavingState>(null);
   const [isSavingTMDB, setIsSavingTMDB] = useState<boolean>(false);
@@ -67,6 +77,11 @@ export const useSystemSettingsController = () => {
     enableSearchSourceDiversity: DEFAULT_ENABLE_SEARCH_SOURCE_DIVERSITY,
     searchFirstPageMaxPerSource: DEFAULT_SEARCH_FIRST_PAGE_MAX_PER_SOURCE,
     publicSiteUrl: resolvePublicSiteUrl(),
+    signupAutobanEnabled: DEFAULT_SIGNUP_AUTOBAN_ENABLED,
+    signupAutobanThreshold: DEFAULT_SIGNUP_AUTOBAN_THRESHOLD,
+    signupAutobanWindowMin: DEFAULT_SIGNUP_AUTOBAN_WINDOW_MIN,
+    signupAutobanDurationMin: DEFAULT_SIGNUP_AUTOBAN_DURATION_MIN,
+    enableSignupCaptcha: DEFAULT_ENABLE_SIGNUP_CAPTCHA,
   });
 
   const loadSettings = useCallback(async () => {
@@ -87,7 +102,19 @@ export const useSystemSettingsController = () => {
       setEnableSearchSourceDiversity(nextEnableSearchSourceDiversity);
       setSearchFirstPageMaxPerSource(nextSearchFirstPageMaxPerSource);
       setPublicSiteUrl(resolvePublicSiteUrl(settings));
-      
+
+      const nextSignupAutobanEnabled = Boolean(settings.signup_autoban_enabled);
+      const nextSignupAutobanThreshold = settings.signup_autoban_threshold;
+      const nextSignupAutobanWindowMin = settings.signup_autoban_window_min;
+      const nextSignupAutobanDurationMin = settings.signup_autoban_duration_min;
+      setSignupAutobanEnabled(nextSignupAutobanEnabled);
+      setSignupAutobanThreshold(nextSignupAutobanThreshold);
+      setSignupAutobanWindowMin(nextSignupAutobanWindowMin);
+      setSignupAutobanDurationMin(nextSignupAutobanDurationMin);
+
+      const nextEnableSignupCaptcha = Boolean(settings.enable_signup_captcha);
+      setEnableSignupCaptcha(nextEnableSignupCaptcha);
+
       setOriginalValues({
         enableUserAuth: settings.enable_user_auth,
         enableUserLogin: settings.enable_user_login,
@@ -97,6 +124,11 @@ export const useSystemSettingsController = () => {
         enableSearchSourceDiversity: nextEnableSearchSourceDiversity,
         searchFirstPageMaxPerSource: nextSearchFirstPageMaxPerSource,
         publicSiteUrl: resolvePublicSiteUrl(settings),
+        signupAutobanEnabled: nextSignupAutobanEnabled,
+        signupAutobanThreshold: nextSignupAutobanThreshold,
+        signupAutobanWindowMin: nextSignupAutobanWindowMin,
+        signupAutobanDurationMin: nextSignupAutobanDurationMin,
+        enableSignupCaptcha: nextEnableSignupCaptcha,
       });
 
       const tmdbSettings = await SystemSettingsService.getTMDBSettings(token);
@@ -185,6 +217,87 @@ export const useSystemSettingsController = () => {
     } catch (error) {
       console.error('保存系统设置失败:', error);
       setEnableUserSignup(originalValues.enableUserSignup);
+      toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
+    } finally {
+      setIsSaving(null);
+    }
+  };
+
+  const handleToggleSignupAutoban = async (checked: boolean) => {
+    if (!token) return;
+
+    setSignupAutobanEnabled(checked);
+    setIsSaving('signup_autoban');
+
+    try {
+      await SystemSettingsService.updateSettings(token, {
+        signup_autoban_enabled: checked,
+      });
+      setOriginalValues(prev => ({ ...prev, signupAutobanEnabled: checked }));
+      toast.success(checked ? '已启用注册自动封禁' : '已禁用注册自动封禁');
+    } catch (error) {
+      console.error('保存系统设置失败:', error);
+      setSignupAutobanEnabled(originalValues.signupAutobanEnabled);
+      toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
+    } finally {
+      setIsSaving(null);
+    }
+  };
+
+  const handleSaveSignupAutobanSettings = async () => {
+    if (!token) return;
+
+    setIsSaving('signup_autoban');
+    try {
+      const settings = await SystemSettingsService.updateSettings(token, {
+        signup_autoban_enabled: signupAutobanEnabled,
+        signup_autoban_threshold: signupAutobanThreshold,
+        signup_autoban_window_min: signupAutobanWindowMin,
+        signup_autoban_duration_min: signupAutobanDurationMin,
+      });
+      const nextSignupAutobanEnabled = Boolean(settings.signup_autoban_enabled);
+      const nextSignupAutobanThreshold = settings.signup_autoban_threshold;
+      const nextSignupAutobanWindowMin = settings.signup_autoban_window_min;
+      const nextSignupAutobanDurationMin = settings.signup_autoban_duration_min;
+      setSignupAutobanEnabled(nextSignupAutobanEnabled);
+      setSignupAutobanThreshold(nextSignupAutobanThreshold);
+      setSignupAutobanWindowMin(nextSignupAutobanWindowMin);
+      setSignupAutobanDurationMin(nextSignupAutobanDurationMin);
+      setOriginalValues(prev => ({
+        ...prev,
+        signupAutobanEnabled: nextSignupAutobanEnabled,
+        signupAutobanThreshold: nextSignupAutobanThreshold,
+        signupAutobanWindowMin: nextSignupAutobanWindowMin,
+        signupAutobanDurationMin: nextSignupAutobanDurationMin,
+      }));
+      toast.success('注册防刷设置已更新');
+    } catch (error) {
+      console.error('保存注册防刷设置失败:', error);
+      setSignupAutobanEnabled(originalValues.signupAutobanEnabled);
+      setSignupAutobanThreshold(originalValues.signupAutobanThreshold);
+      setSignupAutobanWindowMin(originalValues.signupAutobanWindowMin);
+      setSignupAutobanDurationMin(originalValues.signupAutobanDurationMin);
+      toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
+    } finally {
+      setIsSaving(null);
+    }
+  };
+
+  const handleToggleSignupCaptcha = async (checked: boolean) => {
+    if (!token) return;
+
+    setEnableSignupCaptcha(checked);
+    setIsSaving('signup_captcha');
+
+    try {
+      await SystemSettingsService.updateSettings(token, {
+        enable_signup_captcha: checked,
+      });
+      setOriginalValues(prev => ({ ...prev, enableSignupCaptcha: checked }));
+      toast.success(checked ? '已启用注册人机验证' : '已禁用注册人机验证');
+    } catch (error) {
+      console.error('保存系统设置失败:', error);
+      setEnableSignupCaptcha(originalValues.enableSignupCaptcha);
       toast.error('保存失败：' + (getErrorDataError(error) || getErrorMessage(error)));
     } finally {
       setIsSaving(null);
@@ -439,6 +552,11 @@ export const useSystemSettingsController = () => {
       enableResourceSourceBadges,
       enableSearchSourceDiversity,
       searchFirstPageMaxPerSource,
+      signupAutobanEnabled,
+      signupAutobanThreshold,
+      signupAutobanWindowMin,
+      signupAutobanDurationMin,
+      enableSignupCaptcha,
       publicSiteUrl,
       tmdbReadAccessToken,
       tmdbCurrentTokenPreview,
@@ -465,6 +583,12 @@ export const useSystemSettingsController = () => {
       setEnableSearchSourceDiversity,
       setSearchFirstPageMaxPerSource,
       handleSaveSearchSourceDiversitySettings,
+      setSignupAutobanThreshold,
+      setSignupAutobanWindowMin,
+      setSignupAutobanDurationMin,
+      handleToggleSignupAutoban,
+      handleSaveSignupAutobanSettings,
+      handleToggleSignupCaptcha,
       handleSaveDisplayConfig,
       handleSaveTMDBConfig,
       handleSaveCacheSettings,

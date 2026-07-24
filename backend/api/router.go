@@ -1,8 +1,11 @@
 package api
 
 import (
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"unisearch/api/controller"
+	"unisearch/config"
 	"unisearch/util"
 )
 
@@ -16,11 +19,34 @@ func SetupRouter(deps RouterDeps) *gin.Engine {
 	SetTGChannelService(deps.TGChannelService)
 	SetTGChannelHealthService(deps.TGChannelHealthService)
 	SetAdminTagService(deps.AdminTagService)
+	SetBannedIPService(deps.BannedIPService)
 
 	authController := controller.NewAuthController(deps.AuthService)
 
+	InitSignupRateLimiters(config.AppConfig.SignupIPLimitPerMin, config.AppConfig.SignupIPLimitPerHour)
+	// 选择注册限流计数后端：Redis（多实例共享、重启不丢）或内存（单实例）。
+	InitSignupRateLimitStore(config.AppConfig.SignupRateLimitUseRedis, deps.RedisCache)
+	// 自动封禁阈值存于 system_settings，支持后台热调；启动时读取初始值。
+	if deps.SystemSettingsService != nil {
+		if settings, err := deps.SystemSettingsService.GetSettings(); err != nil {
+			log.Printf("⚠️  读取自动封禁配置失败，暂用默认值: %v", err)
+		} else {
+			InitSignupAutoban(
+				settings.SignupAutobanEnabled,
+				settings.SignupAutobanThreshold,
+				settings.SignupAutobanWindowMin,
+				settings.SignupAutobanDurationMin,
+			)
+		}
+	}
+	// 全局注册熔断（L4 / 修复 W5）：全站每小时注册成功总量超阈值即临时熔断。
+	InitSignupCircuitBreaker(config.AppConfig.SignupGlobalLimitPerHour, config.AppConfig.SignupCircuitBreakMin, deps.RedisCache)
+	// 注册防刷可观测性（M6）：周期性汇总各维度拦截统计。
+	StartSignupMetricsReporter(0)
+
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
+	applyTrustedProxies(r)
 	r.Use(gin.Recovery())
 	r.Use(CORSMiddleware())
 	r.Use(LoggerMiddleware())
@@ -41,6 +67,19 @@ func SetupRouter(deps RouterDeps) *gin.Engine {
 	}
 
 	return r
+}
+
+// applyTrustedProxies 配置 Gin 的可信反向代理列表，保证 c.ClientIP() 取到真实客户端 IP。
+// 未显式配置 TRUSTED_PROXIES 时默认仅信任回环地址（本项目 Nginx 反代自 127.0.0.1）。
+// 信任列表之外的 X-Forwarded-For 将被忽略，避免客户端伪造真实 IP 绕过限流/封禁。
+func applyTrustedProxies(r *gin.Engine) {
+	proxies := config.AppConfig.TrustedProxies
+	if len(proxies) == 0 {
+		proxies = []string{"127.0.0.1", "::1"}
+	}
+	if err := r.SetTrustedProxies(proxies); err != nil {
+		log.Printf("警告: 设置可信代理失败: %v (信任列表: %v)", err, proxies)
+	}
 }
 
 func registerPublicRoutes(api *gin.RouterGroup, deps RouterDeps) {

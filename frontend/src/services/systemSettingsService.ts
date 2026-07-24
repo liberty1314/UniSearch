@@ -31,14 +31,42 @@ export interface SystemSettingsResponse {
     public_site_url: string;        // 公开站点 URL（为空时由前端环境变量兜底）
     default_copy_format_template: string; // API Key 复制默认模板
     progressive_search_enabled: boolean; // 是否启用渐进式搜索
+    signup_autoban_enabled: boolean; // 是否启用注册 IP 自动封禁
+    signup_autoban_threshold: number; // 触发窗口内注册请求数超过该值即封禁
+    signup_autoban_window_min: number; // 统计窗口（分钟）
+    signup_autoban_duration_min: number; // 封禁时长（分钟；0=永久）
+    enable_signup_captcha: boolean; // 是否启用注册人机验证
+    signup_captcha_provider: string; // 注册人机验证提供方
+    signup_captcha_site_key?: string; // 人机验证站点公钥（从环境变量读取，仅 GET 返回）
 }
+
+export const DEFAULT_SIGNUP_AUTOBAN_ENABLED = true;
+export const DEFAULT_SIGNUP_AUTOBAN_THRESHOLD = 30;
+export const DEFAULT_SIGNUP_AUTOBAN_WINDOW_MIN = 10;
+export const DEFAULT_SIGNUP_AUTOBAN_DURATION_MIN = 1440;
+export const DEFAULT_ENABLE_SIGNUP_CAPTCHA = false;
+export const DEFAULT_SIGNUP_CAPTCHA_PROVIDER = 'turnstile';
 
 type SystemSettingsWireResponse = Omit<
     SystemSettingsResponse,
-    'enable_search_source_diversity' | 'search_first_page_max_per_source'
+    | 'enable_search_source_diversity'
+    | 'search_first_page_max_per_source'
+    | 'signup_autoban_enabled'
+    | 'signup_autoban_threshold'
+    | 'signup_autoban_window_min'
+    | 'signup_autoban_duration_min'
+    | 'enable_signup_captcha'
+    | 'signup_captcha_provider'
 > & Partial<Pick<
     SystemSettingsResponse,
-    'enable_search_source_diversity' | 'search_first_page_max_per_source'
+    | 'enable_search_source_diversity'
+    | 'search_first_page_max_per_source'
+    | 'signup_autoban_enabled'
+    | 'signup_autoban_threshold'
+    | 'signup_autoban_window_min'
+    | 'signup_autoban_duration_min'
+    | 'enable_signup_captcha'
+    | 'signup_captcha_provider'
 >>;
 
 const normalizeSystemSettingsResponse = (
@@ -52,6 +80,18 @@ const normalizeSystemSettingsResponse = (
         search_first_page_max_per_source: normalizeSearchFirstPageMaxPerSource(
             settings.search_first_page_max_per_source,
         ),
+        signup_autoban_enabled:
+            settings.signup_autoban_enabled ?? DEFAULT_SIGNUP_AUTOBAN_ENABLED,
+        signup_autoban_threshold:
+            settings.signup_autoban_threshold ?? DEFAULT_SIGNUP_AUTOBAN_THRESHOLD,
+        signup_autoban_window_min:
+            settings.signup_autoban_window_min ?? DEFAULT_SIGNUP_AUTOBAN_WINDOW_MIN,
+        signup_autoban_duration_min:
+            settings.signup_autoban_duration_min ?? DEFAULT_SIGNUP_AUTOBAN_DURATION_MIN,
+        enable_signup_captcha:
+            settings.enable_signup_captcha ?? DEFAULT_ENABLE_SIGNUP_CAPTCHA,
+        signup_captcha_provider:
+            settings.signup_captcha_provider ?? DEFAULT_SIGNUP_CAPTCHA_PROVIDER,
     };
 };
 
@@ -188,6 +228,12 @@ export class SystemSettingsService {
             search_first_page_max_per_source?: number;
             public_site_url?: string;
             default_copy_format_template?: string;
+            signup_autoban_enabled?: boolean;
+            signup_autoban_threshold?: number;
+            signup_autoban_window_min?: number;
+            signup_autoban_duration_min?: number;
+            enable_signup_captcha?: boolean;
+            signup_captcha_provider?: string;
         }
     ): Promise<SystemSettingsResponse> {
         const response = await axios.put<SystemSettingsWireResponse>(

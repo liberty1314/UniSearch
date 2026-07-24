@@ -18,20 +18,23 @@ import (
 // AuthController 认证控制器
 // 处理用户注册、登录等认证相关的 HTTP 请求
 type AuthController struct {
-	authService *service.AuthService
+	authService    *service.AuthService
+	captchaService *service.CaptchaService
 }
 
 // NewAuthController 创建认证控制器实例
 func NewAuthController(authService *service.AuthService) *AuthController {
 	return &AuthController{
-		authService: authService,
+		authService:    authService,
+		captchaService: service.NewCaptchaService(nil),
 	}
 }
 
 // RegisterRequest 用户注册请求结构
 type RegisterRequest struct {
-	Username string `json:"username" binding:"required"` // 用户名
-	Password string `json:"password" binding:"required"` // 密码
+	Username     string `json:"username" binding:"required"` // 用户名
+	Password     string `json:"password" binding:"required"` // 密码
+	CaptchaToken string `json:"captcha_token"`               // 人机验证令牌（是否必填由后台开关运行时决定）
 }
 
 // LoginRequest 用户登录请求结构（支持记住我）
@@ -122,6 +125,38 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 			Data:    nil,
 		})
 		return
+	}
+
+	// 注册人机验证（受后台开关控制，关闭时完全跳过）
+	captchaEnabled, captchaProvider, captchaCfgErr := ctrl.authService.SignupCaptchaConfig()
+	if captchaCfgErr != nil {
+		log.Printf("✗ 读取人机验证配置失败: %v", captchaCfgErr)
+		c.JSON(500, LoginResponse{
+			Code:    500,
+			Message: "服务暂时不可用",
+			Data:    nil,
+		})
+		return
+	}
+	if captchaEnabled {
+		token := strings.TrimSpace(req.CaptchaToken)
+		if token == "" {
+			c.JSON(400, LoginResponse{
+				Code:    400,
+				Message: "请先完成人机验证",
+				Data:    nil,
+			})
+			return
+		}
+		if err := ctrl.captchaService.Verify(c.Request.Context(), captchaProvider, token, c.ClientIP()); err != nil {
+			log.Printf("✗ 注册人机验证失败: %v", err)
+			c.JSON(400, LoginResponse{
+				Code:    400,
+				Message: "人机验证未通过，请重试",
+				Data:    nil,
+			})
+			return
+		}
 	}
 
 	// 调用服务层进行注册

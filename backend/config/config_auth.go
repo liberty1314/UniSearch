@@ -360,6 +360,18 @@ func getRefreshTokenEncryptKey() string {
 	return key
 }
 
+// GetTurnstileSiteKey 返回 Cloudflare Turnstile 站点公钥（sitekey）。
+// 该值属于前端渲染所需的公开信息，直接从环境变量读取，不进入 Config 结构体。
+func GetTurnstileSiteKey() string {
+	return strings.TrimSpace(os.Getenv("TURNSTILE_SITE_KEY"))
+}
+
+// GetTurnstileSecretKey 返回 Cloudflare Turnstile 服务端校验密钥。
+// 该值属于机密，直接从环境变量读取，不进入 Config 结构体，避免泄漏到日志或响应。
+func GetTurnstileSecretKey() string {
+	return strings.TrimSpace(os.Getenv("TURNSTILE_SECRET_KEY"))
+}
+
 // 从环境变量获取密钥后端类型，如果未设置则默认使用数据库模式
 func getSecretBackend() string {
 	backend := os.Getenv("SECRET_BACKEND")

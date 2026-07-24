@@ -3,6 +3,7 @@
 export interface RegisterRequest {
   username: string;
   password: string;
+  captcha_token?: string;
 }
 
 export interface RegisterResponse {

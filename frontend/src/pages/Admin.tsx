@@ -49,10 +49,12 @@ const PerformanceObservabilityView = lazy(() =>
   }))
 );
 const AdminUsersView = lazy(() => import("@/components/admin/AdminUsersView"));
+const BannedIPView = lazy(() => import("@/components/admin/BannedIPView"));
 
 const adminViewTitles = {
   system_info: "系统监控",
   user_management: "用户管理",
+  banned_ip_management: "IP 封禁",
   channel_management: "Telegram 频道",
   plugin_management: "插件中心",
   plugin_observability: "性能监控",
@@ -243,6 +245,7 @@ const Admin: React.FC = () => {
                   <Suspense fallback={<AdminWorkspaceFallback />}>
                     {currentView === "system_info" && <SystemInfoView />}
                     {currentView === "user_management" && <AdminUsersView />}
+                    {currentView === "banned_ip_management" && <BannedIPView />}
                     {currentView === "channel_management" && <ChannelManagementView />}
                     {currentView === "plugin_management" && <PluginManagementView />}
                     {currentView === "plugin_observability" && <PerformanceObservabilityView />}

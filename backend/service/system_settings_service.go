@@ -20,6 +20,12 @@ type SystemSettingsUpdateInput struct {
 	EnableUserAuth              *bool
 	EnableUserLogin             *bool
 	EnableUserSignup            *bool
+	SignupAutobanEnabled        *bool
+	SignupAutobanThreshold      *int
+	SignupAutobanWindowMin      *int
+	SignupAutobanDurationMin    *int
+	EnableSignupCaptcha         *bool
+	SignupCaptchaProvider       *string
 	EnableResourceDetailPage    *bool
 	EnableResourceSourceBadges  *bool
 	EnableSearchSourceDiversity *bool
@@ -188,13 +194,19 @@ func (s *SystemSettingsService) GetSettings() (*model.SystemSettings, error) {
 			runtimeDefaults := resolveDefaultRuntimeSettings()
 			// 如果不存在，创建默认设置
 			settings = model.SystemSettings{
-				EnableUserAuth:                   true,  // 默认启用用户登录注册
-				EnableUserLogin:                  true,  // 默认启用用户登录
-				EnableUserSignup:                 true,  // 默认启用用户注册
-				AnnouncementEnabled:              false, // 默认禁用公告功能（需求 13.5）
-				EnableResourceDetailPage:         false, // 默认关闭资源详情页
-				EnableResourceSourceBadges:       false, // 默认关闭搜索结果来源标签
-				EnableSearchSourceDiversity:      false, // 默认关闭搜索结果首屏来源配额
+				EnableUserAuth:                   true,        // 默认启用用户登录注册
+				EnableUserLogin:                  true,        // 默认启用用户登录
+				EnableUserSignup:                 true,        // 默认启用用户注册
+				SignupAutobanEnabled:             true,        // 默认启用 IP 自动封禁
+				SignupAutobanThreshold:           30,          // 触发窗口内注册请求超过该值即自动封禁
+				SignupAutobanWindowMin:           10,          // 自动封禁触发统计窗口（分钟）
+				SignupAutobanDurationMin:         1440,        // 自动封禁时长（分钟，0=永久）
+				EnableSignupCaptcha:              false,       // 默认关闭注册人机验证
+				SignupCaptchaProvider:            "turnstile", // 默认人机验证提供方
+				AnnouncementEnabled:              false,       // 默认禁用公告功能（需求 13.5）
+				EnableResourceDetailPage:         false,       // 默认关闭资源详情页
+				EnableResourceSourceBadges:       false,       // 默认关闭搜索结果来源标签
+				EnableSearchSourceDiversity:      false,       // 默认关闭搜索结果首屏来源配额
 				SearchFirstPageMaxPerSource:      defaultSearchFirstPageMaxPerSource,
 				PublicSiteURL:                    "",
 				DefaultCopyFormatTemplate:        "",
@@ -255,6 +267,27 @@ func (s *SystemSettingsService) UpdateSettings(input SystemSettingsUpdateInput) 
 	if input.EnableUserSignup != nil {
 		settings.EnableUserSignup = *input.EnableUserSignup
 	}
+	if input.SignupAutobanEnabled != nil {
+		settings.SignupAutobanEnabled = *input.SignupAutobanEnabled
+	}
+	if input.SignupAutobanThreshold != nil {
+		if *input.SignupAutobanThreshold <= 0 {
+			return nil, fmt.Errorf("自动封禁阈值必须大于 0")
+		}
+		settings.SignupAutobanThreshold = *input.SignupAutobanThreshold
+	}
+	if input.SignupAutobanWindowMin != nil {
+		if *input.SignupAutobanWindowMin <= 0 {
+			return nil, fmt.Errorf("自动封禁统计窗口必须大于 0 分钟")
+		}
+		settings.SignupAutobanWindowMin = *input.SignupAutobanWindowMin
+	}
+	if input.SignupAutobanDurationMin != nil {
+		if *input.SignupAutobanDurationMin < 0 {
+			return nil, fmt.Errorf("自动封禁时长不能为负（0 表示永久）")
+		}
+		settings.SignupAutobanDurationMin = *input.SignupAutobanDurationMin
+	}
 	if input.EnableResourceDetailPage != nil {
 		settings.EnableResourceDetailPage = *input.EnableResourceDetailPage
 	}
@@ -272,6 +305,15 @@ func (s *SystemSettingsService) UpdateSettings(input SystemSettingsUpdateInput) 
 	}
 	if input.DefaultCopyFormatTemplate != nil {
 		settings.DefaultCopyFormatTemplate = strings.TrimSpace(*input.DefaultCopyFormatTemplate)
+	}
+	if input.EnableSignupCaptcha != nil {
+		settings.EnableSignupCaptcha = *input.EnableSignupCaptcha
+	}
+	if input.SignupCaptchaProvider != nil {
+		provider := strings.TrimSpace(*input.SignupCaptchaProvider)
+		if provider != "" {
+			settings.SignupCaptchaProvider = provider
+		}
 	}
 
 	if err := s.db.Save(settings).Error; err != nil {

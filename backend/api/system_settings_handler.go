@@ -62,6 +62,13 @@ func GetSystemSettingsHandler(c *gin.Context) {
 		"public_site_url":                  settings.PublicSiteURL,
 		"default_copy_format_template":     settings.DefaultCopyFormatTemplate,
 		"progressive_search_enabled":       settings.RuntimeProgressiveSearchEnabled,
+		"signup_autoban_enabled":           settings.SignupAutobanEnabled,
+		"signup_autoban_threshold":         settings.SignupAutobanThreshold,
+		"signup_autoban_window_min":        settings.SignupAutobanWindowMin,
+		"signup_autoban_duration_min":      settings.SignupAutobanDurationMin,
+		"enable_signup_captcha":            settings.EnableSignupCaptcha,
+		"signup_captcha_provider":          settings.SignupCaptchaProvider,
+		"signup_captcha_site_key":          config.GetTurnstileSiteKey(),
 	})
 }
 
@@ -86,6 +93,12 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 		SearchFirstPageMaxPerSource *int    `json:"search_first_page_max_per_source"`
 		PublicSiteURL               *string `json:"public_site_url"`
 		DefaultCopyFormatTemplate   *string `json:"default_copy_format_template"`
+		SignupAutobanEnabled        *bool   `json:"signup_autoban_enabled"`
+		SignupAutobanThreshold      *int    `json:"signup_autoban_threshold"`
+		SignupAutobanWindowMin      *int    `json:"signup_autoban_window_min"`
+		SignupAutobanDurationMin    *int    `json:"signup_autoban_duration_min"`
+		EnableSignupCaptcha         *bool   `json:"enable_signup_captcha"`
+		SignupCaptchaProvider       *string `json:"signup_captcha_provider"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -104,7 +117,13 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 		req.EnableSearchSourceDiversity == nil &&
 		req.SearchFirstPageMaxPerSource == nil &&
 		req.PublicSiteURL == nil &&
-		req.DefaultCopyFormatTemplate == nil {
+		req.DefaultCopyFormatTemplate == nil &&
+		req.SignupAutobanEnabled == nil &&
+		req.SignupAutobanThreshold == nil &&
+		req.SignupAutobanWindowMin == nil &&
+		req.SignupAutobanDurationMin == nil &&
+		req.EnableSignupCaptcha == nil &&
+		req.SignupCaptchaProvider == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "请求参数错误：至少需要提供一个设置字段",
 		})
@@ -138,6 +157,12 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 		SearchFirstPageMaxPerSource: req.SearchFirstPageMaxPerSource,
 		PublicSiteURL:               req.PublicSiteURL,
 		DefaultCopyFormatTemplate:   req.DefaultCopyFormatTemplate,
+		SignupAutobanEnabled:        req.SignupAutobanEnabled,
+		SignupAutobanThreshold:      req.SignupAutobanThreshold,
+		SignupAutobanWindowMin:      req.SignupAutobanWindowMin,
+		SignupAutobanDurationMin:    req.SignupAutobanDurationMin,
+		EnableSignupCaptcha:         req.EnableSignupCaptcha,
+		SignupCaptchaProvider:       req.SignupCaptchaProvider,
 	}
 	if req.EnableUserAuth != nil {
 		input.EnableUserAuth = req.EnableUserAuth
@@ -153,6 +178,14 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 		return
 	}
 
+	// 自动封禁配置可能已变更，热重载触发器使其立即生效。
+	InitSignupAutoban(
+		settings.SignupAutobanEnabled,
+		settings.SignupAutobanThreshold,
+		settings.SignupAutobanWindowMin,
+		settings.SignupAutobanDurationMin,
+	)
+
 	c.JSON(http.StatusOK, gin.H{
 		"message":                          "系统设置已更新",
 		"enable_user_auth":                 settings.EnableUserAuth,
@@ -164,6 +197,13 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 		"search_first_page_max_per_source": settings.SearchFirstPageMaxPerSource,
 		"public_site_url":                  settings.PublicSiteURL,
 		"default_copy_format_template":     settings.DefaultCopyFormatTemplate,
+		"signup_autoban_enabled":           settings.SignupAutobanEnabled,
+		"signup_autoban_threshold":         settings.SignupAutobanThreshold,
+		"signup_autoban_window_min":        settings.SignupAutobanWindowMin,
+		"signup_autoban_duration_min":      settings.SignupAutobanDurationMin,
+		"enable_signup_captcha":            settings.EnableSignupCaptcha,
+		"signup_captcha_provider":          settings.SignupCaptchaProvider,
+		"signup_captcha_site_key":          config.GetTurnstileSiteKey(),
 	})
 }
 

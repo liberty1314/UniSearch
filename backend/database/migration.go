@@ -63,6 +63,7 @@ func AutoMigrate() error {
 		&model.TGChannelPerformanceMetric{}, // 创建 tg_channel_performance_metrics 表（TG 频道性能聚合指标）
 		&model.TGChannelErrorLog{},          // 创建 tg_channel_error_logs 表（TG 频道错误日志）
 		&model.UserLoginDailyStat{},         // 创建 user_login_daily_stats 表（用户日登录统计）
+		&model.BannedIP{},                   // 创建 banned_ips 表（IP 封禁名单）
 	)
 
 	if err != nil {
@@ -87,6 +88,7 @@ func AutoMigrate() error {
 	log.Println("  - tg_channel_performance_metrics 表已创建/更新")
 	log.Println("  - tg_channel_error_logs 表已创建/更新")
 	log.Println("  - user_login_daily_stats 表已创建/更新")
+	log.Println("  - banned_ips 表已创建/更新")
 
 	return nil
 }

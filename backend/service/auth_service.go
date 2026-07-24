@@ -42,6 +42,26 @@ func (s *AuthService) SetSystemSettingsService(systemSettingsService *SystemSett
 	s.systemSettingsService = systemSettingsService
 }
 
+// SignupCaptchaConfig 返回注册人机验证的开关与提供方。
+// 当系统设置服务未注入或查询失败时，默认视为关闭。
+func (s *AuthService) SignupCaptchaConfig() (enabled bool, provider string, err error) {
+	if s.systemSettingsService == nil {
+		return false, "", nil
+	}
+	settings, err := s.systemSettingsService.GetSettings()
+	if err != nil {
+		return false, "", err
+	}
+	enabled = settings.EnableSignupCaptcha
+	provider = settings.SignupCaptchaProvider
+	// Turnstile 缺少服务端密钥时无法校验，视为未启用，避免"开关开着但密钥缺失"
+	// 导致前端不渲染验证组件、后端却强制要求 token 的死锁。
+	if enabled && provider == "turnstile" && config.GetTurnstileSecretKey() == "" {
+		return false, provider, nil
+	}
+	return enabled, provider, nil
+}
+
 func (s *AuthService) recordDailyLogin(userID uint, now time.Time) error {
 	if userID == 0 {
 		return errors.New("用户ID不能为空")

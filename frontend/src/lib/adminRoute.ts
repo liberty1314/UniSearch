@@ -4,6 +4,7 @@ export const ADMIN_VIEWS = [
   'plugin_management',
   'plugin_observability',
   'user_management',
+  'banned_ip_management',
   'system_settings',
   'announcement_management',
 ] as const;

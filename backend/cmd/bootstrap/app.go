@@ -88,6 +88,11 @@ func Initialize() (*App, error) {
 
 	tgChannelService := service.NewTGChannelService(database.GetDB())
 	adminTagService := service.NewAdminTagService(database.GetDB())
+	bannedIPService := service.NewBannedIPService(database.GetDB())
+	if err := bannedIPService.WarmUp(); err != nil {
+		log.Printf("⚠️  预热 IP 封禁名单失败: %v", err)
+	}
+	fmt.Println("BannedIP 服务已启动（IP 封禁功能已启用）")
 	if err := tgChannelService.MigrateFromEnv(); err != nil {
 		log.Printf("⚠️  TG 频道迁移失败: %v", err)
 	}
@@ -144,7 +149,9 @@ func Initialize() (*App, error) {
 			PluginRuntimeConfig:       pluginRuntimeConfigService,
 			TGChannelHealthService:    tgChannelHealthService,
 			AdminTagService:           adminTagService,
+			BannedIPService:           bannedIPService,
 			HotRankingService:         hotRankingService,
+			RedisCache:                redisCache,
 		},
 		PluginManager:  pluginManager,
 		RedisCache:     redisCache,

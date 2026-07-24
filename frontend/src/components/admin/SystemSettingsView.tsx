@@ -36,6 +36,11 @@ export const SystemSettingsView: React.FC = () => {
     enableUserAuth,
     enableUserLogin,
     enableUserSignup,
+    signupAutobanEnabled,
+    signupAutobanThreshold,
+    signupAutobanWindowMin,
+    signupAutobanDurationMin,
+    enableSignupCaptcha,
     enableResourceDetailPage,
     enableResourceSourceBadges,
     enableSearchSourceDiversity,
@@ -83,10 +88,21 @@ export const SystemSettingsView: React.FC = () => {
             enableUserAuth={enableUserAuth}
             enableUserLogin={enableUserLogin}
             enableUserSignup={enableUserSignup}
+            signupAutobanEnabled={signupAutobanEnabled}
+            signupAutobanThreshold={signupAutobanThreshold}
+            signupAutobanWindowMin={signupAutobanWindowMin}
+            signupAutobanDurationMin={signupAutobanDurationMin}
+            enableSignupCaptcha={enableSignupCaptcha}
             isSaving={isSaving}
             onToggleAuth={actions.handleToggleAuth}
             onToggleLogin={actions.handleToggleLogin}
             onToggleSignup={actions.handleToggleSignup}
+            onToggleSignupAutoban={actions.handleToggleSignupAutoban}
+            onChangeSignupAutobanThreshold={actions.setSignupAutobanThreshold}
+            onChangeSignupAutobanWindowMin={actions.setSignupAutobanWindowMin}
+            onChangeSignupAutobanDurationMin={actions.setSignupAutobanDurationMin}
+            onSaveSignupAutoban={actions.handleSaveSignupAutobanSettings}
+            onToggleSignupCaptcha={actions.handleToggleSignupCaptcha}
           />
         );
       case 'search':

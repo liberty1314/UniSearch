@@ -500,3 +500,114 @@
     - backend/service/auth_errors.go
     - backend/service/auth_service.go
     - docs/readme_2607.md
+
+- [2026-07-25 01:07] feat(auth): 新增注册防刷多层防护与 IP 自动封禁能力
+  - Body: 针对生产环境恶意批量注册，重构限流为纯 IP 维度并支持 Redis 分布式计数，新增 IP 自动封禁与后台管理、人机验证（Turnstile）、注册总量熔断与可观测性；配套系统设置开关、配置项与前端管理界面，均可通过配置或后台开关快速回退。
+  - Footer:
+    - 破坏性变更: 注册限流 key 由 IP+username 改为纯 IP，限流计数语义变化；新增 banned_ip 表需执行迁移
+    - Migration: 启动时自动执行 AutoMigrate 创建 banned_ip 表；新增 Turnstile/限流/熔断相关环境变量参见 .env.example
+  - Files:
+    - .Codex/context-summary-用户管理跨页批量操作.md
+    - .env.example
+    - backend/api/banned_ip_handler.go
+    - backend/api/controller/auth_controller.go
+    - backend/api/rate_limiter.go
+    - backend/api/rate_limiter_store.go
+    - backend/api/rate_limiter_store_test.go
+    - backend/api/rate_limiter_test.go
+    - backend/api/router.go
+    - backend/api/router_admin.go
+    - backend/api/router_auth.go
+    - backend/api/router_deps.go
+    - backend/api/signup_circuit_breaker.go
+    - backend/api/signup_circuit_breaker_test.go
+    - backend/api/signup_observability.go
+    - backend/api/system_settings_handler.go
+    - backend/cmd/bootstrap/app.go
+    - backend/config/config.go
+    - backend/config/config_auth.go
+    - backend/config/config_env.go
+    - backend/database/migration.go
+    - backend/model/banned_ip.go
+    - backend/model/system_settings.go
+    - backend/service/auth_service.go
+    - backend/service/banned_ip_service.go
+    - backend/service/banned_ip_service_test.go
+    - backend/service/captcha_service.go
+    - backend/service/captcha_service_test.go
+    - backend/service/system_settings_service.go
+    - backend/util/cache/redis_cache.go
+    - backend/util/cache/redis_cache_test.go
+    - backend/util/cache/redis_ratelimit.go
+    - docs/design_register_anti_abuse.md
+    - docs/plan_register_anti_abuse.md
+    - frontend/src/components/admin/BanIPDialog.tsx
+    - frontend/src/components/admin/BannedIPView.tsx
+    - frontend/src/components/admin/Sidebar.tsx
+    - frontend/src/components/admin/SystemSettingsView.tsx
+    - frontend/src/components/admin/system-settings/AccountAccessSettingsPanel.tsx
+    - frontend/src/components/auth/TurnstileWidget.tsx
+    - frontend/src/hooks/useSystemSettingsController.ts
+    - frontend/src/lib/adminRoute.ts
+    - frontend/src/pages/Admin.tsx
+    - frontend/src/pages/RegisterPage.tsx
+    - frontend/src/services/authService.ts
+    - frontend/src/services/bannedIPService.ts
+    - frontend/src/services/systemSettingsService.ts
+    - frontend/src/types/auth.ts
+    - frontend/src/types/bannedIP.ts
+    - docs/readme_2607.md
+
+- [2026-07-25 01:07] feat(auth): 新增注册防滥用能力（限流/验证码/封禁IP/熔断）
+  - Body: 为注册流程新增 IP 限流、Turnstile 人机验证、封禁 IP 管理与注册熔断保护，配套可观测性统计、系统设置项与后台管理界面，防止批量恶意注册。
+  - Footer: 破坏性变更: 新增注册相关环境变量与系统设置项；Migration: 参照 .env.example 补充配置并执行数据库迁移创建 banned_ip 表
+  - Files:
+    - .Codex/context-summary-用户管理跨页批量操作.md
+    - .env.example
+    - backend/api/banned_ip_handler.go
+    - backend/api/controller/auth_controller.go
+    - backend/api/rate_limiter.go
+    - backend/api/rate_limiter_store.go
+    - backend/api/rate_limiter_store_test.go
+    - backend/api/rate_limiter_test.go
+    - backend/api/router.go
+    - backend/api/router_admin.go
+    - backend/api/router_auth.go
+    - backend/api/router_deps.go
+    - backend/api/signup_circuit_breaker.go
+    - backend/api/signup_circuit_breaker_test.go
+    - backend/api/signup_observability.go
+    - backend/api/system_settings_handler.go
+    - backend/cmd/bootstrap/app.go
+    - backend/config/config.go
+    - backend/config/config_auth.go
+    - backend/config/config_env.go
+    - backend/database/migration.go
+    - backend/model/banned_ip.go
+    - backend/model/system_settings.go
+    - backend/service/auth_service.go
+    - backend/service/banned_ip_service.go
+    - backend/service/banned_ip_service_test.go
+    - backend/service/captcha_service.go
+    - backend/service/captcha_service_test.go
+    - backend/service/system_settings_service.go
+    - backend/util/cache/redis_cache.go
+    - backend/util/cache/redis_cache_test.go
+    - backend/util/cache/redis_ratelimit.go
+    - docs/design_register_anti_abuse.md
+    - docs/plan_register_anti_abuse.md
+    - frontend/src/components/admin/BanIPDialog.tsx
+    - frontend/src/components/admin/BannedIPView.tsx
+    - frontend/src/components/admin/Sidebar.tsx
+    - frontend/src/components/admin/SystemSettingsView.tsx
+    - frontend/src/components/admin/system-settings/AccountAccessSettingsPanel.tsx
+    - frontend/src/components/auth/TurnstileWidget.tsx
+    - frontend/src/hooks/useSystemSettingsController.ts
+    - frontend/src/lib/adminRoute.ts
+    - frontend/src/pages/Admin.tsx
+    - frontend/src/pages/RegisterPage.tsx
+    - frontend/src/services/authService.ts
+    - frontend/src/services/bannedIPService.ts
+    - frontend/src/services/systemSettingsService.ts
+    - frontend/src/types/auth.ts
+    - frontend/src/types/bannedIP.ts

@@ -105,6 +105,10 @@ func (f *fakeRedisClient) Expire(_ context.Context, key string, _ time.Duration)
 	return redis.NewBoolResult(exists, nil)
 }
 
+func (f *fakeRedisClient) Eval(_ context.Context, _ string, _ []string, _ ...interface{}) *redis.Cmd {
+	return redis.NewCmdResult(nil, nil)
+}
+
 func (f *fakeRedisClient) Close() error {
 	return nil
 }

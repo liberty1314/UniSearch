@@ -2,12 +2,16 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
+	"log"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
 	"unisearch/api/controller"
+	"unisearch/model"
 
 	"github.com/gin-gonic/gin"
 )
@@ -76,7 +80,95 @@ var (
 	signupRateLimiter        = NewRateLimiter(5, time.Minute)
 	usernameCheckRateLimiter = NewRateLimiter(12, time.Minute)
 	refreshTokenRateLimiter  = NewRateLimiter(10, time.Minute)
+
+	// 注册 IP 维度限流阈值：仅以 ClientIP 为 key 计数，不含 username，
+	// 确保同一 IP 换不同用户名也受同一计数器约束（修复 W1）。
+	// 实际计数走 signupRateLimitStore（内存或 Redis，见 rate_limiter_store.go）。
+	signupIPLimitPerMin  = 5
+	signupIPLimitPerHour = 20
+
+	// 自动封禁触发计数：统计单 IP 在触发窗口内的注册请求数，
+	// 超过阈值即写入封禁名单（L1.5 / 修复 W6）。计数走 signupRateLimitStore，
+	// 与限流共用后端（Redis 时多实例共享）。阈值/窗口由 InitSignupAutoban 配置。
+	signupAutobanEnabled   = false
+	signupAutobanThreshold = 30
+	signupAutobanWindow    = 10 * time.Minute
+	signupAutobanDuration  = 24 * time.Hour
 )
+
+// InitSignupRateLimiters 按配置设置注册 IP 维度限流阈值。
+// 需在 config.Init 之后、开始处理请求之前调用（如 SetupRouter 内）。
+func InitSignupRateLimiters(perMin, perHour int) {
+	if perMin <= 0 {
+		perMin = 5
+	}
+	if perHour <= 0 {
+		perHour = 20
+	}
+	signupIPLimitPerMin = perMin
+	signupIPLimitPerHour = perHour
+}
+
+// InitSignupAutoban 按配置初始化自动封禁触发器。窗口内注册请求超过阈值即封禁。
+func InitSignupAutoban(enabled bool, threshold, windowMin, durationMin int) {
+	signupAutobanEnabled = enabled
+	if threshold <= 0 {
+		threshold = 30
+	}
+	if windowMin <= 0 {
+		windowMin = 10
+	}
+	signupAutobanThreshold = threshold
+	signupAutobanWindow = time.Duration(windowMin) * time.Minute
+	if durationMin > 0 {
+		signupAutobanDuration = time.Duration(durationMin) * time.Minute
+	} else {
+		signupAutobanDuration = 0 // 0 表示永久封禁
+	}
+}
+
+// maybeAutobanSignupIP 在自动封禁开启时统计该 IP 的注册请求；超过阈值则写入封禁名单。
+func maybeAutobanSignupIP(ip string) {
+	if !signupAutobanEnabled || bannedIPService == nil {
+		return
+	}
+	if strings.TrimSpace(ip) == "" {
+		return
+	}
+	// tracker 未超限时返回 true，无需封禁；超限（false）说明触发窗口内请求过多。
+	// 走 signupRateLimitStore 以在多实例间共享计数（Redis 不可用时降级到内存）。
+	allowed, _ := signupRateLimitStore.Allow(context.Background(), "signup:autoban:"+ip, signupAutobanThreshold, signupAutobanWindow)
+	if allowed {
+		return
+	}
+
+	var expiresAt *time.Time
+	if signupAutobanDuration > 0 {
+		t := time.Now().Add(signupAutobanDuration)
+		expiresAt = &t
+	}
+	if _, err := bannedIPService.Ban(ip, "注册请求过于频繁，自动封禁", model.BannedIPSourceAuto, expiresAt, ""); err != nil {
+		log.Printf("警告: 自动封禁 IP %s 失败: %v", ip, err)
+		return
+	}
+	log.Printf("安全: IP %s 因注册请求过于频繁被自动封禁 (时长: %v)", ip, signupAutobanDuration)
+}
+
+// SignupBanGuardMiddleware 命中封禁名单的请求直接 403 拒绝。挂在 auth 公开入口之前。
+func SignupBanGuardMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if bannedIPService != nil && bannedIPService.IsBanned(c.ClientIP()) {
+			recordSignupBlocked("banned")
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"code":    http.StatusForbidden,
+				"message": "您的访问已被限制，如有疑问请联系管理员",
+				"data":    nil,
+			})
+			return
+		}
+		c.Next()
+	}
+}
 
 func buildRateLimitKey(c *gin.Context, parts ...string) string {
 	keyParts := []string{c.ClientIP()}
@@ -171,11 +263,38 @@ func registerRateLimitMiddleware() gin.HandlerFunc {
 			abortRequestBodyTooLarge(c)
 			return
 		}
+
+		recordSignupAttempt()
+
+		// IP 维度双窗口：同一 IP 无论换多少用户名都受同一计数器约束（修复 W1）。
+		// 计数走 signupRateLimitStore（内存或 Redis），实现多实例共享、重启不丢（M3）。
+		ctx := c.Request.Context()
+		ip := c.ClientIP()
+		if allowed, _ := signupRateLimitStore.Allow(ctx, "signup:ip:min:"+ip, signupIPLimitPerMin, time.Minute); !allowed {
+			recordSignupBlocked("ip_min")
+			maybeAutobanSignupIP(ip)
+			denyAuthEntryRateLimit(c)
+			return
+		}
+		if allowed, _ := signupRateLimitStore.Allow(ctx, "signup:ip:hour:"+ip, signupIPLimitPerHour, time.Hour); !allowed {
+			recordSignupBlocked("ip_hour")
+			maybeAutobanSignupIP(ip)
+			denyAuthEntryRateLimit(c)
+			return
+		}
+
+		// IP+username 维度：防止针对单一目标用户名的撞注册。
 		if !signupRateLimiter.Allow(key) {
+			recordSignupBlocked("ip_username")
 			denyAuthEntryRateLimit(c)
 			return
 		}
 		c.Next()
+
+		// 注册即登录成功返回 200，计入成功指标。
+		if c.Writer.Status() == http.StatusOK {
+			recordSignupSuccess()
+		}
 	}
 }
 
