@@ -46,7 +46,10 @@ func Initialize() (*App, error) {
 		return nil, fmt.Errorf("数据库连接失败: %w", err)
 	}
 
-	log.Println("✓ 数据库连接完成；结构迁移请通过独立迁移命令执行")
+	log.Println("正在执行数据库结构迁移...")
+	if err := database.AutoMigrate(); err != nil {
+		return nil, fmt.Errorf("数据库结构迁移失败: %w", err)
+	}
 	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	secretManager := initializeSecretManager()

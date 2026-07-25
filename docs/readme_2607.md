@@ -618,3 +618,9 @@
     - frontend/src/hooks/__tests__/useSystemSettingsController.test.tsx
     - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
     - docs/readme_2607.md
+
+- [2026-07-25 10:27] feat(bootstrap): 应用启动时自动执行数据库结构迁移
+  - Body: 在 bootstrap 启动流程接入 database.AutoMigrate，应用启动即自动建表，避免生产部署后遗漏运行独立迁移命令导致 banned_ips 等新表缺失。迁移为幂等非破坏性操作，破坏性清理仍保留在独立迁移命令中。
+  - Files:
+    - backend/cmd/bootstrap/app.go
+    - docs/readme_2607.md
