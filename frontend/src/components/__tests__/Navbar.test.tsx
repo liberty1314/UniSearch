@@ -16,7 +16,7 @@ const {
     isAuthenticated: true,
     isAdmin: true,
     username: 'admin',
-    refreshToken: 'refresh-token',
+    rememberMe: true,
     logout: vi.fn(),
   };
 
@@ -163,7 +163,7 @@ describe('Navbar', () => {
     await user.click(screen.getByRole('button', { name: '退出登录' }));
 
     await waitFor(() => {
-      expect(revokeRefreshTokenMock).toHaveBeenCalledWith('refresh-token');
+      expect(revokeRefreshTokenMock).toHaveBeenCalled();
     });
     expect(authState.logout).toHaveBeenCalled();
   });

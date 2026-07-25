@@ -7,7 +7,7 @@ import { PluginPerformanceDashboard } from '../PluginPerformanceDashboard';
 const { authState, refreshAuthTokenSingleFlightMock, useAuthStoreMock } = vi.hoisted(() => {
   const state = {
     token: 'test-token' as string | null,
-    refreshToken: null as string | null,
+    rememberMe: false as boolean,
   };
   return {
     authState: state,
@@ -310,7 +310,7 @@ describe('PluginPerformanceDashboard', () => {
   beforeEach(() => {
     vi.useRealTimers();
     authState.token = 'test-token';
-    authState.refreshToken = null;
+    authState.rememberMe = false;
     useAuthStoreMock.mockClear();
     useAuthStoreMock.getState.mockClear();
     refreshAuthTokenSingleFlightMock.mockReset();
@@ -354,7 +354,7 @@ describe('PluginPerformanceDashboard', () => {
 
   it('刷新页面仅保留刷新令牌时先恢复访问令牌再加载数据', async () => {
     authState.token = null;
-    authState.refreshToken = 'refresh-token';
+    authState.rememberMe = true;
     refreshAuthTokenSingleFlightMock.mockResolvedValue({
       access_token: 'restored-token',
       refresh_token: 'new-refresh-token',

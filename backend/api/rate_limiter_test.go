@@ -20,7 +20,7 @@ func newSignupRateLimitTestRouter() *gin.Engine {
 }
 
 func doRegister(router *gin.Engine, ip, username string) *httptest.ResponseRecorder {
-	body := fmt.Sprintf(`{"username":%q,"password":"secret123"}`, username)
+	body := fmt.Sprintf(`{"username":%q,"password":"Secret123!"}`, username)
 	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.RemoteAddr = ip + ":12345"

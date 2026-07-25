@@ -41,13 +41,10 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, navItem
     }, [isOpen, onClose]);
 
     const handleLogout = async () => {
-        const { refreshToken } = useAuthStore.getState();
-        if (refreshToken) {
-            try {
-                await AuthService.revokeRefreshToken(refreshToken);
-            } catch (error) {
-                console.error('撤销刷新令牌失败:', error);
-            }
+        try {
+            await AuthService.revokeRefreshToken();
+        } catch (error) {
+            console.error('撤销刷新令牌失败:', error);
         }
         logout();
         toast.success('已退出登录');

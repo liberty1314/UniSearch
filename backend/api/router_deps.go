@@ -24,4 +24,5 @@ type RouterDeps struct {
 	AdminTagService           *service.AdminTagService
 	HotRankingService         *service.HotRankingService
 	BannedIPService           *service.BannedIPService
+	TokenRevocationService    *service.TokenRevocationService
 }

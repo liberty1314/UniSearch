@@ -252,7 +252,7 @@ const RegisterPage: React.FC = () => {
           response.access_token,
           response.username,
           false,
-          response.refresh_token || null,
+          false,
         );
         toast.success("注册成功，已为您自动登录");
         navigate("/", { replace: true });

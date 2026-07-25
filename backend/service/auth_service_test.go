@@ -72,6 +72,36 @@ func TestRegisterRejectsPasswordWhitespace(t *testing.T) {
 	}
 }
 
+func TestRegisterRejectsLowComplexityPassword(t *testing.T) {
+	newAuthServiceTestDB(t)
+	authService := NewAuthService()
+
+	// 仅小写+数字（2 类），低于默认要求的 3 类。
+	if _, err := authService.Register("neo", "abcdefg1"); err == nil {
+		t.Fatal("expected register to reject low-complexity password")
+	}
+}
+
+func TestRegisterRejectsWeakBlocklistedPassword(t *testing.T) {
+	newAuthServiceTestDB(t)
+	authService := NewAuthService()
+
+	// 命中内置弱口令黑名单。
+	if _, err := authService.Register("neo", "Password1"); err == nil {
+		t.Fatal("expected register to reject blocklisted weak password")
+	}
+}
+
+func TestRegisterAcceptsStrongPassword(t *testing.T) {
+	newAuthServiceTestDB(t)
+	authService := NewAuthService()
+
+	// 3 类（大小写+数字+符号），未命中黑名单。
+	if _, err := authService.Register("neo", "Str0ng!Pass"); err != nil {
+		t.Fatalf("expected register to accept strong password, got %v", err)
+	}
+}
+
 func TestCreateDefaultAdminRejectsMissingProductionCredentials(t *testing.T) {
 	db := newAuthServiceTestDB(t)
 	config.AppConfig.AppEnv = "production"

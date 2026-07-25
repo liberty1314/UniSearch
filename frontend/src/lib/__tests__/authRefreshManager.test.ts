@@ -27,14 +27,14 @@ describe('refreshAuthTokenSingleFlight', () => {
     localStorage.clear();
     useAuthStore.setState({
       token: null,
-      refreshToken: 'old-refresh-token',
       isAuthenticated: true,
       isAdmin: true,
       username: 'neo',
+      rememberMe: true,
     });
   });
 
-  it('刷新成功后写回新的 access token 和 refresh token', async () => {
+  it('刷新成功后仅写回新的 access token（刷新令牌由 cookie 轮转）', async () => {
     postMock.mockResolvedValue({
       data: {
         access_token: 'new-access-token',
@@ -45,13 +45,13 @@ describe('refreshAuthTokenSingleFlight', () => {
 
     const payload = await refreshAuthTokenSingleFlight();
 
+    // 请求体只带设备指纹，刷新令牌通过 httpOnly cookie 自动携带。
     expect(postMock).toHaveBeenCalledWith('/auth/refresh', {
-      refresh_token: 'old-refresh-token',
       device_fingerprint: 'device-a',
     });
-    expect(payload.refresh_token).toBe('new-refresh-token');
+    expect(payload.access_token).toBe('new-access-token');
     expect(useAuthStore.getState().token).toBe('new-access-token');
-    expect(useAuthStore.getState().refreshToken).toBe('new-refresh-token');
     expect(useAuthStore.getState().isAdmin).toBe(true);
+    expect(useAuthStore.getState().rememberMe).toBe(true);
   });
 });

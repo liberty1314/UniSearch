@@ -10,7 +10,7 @@ const { authState, revokeRefreshTokenMock, useAuthStoreMock } = vi.hoisted(() =>
     isAuthenticated: true,
     isAdmin: true,
     username: 'admin',
-    refreshToken: 'refresh-token',
+    rememberMe: true,
     logout: vi.fn(),
   };
 
@@ -77,7 +77,7 @@ describe('MobileMenu', () => {
     await user.click(screen.getByRole('button', { name: '退出登录' }));
 
     await waitFor(() => {
-      expect(revokeRefreshTokenMock).toHaveBeenCalledWith('refresh-token');
+      expect(revokeRefreshTokenMock).toHaveBeenCalled();
     });
     expect(authState.logout).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();

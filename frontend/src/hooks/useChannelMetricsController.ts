@@ -212,8 +212,8 @@ const matchesStatus = (row: ChannelObservabilityRow, statusFilter: ChannelMetric
 };
 
 export function useChannelMetricsController() {
-  const { token, refreshToken } = useAuthStore();
-  const hasAuthSession = Boolean(token || refreshToken);
+  const { token, rememberMe } = useAuthStore();
+  const hasAuthSession = Boolean(token || rememberMe);
   const [snapshot, setSnapshot] = useState<ChannelMetricsRealtimeSnapshot>(EMPTY_REALTIME_SNAPSHOT);
   const [metrics, setMetrics] = useState<ChannelPerformanceMetric[]>([]);
   const [errorLogs, setErrorLogs] = useState<ChannelErrorLog[]>([]);
@@ -252,7 +252,7 @@ export function useChannelMetricsController() {
       const authState = useAuthStore.getState();
       let requestToken = authState.token;
       if (!requestToken) {
-        if (!authState.refreshToken) {
+        if (!authState.rememberMe) {
           throw new Error('缺少管理员登录状态');
         }
         const payload = await withTimeout(

@@ -12,6 +12,7 @@ type User struct {
 	PasswordHash string         `gorm:"not null;size:255" json:"-"`                   // 密码哈希（非空，不在JSON中序列化）
 	Role         string         `gorm:"not null;default:'user';size:10" json:"role"`  // 角色（admin或user，默认user）
 	IsEnabled    bool           `gorm:"not null;default:true" json:"is_enabled"`      // 账户启用状态（默认启用）
+	TokenVersion int            `gorm:"not null;default:0" json:"-"`                  // Token 版本号：改密/封禁时自增以批量失效已签发的 access token
 	LastLoginAt  *time.Time     `json:"last_login_at"`                                // 最后登录时间（可为空）
 	CreatedAt    time.Time      `json:"created_at"`                                   // 创建时间
 	UpdatedAt    time.Time      `json:"updated_at"`                                   // 更新时间

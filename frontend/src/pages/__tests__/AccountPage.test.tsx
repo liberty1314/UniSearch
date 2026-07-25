@@ -84,7 +84,7 @@ vi.mock('@/stores/authStore', () => ({
   useAuthStore: () => ({
     username: 'cached-user',
     isAuthenticated: true,
-    refreshToken: 'refresh-token',
+    rememberMe: true,
     logout: logoutMock,
   }),
 }));

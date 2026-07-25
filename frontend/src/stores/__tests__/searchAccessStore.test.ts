@@ -8,7 +8,7 @@ let authState = {
   isAuthenticated: false,
   isAdmin: false,
   token: null as string | null,
-  refreshToken: null as string | null,
+  rememberMe: false as boolean,
   username: null as string | null,
 };
 
@@ -35,7 +35,7 @@ describe('searchAccessStore', () => {
       isAuthenticated: false,
       isAdmin: false,
       token: null,
-      refreshToken: null,
+      rememberMe: false,
       username: null,
     };
     getMock.mockReset();
@@ -49,7 +49,7 @@ describe('searchAccessStore', () => {
       isAuthenticated: true,
       isAdmin: false,
       token: 'jwt-token',
-      refreshToken: null,
+      rememberMe: false,
       username: 'lihua',
     };
 
@@ -65,7 +65,7 @@ describe('searchAccessStore', () => {
       isAuthenticated: true,
       isAdmin: false,
       token: 'jwt-token-a',
-      refreshToken: null,
+      rememberMe: false,
       username: 'lihua',
     };
 
@@ -77,7 +77,7 @@ describe('searchAccessStore', () => {
       isAuthenticated: true,
       isAdmin: false,
       token: 'jwt-token-b',
-      refreshToken: null,
+      rememberMe: false,
       username: 'other-user',
     };
 
@@ -92,7 +92,7 @@ describe('searchAccessStore', () => {
       isAuthenticated: true,
       isAdmin: false,
       token: null,
-      refreshToken: 'refresh-token',
+      rememberMe: true,
       username: 'lihua',
     };
 

@@ -5,7 +5,7 @@ import { useChannelMetricsController } from '../useChannelMetricsController';
 const { authState, refreshAuthTokenSingleFlightMock, useAuthStoreMock } = vi.hoisted(() => {
   const state = {
     token: 'test-token' as string | null,
-    refreshToken: null as string | null,
+    rememberMe: false as boolean,
   };
   return {
     authState: state,
@@ -146,7 +146,7 @@ describe('useChannelMetricsController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     authState.token = 'test-token';
-    authState.refreshToken = null;
+    authState.rememberMe = false;
     mockChannelFetch();
   });
 

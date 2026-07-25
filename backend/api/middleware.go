@@ -97,7 +97,9 @@ func CORSMiddleware() gin.HandlerFunc {
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 		if origin := c.GetHeader("Origin"); isCORSOriginAllowed(origin) {
+			// 回显具体 Origin（而非 *），以便配合 Allow-Credentials 携带 httpOnly Cookie（刷新令牌）。
 			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 			c.Writer.Header().Add("Vary", "Origin")
 		}
 
@@ -180,6 +182,9 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		if token := extractBearerToken(c); token != "" {
 			if claims, err := util.ValidateJWTToken(token, config.AppConfig.AuthJWTSecret); err == nil {
+				if !enforceTokenState(c, claims) {
+					return
+				}
 				c.Set("user_id", claims.UserID)
 				c.Set("username", claims.Username)
 				c.Set("role", claims.Role)
@@ -232,6 +237,10 @@ func AdminMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		if !enforceTokenState(c, claims) {
+			return
+		}
+
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
@@ -264,6 +273,10 @@ func JWTMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		if !enforceTokenState(c, claims) {
+			return
+		}
+
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
@@ -292,6 +305,10 @@ func SearchJWTMiddleware() gin.HandlerFunc {
 				"message": "登录状态已失效，请重新登录",
 			})
 			c.Abort()
+			return
+		}
+
+		if !enforceTokenState(c, claims) {
 			return
 		}
 

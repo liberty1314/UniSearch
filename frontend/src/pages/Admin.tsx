@@ -77,7 +77,7 @@ const AdminWorkspaceFallback: React.FC = () => (
 const Admin: React.FC = () => {
   const { currentView, setCurrentView } = useAdminPageController();
   const { toggleMobileSidebar } = useAdminStore();
-  const { username, refreshToken, logout } = useAuthStore();
+  const { username, logout } = useAuthStore();
   const navigate = useNavigate();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -98,12 +98,10 @@ const Admin: React.FC = () => {
   }, [isUserMenuOpen]);
 
   const handleLogout = async () => {
-    if (refreshToken) {
-      try {
-        await AuthService.revokeRefreshToken(refreshToken);
-      } catch (error) {
-        console.error("退出登录时撤销 refresh token 失败:", error);
-      }
+    try {
+      await AuthService.revokeRefreshToken();
+    } catch (error) {
+      console.error("退出登录时撤销 refresh token 失败:", error);
     }
 
     logout();

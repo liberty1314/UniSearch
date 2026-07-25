@@ -68,13 +68,10 @@ const Navbar: React.FC<NavbarProps> = ({ className }) => {
   }, [isUserMenuOpen]);
 
   const handleLogout = async () => {
-    const { refreshToken } = useAuthStore.getState();
-    if (refreshToken) {
-      try {
-        await AuthService.revokeRefreshToken(refreshToken);
-      } catch (error) {
-        console.error('Logout error:', error);
-      }
+    try {
+      await AuthService.revokeRefreshToken();
+    } catch (error) {
+      console.error('Logout error:', error);
     }
     logout();
     toast.success('已退出登录');

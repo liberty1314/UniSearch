@@ -10,6 +10,7 @@ import (
 	"time"
 	"unisearch/config"
 	"unisearch/service"
+	"unisearch/util"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -330,11 +331,11 @@ func (ctrl *AuthController) handleDatabaseUserLogin(c *gin.Context, req LoginReq
 		Username:    user.Username,
 	}
 
-	// 如果启用"记住我"，生成刷新令牌
+	// 如果启用"记住我"，生成刷新令牌并以 httpOnly cookie 下发（不再放入响应体，降低 XSS 窃取面）。
 	if req.RememberMe {
 		refreshToken := ctrl.generateRefreshToken(c, user.Username, user.IsAdmin(), req.DeviceFingerprint)
 		if refreshToken != nil {
-			loginData.RefreshToken = refreshToken
+			util.SetRefreshTokenCookie(c, *refreshToken)
 		}
 	}
 

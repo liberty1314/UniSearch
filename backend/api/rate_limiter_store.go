@@ -111,3 +111,17 @@ func InitSignupRateLimitStore(useRedis bool, redisCache *cache.RedisCache) {
 	signupRateLimitStore = newMemoryRateLimiterStore()
 	log.Println("信息: 注册限流使用内存计数后端（单实例）")
 }
+
+// loginRateLimitStore 为登录限流与账户失败锁定选择的后端，默认内存，装配时可切到 Redis。
+var loginRateLimitStore RateLimiterStore = newMemoryRateLimiterStore()
+
+// InitLoginRateLimitStore 按配置选择登录限流后端。useRedis 且 redisCache 可用时用 Redis，否则用内存。
+func InitLoginRateLimitStore(useRedis bool, redisCache *cache.RedisCache) {
+	if useRedis && redisCache != nil {
+		loginRateLimitStore = newRedisRateLimiterStore(redisCache)
+		log.Println("信息: 登录限流使用 Redis 计数后端（多实例共享）")
+		return
+	}
+	loginRateLimitStore = newMemoryRateLimiterStore()
+	log.Println("信息: 登录限流使用内存计数后端（单实例）")
+}

@@ -105,7 +105,7 @@ const AdminLogin: React.FC = () => {
                 response.access_token,
                 response.username || username.trim(),
                 true,
-                response.refresh_token || null
+                rememberMe
             );
 
             toast.success('登录成功，欢迎访问 UniSearch！');

@@ -152,10 +152,20 @@ func createAccountFlowUser(t *testing.T, db *gorm.DB, username, password string)
 	return user
 }
 
+// findResponseCookie 从响应的 Set-Cookie 中查找指定名称的 cookie，未找到返回 nil。
+func findResponseCookie(recorder *httptest.ResponseRecorder, name string) *http.Cookie {
+	for _, cookie := range recorder.Result().Cookies() {
+		if cookie.Name == name {
+			return cookie
+		}
+	}
+	return nil
+}
+
 func issueJWT(t *testing.T, user model.User) string {
 	t.Helper()
 
-	token, err := util.GenerateJWTToken(user.ID, user.Username, user.Role, config.AppConfig.AuthJWTSecret, time.Hour)
+	token, err := util.GenerateJWTToken(user.ID, user.Username, user.Role, user.TokenVersion, config.AppConfig.AuthJWTSecret, time.Hour)
 	if err != nil {
 		t.Fatalf("generate jwt: %v", err)
 	}
@@ -387,7 +397,7 @@ func TestRegisterReturnsUnifiedLoginPayload(t *testing.T) {
 	db := newAccountFlowTestDB(t)
 	router := newAccountFlowRouter(t, db)
 
-	body := bytes.NewBufferString(`{"username":"neo","password":"secret123"}`)
+	body := bytes.NewBufferString(`{"username":"neo","password":"Secret123!"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", body)
 	req.Header.Set("Content-Type", "application/json")
 	recorder := httptest.NewRecorder()
@@ -576,7 +586,7 @@ func TestRegisterReturnsRateLimitExceededAfterThreshold(t *testing.T) {
 	}()
 
 	makeRequest := func() *httptest.ResponseRecorder {
-		body := bytes.NewBufferString(`{"username":"neo","password":"secret123"}`)
+		body := bytes.NewBufferString(`{"username":"neo","password":"Secret123!"}`)
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/register", body)
 		req.Header.Set("Content-Type", "application/json")
 		recorder := httptest.NewRecorder()
@@ -643,9 +653,10 @@ func TestRefreshReturnsSanitizedValidationError(t *testing.T) {
 		t.Fatalf("encrypt refresh token: %v", err)
 	}
 
-	body := bytes.NewBufferString(fmt.Sprintf(`{"refresh_token":"%s","device_fingerprint":"device-b"}`, encryptedToken))
+	body := bytes.NewBufferString(`{"device_fingerprint":"device-b"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", body)
 	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: encryptedToken})
 	recorder := httptest.NewRecorder()
 
 	router.ServeHTTP(recorder, req)
@@ -687,9 +698,10 @@ func TestRefreshReturnsRateLimitExceededAfterThreshold(t *testing.T) {
 	}()
 
 	makeRequest := func() *httptest.ResponseRecorder {
-		body := bytes.NewBufferString(fmt.Sprintf(`{"refresh_token":"%s","device_fingerprint":"device-b"}`, encryptedToken))
+		body := bytes.NewBufferString(`{"device_fingerprint":"device-b"}`)
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", body)
 		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: encryptedToken})
 		recorder := httptest.NewRecorder()
 		router.ServeHTTP(recorder, req)
 		return recorder
@@ -715,6 +727,9 @@ func TestRefreshRotatesRefreshTokenAndRevokesOldToken(t *testing.T) {
 	config.AppConfig.RefreshTokenEnabled = true
 	config.AppConfig.RefreshTokenTTL = time.Hour
 
+	// 刷新令牌必须对应真实数据库用户（已移除历史降级兜底）。
+	createAccountFlowUser(t, db, "neo", "Password123!")
+
 	token, err := refreshTokenService.CreateToken("neo", false, "device-a", time.Hour)
 	if err != nil {
 		t.Fatalf("create refresh token: %v", err)
@@ -725,9 +740,10 @@ func TestRefreshRotatesRefreshTokenAndRevokesOldToken(t *testing.T) {
 		t.Fatalf("encrypt refresh token: %v", err)
 	}
 
-	body := bytes.NewBufferString(fmt.Sprintf(`{"refresh_token":"%s","device_fingerprint":"device-a"}`, encryptedToken))
+	body := bytes.NewBufferString(`{"device_fingerprint":"device-a"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", body)
 	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: encryptedToken})
 	recorder := httptest.NewRecorder()
 
 	router.ServeHTTP(recorder, req)
@@ -740,14 +756,19 @@ func TestRefreshRotatesRefreshTokenAndRevokesOldToken(t *testing.T) {
 	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if response.RefreshToken == "" || response.AccessToken == "" {
-		t.Fatalf("expected access token and rotated refresh token, got %#v", response)
+	if response.AccessToken == "" {
+		t.Fatalf("expected access token, got %#v", response)
+	}
+	// 轮转后的刷新令牌通过 Set-Cookie 下发，而非响应体。
+	rotatedCookie := findResponseCookie(recorder, util.RefreshTokenCookieName)
+	if rotatedCookie == nil || rotatedCookie.Value == "" {
+		t.Fatalf("expected rotated refresh token cookie, got none")
 	}
 	if _, err := refreshTokenService.ValidateToken(token.Token, "device-a"); err == nil {
 		t.Fatal("expected old refresh token to be revoked after rotation")
 	}
 
-	decryptedNewToken, err := refreshTokenService.DecryptFromClient(response.RefreshToken)
+	decryptedNewToken, err := refreshTokenService.DecryptFromClient(rotatedCookie.Value)
 	if err != nil {
 		t.Fatalf("decrypt rotated token: %v", err)
 	}
@@ -775,9 +796,8 @@ func TestRevokeRefreshTokenMarksTokenRevoked(t *testing.T) {
 		t.Fatalf("encrypt refresh token: %v", err)
 	}
 
-	body := bytes.NewBufferString(fmt.Sprintf(`{"refresh_token":"%s"}`, encryptedToken))
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/revoke", body)
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/revoke", nil)
+	req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: encryptedToken})
 	recorder := httptest.NewRecorder()
 
 	router.ServeHTTP(recorder, req)

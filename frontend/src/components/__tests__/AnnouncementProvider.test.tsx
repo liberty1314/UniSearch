@@ -42,7 +42,7 @@ describe('AnnouncementProvider', () => {
     });
     useAuthStore.setState({
       token: 'token',
-      refreshToken: null,
+      rememberMe: false,
       isAuthenticated: true,
       isAdmin: false,
       username: 'tester',

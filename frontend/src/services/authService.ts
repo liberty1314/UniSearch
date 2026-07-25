@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api';
-import type { AdminLoginRequest, AdminLoginResponse, CurrentUserResponse, LoginRequest, LoginResponse, LoginWithRememberRequest, LoginWithRememberResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest, RevokeRefreshTokenRequest } from "@/types/auth";
+import type { AdminLoginRequest, AdminLoginResponse, CurrentUserResponse, LoginRequest, LoginResponse, LoginWithRememberRequest, LoginWithRememberResponse, RefreshTokenResponse, RegisterRequest } from "@/types/auth";
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 
 export class AuthService {
@@ -61,24 +61,20 @@ export class AuthService {
     return apiClient.get<CurrentUserResponse>('/user/me');
   }
 
-  static async refreshAccessToken(refreshToken: string): Promise<RefreshTokenResponse> {
+  // 刷新令牌存于 httpOnly cookie，随请求自动携带，不再从 body 传入。
+  // 仅传设备指纹用于服务端校验。
+  static async refreshAccessToken(): Promise<RefreshTokenResponse> {
     const deviceFingerprint = await getDeviceFingerprint();
-    const request: RefreshTokenRequest = {
-      refresh_token: refreshToken,
-      device_fingerprint: deviceFingerprint,
-    };
+    const request = { device_fingerprint: deviceFingerprint };
 
     return apiClient.post<RefreshTokenResponse>('/auth/refresh', request, {
       skipAuthRefresh: true,
     });
   }
 
-  static async revokeRefreshToken(refreshToken: string): Promise<void> {
-    const request: RevokeRefreshTokenRequest = {
-      refresh_token: refreshToken,
-    };
-
-    await apiClient.post('/auth/revoke', request, {
+  // 登出：刷新令牌 cookie 随请求自动携带，服务端撤销并清除该 cookie。
+  static async revokeRefreshToken(): Promise<void> {
+    await apiClient.post('/auth/revoke', {}, {
       skipAuthRefresh: true,
     });
   }

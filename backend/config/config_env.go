@@ -103,6 +103,44 @@ func getSignupCircuitBreakMin() int {
 	return getPositiveIntEnv("SIGNUP_CIRCUIT_BREAK_MIN", 10)
 }
 
+// getLoginIPLimitPerMin 返回单 IP 每分钟登录请求上限（默认 10）。
+func getLoginIPLimitPerMin() int {
+	return getPositiveIntEnv("LOGIN_IP_LIMIT_PER_MIN", 10)
+}
+
+// getLoginIPLimitPerHour 返回单 IP 每小时登录请求上限（默认 60）。
+func getLoginIPLimitPerHour() int {
+	return getPositiveIntEnv("LOGIN_IP_LIMIT_PER_HOUR", 60)
+}
+
+// getLoginRateLimitUseRedis 返回是否将登录限流/账户锁定计数落到 Redis（默认启用）。
+// Redis 不可用时运行期自动降级到内存实现。
+func getLoginRateLimitUseRedis() bool {
+	val := strings.TrimSpace(os.Getenv("LOGIN_RATE_LIMIT_USE_REDIS"))
+	if val == "" {
+		return true
+	}
+	return val != "false" && val != "0"
+}
+
+// getLoginAccountLockThreshold 返回账户连续登录失败达到多少次即锁定（默认 5，0=关闭锁定）。
+func getLoginAccountLockThreshold() int {
+	val := strings.TrimSpace(os.Getenv("LOGIN_ACCOUNT_LOCK_THRESHOLD"))
+	if val == "" {
+		return 5
+	}
+	n, err := strconv.Atoi(val)
+	if err != nil || n < 0 {
+		return 5
+	}
+	return n
+}
+
+// getLoginAccountLockMin 返回账户锁定持续时长（分钟，默认 15）。
+func getLoginAccountLockMin() int {
+	return getPositiveIntEnv("LOGIN_ACCOUNT_LOCK_MIN", 15)
+}
+
 // getPositiveIntEnv 读取正整数环境变量，非法或非正时返回默认值。
 func getPositiveIntEnv(key string, def int) int {
 	val := strings.TrimSpace(os.Getenv(key))

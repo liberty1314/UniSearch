@@ -49,13 +49,13 @@ const isTokenExpiredOrExpiring = (token: string, bufferMinutes: number = 5): boo
  * 3. 支持长时间未访问后的自动恢复登录状态（30天内）
  */
 export function useAutoRefreshToken() {
-    const { token, refreshToken, logout } = useAuthStore();
+    const { token, rememberMe, logout } = useAuthStore();
     const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
     const isRefreshingRef = useRef(false); // 防止重复刷新
 
     // 刷新令牌处理函数
     const handleRefresh = useCallback(async () => {
-        if (!refreshToken || isRefreshingRef.current) {
+        if (!rememberMe || isRefreshingRef.current) {
             return;
         }
 
@@ -76,15 +76,15 @@ export function useAutoRefreshToken() {
         } finally {
             isRefreshingRef.current = false;
         }
-    }, [refreshToken, logout]);
+    }, [rememberMe, logout]);
 
     useEffect(() => {
-        // 如果没有刷新令牌，不启用自动刷新
-        if (!refreshToken) {
+        // 没有"记住我"标记（即无刷新 cookie）时不启用自动刷新
+        if (!rememberMe) {
             return;
         }
 
-        // 如果没有 Token 但有 Refresh Token，尝试刷新
+        // 如果没有 Token 但存在刷新 cookie，尝试静默刷新
         if (!token) {
             handleRefresh();
             return;
@@ -121,5 +121,5 @@ export function useAutoRefreshToken() {
                 clearTimeout(refreshTimerRef.current);
             }
         };
-    }, [token, refreshToken, handleRefresh]);
+    }, [token, rememberMe, handleRefresh]);
 }

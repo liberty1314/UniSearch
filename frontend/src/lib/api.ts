@@ -45,6 +45,8 @@ class ApiClient {
     this.instance = axios.create({
       baseURL: '/api',
       timeout: 30000,
+      // 携带 httpOnly 刷新令牌 cookie；后端 CORS 已按白名单回显具体 Origin 并允许凭据。
+      withCredentials: true,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -113,7 +115,8 @@ class ApiClient {
 
           if (!isExcludedAuthEndpoint && !skipAuthRefresh && !originalRequest._retry) {
             const authStore = useAuthStore.getState();
-            if (authStore.refreshToken) {
+            // 刷新令牌在 httpOnly cookie 中，前端不可见；用持久化的 rememberMe 作为"可能存在刷新 cookie"的信号。
+            if (authStore.rememberMe) {
               originalRequest._retry = true;
               try {
                 await refreshAuthTokenSingleFlight();

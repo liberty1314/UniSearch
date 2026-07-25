@@ -161,36 +161,43 @@ vi.mock("@/components/LoadingState", () => ({
   default: () => <div>loading-state</div>,
 }));
 
-vi.mock("framer-motion", () => ({
-  useReducedMotion: () => false,
-  motion: {
-    div: ({
+vi.mock("framer-motion", () => {
+  // 剥离 framer-motion 专属 props 后渲染原生元素，兼容 motion.div / motion.button 等。
+  const createMotionComponent =
+    (Tag: keyof JSX.IntrinsicElements) =>
+    ({
       children,
       ...props
-    }: React.HTMLAttributes<HTMLDivElement> & {
-      variants?: unknown;
-      initial?: unknown;
-      animate?: unknown;
-      layout?: unknown;
-      layoutId?: unknown;
-      whileHover?: unknown;
-      whileInView?: unknown;
-      transition?: unknown;
-    }) => {
-      const domProps = { ...props };
-      delete domProps.variants;
-      delete domProps.initial;
-      delete domProps.animate;
-      delete domProps.layout;
-      delete domProps.layoutId;
-      delete domProps.whileHover;
-      delete domProps.whileInView;
-      delete domProps.transition;
-      return <div {...domProps}>{children}</div>;
-    },
-  },
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
+    }: React.HTMLAttributes<HTMLElement> & Record<string, unknown>) => {
+      const domProps: Record<string, unknown> = { ...props };
+      for (const key of [
+        "variants",
+        "initial",
+        "animate",
+        "exit",
+        "layout",
+        "layoutId",
+        "whileHover",
+        "whileTap",
+        "whileInView",
+        "transition",
+      ]) {
+        delete domProps[key];
+      }
+      return <Tag {...domProps}>{children}</Tag>;
+    };
+
+  return {
+    useReducedMotion: () => false,
+    motion: new Proxy(
+      {},
+      {
+        get: (_target, tag: string) => createMotionComponent(tag as keyof JSX.IntrinsicElements),
+      }
+    ),
+    AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  };
+});
 
 const DetailRouteProbe = () => {
   const location = useLocation();
@@ -382,8 +389,10 @@ describe("SearchResults", () => {
 
     renderSearchResults();
 
-    const card = await screen.findByTestId("search-result-grid-card");
-    const sourceBadge = screen.getByTestId("search-result-source-badge");
+    // badge 依赖异步 settings（getSettingsCached）resolve 后才渲染；
+    // 先等 badge 出现，再实时查询卡片，避免拿到重渲染前的过时节点引用。
+    const sourceBadge = await screen.findByTestId("search-result-source-badge");
+    const card = screen.getByTestId("search-result-grid-card");
 
     expect(card).toHaveTextContent("PanSearch");
     expect(sourceBadge).toHaveTextContent("PanSearch");

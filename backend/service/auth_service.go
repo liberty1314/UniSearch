@@ -257,7 +257,7 @@ func (s *AuthService) Login(username, password string) (token string, user *mode
 		tokenExpiry = 24 * time.Hour // 默认 24 小时
 	}
 
-	token, err = util.GenerateJWTToken(dbUser.ID, dbUser.Username, dbUser.Role, jwtSecret, tokenExpiry)
+	token, err = util.GenerateJWTToken(dbUser.ID, dbUser.Username, dbUser.Role, dbUser.TokenVersion, jwtSecret, tokenExpiry)
 	if err != nil {
 		return "", nil, "", fmt.Errorf("生成Token失败: %w", err)
 	}
@@ -442,6 +442,41 @@ func (s *AuthService) GetUserByID(userID uint) (*model.User, error) {
 	}
 
 	return &user, nil
+}
+
+// GetTokenVersion 返回用户当前的令牌版本。中间件用它比对 JWT 中的 TokenVersion，
+// 不一致即视为失效（改密/封禁后旧 Token 立即作废）。
+func (s *AuthService) GetTokenVersion(userID uint) (int, error) {
+	if userID == 0 {
+		return 0, errors.New("用户ID不能为空")
+	}
+	var user model.User
+	result := s.db.Select("token_version").First(&user, userID)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return 0, errors.New("用户不存在")
+		}
+		return 0, fmt.Errorf("查询令牌版本失败: %w", result.Error)
+	}
+	return user.TokenVersion, nil
+}
+
+// BumpTokenVersion 递增用户令牌版本，使该用户此前签发的所有 access token 立即失效。
+// 在改密、封禁、禁用账户等需要强制下线的场景调用。
+func (s *AuthService) BumpTokenVersion(userID uint) error {
+	if userID == 0 {
+		return errors.New("用户ID不能为空")
+	}
+	result := s.db.Model(&model.User{}).
+		Where("id = ?", userID).
+		UpdateColumn("token_version", gorm.Expr("token_version + ?", 1))
+	if result.Error != nil {
+		return fmt.Errorf("递增令牌版本失败: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 // GetUserByUsername 根据用户名获取用户信息

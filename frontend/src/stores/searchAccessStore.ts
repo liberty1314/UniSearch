@@ -19,17 +19,17 @@ interface AuthSnapshot {
   isAuthenticated: boolean;
   isAdmin: boolean;
   token: string | null;
-  refreshToken: string | null;
+  rememberMe: boolean;
   username: string | null;
 }
 
 function readAuthSnapshot(): AuthSnapshot {
-  const { isAuthenticated, isAdmin, token, refreshToken, username } = useAuthStore.getState();
-  return { isAuthenticated, isAdmin, token, refreshToken, username };
+  const { isAuthenticated, isAdmin, token, rememberMe, username } = useAuthStore.getState();
+  return { isAuthenticated, isAdmin, token, rememberMe, username };
 }
 
 function getImmediateStatus(snapshot: AuthSnapshot): SearchAccessStatus | null {
-  if (!snapshot.isAuthenticated || (!snapshot.token && !snapshot.refreshToken)) {
+  if (!snapshot.isAuthenticated || (!snapshot.token && !snapshot.rememberMe)) {
     return 'anonymous';
   }
   return 'authenticated';

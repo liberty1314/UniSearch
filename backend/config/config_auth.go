@@ -63,6 +63,26 @@ func getAuthPasswordMaxLength() int {
 	return length
 }
 
+// getAuthPasswordComplexityClasses 返回密码复杂度要求：大写/小写/数字/符号中至少满足几类。
+// 默认 3 类。取值被限制在 1-4 之间，非法值回退到默认。
+func getAuthPasswordComplexityClasses() int {
+	val := os.Getenv("AUTH_PASSWORD_COMPLEXITY_CLASSES")
+	if val == "" {
+		return 3
+	}
+	classes, err := strconv.Atoi(val)
+	if err != nil || classes < 1 || classes > 4 {
+		return 3
+	}
+	return classes
+}
+
+// getAuthPasswordBlocklistPath 返回弱密码黑名单文件路径（可选）。
+// 文件每行一个弱密码，用于扩展内置黑名单。未配置时仅使用内置列表。
+func getAuthPasswordBlocklistPath() string {
+	return strings.TrimSpace(os.Getenv("AUTH_PASSWORD_BLOCKLIST_PATH"))
+}
+
 func getAppEnv() string {
 	value := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
 	if value == "" {
@@ -200,28 +220,6 @@ func isStrongInitialAdminPassword(password string) bool {
 func getAuthEnabled() bool {
 	enabled := os.Getenv("AUTH_ENABLED")
 	return enabled == "true" || enabled == "1"
-}
-
-// 从环境变量获取用户配置，格式：user1:pass1,user2:pass2
-func getAuthUsers() map[string]string {
-	usersEnv := os.Getenv("AUTH_USERS")
-	if usersEnv == "" {
-		return nil
-	}
-
-	users := make(map[string]string)
-	pairs := strings.Split(usersEnv, ",")
-	for _, pair := range pairs {
-		parts := strings.SplitN(pair, ":", 2)
-		if len(parts) == 2 {
-			username := strings.TrimSpace(parts[0])
-			password := strings.TrimSpace(parts[1])
-			if username != "" && password != "" {
-				users[username] = password
-			}
-		}
-	}
-	return users
 }
 
 // 从环境变量获取Token有效期（小时），如果未设置则使用默认值

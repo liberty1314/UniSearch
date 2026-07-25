@@ -34,7 +34,7 @@ describe('useAutoRefreshToken', () => {
     localStorage.clear();
     useAuthStore.setState({
       token: null,
-      refreshToken: null,
+      rememberMe: false,
       isAuthenticated: false,
       isAdmin: false,
       username: null,
@@ -54,7 +54,7 @@ describe('useAutoRefreshToken', () => {
     refreshAuthTokenSingleFlightMock.mockRejectedValue(new Error('刷新令牌失效'));
     useAuthStore.setState({
       token: null,
-      refreshToken: 'expired-refresh-token',
+      rememberMe: true,
       isAuthenticated: true,
       isAdmin: false,
       username: '联调用户',
@@ -66,7 +66,7 @@ describe('useAutoRefreshToken', () => {
       expect(refreshAuthTokenSingleFlightMock).toHaveBeenCalledTimes(1);
     });
     await waitFor(() => {
-      expect(useAuthStore.getState().refreshToken).toBeNull();
+      expect(useAuthStore.getState().rememberMe).toBe(false);
     });
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
     expect(replaceMock).toHaveBeenCalledWith('/login');
@@ -77,7 +77,7 @@ describe('useAutoRefreshToken', () => {
     refreshAuthTokenSingleFlightMock.mockRejectedValue(new Error('刷新令牌失效'));
     useAuthStore.setState({
       token: null,
-      refreshToken: 'expired-refresh-token',
+      rememberMe: true,
       isAuthenticated: true,
       isAdmin: false,
       username: '联调用户',
@@ -89,7 +89,7 @@ describe('useAutoRefreshToken', () => {
       expect(refreshAuthTokenSingleFlightMock).toHaveBeenCalledTimes(1);
     });
     await waitFor(() => {
-      expect(useAuthStore.getState().refreshToken).toBeNull();
+      expect(useAuthStore.getState().rememberMe).toBe(false);
     });
     expect(replaceMock).not.toHaveBeenCalled();
   });

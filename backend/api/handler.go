@@ -14,6 +14,7 @@ import (
 // 保存搜索服务的实例
 var searchService *service.SearchService
 var authService *service.AuthService
+var tokenRevocationService *service.TokenRevocationService
 
 // SetSearchService 设置搜索服务实例
 func SetSearchService(service *service.SearchService) {
@@ -23,6 +24,11 @@ func SetSearchService(service *service.SearchService) {
 // SetAuthService 设置认证服务实例
 func SetAuthService(service *service.AuthService) {
 	authService = service
+}
+
+// SetTokenRevocationService 设置 Token 吊销服务实例
+func SetTokenRevocationService(service *service.TokenRevocationService) {
+	tokenRevocationService = service
 }
 
 // SearchHandler 搜索处理函数

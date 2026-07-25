@@ -148,7 +148,7 @@ const LoginPage: React.FC = () => {
           response.access_token,
           response.username,
           false,
-          response.refresh_token || null,
+          rememberMe,
         );
         toast.success("登录成功，欢迎访问 UniSearch！");
         const nextKeyword = pendingKeyword;

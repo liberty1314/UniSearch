@@ -624,3 +624,69 @@
   - Files:
     - backend/cmd/bootstrap/app.go
     - docs/readme_2607.md
+
+- [2026-07-25 18:01] feat(auth): 迁移 Refresh Token 至 HttpOnly Cookie 并增加登录锁定防护
+  - Body: 前端将刷新令牌移出 localStorage 投递至 HttpOnly Cookie 存储，后端补充 Login Lockout 暴击与登录锁定防护机制，升级 Token 撤销与失效状态校验。
+  - Footer:
+    - 破坏性变更: Refresh Token 接口不再通过 JSON Body 返回 refresh_token，改由 HttpOnly Cookie 自动管理。
+    - Migration: 客户端需配合升级，不再从本地存储或响应体读写 Refresh Token。
+  - Files:
+    - .env.example
+    - backend/api/account_auth_flow_test.go
+    - backend/api/admin_routes_test.go
+    - backend/api/auth_handler.go
+    - backend/api/controller/auth_controller.go
+    - backend/api/handler.go
+    - backend/api/login_lockout.go
+    - backend/api/login_lockout_test.go
+    - backend/api/middleware.go
+    - backend/api/rate_limiter.go
+    - backend/api/rate_limiter_store.go
+    - backend/api/rate_limiter_test.go
+    - backend/api/refresh_token_handler.go
+    - backend/api/router.go
+    - backend/api/router_deps.go
+    - backend/api/token_invalidation_test.go
+    - backend/api/token_state.go
+    - backend/api/user_handler.go
+    - backend/cmd/bootstrap/app.go
+    - backend/config/config.go
+    - backend/config/config_auth.go
+    - backend/config/config_env.go
+    - backend/model/user.go
+    - backend/service/auth_service.go
+    - backend/service/auth_service_test.go
+    - backend/service/password_policy.go
+    - backend/service/token_revocation.go
+    - backend/service/user_service.go
+    - backend/util/jwt.go
+    - backend/util/refresh_cookie.go
+    - docs/readme_2607.md
+    - frontend/src/components/MobileMenu.tsx
+    - frontend/src/components/Navbar.tsx
+    - frontend/src/components/__tests__/AnnouncementProvider.test.tsx
+    - frontend/src/components/__tests__/MobileMenu.test.tsx
+    - frontend/src/components/__tests__/Navbar.test.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/admin/__tests__/ChannelPerformancePanel.test.tsx
+    - frontend/src/components/admin/__tests__/PluginPerformanceDashboard.test.tsx
+    - frontend/src/hooks/__tests__/useAutoRefreshToken.test.tsx
+    - frontend/src/hooks/__tests__/useChannelMetricsController.test.tsx
+    - frontend/src/hooks/useAutoRefreshToken.ts
+    - frontend/src/hooks/useChannelMetricsController.ts
+    - frontend/src/hooks/usePluginMetricsController.ts
+    - frontend/src/lib/__tests__/authRefreshManager.test.ts
+    - frontend/src/lib/api.ts
+    - frontend/src/lib/authRefreshManager.ts
+    - frontend/src/pages/Admin.tsx
+    - frontend/src/pages/AdminLogin.tsx
+    - frontend/src/pages/LoginPage.tsx
+    - frontend/src/pages/RegisterPage.tsx
+    - frontend/src/pages/__tests__/AccountPage.test.tsx
+    - frontend/src/pages/__tests__/AdminNavigation.test.tsx
+    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
+    - frontend/src/services/authService.ts
+    - frontend/src/stores/__tests__/authStore.test.ts
+    - frontend/src/stores/__tests__/searchAccessStore.test.ts
+    - frontend/src/stores/authStore.ts
+    - frontend/src/stores/searchAccessStore.ts

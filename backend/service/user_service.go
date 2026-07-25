@@ -441,6 +441,8 @@ func (s *UserService) ResetPassword(userID uint, newPassword string) error {
 
 	// 更新密码
 	user.PasswordHash = string(passwordHash)
+	// 递增令牌版本：使重置前签发的所有 access token 立即失效。
+	user.TokenVersion++
 	if err := s.db.Save(user).Error; err != nil {
 		return fmt.Errorf("重置密码失败: %w", err)
 	}
@@ -473,6 +475,8 @@ func (s *UserService) ChangePassword(userID uint, currentPassword, newPassword s
 	}
 
 	user.PasswordHash = string(passwordHash)
+	// 递增令牌版本：使改密前签发的所有 access token 立即失效。
+	user.TokenVersion++
 	if err := s.db.Save(user).Error; err != nil {
 		return fmt.Errorf("修改密码失败: %w", err)
 	}
@@ -536,6 +540,10 @@ func (s *UserService) SetUserStatus(userID uint, isEnabled bool, currentUserID u
 
 	// 更新状态
 	user.IsEnabled = isEnabled
+	// 禁用账户时递增令牌版本，使其已签发的 access token 立即失效。
+	if !isEnabled {
+		user.TokenVersion++
+	}
 	if err := s.db.Save(user).Error; err != nil {
 		return fmt.Errorf("更新用户状态失败: %w", err)
 	}

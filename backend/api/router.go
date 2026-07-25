@@ -20,6 +20,7 @@ func SetupRouter(deps RouterDeps) *gin.Engine {
 	SetTGChannelHealthService(deps.TGChannelHealthService)
 	SetAdminTagService(deps.AdminTagService)
 	SetBannedIPService(deps.BannedIPService)
+	SetTokenRevocationService(deps.TokenRevocationService)
 
 	authController := controller.NewAuthController(deps.AuthService)
 
@@ -41,6 +42,15 @@ func SetupRouter(deps RouterDeps) *gin.Engine {
 	}
 	// 全局注册熔断（L4 / 修复 W5）：全站每小时注册成功总量超阈值即临时熔断。
 	InitSignupCircuitBreaker(config.AppConfig.SignupGlobalLimitPerHour, config.AppConfig.SignupCircuitBreakMin, deps.RedisCache)
+
+	// 登录防爆破：IP 维度限流阈值 + 计数后端（Redis 多实例共享或内存），以及账户级失败锁定。
+	InitLoginRateLimiters(config.AppConfig.LoginIPLimitPerMin, config.AppConfig.LoginIPLimitPerHour)
+	InitLoginRateLimitStore(config.AppConfig.LoginRateLimitUseRedis, deps.RedisCache)
+	loginLockoutRedis := deps.RedisCache
+	if !config.AppConfig.LoginRateLimitUseRedis {
+		loginLockoutRedis = nil
+	}
+	InitLoginLockout(config.AppConfig.LoginAccountLockThreshold, config.AppConfig.LoginAccountLockMin, loginLockoutRedis)
 	// 注册防刷可观测性（M6）：周期性汇总各维度拦截统计。
 	StartSignupMetricsReporter(0)
 

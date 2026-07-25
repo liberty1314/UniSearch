@@ -240,7 +240,7 @@ describe('Auth entry pages', () => {
     await user.click(screen.getByRole('button', { name: '登录后台' }));
 
     await waitFor(() => {
-      expect(setTokenMock).toHaveBeenCalledWith('token', 'admin', true, 'refresh');
+      expect(setTokenMock).toHaveBeenCalledWith('token', 'admin', true, false);
     });
 
     expect(adminLoginWithRememberMock).toHaveBeenCalledWith('admin', 'secret', false);
@@ -391,7 +391,7 @@ describe('Auth entry pages', () => {
     await user.click(screen.getByRole('button', { name: '立即注册' }));
 
     await waitFor(() => {
-      expect(setTokenMock).toHaveBeenCalledWith('token', 'trinity', false, 'refresh');
+      expect(setTokenMock).toHaveBeenCalledWith('token', 'trinity', false, false);
     });
 
     expect(registerMock).toHaveBeenCalledWith('trinity', 'secret123', undefined);

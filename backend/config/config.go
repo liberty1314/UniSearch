@@ -58,6 +58,13 @@ type Config struct {
 	SignupGlobalLimitPerHour int  // 全站每小时注册成功总量上限（0=关闭熔断）
 	SignupCircuitBreakMin    int  // 触发全局熔断后拒绝新注册的持续时长（分钟）
 
+	// 登录防爆破：IP 维度限流与账户级锁定
+	LoginIPLimitPerMin        int  // 单 IP 每分钟登录请求上限
+	LoginIPLimitPerHour       int  // 单 IP 每小时登录请求上限
+	LoginRateLimitUseRedis    bool // 登录限流/账户锁定计数是否使用 Redis 后端（多实例共享）
+	LoginAccountLockThreshold int  // 账户连续登录失败达到该次数即锁定（0=关闭锁定）
+	LoginAccountLockMin       int  // 账户锁定持续时长（分钟）
+
 	DefaultChannels    []string
 	DefaultConcurrency int
 	Port               string
@@ -115,7 +122,6 @@ type Config struct {
 	HotRankingCacheTTLYear       time.Duration
 	// 认证相关配置
 	AuthEnabled            bool              // 是否启用认证
-	AuthUsers              map[string]string // 用户名:密码映射
 	AuthTokenExpiry        time.Duration     // Token有效期
 	AuthJWTSecret          string            // JWT签名密钥（向后兼容，优先使用密钥管理服务）
 	ResourcePublicIDSecret string            // 公开资源 ID 派生密钥
@@ -123,6 +129,8 @@ type Config struct {
 	AuthUsernameMaxLength  int               // 用户名最大长度
 	AuthPasswordMinLength  int               // 密码最小长度
 	AuthPasswordMaxLength  int               // 密码最大长度
+	AuthPasswordComplexityClasses int        // 密码复杂度要求（大写/小写/数字/符号 至少满足几类）
+	AuthPasswordBlocklistPath     string     // 弱密码黑名单文件路径（可选，扩展内置列表）
 	InitialAdminUsername   string            // 首次初始化管理员用户名
 	InitialAdminPassword   string            // 首次初始化管理员密码
 
@@ -210,6 +218,12 @@ func InitWithError() error {
 		SignupGlobalLimitPerHour: getSignupGlobalLimitPerHour(),
 		SignupCircuitBreakMin:    getSignupCircuitBreakMin(),
 
+		LoginIPLimitPerMin:        getLoginIPLimitPerMin(),
+		LoginIPLimitPerHour:       getLoginIPLimitPerHour(),
+		LoginAccountLockThreshold: getLoginAccountLockThreshold(),
+		LoginAccountLockMin:       getLoginAccountLockMin(),
+		LoginRateLimitUseRedis:    getLoginRateLimitUseRedis(),
+
 		DefaultChannels:    getDefaultChannels(),
 		DefaultConcurrency: getDefaultConcurrency(),
 		Port:               getPort(),
@@ -267,7 +281,6 @@ func InitWithError() error {
 		HotRankingCacheTTLYear:       getHotRankingCacheTTL("HOT_RANKING_CACHE_TTL_YEAR", 12*time.Hour),
 		// 认证相关配置
 		AuthEnabled:            getAuthEnabled(),
-		AuthUsers:              getAuthUsers(),
 		AuthTokenExpiry:        getAuthTokenExpiry(),
 		AuthJWTSecret:          getAuthJWTSecret(),
 		ResourcePublicIDSecret: getResourcePublicIDSecret(),
@@ -275,6 +288,8 @@ func InitWithError() error {
 		AuthUsernameMaxLength:  getAuthUsernameMaxLength(),
 		AuthPasswordMinLength:  getAuthPasswordMinLength(),
 		AuthPasswordMaxLength:  getAuthPasswordMaxLength(),
+		AuthPasswordComplexityClasses: getAuthPasswordComplexityClasses(),
+		AuthPasswordBlocklistPath:     getAuthPasswordBlocklistPath(),
 		InitialAdminUsername:   getInitialAdminUsername(),
 		InitialAdminPassword:   getInitialAdminPassword(),
 

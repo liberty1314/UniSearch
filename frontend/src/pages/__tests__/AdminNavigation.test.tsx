@@ -9,7 +9,7 @@ const { authState, revokeRefreshTokenMock } = vi.hoisted(() => ({
   authState: {
     isAdmin: true,
     username: 'root',
-    refreshToken: 'refresh-token',
+    rememberMe: true,
     logout: vi.fn(),
   },
   revokeRefreshTokenMock: vi.fn(),
@@ -218,7 +218,7 @@ describe('Admin 导航集成', () => {
     await user.click(screen.getByRole('menuitem', { name: '退出登录' }));
 
     await waitFor(() => {
-      expect(revokeRefreshTokenMock).toHaveBeenCalledWith('refresh-token');
+      expect(revokeRefreshTokenMock).toHaveBeenCalled();
     });
     expect(authState.logout).toHaveBeenCalled();
     expect(screen.getByTestId('location')).toHaveTextContent('/');

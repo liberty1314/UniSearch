@@ -71,6 +71,9 @@ func Initialize() (*App, error) {
 	authService := service.NewAuthService()
 	fmt.Println("Auth 服务已启动（用户认证功能已启用）")
 
+	tokenRevocationService := service.NewTokenRevocationService(redisCache)
+	fmt.Println("TokenRevocation 服务已启动（登出/改密 Token 精确失效已启用）")
+
 	userService := service.NewUserService(database.GetDB())
 	fmt.Println("User 服务已启动（用户管理功能已启用）")
 
@@ -140,6 +143,7 @@ func Initialize() (*App, error) {
 		RouterDeps: api.RouterDeps{
 			SearchService:             searchService,
 			AuthService:               authService,
+			TokenRevocationService:    tokenRevocationService,
 			RefreshTokenService:       refreshTokenService,
 			UserService:               userService,
 			SystemSettingsService:     systemSettingsService,

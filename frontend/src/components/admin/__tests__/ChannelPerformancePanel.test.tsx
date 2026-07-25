@@ -7,7 +7,7 @@ import { ChannelPerformancePanel } from '../ChannelPerformancePanel';
 const { authState, refreshAuthTokenSingleFlightMock, useAuthStoreMock } = vi.hoisted(() => {
   const state = {
     token: 'test-token' as string | null,
-    refreshToken: null as string | null,
+    rememberMe: false as boolean,
   };
   return {
     authState: state,
@@ -128,7 +128,7 @@ describe('ChannelPerformancePanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     authState.token = 'test-token';
-    authState.refreshToken = null;
+    authState.rememberMe = false;
     mockFetch();
   });
 

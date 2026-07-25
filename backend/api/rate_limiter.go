@@ -94,7 +94,25 @@ var (
 	signupAutobanThreshold = 30
 	signupAutobanWindow    = 10 * time.Minute
 	signupAutobanDuration  = 24 * time.Hour
+
+	// 登录 IP 维度限流阈值：仅以 ClientIP 为 key 计数，不含 username，
+	// 确保同一 IP 换不同用户名撞库也受同一计数器约束（对齐注册的 W1 修复）。
+	// 实际计数走 loginRateLimitStore（内存或 Redis）。
+	loginIPLimitPerMin  = 10
+	loginIPLimitPerHour = 100
 )
+
+// InitLoginRateLimiters 按配置设置登录 IP 维度限流阈值。
+func InitLoginRateLimiters(perMin, perHour int) {
+	if perMin <= 0 {
+		perMin = 10
+	}
+	if perHour <= 0 {
+		perHour = 100
+	}
+	loginIPLimitPerMin = perMin
+	loginIPLimitPerHour = perHour
+}
 
 // InitSignupRateLimiters 按配置设置注册 IP 维度限流阈值。
 // 需在 config.Init 之后、开始处理请求之前调用（如 SetupRouter 内）。
@@ -217,20 +235,27 @@ func registerRateLimitKeyResolver(c *gin.Context) (string, error) {
 }
 
 func loginRateLimitKeyResolver(c *gin.Context) (string, error) {
-	body, err := readRequestBody(c)
-	if err != nil {
-		return buildRateLimitKey(c), err
+	key, _, err := loginRateLimitKeyResolverWithUsername(c)
+	return key, err
+}
+
+// loginRateLimitKeyResolverWithUsername 解析登录请求体，返回 IP+username 限流键与用户名。
+// 用户名用于账户级失败锁定判断。
+func loginRateLimitKeyResolverWithUsername(c *gin.Context) (key, username string, err error) {
+	body, readErr := readRequestBody(c)
+	if readErr != nil {
+		return buildRateLimitKey(c), "", readErr
 	}
 	if len(body) == 0 {
-		return buildRateLimitKey(c), nil
+		return buildRateLimitKey(c), "", nil
 	}
 
 	var req controller.LoginRequest
-	if err := json.Unmarshal(body, &req); err != nil {
-		return buildRateLimitKey(c), nil
+	if unmarshalErr := json.Unmarshal(body, &req); unmarshalErr != nil {
+		return buildRateLimitKey(c), "", nil
 	}
 
-	return buildRateLimitKey(c, req.Username), nil
+	return buildRateLimitKey(c, req.Username), req.Username, nil
 }
 
 func denyAuthEntryRateLimit(c *gin.Context) {
@@ -300,16 +325,51 @@ func registerRateLimitMiddleware() gin.HandlerFunc {
 
 func loginRateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		key, err := loginRateLimitKeyResolver(c)
+		key, username, err := loginRateLimitKeyResolverWithUsername(c)
 		if isRequestBodyTooLargeError(err) {
 			abortRequestBodyTooLarge(c)
 			return
 		}
+
+		ctx := c.Request.Context()
+		ip := c.ClientIP()
+
+		// IP 纯维度双窗口：同一 IP 换不同用户名撞库也受同一计数器约束。
+		// 计数走 loginRateLimitStore（内存或 Redis），支持多实例共享、重启不丢。
+		if allowed, _ := loginRateLimitStore.Allow(ctx, "login:ip:min:"+ip, loginIPLimitPerMin, time.Minute); !allowed {
+			denyAuthEntryRateLimit(c)
+			return
+		}
+		if allowed, _ := loginRateLimitStore.Allow(ctx, "login:ip:hour:"+ip, loginIPLimitPerHour, time.Hour); !allowed {
+			denyAuthEntryRateLimit(c)
+			return
+		}
+
+		// 账户级锁定：针对单一账户的在线爆破，达到阈值后锁定该账户一段时间。
+		if loginLockoutGuard.isLocked(ctx, username) {
+			c.AbortWithStatusJSON(429, gin.H{
+				"code":    429,
+				"message": "账户因多次登录失败已被临时锁定，请稍后再试",
+				"data":    nil,
+			})
+			return
+		}
+
+		// IP+username 维度：防止针对单一目标账户的高频尝试。
 		if !userLoginRateLimiter.Allow(key) {
 			denyAuthEntryRateLimit(c)
 			return
 		}
+
 		c.Next()
+
+		// 依据登录结果更新账户失败计数：200 成功清零，401 凭据错误记一次失败。
+		switch c.Writer.Status() {
+		case http.StatusOK:
+			loginLockoutGuard.recordSuccess(ctx, username)
+		case http.StatusUnauthorized:
+			loginLockoutGuard.recordFailure(ctx, username)
+		}
 	}
 }
 

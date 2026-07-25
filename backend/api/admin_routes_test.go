@@ -80,7 +80,7 @@ func TestPluginWebRoutesRequireAdminAuthentication(t *testing.T) {
 		t.Fatalf("期望匿名访问受保护插件 Web 路由返回 401，实际为 %d: %s", anonymousResp.Code, anonymousResp.Body.String())
 	}
 
-	userToken, err := util.GenerateJWTToken(2, "normal-user", "user", config.AppConfig.AuthJWTSecret, time.Hour)
+	userToken, err := util.GenerateJWTToken(2, "normal-user", "user", 0, config.AppConfig.AuthJWTSecret, time.Hour)
 	if err != nil {
 		t.Fatalf("生成普通用户 token 失败: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestPluginWebRoutesRequireAdminAuthentication(t *testing.T) {
 		t.Fatalf("期望普通用户访问受保护插件 Web 路由返回 403，实际为 %d: %s", userResp.Code, userResp.Body.String())
 	}
 
-	adminToken, err := util.GenerateJWTToken(1, "admin-user", "admin", config.AppConfig.AuthJWTSecret, time.Hour)
+	adminToken, err := util.GenerateJWTToken(1, "admin-user", "admin", 0, config.AppConfig.AuthJWTSecret, time.Hour)
 	if err != nil {
 		t.Fatalf("生成管理员 token 失败: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestAdminUserStatsRouteReturnsSummary(t *testing.T) {
 	router := gin.New()
 	registerAdminRoutes(router.Group("/api"), RouterDeps{UserService: userService})
 
-	token, err := util.GenerateJWTToken(admin.ID, admin.Username, admin.Role, config.AppConfig.AuthJWTSecret, time.Hour)
+	token, err := util.GenerateJWTToken(admin.ID, admin.Username, admin.Role, 0, config.AppConfig.AuthJWTSecret, time.Hour)
 	if err != nil {
 		t.Fatalf("generate token: %v", err)
 	}

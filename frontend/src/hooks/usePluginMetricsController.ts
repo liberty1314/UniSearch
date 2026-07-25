@@ -217,8 +217,8 @@ const matchesStatus = (row: PluginObservabilityRow, statusFilter: PluginMetricSt
 };
 
 export function usePluginMetricsController() {
-  const { token, refreshToken } = useAuthStore();
-  const hasAuthSession = Boolean(token || refreshToken);
+  const { token, rememberMe } = useAuthStore();
+  const hasAuthSession = Boolean(token || rememberMe);
   const [snapshot, setSnapshot] = useState<PluginMetricsRealtimeSnapshot>(EMPTY_REALTIME_SNAPSHOT);
   const [metrics, setMetrics] = useState<PluginPerformanceMetric[]>([]);
   const [errorLogs, setErrorLogs] = useState<PluginErrorLog[]>([]);
@@ -257,7 +257,7 @@ export function usePluginMetricsController() {
       const authState = useAuthStore.getState();
       let requestToken = authState.token;
       if (!requestToken) {
-        if (!authState.refreshToken) {
+        if (!authState.rememberMe) {
           throw new Error('缺少管理员登录状态');
         }
         const payload = await withTimeout(
