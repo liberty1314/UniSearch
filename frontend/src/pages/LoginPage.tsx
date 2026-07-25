@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { toast } from "sonner";
-import { useAuthStore } from "@/stores/authStore";
 import { AuthService } from "@/services/authService";
 import { SystemSettingsService } from "@/services/systemSettingsService";
+import { useLoginForm } from "@/hooks/useLoginForm";
 import {
   Card,
   CardContent,
@@ -46,15 +45,9 @@ import {
   AUTH_ENTRY_FORM_STACK_CLASS,
   AUTH_ENTRY_PAGE_CONTAINER_CLASS,
 } from "@/components/auth/authEntryLayout";
-import { getErrorMessage, getErrorStatus } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import type { SearchParams } from "@/types/search";
-import { DEFAULT_AUTH_POLICY, resolveAuthPolicy } from "@/lib/authPolicy";
-import {
-  getPasswordPolicyHelperText,
-  hasPasswordWhitespace,
-  removePasswordWhitespace,
-} from "@/components/account/passwordValidation";
+import { getPasswordPolicyHelperText } from "@/components/account/passwordValidation";
 
 interface RedirectLocationState {
   from?: {
@@ -84,19 +77,10 @@ const resolveRedirectTarget = (
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setToken } = useAuthStore();
 
   // System Settings
   const [enableUserSignup, setEnableUserSignup] = useState<boolean>(true);
   const [isLoadingSettings, setIsLoadingSettings] = useState<boolean>(true);
-  const [authPolicy, setAuthPolicy] = useState(DEFAULT_AUTH_POLICY);
-
-  // Form State
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   // Animation State
   const particles = useAuthParticles();
@@ -110,13 +94,47 @@ const LoginPage: React.FC = () => {
     routeState,
   );
 
-  // Load Settings
+  const {
+    username,
+    setUsername,
+    password,
+    setPassword,
+    showPassword,
+    setShowPassword,
+    rememberMe,
+    setRememberMe,
+    isLoading,
+    authPolicy,
+    submit: handleLogin,
+  } = useLoginForm({
+    loginRequest: AuthService.userLogin,
+    onSuccess: () => {
+      const redirectTarget = resolveRedirectTarget(redirectState);
+      if (pendingKeyword) {
+        navigate(redirectTarget, {
+          replace: true,
+          state: {
+            resumeSearch: {
+              keyword: pendingKeyword,
+              params: pendingSearchParams,
+              fromTrending: redirectState?.pendingSearch?.fromTrending,
+            },
+          },
+        });
+      } else if (redirectTarget !== "/") {
+        navigate(redirectTarget, { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
+    },
+  });
+
+  // Load Settings（注册开关：仅本页需要，用于是否展示"注册账号"入口）
   useEffect(() => {
     const loadSettings = async () => {
       try {
         const settings = await SystemSettingsService.getSettings();
         setEnableUserSignup(settings.enable_user_signup);
-        setAuthPolicy(resolveAuthPolicy(settings));
       } catch (error) {
         console.error("Failed to load settings:", error);
       } finally {
@@ -124,76 +142,7 @@ const LoginPage: React.FC = () => {
       }
     };
     loadSettings();
-  }, [navigate]);
-
-  const handleLogin = async () => {
-    if (isLoading) {
-      return;
-    }
-
-    if (!username.trim() || !password.trim()) {
-      toast.error("请输入用户名和密码");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const response = await AuthService.userLogin(
-        username.trim(),
-        password,
-        rememberMe,
-      );
-      if (response && response.access_token) {
-        setToken(
-          response.access_token,
-          response.username,
-          false,
-          rememberMe,
-        );
-        toast.success("登录成功，欢迎访问 UniSearch！");
-        const nextKeyword = pendingKeyword;
-        const redirectTarget = resolveRedirectTarget(redirectState);
-        if (nextKeyword) {
-          navigate(redirectTarget, {
-            replace: true,
-            state: {
-              resumeSearch: {
-                keyword: nextKeyword,
-                params: pendingSearchParams,
-                fromTrending: redirectState?.pendingSearch?.fromTrending,
-              },
-            },
-          });
-        } else if (redirectTarget !== "/") {
-          navigate(redirectTarget, { replace: true });
-        } else {
-          navigate("/", { replace: true });
-        }
-      } else {
-        toast.error("登录失败：服务器未返回有效令牌");
-      }
-    } catch (error) {
-      console.error("Login failed:", error);
-      if (getErrorStatus(error) === 401) {
-        toast.error("用户名或密码错误");
-      } else if (getErrorStatus(error) === 429) {
-        toast.error("请求过于频繁，请稍后再试");
-      } else {
-        toast.error("登录失败：" + getErrorMessage(error));
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const normalizePasswordInput = (value: string) => {
-    if (!hasPasswordWhitespace(value)) {
-      return value;
-    }
-
-    toast.error("密码不能包含空格");
-    return removePasswordWhitespace(value);
-  };
+  }, []);
 
   return (
     <div className={AUTH_ENTRY_PAGE_CONTAINER_CLASS}>
@@ -284,7 +233,7 @@ const LoginPage: React.FC = () => {
                   autoComplete="current-password"
                   placeholder="请输入密码"
                   value={password}
-                  onChange={(e) => setPassword(normalizePasswordInput(e.target.value))}
+                  onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading}
                   helperText={getPasswordPolicyHelperText(authPolicy)}
                   endAdornment={

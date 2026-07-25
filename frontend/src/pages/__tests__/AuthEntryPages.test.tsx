@@ -7,6 +7,15 @@ import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import AdminLogin from '@/pages/AdminLogin';
 
+// 生成一个可被 deriveIsAdminFromToken 解析的最小 JWT（仅 payload 有效，无需真实签名）。
+const makeJwt = (payload: Record<string, unknown>): string => {
+  const encode = (obj: Record<string, unknown>) =>
+    btoa(JSON.stringify(obj)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode(payload)}.sig`;
+};
+
+const adminJwt = makeJwt({ role: 'admin', username: 'admin' });
+
 const {
   navigateMock,
   getSettingsMock,
@@ -218,7 +227,7 @@ describe('Auth entry pages', () => {
 
   it('does not perform an extra client-side navigate after successful admin login', async () => {
     adminLoginWithRememberMock.mockResolvedValue({
-      access_token: 'token',
+      access_token: adminJwt,
       refresh_token: 'refresh',
       username: 'admin',
     });
@@ -240,7 +249,7 @@ describe('Auth entry pages', () => {
     await user.click(screen.getByRole('button', { name: '登录后台' }));
 
     await waitFor(() => {
-      expect(setTokenMock).toHaveBeenCalledWith('token', 'admin', true, false);
+      expect(setTokenMock).toHaveBeenCalledWith(adminJwt, 'admin', true, false);
     });
 
     expect(adminLoginWithRememberMock).toHaveBeenCalledWith('admin', 'secret', false);

@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { toast } from 'sonner';
-import { useAuthStore } from '@/stores/authStore';
 import { AuthService } from '@/services/authService';
+import { useLoginForm } from '@/hooks/useLoginForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -20,110 +19,41 @@ import {
     AUTH_ENTRY_CARD_SHELL_CLASS,
     AUTH_ENTRY_PAGE_CONTAINER_CLASS,
 } from '@/components/auth/authEntryLayout';
-import { getErrorMessage, getErrorStatus } from '@/lib/error';
-import { DEFAULT_AUTH_POLICY, resolveAuthPolicy } from '@/lib/authPolicy';
-import { SystemSettingsService } from '@/services/systemSettingsService';
-import {
-    getPasswordPolicyHelperText,
-    hasPasswordWhitespace,
-    removePasswordWhitespace,
-} from '@/components/account/passwordValidation';
+import { getPasswordPolicyHelperText } from '@/components/account/passwordValidation';
 
 /**
  * 管理员登录页面组件
- * 
- * 提供管理员密码登录方式
+ *
+ * 提供管理员密码登录方式。登录逻辑与普通登录共用 useLoginForm，
+ * requireAdmin 确保仅管理员可写入登录态（后端亦已对非管理员返回 403）。
  */
 const AdminLogin: React.FC = () => {
     const location = useLocation();
-
-    // 认证状态管理
-    const { setToken } = useAuthStore();
-
-    // 管理员登录表单状态
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false); // 新增：记住我
-    const [isAdminLoading, setIsAdminLoading] = useState(false);
-    const [authPolicy, setAuthPolicy] = useState(DEFAULT_AUTH_POLICY);
 
     // 动态效果状态
     const particles = useAuthParticles();
     const routeState = location.state as AuthTransitionState | null;
     const authDirection = resolveAuthDirection(routeState?.from, location.pathname, routeState);
 
-    useEffect(() => {
-        const loadAuthPolicy = async () => {
-            try {
-                const settings = await SystemSettingsService.getSettings();
-                setAuthPolicy(resolveAuthPolicy(settings));
-            } catch {
-                setAuthPolicy(DEFAULT_AUTH_POLICY);
-            }
-        };
-
-        void loadAuthPolicy();
-    }, []);
-
-    const normalizePasswordInput = (value: string) => {
-        if (!hasPasswordWhitespace(value)) {
-            return value;
-        }
-
-        toast.error('密码不能包含空格');
-        return removePasswordWhitespace(value);
-    };
-
-    /**
-     * 处理管理员登录（用户名+密码）
-     */
-    const handleAdminLogin = async () => {
-        if (isAdminLoading) {
-            return;
-        }
-
-        // 验证输入
-        if (!username.trim()) {
-            toast.error('请输入用户名');
-            return;
-        }
-
-        if (!password.trim()) {
-            toast.error('请输入管理员密码');
-            return;
-        }
-
-        setIsAdminLoading(true);
-
-        try {
-            // 调用管理员登录接口（支持"记住我"）
-            const response = await AuthService.adminLoginWithRemember(username, password, rememberMe);
-
-            // 保存 Token 和可选的 Refresh Token 到状态管理（明确设置 isAdmin = true）
-            setToken(
-                response.access_token,
-                response.username || username.trim(),
-                true,
-                rememberMe
-            );
-
-            toast.success('登录成功，欢迎访问 UniSearch！');
-        } catch (error) {
-            console.error('管理员登录失败:', error);
-
-            // 根据错误类型显示不同提示
-            if (getErrorStatus(error) === 401) {
-                toast.error('用户名或密码错误，请重试');
-            } else if (getErrorStatus(error) === 429) {
-                toast.error('请求过于频繁，请稍后再试');
-            } else {
-                toast.error('登录失败：' + getErrorMessage(error));
-            }
-        } finally {
-            setIsAdminLoading(false);
-        }
-    };
+    const {
+        username,
+        setUsername,
+        password,
+        setPassword,
+        showPassword,
+        setShowPassword,
+        rememberMe,
+        setRememberMe,
+        isLoading: isAdminLoading,
+        authPolicy,
+        submit: handleAdminLogin,
+    } = useLoginForm({
+        loginRequest: AuthService.adminLoginWithRemember,
+        requireAdmin: true,
+        onSuccess: () => {
+            // 跳转由 AdminRoute / AdminGuestRoute 依据登录态处理。
+        },
+    });
 
     return (
         <div className={AUTH_ENTRY_PAGE_CONTAINER_CLASS}>
@@ -188,7 +118,7 @@ const AdminLogin: React.FC = () => {
                                         autoComplete="current-password"
                                         placeholder="请输入管理员密码"
                                         value={password}
-                                        onChange={(e) => setPassword(normalizePasswordInput(e.target.value))}
+                                        onChange={(e) => setPassword(e.target.value)}
                                         disabled={isAdminLoading}
                                         helperText={getPasswordPolicyHelperText(authPolicy)}
                                         endAdornment={(

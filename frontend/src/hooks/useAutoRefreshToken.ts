@@ -1,25 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { refreshAuthTokenSingleFlight } from '@/lib/authRefreshManager';
-
-/**
- * 解析 JWT Token 获取过期时间
- */
-const parseJWT = (token: string) => {
-    try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(
-            atob(base64)
-                .split('')
-                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-                .join('')
-        );
-        return JSON.parse(jsonPayload);
-    } catch {
-        return null;
-    }
-};
+import { parseJWT } from '@/lib/jwt';
 
 /**
  * 检查 Token 是否已过期或即将过期

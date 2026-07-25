@@ -690,3 +690,14 @@
     - frontend/src/stores/__tests__/searchAccessStore.test.ts
     - frontend/src/stores/authStore.ts
     - frontend/src/stores/searchAccessStore.ts
+
+- [2026-07-25 21:54] refactor(auth): 抽取前端登录表单 Hook 并完善 JWT 解析逻辑
+  - Body: 抽离 useLoginForm 通用 Hook 统一普通用户与管理员登录表单的状态管理与提交逻辑，新增 jwt 工具模块实现客户端解析与验证，并重构相关测试。
+  - Files:
+    - docs/readme_2607.md
+    - frontend/src/hooks/useAutoRefreshToken.ts
+    - frontend/src/hooks/useLoginForm.ts
+    - frontend/src/lib/jwt.ts
+    - frontend/src/pages/AdminLogin.tsx
+    - frontend/src/pages/LoginPage.tsx
+    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
