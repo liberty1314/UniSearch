@@ -611,3 +611,10 @@
     - frontend/src/services/systemSettingsService.ts
     - frontend/src/types/auth.ts
     - frontend/src/types/bannedIP.ts
+
+- [2026-07-25 09:56] test(auth): 更新注册防滥用相关测试用例
+  - Body: 为系统设置控制器测试补充注册自动封禁与验证码默认值 Mock，并同步注册接口调用签名新增的验证码令牌参数断言。
+  - Files:
+    - frontend/src/hooks/__tests__/useSystemSettingsController.test.tsx
+    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
+    - docs/readme_2607.md

@@ -28,6 +28,11 @@ vi.mock('@/services/systemSettingsService', () => ({
     updateTMDBSettings: (...args: unknown[]) => updateTMDBSettingsMock(...args),
     updateRuntimeSettings: (...args: unknown[]) => updateRuntimeSettingsMock(...args),
   },
+  DEFAULT_SIGNUP_AUTOBAN_ENABLED: true,
+  DEFAULT_SIGNUP_AUTOBAN_THRESHOLD: 30,
+  DEFAULT_SIGNUP_AUTOBAN_WINDOW_MIN: 10,
+  DEFAULT_SIGNUP_AUTOBAN_DURATION_MIN: 1440,
+  DEFAULT_ENABLE_SIGNUP_CAPTCHA: false,
 }));
 
 vi.mock('sonner', () => ({

@@ -394,7 +394,7 @@ describe('Auth entry pages', () => {
       expect(setTokenMock).toHaveBeenCalledWith('token', 'trinity', false, 'refresh');
     });
 
-    expect(registerMock).toHaveBeenCalledWith('trinity', 'secret123');
+    expect(registerMock).toHaveBeenCalledWith('trinity', 'secret123', undefined);
     expect(navigateMock).toHaveBeenCalledWith('/', { replace: true });
   });
 
@@ -515,7 +515,7 @@ describe('Auth entry pages', () => {
     await user.click(screen.getByRole('button', { name: '立即注册' }));
 
     await waitFor(() => {
-      expect(registerMock).toHaveBeenCalledWith('trinity', 'secret123');
+      expect(registerMock).toHaveBeenCalledWith('trinity', 'secret123', undefined);
     });
   });
 
