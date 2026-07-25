@@ -5,6 +5,10 @@ import {
 } from "@/components/search-results/searchResultsPresentation";
 import { buildActiveFilterChips } from "@/utils/searchFilters";
 import { DEFAULT_SEARCH_FIRST_PAGE_MAX_PER_SOURCE } from "@/lib/searchSourceDiversity";
+import {
+  DEFAULT_SEARCH_SORT_MODE,
+  type SearchSortMode,
+} from "@/utils/searchResultSorter";
 
 export type SearchResultsViewMode = "list" | "grid";
 
@@ -14,6 +18,7 @@ interface UseSearchResultsPresentationParams {
   displayedCount: number;
   enableSourceDiversity?: boolean;
   maxPerSource?: number;
+  sortMode?: SearchSortMode;
 }
 
 export const useSearchResultsPresentation = ({
@@ -22,6 +27,7 @@ export const useSearchResultsPresentation = ({
   displayedCount,
   enableSourceDiversity = false,
   maxPerSource = DEFAULT_SEARCH_FIRST_PAGE_MAX_PER_SOURCE,
+  sortMode = DEFAULT_SEARCH_SORT_MODE,
 }: UseSearchResultsPresentationParams) => {
   const { allSortedResults, displayedResults } = useMemo(
     () => buildSearchResultsPresentation({
@@ -31,11 +37,13 @@ export const useSearchResultsPresentation = ({
       displayedCount,
       enableSourceDiversity,
       maxPerSource,
+      sortMode,
     }),
     [
       displayedCount,
       enableSourceDiversity,
       maxPerSource,
+      sortMode,
       searchParams.cloudTypes,
       searchParams.keyword,
       searchResults?.resources,

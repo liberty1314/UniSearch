@@ -1,6 +1,13 @@
 import type { ResourceObject } from "@/types/resource";
 import { getCloudTypePriority, type ResultItem } from "./cloudTypeUtils";
 
+export type SearchSortMode = "smart" | "newest" | "oldest";
+
+export const DEFAULT_SEARCH_SORT_MODE: SearchSortMode = "smart";
+
+export const isSearchSortMode = (value: unknown): value is SearchSortMode =>
+  value === "smart" || value === "newest" || value === "oldest";
+
 type SortableResultItem = ResultItem & {
   originalIndex: number;
   priority: number;
@@ -120,9 +127,50 @@ function resolveResourceActionabilityRank(resource: ResourceObject): number {
   return 1;
 }
 
+const compareSmart = (a: SortableResultItem, b: SortableResultItem): number => {
+  if (a.matchRank !== b.matchRank) {
+    return a.matchRank - b.matchRank;
+  }
+  if (a.hasKnownTime !== b.hasKnownTime) {
+    return a.hasKnownTime ? -1 : 1;
+  }
+  const timeDiff = b.datetime - a.datetime;
+  if (timeDiff !== 0) {
+    return timeDiff;
+  }
+  if (a.actionabilityRank !== b.actionabilityRank) {
+    return a.actionabilityRank - b.actionabilityRank;
+  }
+  if (a.priority !== b.priority) {
+    return a.priority - b.priority;
+  }
+  return a.originalIndex - b.originalIndex;
+};
+
+// 时间排序：无已知时间的条目始终沉底，其余按方向排序，同刻回落到智能序保持稳定。
+const compareByTime = (
+  a: SortableResultItem,
+  b: SortableResultItem,
+  direction: "newest" | "oldest",
+): number => {
+  if (a.hasKnownTime !== b.hasKnownTime) {
+    return a.hasKnownTime ? -1 : 1;
+  }
+  if (a.hasKnownTime && b.hasKnownTime) {
+    const timeDiff = direction === "newest"
+      ? b.datetime - a.datetime
+      : a.datetime - b.datetime;
+    if (timeDiff !== 0) {
+      return timeDiff;
+    }
+  }
+  return compareSmart(a, b);
+};
+
 export const sortResources = (
   resources: ResourceObject[] | undefined | null,
   keyword = "",
+  sortMode: SearchSortMode = DEFAULT_SEARCH_SORT_MODE,
 ): ResultItem[] => {
   if (!resources || resources.length === 0) {
     return [];
@@ -147,23 +195,7 @@ export const sortResources = (
     };
   });
 
-  return items.sort((a, b) => {
-    if (a.matchRank !== b.matchRank) {
-      return a.matchRank - b.matchRank;
-    }
-    if (a.hasKnownTime !== b.hasKnownTime) {
-      return a.hasKnownTime ? -1 : 1;
-    }
-    const timeDiff = b.datetime - a.datetime;
-    if (timeDiff !== 0) {
-      return timeDiff;
-    }
-    if (a.actionabilityRank !== b.actionabilityRank) {
-      return a.actionabilityRank - b.actionabilityRank;
-    }
-    if (a.priority !== b.priority) {
-      return a.priority - b.priority;
-    }
-    return a.originalIndex - b.originalIndex;
-  });
+  return items.sort((a, b) =>
+    sortMode === "smart" ? compareSmart(a, b) : compareByTime(a, b, sortMode),
+  );
 };

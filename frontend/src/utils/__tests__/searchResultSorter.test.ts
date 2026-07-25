@@ -245,4 +245,42 @@ describe("sortResources", () => {
 
 	expect(result.map((item) => item.resource.id)).toEqual(["first", "second", "third"]);
   });
+
+  it("newest mode sorts strictly by time regardless of match rank", () => {
+    const result = sortResources(
+      [
+        makeResource("exact-older", "2024-01-01T00:00:00.000Z", CloudType.QUARK, {
+          title: "速度与激情8",
+        }),
+        makeResource("fuzzy-newer", "2024-12-01T00:00:00.000Z", CloudType.QUARK, {
+          title: "速度：激情特别篇",
+        }),
+      ],
+      "速度与激情",
+      "newest",
+    );
+
+    expect(result.map((item) => item.resource.id)).toEqual([
+      "fuzzy-newer",
+      "exact-older",
+    ]);
+  });
+
+  it("oldest mode reverses time order and keeps unknown-time items last", () => {
+    const result = sortResources(
+      [
+        makeResource("newer", "2024-12-01T00:00:00.000Z", CloudType.QUARK),
+        makeResource("no-time", null, CloudType.QUARK),
+        makeResource("older", "2024-01-01T00:00:00.000Z", CloudType.QUARK),
+      ],
+      "",
+      "oldest",
+    );
+
+    expect(result.map((item) => item.resource.id)).toEqual([
+      "older",
+      "newer",
+      "no-time",
+    ]);
+  });
 });

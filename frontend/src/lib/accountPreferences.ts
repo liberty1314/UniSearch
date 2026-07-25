@@ -19,6 +19,7 @@ export type AccountSearchDefaults = Pick<SearchParams, 'cloudTypes' | 'resultTyp
 export const ACCOUNT_PREFERENCES_STORAGE_KEY = 'unisearch_account_preferences';
 export const ACCOUNT_SEARCH_DEFAULTS_STORAGE_KEY = 'unisearch_account_search_defaults';
 export const SEARCH_RESULTS_VIEW_MODE_KEY = 'unisearch_search_results_view_mode';
+export const SEARCH_RESULTS_SORT_MODE_KEY = 'unisearch_search_results_sort_mode';
 
 export const DEFAULT_ACCOUNT_PREFERENCES: AccountPreferences = {
   theme: 'system',

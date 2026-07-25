@@ -1,7 +1,11 @@
 import type { CloudTypeValue } from "@/types/search";
 import type { ResourceObject } from "@/types/resource";
 import type { ResultItem } from "@/utils/cloudTypeUtils";
-import { sortResources } from "@/utils/searchResultSorter";
+import {
+  DEFAULT_SEARCH_SORT_MODE,
+  sortResources,
+  type SearchSortMode,
+} from "@/utils/searchResultSorter";
 
 export const SEARCH_RESULTS_FIRST_PAGE_SIZE = 48;
 
@@ -12,6 +16,7 @@ interface BuildSearchResultsPresentationParams {
   displayedCount: number;
   enableSourceDiversity: boolean;
   maxPerSource: number;
+  sortMode?: SearchSortMode;
 }
 
 export function rebalanceFirstPageBySource(
@@ -57,17 +62,19 @@ export function buildSearchResultsPresentation({
   displayedCount,
   enableSourceDiversity,
   maxPerSource,
+  sortMode = DEFAULT_SEARCH_SORT_MODE,
 }: BuildSearchResultsPresentationParams): {
   allSortedResults: ResultItem[];
   displayedResults: ResultItem[];
 } {
-  const sortedResults = sortResources(resources, keyword);
+  const sortedResults = sortResources(resources, keyword, sortMode);
   const filteredResults = selectedCloudTypes.length === 0
     ? sortedResults
     : sortedResults.filter((item) =>
         selectedCloudTypes.includes(item.cloudType as CloudTypeValue),
       );
-  const presentedResults = enableSourceDiversity
+  // 显式时间排序时不做来源多样性重排，否则会打乱用户选择的时间顺序。
+  const presentedResults = enableSourceDiversity && sortMode === "smart"
     ? rebalanceFirstPageBySource(
         filteredResults,
         SEARCH_RESULTS_FIRST_PAGE_SIZE,

@@ -144,6 +144,7 @@ const SearchUnifiedFilterCard: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [expanded, setExpanded] = useState(false);
+  const [mobileSourcesExpanded, setMobileSourcesExpanded] = useState(false);
   const [includeDraft, setIncludeDraft] = useState("");
   const [excludeDraft, setExcludeDraft] = useState("");
   const [sourceFocusMenu, setSourceFocusMenu] = useState<{
@@ -443,7 +444,34 @@ const SearchUnifiedFilterCard: React.FC = () => {
             </Button>
           </div>
 
-          <div className="flex flex-col gap-3">
+          {/* 移动端折叠开关：收起时仅显示选择摘要，避免筛选卡在小屏挤占首屏结果。桌面端始终展开。 */}
+          <button
+            type="button"
+            onClick={() => setMobileSourcesExpanded((prev) => !prev)}
+            aria-expanded={mobileSourcesExpanded}
+            data-testid="search-unified-filter-mobile-sources-toggle"
+            className="mb-3 flex w-full items-center justify-between gap-2 rounded-[1.2rem] border border-slate-200/70 bg-white/60 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-white/90 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 sm:hidden"
+          >
+            <span>
+              {isAllSelected
+                ? "全部网盘"
+                : `已选 ${effectiveSelectedTypes.length} 个网盘`}
+            </span>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 transition-transform duration-300",
+                mobileSourcesExpanded && "rotate-180",
+              )}
+            />
+          </button>
+
+          <div
+            className={cn(
+              "flex-col gap-3",
+              mobileSourcesExpanded ? "flex" : "hidden",
+              "sm:flex",
+            )}
+          >
             <div className="flex w-full flex-wrap justify-center gap-3">
               {platformThemes.slice(0, 6).map((config) => (
                 <SourceChip

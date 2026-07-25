@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import PasswordModal from "./PasswordModal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import LoadingState from "@/components/LoadingState";
+import BackToTopButton from "@/components/search/BackToTopButton";
 import SearchResultsHeader from "@/components/search-results/SearchResultsHeader";
 import SearchResultsList from "@/components/search-results/SearchResultsList";
 import SearchResultsState from "@/components/search-results/SearchResultsState";
@@ -39,7 +40,15 @@ import {
 import { removeActiveFilterChip } from "@/utils/searchFilters";
 import { SearchService } from "@/services/searchService";
 import { readJsonStorage, writeJsonStorage } from "@/lib/safeStorage";
-import { SEARCH_RESULTS_VIEW_MODE_KEY } from "@/lib/accountPreferences";
+import {
+  SEARCH_RESULTS_SORT_MODE_KEY,
+  SEARCH_RESULTS_VIEW_MODE_KEY,
+} from "@/lib/accountPreferences";
+import {
+  DEFAULT_SEARCH_SORT_MODE,
+  isSearchSortMode,
+  type SearchSortMode,
+} from "@/utils/searchResultSorter";
 import { getErrorDataCode, getErrorMessage } from "@/lib/error";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -56,6 +65,11 @@ const isSearchResultsViewMode = (
 const readStoredViewMode = (): SearchResultsViewMode | null => {
   const value = readJsonStorage<unknown>(SEARCH_RESULTS_VIEW_MODE_KEY, null);
   return isSearchResultsViewMode(value) ? value : null;
+};
+
+const readStoredSortMode = (): SearchSortMode => {
+  const value = readJsonStorage<unknown>(SEARCH_RESULTS_SORT_MODE_KEY, null);
+  return isSearchSortMode(value) ? value : DEFAULT_SEARCH_SORT_MODE;
 };
 
 const isAbortLikeError = (error: unknown): boolean => {
@@ -146,6 +160,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   const [viewMode, setViewMode] = useState<SearchResultsViewMode>(
     initialViewModeRef.current.mode,
   );
+  const [sortMode, setSortMode] = useState<SearchSortMode>(readStoredSortMode);
   const [passwordModalTarget, setPasswordModalTarget] = useState<ResourceOpenTarget | null>(null);
   const [resolvingResourceId, setResolvingResourceId] = useState<string | null>(null);
   const [enableResourceDetailPage, setEnableResourceDetailPage] = useState(true);
@@ -245,6 +260,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     displayedCount,
     enableSourceDiversity: enableSearchSourceDiversity,
     maxPerSource: searchFirstPageMaxPerSource,
+    sortMode,
   });
 
   // ── 回调（useCallback 保持引用稳定，配合卡片的 React.memo）───────────────
@@ -390,6 +406,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     setViewMode(mode);
   }, []);
 
+  const handleSortModeChange = useCallback((mode: SearchSortMode) => {
+    writeJsonStorage(SEARCH_RESULTS_SORT_MODE_KEY, mode);
+    setSortMode(mode);
+  }, []);
+
   const handleClearAllFilters = useCallback(() => {
     setSearchParams({ cloudTypes: [], filter: undefined });
     syncSearchUrl({ cloudTypes: [], filter: undefined });
@@ -461,6 +482,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         totalCount={allSortedResults.length}
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
+        sortMode={sortMode}
+        onSortModeChange={handleSortModeChange}
         isRefreshing={isRefreshing}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveFilterChip}
@@ -482,17 +505,25 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         onOpenDetail={handleOpenDetail}
       />
 
-      {/* 无限滚动触发点 */}
+      {/* 无限滚动触发点 + 手动兜底：观察器未触发时用户仍可点击加载 */}
       {hasMore && (
         <div
           ref={observerTarget}
-          className="flex justify-center items-center py-8"
+          className="flex flex-col items-center gap-3 py-8"
         >
           <LoadingState
             type="inline"
             size="sm"
             message="正在加载更多优质资源..."
           />
+          <button
+            type="button"
+            onClick={loadMore}
+            data-testid="search-results-load-more"
+            className="rounded-full border border-slate-200/70 bg-white/60 px-5 py-2 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-md transition-all duration-300 hover:bg-white/90 hover:text-blue-600 hover:shadow-md active:scale-95 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-blue-400"
+          >
+            加载更多
+          </button>
         </div>
       )}
 
@@ -521,6 +552,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         accessMode={passwordModalTarget?.accessMode}
         scanTransfer={passwordModalTarget?.scanTransfer}
       />
+
+      <BackToTopButton />
     </div>
   );
 };
