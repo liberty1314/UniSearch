@@ -16,6 +16,10 @@ import (
 	"unisearch/model"
 )
 
+// ErrRefreshTokenReuse 表示检测到已撤销但未过期的刷新令牌被再次使用（疑似泄露/重放）。
+// 触发时会吊销该用户的所有刷新令牌，调用方应据此要求用户重新登录并可告警。
+var ErrRefreshTokenReuse = errors.New("刷新令牌重放：已吊销该用户全部令牌")
+
 // StorageType 存储类型
 type StorageType string
 
@@ -145,7 +149,17 @@ func (s *RefreshTokenService) ValidateToken(tokenStr string, deviceFingerprint s
 		}
 	}
 
-	// 检查令牌是否有效
+	// 重放检测：令牌已撤销但尚未过期，却被再次使用。
+	// 正常轮转后旧令牌立即撤销，合法客户端不会再用它；此处被用到说明旧令牌可能已泄露。
+	// 立即吊销该用户全部刷新令牌，迫使重新登录，切断攻击者与合法用户的会话。
+	if token.IsRevoked && !token.IsExpired() {
+		if err := s.RevokeUserTokens(token.Username); err != nil {
+			return nil, err
+		}
+		return nil, ErrRefreshTokenReuse
+	}
+
+	// 检查令牌是否有效（其余失效情形，如已过期）
 	if !token.IsValid() {
 		return nil, errors.New("令牌已失效")
 	}

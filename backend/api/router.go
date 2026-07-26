@@ -53,11 +53,14 @@ func SetupRouter(deps RouterDeps) *gin.Engine {
 	InitLoginLockout(config.AppConfig.LoginAccountLockThreshold, config.AppConfig.LoginAccountLockMin, loginLockoutRedis)
 	// 注册防刷可观测性（M6）：周期性汇总各维度拦截统计。
 	StartSignupMetricsReporter(0)
+	// 周期回收内存限流器中已过期的 key，防止 key 无限增长导致内存耗尽。
+	StartMemoryRateLimiterCleanup()
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	applyTrustedProxies(r)
 	r.Use(gin.Recovery())
+	r.Use(SecurityHeadersMiddleware())
 	r.Use(CORSMiddleware())
 	r.Use(LoggerMiddleware())
 	r.Use(ValidationMiddleware())

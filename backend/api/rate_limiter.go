@@ -74,6 +74,52 @@ func (rl *RateLimiter) AllowWithRetryAfter(key string) (bool, time.Duration) {
 	return true, 0
 }
 
+// cleanupExpired 扫描并删除所有时间戳都已过期的 key，防止内存中 key 无限增长。
+// 攻击者用大量不同 IP/用户名请求会不断新增 key，仅靠 key 内裁剪无法回收空 key，
+// 存在内存耗尽的 DoS 面；本方法回收这些 key。
+func (rl *RateLimiter) cleanupExpired() {
+	if rl == nil {
+		return
+	}
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	cutoff := time.Now().Add(-rl.window)
+	for key, attempts := range rl.attempts {
+		hasValid := false
+		for _, attemptAt := range attempts {
+			if attemptAt.After(cutoff) {
+				hasValid = true
+				break
+			}
+		}
+		if !hasValid {
+			delete(rl.attempts, key)
+		}
+	}
+}
+
+// StartMemoryRateLimiterCleanup 启动后台协程，周期性回收内存限流器中已过期的 key。
+// 在 SetupRouter 内调用一次即可。Redis 后端不受影响（自带 TTL）。
+func StartMemoryRateLimiterCleanup() {
+	limiters := []*RateLimiter{
+		adminLoginRateLimiter,
+		userLoginRateLimiter,
+		signupRateLimiter,
+		usernameCheckRateLimiter,
+		refreshTokenRateLimiter,
+	}
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			for _, rl := range limiters {
+				rl.cleanupExpired()
+			}
+		}
+	}()
+}
+
 var (
 	adminLoginRateLimiter    = NewRateLimiter(5, time.Minute)
 	userLoginRateLimiter     = NewRateLimiter(5, time.Minute)
@@ -346,7 +392,7 @@ func loginRateLimitMiddleware() gin.HandlerFunc {
 		}
 
 		// 账户级锁定：针对单一账户的在线爆破，达到阈值后锁定该账户一段时间。
-		if loginLockoutGuard.isLocked(ctx, username) {
+		if loginLockoutGuard.isLocked(ctx, username, ip) {
 			c.AbortWithStatusJSON(429, gin.H{
 				"code":    429,
 				"message": "账户因多次登录失败已被临时锁定，请稍后再试",
@@ -366,9 +412,9 @@ func loginRateLimitMiddleware() gin.HandlerFunc {
 		// 依据登录结果更新账户失败计数：200 成功清零，401 凭据错误记一次失败。
 		switch c.Writer.Status() {
 		case http.StatusOK:
-			loginLockoutGuard.recordSuccess(ctx, username)
+			loginLockoutGuard.recordSuccess(ctx, username, ip)
 		case http.StatusUnauthorized:
-			loginLockoutGuard.recordFailure(ctx, username)
+			loginLockoutGuard.recordFailure(ctx, username, ip)
 		}
 	}
 }

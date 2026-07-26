@@ -3,6 +3,7 @@ package api
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -173,6 +174,17 @@ func RefreshAccessTokenHandler(refreshTokenService *service.RefreshTokenService)
 		// 验证刷新令牌
 		token, err := refreshTokenService.ValidateToken(decryptedToken, deviceFingerprint)
 		if err != nil {
+			// 重放检测：已撤销（轮转弃用）的令牌被再次使用，视为可能泄露。
+			// ValidateToken 已吊销该用户全部刷新令牌；此处清除本端 cookie 并要求重新登录。
+			if errors.Is(err, service.ErrRefreshTokenReuse) {
+				log.Printf("安全: 检测到刷新令牌重放，已吊销用户全部令牌")
+				util.ClearRefreshTokenCookie(c)
+				c.JSON(401, gin.H{
+					"error": "检测到异常登录活动，请重新登录",
+					"code":  "REFRESH_TOKEN_REUSE_DETECTED",
+				})
+				return
+			}
 			log.Printf("刷新令牌验证失败: %v", err)
 			c.JSON(401, gin.H{
 				"error": "刷新令牌无效或已过期",

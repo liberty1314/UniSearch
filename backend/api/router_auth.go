@@ -17,10 +17,10 @@ func registerAuthRoutes(api *gin.RouterGroup, deps RouterDeps, authController *c
 			authController.Login(c)
 		})
 		auth.GET("/validate", authController.ValidateToken)
-		auth.POST("/refresh", refreshRateLimitMiddleware(), RefreshAccessTokenHandler(deps.RefreshTokenService))
-		auth.POST("/revoke", RevokeRefreshTokenHandler(deps.RefreshTokenService))
+		auth.POST("/refresh", EnforceSameOriginMiddleware(), refreshRateLimitMiddleware(), RefreshAccessTokenHandler(deps.RefreshTokenService))
+		auth.POST("/revoke", EnforceSameOriginMiddleware(), RevokeRefreshTokenHandler(deps.RefreshTokenService))
 		auth.POST("/verify", VerifyHandler)
-		auth.POST("/logout", LogoutHandler)
+		auth.POST("/logout", EnforceSameOriginMiddleware(), LogoutHandler)
 	}
 
 	api.POST("/admin/login", BodySizeLimitMiddleware(authRequestBodyLimitBytes), AdminLoginHandler)

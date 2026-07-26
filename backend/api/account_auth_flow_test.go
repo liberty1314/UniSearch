@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -764,16 +765,24 @@ func TestRefreshRotatesRefreshTokenAndRevokesOldToken(t *testing.T) {
 	if rotatedCookie == nil || rotatedCookie.Value == "" {
 		t.Fatalf("expected rotated refresh token cookie, got none")
 	}
-	if _, err := refreshTokenService.ValidateToken(token.Token, "device-a"); err == nil {
-		t.Fatal("expected old refresh token to be revoked after rotation")
-	}
 
+	// 先验证轮转出的新令牌有效（此校验无副作用）。
 	decryptedNewToken, err := refreshTokenService.DecryptFromClient(rotatedCookie.Value)
 	if err != nil {
 		t.Fatalf("decrypt rotated token: %v", err)
 	}
 	if _, err := refreshTokenService.ValidateToken(decryptedNewToken, "device-a"); err != nil {
 		t.Fatalf("expected rotated refresh token to be valid: %v", err)
+	}
+
+	// 再复用已撤销的旧令牌：触发重放检测，返回 ErrRefreshTokenReuse
+	// 并吊销该用户全部令牌（含上面的新令牌）。
+	if _, err := refreshTokenService.ValidateToken(token.Token, "device-a"); !errors.Is(err, service.ErrRefreshTokenReuse) {
+		t.Fatalf("expected old token reuse to trigger replay defense, got: %v", err)
+	}
+	// 重放防御生效后，新令牌也应被一并吊销。
+	if _, err := refreshTokenService.ValidateToken(decryptedNewToken, "device-a"); err == nil {
+		t.Fatal("expected all tokens revoked after replay detected")
 	}
 }
 

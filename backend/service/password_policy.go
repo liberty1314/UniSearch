@@ -10,6 +10,9 @@ import (
 	"unisearch/config"
 )
 
+// bcryptMaxPasswordBytes 是 bcrypt 算法处理的密码字节上限，超出部分会被静默截断。
+const bcryptMaxPasswordBytes = 72
+
 func containsPasswordWhitespace(password string) bool {
 	for _, char := range password {
 		if unicode.IsSpace(char) {
@@ -134,6 +137,14 @@ func ValidateNewPassword(password string) error {
 
 	if len(password) < minLength || len(password) > maxLength {
 		return newAuthValidationError(fmt.Sprintf("密码长度必须在%d-%d字符之间", minLength, maxLength))
+	}
+
+	// bcrypt 只对前 72 字节做哈希，超出部分被静默忽略：这会让超长密码的末尾字符
+	// 不参与校验，不同的长密码可能产生相同哈希。此处显式拒绝 >72 字节的密码，
+	// 兜住 AUTH_PASSWORD_MAX_LENGTH 被配置为大于 72 的情况。
+	// 注意 len() 计的是字节数：UTF-8 下中文每字符 3 字节，约 24 个中文即达到上限。
+	if len(password) > bcryptMaxPasswordBytes {
+		return newAuthValidationError(fmt.Sprintf("密码长度不能超过%d字节（含多字节字符）", bcryptMaxPasswordBytes))
 	}
 
 	requiredClasses := config.AppConfig.AuthPasswordComplexityClasses

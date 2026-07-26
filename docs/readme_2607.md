@@ -701,3 +701,22 @@
     - frontend/src/pages/AdminLogin.tsx
     - frontend/src/pages/LoginPage.tsx
     - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
+
+- [2026-07-26 09:45] fix(auth): 强化身份认证安全策略与重放检测机制
+  - Body: 优化登录侧信道防护与密码长度校验，增加刷新令牌重放检测及全量吊销机制，同时完善安全响应头与防刷中间件。
+  - Files:
+    - .env.example
+    - backend/api/account_auth_flow_test.go
+    - backend/api/login_lockout.go
+    - backend/api/login_lockout_test.go
+    - backend/api/middleware.go
+    - backend/api/rate_limiter.go
+    - backend/api/refresh_token_handler.go
+    - backend/api/router.go
+    - backend/api/router_auth.go
+    - backend/service/auth_service.go
+    - backend/service/password_policy.go
+    - backend/service/refresh_token_service.go
+    - backend/util/crypto.go
+    - docs/readme_2607.md
+

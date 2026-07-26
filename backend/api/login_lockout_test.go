@@ -60,8 +60,8 @@ func TestLoginIPRateLimitBlocksDifferentUsernames(t *testing.T) {
 	}
 }
 
-// TestLoginAccountLockoutAfterFailures 验证同一账户连续失败达到阈值后被锁定，
-// 即使换 IP 也会命中账户级锁定。
+// TestLoginAccountLockoutAfterFailures 验证同一 (账户+IP) 连续失败达到阈值后被锁定。
+// 锁定维度为账户+来源 IP：换 IP 不触发同账户锁定，避免攻击者从任意 IP 恶意锁死受害者账户（DoS）。
 func TestLoginAccountLockoutAfterFailures(t *testing.T) {
 	resetLoginGuards()
 	defer resetLoginGuards()
@@ -71,21 +71,26 @@ func TestLoginAccountLockoutAfterFailures(t *testing.T) {
 	InitLoginLockout(3, 15, nil)
 	router := newLoginTestRouter(http.StatusUnauthorized)
 
-	// 连续 3 次凭据错误（每次换 IP，证明锁定是账户维度而非 IP 维度）。
+	attackerIP := "198.51.100.10"
+	// 同一 (账户+IP) 连续 3 次凭据错误。
 	for i := 0; i < 3; i++ {
-		ip := fmt.Sprintf("198.51.100.%d", 10+i)
-		if w := doLogin(router, ip, "victim"); w.Code != http.StatusUnauthorized {
+		if w := doLogin(router, attackerIP, "victim"); w.Code != http.StatusUnauthorized {
 			t.Fatalf("失败请求 %d 期望 401，实际 %d", i, w.Code)
 		}
 	}
 
-	// 第 4 次应被账户锁定拦截为 429。
-	if w := doLogin(router, "198.51.100.99", "victim"); w.Code != http.StatusTooManyRequests {
+	// 同一 (账户+IP) 第 4 次应被锁定拦截为 429。
+	if w := doLogin(router, attackerIP, "victim"); w.Code != http.StatusTooManyRequests {
 		t.Fatalf("账户锁定后应返回 429，实际 %d: %s", w.Code, w.Body.String())
 	}
 
+	// DoS 缓解：合法用户从不同 IP 登录同一账户不受锁定影响（仍走正常 401，而非 429）。
+	if w := doLogin(router, "198.51.100.99", "victim"); w.Code != http.StatusUnauthorized {
+		t.Fatalf("换 IP 的同账户不应被锁定（DoS 缓解），实际 %d: %s", w.Code, w.Body.String())
+	}
+
 	// 其它账户不受影响。
-	if w := doLogin(router, "198.51.100.99", "other"); w.Code != http.StatusUnauthorized {
+	if w := doLogin(router, attackerIP, "other"); w.Code != http.StatusUnauthorized {
 		t.Fatalf("其它账户不应被锁定，实际 %d", w.Code)
 	}
 }

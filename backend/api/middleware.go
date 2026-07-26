@@ -91,6 +91,27 @@ func recordAuthenticatedRequestActivity(c *gin.Context) {
 	}
 }
 
+// SecurityHeadersMiddleware 设置全站安全响应头，降低点击劫持、MIME 嗅探与降级攻击面。
+// 这些头对 API 与页面响应均无副作用，仅生产环境（HTTPS）追加 HSTS。
+func SecurityHeadersMiddleware() gin.HandlerFunc {
+	isProduction := config.AppConfig != nil && config.AppConfig.IsProduction()
+	return func(c *gin.Context) {
+		h := c.Writer.Header()
+		// 阻止 MIME 嗅探。
+		h.Set("X-Content-Type-Options", "nosniff")
+		// 禁止被 iframe 嵌套，防点击劫持（等价于 CSP frame-ancestors 'none'）。
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("Content-Security-Policy", "frame-ancestors 'none'")
+		// 限制 Referer 泄漏。
+		h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		// 仅生产（HTTPS）启用 HSTS，避免开发环境 HTTP 被强制升级导致无法访问。
+		if isProduction {
+			h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
+		c.Next()
+	}
+}
+
 // CORSMiddleware 跨域中间件
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -122,6 +143,44 @@ func isCORSOriginAllowed(origin string) bool {
 		}
 	}
 	return false
+}
+
+// EnforceSameOriginMiddleware 对 Cookie 驱动的写端点（refresh/revoke/logout）强制校验请求来源。
+// httpOnly Cookie 会被浏览器自动携带，SameSite=Strict 是主要防线；此中间件作为 CSRF 的第二道防线：
+// 校验 Origin（缺失时回退 Referer）必须落在 ALLOWED_ORIGINS 白名单内，否则 403。
+// 说明：非浏览器客户端（无 Origin/Referer）默认放行，避免破坏合法的服务端到服务端调用；
+// 真正的 CSRF 依赖浏览器发起并自动带 Cookie，浏览器必定附带 Origin/Referer。
+func EnforceSameOriginMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		origin := strings.TrimSpace(c.GetHeader("Origin"))
+		if origin == "" {
+			// 部分浏览器同源 POST 不带 Origin，回退校验 Referer。
+			if referer := strings.TrimSpace(c.GetHeader("Referer")); referer != "" {
+				if u, err := url.Parse(referer); err == nil && u.Scheme != "" && u.Host != "" {
+					origin = u.Scheme + "://" + u.Host
+				} else {
+					c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+						"error": "请求来源非法",
+						"code":  "INVALID_ORIGIN",
+					})
+					return
+				}
+			} else {
+				// 既无 Origin 也无 Referer：视为非浏览器客户端，放行。
+				c.Next()
+				return
+			}
+		}
+
+		if !isCORSOriginAllowed(origin) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error": "请求来源非法",
+				"code":  "INVALID_ORIGIN",
+			})
+			return
+		}
+		c.Next()
+	}
 }
 
 // LoggerMiddleware 日志中间件

@@ -51,8 +51,16 @@ func (l *loginLockout) enabled() bool {
 	return l != nil && l.threshold > 0
 }
 
-func normalizeLockoutKey(username string) string {
-	return strings.ToLower(strings.TrimSpace(username))
+// normalizeLockoutKey 以 (username + 来源 IP) 组合为锁定维度。
+// 纯 username 维度会被滥用为拒绝服务：攻击者从任意 IP 故意输错即可锁死受害者账户。
+// 并入 IP 后，攻击者只能锁住"其自身 IP 尝试该账户"的能力，
+// 合法用户从自己的 IP 登录不受影响；分布式爆破由 IP 双窗口与全局限流另行兜底。
+func normalizeLockoutKey(username, ip string) string {
+	name := strings.ToLower(strings.TrimSpace(username))
+	if name == "" {
+		return ""
+	}
+	return name + "|" + strings.TrimSpace(ip)
 }
 
 const (
@@ -60,12 +68,12 @@ const (
 	loginLockKeyPrefix      = "login:lock:"
 )
 
-// isLocked 返回该用户名当前是否处于锁定态。
-func (l *loginLockout) isLocked(ctx context.Context, username string) bool {
+// isLocked 返回该 (用户名+IP) 当前是否处于锁定态。
+func (l *loginLockout) isLocked(ctx context.Context, username, ip string) bool {
 	if !l.enabled() {
 		return false
 	}
-	key := normalizeLockoutKey(username)
+	key := normalizeLockoutKey(username, ip)
 	if key == "" {
 		return false
 	}
@@ -91,11 +99,11 @@ func (l *loginLockout) isLocked(ctx context.Context, username string) bool {
 }
 
 // recordFailure 记一次登录失败；若窗口内累计达到阈值则锁定该账户。
-func (l *loginLockout) recordFailure(ctx context.Context, username string) {
+func (l *loginLockout) recordFailure(ctx context.Context, username, ip string) {
 	if !l.enabled() {
 		return
 	}
-	key := normalizeLockoutKey(username)
+	key := normalizeLockoutKey(username, ip)
 	if key == "" {
 		return
 	}
@@ -136,11 +144,11 @@ func (l *loginLockout) recordFailure(ctx context.Context, username string) {
 }
 
 // recordSuccess 登录成功后清除该账户的失败计数与锁定标记。
-func (l *loginLockout) recordSuccess(ctx context.Context, username string) {
+func (l *loginLockout) recordSuccess(ctx context.Context, username, ip string) {
 	if !l.enabled() {
 		return
 	}
-	key := normalizeLockoutKey(username)
+	key := normalizeLockoutKey(username, ip)
 	if key == "" {
 		return
 	}

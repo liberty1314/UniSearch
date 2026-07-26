@@ -231,7 +231,9 @@ func (s *AuthService) Login(username, password string) (token string, user *mode
 	result := s.db.Where("username = ?", username).First(&dbUser)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			// 用户不存在，返回通用错误消息（安全考虑）
+			// 用户不存在：执行一次等价耗时的 dummy bcrypt 比对，拉平与"密码错误"路径的响应时间，
+			// 消除用户枚举的时序侧信道。返回通用错误消息（安全考虑）。
+			util.DummyComparePassword(password)
 			return "", nil, "", ErrInvalidCredentials
 		}
 		// 数据库查询错误
