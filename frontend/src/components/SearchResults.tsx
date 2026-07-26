@@ -464,16 +464,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           void performSearch(params);
         }}
         onClearFilters={handleClearAllFilters}
-        onSuggestSearch={(kw) => {
-          const nextKeyword = kw.trim();
-          if (!nextKeyword) {
-            return;
-          }
-
-          setSearchParams({ keyword: nextKeyword });
-          syncSearchUrl({ keyword: nextKeyword });
-          void performSearch({ keyword: nextKeyword }, { preserveResults: false });
-        }}
       />
     );
   }

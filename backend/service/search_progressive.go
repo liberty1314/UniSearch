@@ -141,7 +141,7 @@ func (s *SearchService) SearchProgressive(ctx context.Context, req model.SearchR
 
 	finalResponse := s.responseBuilder.Build(collectedResults, normalized)
 	finalResponse.Warnings = append([]model.SearchSourceWarning(nil), collectedWarnings...)
-	s.metrics.RecordWarning(len(collectedWarnings))
+	s.metrics.RecordWarning("progressive", normalized.Keyword, collectedWarnings)
 	s.metrics.RecordSearch("progressive", normalized.Keyword, time.Since(startedAt), finalResponse.Total, nil)
 
 	return emit(model.SearchProgressiveEvent{

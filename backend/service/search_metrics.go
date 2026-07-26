@@ -85,13 +85,19 @@ func (r *SearchMetricsRecorder) RecordSearch(scope string, keyword string, durat
 	logSearchEventIfEnabled("search", fields)
 }
 
-func (r *SearchMetricsRecorder) RecordWarning(count int) {
-	if count <= 0 {
+// RecordWarning 记录一批来源告警：既累加告警计数，也把每条告警明细写入最近异常列表，
+// 避免出现「Warning 计数 > 0 但最近异常为空」的展示断层。
+// scope 为搜索作用域（如 all / progressive），warning 的来源名映射到明细的 PluginName。
+func (r *SearchMetricsRecorder) RecordWarning(scope string, keyword string, warnings []model.SearchSourceWarning) {
+	if len(warnings) == 0 {
 		return
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.warningCount += count
+	r.warningCount += len(warnings)
+	for _, warning := range warnings {
+		r.appendRecentErrorLocked(scope, warning.Source, keyword, warning.Message)
+	}
 }
 
 func (r *SearchMetricsRecorder) RecordTimeout(scope string, pluginName string, keyword string, message string) {

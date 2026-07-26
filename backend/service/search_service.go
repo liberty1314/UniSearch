@@ -179,7 +179,7 @@ func (s *SearchService) Search(keyword string, channels []string, concurrency in
 	allResults := s.resultMerger.Merge(tgResults, pluginResults)
 	response := s.responseBuilder.Build(allResults, normalized)
 	response.Warnings = pluginWarnings
-	s.metrics.RecordWarning(len(pluginWarnings))
+	s.metrics.RecordWarning("all", normalized.Keyword, pluginWarnings)
 	s.metrics.RecordSearch("all", normalized.Keyword, time.Since(startedAt), response.Total, nil)
 	return response, nil
 }

@@ -16,8 +16,6 @@ interface SearchResultsEmptyStateProps {
   className?: string;
   /** 仅 variant="error" 时使用，重试回调 */
   onRetry?: () => void;
-  /** 仅 variant="no-results" 时使用，点击推荐词回调 */
-  onSuggestSearch?: (keyword: string) => void;
   /** 仅 variant="filtered-results" 时使用，清空筛选回调 */
   onClearFilters?: () => void;
   /** 系统级可用性提示，不描述单条结果或来源质量 */
@@ -25,8 +23,6 @@ interface SearchResultsEmptyStateProps {
 }
 
 // ─── 推荐搜索词 ───────────────────────────────────────────────────────────────
-
-const SUGGEST_KEYWORDS = ["考研", "原神", "短剧", "电子书", "黑神话悟空"] as const;
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -79,9 +75,8 @@ const ErrorState: React.FC<{
 const NoResultsState: React.FC<{
   keyword: string;
   className?: string;
-  onSuggestSearch?: (keyword: string) => void;
   systemHint?: string;
-}> = ({ keyword, className, onSuggestSearch, systemHint }) => (
+}> = ({ keyword, className, systemHint }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.95 }}
     animate={{ opacity: 1, scale: 1 }}
@@ -107,29 +102,10 @@ const NoResultsState: React.FC<{
           "相关的资源。
         </p>
         {systemHint ? (
-          <p className="mx-auto mb-8 max-w-lg rounded-2xl border border-amber-200/70 bg-amber-50/80 px-4 py-3 text-sm leading-6 text-amber-800 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-100">
+          <p className="mx-auto max-w-lg rounded-2xl border border-amber-200/70 bg-amber-50/80 px-4 py-3 text-sm leading-6 text-amber-800 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-100">
             {systemHint}
           </p>
         ) : null}
-
-        {onSuggestSearch && (
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <div className="text-[13px] font-medium text-slate-500 dark:text-slate-400">
-              试着搜搜看：
-            </div>
-            <div className="flex flex-wrap gap-2.5 justify-center">
-              {SUGGEST_KEYWORDS.map((kw) => (
-                <button
-                  key={kw}
-                  onClick={() => onSuggestSearch(kw)}
-                  className="px-4 py-1.5 bg-white/50 dark:bg-white/[0.04] backdrop-blur-md border border-slate-200/60 dark:border-white/[0.06] text-slate-600 dark:text-slate-300 rounded-[10px] text-[13px] font-medium shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 hover:text-slate-900 dark:hover:text-white"
-                >
-                  {kw}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   </motion.div>
@@ -208,7 +184,6 @@ export const SearchResultsEmptyState: React.FC<SearchResultsEmptyStateProps> = (
   keyword,
   className,
   onRetry,
-  onSuggestSearch,
   onClearFilters,
   systemHint,
 }) => {
@@ -227,7 +202,6 @@ export const SearchResultsEmptyState: React.FC<SearchResultsEmptyStateProps> = (
       <NoResultsState
         keyword={keyword ?? ""}
         className={className}
-        onSuggestSearch={onSuggestSearch}
         systemHint={systemHint}
       />
     );

@@ -20,7 +20,6 @@ interface SearchResultsStateProps {
   searchParams: SearchParams;
   onRetry: (params: SearchParams) => void;
   onClearFilters: () => void;
-  onSuggestSearch: (keyword: string) => void;
 }
 
 const SearchResultsState: React.FC<SearchResultsStateProps> = ({
@@ -36,7 +35,6 @@ const SearchResultsState: React.FC<SearchResultsStateProps> = ({
   searchParams,
   onRetry,
   onClearFilters,
-  onSuggestSearch,
 }) => {
   if (error) {
     return (
@@ -63,7 +61,6 @@ const SearchResultsState: React.FC<SearchResultsStateProps> = ({
         variant="no-results"
         keyword={keyword}
         className={className}
-        onSuggestSearch={onSuggestSearch}
       />
     );
   }
