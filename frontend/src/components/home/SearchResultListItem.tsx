@@ -56,22 +56,10 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
       onOpenResource(item);
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (!canOpenResource || isResolvingResource) {
-        return;
-      }
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        e.stopPropagation();
-        onOpenResource(item);
-      }
-    };
+    const ariaLabel = `${cloudInfo.name}资源：${displayTitle || "未命名资源"}${hasPassword ? "（需要访问码）" : ""}`;
 
     return (
       <motion.div
-        role={canOpenResource ? "button" : undefined}
-        tabIndex={canOpenResource ? 0 : undefined}
-        aria-label={`${cloudInfo.name}资源：${displayTitle || "未命名资源"}${hasPassword ? "（需要访问码）" : ""}`}
         aria-busy={isResolvingResource || undefined}
         initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -85,22 +73,31 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
           : canOpenResource
             ? { x: 4 }
             : undefined}
-        onClick={canOpenResource ? handleClick : undefined}
-        onKeyDown={canOpenResource ? handleKeyDown : undefined}
         className={cn(
           "group relative p-4 flex items-center gap-5 bg-white/60 dark:bg-slate-950/40 backdrop-blur-xl rounded-[20px] border border-white/60 dark:border-white/[0.06] hover:border-slate-200/70 dark:hover:border-white/10 shadow-[0_8px_24px_rgba(15,23,42,0.03)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.3)] hover:shadow-[0_16px_32px_rgba(15,23,42,0.06)] dark:hover:shadow-[0_16px_32px_rgba(0,0,0,0.5)] overflow-hidden transition-colors transition-shadow duration-300",
-          canOpenResource
-            ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-            : "cursor-default",
+          canOpenResource ? "cursor-pointer" : "cursor-default",
         )}
         data-testid="search-result-list-item"
         data-source-id={sourceId}
         data-resource-id={resource.id}
       >
+        {/* 铺满条目的主操作按钮（stretched overlay）：承接"打开资源"点击，
+            作为内容的兄弟节点而非祖先，避免"按钮套按钮"的无障碍反模式。
+            右侧"详情/取消"通过更高 z-index 浮于其上，独立可点击、可聚焦。 */}
+        {canOpenResource ? (
+          <button
+            type="button"
+            onClick={handleClick}
+            disabled={isResolvingResource}
+            aria-label={ariaLabel}
+            data-testid="search-result-list-item-open"
+            className="absolute inset-0 z-10 rounded-[20px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
+          />
+        ) : null}
         {/* 左侧彩色竖条（hover 显示） */}
-        <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-blue-400 to-cyan-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300 dark:from-blue-500/50 dark:to-cyan-400/50" />
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-blue-400 to-cyan-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300 dark:from-blue-500/50 dark:to-cyan-400/50" />
 
-        <div className="flex w-full items-center gap-5 relative z-10">
+        <div className="pointer-events-none flex w-full items-center gap-5 relative z-10">
           {/* 左侧网盘类型头像 */}
           <div
             className={cn(
@@ -155,7 +152,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="relative z-20 flex flex-wrap items-center justify-end gap-2 pointer-events-auto">
             {hasPassword && (
               <div className="flex-shrink-0 px-2.5 py-1 bg-green-50 dark:bg-emerald-400/[0.08] text-green-600 dark:text-emerald-200 text-xs font-medium rounded-full border border-green-200/50 dark:border-emerald-300/16 flex items-center gap-1">
                 <KeyRound className="w-3.5 h-3.5" />

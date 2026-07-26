@@ -446,7 +446,7 @@ describe("SearchResults", () => {
 
     expect(await screen.findByText("【电影】速度与激情特别行动 4K")).toBeInTheDocument();
     expect(screen.queryByText(/描述：/)).not.toBeInTheDocument();
-    expect(screen.getByTestId("search-result-grid-card-wrapper")).toHaveAttribute(
+    expect(screen.getByTestId("search-result-grid-card-open")).toHaveAttribute(
       "aria-label",
       expect.stringContaining("【电影】速度与激情特别行动 4K"),
     );
@@ -476,7 +476,7 @@ describe("SearchResults", () => {
     renderSearchResults();
     await screen.findByTestId("search-result-grid-card-wrapper");
     expect(screen.queryByText("需扫码")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
+    fireEvent.click(screen.getByTestId("search-result-grid-card-open"));
 
     expect(openSpy).toHaveBeenCalledWith("https://example.com/resource", "_blank");
   });
@@ -486,7 +486,7 @@ describe("SearchResults", () => {
 
     renderSearchResults();
     await screen.findByTestId("search-result-grid-card-wrapper");
-    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
+    fireEvent.click(screen.getByTestId("search-result-grid-card-open"));
 
     expect(screen.getByTestId("password-modal")).toHaveTextContent(
       "1234|https://example.com/resource|quark",
@@ -509,7 +509,7 @@ describe("SearchResults", () => {
     renderSearchResults();
     await screen.findByTestId("search-result-grid-card-wrapper");
     expect(screen.queryByText("需扫码")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
+    fireEvent.click(screen.getByTestId("search-result-grid-card-open"));
 
     expect(screen.getByTestId("password-modal")).toHaveTextContent(
       "|magnet:?xt=urn:btih:testhash|magnet",
@@ -539,7 +539,7 @@ describe("SearchResults", () => {
     renderSearchResults();
     await screen.findByTestId("search-result-grid-card-wrapper");
     expect(screen.queryByText("需扫码")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
+    fireEvent.click(screen.getByTestId("search-result-grid-card-open"));
 
     expect(screen.getByTestId("password-modal")).toHaveTextContent(
       "|https://www.seedhub.cc/link_start/?redirect_to=quark_scan|quark",
@@ -568,7 +568,7 @@ describe("SearchResults", () => {
     });
 
     renderSearchResults();
-    fireEvent.click(await screen.findByTestId("search-result-grid-card-wrapper"));
+    fireEvent.click(await screen.findByTestId("search-result-grid-card-open"));
 
     await waitFor(() => expect(SearchService.resolveResource).toHaveBeenCalledWith(
       { resource_id: "resource-1", link_id: "lnk-primary", resolve_token: "rrt-primary" },
@@ -595,7 +595,7 @@ describe("SearchResults", () => {
     });
 
     renderSearchResults();
-    fireEvent.click(await screen.findByTestId("search-result-grid-card-wrapper"));
+    fireEvent.click(await screen.findByTestId("search-result-grid-card-open"));
     await waitFor(() => expect(openSpy).toHaveBeenCalledWith("https://pan.quark.cn/s/http", "_blank"));
   });
 
@@ -619,7 +619,7 @@ describe("SearchResults", () => {
     });
 
     renderSearchResults();
-    fireEvent.click(await screen.findByTestId("search-result-grid-card-wrapper"));
+    fireEvent.click(await screen.findByTestId("search-result-grid-card-open"));
 
     expect(await screen.findByTestId("password-modal")).toHaveTextContent(
       "|magnet:?xt=urn:btih:resolved|magnet",
@@ -647,7 +647,7 @@ describe("SearchResults", () => {
     });
 
     renderSearchResults();
-    fireEvent.click(await screen.findByTestId("search-result-grid-card-wrapper"));
+    fireEvent.click(await screen.findByTestId("search-result-grid-card-open"));
     fireEvent.click(await screen.findByRole("button", { name: "取消获取" }));
 
     await waitFor(() => expect(capturedSignal?.aborted).toBe(true));
@@ -687,7 +687,7 @@ describe("SearchResults", () => {
     const openSpy = vi.spyOn(window, "open").mockReturnValue({ opener: null } as Window);
 
     renderSearchResults();
-    fireEvent.click(await screen.findByTestId("search-result-grid-card-wrapper"));
+    fireEvent.click(await screen.findByTestId("search-result-grid-card-open"));
 
     await waitFor(() => expect(SearchService.resolveResource).toHaveBeenCalledTimes(2));
     expect(searchStoreState.markResourceLinkInvalid).toHaveBeenCalledWith("resource-1", "lnk-primary");
@@ -712,7 +712,7 @@ describe("SearchResults", () => {
     });
 
     renderSearchResults();
-    fireEvent.click(await screen.findByTestId("search-result-grid-card-wrapper"));
+    fireEvent.click(await screen.findByTestId("search-result-grid-card-open"));
 
     await waitFor(() => expect(SearchService.resolveResource).toHaveBeenCalledTimes(1));
     expect(searchStoreState.markResourceLinkInvalid).not.toHaveBeenCalled();
@@ -729,7 +729,7 @@ describe("SearchResults", () => {
     });
 
     renderSearchResults();
-    fireEvent.click(await screen.findByTestId("search-result-grid-card-wrapper"));
+    fireEvent.click(await screen.findByTestId("search-result-grid-card-open"));
 
     await waitFor(() => expect(SearchService.resolveResource).toHaveBeenCalledTimes(2));
     expect(searchStoreState.markResourceLinkInvalid).toHaveBeenCalledTimes(2);
@@ -758,7 +758,7 @@ describe("SearchResults", () => {
     renderSearchResults();
     await screen.findByTestId("search-result-grid-card-wrapper");
     expect(screen.queryByText("需扫码")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("search-result-grid-card-wrapper"));
+    fireEvent.click(screen.getByTestId("search-result-grid-card-open"));
 
     expect(openSpy).toHaveBeenCalledWith("https://pan.quark.cn/s/686290f881b7", "_blank");
     expect(screen.queryByTestId("password-modal")).not.toBeInTheDocument();

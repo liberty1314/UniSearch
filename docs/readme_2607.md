@@ -773,3 +773,12 @@
     - frontend/src/index.css
     - frontend/src/stores/searchStore.ts
 
+- [2026-07-26 20:59] refactor(frontend): 重构搜索结果卡片与列表项的主操作覆盖层
+  - Body: 使用绝对定位 overlay button 承接卡片与列表项的主点击操作，解决 DOM 按钮嵌套的反模式并提升无障碍（a11y）兼容性，同步更新相关单元测试。
+  - Files:
+    - docs/readme_2607.md
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/home/SearchResultGridCard.tsx
+    - frontend/src/components/home/SearchResultListItem.tsx
+
+

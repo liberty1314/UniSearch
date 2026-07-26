@@ -55,17 +55,6 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
       onOpenResource(item);
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (!canOpenResource || isResolvingResource) {
-        return;
-      }
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        e.stopPropagation();
-        onOpenResource(item);
-      }
-    };
-
     const ariaLabel = `${cloudInfo.name}资源：${displayTitle || "未命名资源"}${
       hasPassword ? "（需要访问码）" : ""
     }`;
@@ -86,17 +75,8 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
           : canOpenResource
             ? { y: -4, scale: 1.01 }
             : { y: -2 }}
-        role={canOpenResource ? "button" : undefined}
-        tabIndex={canOpenResource ? 0 : undefined}
-        aria-label={ariaLabel}
         aria-busy={isResolvingResource || undefined}
-        className={cn(
-          "group relative h-full rounded-[24px] dark:focus-visible:ring-offset-slate-950",
-          canOpenResource &&
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
-        )}
-        onClick={canOpenResource ? handleClick : undefined}
-        onKeyDown={canOpenResource ? handleKeyDown : undefined}
+        className="group relative h-full rounded-[24px]"
         data-testid="search-result-grid-card-wrapper"
         data-source-id={sourceId}
         data-resource-id={resource.id}
@@ -106,8 +86,24 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
 
         <div
           data-testid="search-result-grid-card"
-          className="relative h-full flex flex-col p-5 bg-white/60 dark:bg-slate-950/40 backdrop-blur-xl rounded-[24px] border border-white/60 dark:border-white/[0.06] hover:border-slate-200/70 dark:hover:border-white/10 shadow-[0_12px_32px_rgba(15,23,42,0.04)] dark:shadow-[0_12px_32px_rgba(0,0,0,0.4)] hover:shadow-[0_20px_48px_rgba(15,23,42,0.08)] dark:hover:shadow-[0_20px_48px_rgba(0,0,0,0.6)] transition-colors transition-shadow duration-300 cursor-pointer overflow-hidden"
+          className={cn(
+            "relative h-full flex flex-col p-5 bg-white/60 dark:bg-slate-950/40 backdrop-blur-xl rounded-[24px] border border-white/60 dark:border-white/[0.06] hover:border-slate-200/70 dark:hover:border-white/10 shadow-[0_12px_32px_rgba(15,23,42,0.04)] dark:shadow-[0_12px_32px_rgba(0,0,0,0.4)] hover:shadow-[0_20px_48px_rgba(15,23,42,0.08)] dark:hover:shadow-[0_20px_48px_rgba(0,0,0,0.6)] transition-colors transition-shadow duration-300 overflow-hidden",
+            canOpenResource && "cursor-pointer",
+          )}
         >
+          {/* 铺满卡片的主操作按钮（stretched overlay）：承接"打开资源"点击，
+              作为内容的兄弟节点而非祖先，避免"按钮套按钮"的无障碍反模式。
+              次级按钮（详情/取消）通过更高 z-index 浮于其上，点击不被它拦截。 */}
+          {canOpenResource ? (
+            <button
+              type="button"
+              onClick={handleClick}
+              disabled={isResolvingResource}
+              aria-label={ariaLabel}
+              data-testid="search-result-grid-card-open"
+              className="absolute inset-0 z-10 rounded-[24px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
+            />
+          ) : null}
           {/* 顶部高光线 */}
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
@@ -119,15 +115,17 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
             )}
           />
 
-          {/* 标题 */}
-          <div className="flex-1 mb-4 min-h-[3.5rem]">
-            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg line-clamp-2 leading-snug group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-purple-600 dark:group-hover:from-blue-400 dark:group-hover:to-purple-400 transition-all duration-300">
+          {/* 标题。pointer-events-none 让点击穿透到底层 overlay 主按钮。
+              hover 变色用实色而非 bg-clip-text 透明渐变，避免与 line-clamp-2 的
+              省略号裁剪冲突（透明渐变叠加多行截断时省略号可能消失）。 */}
+          <div className="pointer-events-none relative z-0 flex-1 mb-4 min-h-[3.5rem]">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg line-clamp-2 leading-snug transition-colors duration-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
               {displayTitle || "未命名资源"}
             </h3>
           </div>
 
           {/* 元数据行（时间 + 大小） */}
-          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-slate-400 mb-4 px-1">
+          <div className="pointer-events-none relative z-0 flex items-center justify-between text-xs text-gray-500 dark:text-slate-400 mb-4 px-1">
             <div className="flex items-center gap-1.5">
               <Clock3 className="w-3.5 h-3.5" />
               <span>{formatResultTime(datetime)}</span>
@@ -139,10 +137,12 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
             ) : null}
           </div>
 
-          {/* 底部：左侧网盘类型 + 访问码，右侧详情 */}
+          {/* 底部：左侧网盘类型 + 访问码，右侧详情。
+              relative z-20 使其浮于整卡主操作 overlay 按钮之上，
+              让"详情/取消获取"作为独立可点击兄弟元素，而非嵌套在主按钮内。 */}
           <div
             data-testid="search-result-grid-card-footer"
-            className="mt-auto pt-3 border-t border-slate-200/50 dark:border-white/[0.04] flex items-center justify-between gap-3"
+            className="relative z-20 mt-auto pt-3 border-t border-slate-200/50 dark:border-white/[0.04] flex items-center justify-between gap-3"
           >
             <div
               data-testid="search-result-grid-card-footer-left"
