@@ -756,3 +756,20 @@
     - frontend/src/pages/RegisterPage.tsx
     - frontend/src/pages/__tests__/AccountPage.test.tsx
     - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
+
+- [2026-07-26 20:12] perf(search-results): 引入虚拟滚动列表与滚动毛玻璃降级以优化搜索渲染性能
+  - Body: 基于 @tanstack/react-virtual 引入 SearchResultsVirtualList 实现搜索卡片列表虚拟化，新增 useScrollingClass Hook 与 CSS 规则在滚动过程中动态降级卡片毛玻璃效果，并在 searchStore 中优化结果复用时的已显示条数保留。
+  - Files:
+    - docs/readme_2607.md
+    - frontend/package.json
+    - frontend/pnpm-lock.yaml
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/home/SearchResultGridCard.tsx
+    - frontend/src/components/home/SearchResultListItem.tsx
+    - frontend/src/components/home/SearchResultsToolbar.tsx
+    - frontend/src/components/search-results/SearchResultsList.tsx
+    - frontend/src/components/search-results/SearchResultsVirtualList.tsx
+    - frontend/src/hooks/useScrollingClass.ts
+    - frontend/src/index.css
+    - frontend/src/stores/searchStore.ts
+

@@ -93,6 +93,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
             ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             : "cursor-default",
         )}
+        data-testid="search-result-list-item"
         data-source-id={sourceId}
         data-resource-id={resource.id}
       >
@@ -169,7 +170,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
                   event.stopPropagation();
                   onCancelResolveResource();
                 }}
-                className="flex-shrink-0 px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-full border border-amber-200/70 transition hover:bg-amber-100 dark:bg-amber-400/[0.08] dark:text-amber-200 dark:border-amber-300/18 dark:hover:bg-amber-400/[0.14]"
+                className="flex-shrink-0 px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-full border border-amber-200/70 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 dark:bg-amber-400/[0.08] dark:text-amber-200 dark:border-amber-300/18 dark:hover:bg-amber-400/[0.14]"
               >
                 取消获取
               </button>
@@ -181,7 +182,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
                   event.stopPropagation();
                   onOpenDetail(item);
                 }}
-                className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                className="inline-flex items-center gap-1 rounded-md text-xs font-medium text-slate-500 transition hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 dark:text-slate-400 dark:hover:text-slate-100"
               >
                 详情
                 <ChevronRight className="h-3.5 w-3.5" />

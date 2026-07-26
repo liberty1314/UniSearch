@@ -11,6 +11,7 @@ import { useSearchStore } from "@/stores/searchStore";
 import { cn } from "@/lib/utils";
 import PasswordModal from "./PasswordModal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useScrollingClass } from "@/hooks/useScrollingClass";
 import LoadingState from "@/components/LoadingState";
 import BackToTopButton from "@/components/search/BackToTopButton";
 import SearchResultsHeader from "@/components/search-results/SearchResultsHeader";
@@ -110,6 +111,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   } = useSearchStore();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // 滚动进行中降级卡片毛玻璃（见 index.css 的 html.is-scrolling 规则），滚动停止后恢复。
+  useScrollingClass();
 
   const syncSearchUrl = useCallback(
     (nextParams: Partial<typeof searchParams>) => {

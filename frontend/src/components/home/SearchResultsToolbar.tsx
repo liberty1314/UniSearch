@@ -83,7 +83,7 @@ const SortMenu: React.FC<{
         aria-expanded={open}
         aria-label={`排序方式：${activeLabel}`}
         data-testid="search-results-sort-trigger"
-        className="flex items-center gap-1.5 rounded-[14px] border border-slate-200/60 bg-white/50 py-2.5 pl-3 pr-2.5 text-[13px] font-medium text-slate-600 shadow-sm transition-all duration-300 hover:bg-white/80 hover:text-blue-600 hover:shadow-md active:scale-95 dark:border-white/[0.06] dark:bg-black/20 dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-blue-400"
+        className="flex min-h-11 items-center gap-1.5 rounded-[14px] border border-slate-200/60 bg-white/50 py-2.5 pl-3 pr-2.5 text-[13px] font-medium text-slate-600 shadow-sm transition-all duration-300 hover:bg-white/80 hover:text-blue-600 hover:shadow-md active:scale-95 dark:border-white/[0.06] dark:bg-black/20 dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-blue-400"
       >
         <ArrowDownUp className="h-4 w-4" />
         <span className="hidden sm:inline">{activeLabel}</span>
@@ -199,7 +199,7 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
                       key={chip.id}
                       type="button"
                       onClick={() => onRemoveFilterChip?.(chip.id)}
-                      className="rounded-full border border-cyan-300/35 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-800 transition hover:bg-cyan-500/15 dark:border-cyan-300/20 dark:bg-cyan-400/12 dark:text-cyan-100"
+                      className="inline-flex min-h-9 items-center rounded-full border border-cyan-300/35 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-800 transition hover:bg-cyan-500/15 dark:border-cyan-300/20 dark:bg-cyan-400/12 dark:text-cyan-100"
                     >
                       {chip.label}
                     </button>
@@ -208,7 +208,7 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
                     <button
                       type="button"
                       onClick={onClearFilters}
-                      className="text-xs font-medium text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                      className="inline-flex min-h-9 items-center px-1 text-xs font-medium text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                     >
                       清空筛选条件
                     </button>
@@ -228,7 +228,7 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
               {/* 视图切换按钮 */}
               <button
                 onClick={handleToggle}
-                className="flex shrink-0 items-center justify-center rounded-[14px] border border-slate-200/60 bg-white/50 p-2.5 text-slate-600 shadow-sm transition-all duration-300 hover:bg-white/80 hover:text-blue-600 hover:shadow-md active:scale-90 dark:border-white/[0.06] dark:bg-black/20 dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-blue-400"
+                className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[14px] border border-slate-200/60 bg-white/50 p-2.5 text-slate-600 shadow-sm transition-all duration-300 hover:bg-white/80 hover:text-blue-600 hover:shadow-md active:scale-90 dark:border-white/[0.06] dark:bg-black/20 dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-blue-400"
                 title={viewMode === "grid" ? "切换为列表视图" : "切换为网格视图"}
                 aria-label={viewMode === "grid" ? "切换为列表视图" : "切换为网格视图"}
               >

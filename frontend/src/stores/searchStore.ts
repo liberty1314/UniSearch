@@ -222,8 +222,13 @@ export const useSearchStore = create<SearchState>()(
           error: null,
           searchResults: preserveResults ? state.searchResults : null,
           searchParams: finalParams,
-          displayedCount: initialDisplayCount,
-          hasMore: false,
+          // 复用已有结果（如从详情页返回）时保留当前已展开的条数，
+          // 使列表高度得以恢复，配合 ScrollToTop 的 scrollY 恢复让浏览进度连续；
+          // 全新搜索则重置回初始条数。
+          displayedCount: preserveResults ? state.displayedCount : initialDisplayCount,
+          hasMore: preserveResults
+            ? state.displayedCount < (state.searchResults?.resources.length ?? 0)
+            : false,
         });
 
         const commitCompletedSearch = (results: SearchResponse, status: SearchState["progressiveStatus"]) => {

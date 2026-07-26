@@ -2,6 +2,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { SearchResultGridCard } from "@/components/home/SearchResultGridCard";
 import { SearchResultListItem } from "@/components/home/SearchResultListItem";
+import SearchResultsVirtualList from "@/components/search-results/SearchResultsVirtualList";
 import type { ResultItem } from "@/utils/cloudTypeUtils";
 import {
   resolveDeferredResourceLinks,
@@ -10,6 +11,10 @@ import {
 import { resolveSearchResultEntranceDelay } from "@/components/search-results/searchResultReveal";
 
 type ViewMode = "list" | "grid";
+
+// 超过该数量才启用虚拟化：少量结果直接渲染，避免虚拟化的测量/定位开销与潜在布局抖动；
+// 大量结果（持续下拉累积）时才用窗口虚拟化收敛 DOM 与合成成本。
+const VIRTUALIZATION_THRESHOLD = 60;
 
 interface SearchResultsListProps {
   resources: ResultItem[];
@@ -33,7 +38,24 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
   onOpenResource,
   onCancelResolveResource,
   onOpenDetail,
-}) => (
+}) => {
+  if (resources.length > VIRTUALIZATION_THRESHOLD) {
+    return (
+      <SearchResultsVirtualList
+        resources={resources}
+        viewMode={viewMode}
+        revealActive={revealActive}
+        enableResourceDetailPage={enableResourceDetailPage}
+        enableResourceSourceBadges={enableResourceSourceBadges}
+        resolvingResourceId={resolvingResourceId}
+        onOpenResource={onOpenResource}
+        onCancelResolveResource={onCancelResolveResource}
+        onOpenDetail={onOpenDetail}
+      />
+    );
+  }
+
+  return (
   <div
     data-testid="search-results-stage"
     className={cn(
@@ -80,6 +102,7 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
       );
     })}
   </div>
-);
+  );
+};
 
 export default SearchResultsList;

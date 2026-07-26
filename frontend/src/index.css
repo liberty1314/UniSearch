@@ -1659,3 +1659,21 @@ body {
 [data-sonner-toast]:hover [data-close-button] {
   opacity: 1;
 }
+
+/* 滚动性能优化：滚动进行中降级搜索结果卡片的毛玻璃效果。
+   backdrop-filter 在多卡同屏时是 GPU 合成开销大户，滚动中降为普通半透明背景，
+   滚动停止（useScrollingClass 移除 is-scrolling）后恢复，兼顾流畅度与观感。
+   仅作用于搜索结果卡片，不影响导航栏等其他毛玻璃表面。 */
+html.is-scrolling [data-testid="search-result-grid-card"],
+html.is-scrolling [data-testid="search-result-list-item"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.is-scrolling [data-testid="search-result-grid-card"],
+  html.is-scrolling [data-testid="search-result-list-item"] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
