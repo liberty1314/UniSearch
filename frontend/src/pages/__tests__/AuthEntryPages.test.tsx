@@ -350,8 +350,8 @@ describe('Auth entry pages', () => {
     await screen.findByText('创建账户');
 
     await user.type(screen.getByLabelText('用户名'), 'trinity');
-    await user.type(screen.getByLabelText(/^密码$/), 'secret123');
-    await user.type(screen.getByLabelText('确认密码'), 'secret123{Enter}');
+    await user.type(screen.getByLabelText(/^密码$/), 'Secret123');
+    await user.type(screen.getByLabelText('确认密码'), 'Secret123{Enter}');
 
     await waitFor(() => {
       expect(registerMock).toHaveBeenCalledTimes(1);
@@ -373,7 +373,7 @@ describe('Auth entry pages', () => {
 
     await waitFor(() => {
       expect(checkUsernameMock).toHaveBeenCalledWith('neo01');
-    });
+    }, { timeout: 3000 });
   });
 
   it('uses the register success payload to complete auto login', async () => {
@@ -395,15 +395,15 @@ describe('Auth entry pages', () => {
     await screen.findByText('创建账户');
 
     await user.type(screen.getByLabelText('用户名'), 'trinity');
-    await user.type(screen.getByLabelText(/^密码$/), 'secret123');
-    await user.type(screen.getByLabelText('确认密码'), 'secret123');
+    await user.type(screen.getByLabelText(/^密码$/), 'Secret123');
+    await user.type(screen.getByLabelText('确认密码'), 'Secret123');
     await user.click(screen.getByRole('button', { name: '立即注册' }));
 
     await waitFor(() => {
       expect(setTokenMock).toHaveBeenCalledWith('token', 'trinity', false, false);
     });
 
-    expect(registerMock).toHaveBeenCalledWith('trinity', 'secret123', undefined);
+    expect(registerMock).toHaveBeenCalledWith('trinity', 'Secret123', undefined);
     expect(navigateMock).toHaveBeenCalledWith('/', { replace: true });
   });
 
@@ -519,12 +519,12 @@ describe('Auth entry pages', () => {
     await screen.findByText('创建账户');
 
     await user.type(screen.getByLabelText('用户名'), 'trinity');
-    await user.type(screen.getByLabelText(/^密码$/), 'secret 123');
-    await user.type(screen.getByLabelText('确认密码'), 'secret123');
+    await user.type(screen.getByLabelText(/^密码$/), 'Secret 123');
+    await user.type(screen.getByLabelText('确认密码'), 'Secret123');
     await user.click(screen.getByRole('button', { name: '立即注册' }));
 
     await waitFor(() => {
-      expect(registerMock).toHaveBeenCalledWith('trinity', 'secret123', undefined);
+      expect(registerMock).toHaveBeenCalledWith('trinity', 'Secret123', undefined);
     });
   });
 

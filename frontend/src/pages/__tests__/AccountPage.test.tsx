@@ -273,8 +273,8 @@ describe('AccountPage', () => {
     await screen.findByRole('button', { name: /账号安全/ });
     await user.click(screen.getByRole('button', { name: /账号安全/ }));
     await user.type(screen.getByLabelText('当前密码'), 'old-password');
-    await user.type(screen.getByLabelText('新密码'), 'new-password');
-    await user.type(screen.getByLabelText('确认新密码'), 'different-password');
+    await user.type(screen.getByLabelText('新密码'), 'New-pass123');
+    await user.type(screen.getByLabelText('确认新密码'), 'Different-pass123');
     await user.click(screen.getByRole('button', { name: '更新密码' }));
 
     expect(postMock).not.toHaveBeenCalled();
@@ -307,14 +307,14 @@ describe('AccountPage', () => {
     await screen.findByRole('button', { name: /账号安全/ });
     await user.click(screen.getByRole('button', { name: /账号安全/ }));
     await user.type(screen.getByLabelText('当前密码'), 'old password');
-    await user.type(screen.getByLabelText('新密码'), 'new password 123');
-    await user.type(screen.getByLabelText('确认新密码'), 'newpassword123');
+    await user.type(screen.getByLabelText('新密码'), 'New password 123');
+    await user.type(screen.getByLabelText('确认新密码'), 'Newpassword123');
     await user.click(screen.getByRole('button', { name: '更新密码' }));
 
     await waitFor(() => {
       expect(postMock).toHaveBeenCalledWith('/user/change-password', {
         current_password: 'oldpassword',
-        new_password: 'newpassword123',
+        new_password: 'Newpassword123',
       });
     });
   });
@@ -369,15 +369,15 @@ describe('AccountPage', () => {
     expect(screen.getByRole('button', { name: '更新密码' })).toBeDisabled();
 
     await user.type(currentPasswordInput, 'old-password');
-    await user.type(newPasswordInput, 'new-password');
-    await user.type(confirmPasswordInput, 'new-password');
+    await user.type(newPasswordInput, 'New-password123');
+    await user.type(confirmPasswordInput, 'New-password123');
     expect(screen.getByRole('button', { name: '更新密码' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: '更新密码' }));
 
     await waitFor(() => {
       expect(postMock).toHaveBeenCalledWith('/user/change-password', {
         current_password: 'old-password',
-        new_password: 'new-password',
+        new_password: 'New-password123',
       });
     });
 

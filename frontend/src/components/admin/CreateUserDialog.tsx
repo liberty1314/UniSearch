@@ -4,7 +4,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { UserService } from '@/services/userService';
 import { SystemSettingsService } from '@/services/systemSettingsService';
 import { getErrorDataCode, getErrorDataError, getErrorMessage, getErrorStatus } from '@/lib/error';
-import { DEFAULT_AUTH_POLICY, resolveAuthPolicy } from '@/lib/authPolicy';
+import { DEFAULT_AUTH_POLICY, resolveAuthPolicy, USERNAME_CHARSET_PATTERN } from '@/lib/authPolicy';
 import {
     Dialog,
     DialogContent,
@@ -132,12 +132,18 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
             toast.error(`用户名长度必须在 ${authPolicy.usernameMinLength}-${authPolicy.usernameMaxLength} 字符之间`);
             return false;
         }
+        // 用户名字符集校验，与注册路径及后端 ValidateUsernameCharset 一致。
+        if (!USERNAME_CHARSET_PATTERN.test(trimmedUsername)) {
+            toast.error('用户名只能包含字母、数字、下划线和连字符');
+            return false;
+        }
 
         // 验证密码
         const passwordError = validateAccountPassword(password, {
             required: true,
             minLength: authPolicy.passwordMinLength,
             maxLength: authPolicy.passwordMaxLength,
+            complexityClasses: authPolicy.passwordComplexityClasses,
         });
         if (passwordError) {
             toast.error(passwordError === '请输入新密码' ? '请输入密码' : passwordError);

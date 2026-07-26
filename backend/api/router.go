@@ -46,6 +46,8 @@ func SetupRouter(deps RouterDeps) *gin.Engine {
 	// 登录防爆破：IP 维度限流阈值 + 计数后端（Redis 多实例共享或内存），以及账户级失败锁定。
 	InitLoginRateLimiters(config.AppConfig.LoginIPLimitPerMin, config.AppConfig.LoginIPLimitPerHour)
 	InitLoginRateLimitStore(config.AppConfig.LoginRateLimitUseRedis, deps.RedisCache)
+	// 用户名查重 IP 维度限流阈值：复用 loginRateLimitStore 计数后端，堵住单 IP 遍历用户名的枚举。
+	InitCheckUsernameRateLimiters(config.AppConfig.CheckUsernameIPLimitPerMin, config.AppConfig.CheckUsernameIPLimitPerHour)
 	loginLockoutRedis := deps.RedisCache
 	if !config.AppConfig.LoginRateLimitUseRedis {
 		loginLockoutRedis = nil

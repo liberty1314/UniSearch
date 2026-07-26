@@ -2,6 +2,9 @@ interface PasswordValidationOptions {
   required?: boolean;
   minLength?: number;
   maxLength?: number;
+  // 密码复杂度：大写/小写/数字/符号中至少满足几类（与后端 AUTH_PASSWORD_COMPLEXITY_CLASSES 对齐）。
+  // 缺省（undefined）时跳过复杂度校验，保持调用方向后兼容。
+  complexityClasses?: number;
 }
 
 export const ACCOUNT_PASSWORD_MIN_LENGTH = 6;
@@ -10,6 +13,20 @@ export const ACCOUNT_PASSWORD_MAX_LENGTH = 64;
 export const PASSWORD_MAX_BYTES = 72;
 export const PASSWORD_WHITESPACE_PATTERN = /\s/u;
 export const PASSWORD_ALL_WHITESPACE_PATTERN = /\s/gu;
+
+// 前端弱口令黑名单：与后端 builtinWeakPasswords 保持一致（小写归一化后比对）。
+// 后端可通过 AUTH_PASSWORD_BLOCKLIST_PATH 扩展，前端无法感知那部分，仅覆盖内置项，
+// 剩余弱口令仍由后端兜底——前端校验只是体验优化，后端才是权威。
+const BUILTIN_WEAK_PASSWORDS = new Set<string>([
+  '123456', '123456789', '12345678', 'password', '111111', '123123',
+  '000000', 'qwerty', 'qwerty123', 'abc123', 'password1', '1234567890',
+  'iloveyou', 'admin', 'admin123', 'root', '666666', '888888',
+  'letmein', 'welcome', 'monkey', '1q2w3e4r', 'passw0rd', 'zaq12wsx',
+]);
+
+// isWeakPassword 判断密码是否命中内置弱口令黑名单（小写归一化比对，与后端一致）。
+export const isWeakPassword = (password: string): boolean =>
+  BUILTIN_WEAK_PASSWORDS.has(password.toLowerCase());
 
 export const hasPasswordWhitespace = (password: string): boolean =>
   PASSWORD_WHITESPACE_PATTERN.test(password);
@@ -94,22 +111,40 @@ export const validateAccountPassword = (
     required = false,
     minLength = ACCOUNT_PASSWORD_MIN_LENGTH,
     maxLength = ACCOUNT_PASSWORD_MAX_LENGTH,
+    complexityClasses,
   }: PasswordValidationOptions = {}
 ): string | undefined => {
   if (!password) {
     return required ? '请输入新密码' : undefined;
   }
 
+  // 校验顺序与后端 ValidateNewPassword 对齐：空格 → 长度 → 72字节 → 复杂度 → 弱口令。
   if (hasPasswordWhitespace(password)) {
     return '密码不能包含空格';
   }
 
-  if (password.length < minLength) {
+  // 长度按 UTF-8 字节数判断，与后端 len(password) 语义一致（中文每字符 3 字节）。
+  const byteLength = passwordByteLength(password);
+  if (byteLength < minLength) {
     return `密码长度至少为 ${minLength} 个字符`;
   }
 
-  if (password.length > maxLength) {
+  if (byteLength > maxLength) {
     return `密码长度不能超过 ${maxLength} 个字符`;
+  }
+
+  if (byteLength > PASSWORD_MAX_BYTES) {
+    return `密码长度不能超过 ${PASSWORD_MAX_BYTES} 字节（含多字节字符）`;
+  }
+
+  if (complexityClasses !== undefined && complexityClasses >= 1) {
+    if (countPasswordClasses(password) < complexityClasses) {
+      return `密码必须包含大写字母、小写字母、数字、符号中的至少 ${complexityClasses} 类`;
+    }
+  }
+
+  if (isWeakPassword(password)) {
+    return '密码过于简单，请勿使用常见弱口令';
   }
 
   return undefined;

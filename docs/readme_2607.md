@@ -737,3 +737,22 @@
     - frontend/src/pages/__tests__/AccountPage.test.tsx
     - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
     - frontend/src/services/systemSettingsService.ts
+
+- [2026-07-26 13:40] feat(auth): 统一前后端密码校验逻辑并优化用户名查重接口限流
+  - Body: 前端统一使用共享的密码复杂度校验逻辑，并将注册界面用户名查重防抖延长至 2 秒；后端为 check-username 路由增加 IP 限流配置，并同步更新关联单元测试。
+  - Files:
+    - .env.example
+    - backend/api/rate_limiter.go
+    - backend/api/router.go
+    - backend/config/config.go
+    - backend/config/config_env.go
+    - docs/readme_2607.md
+    - frontend/src/components/account/passwordValidation.ts
+    - frontend/src/components/admin/CreateUserDialog.tsx
+    - frontend/src/components/admin/ResetPasswordDialog.tsx
+    - frontend/src/components/admin/__tests__/CreateUserDialog.test.tsx
+    - frontend/src/components/admin/__tests__/ResetPasswordDialog.test.tsx
+    - frontend/src/pages/AccountPage.tsx
+    - frontend/src/pages/RegisterPage.tsx
+    - frontend/src/pages/__tests__/AccountPage.test.tsx
+    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx

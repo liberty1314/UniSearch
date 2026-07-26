@@ -80,12 +80,12 @@ describe('ResetPasswordDialog', () => {
       />
     );
 
-    await user.type(screen.getByLabelText(/^新密码/), 'reset password 123');
-    await user.type(screen.getByLabelText(/^确认密码/), 'resetpassword123');
+    await user.type(screen.getByLabelText(/^新密码/), 'Reset password 123');
+    await user.type(screen.getByLabelText(/^确认密码/), 'Resetpassword123');
     await user.click(screen.getByRole('button', { name: '重置密码' }));
 
     await waitFor(() => {
-      expect(resetPasswordMock).toHaveBeenCalledWith(1, 'resetpassword123');
+      expect(resetPasswordMock).toHaveBeenCalledWith(1, 'Resetpassword123');
     });
   });
 });

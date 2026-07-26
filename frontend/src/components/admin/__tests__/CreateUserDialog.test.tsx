@@ -98,10 +98,10 @@ describe('CreateUserDialog', () => {
     );
 
     await user.type(screen.getByLabelText('用户名'), 'neo-user');
-    await user.type(screen.getByLabelText('密码'), 'secret 1234');
-    await user.type(screen.getByLabelText('确认密码'), 'secret1234');
+    await user.type(screen.getByLabelText('密码'), 'Secret 1234');
+    await user.type(screen.getByLabelText('确认密码'), 'Secret1234');
     await user.click(screen.getByRole('button', { name: '创建用户' }));
 
-    expect(createUserMock).toHaveBeenCalledWith('neo-user', 'secret1234', 'user', false);
+    expect(createUserMock).toHaveBeenCalledWith('neo-user', 'Secret1234', 'user', false);
   });
 });

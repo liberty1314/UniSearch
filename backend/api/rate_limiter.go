@@ -146,7 +146,26 @@ var (
 	// 实际计数走 loginRateLimitStore（内存或 Redis）。
 	loginIPLimitPerMin  = 10
 	loginIPLimitPerHour = 100
+
+	// 用户名查重 IP 维度限流阈值：仅以 ClientIP 为 key 计数，不含 username。
+	// 现有的 IP+username 内存限流防不住"单 IP 遍历大量不同用户名"的枚举
+	// （每个用户名各自计数、永不触顶），此纯 IP 维度双窗口用于堵这个枚举面。
+	// 计数复用 loginRateLimitStore（内存或 Redis），多副本共享、重启不丢。
+	checkUsernameIPLimitPerMin  = 3
+	checkUsernameIPLimitPerHour = 200
 )
+
+// InitCheckUsernameRateLimiters 按配置设置用户名查重 IP 维度限流阈值。
+func InitCheckUsernameRateLimiters(perMin, perHour int) {
+	if perMin <= 0 {
+		perMin = 3
+	}
+	if perHour <= 0 {
+		perHour = 200
+	}
+	checkUsernameIPLimitPerMin = perMin
+	checkUsernameIPLimitPerHour = perHour
+}
 
 // InitLoginRateLimiters 按配置设置登录 IP 维度限流阈值。
 func InitLoginRateLimiters(perMin, perHour int) {
@@ -421,6 +440,21 @@ func loginRateLimitMiddleware() gin.HandlerFunc {
 
 func checkUsernameRateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+		ip := c.ClientIP()
+
+		// IP 纯维度双窗口：同一 IP 无论查询多少个不同用户名都受同一计数器约束，
+		// 堵住"单 IP 遍历大量用户名"的枚举。计数走 loginRateLimitStore（内存或 Redis）。
+		if allowed, _ := loginRateLimitStore.Allow(ctx, "checkuser:ip:min:"+ip, checkUsernameIPLimitPerMin, time.Minute); !allowed {
+			denyCheckUsernameRateLimit(c)
+			return
+		}
+		if allowed, _ := loginRateLimitStore.Allow(ctx, "checkuser:ip:hour:"+ip, checkUsernameIPLimitPerHour, time.Hour); !allowed {
+			denyCheckUsernameRateLimit(c)
+			return
+		}
+
+		// IP+username 维度：防止对单一用户名的高频查询。
 		key := buildRateLimitKey(c, c.Query("username"))
 		if !usernameCheckRateLimiter.Allow(key) {
 			denyCheckUsernameRateLimit(c)

@@ -65,6 +65,10 @@ type Config struct {
 	LoginAccountLockThreshold int  // 账户连续登录失败达到该次数即锁定（0=关闭锁定）
 	LoginAccountLockMin       int  // 账户锁定持续时长（分钟）
 
+	// 用户名查重（枚举防护）：IP 维度限流，复用登录限流后端
+	CheckUsernameIPLimitPerMin  int // 单 IP 每分钟用户名查重请求上限
+	CheckUsernameIPLimitPerHour int // 单 IP 每小时用户名查重请求上限
+
 	DefaultChannels    []string
 	DefaultConcurrency int
 	Port               string
@@ -223,6 +227,9 @@ func InitWithError() error {
 		LoginAccountLockThreshold: getLoginAccountLockThreshold(),
 		LoginAccountLockMin:       getLoginAccountLockMin(),
 		LoginRateLimitUseRedis:    getLoginRateLimitUseRedis(),
+
+		CheckUsernameIPLimitPerMin:  getCheckUsernameIPLimitPerMin(),
+		CheckUsernameIPLimitPerHour: getCheckUsernameIPLimitPerHour(),
 
 		DefaultChannels:    getDefaultChannels(),
 		DefaultConcurrency: getDefaultConcurrency(),

@@ -104,6 +104,7 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
         required: true,
         minLength: authPolicy.passwordMinLength,
         maxLength: authPolicy.passwordMaxLength,
+        complexityClasses: authPolicy.passwordComplexityClasses,
       });
       setErrors((prev) => ({ ...prev, newPassword: error }));
     }
@@ -146,6 +147,7 @@ export const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
       required: true,
       minLength: authPolicy.passwordMinLength,
       maxLength: authPolicy.passwordMaxLength,
+      complexityClasses: authPolicy.passwordComplexityClasses,
     });
     const confirmPasswordError = validateAccountPasswordConfirmation(confirmPassword, newPassword, {
       required: true,

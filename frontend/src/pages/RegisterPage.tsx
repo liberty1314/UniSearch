@@ -41,8 +41,7 @@ import {
   hasPasswordWhitespace,
   removePasswordWhitespace,
   evaluatePasswordStrength,
-  passwordByteLength,
-  PASSWORD_MAX_BYTES,
+  validateAccountPassword,
 } from "@/components/account/passwordValidation";
 import { USERNAME_CHARSET_PATTERN } from "@/lib/authPolicy";
 import {
@@ -187,6 +186,8 @@ const RegisterPage: React.FC = () => {
     }
 
     setIsCheckingUsername(true);
+    // 防抖 2 秒：配合后端 check-username 的 IP 限流（默认 3 次/分钟），
+    // 降低用户连续输入时的查重请求频率，避免正常注册被限流误伤。
     const timer = setTimeout(async () => {
       try {
         const available = await AuthService.checkUsername(trimmed);
@@ -196,7 +197,7 @@ const RegisterPage: React.FC = () => {
       } finally {
         setIsCheckingUsername(false);
       }
-    }, 500);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [authPolicy.usernameMaxLength, authPolicy.usernameMinLength, username]);
@@ -239,13 +240,16 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
-    if (
-      password.length < authPolicy.passwordMinLength ||
-      password.length > authPolicy.passwordMaxLength
-    ) {
-      toast.error(
-        `密码长度必须在${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength}字符之间`,
-      );
+    // 与后端 ValidateNewPassword 对齐：长度（字节）+ 72字节上限 + 复杂度 + 弱口令，
+    // 统一走共享校验函数，避免"前端放行、后端拒"的不一致。
+    const registerPasswordError = validateAccountPassword(password, {
+      required: true,
+      minLength: authPolicy.passwordMinLength,
+      maxLength: authPolicy.passwordMaxLength,
+      complexityClasses: authPolicy.passwordComplexityClasses,
+    });
+    if (registerPasswordError) {
+      toast.error(registerPasswordError);
       return;
     }
 
@@ -310,12 +314,12 @@ const RegisterPage: React.FC = () => {
     ? undefined
     : !password.trim()
       ? "请输入密码"
-      : hasPasswordWhitespace(password)
-        ? "密码不能包含空格"
-      : password.length < authPolicy.passwordMinLength ||
-          password.length > authPolicy.passwordMaxLength
-        ? `密码长度必须在${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength}字符之间`
-        : undefined;
+      : validateAccountPassword(password, {
+          required: true,
+          minLength: authPolicy.passwordMinLength,
+          maxLength: authPolicy.passwordMaxLength,
+          complexityClasses: authPolicy.passwordComplexityClasses,
+        });
 
   // 确认密码：一旦用户开始输入即实时校验"是否一致"，无需等到提交；
   // 空值缺失提示仍仅在提交后给出，避免刚聚焦就报错。

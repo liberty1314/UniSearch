@@ -113,6 +113,16 @@ func getLoginIPLimitPerHour() int {
 	return getPositiveIntEnv("LOGIN_IP_LIMIT_PER_HOUR", 60)
 }
 
+// getCheckUsernameIPLimitPerMin 返回单 IP 每分钟用户名查重请求上限（默认 3）。
+func getCheckUsernameIPLimitPerMin() int {
+	return getPositiveIntEnv("CHECK_USERNAME_IP_LIMIT_PER_MIN", 3)
+}
+
+// getCheckUsernameIPLimitPerHour 返回单 IP 每小时用户名查重请求上限（默认 200）。
+func getCheckUsernameIPLimitPerHour() int {
+	return getPositiveIntEnv("CHECK_USERNAME_IP_LIMIT_PER_HOUR", 200)
+}
+
 // getLoginRateLimitUseRedis 返回是否将登录限流/账户锁定计数落到 Redis（默认启用）。
 // Redis 不可用时运行期自动降级到内存实现。
 func getLoginRateLimitUseRedis() bool {

@@ -90,8 +90,14 @@ const AccountPage: React.FC = () => {
         required: false,
         minLength: authPolicy.passwordMinLength,
         maxLength: authPolicy.passwordMaxLength,
+        complexityClasses: authPolicy.passwordComplexityClasses,
       }),
-    [authPolicy.passwordMaxLength, authPolicy.passwordMinLength, newPassword]
+    [
+      authPolicy.passwordMaxLength,
+      authPolicy.passwordMinLength,
+      authPolicy.passwordComplexityClasses,
+      newPassword,
+    ]
   );
 
   const confirmError = useMemo(
@@ -127,6 +133,7 @@ const AccountPage: React.FC = () => {
       required: true,
       minLength: authPolicy.passwordMinLength,
       maxLength: authPolicy.passwordMaxLength,
+      complexityClasses: authPolicy.passwordComplexityClasses,
     });
     if (nextPasswordError) {
       toast.error(nextPasswordError);
