@@ -47,7 +47,6 @@ import {
 } from "@/components/auth/authEntryLayout";
 import { cn } from "@/lib/utils";
 import type { SearchParams } from "@/types/search";
-import { getPasswordPolicyHelperText } from "@/components/account/passwordValidation";
 
 interface RedirectLocationState {
   from?: {
@@ -104,7 +103,6 @@ const LoginPage: React.FC = () => {
     rememberMe,
     setRememberMe,
     isLoading,
-    authPolicy,
     submit: handleLogin,
   } = useLoginForm({
     loginRequest: AuthService.userLogin,
@@ -235,7 +233,6 @@ const LoginPage: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading}
-                  helperText={getPasswordPolicyHelperText(authPolicy)}
                   endAdornment={
                     <button
                       type="button"

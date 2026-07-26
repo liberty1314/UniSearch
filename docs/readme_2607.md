@@ -720,3 +720,20 @@
     - backend/util/crypto.go
     - docs/readme_2607.md
 
+- [2026-07-26 11:41] feat(auth): 优化注册登录表单密码策略与输入安全校验
+  - Body: 前端新增用户名字符集限制与确认密码防粘贴校验，支持密码复杂度动态提示并在提交时复位明文显示；后端透出密码复杂度配置并同步更新相关测试。
+  - Files:
+    - backend/api/controller/auth_controller.go
+    - backend/api/system_settings_handler.go
+    - backend/service/auth_service.go
+    - backend/service/user_service.go
+    - docs/readme_2607.md
+    - frontend/src/components/account/passwordValidation.ts
+    - frontend/src/components/admin/__tests__/CreateUserDialog.test.tsx
+    - frontend/src/components/admin/__tests__/ResetPasswordDialog.test.tsx
+    - frontend/src/lib/authPolicy.ts
+    - frontend/src/pages/LoginPage.tsx
+    - frontend/src/pages/RegisterPage.tsx
+    - frontend/src/pages/__tests__/AccountPage.test.tsx
+    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
+    - frontend/src/services/systemSettingsService.ts

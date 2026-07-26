@@ -40,7 +40,11 @@ import {
   getPasswordPolicyHelperText,
   hasPasswordWhitespace,
   removePasswordWhitespace,
+  evaluatePasswordStrength,
+  passwordByteLength,
+  PASSWORD_MAX_BYTES,
 } from "@/components/account/passwordValidation";
+import { USERNAME_CHARSET_PATTERN } from "@/lib/authPolicy";
 import {
   AUTH_ENTRY_CARD_BASE_CLASS,
   AUTH_ENTRY_CARD_CONTENT_CLASS,
@@ -57,41 +61,33 @@ import { cn } from "@/lib/utils";
 
 // ─── 密码强度计算 ─────────────────────────────────────────────────────────────
 
-/**
- * 计算密码强度分值（0 = 太短/空, 1 = 弱, 2 = 中, 3 = 强）
- *
- * 评分规则（满足任意条件 +1 分，基础分为 1）：
- * - 长度 >= 10
- * - 同时包含大写和小写字母
- * - 同时包含数字和特殊字符
- */
-const calcPasswordStrength = (pwd: string): 0 | 1 | 2 | 3 => {
-  if (!pwd || pwd.length < 6) return 0;
-  let score = 0;
-  if (pwd.length >= 10) score++;
-  if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score++;
-  if (/[0-9]/.test(pwd) && /[^A-Za-z0-9]/.test(pwd)) score++;
-  return Math.min(score + 1, 3) as 1 | 2 | 3;
-};
-
-const STRENGTH_LABELS = ["", "弱", "中", "强"] as const;
+// 强度标签与后端真实规则对齐：0=不达标（长度/复杂度未满足后端要求）。
+const STRENGTH_LABELS = ["不达标", "达标", "良好", "强"] as const;
 
 const getPasswordStrengthHelperText = (
   password: string,
   policy: {
     passwordMinLength: number;
     passwordMaxLength: number;
+    passwordComplexityClasses: number;
   },
+  focused: boolean,
 ) => {
   if (!password) {
     return getPasswordPolicyHelperText(policy);
   }
 
-  const passwordStrength = calcPasswordStrength(password);
-  const strengthLabel =
-    passwordStrength > 0 ? STRENGTH_LABELS[passwordStrength] : "太短";
-
-  return `密码强度：${strengthLabel}`;
+  const passwordStrength = evaluatePasswordStrength(password, policy);
+  // 未达标时提示完整规则，帮助用户修正，而非只显示一个模糊标签。
+  if (passwordStrength === 0) {
+    return getPasswordPolicyHelperText(policy);
+  }
+  // 肩窥缓解：强度标签会暗示密码构成，仅在输入框聚焦时展示；
+  // 失焦后回退为通用规则文本，避免强度提示长时间停留在屏幕上被旁人看到。
+  if (!focused) {
+    return getPasswordPolicyHelperText(policy);
+  }
+  return `密码强度：${STRENGTH_LABELS[passwordStrength]}`;
 };
 
 const RegisterPage: React.FC = () => {
@@ -107,7 +103,7 @@ const RegisterPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
@@ -166,13 +162,25 @@ const RegisterPage: React.FC = () => {
     loadSettings();
   }, [navigate]);
 
+  // 明文密码自动隐藏：切到明文查看后 15 秒自动复位为隐藏，
+  // 降低离开/截图时密码长时间明文停留在屏幕上的肩窥风险。
+  useEffect(() => {
+    if (!showPassword) {
+      return;
+    }
+    const timer = setTimeout(() => setShowPassword(false), 15000);
+    return () => clearTimeout(timer);
+  }, [showPassword]);
+
   // Real-time username check with debounce
   useEffect(() => {
     const trimmed = username.trim();
     if (
       trimmed.length < authPolicy.usernameMinLength ||
-      trimmed.length > authPolicy.usernameMaxLength
+      trimmed.length > authPolicy.usernameMaxLength ||
+      !USERNAME_CHARSET_PATTERN.test(trimmed)
     ) {
+      // 长度或字符集不合法时不查重：既避免无谓打枚举接口，也与后端约束保持一致。
       setUsernameAvailable(null);
       setIsCheckingUsername(false);
       return;
@@ -192,6 +200,7 @@ const RegisterPage: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, [authPolicy.usernameMaxLength, authPolicy.usernameMinLength, username]);
+  // USERNAME_CHARSET_PATTERN 为模块级常量，无需列入依赖。
 
   const handleRegister = async () => {
     if (isLoading) {
@@ -225,6 +234,11 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
+    if (!USERNAME_CHARSET_PATTERN.test(username.trim())) {
+      toast.error("用户名只能包含字母、数字、下划线和连字符");
+      return;
+    }
+
     if (
       password.length < authPolicy.passwordMinLength ||
       password.length > authPolicy.passwordMaxLength
@@ -240,6 +254,8 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
+    // 提交前复位明文显示，避免密码在提交/跳转期间明文停留在屏幕上。
+    setShowPassword(false);
     setIsLoading(true);
     try {
       const response = await AuthService.register(
@@ -284,9 +300,11 @@ const RegisterPage: React.FC = () => {
       : username.trim().length < authPolicy.usernameMinLength ||
           username.trim().length > authPolicy.usernameMaxLength
         ? `用户名长度必须在${authPolicy.usernameMinLength}-${authPolicy.usernameMaxLength}字符之间`
-        : usernameAvailable === false
-          ? "用户名已被占用"
-          : undefined;
+        : !USERNAME_CHARSET_PATTERN.test(username.trim())
+          ? "用户名只能包含字母、数字、下划线和连字符"
+          : usernameAvailable === false
+            ? "用户名已被占用"
+            : undefined;
 
   const passwordError = !submitAttempted
     ? undefined
@@ -299,15 +317,17 @@ const RegisterPage: React.FC = () => {
         ? `密码长度必须在${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength}字符之间`
         : undefined;
 
-  const confirmPasswordError = !submitAttempted
-    ? undefined
-    : !confirmPassword.trim()
-      ? "请再次输入密码"
-      : hasPasswordWhitespace(confirmPassword)
-        ? "密码不能包含空格"
+  // 确认密码：一旦用户开始输入即实时校验"是否一致"，无需等到提交；
+  // 空值缺失提示仍仅在提交后给出，避免刚聚焦就报错。
+  const confirmPasswordError = confirmPassword
+    ? hasPasswordWhitespace(confirmPassword)
+      ? "密码不能包含空格"
       : password !== confirmPassword
         ? "两次输入的密码不一致"
-        : undefined;
+        : undefined
+    : submitAttempted
+      ? "请再次输入密码"
+      : undefined;
 
   if (isLoadingSettings) {
     return (
@@ -416,10 +436,11 @@ const RegisterPage: React.FC = () => {
                   icon={<User className="w-4 h-4" />}
                   type="text"
                   autoComplete="username"
-                  placeholder={`${authPolicy.usernameMinLength}-${authPolicy.usernameMaxLength}个字符`}
+                  placeholder={`${authPolicy.usernameMinLength}-${authPolicy.usernameMaxLength}个字符（字母、数字、下划线、连字符）`}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   error={usernameError}
+                  helperText={usernameError ? undefined : "仅支持字母、数字、下划线（_）和连字符（-）"}
                   disabled={isLoading}
                   endAdornment={
                     isCheckingUsername ? (
@@ -442,12 +463,14 @@ const RegisterPage: React.FC = () => {
                     placeholder={`${authPolicy.passwordMinLength}-${authPolicy.passwordMaxLength}个字符`}
                     value={password}
                     onChange={(e) => setPassword(normalizePasswordInput(e.target.value))}
+                    onFocus={() => setPasswordFocused(true)}
+                    onBlur={() => setPasswordFocused(false)}
                     error={passwordError}
                     disabled={isLoading}
                     helperText={
                       passwordError
                         ? undefined
-                        : getPasswordStrengthHelperText(password, authPolicy)
+                        : getPasswordStrengthHelperText(password, authPolicy, passwordFocused)
                     }
                     endAdornment={
                       <button
@@ -472,31 +495,14 @@ const RegisterPage: React.FC = () => {
                   label="确认密码"
                   tone="emerald"
                   icon={<Lock className="w-4 h-4" />}
-                  type={showConfirmPassword ? "text" : "password"}
+                  type="password"
                   autoComplete="new-password"
                   placeholder="请再次输入密码"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(normalizePasswordInput(e.target.value))}
+                  onPaste={(e) => e.preventDefault()}
                   error={confirmPasswordError}
                   disabled={isLoading}
-                  endAdornment={
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                      className="text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-slate-200"
-                      aria-label={
-                        showConfirmPassword ? "隐藏确认密码" : "显示确认密码"
-                      }
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  }
                 />
 
                 {captchaActive && (

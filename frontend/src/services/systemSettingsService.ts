@@ -24,6 +24,7 @@ export interface SystemSettingsResponse {
     auth_username_max_length?: number; // 用户名最大长度
     auth_password_min_length?: number; // 密码最小长度
     auth_password_max_length?: number; // 密码最大长度
+    auth_password_complexity_classes?: number; // 密码复杂度：大写/小写/数字/符号至少满足几类
     enable_resource_detail_page: boolean; // 是否启用资源详情页展示
     enable_resource_source_badges: boolean; // 是否展示搜索结果来源标签
     enable_search_source_diversity: boolean; // 是否启用首屏来源配额

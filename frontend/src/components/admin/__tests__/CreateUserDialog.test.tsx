@@ -82,7 +82,7 @@ describe('CreateUserDialog', () => {
     );
 
     expect(await screen.findByText('用户名长度为 5-18 字符')).toBeInTheDocument();
-    expect(screen.getByText('密码长度需在 8-20 个字符之间')).toBeInTheDocument();
+    expect(screen.getByText(/密码长度需在 8-20 个字符之间/)).toBeInTheDocument();
   });
 
   it('removes whitespace before creating a user password', async () => {

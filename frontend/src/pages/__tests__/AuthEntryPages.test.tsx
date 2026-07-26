@@ -446,7 +446,7 @@ describe('Auth entry pages', () => {
 
     await screen.findByText('创建账户');
 
-    expect(screen.getByText('密码长度需在 6-64 个字符之间')).toBeInTheDocument();
+    expect(screen.getByText(/密码长度需在 6-64 个字符之间/)).toBeInTheDocument();
   });
 
   it('removes whitespace from the user login password before submit', async () => {

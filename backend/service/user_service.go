@@ -239,6 +239,18 @@ func (s *UserService) GetUserByID(userID uint) (*model.User, error) {
 	return &user, nil
 }
 
+// usernameCharsetPattern 用户名允许的字符集：字母、数字、下划线、连字符。
+var usernameCharsetPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
+// ValidateUsernameCharset 校验用户名字符集（只允许字母、数字、下划线、连字符）。
+// 注册与用户管理路径共用，避免"某入口校验、另一入口放行"导致的不一致。
+func ValidateUsernameCharset(username string) error {
+	if !usernameCharsetPattern.MatchString(username) {
+		return newAuthValidationError("用户名只能包含字母、数字、下划线和连字符")
+	}
+	return nil
+}
+
 // validateUsername 验证用户名
 func (s *UserService) validateUsername(username string) error {
 	minLength := config.AppConfig.AuthUsernameMinLength
@@ -255,13 +267,7 @@ func (s *UserService) validateUsername(username string) error {
 		return newAuthValidationError(fmt.Sprintf("用户名长度必须在%d-%d字符之间", minLength, maxLength))
 	}
 
-	// 验证字符（只允许字母、数字、下划线、连字符）
-	validPattern := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
-	if !validPattern.MatchString(username) {
-		return errors.New("用户名只能包含字母、数字、下划线和连字符")
-	}
-
-	return nil
+	return ValidateUsernameCharset(username)
 }
 
 // validatePassword 验证新设置的密码

@@ -201,7 +201,7 @@ describe('AccountPage', () => {
     expect(screen.getByText('安全设置')).toBeInTheDocument();
     expect(screen.getByText('ACCOUNT SECURITY')).toBeInTheDocument();
     expect(screen.getByText('密码更新建议')).toBeInTheDocument();
-    expect(screen.getAllByText('密码长度需在 8-20 个字符之间').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/密码长度需在 8-20 个字符之间/).length).toBeGreaterThan(0);
     expect(screen.getByLabelText('当前密码')).toBeInTheDocument();
     expectPrimaryAccountActionButton(screen.getByRole('button', { name: '更新密码' }));
     expect(screen.queryByText('安全提示')).not.toBeInTheDocument();

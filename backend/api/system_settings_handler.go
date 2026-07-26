@@ -55,6 +55,7 @@ func GetSystemSettingsHandler(c *gin.Context) {
 		"auth_username_max_length":         config.AppConfig.AuthUsernameMaxLength,
 		"auth_password_min_length":         config.AppConfig.AuthPasswordMinLength,
 		"auth_password_max_length":         config.AppConfig.AuthPasswordMaxLength,
+		"auth_password_complexity_classes": config.AppConfig.AuthPasswordComplexityClasses,
 		"enable_resource_detail_page":      settings.EnableResourceDetailPage,
 		"enable_resource_source_badges":    settings.EnableResourceSourceBadges,
 		"enable_search_source_diversity":   settings.EnableSearchSourceDiversity,

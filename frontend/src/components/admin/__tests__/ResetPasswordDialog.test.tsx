@@ -56,7 +56,7 @@ describe('ResetPasswordDialog', () => {
     );
 
     expect(
-      await screen.findByText('密码长度需在 10-24 个字符之间')
+      await screen.findByText(/密码长度需在 10-24 个字符之间/)
     ).toBeInTheDocument();
   });
 

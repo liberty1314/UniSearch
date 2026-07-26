@@ -142,6 +142,11 @@ func (s *AuthService) Register(username, password string) (*model.User, error) {
 		return nil, newAuthValidationError(fmt.Sprintf("用户名长度必须在%d-%d字符之间", minU, maxU))
 	}
 
+	// 验证用户名字符集（与用户管理路径一致，避免注册绕过字符集约束）。
+	if err := ValidateUsernameCharset(username); err != nil {
+		return nil, err
+	}
+
 	if err := ValidateNewPassword(password); err != nil {
 		return nil, err
 	}

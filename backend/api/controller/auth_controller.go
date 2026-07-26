@@ -227,6 +227,12 @@ func (ctrl *AuthController) CheckUsername(c *gin.Context) {
 		return
 	}
 
+	// 字符集校验与注册路径一致，避免"查重显示可用、注册却被拒"的不一致。
+	if err := service.ValidateUsernameCharset(username); err != nil {
+		c.JSON(400, gin.H{"code": 400, "message": "用户名只能包含字母、数字、下划线和连字符", "data": false})
+		return
+	}
+
 	exists, err := ctrl.authService.CheckUsernameExist(username)
 	if err != nil {
 		c.JSON(500, gin.H{"code": 500, "message": "检查失败", "data": false})
