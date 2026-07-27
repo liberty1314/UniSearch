@@ -29,7 +29,7 @@ func main() {
 	}
 
 	log.Println("正在连接数据库...")
-	if err := database.InitDB(); err != nil {
+	if err := database.InitMigrationDB(); err != nil {
 		log.Fatalf("数据库连接失败: %v", err)
 	}
 	defer func() {

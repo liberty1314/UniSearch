@@ -44,15 +44,17 @@ func Initialize() (*App, error) {
 	plugin.SyncConfiguredProxyFromAppConfig()
 
 	log.Println("正在连接数据库...")
-	if err := database.InitDB(); err != nil {
+	if err := database.InitRuntimeDB(); err != nil {
 		return nil, fmt.Errorf("数据库连接失败: %w", err)
 	}
 
-	log.Println("正在执行数据库结构迁移...")
-	if err := database.AutoMigrate(); err != nil {
-		return nil, fmt.Errorf("数据库结构迁移失败: %w", err)
+	log.Println("正在校验数据库结构...")
+	if err := database.ValidateRuntimeSchema(database.GetDB()); err != nil {
+		_ = database.CloseDB()
+		return nil, fmt.Errorf("数据库结构校验失败: %w", err)
 	}
 	if err := database.EnsureLegacyRefreshTokensEmpty(database.GetDB()); err != nil {
+		_ = database.CloseDB()
 		return nil, fmt.Errorf("刷新会话迁移未完成: %w", err)
 	}
 	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")

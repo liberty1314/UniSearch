@@ -3,6 +3,8 @@ package database
 import (
 	"fmt"
 	"log"
+	"sort"
+	"strings"
 	"unisearch/model"
 
 	"gorm.io/gorm"
@@ -15,6 +17,35 @@ var removedPluginNames = []string{
 	"xinjuc",
 	"ouge",
 	"wanou",
+}
+
+type schemaRequirement struct {
+	name  string
+	model any
+}
+
+func schemaRequirements() []schemaRequirement {
+	return []schemaRequirement{
+		{name: "users", model: &model.User{}},
+		{name: "admin_tags", model: &model.AdminTag{}},
+		{name: "system_settings", model: &model.SystemSettings{}},
+		{name: "refresh_token_sessions", model: &model.RefreshTokenSession{}},
+		{name: "secrets", model: &model.Secret{}},
+		{name: "announcements", model: &model.Announcement{}},
+		{name: "tg_channels", model: &model.TGChannel{}},
+		{name: "plugin_states", model: &model.PluginState{}},
+		{name: "plugin_health_statuses", model: &model.PluginHealthStatus{}},
+		{name: "plugin_runtime_configs", model: &model.PluginRuntimeConfig{}},
+		{name: "plugin_performance_metrics", model: &model.PluginPerformanceMetric{}},
+		{name: "plugin_error_logs", model: &model.PluginErrorLog{}},
+		{name: "tg_channel_health_statuses", model: &model.TGChannelHealthStatus{}},
+		{name: "tg_channel_performance_metrics", model: &model.TGChannelPerformanceMetric{}},
+		{name: "tg_channel_error_logs", model: &model.TGChannelErrorLog{}},
+		{name: "user_login_daily_stats", model: &model.UserLoginDailyStat{}},
+		{name: "banned_ips", model: &model.BannedIP{}},
+		{name: "search_audit_logs", model: &model.SearchAuditLog{}},
+		{name: "admin_audit_logs", model: &model.AdminAuditLog{}},
+	}
 }
 
 // RemovedPluginNames 返回已下线且需要清理历史数据的插件名称副本。
@@ -44,29 +75,17 @@ func (r RemovedPluginPurgeResult) TotalDeleted() int64 {
 // 使用 GORM AutoMigrate 创建账号体系所需表。
 // 验证需求：2.2
 func AutoMigrate() error {
+	if DB == nil {
+		return fmt.Errorf("数据库连接未初始化")
+	}
 	log.Println("开始执行数据库迁移...")
 
-	err := DB.AutoMigrate(
-		&model.User{},
-		&model.AdminTag{},                   // 创建 admin_tags 表（后台标签词库）
-		&model.SystemSettings{},             // 创建 system_settings 表
-		&model.RefreshTokenSession{},        // 创建 refresh_token_sessions 表（摘要刷新会话）
-		&model.Secret{},                     // 创建 secrets 表（密钥管理）
-		&model.Announcement{},               // 创建 announcements 表（系统公告）
-		&model.TGChannel{},                  // 创建 tg_channels 表（Telegram 频道管理）
-		&model.PluginState{},                // 创建 plugin_states 表（插件启用状态）
-		&model.PluginHealthStatus{},         // 创建 plugin_health_statuses 表（插件健康状态）
-		&model.PluginRuntimeConfig{},        // 创建 plugin_runtime_configs 表（插件运行配置）
-		&model.PluginPerformanceMetric{},    // 创建 plugin_performance_metrics 表（插件性能聚合指标）
-		&model.PluginErrorLog{},             // 创建 plugin_error_logs 表（插件错误日志）
-		&model.TGChannelHealthStatus{},      // 创建 tg_channel_health_statuses 表（TG 频道健康状态）
-		&model.TGChannelPerformanceMetric{}, // 创建 tg_channel_performance_metrics 表（TG 频道性能聚合指标）
-		&model.TGChannelErrorLog{},          // 创建 tg_channel_error_logs 表（TG 频道错误日志）
-		&model.UserLoginDailyStat{},         // 创建 user_login_daily_stats 表（用户日登录统计）
-		&model.BannedIP{},                   // 创建 banned_ips 表（IP 封禁名单）
-		&model.SearchAuditLog{},             // 创建 search_audit_logs 表（搜索审计日志）
-		&model.AdminAuditLog{},              // 创建 admin_audit_logs 表（操作审计日志）
-	)
+	requirements := schemaRequirements()
+	models := make([]any, 0, len(requirements))
+	for _, requirement := range requirements {
+		models = append(models, requirement.model)
+	}
+	err := DB.AutoMigrate(models...)
 
 	if err != nil {
 		log.Printf("✗ 数据库迁移失败: %v", err)
@@ -74,27 +93,34 @@ func AutoMigrate() error {
 	}
 
 	log.Println("✓ 数据库迁移完成")
-	log.Println("  - users 表已创建/更新")
-	log.Println("  - admin_tags 表已创建/更新")
-	log.Println("  - system_settings 表已创建/更新")
-	log.Println("  - refresh_token_sessions 表已创建/更新")
-	log.Println("  - secrets 表已创建/更新")
-	log.Println("  - announcements 表已创建/更新")
-	log.Println("  - tg_channels 表已创建/更新")
-	log.Println("  - plugin_states 表已创建/更新")
-	log.Println("  - plugin_health_statuses 表已创建/更新")
-	log.Println("  - plugin_runtime_configs 表已创建/更新")
-	log.Println("  - plugin_performance_metrics 表已创建/更新")
-	log.Println("  - plugin_error_logs 表已创建/更新")
-	log.Println("  - tg_channel_health_statuses 表已创建/更新")
-	log.Println("  - tg_channel_performance_metrics 表已创建/更新")
-	log.Println("  - tg_channel_error_logs 表已创建/更新")
-	log.Println("  - user_login_daily_stats 表已创建/更新")
-	log.Println("  - banned_ips 表已创建/更新")
-	log.Println("  - search_audit_logs 表已创建/更新")
-	log.Println("  - admin_audit_logs 表已创建/更新")
+	for _, requirement := range requirements {
+		log.Printf("  - %s 表已创建/更新", requirement.name)
+	}
 
 	return nil
+}
+
+// ValidateRuntimeSchema 只读检查运行所需表，缺失迁移时拒绝启动。
+func ValidateRuntimeSchema(db *gorm.DB) error {
+	if db == nil {
+		return fmt.Errorf("数据库连接未初始化")
+	}
+
+	missing := make([]string, 0)
+	for _, requirement := range schemaRequirements() {
+		if !db.Migrator().HasTable(requirement.model) {
+			missing = append(missing, requirement.name)
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+
+	sort.Strings(missing)
+	return fmt.Errorf(
+		"数据库结构未完成迁移，缺少表: %s；请先运行 unisearch-migrate",
+		strings.Join(missing, ", "),
+	)
 }
 
 // MigrateRefreshTokenSessions 创建摘要会话表并清空旧原文刷新令牌。

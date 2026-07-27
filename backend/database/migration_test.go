@@ -2,6 +2,7 @@ package database
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,6 +11,43 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+func TestValidateRuntimeSchemaRejectsNilDatabase(t *testing.T) {
+	err := ValidateRuntimeSchema(nil)
+	if err == nil || !strings.Contains(err.Error(), "数据库连接未初始化") {
+		t.Fatalf("nil 数据库必须返回稳定错误，实际为 %v", err)
+	}
+}
+
+func TestValidateRuntimeSchemaRejectsMissingTables(t *testing.T) {
+	db := setupMigrationTestDB(t)
+	if err := db.AutoMigrate(&model.User{}); err != nil {
+		t.Fatalf("准备 users 表失败: %v", err)
+	}
+
+	err := ValidateRuntimeSchema(db)
+	if err == nil {
+		t.Fatal("缺少业务表时必须拒绝启动")
+	}
+	if !strings.Contains(err.Error(), "数据库结构未完成迁移") ||
+		!strings.Contains(err.Error(), "secrets") ||
+		!strings.Contains(err.Error(), "unisearch-migrate") {
+		t.Fatalf("缺表错误必须列出表名和迁移命令，实际为 %v", err)
+	}
+	if db.Migrator().HasTable(&model.Secret{}) {
+		t.Fatal("运行时结构校验不得创建缺失表")
+	}
+}
+
+func TestValidateRuntimeSchemaAcceptsMigratedDatabase(t *testing.T) {
+	setupMigrationTestDB(t)
+	if err := AutoMigrate(); err != nil {
+		t.Fatalf("迁移测试库失败: %v", err)
+	}
+	if err := ValidateRuntimeSchema(DB); err != nil {
+		t.Fatalf("完整结构应通过校验: %v", err)
+	}
+}
 
 func TestPurgeRemovedPluginDataDeletesOnlyRemovedPluginsAndIsIdempotent(t *testing.T) {
 	db := setupMigrationTestDB(t)

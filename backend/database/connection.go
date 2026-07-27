@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"time"
 
 	"unisearch/config"
@@ -15,52 +16,64 @@ import (
 // DB 全局数据库连接实例
 var DB *gorm.DB
 
-// InitDB 初始化数据库连接
-// 从环境变量读取数据库配置，构建 MySQL DSN 连接字符串，使用 GORM 连接数据库
-// 如果目标数据库不存在则自动创建
-func InitDB() error {
-	// 从配置中读取数据库参数
-	dbHost := config.AppConfig.DBHost
-	dbPort := config.AppConfig.DBPort
-	dbUser := config.AppConfig.DBUser
-	dbPassword := config.AppConfig.DBPassword
-	dbName := config.AppConfig.DBName
+var databaseNamePattern = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
 
-	// 验证必需的配置参数
-	if dbName == "" {
-		return fmt.Errorf("数据库名称 (DB_NAME) 未设置，请在 .env 文件中配置")
+// InitRuntimeDB 仅连接已经存在的目标数据库，不执行建库或结构迁移。
+func InitRuntimeDB() error {
+	if err := validateDatabaseName(config.AppConfig.DBName); err != nil {
+		return err
 	}
+	return openTargetDatabase()
+}
 
-	// 第一步：先连接 MySQL（不指定数据库名），确保目标数据库存在
-	rootDSN := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=True&loc=Local",
-		dbUser, dbPassword, dbHost, dbPort,
+// InitMigrationDB 为独立迁移命令创建目标数据库并建立迁移连接。
+func InitMigrationDB() error {
+	if err := validateDatabaseName(config.AppConfig.DBName); err != nil {
+		return err
+	}
+	if err := ensureTargetDatabase(); err != nil {
+		return err
+	}
+	return openTargetDatabase()
+}
+
+func validateDatabaseName(name string) error {
+	if !databaseNamePattern.MatchString(name) {
+		return fmt.Errorf("数据库名称 (DB_NAME) 只能包含字母、数字和下划线")
+	}
+	return nil
+}
+
+func ensureTargetDatabase() error {
+	cfg := config.AppConfig
+	serverDSN := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=True&loc=Local",
+		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort,
 	)
-
-	rootDB, err := gorm.Open(mysql.Open(rootDSN), &gorm.Config{
+	serverDB, err := gorm.Open(mysql.Open(serverDSN), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
 		return fmt.Errorf("连接 MySQL 服务器失败: %w", err)
 	}
+	if sqlDB, dbErr := serverDB.DB(); dbErr == nil {
+		defer func() { _ = sqlDB.Close() }()
+	}
 
-	// 自动创建数据库（如果不存在）
 	createSQL := fmt.Sprintf(
 		"CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
-		dbName,
+		cfg.DBName,
 	)
-	if err := rootDB.Exec(createSQL).Error; err != nil {
-		return fmt.Errorf("创建数据库 '%s' 失败: %w", dbName, err)
+	if err := serverDB.Exec(createSQL).Error; err != nil {
+		return fmt.Errorf("创建数据库 '%s' 失败: %w", cfg.DBName, err)
 	}
-	log.Printf("✓ 数据库 '%s' 已就绪", dbName)
+	log.Printf("✓ 数据库 '%s' 已就绪", cfg.DBName)
+	return nil
+}
 
-	// 关闭临时连接
-	if sqlDB, err := rootDB.DB(); err == nil {
-		sqlDB.Close()
-	}
-
-	// 第二步：连接到目标数据库
+func openTargetDatabase() error {
+	cfg := config.AppConfig
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		dbUser, dbPassword, dbHost, dbPort, dbName,
+		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName,
 	)
 
 	// 配置 GORM 日志
@@ -112,13 +125,14 @@ func InitDB() error {
 
 	// 测试数据库连接
 	if err := sqlDB.Ping(); err != nil {
+		_ = sqlDB.Close()
 		return fmt.Errorf("数据库连接测试失败: %w", err)
 	}
 
 	// 保存全局数据库连接实例
 	DB = db
 
-	log.Printf("✓ 数据库连接成功: %s@%s:%s/%s", dbUser, dbHost, dbPort, dbName)
+	log.Printf("✓ 数据库连接成功: %s@%s:%s/%s", cfg.DBUser, cfg.DBHost, cfg.DBPort, cfg.DBName)
 	return nil
 }
 
