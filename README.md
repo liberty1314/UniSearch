@@ -280,14 +280,14 @@ mysql -h "$DB_HOST" -P "$DB_PORT" -u unisearch_runtime -p "$DB_NAME" \
 
 ```bash
 docker compose stop app
-read -rsp "旧主密钥: " OLD_SECRET_MASTER_KEY && echo
+read -rsp "旧主密钥: " SECRET_MASTER_KEY && echo
 read -rsp "新主密钥: " NEW_SECRET_MASTER_KEY && echo
-export OLD_SECRET_MASTER_KEY NEW_SECRET_MASTER_KEY
+export SECRET_MASTER_KEY NEW_SECRET_MASTER_KEY
 docker compose run --rm --no-deps \
   --entrypoint /app/backend/unisearch-rotate-master-key \
-  -e OLD_SECRET_MASTER_KEY -e NEW_SECRET_MASTER_KEY \
+  -e SECRET_MASTER_KEY -e NEW_SECRET_MASTER_KEY \
   app -confirm rotate-database-master-key
-unset OLD_SECRET_MASTER_KEY NEW_SECRET_MASTER_KEY
+unset SECRET_MASTER_KEY NEW_SECRET_MASTER_KEY
 ```
 
 禁止把 `NEW_SECRET_MASTER_KEY` 写入 Compose、环境模板、shell 历史、命令参数或日志。轮换失败时保持停写，不得切换运行时主密钥；恢复旧主密钥并使用原镜像回滚。

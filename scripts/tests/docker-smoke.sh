@@ -8,16 +8,33 @@ NETWORK_NAME="unisearch-smoke-${SMOKE_ID}"
 MYSQL_CONTAINER="unisearch-smoke-mysql-${SMOKE_ID}"
 REDIS_CONTAINER="unisearch-smoke-redis-${SMOKE_ID}"
 APP_CONTAINER="unisearch-smoke-app-${SMOKE_ID}"
-MYSQL_ROOT_PASSWORD="docker-smoke-root-password"
+MYSQL_ROOT_PASSWORD=""
 MYSQL_MIGRATION_USER="unisearch_smoke_migrate"
-MYSQL_MIGRATION_PASSWORD="docker-smoke-migration-password"
+MYSQL_MIGRATION_PASSWORD=""
 MYSQL_RUNTIME_USER="unisearch_smoke_runtime"
-MYSQL_RUNTIME_PASSWORD="docker-smoke-runtime-password"
-REDIS_PASSWORD="docker-smoke-redis-password"
+MYSQL_RUNTIME_PASSWORD=""
+REDIS_PASSWORD=""
+AUTH_JWT_SECRET=""
+RESOURCE_PUBLIC_ID_SECRET=""
+SECRET_MASTER_KEY=""
+INITIAL_ADMIN_PASSWORD=""
 
 source "$ROOT_DIR/scripts/tests/lib/docker-preflight.sh"
 
 require_docker_daemon
+if ! command -v openssl >/dev/null 2>&1; then
+  echo "缺少 openssl，无法生成 Docker smoke 临时凭据" >&2
+  exit 1
+fi
+
+MYSQL_ROOT_PASSWORD="$(openssl rand -hex 24)"
+MYSQL_MIGRATION_PASSWORD="$(openssl rand -hex 24)"
+MYSQL_RUNTIME_PASSWORD="$(openssl rand -hex 24)"
+REDIS_PASSWORD="$(openssl rand -hex 24)"
+AUTH_JWT_SECRET="$(openssl rand -hex 32)"
+RESOURCE_PUBLIC_ID_SECRET="$(openssl rand -hex 32)"
+SECRET_MASTER_KEY="$(openssl rand -hex 32)"
+INITIAL_ADMIN_PASSWORD="SmokeA1!$(openssl rand -hex 16)"
 
 cleanup() {
   docker rm -f "$APP_CONTAINER" "$MYSQL_CONTAINER" "$REDIS_CONTAINER" >/dev/null 2>&1 || true
@@ -120,12 +137,12 @@ docker run --rm \
   -e REDIS_HOST=redis \
   -e REDIS_PORT=6379 \
   -e REDIS_PASSWORD="$REDIS_PASSWORD" \
-  -e AUTH_JWT_SECRET=docker-smoke-jwt-secret-with-at-least-32-chars \
-  -e RESOURCE_PUBLIC_ID_SECRET=docker-smoke-resource-secret-with-at-least-32-chars \
-  -e SECRET_MASTER_KEY=docker-smoke-master-secret-with-at-least-32-chars \
+  -e AUTH_JWT_SECRET="$AUTH_JWT_SECRET" \
+  -e RESOURCE_PUBLIC_ID_SECRET="$RESOURCE_PUBLIC_ID_SECRET" \
+  -e SECRET_MASTER_KEY="$SECRET_MASTER_KEY" \
   -e SECRET_BACKEND=environment \
   -e INITIAL_ADMIN_USERNAME=docker_smoke_admin \
-  -e INITIAL_ADMIN_PASSWORD='Docker!Smoke2026' \
+  -e INITIAL_ADMIN_PASSWORD="$INITIAL_ADMIN_PASSWORD" \
   -e ENABLED_PLUGINS= \
   "$IMAGE_NAME" >/dev/null
 
@@ -144,12 +161,12 @@ docker run -d \
   -e REDIS_HOST=redis \
   -e REDIS_PORT=6379 \
   -e REDIS_PASSWORD="$REDIS_PASSWORD" \
-  -e AUTH_JWT_SECRET=docker-smoke-jwt-secret-with-at-least-32-chars \
-  -e RESOURCE_PUBLIC_ID_SECRET=docker-smoke-resource-secret-with-at-least-32-chars \
-  -e SECRET_MASTER_KEY=docker-smoke-master-secret-with-at-least-32-chars \
+  -e AUTH_JWT_SECRET="$AUTH_JWT_SECRET" \
+  -e RESOURCE_PUBLIC_ID_SECRET="$RESOURCE_PUBLIC_ID_SECRET" \
+  -e SECRET_MASTER_KEY="$SECRET_MASTER_KEY" \
   -e SECRET_BACKEND=environment \
   -e INITIAL_ADMIN_USERNAME=docker_smoke_admin \
-  -e INITIAL_ADMIN_PASSWORD='Docker!Smoke2026' \
+  -e INITIAL_ADMIN_PASSWORD="$INITIAL_ADMIN_PASSWORD" \
   -e ENABLED_PLUGINS= \
   "$IMAGE_NAME" >/dev/null
 
