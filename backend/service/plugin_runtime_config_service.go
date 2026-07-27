@@ -6,7 +6,6 @@ import (
 	"math"
 	"strconv"
 	"strings"
-	"sync"
 
 	"unisearch/model"
 
@@ -16,23 +15,11 @@ import (
 const PluginRuntimeConfigExtKey = "plugin_runtime_config"
 
 type PluginRuntimeConfigService struct {
-	db          *gorm.DB
-	migrateErr  error
-	migrateOnce sync.Once
+	db *gorm.DB
 }
 
 func NewPluginRuntimeConfigService(db *gorm.DB) *PluginRuntimeConfigService {
 	return &PluginRuntimeConfigService{db: db}
-}
-
-func (s *PluginRuntimeConfigService) ensureMigrated() error {
-	if s == nil || s.db == nil {
-		return nil
-	}
-	s.migrateOnce.Do(func() {
-		s.migrateErr = s.db.AutoMigrate(&model.PluginRuntimeConfig{})
-	})
-	return s.migrateErr
 }
 
 func normalizePluginRuntimeConfigName(name string) string {
@@ -47,10 +34,6 @@ func (s *PluginRuntimeConfigService) GetConfig(pluginName string, manifest model
 	if s == nil || s.db == nil {
 		return defaults, nil
 	}
-	if err := s.ensureMigrated(); err != nil {
-		return nil, err
-	}
-
 	normalizedName := normalizePluginRuntimeConfigName(pluginName)
 	if normalizedName == "" {
 		return defaults, nil
@@ -83,10 +66,6 @@ func (s *PluginRuntimeConfigService) SaveConfig(pluginName string, manifest mode
 	if s == nil || s.db == nil {
 		return normalized, nil
 	}
-	if err := s.ensureMigrated(); err != nil {
-		return nil, err
-	}
-
 	normalizedName := normalizePluginRuntimeConfigName(pluginName)
 	if normalizedName == "" {
 		return nil, fmt.Errorf("插件名称不能为空")

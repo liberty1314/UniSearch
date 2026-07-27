@@ -31,6 +31,19 @@ func newCircuitBreakerTestService(t *testing.T) (*PluginHealthService, *PluginCi
 	return healthService, circuit, &now
 }
 
+func TestPluginCircuitBreakerReturnsErrorWhenSchemaMissing(t *testing.T) {
+	db := newPluginHealthTestDB(t)
+	healthService := NewPluginHealthService(db)
+	circuit := NewPluginCircuitBreakerService(healthService)
+
+	if err := circuit.RecordResultWithSource("missing-schema", false, "timeout", "timeout"); err == nil {
+		t.Fatal("缺少插件健康状态表时熔断器必须返回错误")
+	}
+	if db.Migrator().HasTable(&model.PluginHealthStatus{}) {
+		t.Fatal("熔断器运行路径不得创建插件健康状态表")
+	}
+}
+
 func TestPluginCircuitBreakerOpensAndRecoversThroughHalfOpen(t *testing.T) {
 	healthService, circuit, now := newCircuitBreakerTestService(t)
 

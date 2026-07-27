@@ -12,6 +12,7 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
+	"unisearch/model"
 	"unisearch/service"
 )
 
@@ -21,6 +22,9 @@ func newChannelMetricsHandlerTestCollector(t *testing.T) *service.TGChannelMetri
 	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("打开 SQLite 测试库失败: %v", err)
+	}
+	if err := db.AutoMigrate(&model.TGChannelPerformanceMetric{}, &model.TGChannelErrorLog{}); err != nil {
+		t.Fatalf("迁移频道指标测试表失败: %v", err)
 	}
 	return service.NewTGChannelMetricsCollector(db)
 }

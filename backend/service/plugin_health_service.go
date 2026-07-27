@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 	"unisearch/model"
 
@@ -13,24 +12,12 @@ import (
 
 // PluginHealthService 插件健康状态服务
 type PluginHealthService struct {
-	db          *gorm.DB
-	migrateErr  error
-	migrateOnce sync.Once
+	db *gorm.DB
 }
 
 // NewPluginHealthService 创建插件健康状态服务
 func NewPluginHealthService(db *gorm.DB) *PluginHealthService {
 	return &PluginHealthService{db: db}
-}
-
-func (s *PluginHealthService) ensureMigrated() error {
-	if s == nil || s.db == nil {
-		return nil
-	}
-	s.migrateOnce.Do(func() {
-		s.migrateErr = s.db.AutoMigrate(&model.PluginHealthStatus{})
-	})
-	return s.migrateErr
 }
 
 func normalizePluginName(name string) string {
@@ -50,10 +37,6 @@ func (s *PluginHealthService) RecordResult(pluginName string, healthy bool, errM
 	if s == nil || s.db == nil {
 		return nil
 	}
-	if err := s.ensureMigrated(); err != nil {
-		return fmt.Errorf("迁移插件健康状态表失败: %w", err)
-	}
-
 	normalizedName := normalizePluginName(pluginName)
 	if normalizedName == "" {
 		return fmt.Errorf("插件名称不能为空")
@@ -110,10 +93,6 @@ func (s *PluginHealthService) GetStatus(pluginName string) (*model.PluginHealthS
 	if s == nil || s.db == nil {
 		return nil, nil
 	}
-	if err := s.ensureMigrated(); err != nil {
-		return nil, fmt.Errorf("迁移插件健康状态表失败: %w", err)
-	}
-
 	normalizedName := normalizePluginName(pluginName)
 	if normalizedName == "" {
 		return nil, nil
@@ -136,10 +115,6 @@ func (s *PluginHealthService) GetStatusMap(pluginNames []string) (map[string]boo
 	if s == nil || s.db == nil || len(pluginNames) == 0 {
 		return result, nil
 	}
-	if err := s.ensureMigrated(); err != nil {
-		return nil, fmt.Errorf("迁移插件健康状态表失败: %w", err)
-	}
-
 	normalizedToOriginal := make(map[string]string, len(pluginNames))
 	normalizedNames := make([]string, 0, len(pluginNames))
 
@@ -180,10 +155,6 @@ func (s *PluginHealthService) GetSnapshotMap(pluginNames []string) (map[string]m
 	if s == nil || s.db == nil || len(pluginNames) == 0 {
 		return result, nil
 	}
-	if err := s.ensureMigrated(); err != nil {
-		return nil, fmt.Errorf("迁移插件健康状态表失败: %w", err)
-	}
-
 	normalizedToOriginal := make(map[string]string, len(pluginNames))
 	normalizedNames := make([]string, 0, len(pluginNames))
 
@@ -230,10 +201,6 @@ func (s *PluginHealthService) ClearStatus(pluginName string) error {
 	if s == nil || s.db == nil {
 		return nil
 	}
-	if err := s.ensureMigrated(); err != nil {
-		return fmt.Errorf("迁移插件健康状态表失败: %w", err)
-	}
-
 	normalizedName := normalizePluginName(pluginName)
 	if normalizedName == "" {
 		return nil
@@ -249,10 +216,6 @@ func (s *PluginHealthService) ClearAllStatuses(pluginNames []string) error {
 	if s == nil || s.db == nil {
 		return nil
 	}
-	if err := s.ensureMigrated(); err != nil {
-		return fmt.Errorf("迁移插件健康状态表失败: %w", err)
-	}
-
 	normalizedNames := make([]string, 0, len(pluginNames))
 	seen := make(map[string]struct{}, len(pluginNames))
 	for _, name := range pluginNames {

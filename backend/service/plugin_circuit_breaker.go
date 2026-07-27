@@ -170,9 +170,6 @@ func (s *PluginCircuitBreakerService) saveStatus(status *model.PluginHealthStatu
 	if s == nil || s.pluginHealthService == nil || s.pluginHealthService.db == nil || status == nil {
 		return nil
 	}
-	if err := s.pluginHealthService.ensureMigrated(); err != nil {
-		return fmt.Errorf("迁移插件健康状态表失败: %w", err)
-	}
 	if err := s.pluginHealthService.db.Save(status).Error; err != nil {
 		return fmt.Errorf("保存插件熔断状态失败: %w", err)
 	}

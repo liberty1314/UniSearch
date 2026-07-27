@@ -2,30 +2,17 @@ package service
 
 import (
 	"strings"
-	"sync"
 	"unisearch/model"
 
 	"gorm.io/gorm"
 )
 
 type PluginStateService struct {
-	db          *gorm.DB
-	migrateErr  error
-	migrateOnce sync.Once
+	db *gorm.DB
 }
 
 func NewPluginStateService(db *gorm.DB) *PluginStateService {
 	return &PluginStateService{db: db}
-}
-
-func (s *PluginStateService) ensureMigrated() error {
-	if s == nil || s.db == nil {
-		return nil
-	}
-	s.migrateOnce.Do(func() {
-		s.migrateErr = s.db.AutoMigrate(&model.PluginState{})
-	})
-	return s.migrateErr
 }
 
 func normalizePluginStateName(name string) string {
@@ -46,10 +33,6 @@ func (s *PluginStateService) GetStatusMap(pluginNames []string) (map[string]bool
 	if s == nil || s.db == nil || len(pluginNames) == 0 {
 		return result, nil
 	}
-	if err := s.ensureMigrated(); err != nil {
-		return nil, err
-	}
-
 	normalizedToOriginal := make(map[string]string, len(pluginNames))
 	normalizedNames := make([]string, 0, len(pluginNames))
 	for _, name := range pluginNames {
@@ -89,10 +72,6 @@ func (s *PluginStateService) SetStatus(pluginName, pluginType string, isEnabled 
 	if s == nil || s.db == nil {
 		return nil
 	}
-	if err := s.ensureMigrated(); err != nil {
-		return err
-	}
-
 	normalizedName := normalizePluginStateName(pluginName)
 	if normalizedName == "" {
 		return nil
@@ -124,10 +103,6 @@ func (s *PluginStateService) DeleteStatus(pluginName string) error {
 	if s == nil || s.db == nil {
 		return nil
 	}
-	if err := s.ensureMigrated(); err != nil {
-		return err
-	}
-
 	normalizedName := normalizePluginStateName(pluginName)
 	if normalizedName == "" {
 		return nil

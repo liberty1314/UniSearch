@@ -49,13 +49,11 @@ type PluginMetricsCollector struct {
 	capacity      int
 	flushInterval time.Duration
 
-	mu          sync.Mutex
-	events      []PluginMetricEvent
-	active      map[string]int
-	started     bool
-	closed      bool
-	migrateErr  error
-	migrateOnce sync.Once
+	mu      sync.Mutex
+	events  []PluginMetricEvent
+	active  map[string]int
+	started bool
+	closed  bool
 }
 
 // NewPluginMetricsCollector 创建插件指标采集器。
@@ -79,16 +77,6 @@ func newPluginMetricsCollectorWithConfig(db *gorm.DB, cfg pluginMetricsCollector
 		flushInterval: cfg.flushInterval,
 		active:        make(map[string]int),
 	}
-}
-
-func (c *PluginMetricsCollector) ensureMigrated() error {
-	if c == nil || c.db == nil {
-		return nil
-	}
-	c.migrateOnce.Do(func() {
-		c.migrateErr = c.db.AutoMigrate(&model.PluginPerformanceMetric{}, &model.PluginErrorLog{})
-	})
-	return c.migrateErr
 }
 
 // Start 启动定时聚合任务。重复调用只会启动一次。
@@ -195,10 +183,6 @@ func (c *PluginMetricsCollector) Flush(ctx context.Context) error {
 	if c == nil || c.db == nil {
 		return nil
 	}
-	if err := c.ensureMigrated(); err != nil {
-		return fmt.Errorf("迁移插件指标表失败: %w", err)
-	}
-
 	c.mu.Lock()
 	events := make([]PluginMetricEvent, len(c.events))
 	copy(events, c.events)
@@ -275,10 +259,6 @@ func (c *PluginMetricsCollector) ListMetrics(query PluginMetricsQuery) ([]model.
 	if c == nil || c.db == nil {
 		return []model.PluginPerformanceMetric{}, nil
 	}
-	if err := c.ensureMigrated(); err != nil {
-		return nil, fmt.Errorf("迁移插件指标表失败: %w", err)
-	}
-
 	db := c.db.Model(&model.PluginPerformanceMetric{}).Order("bucket_started_at DESC")
 	if pluginName := normalizePluginName(query.PluginName); pluginName != "" {
 		db = db.Where("plugin_name = ?", pluginName)
@@ -310,10 +290,6 @@ func (c *PluginMetricsCollector) ListErrorLogs(query PluginErrorLogQuery) ([]mod
 	if c == nil || c.db == nil {
 		return []model.PluginErrorLog{}, 0, nil
 	}
-	if err := c.ensureMigrated(); err != nil {
-		return nil, 0, fmt.Errorf("迁移插件指标表失败: %w", err)
-	}
-
 	if query.Page <= 0 {
 		query.Page = 1
 	}

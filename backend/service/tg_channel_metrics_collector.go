@@ -45,12 +45,10 @@ type TGChannelMetricsCollector struct {
 	capacity      int
 	flushInterval time.Duration
 
-	mu          sync.Mutex
-	events      []TGChannelMetricEvent
-	active      map[string]int
-	started     bool
-	migrateErr  error
-	migrateOnce sync.Once
+	mu      sync.Mutex
+	events  []TGChannelMetricEvent
+	active  map[string]int
+	started bool
 }
 
 // NewTGChannelMetricsCollector 创建频道指标采集器。
@@ -74,16 +72,6 @@ func newTGChannelMetricsCollectorWithConfig(db *gorm.DB, cfg tgChannelMetricsCol
 		flushInterval: cfg.flushInterval,
 		active:        make(map[string]int),
 	}
-}
-
-func (c *TGChannelMetricsCollector) ensureMigrated() error {
-	if c == nil || c.db == nil {
-		return nil
-	}
-	c.migrateOnce.Do(func() {
-		c.migrateErr = c.db.AutoMigrate(&model.TGChannelPerformanceMetric{}, &model.TGChannelErrorLog{})
-	})
-	return c.migrateErr
 }
 
 // Start 启动定时聚合任务。重复调用只会启动一次。
@@ -190,10 +178,6 @@ func (c *TGChannelMetricsCollector) Flush(ctx context.Context) error {
 	if c == nil || c.db == nil {
 		return nil
 	}
-	if err := c.ensureMigrated(); err != nil {
-		return fmt.Errorf("迁移频道指标表失败: %w", err)
-	}
-
 	c.mu.Lock()
 	events := make([]TGChannelMetricEvent, len(c.events))
 	copy(events, c.events)
@@ -270,10 +254,6 @@ func (c *TGChannelMetricsCollector) ListMetrics(query TGChannelMetricsQuery) ([]
 	if c == nil || c.db == nil {
 		return []model.TGChannelPerformanceMetric{}, nil
 	}
-	if err := c.ensureMigrated(); err != nil {
-		return nil, fmt.Errorf("迁移频道指标表失败: %w", err)
-	}
-
 	db := c.db.Model(&model.TGChannelPerformanceMetric{}).Order("bucket_started_at DESC")
 	if channelName := normalizeChannelName(query.ChannelName); channelName != "" {
 		db = db.Where("channel_name = ?", channelName)
@@ -305,10 +285,6 @@ func (c *TGChannelMetricsCollector) ListErrorLogs(query TGChannelErrorLogQuery) 
 	if c == nil || c.db == nil {
 		return []model.TGChannelErrorLog{}, 0, nil
 	}
-	if err := c.ensureMigrated(); err != nil {
-		return nil, 0, fmt.Errorf("迁移频道指标表失败: %w", err)
-	}
-
 	if query.Page <= 0 {
 		query.Page = 1
 	}

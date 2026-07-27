@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 	"unisearch/config"
 	"unisearch/model"
@@ -154,9 +153,7 @@ const (
 
 // SystemSettingsService 系统设置服务
 type SystemSettingsService struct {
-	db               *gorm.DB
-	ensureSchemaOnce sync.Once
-	ensureSchemaErr  error
+	db *gorm.DB
 }
 
 type TMDBAdminSettings struct {
@@ -172,23 +169,10 @@ func NewSystemSettingsService(db *gorm.DB) *SystemSettingsService {
 	return &SystemSettingsService{db: db}
 }
 
-func (s *SystemSettingsService) ensureSchema() error {
-	s.ensureSchemaOnce.Do(func() {
-		if s.db == nil {
-			s.ensureSchemaErr = errors.New("数据库连接未初始化")
-			return
-		}
-
-		s.ensureSchemaErr = s.db.AutoMigrate(&model.SystemSettings{})
-	})
-
-	return s.ensureSchemaErr
-}
-
 // GetSettings 获取系统设置（如果不存在则创建默认设置）
 func (s *SystemSettingsService) GetSettings() (*model.SystemSettings, error) {
-	if err := s.ensureSchema(); err != nil {
-		return nil, err
+	if s == nil || s.db == nil {
+		return nil, errors.New("数据库连接未初始化")
 	}
 
 	var settings model.SystemSettings

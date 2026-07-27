@@ -314,7 +314,7 @@ func TestSystemSettingsServiceApplyRuntimeSettingsUpdatesAppConfig(t *testing.T)
 	}
 }
 
-func TestSystemSettingsServiceUpdateCacheSettingsAutoMigratesLegacySchema(t *testing.T) {
+func TestSystemSettingsServiceReturnsErrorForLegacySchema(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open sqlite db: %v", err)
@@ -341,24 +341,20 @@ func TestSystemSettingsServiceUpdateCacheSettingsAutoMigratesLegacySchema(t *tes
 	searchTTL := 5400
 	queueSize := 512
 
-	cacheSettings, err := service.UpdateCacheSettings(CacheSettingsUpdateInput{
+	_, err = service.UpdateCacheSettings(CacheSettingsUpdateInput{
 		SearchCacheTTLSeconds: &searchTTL,
 		CacheWriteQueueSize:   &queueSize,
 	})
-	if err != nil {
-		t.Fatalf("UpdateCacheSettings on legacy schema returned error: %v", err)
+	if err == nil {
+		t.Fatal("旧结构缺少缓存字段时更新必须失败")
 	}
 
-	if cacheSettings.SearchCacheTTLSeconds != 5400 {
-		t.Fatalf("expected migrated schema to persist search cache ttl, got %d", cacheSettings.SearchCacheTTLSeconds)
+	if db.Migrator().HasColumn(&model.SystemSettings{}, "cache_enabled") {
+		t.Fatal("服务运行路径不得为旧结构补充 cache_enabled 列")
 	}
 
-	if !db.Migrator().HasColumn(&model.SystemSettings{}, "cache_enabled") {
-		t.Fatal("expected legacy schema to auto-migrate cache_enabled column")
-	}
-
-	if !db.Migrator().HasColumn(&model.SystemSettings{}, "search_cache_ttl_seconds") {
-		t.Fatal("expected legacy schema to auto-migrate search_cache_ttl_seconds column")
+	if db.Migrator().HasColumn(&model.SystemSettings{}, "search_cache_ttl_seconds") {
+		t.Fatal("服务运行路径不得为旧结构补充 search_cache_ttl_seconds 列")
 	}
 }
 

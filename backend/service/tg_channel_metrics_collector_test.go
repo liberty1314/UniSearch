@@ -18,11 +18,37 @@ func newTGChannelMetricsTestCollector(t *testing.T) (*TGChannelMetricsCollector,
 	if err != nil {
 		t.Fatalf("打开 SQLite 测试库失败: %v", err)
 	}
+	if err := db.AutoMigrate(&model.TGChannelPerformanceMetric{}, &model.TGChannelErrorLog{}); err != nil {
+		t.Fatalf("迁移频道指标测试表失败: %v", err)
+	}
 	collector := newTGChannelMetricsCollectorWithConfig(db, tgChannelMetricsCollectorConfig{
 		capacity:      10,
 		flushInterval: time.Hour,
 	})
 	return collector, db
+}
+
+func TestTGChannelMetricsCollectorReturnsErrorWhenSchemaMissing(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("打开 SQLite 测试库失败: %v", err)
+	}
+	collector := newTGChannelMetricsCollectorWithConfig(db, tgChannelMetricsCollectorConfig{
+		capacity:      10,
+		flushInterval: time.Hour,
+	})
+	collector.RecordEvent(TGChannelMetricEvent{
+		ChannelName: "missing-schema",
+		Success:     true,
+		OccurredAt:  time.Now(),
+	})
+
+	if err := collector.Flush(context.Background()); err == nil {
+		t.Fatal("缺少频道指标表时必须返回错误")
+	}
+	if db.Migrator().HasTable(&model.TGChannelPerformanceMetric{}) || db.Migrator().HasTable(&model.TGChannelErrorLog{}) {
+		t.Fatal("服务运行路径不得创建频道指标表")
+	}
 }
 
 func TestTGChannelMetricsCollectorAggregatesAndFlushesMetrics(t *testing.T) {

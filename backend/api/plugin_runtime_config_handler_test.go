@@ -68,6 +68,9 @@ func newPluginRuntimeConfigTestRouter(t *testing.T) *gin.Engine {
 	if err != nil {
 		t.Fatalf("打开测试数据库失败: %v", err)
 	}
+	if err := db.AutoMigrate(&model.PluginRuntimeConfig{}); err != nil {
+		t.Fatalf("迁移插件运行配置表失败: %v", err)
+	}
 	manager := plugin.NewPluginManager()
 	manager.RegisterPlugin(newRuntimeConfigTestPlugin())
 	searchService := service.NewSearchService(manager, nil, nil)

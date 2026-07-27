@@ -111,22 +111,15 @@ func TestPluginHealthServiceDoesNotCountDeferredOrPartialSuccessAsTimeout(t *tes
 	}
 }
 
-func TestPluginHealthServiceRecordResultAutoMigratesSchema(t *testing.T) {
-	service := NewPluginHealthService(newPluginHealthTestDB(t))
+func TestPluginHealthServiceReturnsErrorWhenSchemaMissing(t *testing.T) {
+	db := newPluginHealthTestDB(t)
+	service := NewPluginHealthService(db)
 
-	if err := service.RecordResult("auto-migrate-plugin", false, "timeout", "timeout"); err != nil {
-		t.Fatalf("记录健康状态应自动迁移表结构: %v", err)
+	if err := service.RecordResult("missing-schema", false, "timeout", "timeout"); err == nil {
+		t.Fatal("缺少插件健康状态表时必须返回错误")
 	}
-
-	status, err := service.GetStatus("auto-migrate-plugin")
-	if err != nil {
-		t.Fatalf("查询自动迁移后的健康状态失败: %v", err)
-	}
-	if status == nil {
-		t.Fatal("自动迁移后应能读取健康状态")
-	}
-	if status.TotalChecks != 1 || status.TimeoutCount != 1 || status.TimeoutRate != 1 {
-		t.Fatalf("自动迁移后统计字段应可写入，实际为 %#v", status)
+	if db.Migrator().HasTable(&model.PluginHealthStatus{}) {
+		t.Fatal("服务运行路径不得创建插件健康状态表")
 	}
 }
 

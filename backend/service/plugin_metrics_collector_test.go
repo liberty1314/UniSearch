@@ -18,11 +18,37 @@ func newPluginMetricsTestCollector(t *testing.T) (*PluginMetricsCollector, *gorm
 	if err != nil {
 		t.Fatalf("打开 SQLite 测试库失败: %v", err)
 	}
+	if err := db.AutoMigrate(&model.PluginPerformanceMetric{}, &model.PluginErrorLog{}); err != nil {
+		t.Fatalf("迁移插件指标测试表失败: %v", err)
+	}
 	collector := newPluginMetricsCollectorWithConfig(db, pluginMetricsCollectorConfig{
 		capacity:      10,
 		flushInterval: time.Hour,
 	})
 	return collector, db
+}
+
+func TestPluginMetricsCollectorReturnsErrorWhenSchemaMissing(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("打开 SQLite 测试库失败: %v", err)
+	}
+	collector := newPluginMetricsCollectorWithConfig(db, pluginMetricsCollectorConfig{
+		capacity:      10,
+		flushInterval: time.Hour,
+	})
+	collector.RecordEvent(PluginMetricEvent{
+		PluginName: "missing-schema",
+		Success:    true,
+		OccurredAt: time.Now(),
+	})
+
+	if err := collector.Flush(context.Background()); err == nil {
+		t.Fatal("缺少插件指标表时必须返回错误")
+	}
+	if db.Migrator().HasTable(&model.PluginPerformanceMetric{}) || db.Migrator().HasTable(&model.PluginErrorLog{}) {
+		t.Fatal("服务运行路径不得创建插件指标表")
+	}
 }
 
 func TestPluginMetricsCollectorAggregatesAndFlushesMetrics(t *testing.T) {

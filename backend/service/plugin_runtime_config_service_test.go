@@ -20,6 +20,9 @@ func newPluginRuntimeConfigTestService(t *testing.T) *PluginRuntimeConfigService
 	if err != nil {
 		t.Fatalf("打开测试数据库失败: %v", err)
 	}
+	if err := db.AutoMigrate(&model.PluginRuntimeConfig{}); err != nil {
+		t.Fatalf("迁移插件运行配置表失败: %v", err)
+	}
 	return NewPluginRuntimeConfigService(db)
 }
 
@@ -145,5 +148,20 @@ func TestPluginRuntimeConfigServiceRejectsInvalidNumber(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("期望非法数字配置保存失败")
+	}
+}
+
+func TestPluginRuntimeConfigServiceReturnsErrorWhenSchemaMissing(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("打开 SQLite 测试库失败: %v", err)
+	}
+
+	service := NewPluginRuntimeConfigService(db)
+	if _, err := service.GetConfig("missing-schema", testRuntimeConfigManifest()); err == nil {
+		t.Fatal("缺少插件运行配置表时必须返回错误")
+	}
+	if db.Migrator().HasTable(&model.PluginRuntimeConfig{}) {
+		t.Fatal("服务运行路径不得创建插件运行配置表")
 	}
 }

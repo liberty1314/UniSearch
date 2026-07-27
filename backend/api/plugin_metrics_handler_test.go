@@ -12,6 +12,7 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
+	"unisearch/model"
 	"unisearch/service"
 )
 
@@ -21,6 +22,9 @@ func newPluginMetricsHandlerTestCollector(t *testing.T) *service.PluginMetricsCo
 	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("打开 SQLite 测试库失败: %v", err)
+	}
+	if err := db.AutoMigrate(&model.PluginPerformanceMetric{}, &model.PluginErrorLog{}); err != nil {
+		t.Fatalf("迁移插件指标测试表失败: %v", err)
 	}
 	return service.NewPluginMetricsCollector(db)
 }
