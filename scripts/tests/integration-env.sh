@@ -11,15 +11,19 @@ APP_PORT="${UNISEARCH_IT_APP_PORT:-18888}"
 API_BASE_URL="http://127.0.0.1:${APP_PORT}"
 INITIAL_ADMIN_USERNAME="integration_admin"
 INITIAL_ADMIN_PASSWORD="Integration!Admin2026"
-MYSQL_APP_USER="unisearch_integration"
+MYSQL_MIGRATION_USER="unisearch_migrate"
+MYSQL_RUNTIME_USER="unisearch_runtime"
 MYSQL_ROOT_PASSWORD=""
-MYSQL_APP_PASSWORD=""
+MYSQL_MIGRATION_PASSWORD=""
+MYSQL_RUNTIME_PASSWORD=""
 REDIS_PASSWORD=""
+UNMIGRATED_DB="unisearch_unmigrated"
 DEVICE_FINGERPRINT="integration-device-${RUN_ID}"
 LEGACY_REFRESH_TOKEN="legacy-plaintext-token-${RUN_ID}"
 TMP_DIR="$(mktemp -d)"
 APP_BINARY="$TMP_DIR/unisearch-integration"
 APP_LOG="$TMP_DIR/backend.log"
+UNMIGRATED_LOG="$TMP_DIR/unmigrated.log"
 LOGIN_HEADERS="$TMP_DIR/login.headers"
 LOGIN_BODY="$TMP_DIR/login.json"
 LOGIN_COOKIES="$TMP_DIR/login.cookies"
@@ -49,6 +53,10 @@ cleanup() {
     echo "== 集成环境: 后端失败日志 ==" >&2
     tail -n 120 "$APP_LOG" >&2 || true
   fi
+  if [ "$status" -ne 0 ] && [ -s "$UNMIGRATED_LOG" ]; then
+    echo "== 集成环境: 缺迁移启动日志 ==" >&2
+    tail -n 120 "$UNMIGRATED_LOG" >&2 || true
+  fi
   docker rm -f "$MYSQL_CONTAINER" "$REDIS_CONTAINER" >/dev/null 2>&1 || true
   rm -rf "$TMP_DIR"
   return "$status"
@@ -63,16 +71,20 @@ require_command() {
   fi
 }
 
-run_backend_command() {
+run_backend_command_as() {
+  local db_user="$1"
+  local db_password="$2"
+  shift 2
+
   (
     cd "$ROOT_DIR/backend"
     APP_ENV=development \
     PORT="$APP_PORT" \
     DB_HOST=127.0.0.1 \
     DB_PORT="$MYSQL_PORT" \
-    DB_USER="$MYSQL_APP_USER" \
-    DB_PASSWORD="$MYSQL_APP_PASSWORD" \
-    DB_NAME=unisearch \
+    DB_USER="$db_user" \
+    DB_PASSWORD="$db_password" \
+    DB_NAME="${DB_NAME:-unisearch}" \
     REDIS_HOST=127.0.0.1 \
     REDIS_PORT="$REDIS_PORT" \
     REDIS_PASSWORD="$REDIS_PASSWORD" \
@@ -88,11 +100,50 @@ run_backend_command() {
   )
 }
 
-mysql_scalar() {
+mysql_exec_as() {
+  local db_user="$1"
+  local db_password="$2"
+  local db_name="$3"
+  local query="$4"
+  if [ -n "$db_name" ]; then
+    docker exec "$MYSQL_CONTAINER" mysql \
+      -h 127.0.0.1 -u"$db_user" -p"$db_password" "$db_name" \
+      -e "$query" 2>/dev/null
+    return
+  fi
+
+  docker exec "$MYSQL_CONTAINER" mysql \
+    -h 127.0.0.1 -u"$db_user" -p"$db_password" \
+    -e "$query" 2>/dev/null
+}
+
+mysql_scalar_as() {
+  local db_user="$1"
+  local db_password="$2"
+  local db_name="$3"
+  local query="$4"
+
   docker exec "$MYSQL_CONTAINER" mysql \
     --batch --skip-column-names \
-    -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" unisearch \
-    -e "$1" 2>/dev/null
+    -h 127.0.0.1 -u"$db_user" -p"$db_password" "$db_name" \
+    -e "$query" 2>/dev/null
+}
+
+mysql_scalar() {
+  mysql_scalar_as "$MYSQL_RUNTIME_USER" "$MYSQL_RUNTIME_PASSWORD" unisearch "$1"
+}
+
+assert_mysql_command_fails() {
+  local db_user="$1"
+  local db_password="$2"
+  local db_name="$3"
+  local query="$4"
+  local message="$5"
+
+  if mysql_exec_as "$db_user" "$db_password" "$db_name" "$query" >/dev/null 2>&1; then
+    echo "$message" >&2
+    exit 1
+  fi
 }
 
 assert_equals() {
@@ -123,16 +174,14 @@ require_command jq
 require_command openssl
 
 MYSQL_ROOT_PASSWORD="$(openssl rand -hex 24)"
-MYSQL_APP_PASSWORD="$(openssl rand -hex 24)"
+MYSQL_MIGRATION_PASSWORD="$(openssl rand -hex 24)"
+MYSQL_RUNTIME_PASSWORD="$(openssl rand -hex 24)"
 REDIS_PASSWORD="$(openssl rand -hex 24)"
 
 echo "== 集成环境: 启动 MySQL 与 Redis =="
 docker run -d \
   --name "$MYSQL_CONTAINER" \
   -e MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" \
-  -e MYSQL_DATABASE=unisearch \
-  -e MYSQL_USER="$MYSQL_APP_USER" \
-  -e MYSQL_PASSWORD="$MYSQL_APP_PASSWORD" \
   -e TZ=Asia/Shanghai \
   -p "127.0.0.1:${MYSQL_PORT}:3306" \
   mysql:8.0 \
@@ -156,6 +205,20 @@ for _ in {1..60}; do
 done
 docker exec "$MYSQL_CONTAINER" mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" --silent >/dev/null
 
+echo "== 集成环境: 创建迁移账号与运行账号 =="
+docker exec -i "$MYSQL_CONTAINER" mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" >/dev/null 2>&1 <<SQL
+CREATE USER '${MYSQL_MIGRATION_USER}'@'%' IDENTIFIED BY '${MYSQL_MIGRATION_PASSWORD}';
+GRANT CREATE, ALTER, DROP, INDEX, REFERENCES, SELECT, INSERT, UPDATE, DELETE
+ON \`unisearch\`.* TO '${MYSQL_MIGRATION_USER}'@'%';
+GRANT CREATE, ALTER, DROP, INDEX, REFERENCES, SELECT, INSERT, UPDATE, DELETE
+ON \`${UNMIGRATED_DB}\`.* TO '${MYSQL_MIGRATION_USER}'@'%';
+CREATE USER '${MYSQL_RUNTIME_USER}'@'%' IDENTIFIED BY '${MYSQL_RUNTIME_PASSWORD}';
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON \`unisearch\`.* TO '${MYSQL_RUNTIME_USER}'@'%';
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON \`${UNMIGRATED_DB}\`.* TO '${MYSQL_RUNTIME_USER}'@'%';
+SQL
+
 echo "== 集成环境: 等待 Redis 就绪 =="
 for _ in {1..30}; do
   if docker exec "$REDIS_CONTAINER" redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG; then
@@ -166,10 +229,31 @@ done
 docker exec "$REDIS_CONTAINER" redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG
 
 echo "== 集成环境: 执行数据库迁移 =="
-run_backend_command go run ./cmd/migrate
+run_backend_command_as "$MYSQL_MIGRATION_USER" "$MYSQL_MIGRATION_PASSWORD" go run ./cmd/migrate
+
+echo "== 集成环境: 验证迁移账号和运行账号最小权限 =="
+mysql_exec_as "$MYSQL_MIGRATION_USER" "$MYSQL_MIGRATION_PASSWORD" unisearch \
+  "CREATE TABLE runtime_privilege_probe (id BIGINT PRIMARY KEY, probe_value VARCHAR(32) NOT NULL);" >/dev/null
+mysql_exec_as "$MYSQL_RUNTIME_USER" "$MYSQL_RUNTIME_PASSWORD" unisearch \
+  "INSERT INTO runtime_privilege_probe (id, probe_value) VALUES (1, 'created');" >/dev/null
+mysql_exec_as "$MYSQL_RUNTIME_USER" "$MYSQL_RUNTIME_PASSWORD" unisearch \
+  "UPDATE runtime_privilege_probe SET probe_value = 'updated' WHERE id = 1;" >/dev/null
+assert_equals "updated" "$(mysql_scalar "SELECT probe_value FROM runtime_privilege_probe WHERE id = 1;")" "运行账号 DML 校验失败"
+mysql_exec_as "$MYSQL_RUNTIME_USER" "$MYSQL_RUNTIME_PASSWORD" unisearch \
+  "DELETE FROM runtime_privilege_probe WHERE id = 1;" >/dev/null
+assert_equals "0" "$(mysql_scalar "SELECT COUNT(*) FROM runtime_privilege_probe;")" "运行账号删除探针记录失败"
+assert_mysql_command_fails "$MYSQL_RUNTIME_USER" "$MYSQL_RUNTIME_PASSWORD" unisearch \
+  "CREATE TABLE runtime_create_denied (id BIGINT PRIMARY KEY);" \
+  "运行账号不应具有 CREATE TABLE 权限"
+assert_mysql_command_fails "$MYSQL_RUNTIME_USER" "$MYSQL_RUNTIME_PASSWORD" unisearch \
+  "ALTER TABLE runtime_privilege_probe ADD COLUMN forbidden_column BIGINT;" \
+  "运行账号不应具有 ALTER TABLE 权限"
+assert_mysql_command_fails "$MYSQL_RUNTIME_USER" "$MYSQL_RUNTIME_PASSWORD" unisearch \
+  "DROP TABLE runtime_privilege_probe;" \
+  "运行账号不应具有 DROP TABLE 权限"
 
 echo "== 集成环境: 创建旧刷新令牌原文夹具 =="
-docker exec "$MYSQL_CONTAINER" mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" unisearch -e "
+mysql_exec_as "$MYSQL_MIGRATION_USER" "$MYSQL_MIGRATION_PASSWORD" unisearch "
 CREATE TABLE IF NOT EXISTS refresh_tokens (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   token VARCHAR(255) NOT NULL,
@@ -183,14 +267,36 @@ VALUES ('${LEGACY_REFRESH_TOKEN}', '${INITIAL_ADMIN_USERNAME}', DATE_ADD(NOW(), 
 assert_equals "1" "$(mysql_scalar "SELECT COUNT(*) FROM refresh_tokens;")" "旧刷新令牌夹具创建失败"
 
 echo "== 集成环境: 执行刷新会话摘要迁移 =="
-run_backend_command go run ./cmd/migrate -migrate-refresh-token-sessions
+run_backend_command_as "$MYSQL_MIGRATION_USER" "$MYSQL_MIGRATION_PASSWORD" \
+  go run ./cmd/migrate -migrate-refresh-token-sessions
 assert_equals "1" "$(mysql_scalar "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'refresh_token_sessions';")" "摘要刷新会话表不存在"
 assert_equals "0" "$(mysql_scalar "SELECT COUNT(*) FROM refresh_tokens;")" "旧刷新令牌原文未清空"
 assert_equals "0" "$(mysql_scalar "SELECT COUNT(*) FROM refresh_token_sessions WHERE CHAR_LENGTH(token_digest) <> 64;")" "摘要长度校验失败"
 
 echo "== 集成环境: 构建并启动后端 =="
 (cd "$ROOT_DIR/backend" && go build -o "$APP_BINARY" .)
-run_backend_command "$APP_BINARY" >"$APP_LOG" 2>&1 &
+
+echo "== 集成环境: 验证缺失迁移时应用失败关闭 =="
+mysql_exec_as "$MYSQL_MIGRATION_USER" "$MYSQL_MIGRATION_PASSWORD" "" \
+  "CREATE DATABASE ${UNMIGRATED_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >/dev/null
+set +e
+DB_NAME="$UNMIGRATED_DB" run_backend_command_as \
+  "$MYSQL_RUNTIME_USER" "$MYSQL_RUNTIME_PASSWORD" "$APP_BINARY" >"$UNMIGRATED_LOG" 2>&1
+unmigrated_status=$?
+set -e
+if [ "$unmigrated_status" -eq 0 ]; then
+  echo "缺少迁移的应用必须在健康检查前退出" >&2
+  exit 1
+fi
+if ! grep -q "数据库结构未完成迁移" "$UNMIGRATED_LOG" || ! grep -q "unisearch-migrate" "$UNMIGRATED_LOG"; then
+  echo "缺少迁移的失败日志必须包含结构错误和迁移命令提示" >&2
+  exit 1
+fi
+assert_equals "0" "$(mysql_scalar_as "$MYSQL_RUNTIME_USER" "$MYSQL_RUNTIME_PASSWORD" "$UNMIGRATED_DB" \
+  "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE();")" "缺迁移启动不得创建业务表"
+
+run_backend_command_as "$MYSQL_RUNTIME_USER" "$MYSQL_RUNTIME_PASSWORD" \
+  "$APP_BINARY" >"$APP_LOG" 2>&1 &
 APP_PID=$!
 
 for _ in {1..60}; do
@@ -267,7 +373,12 @@ assert_equals "401" "$replay_status" "旧轮转 Cookie 重放应被拒绝"
 jq -e '.code == "REFRESH_TOKEN_REUSE_DETECTED"' "$REPLAY_BODY" >/dev/null
 
 echo "== 集成环境: 删除已清空的旧刷新令牌表 =="
-run_backend_command go run ./cmd/migrate -drop-legacy-refresh-tokens
+run_backend_command_as "$MYSQL_MIGRATION_USER" "$MYSQL_MIGRATION_PASSWORD" \
+  go run ./cmd/migrate -drop-legacy-refresh-tokens
 assert_equals "0" "$(mysql_scalar "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'refresh_tokens';")" "旧刷新令牌表删除失败"
+
+echo "== 集成环境: 清理权限探针表 =="
+mysql_exec_as "$MYSQL_MIGRATION_USER" "$MYSQL_MIGRATION_PASSWORD" unisearch \
+  "DROP TABLE runtime_privilege_probe;" >/dev/null
 
 echo "== 集成环境验证完成 =="

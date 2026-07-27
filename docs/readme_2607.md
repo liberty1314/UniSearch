@@ -1,3 +1,12 @@
+- [2026-07-27 20:47] test(database): 验证迁移与运行账号最小权限
+  - 内容: 临时 MySQL 和 Docker smoke 拆分迁移账号与运行账号；迁移账号负责建库、建表和破坏性清理，运行账号只允许 DML。新增运行账号 CREATE/ALTER/DROP 拒绝、空库失败关闭、同镜像显式迁移和登录刷新链路回归。
+  - 迁移与回滚: 发布前先用迁移账号运行 `unisearch-migrate`，再用运行账号启动应用。缺迁移时应用会拒绝启动。回滚时恢复原镜像和原运行账号配置，但不得恢复主应用运行时 DDL；主密钥轮换只在获批镜像包含对应命令时执行。
+  - 文件:
+    - README.md
+    - scripts/tests/docker-smoke.sh
+    - scripts/tests/integration-env.sh
+    - docs/readme_2607.md
+
 - [2026-07-27 12:04] refactor(auth): 迁移刷新令牌为数据库摘要会话
   - 内容: 新增 `refresh_token_sessions` 摘要会话模型和原子轮转服务，登录与刷新只通过 HttpOnly Cookie 传递原始令牌；新增显式破坏性迁移、旧表启动阻断、重放全量撤销和临时 MySQL/Redis 发布演练。删除旧原文模型、文件存储、AES 包装及 `REFRESH_TOKEN_ENCRYPT_KEY` 配置体系。
   - 迁移与回滚: 所有旧刷新 Cookie 一次性失效，用户必须重新登录；禁止双读或恢复旧原文会话。公告重新登录并备份，停旧实例后执行 `-migrate-refresh-token-sessions`，部署新实例并验证旧 Cookie 401、新登录与首次轮转 200、重放 401，观察窗口后执行 `-drop-legacy-refresh-tokens`。只允许回滚到兼容 `refresh_token_sessions` 的镜像。

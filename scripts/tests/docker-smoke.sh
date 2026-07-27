@@ -9,8 +9,10 @@ MYSQL_CONTAINER="unisearch-smoke-mysql-${SMOKE_ID}"
 REDIS_CONTAINER="unisearch-smoke-redis-${SMOKE_ID}"
 APP_CONTAINER="unisearch-smoke-app-${SMOKE_ID}"
 MYSQL_ROOT_PASSWORD="docker-smoke-root-password"
-MYSQL_APP_USER="unisearch_smoke"
-MYSQL_APP_PASSWORD="docker-smoke-database-password"
+MYSQL_MIGRATION_USER="unisearch_smoke_migrate"
+MYSQL_MIGRATION_PASSWORD="docker-smoke-migration-password"
+MYSQL_RUNTIME_USER="unisearch_smoke_runtime"
+MYSQL_RUNTIME_PASSWORD="docker-smoke-runtime-password"
 REDIS_PASSWORD="docker-smoke-redis-password"
 
 source "$ROOT_DIR/scripts/tests/lib/docker-preflight.sh"
@@ -64,9 +66,6 @@ docker run -d \
   --network "$NETWORK_NAME" \
   --network-alias mysql \
   -e MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" \
-  -e MYSQL_DATABASE=unisearch \
-  -e MYSQL_USER="$MYSQL_APP_USER" \
-  -e MYSQL_PASSWORD="$MYSQL_APP_PASSWORD" \
   mysql:8.0 \
   --character-set-server=utf8mb4 \
   --collation-server=utf8mb4_unicode_ci \
@@ -89,6 +88,16 @@ for _ in {1..60}; do
 done
 docker exec "$MYSQL_CONTAINER" mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" --silent >/dev/null
 
+echo "== Docker smoke: 创建迁移账号与运行账号 =="
+docker exec -i "$MYSQL_CONTAINER" mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" >/dev/null 2>&1 <<SQL
+CREATE USER '${MYSQL_MIGRATION_USER}'@'%' IDENTIFIED BY '${MYSQL_MIGRATION_PASSWORD}';
+GRANT CREATE, ALTER, DROP, INDEX, REFERENCES, SELECT, INSERT, UPDATE, DELETE
+ON \`unisearch\`.* TO '${MYSQL_MIGRATION_USER}'@'%';
+CREATE USER '${MYSQL_RUNTIME_USER}'@'%' IDENTIFIED BY '${MYSQL_RUNTIME_PASSWORD}';
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON \`unisearch\`.* TO '${MYSQL_RUNTIME_USER}'@'%';
+SQL
+
 for _ in {1..30}; do
   if docker exec "$REDIS_CONTAINER" redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG; then
     break
@@ -96,6 +105,29 @@ for _ in {1..30}; do
   sleep 1
 done
 docker exec "$REDIS_CONTAINER" redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG
+
+echo "== Docker smoke: 使用迁移账号显式执行数据库迁移 =="
+docker run --rm \
+  --network "$NETWORK_NAME" \
+  --entrypoint /app/backend/unisearch-migrate \
+  -e APP_ENV=production \
+  -e ALLOWED_ORIGINS=https://search.example.com \
+  -e DB_HOST=mysql \
+  -e DB_PORT=3306 \
+  -e DB_USER="$MYSQL_MIGRATION_USER" \
+  -e DB_PASSWORD="$MYSQL_MIGRATION_PASSWORD" \
+  -e DB_NAME=unisearch \
+  -e REDIS_HOST=redis \
+  -e REDIS_PORT=6379 \
+  -e REDIS_PASSWORD="$REDIS_PASSWORD" \
+  -e AUTH_JWT_SECRET=docker-smoke-jwt-secret-with-at-least-32-chars \
+  -e RESOURCE_PUBLIC_ID_SECRET=docker-smoke-resource-secret-with-at-least-32-chars \
+  -e SECRET_MASTER_KEY=docker-smoke-master-secret-with-at-least-32-chars \
+  -e SECRET_BACKEND=environment \
+  -e INITIAL_ADMIN_USERNAME=docker_smoke_admin \
+  -e INITIAL_ADMIN_PASSWORD='Docker!Smoke2026' \
+  -e ENABLED_PLUGINS= \
+  "$IMAGE_NAME" >/dev/null
 
 echo "== Docker smoke: 启动非 root 应用容器 =="
 docker run -d \
@@ -106,8 +138,8 @@ docker run -d \
   -e ALLOWED_ORIGINS=https://search.example.com \
   -e DB_HOST=mysql \
   -e DB_PORT=3306 \
-  -e DB_USER="$MYSQL_APP_USER" \
-  -e DB_PASSWORD="$MYSQL_APP_PASSWORD" \
+  -e DB_USER="$MYSQL_RUNTIME_USER" \
+  -e DB_PASSWORD="$MYSQL_RUNTIME_PASSWORD" \
   -e DB_NAME=unisearch \
   -e REDIS_HOST=redis \
   -e REDIS_PORT=6379 \

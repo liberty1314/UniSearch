@@ -173,8 +173,8 @@ cp .env.example .env
 # 数据库配置
 DB_HOST=localhost
 DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=你的数据库密码
+DB_USER=unisearch_runtime
+DB_PASSWORD=运行账号密码
 DB_NAME=unisearch
 
 # 认证密钥（必须修改为强随机字符串）
@@ -213,18 +213,55 @@ docker build -t unisearch:latest .
 
 #### 4. 执行数据库迁移
 
+生产数据库必须拆分为两个身份：迁移账号只用于 `unisearch-migrate`，可执行目标库的 DDL 和 DML；运行账号只授予 `SELECT`、`INSERT`、`UPDATE`、`DELETE`。主应用不会创建数据库、表或列，缺少迁移时会提示 `数据库结构未完成迁移` 并退出。
+
+先由数据库管理员创建两个账号。密码必须来自密码管理器或平台 Secret，不要直接写入仓库中的 SQL 文件：
+
+```sql
+CREATE USER 'unisearch_migrate'@'%' IDENTIFIED BY '<迁移账号随机密码>';
+GRANT CREATE, ALTER, DROP, INDEX, REFERENCES, SELECT, INSERT, UPDATE, DELETE
+ON `unisearch`.* TO 'unisearch_migrate'@'%';
+
+CREATE USER 'unisearch_runtime'@'%' IDENTIFIED BY '<运行账号随机密码>';
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON `unisearch`.* TO 'unisearch_runtime'@'%';
+```
+
+将 `.env` 中的 `DB_USER`、`DB_PASSWORD` 固定为运行账号。迁移时从当前终端环境临时传入迁移账号，命令完成后立即清理：
+
 ```bash
-docker compose run --rm --entrypoint /app/backend/unisearch-migrate app
+export DB_USER=unisearch_migrate
+read -rsp "迁移账号密码: " DB_PASSWORD && echo
+export DB_PASSWORD
+docker compose run --rm --no-deps \
+  --entrypoint /app/backend/unisearch-migrate \
+  -e DB_USER -e DB_PASSWORD app
+unset DB_USER DB_PASSWORD
+```
+
+迁移后使用运行账号验证 DML 可用，并确认 DDL 被 MySQL 拒绝：
+
+```bash
+mysql -h "$DB_HOST" -P "$DB_PORT" -u unisearch_runtime -p "$DB_NAME" \
+  -e "SELECT 1"
+
+# 此命令必须非零退出；若成功，禁止启动应用并立即收回运行账号 DDL 权限。
+mysql -h "$DB_HOST" -P "$DB_PORT" -u unisearch_runtime -p "$DB_NAME" \
+  -e "CREATE TABLE runtime_ddl_probe (id BIGINT PRIMARY KEY)"
 ```
 
 从仍使用 `refresh_tokens` 原文表的旧版本升级时，这是一次强制全部用户重新登录的破坏性迁移。必须按以下顺序执行：
+
+以下所有迁移和清理命令都必须重新按上文方式交互读取并导出迁移账号到 `DB_USER`、`DB_PASSWORD`，完成后立即 `unset`。
 
 1. 提前公告维护窗口和重新登录要求。
 2. 备份业务数据库，停止所有旧版本应用实例，避免迁移期间继续写入旧会话。
 3. 显式创建摘要会话表并清空旧原文记录：
 
    ```bash
-   docker compose run --rm --entrypoint /app/backend/unisearch-migrate app -migrate-refresh-token-sessions
+   docker compose run --rm --no-deps \
+     --entrypoint /app/backend/unisearch-migrate \
+     -e DB_USER -e DB_PASSWORD app -migrate-refresh-token-sessions
    ```
 
 4. 部署并启动新版本，确认旧 Cookie 请求 `POST /api/auth/refresh` 返回 401。
@@ -232,21 +269,43 @@ docker compose run --rm --entrypoint /app/backend/unisearch-migrate app
 6. 验证窗口结束且所有实例均为新版本后，显式删除已清空的旧表：
 
    ```bash
-   docker compose run --rm --entrypoint /app/backend/unisearch-migrate app -drop-legacy-refresh-tokens
+   docker compose run --rm --no-deps \
+     --entrypoint /app/backend/unisearch-migrate \
+     -e DB_USER -e DB_PASSWORD app -drop-legacy-refresh-tokens
    ```
 
 迁移后数据库只保存刷新令牌的 SHA-256 摘要，原始令牌仅存在于 HttpOnly Cookie。回滚只允许使用兼容 `refresh_token_sessions` 的修复镜像；禁止恢复旧 `refresh_tokens` 原文、旧加密密钥或迁移前会话。
 
+如事件审批要求轮换数据库密钥主密钥，必须先确认当前镜像已包含获批的 `/app/backend/unisearch-rotate-master-key`，再进入停写窗口。当前镜像没有该产物时不得使用临时脚本替代。获批版本按以下顺序执行：停止应用写入、从终端交互读取新旧主密钥、运行原子重加密命令、把 Secret 管理器中的 `SECRET_MASTER_KEY` 更新为新值、启动应用并验证密钥可读，最后撤销旧值。
+
+```bash
+docker compose stop app
+read -rsp "旧主密钥: " OLD_SECRET_MASTER_KEY && echo
+read -rsp "新主密钥: " NEW_SECRET_MASTER_KEY && echo
+export OLD_SECRET_MASTER_KEY NEW_SECRET_MASTER_KEY
+docker compose run --rm --no-deps \
+  --entrypoint /app/backend/unisearch-rotate-master-key \
+  -e OLD_SECRET_MASTER_KEY -e NEW_SECRET_MASTER_KEY \
+  app -confirm rotate-database-master-key
+unset OLD_SECRET_MASTER_KEY NEW_SECRET_MASTER_KEY
+```
+
+禁止把 `NEW_SECRET_MASTER_KEY` 写入 Compose、环境模板、shell 历史、命令参数或日志。轮换失败时保持停写，不得切换运行时主密钥；恢复旧主密钥并使用原镜像回滚。
+
 如需清理已经下线的旧表，确认备份后显式追加参数：
 
 ```bash
-docker compose run --rm --entrypoint /app/backend/unisearch-migrate app -drop-deprecated
+docker compose run --rm --no-deps \
+  --entrypoint /app/backend/unisearch-migrate \
+  -e DB_USER -e DB_PASSWORD app -drop-deprecated
 ```
 
 如需清理已移除上游插件的历史数据，确认目标数据库备份后显式执行：
 
 ```bash
-docker compose run --rm --entrypoint /app/backend/unisearch-migrate app -purge-removed-plugins
+docker compose run --rm --no-deps \
+  --entrypoint /app/backend/unisearch-migrate \
+  -e DB_USER -e DB_PASSWORD app -purge-removed-plugins
 ```
 
 该命令仅清理 `clmao`、`panta`、`panyq`、`xinjuc`、`ouge`、`wanou` 在插件状态、健康状态、运行配置、性能指标和错误日志表中的记录；不会在主应用启动时自动执行。
@@ -295,14 +354,18 @@ docker compose ps
 docker compose restart
 
 # 执行数据库迁移
-docker compose run --rm --entrypoint /app/backend/unisearch-migrate app
+docker compose run --rm --no-deps \
+  --entrypoint /app/backend/unisearch-migrate \
+  -e DB_USER -e DB_PASSWORD app
 
 # 停止服务
 docker compose down
 
 # 重新构建并启动（代码更新后）
 docker build -t unisearch:latest .
-docker compose run --rm --entrypoint /app/backend/unisearch-migrate app
+docker compose run --rm --no-deps \
+  --entrypoint /app/backend/unisearch-migrate \
+  -e DB_USER -e DB_PASSWORD app
 docker compose up -d
 ```
 
@@ -359,9 +422,9 @@ server {
    | `ALLOWED_ORIGINS` | `https://实际生成的域名` | 只允许实际 HTTPS 来源 |
    | `DB_HOST` | `${MYSQL_HOST}` | 引用 Zeabur MySQL 变量 |
    | `DB_PORT` | `${MYSQL_PORT}` | 引用 Zeabur MySQL 变量 |
-   | `DB_USER` | `${MYSQL_USERNAME}` | 引用 Zeabur MySQL 变量 |
-   | `DB_PASSWORD` | `${MYSQL_PASSWORD}` | 引用 Zeabur MySQL 变量 |
-   | `DB_NAME` | `unisearch` | 数据库名，首次启动自动创建 |
+   | `DB_USER` | `${MYSQL_USERNAME}` | 运行账号，仅授予 DML 权限 |
+   | `DB_PASSWORD` | `${MYSQL_PASSWORD}` | 运行账号密码 |
+   | `DB_NAME` | `unisearch` | 必须先由迁移任务创建并完成迁移 |
    | `REDIS_HOST` | `${REDIS_HOST}` | 引用 Zeabur Redis 变量 |
    | `REDIS_PORT` | `${REDIS_PORT}` | 引用 Zeabur Redis 变量 |
    | `REDIS_PASSWORD` | `${REDIS_PASSWORD}` | 生产环境必须使用 Redis 密码 |
@@ -376,7 +439,7 @@ server {
 
 > **⚠️ 重要提示：** 不要设置 `PORT` 变量。本项目架构为 Nginx(8080) + 后端(8888) 内部代理，`PORT` 会覆盖后端端口导致代理失败。
 
-> **数据库自动创建：** 后端启动时会自动创建 `DB_NAME` 指定的数据库（如果不存在），无需手动建库。数据库表结构不会在主应用启动时隐式迁移，首次部署或模型变更后需要先运行迁移命令。
+> **数据库迁移：** 主应用只使用运行账号连接已迁移数据库，不会自动建库或改表。首次部署和每次模型变更都必须先创建一次性迁移任务，使用迁移账号运行 `/app/backend/unisearch-migrate`；任务成功后才能发布主应用。
 
 #### Zeabur 环境变量模板
 
@@ -513,8 +576,8 @@ bash scripts/local.sh
 |------|------|--------|
 | `DB_HOST` | MySQL 主机 | `localhost` |
 | `DB_PORT` | MySQL 端口 | `3306` |
-| `DB_USER` | MySQL 用户名 | `root` |
-| `DB_PASSWORD` | MySQL 密码 | — |
+| `DB_USER` | 主应用 MySQL 运行账号，仅授予 DML 权限；迁移命令临时覆盖为迁移账号 | `root` |
+| `DB_PASSWORD` | 当前数据库账号密码 | — |
 | `DB_NAME` | 数据库名 | `unisearch` |
 
 ### 认证（必填）
@@ -627,10 +690,10 @@ Redis 为可选依赖，连接失败时系统自动降级运行（无缓存）�
 ### Zeabur 部署问题
 
 **`Unknown database 'unisearch'`：**
-后端已支持自动创建数据库。如仍出现此错误，请确认 MySQL 服务已完全启动后重新部署主应用。
+主应用不会自动创建数据库。请确认 MySQL 已就绪，并使用迁移账号运行 `unisearch-migrate`；迁移成功后再以运行账号启动主应用。
 
 **提示表不存在或首次管理员缺失：**
-先配置 `INITIAL_ADMIN_USERNAME` 和 `INITIAL_ADMIN_PASSWORD`，再执行数据库迁移命令并启动主应用。Docker 环境执行 `docker compose run --rm --entrypoint /app/backend/unisearch-migrate app`；本地开发执行 `cd backend && go run ./cmd/migrate`。数据库已有管理员时不需要保留这两个变量。
+先配置 `INITIAL_ADMIN_USERNAME` 和 `INITIAL_ADMIN_PASSWORD`，再使用迁移账号执行数据库迁移并以运行账号启动主应用。Docker 环境按“执行数据库迁移”章节交互导出迁移账号后运行迁移容器；本地开发使用迁移账号设置 `DB_USER`、`DB_PASSWORD` 后执行 `cd backend && go run ./cmd/migrate`。数据库已有管理员时不需要保留首次管理员变量。
 
 **后端反复重启（exit status 1）：**
 检查 Zeabur 控制台的 Runtime Logs，常见原因：
