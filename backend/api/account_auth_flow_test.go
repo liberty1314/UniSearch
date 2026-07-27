@@ -445,6 +445,17 @@ func TestCheckUsernameReturnsAvailabilityAndValidationState(t *testing.T) {
 		config.AppConfig.AuthUsernameMinLength = originalMinLength
 	}()
 
+	// 本用例验证的是查重响应与校验分支，多个子用例共用同一路由与客户端 IP。
+	// 放宽 IP 维度限流阈值，避免第 4 个子用例被默认 3/min 的限流拦成 429。
+	originalIPPerMin := checkUsernameIPLimitPerMin
+	originalIPPerHour := checkUsernameIPLimitPerHour
+	checkUsernameIPLimitPerMin = 1000
+	checkUsernameIPLimitPerHour = 1000
+	defer func() {
+		checkUsernameIPLimitPerMin = originalIPPerMin
+		checkUsernameIPLimitPerHour = originalIPPerHour
+	}()
+
 	testCases := []struct {
 		name           string
 		username       string

@@ -46,6 +46,7 @@ func Run(srv *http.Server, app *App) error {
 	startTGChannelMetricsCollector(serverLifecycleCtx, app)
 	startPluginMetricsCleaner(serverLifecycleCtx, app)
 	startPluginHealthChecker(serverLifecycleCtx, app)
+	startAuditCleaner(serverLifecycleCtx, app)
 
 	serverErr := make(chan error, 1)
 	go func() {
@@ -129,6 +130,61 @@ func startPluginMetricsCleaner(ctx context.Context, app *App) {
 	}
 	app.PluginCleaner.Start(ctx)
 	log.Println("插件指标清理器已启动：每天清理 30 天前指标和 7 天前错误日志")
+}
+
+// startAuditCleaner 每 24 小时按 system_settings 中的留存天数清理搜索/操作审计日志。
+func startAuditCleaner(ctx context.Context, app *App) {
+	if app == nil || (app.SearchAudit == nil && app.AdminAudit == nil) {
+		log.Println("审计清理器未启动：服务不可用")
+		return
+	}
+
+	settingsService := app.RouterDeps.SystemSettingsService
+	runOnce := func() {
+		searchRetention := 30
+		adminRetention := 90
+		if settingsService != nil {
+			if settings, err := settingsService.GetSettings(); err != nil {
+				log.Printf("event=audit_cleanup status=settings_failed error=%q", err.Error())
+			} else {
+				if settings.SearchAuditRetentionDays > 0 {
+					searchRetention = settings.SearchAuditRetentionDays
+				}
+				if settings.AdminAuditRetentionDays > 0 {
+					adminRetention = settings.AdminAuditRetentionDays
+				}
+			}
+		}
+		if app.SearchAudit != nil {
+			if deleted, err := app.SearchAudit.Cleanup(searchRetention); err != nil {
+				log.Printf("event=search_audit_cleanup status=failed error=%q", err.Error())
+			} else {
+				log.Printf("event=search_audit_cleanup status=success deleted=%d retention_days=%d", deleted, searchRetention)
+			}
+		}
+		if app.AdminAudit != nil {
+			if deleted, err := app.AdminAudit.Cleanup(adminRetention); err != nil {
+				log.Printf("event=admin_audit_cleanup status=failed error=%q", err.Error())
+			} else {
+				log.Printf("event=admin_audit_cleanup status=success deleted=%d retention_days=%d", deleted, adminRetention)
+			}
+		}
+	}
+
+	ticker := time.NewTicker(24 * time.Hour)
+	go func() {
+		defer ticker.Stop()
+		runOnce()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				runOnce()
+			}
+		}
+	}()
+	log.Println("审计清理器已启动：每天按留存天数清理搜索/操作审计日志")
 }
 
 func serveHTTP(srv *http.Server) error {

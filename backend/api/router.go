@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"unisearch/api/controller"
 	"unisearch/config"
+	"unisearch/service"
 	"unisearch/util"
 )
 
@@ -21,6 +22,8 @@ func SetupRouter(deps RouterDeps) *gin.Engine {
 	SetAdminTagService(deps.AdminTagService)
 	SetBannedIPService(deps.BannedIPService)
 	SetTokenRevocationService(deps.TokenRevocationService)
+	SetSearchAuditService(deps.SearchAuditService)
+	SetAdminAuditService(deps.AdminAuditService)
 
 	authController := controller.NewAuthController(deps.AuthService)
 
@@ -38,6 +41,8 @@ func SetupRouter(deps RouterDeps) *gin.Engine {
 				settings.SignupAutobanWindowMin,
 				settings.SignupAutobanDurationMin,
 			)
+			// 搜索审计开关缓存，避免每次搜索查库；系统设置更新时刷新。
+			service.SetSearchAuditEnabled(settings.SearchAuditEnabled)
 		}
 	}
 	// 全局注册熔断（L4 / 修复 W5）：全站每小时注册成功总量超阈值即临时熔断。

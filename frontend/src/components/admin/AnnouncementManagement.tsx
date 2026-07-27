@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { AnnouncementDialog } from '@/components/AnnouncementDialog';
+import type { Announcement } from "@/types/announcement";
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,8 +71,33 @@ const formatDateTime = (dateString: string): string => {
   });
 };
 
+const buildPreviewAnnouncement = (formData: {
+  title: string;
+  content: string;
+  priority: AnnouncementPriority;
+  start_time: string;
+  end_time: string;
+  is_enabled: boolean;
+}): Announcement => {
+  const now = new Date().toISOString();
+  return {
+    id: 0,
+    title: formData.title.trim() || '公告标题预览',
+    content: formData.content,
+    priority: formData.priority,
+    start_time: formData.start_time ? new Date(formData.start_time).toISOString() : now,
+    end_time: formData.end_time ? new Date(formData.end_time).toISOString() : null,
+    is_enabled: formData.is_enabled,
+    created_at: now,
+    updated_at: now,
+    created_by: '预览',
+    updated_by: null,
+  };
+};
+
 export const AnnouncementManagement: React.FC = () => {
   const { state, actions } = useAnnouncementManagement();
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const {
     featureEnabled, isFeatureLoading, isListLoading, isSaving,
@@ -383,6 +410,13 @@ export const AnnouncementManagement: React.FC = () => {
             >
               取消
             </Button>
+            <Button
+              onClick={() => setPreviewOpen(true)}
+              variant="outline"
+              disabled={isSaving}
+            >
+              预览弹窗
+            </Button>
             <Button onClick={handleSubmit} disabled={isSaving}>
               {isSaving ? (
                 <>
@@ -508,6 +542,14 @@ export const AnnouncementManagement: React.FC = () => {
             </div>
           </div>
       </AdminDetailDrawer>
+
+      {/* 公告弹窗预览：复用用户实际看到的 AnnouncementDialog，预览态下所有交互为空操作 */}
+      <AnnouncementDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        announcement={buildPreviewAnnouncement(formData)}
+        onDismiss={() => setPreviewOpen(false)}
+      />
 
       {/* 删除确认对话框 */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -507,6 +508,9 @@ func DeleteUserHandler(userService *service.UserService) gin.HandlerFunc {
 			return
 		}
 
+		SetAuditAction(c, "delete_user")
+		SetAuditTarget(c, userIDStr)
+
 		log.Printf("✓ 用户删除成功: 用户ID %d", userID)
 		respondSuccess(c, SuccessResponse{Message: "用户已删除"})
 	}
@@ -561,6 +565,12 @@ func SetUserStatusHandler(userService *service.UserService) gin.HandlerFunc {
 		if !req.IsEnabled {
 			statusText = "禁用"
 		}
+		if req.IsEnabled {
+			SetAuditAction(c, "enable_user")
+		} else {
+			SetAuditAction(c, "disable_user")
+		}
+		SetAuditTarget(c, userIDStr)
 		log.Printf("✓ 用户状态更新成功: 用户ID %d (%s)", userID, statusText)
 		respondSuccess(c, SuccessResponse{Message: "用户状态已更新"})
 	}
@@ -591,6 +601,9 @@ func BatchDeleteUsersHandler(userService *service.UserService) gin.HandlerFunc {
 		}
 
 		log.Printf("✓ 批量删除用户完成: 成功 %d, 失败 %d", result.SuccessCount, result.FailedCount)
+
+		SetAuditAction(c, "batch_delete_user")
+		SetAuditTarget(c, fmt.Sprintf("%d 个用户", result.SuccessCount))
 
 		// 转换为响应格式
 		response := BatchOperationResponse{

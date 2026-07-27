@@ -43,6 +43,9 @@ type SystemSettings struct {
 	RuntimeProxyEnabled              bool      `gorm:"not null;default:false" json:"runtime_proxy_enabled"`                 // 是否启用运行时代理
 	RuntimeProxyURL                  string    `gorm:"size:512;not null;default:''" json:"runtime_proxy_url"`               // 运行时代理地址
 	RuntimeProgressiveSearchEnabled  bool      `gorm:"not null;default:true" json:"runtime_progressive_search_enabled"`     // 是否启用渐进式搜索
+	SearchAuditEnabled               bool      `gorm:"not null;default:true" json:"search_audit_enabled"`                   // 是否启用搜索审计日志（默认启用）
+	SearchAuditRetentionDays         int       `gorm:"not null;default:30" json:"search_audit_retention_days"`              // 搜索审计日志留存天数
+	AdminAuditRetentionDays          int       `gorm:"not null;default:90" json:"admin_audit_retention_days"`               // 操作审计日志留存天数
 	CreatedAt                        time.Time `json:"created_at"`                                                          // 创建时间
 	UpdatedAt                        time.Time `json:"updated_at"`                                                          // 更新时间
 }

@@ -105,6 +105,9 @@ func CreateBannedIPHandler(c *gin.Context) {
 		return
 	}
 
+	SetAuditAction(c, "ban_ip")
+	SetAuditTarget(c, req.IP)
+
 	c.JSON(http.StatusCreated, gin.H{
 		"success": true,
 		"item":    item,
@@ -137,6 +140,9 @@ func DeleteBannedIPHandler(c *gin.Context) {
 		})
 		return
 	}
+
+	SetAuditAction(c, "unban_ip")
+	SetAuditTarget(c, "id:"+strconv.FormatUint(id, 10))
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

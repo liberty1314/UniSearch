@@ -25,4 +25,6 @@ type RouterDeps struct {
 	HotRankingService         *service.HotRankingService
 	BannedIPService           *service.BannedIPService
 	TokenRevocationService    *service.TokenRevocationService
+	SearchAuditService        *service.SearchAuditService
+	AdminAuditService         *service.AdminAuditService
 }

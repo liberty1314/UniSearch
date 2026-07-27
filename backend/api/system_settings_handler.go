@@ -100,6 +100,9 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 		SignupAutobanDurationMin    *int    `json:"signup_autoban_duration_min"`
 		EnableSignupCaptcha         *bool   `json:"enable_signup_captcha"`
 		SignupCaptchaProvider       *string `json:"signup_captcha_provider"`
+		SearchAuditEnabled          *bool   `json:"search_audit_enabled"`
+		SearchAuditRetentionDays    *int    `json:"search_audit_retention_days"`
+		AdminAuditRetentionDays     *int    `json:"admin_audit_retention_days"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -124,7 +127,10 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 		req.SignupAutobanWindowMin == nil &&
 		req.SignupAutobanDurationMin == nil &&
 		req.EnableSignupCaptcha == nil &&
-		req.SignupCaptchaProvider == nil {
+		req.SignupCaptchaProvider == nil &&
+		req.SearchAuditEnabled == nil &&
+		req.SearchAuditRetentionDays == nil &&
+		req.AdminAuditRetentionDays == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "请求参数错误：至少需要提供一个设置字段",
 		})
@@ -164,6 +170,9 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 		SignupAutobanDurationMin:    req.SignupAutobanDurationMin,
 		EnableSignupCaptcha:         req.EnableSignupCaptcha,
 		SignupCaptchaProvider:       req.SignupCaptchaProvider,
+		SearchAuditEnabled:          req.SearchAuditEnabled,
+		SearchAuditRetentionDays:    req.SearchAuditRetentionDays,
+		AdminAuditRetentionDays:     req.AdminAuditRetentionDays,
 	}
 	if req.EnableUserAuth != nil {
 		input.EnableUserAuth = req.EnableUserAuth
@@ -187,6 +196,11 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 		settings.SignupAutobanDurationMin,
 	)
 
+	// 搜索审计开关可能已变更，刷新缓存使其立即生效。
+	service.SetSearchAuditEnabled(settings.SearchAuditEnabled)
+
+	SetAuditAction(c, "update_settings")
+
 	c.JSON(http.StatusOK, gin.H{
 		"message":                          "系统设置已更新",
 		"enable_user_auth":                 settings.EnableUserAuth,
@@ -205,6 +219,9 @@ func UpdateSystemSettingsHandler(c *gin.Context) {
 		"enable_signup_captcha":            settings.EnableSignupCaptcha,
 		"signup_captcha_provider":          settings.SignupCaptchaProvider,
 		"signup_captcha_site_key":          config.GetTurnstileSiteKey(),
+		"search_audit_enabled":             settings.SearchAuditEnabled,
+		"search_audit_retention_days":      settings.SearchAuditRetentionDays,
+		"admin_audit_retention_days":       settings.AdminAuditRetentionDays,
 	})
 }
 

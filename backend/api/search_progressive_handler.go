@@ -39,7 +39,13 @@ func SearchProgressiveHandler(searchService *service.SearchService) gin.HandlerF
 		c.Status(http.StatusOK)
 
 		flusher, _ := c.Writer.(http.Flusher)
+		finalTotal := 0
+		hasFinalTotal := false
 		emit := func(event model.SearchProgressiveEvent) error {
+			if event.Type == "complete" && event.Response != nil {
+				finalTotal = event.Response.Total
+				hasFinalTotal = true
+			}
 			payload, marshalErr := jsonutil.Marshal(event)
 			if marshalErr != nil {
 				return marshalErr
@@ -66,6 +72,11 @@ func SearchProgressiveHandler(searchService *service.SearchService) gin.HandlerF
 				ErrorCode: "SEARCH_PROGRESSIVE_FAILED",
 				RequestID: requestIDFromContext(c),
 			})
+			return
+		}
+
+		if hasFinalTotal {
+			recordSearchAudit(c, "progressive", req.Keyword, finalTotal)
 		}
 	}
 }

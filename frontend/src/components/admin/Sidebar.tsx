@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Gauge, Layers, Megaphone, Radio, Settings, ShieldBan, Users, X } from 'lucide-react';
+import { Activity, ClipboardList, Gauge, History, Layers, Megaphone, Radio, Settings, ShieldBan, Users, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,8 @@ const navItems: NavItem[] = [
     { id: 'plugin_observability', label: '性能监控', icon: <Gauge className="h-4 w-4" /> },
     { id: 'user_management', label: '用户管理', icon: <Users className="h-4 w-4" /> },
     { id: 'banned_ip_management', label: 'IP 封禁', icon: <ShieldBan className="h-4 w-4" /> },
+    { id: 'search_audit', label: '搜索审计', icon: <History className="h-4 w-4" /> },
+    { id: 'admin_audit', label: '操作审计', icon: <ClipboardList className="h-4 w-4" /> },
     { id: 'announcement_management', label: '公告管理', icon: <Megaphone className="h-4 w-4" /> },
     { id: 'system_settings', label: '系统设置', icon: <Settings className="h-4 w-4" /> },
 ];

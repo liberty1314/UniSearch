@@ -32,6 +32,9 @@ type SystemSettingsUpdateInput struct {
 	SearchFirstPageMaxPerSource *int
 	PublicSiteURL               *string
 	DefaultCopyFormatTemplate   *string
+	SearchAuditEnabled          *bool
+	SearchAuditRetentionDays    *int
+	AdminAuditRetentionDays     *int
 }
 
 type CacheSettings struct {
@@ -143,6 +146,10 @@ const (
 	minSearchFirstPageMaxPerSource          = 1
 	maxSearchFirstPageMaxPerSource          = 48
 	defaultSearchFirstPageMaxPerSource      = 16
+	minAuditRetentionDays                   = 1
+	maxAuditRetentionDays                   = 3650
+	defaultSearchAuditRetentionDays         = 30
+	defaultAdminAuditRetentionDays          = 90
 )
 
 // SystemSettingsService 系统设置服务
@@ -230,6 +237,9 @@ func (s *SystemSettingsService) GetSettings() (*model.SystemSettings, error) {
 				RuntimeProxyEnabled:              runtimeDefaults.ProxyEnabled,
 				RuntimeProxyURL:                  runtimeDefaults.ProxyURL,
 				RuntimeProgressiveSearchEnabled:  runtimeDefaults.ProgressiveSearchEnabled,
+				SearchAuditEnabled:               true,
+				SearchAuditRetentionDays:         defaultSearchAuditRetentionDays,
+				AdminAuditRetentionDays:          defaultAdminAuditRetentionDays,
 			}
 			if err := s.db.Create(&settings).Error; err != nil {
 				return nil, err
@@ -305,6 +315,21 @@ func (s *SystemSettingsService) UpdateSettings(input SystemSettingsUpdateInput) 
 	}
 	if input.DefaultCopyFormatTemplate != nil {
 		settings.DefaultCopyFormatTemplate = strings.TrimSpace(*input.DefaultCopyFormatTemplate)
+	}
+	if input.SearchAuditEnabled != nil {
+		settings.SearchAuditEnabled = *input.SearchAuditEnabled
+	}
+	if input.SearchAuditRetentionDays != nil {
+		if err := validateCacheSettingRange("search_audit_retention_days", *input.SearchAuditRetentionDays, minAuditRetentionDays, maxAuditRetentionDays); err != nil {
+			return nil, err
+		}
+		settings.SearchAuditRetentionDays = *input.SearchAuditRetentionDays
+	}
+	if input.AdminAuditRetentionDays != nil {
+		if err := validateCacheSettingRange("admin_audit_retention_days", *input.AdminAuditRetentionDays, minAuditRetentionDays, maxAuditRetentionDays); err != nil {
+			return nil, err
+		}
+		settings.AdminAuditRetentionDays = *input.AdminAuditRetentionDays
 	}
 	if input.EnableSignupCaptcha != nil {
 		settings.EnableSignupCaptcha = *input.EnableSignupCaptcha

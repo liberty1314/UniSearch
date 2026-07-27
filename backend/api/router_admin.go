@@ -10,6 +10,8 @@ func registerAdminRoutes(api *gin.RouterGroup, deps RouterDeps) {
 	admin := api.Group("/admin")
 	admin.Use(JWTMiddleware())
 	admin.Use(AdminMiddleware())
+	// 操作审计：统一采集管理员写操作（POST/PUT/DELETE/PATCH），只读方法自动跳过。
+	admin.Use(AdminAuditMiddleware())
 	{
 		users := admin.Group("/users")
 		{
@@ -42,6 +44,10 @@ func registerAdminRoutes(api *gin.RouterGroup, deps RouterDeps) {
 		admin.GET("/banned-ips", ListBannedIPsHandler)
 		admin.POST("/banned-ips", CreateBannedIPHandler)
 		admin.DELETE("/banned-ips/:id", DeleteBannedIPHandler)
+		admin.GET("/search-audit", ListSearchAuditHandler)
+		admin.DELETE("/search-audit", CleanupSearchAuditHandler)
+		admin.GET("/admin-audit", ListAdminAuditHandler)
+		admin.DELETE("/admin-audit", CleanupAdminAuditHandler)
 		admin.GET("/plugins/:pluginName/config", GetPluginRuntimeConfigHandler(deps.SearchService, deps.PluginRuntimeConfig))
 		admin.PUT("/plugins/:pluginName/config", SavePluginRuntimeConfigHandler(deps.SearchService, deps.PluginRuntimeConfig))
 		admin.POST("/plugins/:pluginName/test", TestPluginHandler(deps.SearchService, deps.PluginHealthService))

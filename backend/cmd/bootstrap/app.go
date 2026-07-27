@@ -27,6 +27,8 @@ type App struct {
 	ChannelMetrics *service.TGChannelMetricsCollector
 	PluginCleaner  *service.PluginMetricsCleaner
 	PluginChecker  *service.PluginHealthChecker
+	SearchAudit    *service.SearchAuditService
+	AdminAudit     *service.AdminAuditService
 }
 
 func Initialize() (*App, error) {
@@ -99,6 +101,10 @@ func Initialize() (*App, error) {
 		log.Printf("⚠️  预热 IP 封禁名单失败: %v", err)
 	}
 	fmt.Println("BannedIP 服务已启动（IP 封禁功能已启用）")
+
+	searchAuditService := service.NewSearchAuditService(database.GetDB())
+	adminAuditService := service.NewAdminAuditService(database.GetDB())
+	fmt.Println("审计服务已启动（搜索审计 + 操作审计已启用）")
 	if err := tgChannelService.MigrateFromEnv(); err != nil {
 		log.Printf("⚠️  TG 频道迁移失败: %v", err)
 	}
@@ -157,6 +163,8 @@ func Initialize() (*App, error) {
 			TGChannelHealthService:    tgChannelHealthService,
 			AdminTagService:           adminTagService,
 			BannedIPService:           bannedIPService,
+			SearchAuditService:        searchAuditService,
+			AdminAuditService:         adminAuditService,
 			HotRankingService:         hotRankingService,
 			RedisCache:                redisCache,
 		},
@@ -168,6 +176,8 @@ func Initialize() (*App, error) {
 		ChannelMetrics: tgChannelMetricsCollector,
 		PluginCleaner:  pluginMetricsCleaner,
 		PluginChecker:  pluginHealthChecker,
+		SearchAudit:    searchAuditService,
+		AdminAudit:     adminAuditService,
 	}, nil
 }
 

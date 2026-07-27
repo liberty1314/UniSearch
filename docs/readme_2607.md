@@ -782,3 +782,39 @@
     - frontend/src/components/home/SearchResultListItem.tsx
 
 
+- [2026-07-27 10:26] feat(admin): 新增搜索审计、操作审计日志与公告弹窗预览
+  - Body: 新增搜索审计（每次搜索按条落库关键词/用户/IP/结果数，覆盖普通与渐进式两条路径，带系统设置开关与每日留存清理）和操作审计（中间件统一采集管理员写操作，关键处理器补充语义），并在公告编辑抽屉复用真实 AnnouncementDialog 呈现用户实际弹窗效果。
+  - Footer: 破坏性变更: 新增 search_audit_logs、admin_audit_logs 两张表，system_settings 新增审计开关与留存字段；Migration: 应用启动自动执行 AutoMigrate 建表，无需额外操作
+  - Files:
+    - backend/api/account_auth_flow_test.go
+    - backend/api/admin_audit_handler.go
+    - backend/api/admin_audit_middleware.go
+    - backend/api/banned_ip_handler.go
+    - backend/api/handler.go
+    - backend/api/router.go
+    - backend/api/router_admin.go
+    - backend/api/router_deps.go
+    - backend/api/search_audit_handler.go
+    - backend/api/search_progressive_handler.go
+    - backend/api/system_settings_handler.go
+    - backend/api/user_handler.go
+    - backend/cmd/bootstrap/app.go
+    - backend/cmd/bootstrap/server.go
+    - backend/database/migration.go
+    - backend/model/admin_audit_log.go
+    - backend/model/search_audit_log.go
+    - backend/model/system_settings.go
+    - backend/service/admin_audit_service.go
+    - backend/service/search_audit_service.go
+    - backend/service/system_settings_service.go
+    - frontend/src/components/admin/AdminAuditView.tsx
+    - frontend/src/components/admin/AnnouncementManagement.tsx
+    - frontend/src/components/admin/SearchAuditView.tsx
+    - frontend/src/components/admin/Sidebar.tsx
+    - frontend/src/lib/adminRoute.ts
+    - frontend/src/pages/Admin.tsx
+    - frontend/src/services/adminAuditService.ts
+    - frontend/src/services/searchAuditService.ts
+    - frontend/src/types/adminAudit.ts
+    - frontend/src/types/searchAudit.ts
+    - docs/readme_2607.md
