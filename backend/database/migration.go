@@ -50,7 +50,7 @@ func AutoMigrate() error {
 		&model.User{},
 		&model.AdminTag{},                   // 创建 admin_tags 表（后台标签词库）
 		&model.SystemSettings{},             // 创建 system_settings 表
-		&model.RefreshToken{},               // 创建 refresh_tokens 表（记住密码功能）
+		&model.RefreshTokenSession{},        // 创建 refresh_token_sessions 表（摘要刷新会话）
 		&model.Secret{},                     // 创建 secrets 表（密钥管理）
 		&model.Announcement{},               // 创建 announcements 表（系统公告）
 		&model.TGChannel{},                  // 创建 tg_channels 表（Telegram 频道管理）
@@ -77,7 +77,7 @@ func AutoMigrate() error {
 	log.Println("  - users 表已创建/更新")
 	log.Println("  - admin_tags 表已创建/更新")
 	log.Println("  - system_settings 表已创建/更新")
-	log.Println("  - refresh_tokens 表已创建/更新")
+	log.Println("  - refresh_token_sessions 表已创建/更新")
 	log.Println("  - secrets 表已创建/更新")
 	log.Println("  - announcements 表已创建/更新")
 	log.Println("  - tg_channels 表已创建/更新")
@@ -94,6 +94,56 @@ func AutoMigrate() error {
 	log.Println("  - search_audit_logs 表已创建/更新")
 	log.Println("  - admin_audit_logs 表已创建/更新")
 
+	return nil
+}
+
+// MigrateRefreshTokenSessions 创建摘要会话表并清空旧原文刷新令牌。
+func MigrateRefreshTokenSessions(db *gorm.DB) error {
+	if db == nil {
+		return fmt.Errorf("数据库连接未初始化")
+	}
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.AutoMigrate(&model.RefreshTokenSession{}); err != nil {
+			return fmt.Errorf("创建刷新会话表失败: %w", err)
+		}
+		if tx.Migrator().HasTable("refresh_tokens") {
+			if err := tx.Exec("DELETE FROM refresh_tokens").Error; err != nil {
+				return fmt.Errorf("清空旧刷新令牌失败: %w", err)
+			}
+		}
+		return nil
+	})
+}
+
+// EnsureLegacyRefreshTokensEmpty 阻止仍含原文刷新令牌的数据库启动新应用。
+func EnsureLegacyRefreshTokensEmpty(db *gorm.DB) error {
+	if db == nil {
+		return fmt.Errorf("数据库连接未初始化")
+	}
+	if !db.Migrator().HasTable("refresh_tokens") {
+		return nil
+	}
+	var count int64
+	if err := db.Table("refresh_tokens").Count(&count).Error; err != nil {
+		return fmt.Errorf("检查旧刷新令牌表失败: %w", err)
+	}
+	if count != 0 {
+		return fmt.Errorf("旧刷新令牌表仍有 %d 条原文记录，拒绝启动", count)
+	}
+	return nil
+}
+
+// DropLegacyRefreshTokens 仅在旧原文表为空时显式删除该表。
+func DropLegacyRefreshTokens(db *gorm.DB) error {
+	if err := EnsureLegacyRefreshTokensEmpty(db); err != nil {
+		return err
+	}
+	if !db.Migrator().HasTable("refresh_tokens") {
+		return nil
+	}
+	if err := db.Migrator().DropTable("refresh_tokens"); err != nil {
+		return fmt.Errorf("删除旧刷新令牌表失败: %w", err)
+	}
 	return nil
 }
 

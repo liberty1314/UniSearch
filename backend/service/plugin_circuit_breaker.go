@@ -183,7 +183,6 @@ func (s *PluginCircuitBreakerService) transitionHalfOpen(status *model.PluginHea
 	status.CircuitState = string(CircuitStateHalfOpen)
 	status.HalfOpenSuccesses = 0
 	status.CircuitCooldownUntil = nil
-	status.CircuitOpenedAt = status.CircuitOpenedAt
 	status.LastCheckedAt = now
 }
 

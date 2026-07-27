@@ -88,13 +88,7 @@ func getAppEnv() string {
 	if value == "" {
 		return "development"
 	}
-	switch value {
-	case "development", "test", "production":
-		return value
-	default:
-		println("警告: APP_ENV 值无效，使用 development")
-		return "development"
-	}
+	return value
 }
 
 func getInitialAdminUsername() string {
@@ -106,13 +100,12 @@ func getInitialAdminPassword() string {
 }
 
 type InitialAdminCredentials struct {
-	Username                string
-	Password                string
-	UsingDevelopmentDefault bool
+	Username string
+	Password string
 }
 
 // ResolveInitialAdminCredentials 返回首次初始化管理员凭据。
-// 生产环境必须显式配置强密码；开发环境允许使用本地默认值但不会在日志中输出明文密码。
+// 所有环境都必须显式配置，禁止使用默认账号和环境模板占位值。
 func ResolveInitialAdminCredentials() (InitialAdminCredentials, error) {
 	cfg := AppConfig
 	if cfg == nil {
@@ -121,23 +114,15 @@ func ResolveInitialAdminCredentials() (InitialAdminCredentials, error) {
 
 	username := strings.TrimSpace(cfg.InitialAdminUsername)
 	password := cfg.InitialAdminPassword
-	usingDefault := false
-	if username == "" && password == "" && !cfg.IsProduction() {
-		username = "admin"
-		password = "admin"
-		usingDefault = true
-		return InitialAdminCredentials{
-			Username:                username,
-			Password:                password,
-			UsingDevelopmentDefault: true,
-		}, nil
+	if username == "" || password == "" {
+		return InitialAdminCredentials{}, errors.New("首次管理员用户名和密码必须显式配置")
 	}
-
-	if username == "" {
-		return InitialAdminCredentials{}, errors.New("INITIAL_ADMIN_USERNAME 未配置")
+	upperUsername := strings.ToUpper(username)
+	if strings.EqualFold(username, "admin") || strings.HasPrefix(upperUsername, "PLEASE_SET_") {
+		return InitialAdminCredentials{}, errors.New("首次管理员用户名不得使用默认值或占位值")
 	}
-	if password == "" {
-		return InitialAdminCredentials{}, errors.New("INITIAL_ADMIN_PASSWORD 未配置")
+	if strings.HasPrefix(strings.ToUpper(password), "PLEASE_SET_") {
+		return InitialAdminCredentials{}, errors.New("首次管理员密码不得使用占位值")
 	}
 	if err := validateInitialAdminUsername(username, cfg); err != nil {
 		return InitialAdminCredentials{}, err
@@ -147,9 +132,8 @@ func ResolveInitialAdminCredentials() (InitialAdminCredentials, error) {
 	}
 
 	return InitialAdminCredentials{
-		Username:                username,
-		Password:                password,
-		UsingDevelopmentDefault: usingDefault,
+		Username: username,
+		Password: password,
 	}, nil
 }
 
@@ -304,20 +288,6 @@ func getRefreshTokenEnabled() bool {
 	return enabled != "false" && enabled != "0"
 }
 
-// 从环境变量获取刷新令牌存储类型，如果未设置则默认使用数据库
-func getRefreshTokenStorage() string {
-	storage := os.Getenv("REFRESH_TOKEN_STORAGE")
-	if storage == "" {
-		return "database" // 默认使用数据库存储
-	}
-	// 验证存储类型
-	if storage != "file" && storage != "database" {
-		println("警告: REFRESH_TOKEN_STORAGE 值无效，使用默认值 database")
-		return "database"
-	}
-	return storage
-}
-
 // 从环境变量获取刷新令牌有效期（小时），如果未设置则使用默认值
 func getRefreshTokenTTL() time.Duration {
 	ttlEnv := os.Getenv("REFRESH_TOKEN_TTL")
@@ -329,33 +299,6 @@ func getRefreshTokenTTL() time.Duration {
 		return 720 * time.Hour
 	}
 	return time.Duration(ttl) * time.Hour
-}
-
-// 从环境变量获取刷新令牌存储路径，如果未设置则使用默认路径
-func getRefreshTokenStorePath() string {
-	path := os.Getenv("REFRESH_TOKEN_STORE_PATH")
-	if path == "" {
-		// 默认在当前目录下创建 refresh_tokens.dat 文件
-		defaultPath, err := filepath.Abs("./cache/refresh_tokens.dat")
-		if err != nil {
-			return "./cache/refresh_tokens.dat"
-		}
-		return defaultPath
-	}
-	return path
-}
-
-// 从环境变量获取刷新令牌加密密钥，如果未设置则生成随机密钥
-func getRefreshTokenEncryptKey() string {
-	key := os.Getenv("REFRESH_TOKEN_ENCRYPT_KEY")
-	if key == "" {
-		if getAppEnv() == "production" {
-			return ""
-		}
-		key = generateEphemeralSecret("refresh")
-		println("警告: REFRESH_TOKEN_ENCRYPT_KEY 环境变量未设置，开发环境使用临时随机密钥")
-	}
-	return key
 }
 
 // GetTurnstileSiteKey 返回 Cloudflare Turnstile 站点公钥（sitekey）。

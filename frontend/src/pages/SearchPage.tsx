@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import PublicPageShell from "@/components/PublicPageShell";
 import SearchResults from "@/components/SearchResults";
 import SearchUnifiedFilterCard from "@/components/SearchUnifiedFilterCard";

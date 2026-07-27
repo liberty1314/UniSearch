@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router } from "react-router-dom";
+import { BrowserRouter as Router } from "react-router";
 import { useAutoRefreshToken } from "@/hooks/useAutoRefreshToken";
 import AppRoutes from "@/routes/AppRoutes";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";

@@ -1,10 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const realE2EEnabled = process.env.UNISEARCH_REAL_E2E === '1';
-const frontendBaseURL = process.env.UNISEARCH_FRONTEND_BASE_URL || 'http://127.0.0.1:5173';
+const frontendBaseURL = process.env.UNISEARCH_FRONTEND_BASE_URL || 'http://127.0.0.1:4173';
 const frontendURL = new URL(frontendBaseURL);
 const frontendHost = frontendURL.hostname || '127.0.0.1';
-const frontendPort = frontendURL.port || '5173';
+const frontendPort = frontendURL.port || '4173';
 
 export default defineConfig({
   testDir: './e2e',
@@ -44,7 +44,7 @@ export default defineConfig({
     ] : []),
   ],
   webServer: {
-    command: `pnpm dev --host ${frontendHost} --port ${frontendPort} --strictPort`,
+    command: `pnpm build && pnpm preview --host ${frontendHost} --port ${frontendPort} --strictPort`,
     url: frontendBaseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

@@ -78,23 +78,23 @@ func (c *redisSearchCache) Load(scope string, key string, keyword string, target
 	case nil:
 		c.metrics.RecordCache(scope, true)
 		logSearchEventIfEnabled("cache_hit", map[string]interface{}{
-			"scope":   scope,
-			"keyword": keyword,
+			"scope":          scope,
+			"keyword_length": len([]rune(keyword)),
 		})
 		return true, nil
 	case cache.ErrCacheMiss:
 		c.metrics.RecordCache(scope, false)
 		logSearchEventIfEnabled("cache_miss", map[string]interface{}{
-			"scope":   scope,
-			"keyword": keyword,
+			"scope":          scope,
+			"keyword_length": len([]rune(keyword)),
 		})
 		return false, nil
 	default:
 		logger.Warn(
 			"search_cache_load_failed",
 			logger.String("scope", scope),
-			logger.String("keyword", keyword),
-			logger.Any("error", err),
+			logger.Int("keyword_length", len([]rune(keyword))),
+			logger.String("error_class", "cache_load_error"),
 		)
 		return false, err
 	}
@@ -178,15 +178,15 @@ func (c *redisSearchCache) writeToCache(request cacheStoreRequest) {
 		logger.Error(
 			"search_cache_store_failed",
 			logger.String("scope", request.scope),
-			logger.String("keyword", request.keyword),
-			logger.Any("error", err),
+			logger.Int("keyword_length", len([]rune(request.keyword))),
+			logger.String("error_class", "cache_store_error"),
 		)
 		return
 	}
 
 	c.droppedWriteLogs.Store(0)
 	logSearchEventIfEnabled("cache_store", map[string]interface{}{
-		"scope":   request.scope,
-		"keyword": request.keyword,
+		"scope":          request.scope,
+		"keyword_length": len([]rune(request.keyword)),
 	})
 }

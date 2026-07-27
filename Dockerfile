@@ -27,6 +27,7 @@ WORKDIR /app/frontend
 RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml frontend/.pnpmfile.cjs ./
+COPY frontend/patches ./patches
 RUN pnpm install --frozen-lockfile
 
 COPY frontend/ ./
@@ -37,18 +38,23 @@ RUN pnpm run build
 # ============================================
 FROM nginx:alpine
 
-RUN apk add --no-cache ca-certificates tzdata curl supervisor
-
-RUN mkdir -p /app/backend /app/cache /var/log/supervisor
+RUN apk add --no-cache ca-certificates tzdata curl supervisor \
+    && addgroup -S -g 10001 unisearch \
+    && adduser -S -D -H -u 10001 -G unisearch unisearch \
+    && mkdir -p /app/backend /app/cache /app/logs /tmp/nginx /tmp/supervisor \
+    && chown -R unisearch:unisearch /app/cache /app/logs /tmp/nginx /tmp/supervisor \
+    && chmod 0700 /app/cache /app/logs /tmp/nginx /tmp/supervisor
 
 # 从构建阶段复制产物
-COPY --from=backend-builder /app/backend/unisearch /app/backend/unisearch
-COPY --from=backend-builder /app/backend/unisearch-migrate /app/backend/unisearch-migrate
+COPY --from=backend-builder --chown=unisearch:unisearch /app/backend/unisearch /app/backend/unisearch
+COPY --from=backend-builder --chown=unisearch:unisearch /app/backend/unisearch-migrate /app/backend/unisearch-migrate
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
 
 # 复制配置文件
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY supervisord.conf /etc/supervisord.conf
+
+RUN chmod 0555 /app/backend/unisearch /app/backend/unisearch-migrate
 
 # 设置环境变量
 ENV PORT=8888 \
@@ -60,9 +66,11 @@ ENV PORT=8888 \
     ASYNC_CACHE_TTL_HOURS=1 \
     ENABLED_PLUGINS=labi,shandian,muou,hunhepan,pansearch,susu,thepiratebay,u3c3,jutoushe,nyaa,aikanzy,quark4k,quarksoo,huban,panwiki,sidhub
 
-EXPOSE 80
+USER 10001:10001
+
+EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:80/health || exit 1
+    CMD curl -f http://127.0.0.1:8080/health || exit 1
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

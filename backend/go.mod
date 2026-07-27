@@ -12,7 +12,7 @@ require (
 	github.com/redis/go-redis/v9 v9.7.3
 	golang.org/x/crypto v0.51.0
 	golang.org/x/net v0.55.0
-	golang.org/x/text v0.37.0
+	golang.org/x/text v0.40.0
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1

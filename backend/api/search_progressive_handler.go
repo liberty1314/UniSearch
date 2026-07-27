@@ -63,8 +63,8 @@ func SearchProgressiveHandler(searchService *service.SearchService) gin.HandlerF
 			logger.Error(
 				"search_progressive_failed",
 				logger.String("request_id", requestIDFromContext(c)),
-				logger.String("keyword", req.Keyword),
-				logger.Any("error", err),
+				logger.Int("keyword_length", len([]rune(req.Keyword))),
+				logger.String("error_class", "search_progressive_error"),
 			)
 			_ = emit(model.SearchProgressiveEvent{
 				Type:      "error",

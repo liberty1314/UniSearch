@@ -57,8 +57,8 @@ func (s *SearchAuditService) Record(entry model.SearchAuditLog) {
 	go func() {
 		if err := s.db.Create(&entry).Error; err != nil {
 			logger.Warn("search_audit_write_failed",
-				logger.String("keyword", entry.Keyword),
-				logger.Any("error", err),
+				logger.Int("keyword_length", len([]rune(entry.Keyword))),
+				logger.String("error_class", "database_write_error"),
 			)
 		}
 	}()

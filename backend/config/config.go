@@ -3,6 +3,8 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -125,18 +127,18 @@ type Config struct {
 	HotRankingCacheTTLMonth      time.Duration
 	HotRankingCacheTTLYear       time.Duration
 	// 认证相关配置
-	AuthEnabled            bool              // 是否启用认证
-	AuthTokenExpiry        time.Duration     // Token有效期
-	AuthJWTSecret          string            // JWT签名密钥（向后兼容，优先使用密钥管理服务）
-	ResourcePublicIDSecret string            // 公开资源 ID 派生密钥
-	AuthUsernameMinLength  int               // 用户名最小长度
-	AuthUsernameMaxLength  int               // 用户名最大长度
-	AuthPasswordMinLength  int               // 密码最小长度
-	AuthPasswordMaxLength  int               // 密码最大长度
-	AuthPasswordComplexityClasses int        // 密码复杂度要求（大写/小写/数字/符号 至少满足几类）
-	AuthPasswordBlocklistPath     string     // 弱密码黑名单文件路径（可选，扩展内置列表）
-	InitialAdminUsername   string            // 首次初始化管理员用户名
-	InitialAdminPassword   string            // 首次初始化管理员密码
+	AuthEnabled                   bool          // 是否启用认证
+	AuthTokenExpiry               time.Duration // Token有效期
+	AuthJWTSecret                 string        // JWT签名密钥（向后兼容，优先使用密钥管理服务）
+	ResourcePublicIDSecret        string        // 公开资源 ID 派生密钥
+	AuthUsernameMinLength         int           // 用户名最小长度
+	AuthUsernameMaxLength         int           // 用户名最大长度
+	AuthPasswordMinLength         int           // 密码最小长度
+	AuthPasswordMaxLength         int           // 密码最大长度
+	AuthPasswordComplexityClasses int           // 密码复杂度要求（大写/小写/数字/符号 至少满足几类）
+	AuthPasswordBlocklistPath     string        // 弱密码黑名单文件路径（可选，扩展内置列表）
+	InitialAdminUsername          string        // 首次初始化管理员用户名
+	InitialAdminPassword          string        // 首次初始化管理员密码
 
 	// 密钥管理配置
 	SecretBackend   string // 密钥后端类型（database 或 environment）
@@ -147,11 +149,8 @@ type Config struct {
 	APIKeyStorePath  string        // API Key 存储路径
 
 	// Refresh Token 相关配置
-	RefreshTokenEnabled    bool          // 是否启用刷新令牌（记住密码）
-	RefreshTokenStorage    string        // 刷新令牌存储类型（file 或 database）
-	RefreshTokenTTL        time.Duration // 刷新令牌有效期
-	RefreshTokenStorePath  string        // 刷新令牌存储路径（文件模式）
-	RefreshTokenEncryptKey string        // 刷新令牌加密密钥
+	RefreshTokenEnabled bool          // 是否启用刷新令牌（记住密码）
+	RefreshTokenTTL     time.Duration // 刷新令牌有效期
 	// MySQL 数据库配置
 	DBHost     string // 数据库主机地址
 	DBPort     string // 数据库端口
@@ -192,6 +191,11 @@ func Init() {
 
 // InitWithError 初始化配置并返回生产基线校验错误。
 func InitWithError() error {
+	appEnv := getAppEnv()
+	if err := validateAppEnv(appEnv); err != nil {
+		return err
+	}
+
 	proxyURL := getProxyURL()
 	pluginTimeoutSeconds := getPluginTimeout()
 	asyncResponseTimeoutSeconds := getAsyncResponseTimeout()
@@ -212,7 +216,7 @@ func InitWithError() error {
 	}
 
 	AppConfig = &Config{
-		AppEnv:         getAppEnv(),
+		AppEnv:         appEnv,
 		AllowedOrigins: getAllowedOrigins(),
 		TrustedProxies: getTrustedProxies(),
 
@@ -287,18 +291,18 @@ func InitWithError() error {
 		HotRankingCacheTTLMonth:      getHotRankingCacheTTL("HOT_RANKING_CACHE_TTL_MONTH", 6*time.Hour),
 		HotRankingCacheTTLYear:       getHotRankingCacheTTL("HOT_RANKING_CACHE_TTL_YEAR", 12*time.Hour),
 		// 认证相关配置
-		AuthEnabled:            getAuthEnabled(),
-		AuthTokenExpiry:        getAuthTokenExpiry(),
-		AuthJWTSecret:          getAuthJWTSecret(),
-		ResourcePublicIDSecret: getResourcePublicIDSecret(),
-		AuthUsernameMinLength:  getAuthUsernameMinLength(),
-		AuthUsernameMaxLength:  getAuthUsernameMaxLength(),
-		AuthPasswordMinLength:  getAuthPasswordMinLength(),
-		AuthPasswordMaxLength:  getAuthPasswordMaxLength(),
+		AuthEnabled:                   getAuthEnabled(),
+		AuthTokenExpiry:               getAuthTokenExpiry(),
+		AuthJWTSecret:                 getAuthJWTSecret(),
+		ResourcePublicIDSecret:        getResourcePublicIDSecret(),
+		AuthUsernameMinLength:         getAuthUsernameMinLength(),
+		AuthUsernameMaxLength:         getAuthUsernameMaxLength(),
+		AuthPasswordMinLength:         getAuthPasswordMinLength(),
+		AuthPasswordMaxLength:         getAuthPasswordMaxLength(),
 		AuthPasswordComplexityClasses: getAuthPasswordComplexityClasses(),
 		AuthPasswordBlocklistPath:     getAuthPasswordBlocklistPath(),
-		InitialAdminUsername:   getInitialAdminUsername(),
-		InitialAdminPassword:   getInitialAdminPassword(),
+		InitialAdminUsername:          getInitialAdminUsername(),
+		InitialAdminPassword:          getInitialAdminPassword(),
 
 		// 密钥管理配置
 		SecretBackend:   getSecretBackend(),
@@ -309,11 +313,8 @@ func InitWithError() error {
 		APIKeyStorePath:  getAPIKeyStorePath(),
 
 		// Refresh Token 相关配置
-		RefreshTokenEnabled:    getRefreshTokenEnabled(),
-		RefreshTokenStorage:    getRefreshTokenStorage(),
-		RefreshTokenTTL:        getRefreshTokenTTL(),
-		RefreshTokenStorePath:  getRefreshTokenStorePath(),
-		RefreshTokenEncryptKey: getRefreshTokenEncryptKey(),
+		RefreshTokenEnabled: getRefreshTokenEnabled(),
+		RefreshTokenTTL:     getRefreshTokenTTL(),
 		// MySQL 数据库配置
 		DBHost:     getDBHost(),
 		DBPort:     getDBPort(),
@@ -332,10 +333,7 @@ func InitWithError() error {
 		Redis: redisConfig,
 	}
 
-	if err := validateProductionSecrets(AppConfig); err != nil {
-		return err
-	}
-	if err := validateProductionCORS(AppConfig); err != nil {
+	if err := validateProductionSecurityConfig(AppConfig); err != nil {
 		return err
 	}
 
@@ -352,6 +350,45 @@ func (c *Config) IsProduction() bool {
 	return c.AppEnv == "production"
 }
 
+func validateAppEnv(appEnv string) error {
+	switch appEnv {
+	case "development", "test", "production":
+		return nil
+	default:
+		return fmt.Errorf("APP_ENV 值无效: %s", appEnv)
+	}
+}
+
+func validateProductionSecurityConfig(cfg *Config) error {
+	if cfg == nil || !cfg.IsProduction() {
+		return nil
+	}
+	if err := validateProductionSecrets(cfg); err != nil {
+		return err
+	}
+	if err := validateProductionDataPasswords(cfg); err != nil {
+		return err
+	}
+	return validateProductionCORS(cfg)
+}
+
+func validateProductionDataPasswords(cfg *Config) error {
+	requiredPasswords := map[string]string{
+		"DB_PASSWORD":    cfg.DBPassword,
+		"REDIS_PASSWORD": cfg.RedisPassword,
+	}
+	for name, value := range requiredPasswords {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			return fmt.Errorf("%s 未配置，生产环境拒绝启动", name)
+		}
+		if isPlaceholderSecret(trimmed) {
+			return fmt.Errorf("%s 仍为占位符，生产环境拒绝启动", name)
+		}
+	}
+	return nil
+}
+
 func validateProductionCORS(cfg *Config) error {
 	if cfg == nil || !cfg.IsProduction() {
 		return nil
@@ -360,8 +397,26 @@ func validateProductionCORS(cfg *Config) error {
 		return errors.New("ALLOWED_ORIGINS 未配置，生产环境拒绝启动")
 	}
 	for _, origin := range cfg.AllowedOrigins {
-		if strings.TrimSpace(origin) == "*" {
+		normalized := strings.TrimSpace(origin)
+		if normalized == "*" {
 			return errors.New("ALLOWED_ORIGINS 不能在生产环境使用通配符")
+		}
+		parsed, err := url.Parse(normalized)
+		if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+			return fmt.Errorf("ALLOWED_ORIGINS 包含无效来源: %s", normalized)
+		}
+		switch strings.ToLower(parsed.Scheme) {
+		case "https":
+			continue
+		case "http":
+			host := parsed.Hostname()
+			ip := net.ParseIP(host)
+			if strings.EqualFold(host, "localhost") || ip != nil && ip.IsLoopback() {
+				continue
+			}
+			return fmt.Errorf("生产来源必须使用 HTTPS: %s", normalized)
+		default:
+			return fmt.Errorf("生产来源必须使用 HTTPS: %s", normalized)
 		}
 	}
 	return nil
@@ -375,7 +430,6 @@ func validateProductionSecrets(cfg *Config) error {
 	requiredSecrets := map[string]string{
 		"AUTH_JWT_SECRET":           cfg.AuthJWTSecret,
 		"RESOURCE_PUBLIC_ID_SECRET": cfg.ResourcePublicIDSecret,
-		"REFRESH_TOKEN_ENCRYPT_KEY": cfg.RefreshTokenEncryptKey,
 		"SECRET_MASTER_KEY":         cfg.SecretMasterKey,
 	}
 	for name, value := range requiredSecrets {

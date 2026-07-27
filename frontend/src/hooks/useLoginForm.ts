@@ -8,7 +8,7 @@ import {
   removePasswordWhitespace,
 } from '@/components/account/passwordValidation';
 import { deriveIsAdminFromToken } from '@/lib/jwt';
-import { getErrorMessage, getErrorStatus } from '@/lib/error';
+import { getErrorDataCode, getErrorMessage, getErrorStatus } from '@/lib/error';
 import type { LoginWithRememberResponse } from '@/types/auth';
 
 /**
@@ -117,7 +117,12 @@ export function useLoginForm({
     } catch (error) {
       console.error('Login failed:', error);
       const status = getErrorStatus(error);
-      if (status === 401) {
+      const errorCode = getErrorDataCode(error);
+      if (errorCode === 'LOGIN_DISABLED') {
+        toast.error('用户登录功能已关闭');
+      } else if (errorCode === 'AUTH_POLICY_UNAVAILABLE') {
+        toast.error('认证服务暂时不可用，请稍后重试');
+      } else if (status === 401) {
         toast.error('用户名或密码错误');
       } else if (status === 403) {
         toast.error('该账号无管理员权限');

@@ -1,13 +1,27 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"log"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"unisearch/config"
 )
+
+func captureStandardLog(t *testing.T, run func()) string {
+	t.Helper()
+	var output bytes.Buffer
+	previous := log.Writer()
+	log.SetOutput(&output)
+	t.Cleanup(func() { log.SetOutput(previous) })
+	run()
+	return output.String()
+}
 
 type fakeCacheBackend struct {
 	getErr     error
@@ -53,6 +67,27 @@ func (f *fakeCacheBackend) TTL() time.Duration {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.lastTTL
+}
+
+func TestRedisSearchCacheSensitiveLogDoesNotIncludeKeyword(t *testing.T) {
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{CacheEnabled: true}
+	t.Cleanup(func() { config.AppConfig = oldConfig })
+
+	searchCache := &redisSearchCache{
+		cache:   &fakeCacheBackend{getErr: errors.New("缓存读取失败")},
+		metrics: newSearchMetricsRecorder(),
+	}
+	output := captureStandardLog(t, func() {
+		_, _ = searchCache.Load("plugin", "cache-key", "隐私搜索词", &[]string{})
+	})
+
+	if strings.Contains(output, "隐私搜索词") {
+		t.Fatalf("搜索缓存日志暴露搜索词: %s", output)
+	}
+	if !strings.Contains(output, "search_cache_load_failed") || !strings.Contains(output, "scope=plugin") {
+		t.Fatalf("搜索缓存日志缺少事件分类或作用域: %s", output)
+	}
 }
 
 func TestRedisSearchCacheStoreUsesAsyncWorkers(t *testing.T) {

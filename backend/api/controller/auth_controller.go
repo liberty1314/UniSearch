@@ -48,17 +48,17 @@ type LoginRequest struct {
 
 // LoginResponse 用户登录响应结构（支持刷新令牌）
 type LoginResponse struct {
-	Code    int         `json:"code"`           // 响应码
-	Message string      `json:"message"`        // 响应消息
-	Data    interface{} `json:"data,omitempty"` // 响应数据（成功时包含 Token 和用户信息）
+	Code      int         `json:"code"`                 // HTTP 语义响应码
+	ErrorCode string      `json:"error_code,omitempty"` // 稳定业务错误码
+	Message   string      `json:"message"`              // 响应消息
+	Data      interface{} `json:"data,omitempty"`       // 响应数据（成功时包含 Token 和用户信息）
 }
 
 // LoginData 登录成功返回的数据（支持刷新令牌）
 type LoginData struct {
-	AccessToken  string  `json:"access_token"`            // JWT Token
-	ExpiresAt    int64   `json:"expires_at"`              // Token 过期时间（Unix 时间戳）
-	RefreshToken *string `json:"refresh_token,omitempty"` // 刷新令牌（仅在 remember_me=true 时返回）
-	Username     string  `json:"username"`                // 用户名
+	AccessToken string `json:"access_token"` // JWT Token
+	ExpiresAt   int64  `json:"expires_at"`   // Token 过期时间（Unix 时间戳）
+	Username    string `json:"username"`     // 用户名
 }
 
 type CurrentUserData struct {
@@ -87,6 +87,9 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 			Message: "请求参数无效: " + err.Error(),
 			Data:    nil,
 		})
+		return
+	}
+	if writeAuthPolicyError(c, ctrl.authService.RequireSignupEnabled(c.Request.Context())) {
 		return
 	}
 
@@ -186,9 +189,19 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 		if errors.Is(err, service.ErrSignupDisabled) {
 			log.Printf("✗ 注册失败: 用户注册功能已关闭 - %s", req.Username)
 			c.JSON(403, LoginResponse{
-				Code:    403,
-				Message: "用户注册功能已关闭",
-				Data:    nil,
+				Code:      403,
+				ErrorCode: "SIGNUP_DISABLED",
+				Message:   "用户注册功能已关闭",
+				Data:      nil,
+			})
+			return
+		}
+		if errors.Is(err, service.ErrAuthPolicyUnavailable) {
+			c.JSON(503, LoginResponse{
+				Code:      503,
+				ErrorCode: "AUTH_POLICY_UNAVAILABLE",
+				Message:   "认证策略暂时不可用",
+				Data:      nil,
 			})
 			return
 		}
@@ -289,6 +302,9 @@ func (ctrl *AuthController) handleDatabaseUserLogin(c *gin.Context, req LoginReq
 	// 调用服务层进行登录
 	token, user, _, err := ctrl.authService.Login(req.Username, req.Password)
 	if err != nil {
+		if writeAuthPolicyError(c, err) {
+			return
+		}
 		var validationErr *service.AuthValidationError
 		if errors.As(err, &validationErr) {
 			c.JSON(400, LoginResponse{
@@ -339,7 +355,7 @@ func (ctrl *AuthController) handleDatabaseUserLogin(c *gin.Context, req LoginReq
 
 	// 如果启用"记住我"，生成刷新令牌并以 httpOnly cookie 下发（不再放入响应体，降低 XSS 窃取面）。
 	if req.RememberMe {
-		refreshToken := ctrl.generateRefreshToken(c, user.Username, user.IsAdmin(), req.DeviceFingerprint)
+		refreshToken := ctrl.generateRefreshToken(c, user.ID, req.DeviceFingerprint)
 		if refreshToken != nil {
 			util.SetRefreshTokenCookie(c, *refreshToken)
 		}
@@ -353,8 +369,42 @@ func (ctrl *AuthController) handleDatabaseUserLogin(c *gin.Context, req LoginReq
 	})
 }
 
-// generateRefreshToken 生成刷新令牌
-func (ctrl *AuthController) generateRefreshToken(c *gin.Context, username string, isAdmin bool, deviceFingerprint string) *string {
+func writeAuthPolicyError(c *gin.Context, err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, service.ErrLoginDisabled) {
+		c.JSON(403, LoginResponse{
+			Code:      403,
+			ErrorCode: "LOGIN_DISABLED",
+			Message:   "用户登录功能已关闭",
+			Data:      nil,
+		})
+		return true
+	}
+	if errors.Is(err, service.ErrSignupDisabled) {
+		c.JSON(403, LoginResponse{
+			Code:      403,
+			ErrorCode: "SIGNUP_DISABLED",
+			Message:   "用户注册功能已关闭",
+			Data:      nil,
+		})
+		return true
+	}
+	if errors.Is(err, service.ErrAuthPolicyUnavailable) {
+		c.JSON(503, LoginResponse{
+			Code:      503,
+			ErrorCode: "AUTH_POLICY_UNAVAILABLE",
+			Message:   "认证策略暂时不可用",
+			Data:      nil,
+		})
+		return true
+	}
+	return false
+}
+
+// generateRefreshToken 签发只通过 HttpOnly Cookie 返回的原始刷新令牌。
+func (ctrl *AuthController) generateRefreshToken(c *gin.Context, userID uint, deviceFingerprint string) *string {
 	// 获取刷新令牌服务
 	refreshTokenServiceInterface, exists := c.Get("refreshTokenService")
 	if !exists {
@@ -374,9 +424,9 @@ func (ctrl *AuthController) generateRefreshToken(c *gin.Context, username string
 	}
 
 	// 创建刷新令牌
-	refreshToken, err := refreshTokenService.CreateToken(
-		username,
-		isAdmin,
+	refreshToken, err := refreshTokenService.Issue(
+		c.Request.Context(),
+		userID,
 		deviceFingerprint,
 		config.AppConfig.RefreshTokenTTL,
 	)
@@ -385,14 +435,7 @@ func (ctrl *AuthController) generateRefreshToken(c *gin.Context, username string
 		return nil
 	}
 
-	// 加密刷新令牌
-	encryptedToken, err := refreshTokenService.EncryptForClient(refreshToken.Token)
-	if err != nil {
-		log.Printf("⚠ 加密刷新令牌失败: %v", err)
-		return nil
-	}
-
-	return &encryptedToken
+	return &refreshToken.RawToken
 }
 
 // getTokenExpiryTime 获取 Token 过期时间

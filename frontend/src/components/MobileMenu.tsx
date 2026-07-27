@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import { CircleUserRound, LogIn, LogOut, Settings, X } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { AuthService } from '@/services/authService';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BLUE_CYAN_HOVER_TEXT } from '@/lib/brandTheme';

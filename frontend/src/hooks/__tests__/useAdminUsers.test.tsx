@@ -88,13 +88,12 @@ describe('useAdminUsers', () => {
 
     await waitFor(() => {
       expect(getUserStatsMock).toHaveBeenCalledTimes(1);
-    });
-
-    expect(result.current.getUserStats()).toEqual({
-      total: 12,
-      monthNew: 4,
-      sevenDayActive: 7,
-      inactive30Day: 2,
+      expect(result.current.getUserStats()).toEqual({
+        total: 12,
+        monthNew: 4,
+        sevenDayActive: 7,
+        inactive30Day: 2,
+      });
     });
 
     act(() => {

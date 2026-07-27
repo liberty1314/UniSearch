@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -67,7 +68,7 @@ func newAccountFlowTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("open sqlite db: %v", err)
 	}
 
-	if err := db.AutoMigrate(&model.User{}, &model.SystemSettings{}, &model.RefreshToken{}, &model.UserLoginDailyStat{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.SystemSettings{}, &model.RefreshTokenSession{}, &model.UserLoginDailyStat{}); err != nil {
 		t.Fatalf("auto migrate test db: %v", err)
 	}
 
@@ -104,9 +105,9 @@ func newAccountFlowRouterWithRefreshService(t *testing.T, db *gorm.DB, refreshTo
 	pm.RegisterPlugin(&mockAccountSearchPlugin{name: "mock"})
 
 	searchService := service.NewSearchService(pm, nil, nil)
-	authService := service.NewAuthService()
-	userService := service.NewUserService(db)
 	systemSettingsService := service.NewSystemSettingsService(db)
+	authService := service.NewAuthService(db, systemSettingsService)
+	userService := service.NewUserService(db, service.NewAccountSessionService())
 
 	return SetupRouter(RouterDeps{
 		SearchService:         searchService,
@@ -120,12 +121,7 @@ func newAccountFlowRouterWithRefreshService(t *testing.T, db *gorm.DB, refreshTo
 func newAccountFlowRefreshTokenService(t *testing.T, db *gorm.DB) *service.RefreshTokenService {
 	t.Helper()
 
-	refreshTokenService, err := service.NewRefreshTokenService(
-		service.StorageTypeDatabase,
-		db,
-		"",
-		"01234567890123456789012345678901",
-	)
+	refreshTokenService, err := service.NewRefreshTokenService(db)
 	if err != nil {
 		t.Fatalf("create refresh token service: %v", err)
 	}
@@ -350,7 +346,7 @@ func TestAuthenticatedUserRequestDoesNotIncrementExistingDailyStat(t *testing.T)
 	user := createAccountFlowUser(t, db, "alice", "password123")
 	router := newAccountFlowRouter(t, db)
 
-	authService := service.NewAuthService()
+	authService := service.NewAuthService(db, service.NewSystemSettingsService(db))
 	if _, _, _, err := authService.Login("alice", "password123"); err != nil {
 		t.Fatalf("expected login to succeed, got %v", err)
 	}
@@ -381,7 +377,15 @@ func TestLoginRejectsAPIKeyStylePasswordAsNormalCredential(t *testing.T) {
 	createAccountFlowUser(t, db, "alice", "password123")
 	router := newAccountFlowRouter(t, db)
 
-	body := bytes.NewBufferString(`{"username":"alice","password":"<API_KEY>"}`)
+	apiKeyStylePassword := "sk-" + strings.Repeat("1", 40)
+	payload, err := json.Marshal(map[string]string{
+		"username": "alice",
+		"password": apiKeyStylePassword,
+	})
+	if err != nil {
+		t.Fatalf("编码登录请求失败: %v", err)
+	}
+	body := bytes.NewReader(payload)
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/login", body)
 	req.Header.Set("Content-Type", "application/json")
 	recorder := httptest.NewRecorder()
@@ -445,17 +449,6 @@ func TestCheckUsernameReturnsAvailabilityAndValidationState(t *testing.T) {
 		config.AppConfig.AuthUsernameMinLength = originalMinLength
 	}()
 
-	// 本用例验证的是查重响应与校验分支，多个子用例共用同一路由与客户端 IP。
-	// 放宽 IP 维度限流阈值，避免第 4 个子用例被默认 3/min 的限流拦成 429。
-	originalIPPerMin := checkUsernameIPLimitPerMin
-	originalIPPerHour := checkUsernameIPLimitPerHour
-	checkUsernameIPLimitPerMin = 1000
-	checkUsernameIPLimitPerHour = 1000
-	defer func() {
-		checkUsernameIPLimitPerMin = originalIPPerMin
-		checkUsernameIPLimitPerHour = originalIPPerHour
-	}()
-
 	testCases := []struct {
 		name           string
 		username       string
@@ -498,9 +491,10 @@ func TestCheckUsernameReturnsAvailabilityAndValidationState(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCases {
+	for index, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/api/auth/check-username?username="+url.QueryEscape(tc.username), nil)
+			req.RemoteAddr = fmt.Sprintf("198.51.100.%d:12345", index+10)
 			recorder := httptest.NewRecorder()
 
 			router.ServeHTTP(recorder, req)
@@ -536,7 +530,7 @@ func TestLoginRecordsDailyLoginStat(t *testing.T) {
 	db := newAccountFlowTestDB(t)
 	createAccountFlowUser(t, db, "alice", "password123")
 
-	authService := service.NewAuthService()
+	authService := service.NewAuthService(db, service.NewSystemSettingsService(db))
 	if _, _, _, err := authService.Login("alice", "password123"); err != nil {
 		t.Fatalf("expected first login to succeed, got %v", err)
 	}
@@ -646,6 +640,115 @@ func TestCheckUsernameReturnsRateLimitExceededAfterThreshold(t *testing.T) {
 	}
 }
 
+func TestRememberLoginCookieContainsRawTokenWithoutResponseLeak(t *testing.T) {
+	testCases := []struct {
+		name       string
+		path       string
+		username   string
+		role       string
+		production bool
+	}{
+		{name: "普通用户记住登录", path: "/api/auth/login", username: "remember-user", role: "user"},
+		{name: "管理员记住登录", path: "/api/admin/login-remember", username: "remember-admin", role: "admin", production: true},
+	}
+
+	for index, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gin.SetMode(gin.TestMode)
+			db := newAccountFlowTestDB(t)
+			user := createAccountFlowUser(t, db, tc.username, "Password123!")
+			if tc.role == "admin" {
+				if err := db.Model(&user).Update("role", "admin").Error; err != nil {
+					t.Fatalf("设置管理员角色失败: %v", err)
+				}
+			}
+			refreshTokenService := newAccountFlowRefreshTokenService(t, db)
+			router := newAccountFlowRouterWithRefreshService(t, db, refreshTokenService)
+			config.AppConfig.RefreshTokenEnabled = true
+			config.AppConfig.RefreshTokenTTL = time.Hour
+			if tc.production {
+				config.AppConfig.AppEnv = "production"
+			}
+
+			body := bytes.NewBufferString(fmt.Sprintf(`{"username":%q,"password":"Password123!","remember_me":true,"device_fingerprint":"device-remember"}`, tc.username))
+			req := httptest.NewRequest(http.MethodPost, tc.path, body)
+			req.Header.Set("Content-Type", "application/json")
+			req.RemoteAddr = fmt.Sprintf("198.51.100.%d:12345", index+90)
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+
+			if resp.Code != http.StatusOK {
+				t.Fatalf("记住登录失败: %d %s", resp.Code, resp.Body.String())
+			}
+			if bytes.Contains(resp.Body.Bytes(), []byte(`"refresh_token"`)) {
+				t.Fatalf("响应正文不得包含刷新令牌字段: %s", resp.Body.String())
+			}
+			cookie := findResponseCookie(resp, util.RefreshTokenCookieName)
+			if cookie == nil || len(cookie.Value) < 40 {
+				t.Fatalf("未收到高熵刷新 Cookie: %#v", cookie)
+			}
+			if !cookie.HttpOnly || cookie.SameSite != http.SameSiteStrictMode {
+				t.Fatalf("刷新 Cookie 属性不符合预期: %#v", cookie)
+			}
+			if cookie.Secure != tc.production {
+				t.Fatalf("刷新 Cookie Secure=%v，期望 %v", cookie.Secure, tc.production)
+			}
+
+			var session model.RefreshTokenSession
+			if err := db.Where("token_digest = ?", service.DigestRefreshToken(cookie.Value)).First(&session).Error; err != nil {
+				t.Fatalf("Cookie 原始令牌未对应数据库摘要: %v", err)
+			}
+			if session.UserID != user.ID {
+				t.Fatalf("刷新会话用户不匹配: %d", session.UserID)
+			}
+		})
+	}
+}
+
+func TestRefreshRotationFailureDoesNotReturnCredentials(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := newAccountFlowTestDB(t)
+	user := createAccountFlowUser(t, db, "rotation-failure", "Password123!")
+	refreshTokenService := newAccountFlowRefreshTokenService(t, db)
+	router := newAccountFlowRouterWithRefreshService(t, db, refreshTokenService)
+	config.AppConfig.RefreshTokenEnabled = true
+	config.AppConfig.RefreshTokenTTL = time.Hour
+	issued, err := refreshTokenService.Issue(t.Context(), user.ID, "device-rotation-failure", time.Hour)
+	if err != nil {
+		t.Fatalf("签发刷新令牌失败: %v", err)
+	}
+
+	injectedErr := errors.New("注入轮转新会话创建失败")
+	if err := db.Callback().Create().Before("gorm:create").Register("test:fail_api_rotated_session_create", func(tx *gorm.DB) {
+		if tx.Statement.Schema != nil && tx.Statement.Schema.Table == "refresh_token_sessions" {
+			tx.AddError(injectedErr)
+		}
+	}); err != nil {
+		t.Fatalf("注册轮转失败回调失败: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", bytes.NewBufferString(`{"device_fingerprint":"device-rotation-failure"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = "198.51.100.99:12345"
+	req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: issued.RawToken})
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusInternalServerError {
+		t.Fatalf("轮转事务失败应返回 500，实际为 %d: %s", resp.Code, resp.Body.String())
+	}
+	if bytes.Contains(resp.Body.Bytes(), []byte("access_token")) {
+		t.Fatalf("轮转失败不得返回访问令牌: %s", resp.Body.String())
+	}
+	cookie := findResponseCookie(resp, util.RefreshTokenCookieName)
+	if cookie == nil || cookie.MaxAge >= 0 {
+		t.Fatalf("轮转失败应清除客户端 Cookie，实际为 %#v", cookie)
+	}
+	if _, err := refreshTokenService.Validate(t.Context(), issued.RawToken, "device-rotation-failure"); err != nil {
+		t.Fatalf("轮转事务失败后旧会话应保持有效: %v", err)
+	}
+}
+
 func TestRefreshReturnsSanitizedValidationError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := newAccountFlowTestDB(t)
@@ -655,20 +758,16 @@ func TestRefreshReturnsSanitizedValidationError(t *testing.T) {
 	config.AppConfig.RefreshTokenEnabled = true
 	config.AppConfig.RefreshTokenTTL = time.Hour
 
-	token, err := refreshTokenService.CreateToken("neo", false, "device-a", time.Hour)
+	user := createAccountFlowUser(t, db, "neo", "Password123!")
+	token, err := refreshTokenService.Issue(t.Context(), user.ID, "device-a", time.Hour)
 	if err != nil {
 		t.Fatalf("create refresh token: %v", err)
-	}
-
-	encryptedToken, err := refreshTokenService.EncryptForClient(token.Token)
-	if err != nil {
-		t.Fatalf("encrypt refresh token: %v", err)
 	}
 
 	body := bytes.NewBufferString(`{"device_fingerprint":"device-b"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", body)
 	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: encryptedToken})
+	req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: token.RawToken})
 	recorder := httptest.NewRecorder()
 
 	router.ServeHTTP(recorder, req)
@@ -693,14 +792,10 @@ func TestRefreshReturnsRateLimitExceededAfterThreshold(t *testing.T) {
 	config.AppConfig.RefreshTokenEnabled = true
 	config.AppConfig.RefreshTokenTTL = time.Hour
 
-	token, err := refreshTokenService.CreateToken("neo", false, "device-a", time.Hour)
+	user := createAccountFlowUser(t, db, "neo", "Password123!")
+	token, err := refreshTokenService.Issue(t.Context(), user.ID, "device-a", time.Hour)
 	if err != nil {
 		t.Fatalf("create refresh token: %v", err)
-	}
-
-	encryptedToken, err := refreshTokenService.EncryptForClient(token.Token)
-	if err != nil {
-		t.Fatalf("encrypt refresh token: %v", err)
 	}
 
 	originalLimiter := refreshTokenRateLimiter
@@ -713,7 +808,7 @@ func TestRefreshReturnsRateLimitExceededAfterThreshold(t *testing.T) {
 		body := bytes.NewBufferString(`{"device_fingerprint":"device-b"}`)
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", body)
 		req.Header.Set("Content-Type", "application/json")
-		req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: encryptedToken})
+		req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: token.RawToken})
 		recorder := httptest.NewRecorder()
 		router.ServeHTTP(recorder, req)
 		return recorder
@@ -730,6 +825,73 @@ func TestRefreshReturnsRateLimitExceededAfterThreshold(t *testing.T) {
 	}
 }
 
+func TestRefreshRejectsLargeChunkedBodyWithoutRotatingToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := newAccountFlowTestDB(t)
+	refreshTokenService := newAccountFlowRefreshTokenService(t, db)
+	router := newAccountFlowRouterWithRefreshService(t, db, refreshTokenService)
+
+	config.AppConfig.RefreshTokenEnabled = true
+	config.AppConfig.RefreshTokenTTL = time.Hour
+
+	user := createAccountFlowUser(t, db, "chunked-refresh", "Password123!")
+	token, err := refreshTokenService.Issue(t.Context(), user.ID, "device-a", time.Hour)
+	if err != nil {
+		t.Fatalf("创建刷新令牌失败: %v", err)
+	}
+
+	body := fmt.Sprintf(
+		`{"device_fingerprint":"device-a","padding":"%s"}`,
+		strings.Repeat("x", int(authRequestBodyLimitBytes)),
+	)
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.ContentLength = -1
+	req.RemoteAddr = "198.51.100.77:12345"
+	req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: token.RawToken})
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("隐藏 Content-Length 的大刷新请求应返回 413，实际为 %d: %s", resp.Code, resp.Body.String())
+	}
+	if _, err := refreshTokenService.Validate(t.Context(), token.RawToken, "device-a"); err != nil {
+		t.Fatalf("超限请求不得轮转原刷新令牌: %v", err)
+	}
+}
+
+func TestRefreshRejectsMalformedJSONWithoutRotatingToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := newAccountFlowTestDB(t)
+	refreshTokenService := newAccountFlowRefreshTokenService(t, db)
+	router := newAccountFlowRouterWithRefreshService(t, db, refreshTokenService)
+
+	config.AppConfig.RefreshTokenEnabled = true
+	config.AppConfig.RefreshTokenTTL = time.Hour
+
+	user := createAccountFlowUser(t, db, "malformed-refresh", "Password123!")
+	token, err := refreshTokenService.Issue(t.Context(), user.ID, "device-a", time.Hour)
+	if err != nil {
+		t.Fatalf("创建刷新令牌失败: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", strings.NewReader(`{"device_fingerprint":`))
+	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = "198.51.100.78:12345"
+	req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: token.RawToken})
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusBadRequest {
+		t.Fatalf("畸形刷新请求应返回 400，实际为 %d: %s", resp.Code, resp.Body.String())
+	}
+	if _, err := refreshTokenService.Validate(t.Context(), token.RawToken, "device-a"); err != nil {
+		t.Fatalf("畸形请求不得轮转原刷新令牌: %v", err)
+	}
+}
+
 func TestRefreshRotatesRefreshTokenAndRevokesOldToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := newAccountFlowTestDB(t)
@@ -740,22 +902,17 @@ func TestRefreshRotatesRefreshTokenAndRevokesOldToken(t *testing.T) {
 	config.AppConfig.RefreshTokenTTL = time.Hour
 
 	// 刷新令牌必须对应真实数据库用户（已移除历史降级兜底）。
-	createAccountFlowUser(t, db, "neo", "Password123!")
+	user := createAccountFlowUser(t, db, "neo", "Password123!")
 
-	token, err := refreshTokenService.CreateToken("neo", false, "device-a", time.Hour)
+	token, err := refreshTokenService.Issue(t.Context(), user.ID, "device-a", time.Hour)
 	if err != nil {
 		t.Fatalf("create refresh token: %v", err)
-	}
-
-	encryptedToken, err := refreshTokenService.EncryptForClient(token.Token)
-	if err != nil {
-		t.Fatalf("encrypt refresh token: %v", err)
 	}
 
 	body := bytes.NewBufferString(`{"device_fingerprint":"device-a"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", body)
 	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: encryptedToken})
+	req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: token.RawToken})
 	recorder := httptest.NewRecorder()
 
 	router.ServeHTTP(recorder, req)
@@ -778,22 +935,218 @@ func TestRefreshRotatesRefreshTokenAndRevokesOldToken(t *testing.T) {
 	}
 
 	// 先验证轮转出的新令牌有效（此校验无副作用）。
-	decryptedNewToken, err := refreshTokenService.DecryptFromClient(rotatedCookie.Value)
-	if err != nil {
-		t.Fatalf("decrypt rotated token: %v", err)
-	}
-	if _, err := refreshTokenService.ValidateToken(decryptedNewToken, "device-a"); err != nil {
+	if _, err := refreshTokenService.Validate(t.Context(), rotatedCookie.Value, "device-a"); err != nil {
 		t.Fatalf("expected rotated refresh token to be valid: %v", err)
 	}
 
-	// 再复用已撤销的旧令牌：触发重放检测，返回 ErrRefreshTokenReuse
-	// 并吊销该用户全部令牌（含上面的新令牌）。
-	if _, err := refreshTokenService.ValidateToken(token.Token, "device-a"); !errors.Is(err, service.ErrRefreshTokenReuse) {
-		t.Fatalf("expected old token reuse to trigger replay defense, got: %v", err)
+	// 再通过刷新入口复用已撤销的旧令牌，触发重放防御并清除 Cookie。
+	replayReq := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", bytes.NewBufferString(`{"device_fingerprint":"device-a"}`))
+	replayReq.Header.Set("Content-Type", "application/json")
+	replayReq.RemoteAddr = "198.51.100.42:12345"
+	replayReq.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: token.RawToken})
+	replayResp := httptest.NewRecorder()
+	router.ServeHTTP(replayResp, replayReq)
+	if replayResp.Code != http.StatusUnauthorized {
+		t.Fatalf("expected old token replay to return 401, got %d: %s", replayResp.Code, replayResp.Body.String())
 	}
 	// 重放防御生效后，新令牌也应被一并吊销。
-	if _, err := refreshTokenService.ValidateToken(decryptedNewToken, "device-a"); err == nil {
+	if _, err := refreshTokenService.Validate(t.Context(), rotatedCookie.Value, "device-a"); err == nil {
 		t.Fatal("expected all tokens revoked after replay detected")
+	}
+}
+
+func TestDisabledUserCannotRefreshToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := newAccountFlowTestDB(t)
+	refreshTokenService := newAccountFlowRefreshTokenService(t, db)
+	router := newAccountFlowRouterWithRefreshService(t, db, refreshTokenService)
+
+	config.AppConfig.RefreshTokenEnabled = true
+	config.AppConfig.RefreshTokenTTL = time.Hour
+	user := createAccountFlowUser(t, db, "disabled-refresh", "Password123!")
+
+	token, err := refreshTokenService.Issue(t.Context(), user.ID, "device-disabled", time.Hour)
+	if err != nil {
+		t.Fatalf("创建刷新令牌失败: %v", err)
+	}
+	if err := service.NewUserService(db, service.NewAccountSessionService()).SetUserStatus(user.ID, false, 999); err != nil {
+		t.Fatalf("禁用用户失败: %v", err)
+	}
+
+	body := bytes.NewBufferString(`{"device_fingerprint":"device-disabled"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", body)
+	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = "198.51.100.41:12345"
+	req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: token.RawToken})
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusUnauthorized {
+		t.Fatalf("期望禁用用户刷新返回 401，实际为 %d: %s", resp.Code, resp.Body.String())
+	}
+	if bytes.Contains(resp.Body.Bytes(), []byte("access_token")) {
+		t.Fatalf("拒绝刷新时不得返回访问令牌: %s", resp.Body.String())
+	}
+	refreshCookie := findResponseCookie(resp, util.RefreshTokenCookieName)
+	if refreshCookie == nil || refreshCookie.MaxAge >= 0 {
+		t.Fatalf("拒绝刷新时必须清除 Cookie，实际为 %#v", refreshCookie)
+	}
+}
+
+func TestLoginEntriesReturnLoginDisabled(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := newAccountFlowTestDB(t)
+	user := createAccountFlowUser(t, db, "policy-user", "Password123!")
+	admin := createAccountFlowUser(t, db, "policy-admin", "Password123!")
+	if err := db.Model(&admin).Update("role", "admin").Error; err != nil {
+		t.Fatalf("设置管理员角色失败: %v", err)
+	}
+	refreshTokenService := newAccountFlowRefreshTokenService(t, db)
+	router := newAccountFlowRouterWithRefreshService(t, db, refreshTokenService)
+	config.AppConfig.RefreshTokenEnabled = true
+	config.AppConfig.RefreshTokenTTL = time.Hour
+	setAccountFlowAuthPolicy(t, db, false, true)
+
+	refreshToken, err := refreshTokenService.Issue(t.Context(), user.ID, "policy-device", time.Hour)
+	if err != nil {
+		t.Fatalf("创建刷新令牌失败: %v", err)
+	}
+
+	testCases := []struct {
+		name   string
+		path   string
+		body   string
+		cookie string
+	}{
+		{name: "普通登录", path: "/api/auth/login", body: `{"username":"policy-user","password":"Password123!","remember_me":true}`},
+		{name: "管理员登录", path: "/api/admin/login", body: `{"username":"policy-admin","password":"Password123!"}`},
+		{name: "管理员记住登录", path: "/api/admin/login-remember", body: `{"username":"policy-admin","password":"Password123!","remember_me":true}`},
+		{name: "刷新访问令牌", path: "/api/auth/refresh", body: `{"device_fingerprint":"policy-device"}`, cookie: refreshToken.RawToken},
+	}
+
+	for index, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, tc.path, bytes.NewBufferString(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			req.RemoteAddr = fmt.Sprintf("198.51.100.%d:12345", index+60)
+			if tc.cookie != "" {
+				req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: tc.cookie})
+			}
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+
+			assertAccountFlowErrorCode(t, resp, http.StatusForbidden, "LOGIN_DISABLED")
+			if bytes.Contains(resp.Body.Bytes(), []byte("access_token")) {
+				t.Fatalf("关闭登录后不得返回访问令牌: %s", resp.Body.String())
+			}
+			if strings.Contains(resp.Header().Get("Set-Cookie"), util.RefreshTokenCookieName+"=") {
+				t.Fatalf("关闭登录后不得下发刷新 Cookie: %q", resp.Header().Get("Set-Cookie"))
+			}
+		})
+	}
+
+	var refreshTokenCount int64
+	if err := db.Model(&model.RefreshTokenSession{}).Count(&refreshTokenCount).Error; err != nil {
+		t.Fatalf("统计刷新令牌失败: %v", err)
+	}
+	if refreshTokenCount != 1 {
+		t.Fatalf("关闭登录后不得创建新刷新令牌，实际记录数为 %d", refreshTokenCount)
+	}
+}
+
+func TestSignupReturnsSignupDisabledWithoutCreatingUser(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := newAccountFlowTestDB(t)
+	router := newAccountFlowRouter(t, db)
+	setAccountFlowAuthPolicy(t, db, true, false)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"username":"disabled-signup","password":"Password123!"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = "198.51.100.70:12345"
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assertAccountFlowErrorCode(t, resp, http.StatusForbidden, "SIGNUP_DISABLED")
+	if bytes.Contains(resp.Body.Bytes(), []byte("access_token")) {
+		t.Fatalf("关闭注册后不得返回访问令牌: %s", resp.Body.String())
+	}
+	var userCount int64
+	if err := db.Model(&model.User{}).Count(&userCount).Error; err != nil {
+		t.Fatalf("统计用户失败: %v", err)
+	}
+	if userCount != 0 {
+		t.Fatalf("关闭注册后不得创建用户，实际为 %d", userCount)
+	}
+}
+
+func TestAuthPolicyUnavailableRejectsAllAuthEntries(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := newAccountFlowTestDB(t)
+	refreshTokenService := newAccountFlowRefreshTokenService(t, db)
+	router := newAccountFlowRouterWithRefreshService(t, db, refreshTokenService)
+	config.AppConfig.RefreshTokenEnabled = true
+
+	injectedErr := errors.New("注入认证策略查询失败")
+	if err := db.Callback().Query().Before("gorm:query").Register("test:fail_auth_policy_query", func(tx *gorm.DB) {
+		if tx.Statement.Schema != nil && tx.Statement.Schema.Table == "system_settings" {
+			tx.AddError(injectedErr)
+		}
+	}); err != nil {
+		t.Fatalf("注册认证策略失败回调失败: %v", err)
+	}
+
+	testCases := []struct {
+		name string
+		path string
+		body string
+	}{
+		{name: "普通登录", path: "/api/auth/login", body: `{"username":"policy-user","password":"Password123!"}`},
+		{name: "管理员登录", path: "/api/admin/login", body: `{"username":"policy-admin","password":"Password123!"}`},
+		{name: "管理员记住登录", path: "/api/admin/login-remember", body: `{"username":"policy-admin","password":"Password123!","remember_me":true}`},
+		{name: "刷新访问令牌", path: "/api/auth/refresh", body: `{}`},
+		{name: "注册", path: "/api/auth/register", body: `{"username":"policy-signup","password":"Password123!"}`},
+	}
+
+	for index, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, tc.path, bytes.NewBufferString(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			req.RemoteAddr = fmt.Sprintf("203.0.113.%d:12345", index+80)
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+
+			assertAccountFlowErrorCode(t, resp, http.StatusServiceUnavailable, "AUTH_POLICY_UNAVAILABLE")
+			if bytes.Contains(resp.Body.Bytes(), []byte("access_token")) {
+				t.Fatalf("认证策略不可用时不得返回访问令牌: %s", resp.Body.String())
+			}
+		})
+	}
+}
+
+func setAccountFlowAuthPolicy(t *testing.T, db *gorm.DB, loginEnabled, signupEnabled bool) {
+	t.Helper()
+	settingsService := service.NewSystemSettingsService(db)
+	if _, err := settingsService.UpdateSettings(service.SystemSettingsUpdateInput{
+		EnableUserLogin:  &loginEnabled,
+		EnableUserSignup: &signupEnabled,
+	}); err != nil {
+		t.Fatalf("更新认证策略失败: %v", err)
+	}
+}
+
+func assertAccountFlowErrorCode(t *testing.T, resp *httptest.ResponseRecorder, status int, errorCode string) {
+	t.Helper()
+	if resp.Code != status {
+		t.Fatalf("期望状态码 %d，实际为 %d: %s", status, resp.Code, resp.Body.String())
+	}
+	var body struct {
+		ErrorCode string `json:"error_code"`
+	}
+	if err := json.Unmarshal(resp.Body.Bytes(), &body); err != nil {
+		t.Fatalf("解析错误响应失败: %v", err)
+	}
+	if body.ErrorCode != errorCode {
+		t.Fatalf("期望错误码 %s，实际为 %q: %s", errorCode, body.ErrorCode, resp.Body.String())
 	}
 }
 
@@ -806,18 +1159,14 @@ func TestRevokeRefreshTokenMarksTokenRevoked(t *testing.T) {
 	config.AppConfig.RefreshTokenEnabled = true
 	config.AppConfig.RefreshTokenTTL = time.Hour
 
-	token, err := refreshTokenService.CreateToken("neo", false, "device-a", time.Hour)
+	user := createAccountFlowUser(t, db, "neo", "Password123!")
+	token, err := refreshTokenService.Issue(t.Context(), user.ID, "device-a", time.Hour)
 	if err != nil {
 		t.Fatalf("create refresh token: %v", err)
 	}
 
-	encryptedToken, err := refreshTokenService.EncryptForClient(token.Token)
-	if err != nil {
-		t.Fatalf("encrypt refresh token: %v", err)
-	}
-
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/revoke", nil)
-	req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: encryptedToken})
+	req.AddCookie(&http.Cookie{Name: util.RefreshTokenCookieName, Value: token.RawToken})
 	recorder := httptest.NewRecorder()
 
 	router.ServeHTTP(recorder, req)
@@ -825,7 +1174,7 @@ func TestRevokeRefreshTokenMarksTokenRevoked(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
 	}
-	if _, err := refreshTokenService.ValidateToken(token.Token, "device-a"); err == nil {
+	if _, err := refreshTokenService.Validate(t.Context(), token.RawToken, "device-a"); err == nil {
 		t.Fatal("expected revoked token to become invalid")
 	}
 }
@@ -865,7 +1214,7 @@ func TestChangePasswordAllowsCurrentUserToUpdatePassword(t *testing.T) {
 		t.Fatalf("expected response to include data field, got %s", recorder.Body.String())
 	}
 
-	authService := service.NewAuthService()
+	authService := service.NewAuthService(db, service.NewSystemSettingsService(db))
 	if _, _, _, err := authService.Login("alice", "new-password-456"); err != nil {
 		t.Fatalf("expected new password login to succeed, got %v", err)
 	}

@@ -9,18 +9,18 @@ services:
     container_name: unisearch-app
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "127.0.0.1:${UNISEARCH_HTTP_PORT:-8080}:8080"
     env_file:
       - .env
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USER: ${MYSQL_APP_USER:-unisearch_dev}
-      DB_PASSWORD: ${MYSQL_APP_PASSWORD:-unisearch_dev_password}
+      DB_PASSWORD: ${MYSQL_APP_PASSWORD:?必须设置 MYSQL_APP_PASSWORD}
       DB_NAME: ${MYSQL_DATABASE:-unisearch}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?必须设置 REDIS_PASSWORD}
       REDIS_DB: 0
       REDIS_TTL: 3600
     volumes:
@@ -33,7 +33,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -44,13 +44,11 @@ services:
     image: mysql:8.0
     container_name: unisearch-mysql
     restart: unless-stopped
-    ports:
-      - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-unisearch_dev_root_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?必须设置 MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-unisearch}
       MYSQL_USER: ${MYSQL_APP_USER:-unisearch_dev}
-      MYSQL_PASSWORD: ${MYSQL_APP_PASSWORD:-unisearch_dev_password}
+      MYSQL_PASSWORD: ${MYSQL_APP_PASSWORD:?必须设置 MYSQL_APP_PASSWORD}
       TZ: Asia/Shanghai
     volumes:
       - mysql-data:/var/lib/mysql
@@ -72,15 +70,18 @@ services:
     image: redis:7-alpine
     container_name: unisearch-redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?必须设置 REDIS_PASSWORD}
     volumes:
       - redis-data:/data
     networks:
       - unisearch-network
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command:
+      - sh
+      - -c
+      - redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass "$$REDIS_PASSWORD"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
       interval: 10s
       timeout: 3s
       retries: 3

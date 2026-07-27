@@ -1,6 +1,6 @@
 import React from "react";
 import { startTransition } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import PublicPageShell from "@/components/PublicPageShell";
 import SEO from "@/components/SEO";
 import HotToolbar from "@/components/trending/HotToolbar";

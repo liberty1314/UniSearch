@@ -1,7 +1,7 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { HelmetProvider } from 'react-helmet-async';
 import Home from '@/pages/Home';
 import type { SearchAccessStatus } from '@/stores/searchAccessStore';
@@ -131,9 +131,9 @@ vi.mock('@/components/home/TrendingCategories', () => ({
   ),
 }));
 
-vi.mock('react-router-dom', async () => {
+vi.mock('react-router', async () => {
   const actual =
-    await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+    await vi.importActual<typeof import('react-router')>('react-router');
   return {
     ...actual,
     useNavigate: () => navigateMock,

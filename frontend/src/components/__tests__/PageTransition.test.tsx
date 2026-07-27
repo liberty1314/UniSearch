@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import PageTransition from '@/components/PageTransition';
 
 const animatePresenceMock = vi.fn(({ children }: { children: React.ReactNode }) => (

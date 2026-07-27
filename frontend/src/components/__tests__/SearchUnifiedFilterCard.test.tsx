@@ -1,7 +1,7 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import SearchUnifiedFilterCard from "@/components/SearchUnifiedFilterCard";
 import { SearchService } from "@/services/searchService";
 import { CloudType } from "@/types/search";
@@ -39,9 +39,9 @@ let searchStoreState = {
 };
 let locationSearch = "?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97";
 
-vi.mock("react-router-dom", async () => {
+vi.mock("react-router", async () => {
   const actual =
-    await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+    await vi.importActual<typeof import("react-router")>("react-router");
   return {
     ...actual,
     useNavigate: () => navigateMock,

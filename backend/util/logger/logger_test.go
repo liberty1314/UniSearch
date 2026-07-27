@@ -43,10 +43,10 @@ func TestRedactFields(t *testing.T) {
 			want:  "<redacted>",
 		},
 		{
-			name:  "普通关键词保留",
+			name:  "搜索关键词直接脱敏",
 			key:   "keyword",
 			value: "海边的曼彻斯特",
-			want:  "海边的曼彻斯特",
+			want:  "<redacted>",
 		},
 	}
 
@@ -60,10 +60,10 @@ func TestRedactFields(t *testing.T) {
 	}
 }
 
-func TestRedactTruncatesLongKeyword(t *testing.T) {
-	keyword := strings.Repeat("片", 81)
+func TestRedactTruncatesLongPlainText(t *testing.T) {
+	value := strings.Repeat("片", 81)
 
-	got := Redact("keyword", keyword)
+	got := Redact("message", value)
 	gotText, ok := got.(string)
 	if !ok {
 		t.Fatalf("期望关键词仍然是字符串，实际为 %T", got)
@@ -78,14 +78,28 @@ func TestRedactTruncatesLongKeyword(t *testing.T) {
 
 func TestFormatFieldsSortsAndRedactsValues(t *testing.T) {
 	formatted := FormatFields([]Field{
-		{Key: "keyword", Value: strings.Repeat("长", 81)},
+		{Key: "message", Value: strings.Repeat("长", 81)},
 		{Key: "api_key", Value: "sk-1234567890abcdef"},
 	})
 
-	if !strings.HasPrefix(formatted, "api_key=sk-1***cdef keyword=") {
+	if !strings.HasPrefix(formatted, "api_key=sk-1***cdef message=") {
 		t.Fatalf("期望字段按 key 排序并脱敏，实际为 %q", formatted)
 	}
 	if strings.Contains(formatted, "1234567890") {
 		t.Fatalf("格式化日志泄露 API Key 中间片段：%q", formatted)
+	}
+}
+
+func TestRedactHidesURLQueryAndCredentials(t *testing.T) {
+	fields := []Field{
+		String("request_uri", "/api/search?kw=秘密词"),
+		String("resource_url", "https://pan.example/s/a?pwd=1234"),
+		String("extract_password", "1234"),
+	}
+	output := FormatFields(fields)
+	for _, forbidden := range []string{"秘密词", "pan.example", "1234"} {
+		if strings.Contains(output, forbidden) {
+			t.Fatalf("日志暴露敏感值 %q: %s", forbidden, output)
+		}
 	}
 }

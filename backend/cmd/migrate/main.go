@@ -14,6 +14,8 @@ import (
 func main() {
 	dropDeprecated := flag.Bool("drop-deprecated", false, "显式删除已经下线的旧表")
 	purgeRemovedPlugins := flag.Bool("purge-removed-plugins", false, "显式清理已下线插件的历史数据")
+	migrateRefreshTokenSessions := flag.Bool("migrate-refresh-token-sessions", false, "创建摘要刷新会话表并清空旧原文刷新令牌")
+	dropLegacyRefreshTokens := flag.Bool("drop-legacy-refresh-tokens", false, "在旧刷新令牌表为空时显式删除该表")
 	flag.Parse()
 
 	if err := godotenv.Load(); err != nil {
@@ -40,10 +42,26 @@ func main() {
 	if err := database.AutoMigrate(); err != nil {
 		log.Fatalf("数据库结构迁移失败: %v", err)
 	}
+	if *migrateRefreshTokenSessions {
+		log.Println("正在执行刷新会话摘要迁移并清空旧原文记录...")
+		if err := database.MigrateRefreshTokenSessions(database.GetDB()); err != nil {
+			log.Fatalf("刷新会话摘要迁移失败: %v", err)
+		}
+	} else {
+		log.Println("跳过刷新会话摘要迁移；切换新版本前必须显式追加 -migrate-refresh-token-sessions")
+	}
+	if *dropLegacyRefreshTokens {
+		log.Println("正在显式删除已清空的旧刷新令牌表...")
+		if err := database.DropLegacyRefreshTokens(database.GetDB()); err != nil {
+			log.Fatalf("删除旧刷新令牌表失败: %v", err)
+		}
+	} else {
+		log.Println("保留空的旧刷新令牌表；验证窗口结束后可追加 -drop-legacy-refresh-tokens")
+	}
 
-	log.Println("正在检查默认管理员账户...")
+	log.Println("正在检查首次管理员账户...")
 	if err := database.SeedDefaultAdmin(); err != nil {
-		log.Fatalf("创建默认管理员失败: %v", err)
+		log.Fatalf("创建首次管理员失败: %v", err)
 	}
 
 	if *dropDeprecated {

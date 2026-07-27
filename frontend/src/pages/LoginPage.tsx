@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router";
 import { AuthService } from "@/services/authService";
 import { SystemSettingsService } from "@/services/systemSettingsService";
 import { useLoginForm } from "@/hooks/useLoginForm";

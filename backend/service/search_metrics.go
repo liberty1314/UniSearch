@@ -72,11 +72,11 @@ func (r *SearchMetricsRecorder) RecordSearch(scope string, keyword string, durat
 	r.mu.Unlock()
 
 	fields := map[string]interface{}{
-		"scope":        scope,
-		"keyword":      keyword,
-		"duration_ms":  duration.Milliseconds(),
-		"result_count": resultCount,
-		"error_class":  classifySearchError(err),
+		"scope":          scope,
+		"keyword_length": len([]rune(keyword)),
+		"duration_ms":    duration.Milliseconds(),
+		"result_count":   resultCount,
+		"error_class":    classifySearchError(err),
 	}
 	if err != nil {
 		logSearchEvent("search", fields)

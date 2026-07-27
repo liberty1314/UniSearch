@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { Navigate, Route, Routes, matchPath, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, matchPath, useLocation } from 'react-router';
 import { Toaster } from 'sonner';
 import Navbar from '@/components/Navbar';
 import { AnnouncementProvider } from '@/components/AnnouncementProvider';

@@ -1,13 +1,13 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"strings"
 	"time"
 	"unisearch/config"
-	"unisearch/database"
 	"unisearch/model"
 	"unisearch/util"
 
@@ -22,6 +22,15 @@ type AuthService struct {
 	systemSettingsService *SystemSettingsService
 }
 
+// UserAuthState 表示每次授权时必须从数据库确认的账户状态。
+type UserAuthState struct {
+	ID           uint
+	Username     string
+	Role         string
+	IsEnabled    bool
+	TokenVersion int
+}
+
 func isAuthDuplicateEntryError(err error) bool {
 	if err == nil {
 		return false
@@ -30,16 +39,80 @@ func isAuthDuplicateEntryError(err error) bool {
 	return strings.Contains(errMsg, "duplicate entry") || strings.Contains(errMsg, "error 1062")
 }
 
-// NewAuthService 创建认证服务实例
-func NewAuthService() *AuthService {
-	return &AuthService{
-		db: database.GetDB(),
-	}
+// NewAuthService 创建显式依赖的认证服务实例。
+func NewAuthService(db *gorm.DB, systemSettingsService *SystemSettingsService) *AuthService {
+	return &AuthService{db: db, systemSettingsService: systemSettingsService}
 }
 
-// SetSystemSettingsService 注入系统设置服务，用于在注册时校验开关状态
-func (s *AuthService) SetSystemSettingsService(systemSettingsService *SystemSettingsService) {
-	s.systemSettingsService = systemSettingsService
+func (s *AuthService) loadAuthPolicy(ctx context.Context) (*model.SystemSettings, error) {
+	if s == nil || s.systemSettingsService == nil {
+		return nil, ErrAuthPolicyUnavailable
+	}
+	if ctx != nil {
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("%w: %v", ErrAuthPolicyUnavailable, ctx.Err())
+		default:
+		}
+	}
+
+	settings, err := s.systemSettingsService.GetSettings()
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrAuthPolicyUnavailable, err)
+	}
+	return settings, nil
+}
+
+// RequireLoginEnabled 确认后端当前允许签发新的登录凭据。
+func (s *AuthService) RequireLoginEnabled(ctx context.Context) error {
+	settings, err := s.loadAuthPolicy(ctx)
+	if err != nil {
+		return err
+	}
+	if !settings.EnableUserAuth || !settings.EnableUserLogin {
+		return ErrLoginDisabled
+	}
+	return nil
+}
+
+// RequireSignupEnabled 确认后端当前允许创建新账户。
+func (s *AuthService) RequireSignupEnabled(ctx context.Context) error {
+	settings, err := s.loadAuthPolicy(ctx)
+	if err != nil {
+		return err
+	}
+	if !settings.EnableUserAuth || !settings.EnableUserSignup {
+		return ErrSignupDisabled
+	}
+	return nil
+}
+
+func loadUserAuthState(ctx context.Context, db *gorm.DB, userID uint) (*UserAuthState, error) {
+	if db == nil || userID == 0 {
+		return nil, ErrAuthStateUnavailable
+	}
+
+	var state UserAuthState
+	err := db.WithContext(ctx).
+		Model(&model.User{}).
+		Select("id", "username", "role", "is_enabled", "token_version").
+		Where("id = ?", userID).
+		First(&state).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, gorm.ErrRecordNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrAuthStateUnavailable, err)
+	}
+	return &state, nil
+}
+
+// LoadUserAuthState 从数据库读取账户当前授权状态，软删除用户不会被返回。
+func (s *AuthService) LoadUserAuthState(ctx context.Context, userID uint) (*UserAuthState, error) {
+	if s == nil {
+		return nil, ErrAuthStateUnavailable
+	}
+	return loadUserAuthState(ctx, s.db, userID)
 }
 
 // SignupCaptchaConfig 返回注册人机验证的开关与提供方。
@@ -118,14 +191,8 @@ func (s *AuthService) ensureDailyActivity(userID uint, now time.Time) error {
 //
 // 验证需求：4.1-4.6
 func (s *AuthService) Register(username, password string) (*model.User, error) {
-	if s.systemSettingsService != nil {
-		settings, err := s.systemSettingsService.GetSettings()
-		if err != nil {
-			return nil, fmt.Errorf("查询系统设置失败: %w", err)
-		}
-		if !settings.EnableUserAuth || !settings.EnableUserSignup {
-			return nil, ErrSignupDisabled
-		}
+	if err := s.RequireSignupEnabled(context.Background()); err != nil {
+		return nil, err
 	}
 
 	// 验证参数非空
@@ -221,6 +288,10 @@ func (s *AuthService) CheckUsernameExist(username string) (bool, error) {
 //
 // 验证需求：5.1-5.7
 func (s *AuthService) Login(username, password string) (token string, user *model.User, apiKey string, err error) {
+	if err := s.RequireLoginEnabled(context.Background()); err != nil {
+		return "", nil, "", err
+	}
+
 	// 验证参数非空
 	username = strings.TrimSpace(username)
 
@@ -383,7 +454,7 @@ func (s *AuthService) ValidateToken(tokenString string) (*util.JWTClaims, error)
 }
 
 // CreateDefaultAdmin 创建首次管理员账户。
-// 生产环境必须显式配置初始管理员凭据；开发环境允许本地默认值但不输出明文密码。
+// 数据库无管理员时必须显式配置初始管理员凭据。
 // 验证需求：2.3, 2.4, 2.5
 func (s *AuthService) CreateDefaultAdmin() error {
 	// 检查是否存在管理员账户
@@ -422,11 +493,8 @@ func (s *AuthService) CreateDefaultAdmin() error {
 	}
 
 	// 在控制台输出提示信息
-	log.Printf("✓ 默认管理员账户已创建")
+	log.Printf("✓ 首次管理员账户已创建")
 	log.Printf("  用户名: %s", credentials.Username)
-	if credentials.UsingDevelopmentDefault {
-		log.Printf("  提示: 当前使用开发环境默认管理员，请勿用于生产环境")
-	}
 
 	return nil
 }
@@ -498,9 +566,9 @@ func (s *AuthService) GetUserByUsername(username string) (*model.User, error) {
 	result := s.db.Where("username = ?", username).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, errors.New("用户不存在")
+			return nil, gorm.ErrRecordNotFound
 		}
-		return nil, fmt.Errorf("查询用户失败: %w", result.Error)
+		return nil, fmt.Errorf("%w: %v", ErrAuthStateUnavailable, result.Error)
 	}
 
 	return &user, nil

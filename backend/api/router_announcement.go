@@ -4,13 +4,13 @@ import "github.com/gin-gonic/gin"
 
 func registerAnnouncementRoutes(api *gin.RouterGroup, deps RouterDeps) {
 	announcements := api.Group("/announcements")
-	announcements.Use(JWTMiddleware())
+	announcements.Use(JWTMiddleware(deps.AuthService))
 	{
 		announcements.GET("/active", GetActiveAnnouncementsHandler(deps.AnnouncementService, deps.SystemSettingsService))
 	}
 
 	adminAnnouncements := api.Group("/announcements")
-	adminAnnouncements.Use(JWTMiddleware())
+	adminAnnouncements.Use(JWTMiddleware(deps.AuthService))
 	adminAnnouncements.Use(AdminMiddleware())
 	{
 		adminAnnouncements.POST("", CreateAnnouncementHandler(deps.AnnouncementService))

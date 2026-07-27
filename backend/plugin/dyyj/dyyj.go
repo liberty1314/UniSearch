@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -149,7 +148,7 @@ func (p *DyyjPlugin) SearchWithResult(keyword string, ext map[string]interface{}
 // searchImpl 搜索实现
 func (p *DyyjPlugin) searchImpl(client *http.Client, keyword string, ext map[string]interface{}) ([]model.SearchResult, error) {
 	if p.debugMode {
-		log.Printf("[DYYJ] 开始搜索: %s", keyword)
+		log.Printf("[DYYJ] 开始搜索，关键词长度: %d", len([]rune(keyword)))
 	}
 
 	// 第一步：执行搜索获取结果列表
@@ -157,7 +156,7 @@ func (p *DyyjPlugin) searchImpl(client *http.Client, keyword string, ext map[str
 	searchResults, err := p.executeSearch(p.optimizedClient, keyword)
 	if err != nil {
 		if p.debugMode {
-			log.Printf("[DYYJ] 执行搜索失败: %v", err)
+			log.Printf("[DYYJ] 执行搜索失败，错误类型: %T", err)
 		}
 		return nil, fmt.Errorf("[%s] 执行搜索失败: %w", p.Name(), err)
 	}
@@ -196,7 +195,7 @@ func (p *DyyjPlugin) executeSearch(client *http.Client, keyword string) ([]model
 	searchURL := fmt.Sprintf("%s%s", BaseURL, fmt.Sprintf(SearchPath, url.QueryEscape(keyword)))
 
 	if p.debugMode {
-		log.Printf("[DYYJ] 搜索URL: %s", searchURL)
+		log.Printf("[DYYJ] 搜索目标: %s", dyyjTargetClass(searchURL))
 	}
 
 	// 创建带超时的上下文
@@ -206,7 +205,7 @@ func (p *DyyjPlugin) executeSearch(client *http.Client, keyword string) ([]model
 	req, err := http.NewRequestWithContext(ctx, "GET", searchURL, nil)
 	if err != nil {
 		if p.debugMode {
-			log.Printf("[DYYJ] 创建搜索请求失败: %v", err)
+			log.Printf("[DYYJ] 创建搜索请求失败，错误类型: %T", err)
 		}
 		return nil, fmt.Errorf("[%s] 创建搜索请求失败: %w", p.Name(), err)
 	}
@@ -223,7 +222,7 @@ func (p *DyyjPlugin) executeSearch(client *http.Client, keyword string) ([]model
 	resp, err := p.doRequestWithRetry(req, client)
 	if err != nil {
 		if p.debugMode {
-			log.Printf("[DYYJ] 搜索请求失败: %v", err)
+			log.Printf("[DYYJ] 搜索请求失败，错误类型: %T", err)
 		}
 		return nil, fmt.Errorf("[%s] 搜索请求失败: %w", p.Name(), err)
 	}
@@ -244,7 +243,7 @@ func (p *DyyjPlugin) executeSearch(client *http.Client, keyword string) ([]model
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		if p.debugMode {
-			log.Printf("[DYYJ] 读取响应体失败: %v", err)
+			log.Printf("[DYYJ] 读取响应体失败，错误类型: %T", err)
 		}
 		return nil, fmt.Errorf("[%s] 读取响应体失败: %w", p.Name(), err)
 	}
@@ -252,21 +251,6 @@ func (p *DyyjPlugin) executeSearch(client *http.Client, keyword string) ([]model
 	bodyString := string(bodyBytes)
 	if p.debugMode {
 		log.Printf("[DYYJ] 响应体大小: %d 字节", len(bodyString))
-
-		// 保存完整HTML到文件用于分析
-		filename := fmt.Sprintf("./dyyj_search_%s_%d.html", url.QueryEscape(keyword), time.Now().Unix())
-		if err := os.WriteFile(filename, bodyBytes, 0644); err == nil {
-			log.Printf("[DYYJ] 完整HTML已保存到: %s", filename)
-		} else {
-			log.Printf("[DYYJ] 保存HTML文件失败: %v", err)
-		}
-
-		// 输出HTML的前2000个字符用于调试
-		previewLen := 2000
-		if len(bodyString) < previewLen {
-			previewLen = len(bodyString)
-		}
-		log.Printf("[DYYJ] HTML内容预览（前%d字符）:\n%s", previewLen, bodyString[:previewLen])
 
 		// 检查关键元素是否存在
 		hasNoscript := strings.Contains(bodyString, "<noscript")
@@ -282,54 +266,16 @@ func (p *DyyjPlugin) executeSearch(client *http.Client, keyword string) ([]model
 		noscriptCount := strings.Count(bodyString, "<noscript")
 		log.Printf("[DYYJ] 找到 %d 个noscript标签", noscriptCount)
 
-		// 尝试查找所有包含flarum-content的noscript
-		if hasNoscript {
-			noscriptIndex := 0
-			start := 0
-			for {
-				noscriptStart := strings.Index(bodyString[start:], "<noscript")
-				if noscriptStart < 0 {
-					break
-				}
-				noscriptStart += start
-				noscriptEnd := strings.Index(bodyString[noscriptStart:], "</noscript>")
-				if noscriptEnd > 0 {
-					noscriptContent := bodyString[noscriptStart : noscriptStart+noscriptEnd+10]
-					noscriptIndex++
-
-					hasFlarumInNoscript := strings.Contains(noscriptContent, "flarum-content")
-					hasULInNoscript := strings.Contains(noscriptContent, "<ul>")
-					hasLIInNoscript := strings.Contains(noscriptContent, "<li>")
-
-					previewLen := 1000
-					if len(noscriptContent) < previewLen {
-						previewLen = len(noscriptContent)
-					}
-					log.Printf("[DYYJ] noscript标签 #%d 内容预览（前%d字符，flarum-content=%v, ul=%v, li=%v）:\n%s",
-						noscriptIndex, previewLen, hasFlarumInNoscript, hasULInNoscript, hasLIInNoscript, noscriptContent[:previewLen])
-
-					start = noscriptStart + noscriptEnd + 10
-				} else {
-					break
-				}
-			}
-		}
-
 		// 查找所有包含/d/的链接（使用预编译的正则）
 		matches := linkHrefRegex.FindAllStringSubmatch(bodyString, -1)
 		log.Printf("[DYYJ] 使用正则表达式找到 %d 个包含'/d/'的链接", len(matches))
-		for i, match := range matches {
-			if i < 10 {
-				log.Printf("[DYYJ]   链接 %d: %s", i+1, match[1])
-			}
-		}
 	}
 
 	// 解析HTML提取搜索结果
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(bodyString))
 	if err != nil {
 		if p.debugMode {
-			log.Printf("[DYYJ] 解析搜索结果HTML失败: %v", err)
+			log.Printf("[DYYJ] 解析搜索结果HTML失败，错误类型: %T", err)
 		}
 		return nil, fmt.Errorf("[%s] 解析搜索结果HTML失败: %w", p.Name(), err)
 	}
@@ -352,11 +298,11 @@ func (p *DyyjPlugin) doRequestWithRetry(req *http.Request, client *http.Client) 
 			// 指数退避重试
 			backoff := time.Duration(1<<uint(i-1)) * 200 * time.Millisecond
 			if p.debugMode {
-				log.Printf("[DYYJ] 重试请求 (第 %d 次)，等待 %v: %s", i, backoff, req.URL.String())
+				log.Printf("[DYYJ] 重试请求 (第 %d 次)，等待 %v，目标: %s", i, backoff, dyyjTargetClass(req.URL.String()))
 			}
 			time.Sleep(backoff)
 		} else if p.debugMode {
-			log.Printf("[DYYJ] 发送请求: %s", req.URL.String())
+			log.Printf("[DYYJ] 发送请求，目标: %s", dyyjTargetClass(req.URL.String()))
 		}
 
 		// 克隆请求避免并发问题
@@ -365,18 +311,18 @@ func (p *DyyjPlugin) doRequestWithRetry(req *http.Request, client *http.Client) 
 		resp, err := client.Do(reqClone)
 		if err == nil && resp.StatusCode == 200 {
 			if p.debugMode && i > 0 {
-				log.Printf("[DYYJ] 重试成功 (第 %d 次): %s", i+1, req.URL.String())
+				log.Printf("[DYYJ] 重试成功 (第 %d 次)，目标: %s", i+1, dyyjTargetClass(req.URL.String()))
 			}
 			return resp, nil
 		}
 
 		if resp != nil {
 			if p.debugMode {
-				log.Printf("[DYYJ] 请求失败，状态码: %d (尝试 %d/%d): %s", resp.StatusCode, i+1, maxRetries, req.URL.String())
+				log.Printf("[DYYJ] 请求失败，状态码: %d (尝试 %d/%d)，目标: %s", resp.StatusCode, i+1, maxRetries, dyyjTargetClass(req.URL.String()))
 			}
 			resp.Body.Close()
 		} else if err != nil && p.debugMode {
-			log.Printf("[DYYJ] 请求失败，错误: %v (尝试 %d/%d): %s", err, i+1, maxRetries, req.URL.String())
+			log.Printf("[DYYJ] 请求失败，错误类型: %T (尝试 %d/%d)，目标: %s", err, i+1, maxRetries, dyyjTargetClass(req.URL.String()))
 		}
 		lastErr = err
 	}
@@ -461,7 +407,7 @@ func (p *DyyjPlugin) parseSearchResults(doc *goquery.Document, htmlContent strin
 		if result != nil {
 			results = append(results, *result)
 			if p.debugMode {
-				log.Printf("[DYYJ] 解析结果项 %d: %s", i+1, result.Title)
+				log.Printf("[DYYJ] 解析结果项 %d 成功", i+1)
 			}
 		} else if p.debugMode {
 			log.Printf("[DYYJ] 跳过无效结果项 %d", i+1)
@@ -547,7 +493,7 @@ func (p *DyyjPlugin) parseSearchResultsWithRegex(htmlContent string) []model.Sea
 			results = append(results, result)
 
 			if p.debugMode {
-				log.Printf("[DYYJ] 正则解析结果 %d: %s -> %s", i+1, title, href)
+				log.Printf("[DYYJ] 正则解析结果 %d 成功，目标: %s", i+1, dyyjTargetClass(href))
 			}
 		}
 	}
@@ -579,7 +525,7 @@ func (p *DyyjPlugin) parseResultItem(s *goquery.Selection, index int) *model.Sea
 	detailURL, exists := linkEl.Attr("href")
 	if !exists || detailURL == "" {
 		if p.debugMode {
-			log.Printf("[DYYJ] 结果项 %d: 未找到详情页链接，标题: %s", index, title)
+			log.Printf("[DYYJ] 结果项 %d: 未找到详情页链接", index)
 		}
 		return nil
 	}
@@ -648,7 +594,7 @@ func (p *DyyjPlugin) filterByTitleKeyword(results []model.SearchResult, keyword 
 		if matched {
 			filtered = append(filtered, result)
 		} else if p.debugMode {
-			log.Printf("[DYYJ] 标题不包含关键词，跳过: %s", result.Title)
+			log.Printf("[DYYJ] 标题不包含关键词，跳过当前结果")
 		}
 	}
 
@@ -684,13 +630,13 @@ func (p *DyyjPlugin) fetchDetailLinks(client *http.Client, searchResults []model
 			detailURL := p.extractDetailURLFromContent(r.Content)
 			if detailURL == "" {
 				if p.debugMode {
-					log.Printf("[DYYJ] 跳过无详情页URL的结果: %s", r.Title)
+					log.Printf("[DYYJ] 跳过无详情页 URL 的结果")
 				}
 				return
 			}
 
 			if p.debugMode {
-				log.Printf("[DYYJ] 获取详情页链接: %s (标题: %s)", detailURL, r.Title)
+				log.Printf("[DYYJ] 获取详情页链接，目标: %s", dyyjTargetClass(detailURL))
 			}
 
 			// 获取详情页链接和时间信息
@@ -701,23 +647,23 @@ func (p *DyyjPlugin) fetchDetailLinks(client *http.Client, searchResults []model
 				if !publishTime.IsZero() {
 					r.Datetime = publishTime
 					if p.debugMode {
-						log.Printf("[DYYJ] 更新发布时间: %s -> %s", r.Title, publishTime.Format("2006-01-02 15:04:05"))
+						log.Printf("[DYYJ] 更新发布时间成功")
 					}
 				} else {
 					// 如果没有获取到时间，使用当前时间作为默认值
 					r.Datetime = time.Now()
 					if p.debugMode {
-						log.Printf("[DYYJ] 未获取到发布时间，使用当前时间: %s", r.Title)
+						log.Printf("[DYYJ] 未获取到发布时间，使用当前时间")
 					}
 				}
 				// 清理Content中的详情页URL
 				r.Content = p.cleanContent(r.Content)
 				if p.debugMode {
-					log.Printf("[DYYJ] 成功获取详情页链接: %s，找到 %d 个网盘链接", r.Title, len(links))
+					log.Printf("[DYYJ] 成功获取详情页链接，找到 %d 个网盘链接", len(links))
 				}
 				resultsChan <- r
 			} else if p.debugMode {
-				log.Printf("[DYYJ] 详情页无有效链接: %s (URL: %s)", r.Title, detailURL)
+				log.Printf("[DYYJ] 详情页无有效链接，目标: %s", dyyjTargetClass(detailURL))
 			}
 		}(result)
 	}
@@ -767,7 +713,7 @@ func (p *DyyjPlugin) fetchDetailPageLinks(client *http.Client, detailURL string)
 		if cacheData, ok := cached.(*cacheItem); ok {
 			if time.Since(cacheData.Timestamp) < p.cacheTTL {
 				if p.debugMode {
-					log.Printf("[DYYJ] 使用缓存的详情页链接: %s (缓存了 %d 个链接)", detailURL, len(cacheData.Links))
+					log.Printf("[DYYJ] 使用缓存的详情页链接，目标: %s，链接数: %d", dyyjTargetClass(detailURL), len(cacheData.Links))
 				}
 				return cacheData.Links, cacheData.PublishTime
 			}
@@ -775,7 +721,7 @@ func (p *DyyjPlugin) fetchDetailPageLinks(client *http.Client, detailURL string)
 	}
 
 	if p.debugMode {
-		log.Printf("[DYYJ] 开始获取详情页: %s", detailURL)
+		log.Printf("[DYYJ] 开始获取详情页，目标: %s", dyyjTargetClass(detailURL))
 	}
 
 	// 创建带超时的上下文
@@ -785,7 +731,7 @@ func (p *DyyjPlugin) fetchDetailPageLinks(client *http.Client, detailURL string)
 	req, err := http.NewRequestWithContext(ctx, "GET", detailURL, nil)
 	if err != nil {
 		if p.debugMode {
-			log.Printf("[DYYJ] 创建详情页请求失败: %v (URL: %s)", err, detailURL)
+			log.Printf("[DYYJ] 创建详情页请求失败，错误类型: %T，目标: %s", err, dyyjTargetClass(detailURL))
 		}
 		return []model.Link{}, time.Time{}
 	}
@@ -801,19 +747,19 @@ func (p *DyyjPlugin) fetchDetailPageLinks(client *http.Client, detailURL string)
 	resp, err := p.doRequestWithRetry(req, client)
 	if err != nil {
 		if p.debugMode {
-			log.Printf("[DYYJ] 详情页请求失败: %v (URL: %s)", err, detailURL)
+			log.Printf("[DYYJ] 详情页请求失败，错误类型: %T，目标: %s", err, dyyjTargetClass(detailURL))
 		}
 		return []model.Link{}, time.Time{}
 	}
 	defer resp.Body.Close()
 
 	if p.debugMode {
-		log.Printf("[DYYJ] 详情页响应状态码: %d (URL: %s)", resp.StatusCode, detailURL)
+		log.Printf("[DYYJ] 详情页响应状态码: %d，目标: %s", resp.StatusCode, dyyjTargetClass(detailURL))
 	}
 
 	if resp.StatusCode != 200 {
 		if p.debugMode {
-			log.Printf("[DYYJ] 详情页HTTP状态错误: %d (URL: %s)", resp.StatusCode, detailURL)
+			log.Printf("[DYYJ] 详情页 HTTP 状态错误: %d，目标: %s", resp.StatusCode, dyyjTargetClass(detailURL))
 		}
 		return []model.Link{}, time.Time{}
 	}
@@ -822,13 +768,13 @@ func (p *DyyjPlugin) fetchDetailPageLinks(client *http.Client, detailURL string)
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		if p.debugMode {
-			log.Printf("[DYYJ] 读取详情页响应失败: %v (URL: %s)", err, detailURL)
+			log.Printf("[DYYJ] 读取详情页响应失败，错误类型: %T，目标: %s", err, dyyjTargetClass(detailURL))
 		}
 		return []model.Link{}, time.Time{}
 	}
 
 	if p.debugMode {
-		log.Printf("[DYYJ] 详情页响应体大小: %d 字节 (URL: %s)", len(body), detailURL)
+		log.Printf("[DYYJ] 详情页响应体大小: %d 字节，目标: %s", len(body), dyyjTargetClass(detailURL))
 	}
 
 	// 解析网盘链接
@@ -838,9 +784,9 @@ func (p *DyyjPlugin) fetchDetailPageLinks(client *http.Client, detailURL string)
 	publishTime := p.extractPublishTime(string(body))
 
 	if p.debugMode {
-		log.Printf("[DYYJ] 从详情页提取到 %d 个链接: %s", len(links), detailURL)
+		log.Printf("[DYYJ] 从详情页提取到 %d 个链接，目标: %s", len(links), dyyjTargetClass(detailURL))
 		for i, link := range links {
-			log.Printf("[DYYJ]   链接 %d: %s (%s, 密码: %s)", i+1, link.URL, link.Type, link.Password)
+			log.Printf("[DYYJ]   链接 %d 类型: %s", i+1, link.Type)
 		}
 		if !publishTime.IsZero() {
 			log.Printf("[DYYJ] 提取到发布时间: %s", publishTime.Format("2006-01-02 15:04:05"))
@@ -885,14 +831,14 @@ func (p *DyyjPlugin) extractPublishTime(htmlContent string) time.Time {
 			for _, format := range timeFormats {
 				if t, err := time.Parse(format, timeStr); err == nil {
 					if p.debugMode {
-						log.Printf("[DYYJ] 成功解析时间: %s (格式: %s)", timeStr, format)
+						log.Printf("[DYYJ] 成功解析时间，格式: %s", format)
 					}
 					return t
 				}
 			}
 
 			if p.debugMode {
-				log.Printf("[DYYJ] 无法解析时间格式: %s", timeStr)
+				log.Printf("[DYYJ] 无法解析时间格式")
 			}
 		}
 	}
@@ -944,7 +890,7 @@ func (p *DyyjPlugin) parseNetworkDiskLinks(htmlContent string) []model.Link {
 			strongText := strings.TrimSpace(strongEl.Text())
 
 			if p.debugMode {
-				log.Printf("[DYYJ]   检查p标签 %d，strong文本: %s", j+1, strongText)
+				log.Printf("[DYYJ]   检查 p 标签 %d", j+1)
 			}
 
 			// 检查是否是网盘名称
@@ -953,7 +899,7 @@ func (p *DyyjPlugin) parseNetworkDiskLinks(htmlContent string) []model.Link {
 			}
 
 			if p.debugMode {
-				log.Printf("[DYYJ]   找到网盘名称: %s", strongText)
+				log.Printf("[DYYJ]   找到受支持的网盘名称")
 			}
 
 			// 在当前p标签或下一个p标签中查找链接
@@ -991,12 +937,12 @@ func (p *DyyjPlugin) parseNetworkDiskLinks(htmlContent string) []model.Link {
 						}
 
 						if p.debugMode {
-							log.Printf("[DYYJ]   找到网盘链接: %s (%s, 密码: %s)", linkURL, urlType, password)
+							log.Printf("[DYYJ]   找到网盘链接，类型: %s", urlType)
 						}
 
 						links = append(links, link)
 					} else if p.debugMode {
-						log.Printf("[DYYJ]   链接类型为others，跳过: %s", linkURL)
+						log.Printf("[DYYJ]   链接类型为 others，跳过，目标: %s", dyyjTargetClass(linkURL))
 					}
 				} else if p.debugMode {
 					log.Printf("[DYYJ]   p标签 %d 中未找到链接", j+1)
@@ -1054,7 +1000,7 @@ func (p *DyyjPlugin) parseNetworkDiskLinksWithRegex(htmlContent string) []model.
 				// 去重
 				if seen[linkURL] {
 					if p.debugMode {
-						log.Printf("[DYYJ] 跳过重复链接: %s", linkURL)
+						log.Printf("[DYYJ] 跳过重复链接，目标: %s", dyyjTargetClass(linkURL))
 					}
 					continue
 				}
@@ -1078,12 +1024,12 @@ func (p *DyyjPlugin) parseNetworkDiskLinksWithRegex(htmlContent string) []model.
 					}
 
 					if p.debugMode {
-						log.Printf("[DYYJ] 正则找到网盘链接: %s (%s, 密码: %s)", linkURL, urlType, password)
+						log.Printf("[DYYJ] 正则找到网盘链接，类型: %s", urlType)
 					}
 
 					links = append(links, link)
 				} else if p.debugMode {
-					log.Printf("[DYYJ] 链接类型为others，跳过: %s", linkURL)
+					log.Printf("[DYYJ] 链接类型为 others，跳过，目标: %s", dyyjTargetClass(linkURL))
 				}
 			}
 		}
@@ -1130,6 +1076,36 @@ func (p *DyyjPlugin) extractPasswordFromURL(linkURL string) string {
 	}
 
 	return ""
+}
+
+func dyyjTargetClass(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return "invalid"
+	}
+	host := strings.ToLower(parsed.Hostname())
+	switch {
+	case strings.HasSuffix(host, "dyyjmax.org"):
+		return "dyyj"
+	case host == "pan.quark.cn":
+		return "quark"
+	case host == "drive.uc.cn":
+		return "uc"
+	case host == "pan.baidu.com":
+		return "baidu"
+	case strings.HasSuffix(host, "aliyundrive.com"), strings.HasSuffix(host, "alipan.com"):
+		return "aliyun"
+	case host == "pan.xunlei.com":
+		return "xunlei"
+	case host == "cloud.189.cn":
+		return "tianyi"
+	case host == "caiyun.139.com":
+		return "mobile"
+	case host == "":
+		return "non_http"
+	default:
+		return "other"
+	}
 }
 
 // determineCloudType 根据URL自动识别网盘类型（按开发指南完整列表）

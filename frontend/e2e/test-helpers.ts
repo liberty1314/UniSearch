@@ -6,10 +6,17 @@ const apiEnvelope = <T>(data: T) => ({
   data,
 });
 
-const e2eUserToken =
-  '<API_KEY>';
-const e2eAdminToken =
-  '<API_KEY>';
+const createE2EToken = (subject: string) => {
+  const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  return [
+    encode({ alg: 'none', typ: 'JWT' }),
+    encode({ exp: 4102444800, sub: subject }),
+    'e2e',
+  ].join('.');
+};
+
+const e2eUserToken = createE2EToken('e2e-user');
+const e2eAdminToken = createE2EToken('admin');
 
 const publicSettings = {
   enable_user_auth: true,

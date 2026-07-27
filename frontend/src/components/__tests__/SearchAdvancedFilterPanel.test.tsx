@@ -1,7 +1,7 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import SearchAdvancedFilterPanel from "@/components/SearchAdvancedFilterPanel";
 
 const { performSearchMock, setSearchParamsMock } = vi.hoisted(() => ({

@@ -1,7 +1,7 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { HelmetProvider } from "react-helmet-async";
 import ResourceDetailPage from "@/pages/ResourceDetailPage";
 import type { ResourceObject } from "@/types/resource";

@@ -1,6 +1,8 @@
 package api
 
 import (
+	"bytes"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,6 +11,78 @@ import (
 	"github.com/gin-gonic/gin"
 	"unisearch/config"
 )
+
+func captureStandardLog(t *testing.T, run func()) string {
+	t.Helper()
+	var output bytes.Buffer
+	previous := log.Writer()
+	log.SetOutput(&output)
+	t.Cleanup(func() { log.SetOutput(previous) })
+	run()
+	return output.String()
+}
+
+func TestLoggerMiddlewareRedactsSensitiveRequestData(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(LoggerMiddleware())
+	router.GET("/api/search", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	output := captureStandardLog(t, func() {
+		req := httptest.NewRequest(http.MethodGet, "/api/search?kw=%E7%A7%98%E5%AF%86%E8%AF%8D", nil)
+		req.Header.Set("Authorization", "Bearer secret-token")
+		req.Header.Set("Cookie", "refresh_token=secret-cookie")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+	})
+
+	for _, required := range []string{"method=GET", "path=/api/search", "status=200"} {
+		if !strings.Contains(output, required) {
+			t.Fatalf("请求日志缺少 %q: %s", required, output)
+		}
+	}
+	for _, forbidden := range []string{"秘密词", "secret-token", "secret-cookie", "?kw="} {
+		if strings.Contains(output, forbidden) {
+			t.Fatalf("请求日志暴露敏感值 %q: %s", forbidden, output)
+		}
+	}
+}
+
+func TestSecurityHeadersUseEnforcedMinimalCSP(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	oldConfig := config.AppConfig
+	config.AppConfig = &config.Config{AppEnv: "development"}
+	t.Cleanup(func() { config.AppConfig = oldConfig })
+
+	router := gin.New()
+	router.Use(SecurityHeadersMiddleware())
+	router.GET("/api/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/ping", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	const expectedCSP = "default-src 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'"
+	if got := resp.Header().Get("Content-Security-Policy"); got != expectedCSP {
+		t.Fatalf("API 强制 CSP 不符合预期: %q", got)
+	}
+	if got := resp.Header().Get("Content-Security-Policy-Report-Only"); got != "" {
+		t.Fatalf("API 不得返回报告模式 CSP: %q", got)
+	}
+	if got := resp.Header().Get("Referrer-Policy"); got != "no-referrer" {
+		t.Fatalf("Referrer-Policy 不符合预期: %q", got)
+	}
+	if got := resp.Header().Get("Permissions-Policy"); got != "camera=(), microphone=(), geolocation=()" {
+		t.Fatalf("Permissions-Policy 不符合预期: %q", got)
+	}
+	if got := resp.Header().Get("Strict-Transport-Security"); got != "" {
+		t.Fatalf("开发环境不得返回 HSTS: %q", got)
+	}
+}
 
 func TestCORSMiddlewareAllowsWhitelistedOrigin(t *testing.T) {
 	router := newCORSRouterForTest(t, []string{"https://app.example.com"})

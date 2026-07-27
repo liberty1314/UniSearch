@@ -379,15 +379,6 @@ do_start() {
         log_info "请在 .env 或 .env.local 中显式设置 DB_HOST=localhost"
     fi
     
-    # 检查 REFRESH_TOKEN_STORE_PATH 是否使用容器路径
-    if grep -q "^REFRESH_TOKEN_STORE_PATH=" .env; then
-        current_path=$(grep "^REFRESH_TOKEN_STORE_PATH=" .env | cut -d'=' -f2)
-        if [[ "$current_path" == "/app/"* ]]; then
-            log_warning "检测到容器路径 REFRESH_TOKEN_STORE_PATH=$current_path"
-            log_info "脚本不会修改 .env。若需本地覆盖，请在 .env.local 中设置 REFRESH_TOKEN_STORE_PATH=./refresh_tokens.dat"
-        fi
-    fi
-
     # 4. 加载环境变量
     log_step "加载环境变量..."
     set -a

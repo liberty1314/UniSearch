@@ -1,0 +1,10 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "忽略本地生成缓存和依赖目录，不忽略项目源码与部署文件"
+paths = [
+  '''(^|/)\.tmp/''',
+  '''(^|/)\.cache/''',
+  '''(^|/)node_modules/''',
+]

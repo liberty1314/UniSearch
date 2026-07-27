@@ -41,7 +41,7 @@ func init() {
 // SearchWithResult 搜索并返回详细结果
 func (p *U3c3Plugin) SearchWithResult(keyword string, ext map[string]interface{}) (model.PluginSearchResult, error) {
 	if p.debugMode {
-		log.Printf("[U3C3] 开始搜索: %s", keyword)
+		log.Printf("[U3C3] 开始搜索，关键词长度: %d", len([]rune(keyword)))
 	}
 
 	// 第一步：获取search2参数
@@ -204,7 +204,7 @@ func (p *U3c3Plugin) doSearch(keyword, search2 string) ([]model.SearchResult, er
 	searchURL := fmt.Sprintf("%s/?search2=%s&search=%s", BaseURL, search2, encodedKeyword)
 
 	if p.debugMode {
-		log.Printf("[U3C3] 搜索URL: %s", searchURL)
+		log.Printf("[U3C3] 搜索目标: u3c3")
 	}
 
 	client := &http.Client{

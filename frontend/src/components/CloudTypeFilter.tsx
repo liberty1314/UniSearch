@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, Circle } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import type { CloudTypeValue } from "@/types/search";
 import { useSearchStore } from "@/stores/searchStore";
 import { cn } from "@/lib/utils";

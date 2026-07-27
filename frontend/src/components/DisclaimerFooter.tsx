@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { BLUE_CYAN_LINK_ACCENT } from '@/lib/brandTheme';
 
 const DisclaimerFooter: React.FC = () => {

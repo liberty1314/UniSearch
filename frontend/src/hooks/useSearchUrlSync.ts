@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { SearchService } from "@/services/searchService";
 import { useAuthStore } from "@/stores/authStore";
 import { useSearchStore } from "@/stores/searchStore";

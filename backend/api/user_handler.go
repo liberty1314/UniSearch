@@ -420,9 +420,6 @@ func ResetPasswordHandler(userService *service.UserService) gin.HandlerFunc {
 			return
 		}
 
-		// 清除本地版本缓存，使该用户被重置前签发的 access token 立即失效。
-		invalidateTokenVersionCache(uint(userID))
-
 		log.Printf("✓ 密码重置成功: 用户ID %d", userID)
 		respondSuccess(c, SuccessResponse{Message: "密码重置成功"})
 	}
@@ -461,8 +458,7 @@ func ChangePasswordHandler(userService *service.UserService) gin.HandlerFunc {
 			return
 		}
 
-		// 改密成功：清除本地版本缓存并吊销当前 access token，使改密即时生效。
-		invalidateTokenVersionCache(currentUserID)
+		// 改密成功后吊销当前 access token，使当前请求会话立即失效。
 		revokeRequestAccessToken(c)
 
 		c.JSON(http.StatusOK, gin.H{
@@ -554,11 +550,6 @@ func SetUserStatusHandler(userService *service.UserService) gin.HandlerFunc {
 				respondError(c, http.StatusInternalServerError, "更新用户状态失败", "INTERNAL_SERVER_ERROR")
 			}
 			return
-		}
-
-		// 禁用用户时其 TokenVersion 已递增，清理本地缓存使其已签发的 access token 尽快失效。
-		if !req.IsEnabled {
-			invalidateTokenVersionCache(uint(userID))
 		}
 
 		statusText := "启用"

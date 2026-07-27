@@ -13,16 +13,25 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // UserService 用户服务
 type UserService struct {
-	db *gorm.DB
+	db       *gorm.DB
+	sessions *AccountSessionService
 }
 
 // NewUserService 创建用户服务实例
-func NewUserService(db *gorm.DB) *UserService {
-	return &UserService{db: db}
+func NewUserService(db *gorm.DB, sessions *AccountSessionService) *UserService {
+	return &UserService{db: db, sessions: sessions}
+}
+
+func (s *UserService) invalidateUserSessions(tx *gorm.DB, userID uint) error {
+	if s.sessions == nil {
+		return errors.New("账户会话服务未配置")
+	}
+	return s.sessions.InvalidateUserSessions(tx, userID)
 }
 
 // UserListResult 用户列表查询结果
@@ -291,8 +300,8 @@ func isDuplicateEntryError(err error) bool {
 	return strings.Contains(errMsg, "duplicate entry") || strings.Contains(errMsg, "error 1062")
 }
 
-func (s *UserService) restoreDeletedUser(user *model.User, passwordHash, role string) error {
-	return s.db.Unscoped().Model(&model.User{}).Where("id = ?", user.ID).Updates(map[string]interface{}{
+func (s *UserService) restoreDeletedUser(tx *gorm.DB, user *model.User, passwordHash, role string) error {
+	return tx.Unscoped().Model(&model.User{}).Where("id = ?", user.ID).Updates(map[string]interface{}{
 		"username":      user.Username,
 		"password_hash": passwordHash,
 		"role":          role,
@@ -345,7 +354,21 @@ func (s *UserService) CreateUser(username, password, role string, restoreIfDelet
 			return nil, false, errors.New("用户名对应的账号已被删除，请确认是否恢复该账号")
 		}
 
-		if err := s.restoreDeletedUser(&existingUser, string(passwordHash), role); err != nil {
+		if err := s.db.Transaction(func(tx *gorm.DB) error {
+			var deletedUser model.User
+			if err := tx.Unscoped().Clauses(clause.Locking{Strength: "UPDATE"}).First(&deletedUser, existingUser.ID).Error; err != nil {
+				return err
+			}
+			if !deletedUser.DeletedAt.Valid {
+				return errors.New("用户名已存在")
+			}
+
+			deletedUser.Username = username
+			if err := s.restoreDeletedUser(tx, &deletedUser, string(passwordHash), role); err != nil {
+				return err
+			}
+			return s.invalidateUserSessions(tx, deletedUser.ID)
+		}); err != nil {
 			if isDuplicateEntryError(err) {
 				return nil, false, errors.New("用户名已存在")
 			}
@@ -386,25 +409,9 @@ func (s *UserService) UpdateUser(userID uint, username, role string, currentUser
 		return nil, errors.New("不能修改自己的角色")
 	}
 
-	// 获取用户
-	user, err := s.GetUserByID(userID)
-	if err != nil {
-		return nil, err
-	}
-
 	// 验证用户名
 	if err := s.validateUsername(username); err != nil {
 		return nil, err
-	}
-
-	// 验证用户名唯一性（排除当前用户）
-	if username != user.Username {
-		var existingUser model.User
-		if err := s.db.Unscoped().Where("username = ? AND id != ?", username, userID).First(&existingUser).Error; err == nil {
-			return nil, errors.New("用户名已存在")
-		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("检查用户名唯一性失败: %w", err)
-		}
 	}
 
 	// 验证角色
@@ -412,18 +419,46 @@ func (s *UserService) UpdateUser(userID uint, username, role string, currentUser
 		return nil, err
 	}
 
-	// 更新用户
-	user.Username = username
-	user.Role = role
+	var user model.User
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&user, userID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("用户不存在")
+			}
+			return fmt.Errorf("查询用户失败: %w", err)
+		}
 
-	if err := s.db.Save(user).Error; err != nil {
+		if username != user.Username {
+			var existingUser model.User
+			if err := tx.Unscoped().Where("username = ? AND id != ?", username, userID).First(&existingUser).Error; err == nil {
+				return errors.New("用户名已存在")
+			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("检查用户名唯一性失败: %w", err)
+			}
+		}
+
+		if username == user.Username && role == user.Role {
+			return nil
+		}
+
+		if err := tx.Model(&user).Updates(map[string]interface{}{
+			"username": username,
+			"role":     role,
+		}).Error; err != nil {
+			return err
+		}
+		if err := s.invalidateUserSessions(tx, user.ID); err != nil {
+			return err
+		}
+		return tx.First(&user, user.ID).Error
+	}); err != nil {
 		if isDuplicateEntryError(err) {
 			return nil, errors.New("用户名已存在")
 		}
 		return nil, fmt.Errorf("更新用户失败: %w", err)
 	}
 
-	return user, nil
+	return &user, nil
 }
 
 // ResetPassword 重置用户密码
@@ -433,27 +468,25 @@ func (s *UserService) ResetPassword(userID uint, newPassword string) error {
 		return err
 	}
 
-	// 获取用户
-	user, err := s.GetUserByID(userID)
-	if err != nil {
-		return err
-	}
-
 	// 加密新密码
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("密码加密失败: %w", err)
 	}
 
-	// 更新密码
-	user.PasswordHash = string(passwordHash)
-	// 递增令牌版本：使重置前签发的所有 access token 立即失效。
-	user.TokenVersion++
-	if err := s.db.Save(user).Error; err != nil {
-		return fmt.Errorf("重置密码失败: %w", err)
-	}
-
-	return nil
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		var user model.User
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&user, userID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("用户不存在")
+			}
+			return fmt.Errorf("查询用户失败: %w", err)
+		}
+		if err := tx.Model(&user).Update("password_hash", string(passwordHash)).Error; err != nil {
+			return fmt.Errorf("重置密码失败: %w", err)
+		}
+		return s.invalidateUserSessions(tx, user.ID)
+	})
 }
 
 // ChangePassword 允许用户通过当前密码验证后修改密码。
@@ -466,28 +499,27 @@ func (s *UserService) ChangePassword(userID uint, currentPassword, newPassword s
 		return err
 	}
 
-	user, err := s.GetUserByID(userID)
-	if err != nil {
-		return err
-	}
-
-	if !util.ComparePassword(user.PasswordHash, currentPassword) {
-		return errors.New("当前密码错误")
-	}
-
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("密码加密失败: %w", err)
 	}
 
-	user.PasswordHash = string(passwordHash)
-	// 递增令牌版本：使改密前签发的所有 access token 立即失效。
-	user.TokenVersion++
-	if err := s.db.Save(user).Error; err != nil {
-		return fmt.Errorf("修改密码失败: %w", err)
-	}
-
-	return nil
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		var user model.User
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&user, userID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("用户不存在")
+			}
+			return fmt.Errorf("查询用户失败: %w", err)
+		}
+		if !util.ComparePassword(user.PasswordHash, currentPassword) {
+			return errors.New("当前密码错误")
+		}
+		if err := tx.Model(&user).Update("password_hash", string(passwordHash)).Error; err != nil {
+			return fmt.Errorf("修改密码失败: %w", err)
+		}
+		return s.invalidateUserSessions(tx, user.ID)
+	})
 }
 
 // CountAdmins 统计管理员数量
@@ -506,55 +538,57 @@ func (s *UserService) DeleteUser(userID uint, currentUserID uint) error {
 		return errors.New("不能删除自己")
 	}
 
-	// 获取用户
-	user, err := s.GetUserByID(userID)
-	if err != nil {
-		return err
-	}
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		var user model.User
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&user, userID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("用户不存在")
+			}
+			return fmt.Errorf("查询用户失败: %w", err)
+		}
 
-	// 如果是管理员，检查是否为最后一个管理员
-	if user.Role == "admin" {
-		adminCount, err := s.CountAdmins()
-		if err != nil {
+		if user.Role == "admin" {
+			var adminCount int64
+			if err := tx.Model(&model.User{}).Where("role = ?", "admin").Count(&adminCount).Error; err != nil {
+				return fmt.Errorf("统计管理员数量失败: %w", err)
+			}
+			if adminCount <= 1 {
+				return errors.New("不能删除最后一个管理员")
+			}
+		}
+
+		if err := s.invalidateUserSessions(tx, user.ID); err != nil {
 			return err
 		}
-		if adminCount <= 1 {
-			return errors.New("不能删除最后一个管理员")
+		if err := tx.Delete(&user).Error; err != nil {
+			return fmt.Errorf("删除用户失败: %w", err)
 		}
-	}
-
-	// 执行软删除
-	if err := s.db.Delete(user).Error; err != nil {
-		return fmt.Errorf("删除用户失败: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 // SetUserStatus 设置用户状态
 func (s *UserService) SetUserStatus(userID uint, isEnabled bool, currentUserID uint) error {
-	// 检查是否尝试禁用当前用户
-	if userID == currentUserID && !isEnabled {
-		return errors.New("不能禁用自己的账户")
-	}
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		var user model.User
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&user, userID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("用户不存在")
+			}
+			return fmt.Errorf("查询用户失败: %w", err)
+		}
+		if user.IsEnabled == isEnabled {
+			return nil
+		}
+		if userID == currentUserID && !isEnabled {
+			return errors.New("不能禁用自己的账户")
+		}
 
-	// 获取用户
-	user, err := s.GetUserByID(userID)
-	if err != nil {
-		return err
-	}
-
-	// 更新状态
-	user.IsEnabled = isEnabled
-	// 禁用账户时递增令牌版本，使其已签发的 access token 立即失效。
-	if !isEnabled {
-		user.TokenVersion++
-	}
-	if err := s.db.Save(user).Error; err != nil {
-		return fmt.Errorf("更新用户状态失败: %w", err)
-	}
-
-	return nil
+		if err := tx.Model(&user).Update("is_enabled", isEnabled).Error; err != nil {
+			return fmt.Errorf("更新用户状态失败: %w", err)
+		}
+		return s.invalidateUserSessions(tx, user.ID)
+	})
 }
 
 // BatchDeleteUsers 批量删除用户
@@ -579,32 +613,23 @@ func (s *UserService) BatchDeleteUsers(userIDs []uint, currentUserID uint) (*Bat
 
 			// 获取用户
 			var user model.User
-			if err := tx.First(&user, userID).Error; err != nil {
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&user, userID).Error; err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					result.Failed = append(result.Failed, BatchOperationError{
 						ID:    userID,
 						Error: "用户不存在",
 					})
-				} else {
-					result.Failed = append(result.Failed, BatchOperationError{
-						ID:    userID,
-						Error: "查询用户失败",
-					})
+					result.FailedCount++
+					continue
 				}
-				result.FailedCount++
-				continue
+				return fmt.Errorf("查询用户 %d 失败: %w", userID, err)
 			}
 
 			// 如果是管理员，检查是否为最后一个管理员
 			if user.Role == "admin" {
 				var adminCount int64
 				if err := tx.Model(&model.User{}).Where("role = ?", "admin").Count(&adminCount).Error; err != nil {
-					result.Failed = append(result.Failed, BatchOperationError{
-						ID:    userID,
-						Error: "检查管理员数量失败",
-					})
-					result.FailedCount++
-					continue
+					return fmt.Errorf("检查管理员数量失败: %w", err)
 				}
 				if adminCount <= 1 {
 					result.Failed = append(result.Failed, BatchOperationError{
@@ -616,14 +641,11 @@ func (s *UserService) BatchDeleteUsers(userIDs []uint, currentUserID uint) (*Bat
 				}
 			}
 
-			// 执行软删除
+			if err := s.invalidateUserSessions(tx, user.ID); err != nil {
+				return fmt.Errorf("失效用户 %d 会话失败: %w", userID, err)
+			}
 			if err := tx.Delete(&user).Error; err != nil {
-				result.Failed = append(result.Failed, BatchOperationError{
-					ID:    userID,
-					Error: "删除失败",
-				})
-				result.FailedCount++
-				continue
+				return fmt.Errorf("删除用户 %d 失败: %w", userID, err)
 			}
 
 			result.Success = append(result.Success, userID)
@@ -667,31 +689,25 @@ func (s *UserService) BatchUpdateRole(userIDs []uint, role string, currentUserID
 
 			// 获取用户
 			var user model.User
-			if err := tx.First(&user, userID).Error; err != nil {
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&user, userID).Error; err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					result.Failed = append(result.Failed, BatchOperationError{
 						ID:    userID,
 						Error: "用户不存在",
 					})
-				} else {
-					result.Failed = append(result.Failed, BatchOperationError{
-						ID:    userID,
-						Error: "查询用户失败",
-					})
+					result.FailedCount++
+					continue
 				}
-				result.FailedCount++
-				continue
+				return fmt.Errorf("查询用户 %d 失败: %w", userID, err)
 			}
 
-			// 更新角色
-			user.Role = role
-			if err := tx.Save(&user).Error; err != nil {
-				result.Failed = append(result.Failed, BatchOperationError{
-					ID:    userID,
-					Error: "更新角色失败",
-				})
-				result.FailedCount++
-				continue
+			if user.Role != role {
+				if err := tx.Model(&user).Update("role", role).Error; err != nil {
+					return fmt.Errorf("更新用户 %d 角色失败: %w", userID, err)
+				}
+				if err := s.invalidateUserSessions(tx, user.ID); err != nil {
+					return fmt.Errorf("失效用户 %d 会话失败: %w", userID, err)
+				}
 			}
 
 			result.Success = append(result.Success, userID)

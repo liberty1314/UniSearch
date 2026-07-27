@@ -618,6 +618,24 @@ func TestBuildSidHubGroupsKeepOnlyNewestCandidate(t *testing.T) {
 	}
 }
 
+func TestNormalizeUpstreamTextRejectsOversizedInput(t *testing.T) {
+	input := strings.Repeat("界", maxNormalizedTextBytes/len("界")+1)
+	_, err := normalizeUpstreamText(input)
+	if !errors.Is(err, errUpstreamTextTooLarge) {
+		t.Fatalf("期望超限错误，实际为 %v", err)
+	}
+}
+
+func TestNormalizeUpstreamTextKeepsUnicodeBehavior(t *testing.T) {
+	got, err := normalizeUpstreamText("ＡＢＣ 资源")
+	if err != nil {
+		t.Fatalf("规范化失败: %v", err)
+	}
+	if got != "ABC 资源" {
+		t.Fatalf("规范化结果不符合预期: %q", got)
+	}
+}
+
 func TestNormalizeSidHubGroupTitleHandlesWidthCaseAndVersionBoundaries(t *testing.T) {
 	tests := []struct {
 		left  string

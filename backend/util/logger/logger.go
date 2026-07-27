@@ -150,8 +150,15 @@ func isAPIKeyField(normalizedKey string) bool {
 func isSecretField(normalizedKey string) bool {
 	secretMarkers := []string{
 		"cookie",
+		"extract_password",
+		"html_preview",
+		"keyword",
 		"password",
 		"passwd",
+		"raw_query",
+		"request_uri",
+		"resource_url",
+		"response_body",
 		"secret",
 		"token",
 		"redis_password",

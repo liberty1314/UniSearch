@@ -50,7 +50,10 @@ const (
 	refreshCacheTTL                    = 5 * time.Minute
 	seedHubScraperMaxAge               = 25 * time.Minute
 	seedHubScraperSessionInterval      = 24 * time.Hour
+	maxNormalizedTextBytes             = 1 << 20
 )
+
+var errUpstreamTextTooLarge = errors.New("上游文本超过规范化大小上限")
 
 const (
 	sidHubResolutionDeferred = "deferred"
@@ -2171,7 +2174,11 @@ func buildSidHubGroupKey(movieID string, provider string, title string) string {
 }
 
 func normalizeSidHubGroupTitle(title string) string {
-	normalized := strings.ToLower(norm.NFKC.String(cleanText(title)))
+	normalized, err := normalizeUpstreamText(cleanText(title))
+	if err != nil {
+		return ""
+	}
+	normalized = strings.ToLower(normalized)
 	pairedPunctuation := "【】[]()（）「」『』《》<>"
 	return strings.Map(func(value rune) rune {
 		if unicode.IsSpace(value) || strings.ContainsRune(pairedPunctuation, value) {
@@ -2179,6 +2186,13 @@ func normalizeSidHubGroupTitle(title string) string {
 		}
 		return value
 	}, normalized)
+}
+
+func normalizeUpstreamText(value string) (string, error) {
+	if len(value) > maxNormalizedTextBytes {
+		return "", errUpstreamTextTooLarge
+	}
+	return norm.NFKC.String(value), nil
 }
 
 func buildSidHubGroupedResultAt(card sidHubMovie, group sidHubResultGroup, fetchedAt time.Time) model.SearchResult {

@@ -8,7 +8,7 @@ import (
 
 func registerAdminRoutes(api *gin.RouterGroup, deps RouterDeps) {
 	admin := api.Group("/admin")
-	admin.Use(JWTMiddleware())
+	admin.Use(JWTMiddleware(deps.AuthService))
 	admin.Use(AdminMiddleware())
 	// 操作审计：统一采集管理员写操作（POST/PUT/DELETE/PATCH），只读方法自动跳过。
 	admin.Use(AdminAuditMiddleware())

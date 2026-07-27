@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"unisearch/config"
+	"unisearch/model"
 	"unisearch/plugin"
 )
 
@@ -98,6 +99,34 @@ func TestPluginCircuitBreakerHalfOpenFailureReopens(t *testing.T) {
 	}
 	if status.CircuitState != string(CircuitStateOpen) {
 		t.Fatalf("半开失败后应重新熔断，实际为 %#v", status)
+	}
+}
+
+func TestTransitionHalfOpenPreservesCircuitOpenedAt(t *testing.T) {
+	_, circuit, _ := newCircuitBreakerTestService(t)
+	openedAt := time.Date(2026, 7, 4, 21, 59, 0, 0, time.UTC)
+	cooldownUntil := openedAt.Add(time.Minute)
+	now := openedAt.Add(2 * time.Minute)
+	status := &model.PluginHealthStatus{
+		CircuitState:         string(CircuitStateOpen),
+		CircuitOpenedAt:      &openedAt,
+		CircuitCooldownUntil: &cooldownUntil,
+		HalfOpenSuccesses:    3,
+	}
+
+	circuit.transitionHalfOpen(status, now)
+
+	if status.CircuitOpenedAt == nil || !status.CircuitOpenedAt.Equal(openedAt) {
+		t.Fatalf("进入半开状态后应保留最初熔断时间，实际为 %v", status.CircuitOpenedAt)
+	}
+	if status.CircuitCooldownUntil != nil {
+		t.Fatalf("进入半开状态后应清空冷却截止时间，实际为 %v", status.CircuitCooldownUntil)
+	}
+	if status.HalfOpenSuccesses != 0 || status.CircuitState != string(CircuitStateHalfOpen) {
+		t.Fatalf("半开状态应重置成功计数，实际为 %#v", status)
+	}
+	if !status.LastCheckedAt.Equal(now) {
+		t.Fatalf("半开状态应更新最后检查时间，实际为 %v", status.LastCheckedAt)
 	}
 }
 

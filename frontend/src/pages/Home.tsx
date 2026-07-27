@@ -1,7 +1,7 @@
 import React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Layers, Sparkles, Activity } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import GradientText from "@/components/GradientText";
 import { useSearchAccessStatus } from "@/stores/searchAccessStore";
 import PublicPageShell from "@/components/PublicPageShell";

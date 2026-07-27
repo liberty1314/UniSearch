@@ -5,7 +5,7 @@ import React, {
   useCallback,
 } from "react";
 import { motion } from "framer-motion";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useSearchStore } from "@/stores/searchStore";
 import { cn } from "@/lib/utils";

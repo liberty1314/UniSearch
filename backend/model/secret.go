@@ -8,10 +8,9 @@ import (
 type SecretType string
 
 const (
-	SecretTypeJWT          SecretType = "jwt_secret"        // JWT 签名密钥
-	SecretTypeRefreshToken SecretType = "refresh_token_key" // 刷新令牌加密密钥
-	SecretTypeAPIKeyMaster SecretType = "api_key_master"    // API Key 主密钥
-	SecretTypeCustom       SecretType = "custom"            // 自定义密钥
+	SecretTypeJWT          SecretType = "jwt_secret"     // JWT 签名密钥
+	SecretTypeAPIKeyMaster SecretType = "api_key_master" // API Key 主密钥
+	SecretTypeCustom       SecretType = "custom"         // 自定义密钥
 )
 
 // Secret 密钥模型

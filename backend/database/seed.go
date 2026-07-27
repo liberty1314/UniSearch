@@ -10,7 +10,7 @@ import (
 )
 
 // SeedDefaultAdmin 创建首次管理员账户。
-// 生产环境必须显式配置初始管理员凭据；开发环境允许本地默认值但不输出明文密码。
+// 仅在数据库没有管理员时读取显式配置的初始凭据。
 // 验证需求：2.3, 2.4, 2.5
 func SeedDefaultAdmin() error {
 	log.Println("检查默认管理员账户...")
@@ -35,11 +35,7 @@ func SeedDefaultAdmin() error {
 		return err
 	}
 
-	if credentials.UsingDevelopmentDefault {
-		log.Println("未找到管理员账户，使用开发环境默认管理员配置...")
-	} else {
-		log.Println("未找到管理员账户，使用显式初始管理员配置...")
-	}
+	log.Println("未找到管理员账户，使用显式初始管理员配置...")
 
 	// 使用 bcrypt 加密密码（cost=10）
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(credentials.Password), 10)
@@ -48,7 +44,7 @@ func SeedDefaultAdmin() error {
 		return err
 	}
 
-	// 创建默认管理员用户
+	// 创建首次管理员用户
 	defaultAdmin := &model.User{
 		Username:     credentials.Username,
 		PasswordHash: string(passwordHash),
@@ -63,15 +59,12 @@ func SeedDefaultAdmin() error {
 			log.Println("✓ 管理员账户已存在（并发创建），跳过")
 			return nil
 		}
-		log.Printf("✗ 创建默认管理员失败: %v", err)
+		log.Printf("✗ 创建首次管理员失败: %v", err)
 		return err
 	}
 
 	// 在控制台输出提示信息
-	log.Println("✓ 默认管理员账户创建成功")
-	if credentials.UsingDevelopmentDefault {
-		log.Println("提示: 当前使用开发环境默认管理员，请勿用于生产环境")
-	}
+	log.Println("✓ 首次管理员账户创建成功")
 
 	return nil
 }

@@ -39,6 +39,9 @@ func getDBUser() string {
 func getDBPassword() string {
 	password := os.Getenv("DB_PASSWORD")
 	if password == "" {
+		if getAppEnv() == "production" {
+			return ""
+		}
 		return "root" // 默认密码（开发环境）
 	}
 	return password

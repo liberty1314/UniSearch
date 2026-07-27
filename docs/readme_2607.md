@@ -1,3 +1,35 @@
+- [2026-07-27 12:04] refactor(auth): 迁移刷新令牌为数据库摘要会话
+  - 内容: 新增 `refresh_token_sessions` 摘要会话模型和原子轮转服务，登录与刷新只通过 HttpOnly Cookie 传递原始令牌；新增显式破坏性迁移、旧表启动阻断、重放全量撤销和临时 MySQL/Redis 发布演练。删除旧原文模型、文件存储、AES 包装及 `REFRESH_TOKEN_ENCRYPT_KEY` 配置体系。
+  - 迁移与回滚: 所有旧刷新 Cookie 一次性失效，用户必须重新登录；禁止双读或恢复旧原文会话。公告重新登录并备份，停旧实例后执行 `-migrate-refresh-token-sessions`，部署新实例并验证旧 Cookie 401、新登录与首次轮转 200、重放 401，观察窗口后执行 `-drop-legacy-refresh-tokens`。只允许回滚到兼容 `refresh_token_sessions` 的镜像。
+  - 文件:
+    - .env.example
+    - README.md
+    - backend/api/controller/auth_controller.go
+    - backend/api/refresh_token_handler.go
+    - backend/cmd/bootstrap/app.go
+    - backend/cmd/migrate/main.go
+    - backend/config/config.go
+    - backend/config/config_auth.go
+    - backend/database/migration.go
+    - backend/model/refresh_token_session.go
+    - backend/service/refresh_token_service.go
+    - docker-compose.prod.example.yml
+    - scripts/tests/integration-env.sh
+    - scripts/tests/release-candidate.sh
+    - docs/readme_2607.md
+
+- [2026-07-27 11:26] fix(auth): 删除默认管理员凭据
+  - 内容: 首次管理员在所有环境中都必须显式配置，拒绝 `admin` 和 `PLEASE_SET_` 占位值；数据库已有管理员时迁移直接跳过凭据解析。同步更新环境模板和部署说明，移除 `admin/admin` 登录指引。
+  - 文件:
+    - .env.example
+    - README.md
+    - backend/config/config_auth.go
+    - backend/config/config_test.go
+    - backend/database/seed.go
+    - backend/database/seed_test.go
+    - backend/service/auth_service.go
+    - docs/readme_2607.md
+
 - [2026-07-04 10:59] feat(search): 实现搜索插件自适应超时调整与降级机制
   - Body: 引入自适应超时感知和降级策略，根据插件历史健康状况与平均耗时动态调整超时时间，并补充监控日志、部署指南和效果验证脚本，以优化并发搜索场景下的性能与稳定性。
   - Files:
@@ -818,3 +850,171 @@
     - frontend/src/types/adminAudit.ts
     - frontend/src/types/searchAudit.ts
     - docs/readme_2607.md
+
+- [2026-07-27 13:55] fix(deploy): 固定外部 TLS 与内部 loopback 边界
+  - 内容: 应用容器统一使用非特权端口 8080并仅绑定宿主机 loopback，生产流量由外部 TLS 代理在 443终止。代理必须管理证书、写入 HSTS 并传递 `X-Forwarded-Proto=https`，生产来源只允许实际 HTTPS 域名，禁止防火墙开放内部应用 HTTP 端口。
+  - 文件:
+    - docker-compose.prod.example.yml
+    - README.md
+    - scripts/tests/tls-proxy-smoke.sh
+    - docs/readme_2607.md
+
+- [2026-07-27 15:58] feat(security): 完善认证会话与发布安全门禁
+  - Body: 将刷新令牌改为摘要会话与 HttpOnly Cookie 轮转链路，补齐旧会话迁移、重放拒绝、管理员初始化和生产 TLS/loopback 部署约束。新增安全门禁、秘密扫描、TLS smoke、Docker/集成环境验证脚本，并同步更新前后端测试与发布文档。
+  - Footer: 破坏性变更: 刷新令牌从旧 `refresh_tokens` 原文/加密存储迁移为 `refresh_token_sessions` 摘要会话，旧 Cookie 全部失效，首次管理员和生产部署变量必须显式配置。
+  - Footer: Migration: 备份数据库并停止旧实例后执行 `unisearch-migrate -migrate-refresh-token-sessions`，部署新版本并完成刷新链路验证后，再执行 `unisearch-migrate -drop-legacy-refresh-tokens` 清理旧表。
+  - Files:
+    - .env.example
+    - .gitignore
+    - .gitleaks.toml
+    - .gitleaksignore
+    - Dockerfile
+    - README.md
+    - backend/api/account_auth_flow_test.go
+    - backend/api/admin_handler.go
+    - backend/api/admin_routes_test.go
+    - backend/api/controller/auth_controller.go
+    - backend/api/handler.go
+    - backend/api/middleware.go
+    - backend/api/middleware_test.go
+    - backend/api/refresh_token_handler.go
+    - backend/api/router.go
+    - backend/api/router_admin.go
+    - backend/api/router_announcement.go
+    - backend/api/router_auth.go
+    - backend/api/search_progressive_handler.go
+    - backend/api/token_invalidation_test.go
+    - backend/api/token_state.go
+    - backend/api/user_handler.go
+    - backend/cmd/bootstrap/app.go
+    - backend/cmd/migrate/main.go
+    - backend/config/config.go
+    - backend/config/config_auth.go
+    - backend/config/config_redis.go
+    - backend/config/config_test.go
+    - backend/database/migration.go
+    - backend/database/migration_test.go
+    - backend/database/seed.go
+    - backend/database/seed_test.go
+    - backend/go.mod
+    - backend/go.sum
+    - backend/model/refresh_token.go
+    - backend/model/refresh_token_session.go
+    - backend/model/refresh_token_session_test.go
+    - backend/model/secret.go
+    - backend/plugin/dyyj/dyyj.go
+    - backend/plugin/dyyj/dyyj_test.go
+    - backend/plugin/sidhub/sidhub.go
+    - backend/plugin/sidhub/sidhub_test.go
+    - backend/plugin/susu/susu插件设计文档.md
+    - backend/plugin/u3c3/u3c3.go
+    - backend/service/account_session_service.go
+    - backend/service/account_session_service_test.go
+    - backend/service/auth_errors.go
+    - backend/service/auth_service.go
+    - backend/service/auth_service_test.go
+    - backend/service/plugin_circuit_breaker.go
+    - backend/service/plugin_circuit_breaker_test.go
+    - backend/service/refresh_token_service.go
+    - backend/service/refresh_token_service_test.go
+    - backend/service/search_audit_service.go
+    - backend/service/search_cache.go
+    - backend/service/search_cache_test.go
+    - backend/service/search_metrics.go
+    - backend/service/secret_manager.go
+    - backend/service/secret_manager_env.go
+    - backend/service/user_service.go
+    - backend/service/user_service_test.go
+    - backend/util/logger/logger.go
+    - backend/util/logger/logger_test.go
+    - backend/util/refresh_cookie.go
+    - docker-compose.prod.example.yml
+    - docker-compose.yml
+    - docs/readme_2607.md
+    - frontend/e2e/admin-plugin.spec.ts
+    - frontend/e2e/search-quality.spec.ts
+    - frontend/e2e/security-headers.spec.ts
+    - frontend/e2e/test-helpers.ts
+    - frontend/package.json
+    - frontend/patches/sonner@2.0.7.patch
+    - frontend/playwright.config.ts
+    - frontend/pnpm-lock.yaml
+    - frontend/pnpm-workspace.yaml
+    - frontend/src/App.tsx
+    - frontend/src/components/AnnouncementProvider.tsx
+    - frontend/src/components/CloudTypeFilter.tsx
+    - frontend/src/components/DisclaimerFooter.tsx
+    - frontend/src/components/MobileMenu.tsx
+    - frontend/src/components/Navbar.tsx
+    - frontend/src/components/PageTransition.tsx
+    - frontend/src/components/SearchAdvancedFilterPanel.tsx
+    - frontend/src/components/SearchResults.tsx
+    - frontend/src/components/SearchUnifiedFilterCard.tsx
+    - frontend/src/components/__tests__/AnnouncementProvider.test.tsx
+    - frontend/src/components/__tests__/CloudTypeFilter.test.tsx
+    - frontend/src/components/__tests__/DisclaimerFooter.test.tsx
+    - frontend/src/components/__tests__/DisclaimerFooterVisibility.test.tsx
+    - frontend/src/components/__tests__/MobileMenu.test.tsx
+    - frontend/src/components/__tests__/Navbar.test.tsx
+    - frontend/src/components/__tests__/PageTransition.test.tsx
+    - frontend/src/components/__tests__/SearchAdvancedFilterPanel.test.tsx
+    - frontend/src/components/__tests__/SearchBox.test.tsx
+    - frontend/src/components/__tests__/SearchResults.test.tsx
+    - frontend/src/components/__tests__/SearchUnifiedFilterCard.test.tsx
+    - frontend/src/components/__tests__/SiteFooter.test.tsx
+    - frontend/src/components/admin/SystemInfoView.tsx
+    - frontend/src/components/admin/__tests__/SystemInfoView.test.tsx
+    - frontend/src/components/auth/AuthEntryLink.tsx
+    - frontend/src/components/home/HomeSearchWorkbench.tsx
+    - frontend/src/components/home/TrendingCategories.tsx
+    - frontend/src/components/home/__tests__/TrendingCategories.test.tsx
+    - frontend/src/components/ui/__tests__/motion-footer.test.tsx
+    - frontend/src/components/ui/__tests__/page-not-found.test.tsx
+    - frontend/src/components/ui/motion-footer.tsx
+    - frontend/src/components/ui/page-not-found.tsx
+    - frontend/src/components/ui/tabs-6.tsx
+    - frontend/src/components/ui/tubelight-navbar.tsx
+    - frontend/src/hooks/__tests__/useAdminPageController.test.tsx
+    - frontend/src/hooks/__tests__/useAdminUsers.test.tsx
+    - frontend/src/hooks/__tests__/useSearchUrlSync.test.tsx
+    - frontend/src/hooks/useAdminPageController.ts
+    - frontend/src/hooks/useLoginForm.ts
+    - frontend/src/hooks/useSearchBoxController.ts
+    - frontend/src/hooks/useSearchUrlSync.ts
+    - frontend/src/index.css
+    - frontend/src/main.tsx
+    - frontend/src/pages/Admin.tsx
+    - frontend/src/pages/AdminLogin.tsx
+    - frontend/src/pages/Home.tsx
+    - frontend/src/pages/HotPage.tsx
+    - frontend/src/pages/LoginPage.tsx
+    - frontend/src/pages/RegisterPage.tsx
+    - frontend/src/pages/ResourceDetailPage.tsx
+    - frontend/src/pages/SearchPage.tsx
+    - frontend/src/pages/__tests__/Admin.test.tsx
+    - frontend/src/pages/__tests__/AdminNavigation.test.tsx
+    - frontend/src/pages/__tests__/AuthEntryPages.test.tsx
+    - frontend/src/pages/__tests__/Home.test.tsx
+    - frontend/src/pages/__tests__/HotPage.test.tsx
+    - frontend/src/pages/__tests__/ResourceDetailPage.test.tsx
+    - frontend/src/pages/__tests__/SearchPage.test.tsx
+    - frontend/src/routes/AppRoutes.tsx
+    - frontend/src/routes/RouteGuards.tsx
+    - frontend/src/routes/ScrollToTop.tsx
+    - frontend/src/routes/__tests__/AppRoutes.test.tsx
+    - frontend/src/routes/__tests__/RouteGuards.test.tsx
+    - frontend/src/routes/__tests__/ScrollToTop.test.tsx
+    - frontend/vite.config.ts
+    - nginx.conf
+    - scripts/build.sh
+    - scripts/docker.sh
+    - scripts/gen-production-secrets.sh
+    - scripts/local.sh
+    - scripts/tests/docker-smoke.sh
+    - scripts/tests/integration-env.sh
+    - scripts/tests/local-quality.sh
+    - scripts/tests/release-candidate.sh
+    - scripts/tests/security-gate-secret-scan-test.sh
+    - scripts/tests/security-gate.sh
+    - scripts/tests/tls-proxy-smoke.sh
+    - supervisord.conf

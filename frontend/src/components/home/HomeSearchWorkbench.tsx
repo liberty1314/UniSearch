@@ -1,6 +1,6 @@
 import React from 'react';
 import { Flame } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import SearchBox from '@/components/SearchBox';
 import { cn } from '@/lib/utils';
 

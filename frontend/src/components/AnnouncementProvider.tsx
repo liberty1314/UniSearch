@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 import { AnnouncementDialog } from './AnnouncementDialog';
 import { useAnnouncementStore } from '@/stores/announcementStore';
 import { useAuthStore } from '@/stores/authStore';

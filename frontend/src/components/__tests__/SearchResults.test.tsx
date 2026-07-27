@@ -7,7 +7,7 @@ import {
   Routes,
   useLocation,
   useParams,
-} from "react-router-dom";
+} from "react-router";
 import SearchResults from "@/components/SearchResults";
 import { SearchService } from "@/services/searchService";
 import type { SearchParams, SearchResponse } from "@/types/search";
@@ -164,7 +164,7 @@ vi.mock("@/components/LoadingState", () => ({
 vi.mock("framer-motion", () => {
   // 剥离 framer-motion 专属 props 后渲染原生元素，兼容 motion.div / motion.button 等。
   const createMotionComponent =
-    (Tag: keyof JSX.IntrinsicElements) =>
+    (Tag: React.ElementType) =>
     ({
       children,
       ...props
@@ -192,7 +192,7 @@ vi.mock("framer-motion", () => {
     motion: new Proxy(
       {},
       {
-        get: (_target, tag: string) => createMotionComponent(tag as keyof JSX.IntrinsicElements),
+        get: (_target, tag: string) => createMotionComponent(tag as React.ElementType),
       }
     ),
     AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,

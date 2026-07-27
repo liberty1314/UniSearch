@@ -1072,9 +1072,9 @@ if exists {
 func TestDecodeJWTURL(t *testing.T) {
     plugin := NewSusuAsyncPlugin()
     
-    // 测试用例1：正常的JWT token
-    token1 := "<JWT_TOKEN>"
-    expectedURL1 := "https://caiyun.139.com/m/i?2jQXmsfsMfDu3"
+	expectedURL1 := "https://caiyun.139.com/m/i?2jQXmsfsMfDu3"
+	// 测试令牌由辅助函数在运行时生成，避免把可复用令牌写入源码。
+	token1 := buildTestJWT(t, expectedURL1)
     
     url1, err1 := plugin.decodeJWTURL(token1)
     if err1 != nil {

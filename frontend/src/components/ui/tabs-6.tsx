@@ -78,14 +78,6 @@ const XScrollable = forwardRef<
       onMouseUp={endDrag}
       onMouseMove={onMouseMove}
     >
-      {/* Optional scrollbar hiding styles */}
-      {!showScrollbar && (
-        <style>{`
-          .x-scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
-          .x-scrollbar-hide::-webkit-scrollbar { display: none; }
-        `}</style>
-      )}
-
       <div
         ref={scrollRef}
         className={cn(

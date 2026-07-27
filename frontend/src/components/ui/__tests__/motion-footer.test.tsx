@@ -1,5 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { gsap } from 'gsap';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CinematicFooter } from '@/components/ui/motion-footer';
 
@@ -78,13 +80,12 @@ describe('CinematicFooter', () => {
     expect(gsap.fromTo).not.toHaveBeenCalled();
   });
 
-  it('uses restrained Apple-style glass tokens instead of the old neon palette', () => {
+  it('从静态样式表加载克制的玻璃质感令牌且不注入内联样式', () => {
     const { container } = render(<CinematicFooter />);
 
-    const styleTag = container.querySelector('style');
-    expect(styleTag).not.toBeNull();
+    expect(container.querySelector('style')).toBeNull();
 
-    const styles = styleTag?.textContent ?? '';
+    const styles = readFileSync(path.resolve(process.cwd(), 'src/index.css'), 'utf8');
     expect(styles).toContain('#0071e3');
     expect(styles).toContain('rgba(29, 29, 31, 0.82)');
     expect(styles).toContain('.footer-aurora');

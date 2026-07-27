@@ -13,17 +13,11 @@ import (
 
 // 保存搜索服务的实例
 var searchService *service.SearchService
-var authService *service.AuthService
 var tokenRevocationService *service.TokenRevocationService
 
 // SetSearchService 设置搜索服务实例
 func SetSearchService(service *service.SearchService) {
 	searchService = service
-}
-
-// SetAuthService 设置认证服务实例
-func SetAuthService(service *service.AuthService) {
-	authService = service
 }
 
 // SetTokenRevocationService 设置 Token 吊销服务实例
@@ -51,8 +45,8 @@ func SearchHandler(c *gin.Context) {
 		logger.Error(
 			"search_failed",
 			logger.String("request_id", requestIDFromContext(c)),
-			logger.String("keyword", req.Keyword),
-			logger.Any("error", err),
+			logger.Int("keyword_length", len([]rune(req.Keyword))),
+			logger.String("error_class", "search_error"),
 		)
 		response := apiErrorResponse{
 			Code:      http.StatusInternalServerError,

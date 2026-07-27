@@ -1,7 +1,7 @@
 import React from 'react';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
@@ -24,6 +24,8 @@ const {
   userLoginMock,
   registerMock,
   checkUsernameMock,
+	toastErrorMock,
+	toastSuccessMock,
 } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   getSettingsMock: vi.fn(),
@@ -32,17 +34,19 @@ const {
   userLoginMock: vi.fn(),
   registerMock: vi.fn(),
   checkUsernameMock: vi.fn(),
+	toastErrorMock: vi.fn(),
+	toastSuccessMock: vi.fn(),
 }));
 
 vi.mock('sonner', () => ({
   toast: {
-    error: vi.fn(),
-    success: vi.fn(),
+		error: toastErrorMock,
+		success: toastSuccessMock,
   },
 }));
 
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+vi.mock('react-router', async () => {
+  const actual = await vi.importActual<typeof import('react-router')>('react-router');
 
   return {
     ...actual,
@@ -104,6 +108,8 @@ describe('Auth entry pages', () => {
     userLoginMock.mockReset();
     registerMock.mockReset();
     checkUsernameMock.mockReset();
+		toastErrorMock.mockReset();
+		toastSuccessMock.mockReset();
     getSettingsMock.mockResolvedValue({
       enable_user_auth: true,
       enable_user_login: true,
@@ -254,6 +260,54 @@ describe('Auth entry pages', () => {
 
     expect(adminLoginWithRememberMock).toHaveBeenCalledWith('admin', 'secret', false);
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('用户登录页展示后端返回的登录关闭策略提示', async () => {
+    userLoginMock.mockRejectedValue({
+      code: 403,
+      message: '请求被拒绝',
+      data: { error_code: 'LOGIN_DISABLED' },
+    });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('欢迎回来');
+    await user.type(screen.getByLabelText('用户名'), 'neo');
+    await user.type(screen.getByLabelText('密码'), 'matrix');
+    await user.click(screen.getByRole('button', { name: '登录' }));
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith('用户登录功能已关闭');
+    });
+  });
+
+  it('管理员登录页展示稳定的认证策略不可用提示', async () => {
+    adminLoginWithRememberMock.mockRejectedValue({
+      code: 503,
+      message: '内部数据库连接失败',
+      data: { error_code: 'AUTH_POLICY_UNAVAILABLE' },
+    });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/admin/login']}>
+        <AdminLogin />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('管理员登录');
+    await user.type(screen.getByLabelText('用户名'), 'admin');
+    await user.type(screen.getByLabelText('管理员密码'), 'secret');
+    await user.click(screen.getByRole('button', { name: '登录后台' }));
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith('认证服务暂时不可用，请稍后重试');
+    });
   });
 
   it('resumes the pending standalone search after user login succeeds', async () => {

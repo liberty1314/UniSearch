@@ -55,20 +55,47 @@ func TestSeedDefaultAdminCreatesExplicitProductionAdmin(t *testing.T) {
 	}
 }
 
-func TestSeedDefaultAdminAllowsDevelopmentDefaultWithoutProduction(t *testing.T) {
+func TestSeedDefaultAdminRejectsMissingDevelopmentCredentials(t *testing.T) {
 	setupSeedTestDB(t)
 	setSeedTestConfig(t, &config.Config{AppEnv: "development"})
 
-	if err := SeedDefaultAdmin(); err != nil {
-		t.Fatalf("开发环境默认管理员应创建成功: %v", err)
+	if err := SeedDefaultAdmin(); err == nil {
+		t.Fatal("开发环境缺少初始管理员配置时也应拒绝创建")
 	}
 
-	var admin model.User
-	if err := DB.Where("role = ?", "admin").First(&admin).Error; err != nil {
-		t.Fatalf("查询管理员失败: %v", err)
+	var count int64
+	if err := DB.Model(&model.User{}).Where("role = ?", "admin").Count(&count).Error; err != nil {
+		t.Fatalf("查询管理员数量失败: %v", err)
 	}
-	if admin.Username != "admin" {
-		t.Fatalf("开发环境默认管理员用户名应为 admin，实际为 %q", admin.Username)
+	if count != 0 {
+		t.Fatalf("缺少配置时不应创建管理员，实际数量为 %d", count)
+	}
+}
+
+func TestSeedDefaultAdminSkipsCredentialsWhenAdminExists(t *testing.T) {
+	setupSeedTestDB(t)
+	setSeedTestConfig(t, &config.Config{AppEnv: "development"})
+
+	admin := model.User{
+		Username:     "existing-admin",
+		PasswordHash: "hash",
+		Role:         "admin",
+		IsEnabled:    true,
+	}
+	if err := DB.Create(&admin).Error; err != nil {
+		t.Fatalf("创建现有管理员失败: %v", err)
+	}
+
+	if err := SeedDefaultAdmin(); err != nil {
+		t.Fatalf("已有管理员时应跳过初始凭据解析: %v", err)
+	}
+
+	var count int64
+	if err := DB.Model(&model.User{}).Where("role = ?", "admin").Count(&count).Error; err != nil {
+		t.Fatalf("查询管理员数量失败: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("已有管理员时不应重复创建，实际数量为 %d", count)
 	}
 }
 

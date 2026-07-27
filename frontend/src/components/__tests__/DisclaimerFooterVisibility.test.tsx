@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import DisclaimerFooter from '@/components/DisclaimerFooter';
 import { shouldShowDisclaimer } from '@/lib/disclaimer';

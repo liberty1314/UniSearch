@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { render } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import ScrollToTop from '@/routes/ScrollToTop';
 

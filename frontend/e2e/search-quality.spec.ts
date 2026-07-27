@@ -187,8 +187,11 @@ test('来源不足时按原顺序回填且延后结果可继续加载', async ({
   await expect(page.locator('[data-resource-id="source-a-28"]')).toBeVisible();
   await expect(page.locator('[data-resource-id="source-a-29"]')).toHaveCount(0);
 
-  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  const loadMoreButton = page.getByTestId('search-results-load-more');
+  await loadMoreButton.evaluate((button) => (button as HTMLButtonElement).click());
+  await expect.poll(() => cards.count()).not.toBe(48);
+  await loadMoreButton.evaluate((button) => (button as HTMLButtonElement).click());
 
-  await expect(cards).toHaveCount(72);
-  await expect(page.locator('[data-resource-id="source-a-29"]')).toBeVisible();
+  await expect(loadMoreButton).toHaveCount(0);
+  await expect(page.getByText('已加载全部 80 条结果')).toBeAttached();
 });

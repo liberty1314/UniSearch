@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"log"
 	"strings"
 	"time"
@@ -24,6 +25,26 @@ type AdminLoginResponse struct {
 	ExpiresAt int64  `json:"expires_at"`
 }
 
+func writeLoginPolicyResponse(c *gin.Context, err error) bool {
+	if errors.Is(err, service.ErrLoginDisabled) {
+		c.JSON(403, gin.H{
+			"error":      "用户登录功能已关闭",
+			"code":       "LOGIN_DISABLED",
+			"error_code": "LOGIN_DISABLED",
+		})
+		return true
+	}
+	if errors.Is(err, service.ErrAuthPolicyUnavailable) {
+		c.JSON(503, gin.H{
+			"error":      "认证策略暂时不可用",
+			"code":       "AUTH_POLICY_UNAVAILABLE",
+			"error_code": "AUTH_POLICY_UNAVAILABLE",
+		})
+		return true
+	}
+	return false
+}
+
 // APIKeyCreateRequest 创建API Key请求
 type APIKeyCreateRequest struct {
 	TTLHours         int    `json:"ttl_hours" binding:"required,min=1"`
@@ -43,49 +64,49 @@ func resolvePluginStatusByHealthMap(pluginName, defaultStatus string, healthMap 
 }
 
 // AdminLoginHandler 管理员登录
-func AdminLoginHandler(c *gin.Context) {
-	var req AdminLoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{
-			"error": "请求参数错误",
-			"code":  "INVALID_REQUEST",
-		})
-		return
-	}
+func AdminLoginHandler(authService *service.AuthService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req AdminLoginRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{
+				"error": "请求参数错误",
+				"code":  "INVALID_REQUEST",
+			})
+			return
+		}
 
-	// 速率限制检查
-	if !adminLoginRateLimiter.Allow(buildRateLimitKey(c)) {
-		c.JSON(429, gin.H{
-			"error": "请求过于频繁，请稍后再试",
-			"code":  "RATE_LIMIT_EXCEEDED",
-		})
-		return
-	}
+		if !adminLoginRateLimiter.Allow(buildRateLimitKey(c)) {
+			c.JSON(429, gin.H{
+				"error": "请求过于频繁，请稍后再试",
+				"code":  "RATE_LIMIT_EXCEEDED",
+			})
+			return
+		}
 
-	// 使用认证服务进行登录验证
-	authService := service.NewAuthService()
-	token, user, _, err := authService.Login(req.Username, req.Password)
-	if err != nil {
-		c.JSON(401, gin.H{
-			"error": "用户名或密码错误",
-			"code":  "ADMIN_LOGIN_FAILED",
-		})
-		return
-	}
+		token, user, _, err := authService.Login(req.Username, req.Password)
+		if err != nil {
+			if writeLoginPolicyResponse(c, err) {
+				return
+			}
+			c.JSON(401, gin.H{
+				"error": "用户名或密码错误",
+				"code":  "ADMIN_LOGIN_FAILED",
+			})
+			return
+		}
+		if !user.IsAdmin() {
+			c.JSON(403, gin.H{
+				"error": "权限不足，需要管理员权限",
+				"code":  "ADMIN_PERMISSION_REQUIRED",
+			})
+			return
+		}
 
-	// 验证用户是否为管理员
-	if !user.IsAdmin() {
-		c.JSON(403, gin.H{
-			"error": "权限不足，需要管理员权限",
-			"code":  "ADMIN_PERMISSION_REQUIRED",
+		c.JSON(200, gin.H{
+			"token":      token,
+			"expires_at": time.Now().Add(config.AppConfig.AuthTokenExpiry).Unix(),
 		})
-		return
 	}
-
-	c.JSON(200, gin.H{
-		"token":      token,
-		"expires_at": time.Now().Add(config.AppConfig.AuthTokenExpiry).Unix(),
-	})
 }
 
 // ListAPIKeysHandler 列出所有API Keys

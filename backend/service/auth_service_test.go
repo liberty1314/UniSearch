@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -11,6 +13,44 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+func TestLoadUserAuthStateReturnsCurrentFields(t *testing.T) {
+	db := newAuthServiceTestDB(t)
+	user := model.User{
+		Username:     "state-user",
+		PasswordHash: "hash",
+		Role:         "admin",
+		IsEnabled:    true,
+		TokenVersion: 7,
+	}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("创建用户失败: %v", err)
+	}
+
+	state, err := NewAuthService(db, nil).LoadUserAuthState(context.Background(), user.ID)
+	if err != nil {
+		t.Fatalf("读取账户状态失败: %v", err)
+	}
+	if state.ID != user.ID || state.Username != user.Username || state.Role != "admin" || !state.IsEnabled || state.TokenVersion != 7 {
+		t.Fatalf("账户状态不符合预期: %#v", state)
+	}
+}
+
+func TestLoadUserAuthStateExcludesSoftDeletedUser(t *testing.T) {
+	db := newAuthServiceTestDB(t)
+	user := model.User{Username: "deleted-state", PasswordHash: "hash", Role: "user", IsEnabled: true}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("创建用户失败: %v", err)
+	}
+	if err := db.Delete(&user).Error; err != nil {
+		t.Fatalf("软删除用户失败: %v", err)
+	}
+
+	_, err := NewAuthService(db, nil).LoadUserAuthState(context.Background(), user.ID)
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("期望返回记录不存在，实际为 %v", err)
+	}
+}
 
 func newAuthServiceTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
@@ -48,8 +88,8 @@ func newAuthServiceTestDB(t *testing.T) *gorm.DB {
 }
 
 func TestRegisterRejectsPasswordWhitespace(t *testing.T) {
-	newAuthServiceTestDB(t)
-	authService := NewAuthService()
+	db := newAuthServiceTestDB(t)
+	authService := NewAuthService(db, NewSystemSettingsService(db))
 
 	passwords := []string{
 		" secret123",
@@ -73,8 +113,8 @@ func TestRegisterRejectsPasswordWhitespace(t *testing.T) {
 }
 
 func TestRegisterRejectsLowComplexityPassword(t *testing.T) {
-	newAuthServiceTestDB(t)
-	authService := NewAuthService()
+	db := newAuthServiceTestDB(t)
+	authService := NewAuthService(db, NewSystemSettingsService(db))
 
 	// 仅小写+数字（2 类），低于默认要求的 3 类。
 	if _, err := authService.Register("neo", "abcdefg1"); err == nil {
@@ -83,8 +123,8 @@ func TestRegisterRejectsLowComplexityPassword(t *testing.T) {
 }
 
 func TestRegisterRejectsWeakBlocklistedPassword(t *testing.T) {
-	newAuthServiceTestDB(t)
-	authService := NewAuthService()
+	db := newAuthServiceTestDB(t)
+	authService := NewAuthService(db, NewSystemSettingsService(db))
 
 	// 命中内置弱口令黑名单。
 	if _, err := authService.Register("neo", "Password1"); err == nil {
@@ -93,8 +133,8 @@ func TestRegisterRejectsWeakBlocklistedPassword(t *testing.T) {
 }
 
 func TestRegisterAcceptsStrongPassword(t *testing.T) {
-	newAuthServiceTestDB(t)
-	authService := NewAuthService()
+	db := newAuthServiceTestDB(t)
+	authService := NewAuthService(db, NewSystemSettingsService(db))
 
 	// 3 类（大小写+数字+符号），未命中黑名单。
 	if _, err := authService.Register("neo", "Str0ng!Pass"); err != nil {

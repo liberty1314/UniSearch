@@ -62,9 +62,13 @@ func TestPluginWebRoutesRequireAdminAuthentication(t *testing.T) {
 	manager := plugin.NewPluginManager()
 	manager.RegisterPlugin(&mockAdminWebPlugin{name: "mock-web"})
 	searchSvc := service.NewSearchService(manager, nil, nil)
+	db := newAdminRouteTestDB(t)
+	admin := createAdminRouteTestUser(t, db, "admin-user", "admin", nil)
+	normalUser := createAdminRouteTestUser(t, db, "normal-user", "user", nil)
+	authService := service.NewAuthService(db, service.NewSystemSettingsService(db))
 
 	router := gin.New()
-	registerAdminRoutes(router.Group("/api"), RouterDeps{SearchService: searchSvc})
+	registerAdminRoutes(router.Group("/api"), RouterDeps{SearchService: searchSvc, AuthService: authService})
 
 	oldReq := httptest.NewRequest(http.MethodGet, "/mock/ping", nil)
 	oldResp := httptest.NewRecorder()
@@ -80,7 +84,7 @@ func TestPluginWebRoutesRequireAdminAuthentication(t *testing.T) {
 		t.Fatalf("期望匿名访问受保护插件 Web 路由返回 401，实际为 %d: %s", anonymousResp.Code, anonymousResp.Body.String())
 	}
 
-	userToken, err := util.GenerateJWTToken(2, "normal-user", "user", 0, config.AppConfig.AuthJWTSecret, time.Hour)
+	userToken, err := util.GenerateJWTToken(normalUser.ID, normalUser.Username, normalUser.Role, normalUser.TokenVersion, config.AppConfig.AuthJWTSecret, time.Hour)
 	if err != nil {
 		t.Fatalf("生成普通用户 token 失败: %v", err)
 	}
@@ -92,7 +96,7 @@ func TestPluginWebRoutesRequireAdminAuthentication(t *testing.T) {
 		t.Fatalf("期望普通用户访问受保护插件 Web 路由返回 403，实际为 %d: %s", userResp.Code, userResp.Body.String())
 	}
 
-	adminToken, err := util.GenerateJWTToken(1, "admin-user", "admin", 0, config.AppConfig.AuthJWTSecret, time.Hour)
+	adminToken, err := util.GenerateJWTToken(admin.ID, admin.Username, admin.Role, admin.TokenVersion, config.AppConfig.AuthJWTSecret, time.Hour)
 	if err != nil {
 		t.Fatalf("生成管理员 token 失败: %v", err)
 	}
@@ -108,10 +112,9 @@ func TestPluginWebRoutesRequireAdminAuthentication(t *testing.T) {
 func TestAdminUserStatsRouteReturnsSummary(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	config.AppConfig.AuthJWTSecret = "test-admin-user-stats-secret"
-	SetAuthService(nil)
-
 	db := newAdminRouteTestDB(t)
-	userService := service.NewUserService(db)
+	userService := service.NewUserService(db, service.NewAccountSessionService())
+	authService := service.NewAuthService(db, service.NewSystemSettingsService(db))
 	now := time.Now()
 	recentLogin := now.Add(-time.Hour)
 	silentLogin := now.AddDate(0, 0, -31)
@@ -129,7 +132,7 @@ func TestAdminUserStatsRouteReturnsSummary(t *testing.T) {
 	}
 
 	router := gin.New()
-	registerAdminRoutes(router.Group("/api"), RouterDeps{UserService: userService})
+	registerAdminRoutes(router.Group("/api"), RouterDeps{UserService: userService, AuthService: authService})
 
 	token, err := util.GenerateJWTToken(admin.ID, admin.Username, admin.Role, 0, config.AppConfig.AuthJWTSecret, time.Hour)
 	if err != nil {

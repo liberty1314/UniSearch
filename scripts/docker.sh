@@ -127,20 +127,6 @@ do_start() {
         log_success "DB_HOST=mysql 已添加"
     fi
     
-    # 修正 REFRESH_TOKEN_STORE_PATH 为容器路径
-    if grep -q "^REFRESH_TOKEN_STORE_PATH=" .env.docker; then
-        current_path=$(grep "^REFRESH_TOKEN_STORE_PATH=" .env.docker | cut -d'=' -f2)
-        if [[ "$current_path" != "/app/data/"* ]]; then
-            log_step "修正 REFRESH_TOKEN_STORE_PATH 为容器路径..."
-            if [[ "$OSTYPE" == "darwin"* ]]; then
-                sed -i '' 's|^REFRESH_TOKEN_STORE_PATH=.*|REFRESH_TOKEN_STORE_PATH=/app/data/refresh_tokens.dat|' .env.docker
-            else
-                sed -i 's|^REFRESH_TOKEN_STORE_PATH=.*|REFRESH_TOKEN_STORE_PATH=/app/data/refresh_tokens.dat|' .env.docker
-            fi
-            log_success "REFRESH_TOKEN_STORE_PATH 已修正"
-        fi
-    fi
-    
     log_success "Docker 环境配置检查完成"
     
     log_step "检查环境变量配置..."

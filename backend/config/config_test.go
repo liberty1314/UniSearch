@@ -105,19 +105,50 @@ func TestGetDefaultConcurrencyDoesNotNeedPluginCountEnv(t *testing.T) {
 	}
 }
 
-func TestResolveInitialAdminCredentialsAllowsDevelopmentDefault(t *testing.T) {
+func TestResolveInitialAdminCredentialsRejectsMissingDevelopmentValues(t *testing.T) {
 	oldConfig := AppConfig
 	t.Cleanup(func() {
 		AppConfig = oldConfig
 	})
 	AppConfig = &Config{AppEnv: "development"}
 
-	credentials, err := ResolveInitialAdminCredentials()
-	if err != nil {
-		t.Fatalf("开发环境默认管理员凭据不应失败: %v", err)
+	if _, err := ResolveInitialAdminCredentials(); err == nil {
+		t.Fatal("开发环境缺少初始管理员配置时也应失败")
 	}
-	if credentials.Username != "admin" || credentials.Password != "admin" || !credentials.UsingDevelopmentDefault {
-		t.Fatalf("开发环境应返回默认管理员凭据标记，实际为 %#v", credentials)
+}
+
+func TestResolveInitialAdminCredentialsRejectsDefaultAndPlaceholderValues(t *testing.T) {
+	testCases := []struct {
+		name     string
+		username string
+		password string
+	}{
+		{name: "默认管理员用户名", username: "admin", password: "Str0ng!Initial"},
+		{name: "大小写默认管理员用户名", username: "AdMiN", password: "Str0ng!Initial"},
+		{name: "用户名占位值", username: "PLEASE_SET_INITIAL_ADMIN_USERNAME", password: "Str0ng!Initial"},
+		{name: "密码占位值", username: "root-admin", password: "PLEASE_SET_INITIAL_ADMIN_STRONG_PASSWORD"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			oldConfig := AppConfig
+			t.Cleanup(func() {
+				AppConfig = oldConfig
+			})
+			AppConfig = &Config{
+				AppEnv:                "development",
+				InitialAdminUsername:  tc.username,
+				InitialAdminPassword:  tc.password,
+				AuthUsernameMinLength: 3,
+				AuthUsernameMaxLength: 32,
+				AuthPasswordMinLength: 6,
+				AuthPasswordMaxLength: 64,
+			}
+
+			if _, err := ResolveInitialAdminCredentials(); err == nil {
+				t.Fatalf("应拒绝默认值或占位值: username=%q password=%q", tc.username, tc.password)
+			}
+		})
 	}
 }
 
@@ -172,8 +203,76 @@ func TestResolveInitialAdminCredentialsAcceptsStrongProductionPassword(t *testin
 	if err != nil {
 		t.Fatalf("生产环境强初始管理员密码不应失败: %v", err)
 	}
-	if credentials.Username != "root-admin" || credentials.Password != "Str0ng!Initial" || credentials.UsingDevelopmentDefault {
+	if credentials.Username != "root-admin" || credentials.Password != "Str0ng!Initial" {
 		t.Fatalf("生产环境应返回显式管理员凭据，实际为 %#v", credentials)
+	}
+}
+
+func TestValidateProductionSecurityConfigRejectsMissingOrPlaceholderValues(t *testing.T) {
+	newValidConfig := func() *Config {
+		return &Config{
+			AppEnv:                 "production",
+			AllowedOrigins:         []string{"https://search.example.com"},
+			AuthJWTSecret:          "jwt-secret-value-with-at-least-32-chars",
+			ResourcePublicIDSecret: "resource-public-id-secret-with-32-chars",
+			SecretMasterKey:        "master-secret-value-with-32-chars-min",
+			DBPassword:             "database-password",
+			RedisPassword:          "redis-password",
+		}
+	}
+
+	testCases := []struct {
+		name  string
+		apply func(*Config)
+	}{
+		{name: "JWT 密钥为空", apply: func(cfg *Config) { cfg.AuthJWTSecret = "" }},
+		{name: "JWT 密钥为占位值", apply: func(cfg *Config) { cfg.AuthJWTSecret = "PLEASE_SET_AUTH_JWT_SECRET" }},
+		{name: "主密钥为空", apply: func(cfg *Config) { cfg.SecretMasterKey = "" }},
+		{name: "主密钥为占位值", apply: func(cfg *Config) { cfg.SecretMasterKey = "PLEASE_SET_SECRET_MASTER_KEY" }},
+		{name: "数据库密码为空", apply: func(cfg *Config) { cfg.DBPassword = "" }},
+		{name: "数据库密码为占位值", apply: func(cfg *Config) { cfg.DBPassword = "PLEASE_SET_DATABASE_PASSWORD" }},
+		{name: "Redis 密码为空", apply: func(cfg *Config) { cfg.RedisPassword = "" }},
+		{name: "Redis 密码为占位值", apply: func(cfg *Config) { cfg.RedisPassword = "PLEASE_SET_REDIS_PASSWORD" }},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := newValidConfig()
+			tc.apply(cfg)
+			if err := validateProductionSecurityConfig(cfg); err == nil {
+				t.Fatal("生产配置含空值或占位值时应拒绝启动")
+			}
+		})
+	}
+}
+
+func TestValidateProductionSecurityConfigValidatesOrigins(t *testing.T) {
+	newConfig := func(origin string) *Config {
+		return &Config{
+			AppEnv:                 "production",
+			AllowedOrigins:         []string{origin},
+			AuthJWTSecret:          "jwt-secret-value-with-at-least-32-chars",
+			ResourcePublicIDSecret: "resource-public-id-secret-with-32-chars",
+			SecretMasterKey:        "master-secret-value-with-32-chars-min",
+			DBPassword:             "database-password",
+			RedisPassword:          "redis-password",
+		}
+	}
+
+	for _, origin := range []string{"http://search.example.com", "http://localhost.example.com"} {
+		t.Run("拒绝_"+origin, func(t *testing.T) {
+			if err := validateProductionSecurityConfig(newConfig(origin)); err == nil {
+				t.Fatalf("生产环境应拒绝非 loopback HTTP 来源 %q", origin)
+			}
+		})
+	}
+
+	for _, origin := range []string{"https://search.example.com", "http://127.0.0.1:8080", "http://localhost:8080"} {
+		t.Run("接受_"+origin, func(t *testing.T) {
+			if err := validateProductionSecurityConfig(newConfig(origin)); err != nil {
+				t.Fatalf("有效生产来源 %q 不应被拒绝: %v", origin, err)
+			}
+		})
 	}
 }
 
@@ -182,9 +281,6 @@ func TestInitWithErrorRejectsMissingProductionSecrets(t *testing.T) {
 	t.Setenv("APP_ENV", "production")
 	if err := os.Unsetenv("AUTH_JWT_SECRET"); err != nil {
 		t.Fatalf("清理 AUTH_JWT_SECRET 失败: %v", err)
-	}
-	if err := os.Unsetenv("REFRESH_TOKEN_ENCRYPT_KEY"); err != nil {
-		t.Fatalf("清理 REFRESH_TOKEN_ENCRYPT_KEY 失败: %v", err)
 	}
 	if err := os.Unsetenv("SECRET_MASTER_KEY"); err != nil {
 		t.Fatalf("清理 SECRET_MASTER_KEY 失败: %v", err)
@@ -195,11 +291,56 @@ func TestInitWithErrorRejectsMissingProductionSecrets(t *testing.T) {
 	}
 }
 
+func TestInitWithErrorRejectsMissingOrPlaceholderProductionDataPasswords(t *testing.T) {
+	testCases := []struct {
+		name  string
+		key   string
+		value *string
+	}{
+		{name: "数据库密码缺失", key: "DB_PASSWORD"},
+		{name: "Redis 密码缺失", key: "REDIS_PASSWORD"},
+		{name: "数据库密码为占位值", key: "DB_PASSWORD", value: stringPointer("PLEASE_SET_DATABASE_PASSWORD")},
+		{name: "Redis 密码为占位值", key: "REDIS_PASSWORD", value: stringPointer("PLEASE_SET_REDIS_PASSWORD")},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			preserveProductionSecretEnv(t)
+			t.Setenv("APP_ENV", "production")
+			t.Setenv("ALLOWED_ORIGINS", "https://search.example.com")
+			t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
+			t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
+			t.Setenv("RESOURCE_PUBLIC_ID_SECRET", "resource-public-id-secret-with-32-chars")
+			if tc.value == nil {
+				if err := os.Unsetenv(tc.key); err != nil {
+					t.Fatalf("清理 %s 失败: %v", tc.key, err)
+				}
+			} else {
+				t.Setenv(tc.key, *tc.value)
+			}
+
+			err := InitWithError()
+			if err == nil || !strings.Contains(err.Error(), tc.key) {
+				t.Fatalf("生产环境应拒绝无效 %s，实际错误: %v", tc.key, err)
+			}
+		})
+	}
+}
+
+func TestInitWithErrorRejectsInvalidAppEnv(t *testing.T) {
+	preserveProductionSecretEnv(t)
+	t.Setenv("APP_ENV", "prodution")
+
+	err := InitWithError()
+	if err == nil || !strings.Contains(err.Error(), "APP_ENV") {
+		t.Fatalf("无效 APP_ENV 必须阻断启动，实际错误: %v", err)
+	}
+}
+
 func TestInitWithErrorRejectsPlaceholderProductionSecrets(t *testing.T) {
 	preserveProductionSecretEnv(t)
 	t.Setenv("APP_ENV", "production")
 	t.Setenv("AUTH_JWT_SECRET", "PLEASE_GENERATE_A_STRONG_RANDOM_SECRET_KEY_HERE")
-	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "strong-refresh-token-secret-000001")
 	t.Setenv("SECRET_MASTER_KEY", "strong-secret-master-key-000000001")
 	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", "resource-public-id-secret-with-32-chars")
 
@@ -213,8 +354,7 @@ func TestInitWithErrorRejectsDuplicateProductionSecrets(t *testing.T) {
 	duplicate := "same-secret-value-with-at-least-32-chars"
 	t.Setenv("APP_ENV", "production")
 	t.Setenv("AUTH_JWT_SECRET", duplicate)
-	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", duplicate)
-	t.Setenv("SECRET_MASTER_KEY", "different-secret-master-key-00000001")
+	t.Setenv("SECRET_MASTER_KEY", duplicate)
 	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", "resource-public-id-secret-with-32-chars")
 
 	if err := InitWithError(); err == nil {
@@ -227,7 +367,6 @@ func TestInitWithErrorAcceptsDistinctProductionSecrets(t *testing.T) {
 	t.Setenv("APP_ENV", "production")
 	t.Setenv("ALLOWED_ORIGINS", "https://example.com")
 	t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
-	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
 	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
 	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", "resource-public-id-secret-with-32-chars")
 
@@ -241,7 +380,6 @@ func TestInitWithErrorRejectsMissingProductionResourcePublicIDSecret(t *testing.
 	t.Setenv("APP_ENV", "production")
 	t.Setenv("ALLOWED_ORIGINS", "https://example.com")
 	t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
-	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
 	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
 	if err := os.Unsetenv("RESOURCE_PUBLIC_ID_SECRET"); err != nil {
 		t.Fatalf("清理 RESOURCE_PUBLIC_ID_SECRET 失败: %v", err)
@@ -259,7 +397,6 @@ func TestInitWithErrorRejectsResourcePublicIDSecretMatchingJWTSecret(t *testing.
 	t.Setenv("APP_ENV", "production")
 	t.Setenv("ALLOWED_ORIGINS", "https://example.com")
 	t.Setenv("AUTH_JWT_SECRET", duplicate)
-	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
 	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
 	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", duplicate)
 
@@ -273,7 +410,6 @@ func TestInitWithErrorRejectsShortProductionResourcePublicIDSecret(t *testing.T)
 	t.Setenv("APP_ENV", "production")
 	t.Setenv("ALLOWED_ORIGINS", "https://example.com")
 	t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
-	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
 	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
 	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", "too-short")
 
@@ -288,7 +424,6 @@ func TestInitWithErrorRejectsPlaceholderProductionResourcePublicIDSecret(t *test
 	t.Setenv("APP_ENV", "production")
 	t.Setenv("ALLOWED_ORIGINS", "https://example.com")
 	t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
-	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
 	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
 	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", "PLEASE_GENERATE_A_STRONG_RESOURCE_PUBLIC_ID_SECRET_HERE")
 
@@ -305,7 +440,6 @@ func TestInitWithErrorRejectsMissingProductionAllowedOrigins(t *testing.T) {
 		t.Fatalf("清理 ALLOWED_ORIGINS 失败: %v", err)
 	}
 	t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
-	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
 	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
 	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", "resource-public-id-secret-with-32-chars")
 
@@ -319,7 +453,6 @@ func TestInitWithErrorRejectsWildcardProductionAllowedOrigins(t *testing.T) {
 	t.Setenv("APP_ENV", "production")
 	t.Setenv("ALLOWED_ORIGINS", "*")
 	t.Setenv("AUTH_JWT_SECRET", "jwt-secret-value-with-at-least-32-chars")
-	t.Setenv("REFRESH_TOKEN_ENCRYPT_KEY", "refresh-secret-value-with-32-chars-min")
 	t.Setenv("SECRET_MASTER_KEY", "master-secret-value-with-32-chars-min")
 	t.Setenv("RESOURCE_PUBLIC_ID_SECRET", "resource-public-id-secret-with-32-chars")
 
@@ -334,9 +467,6 @@ func TestInitWithErrorGeneratesDevelopmentSecrets(t *testing.T) {
 	if err := os.Unsetenv("AUTH_JWT_SECRET"); err != nil {
 		t.Fatalf("清理 AUTH_JWT_SECRET 失败: %v", err)
 	}
-	if err := os.Unsetenv("REFRESH_TOKEN_ENCRYPT_KEY"); err != nil {
-		t.Fatalf("清理 REFRESH_TOKEN_ENCRYPT_KEY 失败: %v", err)
-	}
 	if err := os.Unsetenv("SECRET_MASTER_KEY"); err != nil {
 		t.Fatalf("清理 SECRET_MASTER_KEY 失败: %v", err)
 	}
@@ -347,7 +477,7 @@ func TestInitWithErrorGeneratesDevelopmentSecrets(t *testing.T) {
 	if err := InitWithError(); err != nil {
 		t.Fatalf("开发环境缺少密钥时应生成临时随机值: %v", err)
 	}
-	if AppConfig.AuthJWTSecret == "" || AppConfig.RefreshTokenEncryptKey == "" || AppConfig.SecretMasterKey == "" || AppConfig.ResourcePublicIDSecret == "" {
+	if AppConfig.AuthJWTSecret == "" || AppConfig.SecretMasterKey == "" || AppConfig.ResourcePublicIDSecret == "" {
 		t.Fatalf("开发环境应生成临时随机密钥，实际配置为 %#v", AppConfig)
 	}
 }
@@ -361,9 +491,16 @@ func preserveProductionSecretEnv(t *testing.T) {
 	preserveEnv(t, "APP_ENV")
 	preserveEnv(t, "ALLOWED_ORIGINS")
 	preserveEnv(t, "AUTH_JWT_SECRET")
-	preserveEnv(t, "REFRESH_TOKEN_ENCRYPT_KEY")
 	preserveEnv(t, "SECRET_MASTER_KEY")
 	preserveEnv(t, "RESOURCE_PUBLIC_ID_SECRET")
+	preserveEnv(t, "DB_PASSWORD")
+	preserveEnv(t, "REDIS_PASSWORD")
+	t.Setenv("DB_PASSWORD", "database-password")
+	t.Setenv("REDIS_PASSWORD", "redis-password")
+}
+
+func stringPointer(value string) *string {
+	return &value
 }
 
 func preserveEnv(t *testing.T, key string) {

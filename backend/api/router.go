@@ -14,7 +14,6 @@ import (
 // 验证需求：4.1, 5.1, 6.1, 7.1, 8.1, 10.1, 10.3
 func SetupRouter(deps RouterDeps) *gin.Engine {
 	SetSearchService(deps.SearchService)
-	SetAuthService(deps.AuthService)
 	SetSystemSettingsService(deps.SystemSettingsService)
 	SetHotRankingCacheAdminService(deps.HotRankingService)
 	SetTGChannelService(deps.TGChannelService)
@@ -106,17 +105,17 @@ func registerPublicRoutes(api *gin.RouterGroup, deps RouterDeps) {
 	api.GET("/system-settings", GetSystemSettingsHandler)
 	api.GET("/hot", GetHotRankingHandler(deps.HotRankingService))
 	api.GET("/system-settings/announcement-enabled", GetAnnouncementFeatureEnabledHandler(deps.SystemSettingsService))
-	api.POST("/system-settings/announcement-enabled", JWTMiddleware(), AdminMiddleware(), SetAnnouncementFeatureEnabledHandler(deps.SystemSettingsService))
-	api.POST("/search", BodySizeLimitMiddleware(searchRequestBodyLimitBytes), SearchJWTMiddleware(), SearchHandler)
-	api.GET("/search", SearchJWTMiddleware(), SearchHandler)
-	api.POST("/search/progressive", BodySizeLimitMiddleware(searchRequestBodyLimitBytes), SearchJWTMiddleware(), SearchProgressiveHandler(deps.SearchService))
-	api.POST("/resources/resolve", BodySizeLimitMiddleware(authRequestBodyLimitBytes), SearchJWTMiddleware(), ResourceResolveHandler)
-	api.POST("/resources/scan-transfer/refresh", BodySizeLimitMiddleware(authRequestBodyLimitBytes), SearchJWTMiddleware(), RefreshScanTransferHandler)
+	api.POST("/system-settings/announcement-enabled", JWTMiddleware(deps.AuthService), AdminMiddleware(), SetAnnouncementFeatureEnabledHandler(deps.SystemSettingsService))
+	api.POST("/search", BodySizeLimitMiddleware(searchRequestBodyLimitBytes), SearchJWTMiddleware(deps.AuthService), SearchHandler)
+	api.GET("/search", SearchJWTMiddleware(deps.AuthService), SearchHandler)
+	api.POST("/search/progressive", BodySizeLimitMiddleware(searchRequestBodyLimitBytes), SearchJWTMiddleware(deps.AuthService), SearchProgressiveHandler(deps.SearchService))
+	api.POST("/resources/resolve", BodySizeLimitMiddleware(authRequestBodyLimitBytes), SearchJWTMiddleware(deps.AuthService), ResourceResolveHandler)
+	api.POST("/resources/scan-transfer/refresh", BodySizeLimitMiddleware(authRequestBodyLimitBytes), SearchJWTMiddleware(deps.AuthService), RefreshScanTransferHandler)
 }
 
 func registerUserRoutes(api *gin.RouterGroup, deps RouterDeps, authController *controller.AuthController) {
 	user := api.Group("/user")
-	user.Use(JWTMiddleware())
+	user.Use(JWTMiddleware(deps.AuthService))
 	{
 		user.GET("/me", authController.GetCurrentUser)
 		user.POST("/change-password", ChangePasswordHandler(deps.UserService))

@@ -1,6 +1,6 @@
 import { ArrowLeft, House, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { BLUE_CYAN_TEXT_GRADIENT } from '@/lib/brandTheme';
 
 type StickFigure = {
@@ -230,7 +230,7 @@ function CharactersAnimation() {
 
 function CircleAnimation() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const requestIdRef = useRef<number>();
+  const requestIdRef = useRef<number | null>(null);
   const timerRef = useRef(0);
   const circlesRef = useRef<Circle[]>([]);
 

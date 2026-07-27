@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router';
 import { useAuthStore } from '@/stores/authStore';
 import { buildAdminUrl } from '@/lib/adminRoute';
 import { AuthService } from '@/services/authService';

@@ -15,7 +15,6 @@ import (
 
 const (
 	SecretNameJWTSecret         = "jwt_secret"
-	SecretNameRefreshTokenKey   = "refresh_token_key"
 	SecretNameTMDBReadAccessKey = "tmdb_read_access_token"
 )
 
@@ -199,14 +198,6 @@ func GetJWTSecret() (string, error) {
 		return "", errors.New("密钥管理服务未初始化")
 	}
 	return globalSecretManager.GetSecret(SecretNameJWTSecret)
-}
-
-// GetRefreshTokenKey 获取刷新令牌加密密钥（便捷方法）
-func GetRefreshTokenKey() (string, error) {
-	if globalSecretManager == nil {
-		return "", errors.New("密钥管理服务未初始化")
-	}
-	return globalSecretManager.GetSecret(SecretNameRefreshTokenKey)
 }
 
 // GetTMDBReadAccessToken 获取 TMDB 读取访问令牌（便捷方法）

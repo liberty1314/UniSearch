@@ -1,385 +1,247 @@
 package service
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
+	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
+	"encoding/hex"
 	"errors"
-	"io"
-	"os"
-	"sync"
+	"fmt"
+	"strings"
 	"time"
 
-	"gorm.io/gorm"
 	"unisearch/model"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-// ErrRefreshTokenReuse 表示检测到已撤销但未过期的刷新令牌被再次使用（疑似泄露/重放）。
-// 触发时会吊销该用户的所有刷新令牌，调用方应据此要求用户重新登录并可告警。
-var ErrRefreshTokenReuse = errors.New("刷新令牌重放：已吊销该用户全部令牌")
-
-// StorageType 存储类型
-type StorageType string
-
-const (
-	StorageTypeFile     StorageType = "file"     // 文件存储
-	StorageTypeDatabase StorageType = "database" // 数据库存储
+var (
+	// ErrRefreshTokenInvalid 统一表示未知、过期、撤销或设备不匹配的刷新令牌。
+	ErrRefreshTokenInvalid = errors.New("刷新令牌无效")
+	// ErrRefreshTokenReuse 表示已撤销但未过期的刷新令牌被再次用于轮转。
+	ErrRefreshTokenReuse = errors.New("刷新令牌重放：已吊销该用户全部会话")
 )
 
-// RefreshTokenService 刷新令牌服务
+// IssuedRefreshToken 包含仅返回给调用方的原始令牌和持久化会话。
+type IssuedRefreshToken struct {
+	RawToken string                     `json:"-"`
+	Session  *model.RefreshTokenSession `json:"session"`
+}
+
+// RefreshRotation 表示一次成功轮转后的新原始令牌和当前账户状态。
+type RefreshRotation struct {
+	RawToken string        `json:"-"`
+	State    UserAuthState `json:"state"`
+}
+
+// RefreshTokenService 只使用数据库摘要保存刷新会话。
 type RefreshTokenService struct {
-	storageType StorageType                    // 存储类型
-	db          *gorm.DB                       // 数据库连接（数据库模式）
-	tokens      map[string]*model.RefreshToken // token -> RefreshToken（文件模式）
-	mu          sync.RWMutex                   // 互斥锁（文件模式）
-	storePath   string                         // 存储路径（文件模式）
-	encryptKey  []byte                         // AES-256 密钥（32字节）
+	db *gorm.DB
 }
 
-// NewRefreshTokenService 创建刷新令牌服务实例
-// storageType: 存储类型（file 或 database）
-// db: 数据库连接（数据库模式必需）
-// storePath: 文件存储路径（文件模式必需）
-// encryptKey: 加密密钥
-func NewRefreshTokenService(storageType StorageType, db *gorm.DB, storePath string, encryptKey string) (*RefreshTokenService, error) {
-	// 确保加密密钥为 32 字节（AES-256）
-	key := []byte(encryptKey)
-	if len(key) < 32 {
-		// 填充到 32 字节
-		paddedKey := make([]byte, 32)
-		copy(paddedKey, key)
-		key = paddedKey
-	} else if len(key) > 32 {
-		key = key[:32]
+// NewRefreshTokenService 创建数据库刷新会话服务。
+func NewRefreshTokenService(db *gorm.DB) (*RefreshTokenService, error) {
+	if db == nil {
+		return nil, errors.New("刷新会话服务需要数据库连接")
 	}
-
-	service := &RefreshTokenService{
-		storageType: storageType,
-		db:          db,
-		tokens:      make(map[string]*model.RefreshToken),
-		storePath:   storePath,
-		encryptKey:  key,
-	}
-
-	// 根据存储类型初始化
-	if storageType == StorageTypeDatabase {
-		if db == nil {
-			return nil, errors.New("数据库模式需要提供数据库连接")
-		}
-		// 数据库模式：启动定期清理
-		go service.cleanupExpiredTokensDB()
-	} else {
-		// 文件模式：加载已有令牌并启动定期清理
-		if err := service.load(); err != nil {
-			return nil, err
-		}
-		go service.cleanupExpiredTokens()
-	}
-
-	return service, nil
+	return &RefreshTokenService{db: db}, nil
 }
 
-// CreateToken 创建新的刷新令牌
-func (s *RefreshTokenService) CreateToken(username string, isAdmin bool, deviceFingerprint string, ttl time.Duration) (*model.RefreshToken, error) {
-	// 生成令牌字符串
-	tokenStr, err := model.GenerateRefreshToken()
+// DigestRefreshToken 返回原始刷新令牌的 SHA-256 小写十六进制摘要。
+func DigestRefreshToken(raw string) string {
+	sum := sha256.Sum256([]byte(raw))
+	return hex.EncodeToString(sum[:])
+}
+
+func generateRefreshToken() (string, error) {
+	data := make([]byte, 32)
+	if _, err := rand.Read(data); err != nil {
+		return "", fmt.Errorf("生成刷新令牌失败: %w", err)
+	}
+	return base64.RawURLEncoding.EncodeToString(data), nil
+}
+
+// Issue 签发刷新令牌，数据库只保存摘要。
+func (s *RefreshTokenService) Issue(ctx context.Context, userID uint, fingerprint string, ttl time.Duration) (*IssuedRefreshToken, error) {
+	if s == nil || s.db == nil {
+		return nil, errors.New("刷新会话数据库未初始化")
+	}
+	return s.issueWithDB(ctx, s.db, userID, fingerprint, ttl)
+}
+
+func (s *RefreshTokenService) issueWithDB(ctx context.Context, db *gorm.DB, userID uint, fingerprint string, ttl time.Duration) (*IssuedRefreshToken, error) {
+	fingerprint = strings.TrimSpace(fingerprint)
+	if db == nil || userID == 0 || fingerprint == "" || ttl <= 0 {
+		return nil, ErrRefreshTokenInvalid
+	}
+
+	raw, err := generateRefreshToken()
 	if err != nil {
 		return nil, err
 	}
-
-	// 创建令牌对象
 	now := time.Now()
-	token := &model.RefreshToken{
-		Token:             tokenStr,
-		Username:          username,
-		IsAdmin:           isAdmin,
-		DeviceFingerprint: deviceFingerprint,
-		CreatedAt:         now,
+	session := &model.RefreshTokenSession{
+		UserID:            userID,
+		TokenDigest:       DigestRefreshToken(raw),
+		DeviceFingerprint: fingerprint,
 		ExpiresAt:         now.Add(ttl),
-		LastUsedAt:        nil,
 		IsRevoked:         false,
 	}
-
-	// 根据存储类型保存
-	if s.storageType == StorageTypeDatabase {
-		// 数据库模式：直接保存到数据库
-		if err := s.db.Create(token).Error; err != nil {
-			return nil, err
-		}
-	} else {
-		// 文件模式：保存到内存并持久化
-		s.mu.Lock()
-		s.tokens[tokenStr] = token
-		err := s.save()
-		s.mu.Unlock()
-		if err != nil {
-			return nil, err
-		}
+	if err := db.WithContext(ctx).Create(session).Error; err != nil {
+		return nil, fmt.Errorf("创建刷新会话失败: %w", err)
 	}
-
-	return token, nil
+	return &IssuedRefreshToken{RawToken: raw, Session: session}, nil
 }
 
-// ValidateToken 验证刷新令牌
-func (s *RefreshTokenService) ValidateToken(tokenStr string, deviceFingerprint string) (*model.RefreshToken, error) {
-	var token *model.RefreshToken
-	var err error
-
-	// 根据存储类型查询
-	if s.storageType == StorageTypeDatabase {
-		// 数据库模式：从数据库查询
-		token = &model.RefreshToken{}
-		err = s.db.Where("token = ?", tokenStr).First(token).Error
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil, errors.New("令牌不存在")
-			}
-			return nil, err
-		}
-	} else {
-		// 文件模式：从内存查询
-		s.mu.RLock()
-		var exists bool
-		token, exists = s.tokens[tokenStr]
-		s.mu.RUnlock()
-		if !exists {
-			return nil, errors.New("令牌不存在")
-		}
+// Validate 验证刷新令牌摘要、有效期和设备指纹。
+func (s *RefreshTokenService) Validate(ctx context.Context, raw string, fingerprint string) (*model.RefreshTokenSession, error) {
+	if s == nil || s.db == nil {
+		return nil, errors.New("刷新会话数据库未初始化")
+	}
+	raw = strings.TrimSpace(raw)
+	fingerprint = strings.TrimSpace(fingerprint)
+	if raw == "" || fingerprint == "" {
+		return nil, ErrRefreshTokenInvalid
 	}
 
-	// 重放检测：令牌已撤销但尚未过期，却被再次使用。
-	// 正常轮转后旧令牌立即撤销，合法客户端不会再用它；此处被用到说明旧令牌可能已泄露。
-	// 立即吊销该用户全部刷新令牌，迫使重新登录，切断攻击者与合法用户的会话。
-	if token.IsRevoked && !token.IsExpired() {
-		if err := s.RevokeUserTokens(token.Username); err != nil {
-			return nil, err
+	var session model.RefreshTokenSession
+	if err := s.db.WithContext(ctx).
+		Where("token_digest = ?", DigestRefreshToken(raw)).
+		First(&session).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrRefreshTokenInvalid
 		}
+		return nil, fmt.Errorf("查询刷新会话失败: %w", err)
+	}
+	if session.IsRevoked || !time.Now().Before(session.ExpiresAt) || session.DeviceFingerprint != fingerprint {
+		return nil, ErrRefreshTokenInvalid
+	}
+
+	now := time.Now()
+	if err := s.db.WithContext(ctx).Model(&session).Update("last_used_at", now).Error; err != nil {
+		return nil, fmt.Errorf("更新刷新会话失败: %w", err)
+	}
+	session.LastUsedAt = &now
+	return &session, nil
+}
+
+// Revoke 撤销单个刷新令牌。
+func (s *RefreshTokenService) Revoke(ctx context.Context, raw string) error {
+	if s == nil || s.db == nil {
+		return errors.New("刷新会话数据库未初始化")
+	}
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ErrRefreshTokenInvalid
+	}
+
+	result := s.db.WithContext(ctx).Model(&model.RefreshTokenSession{}).
+		Where("token_digest = ?", DigestRefreshToken(raw)).
+		Update("is_revoked", true)
+	if result.Error != nil {
+		return fmt.Errorf("撤销刷新会话失败: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return ErrRefreshTokenInvalid
+	}
+	return nil
+}
+
+// RevokeUserSessions 撤销用户的全部刷新会话。
+func (s *RefreshTokenService) RevokeUserSessions(ctx context.Context, userID uint) error {
+	if s == nil || s.db == nil {
+		return errors.New("刷新会话数据库未初始化")
+	}
+	if userID == 0 {
+		return ErrRefreshTokenInvalid
+	}
+	if err := s.db.WithContext(ctx).Model(&model.RefreshTokenSession{}).
+		Where("user_id = ? AND is_revoked = ?", userID, false).
+		Update("is_revoked", true).Error; err != nil {
+		return fmt.Errorf("撤销用户刷新会话失败: %w", err)
+	}
+	return nil
+}
+
+// Rotate 原子撤销旧会话并签发新会话，保证原始令牌只能成功使用一次。
+func (s *RefreshTokenService) Rotate(ctx context.Context, raw string, fingerprint string, ttl time.Duration) (*RefreshRotation, error) {
+	if s == nil || s.db == nil {
+		return nil, errors.New("刷新会话数据库未初始化")
+	}
+	raw = strings.TrimSpace(raw)
+	fingerprint = strings.TrimSpace(fingerprint)
+	if raw == "" || fingerprint == "" || ttl <= 0 {
+		return nil, ErrRefreshTokenInvalid
+	}
+
+	var rotation *RefreshRotation
+	reuseDetected := false
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var old model.RefreshTokenSession
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("token_digest = ?", DigestRefreshToken(raw)).
+			First(&old).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrRefreshTokenInvalid
+			}
+			return fmt.Errorf("查询刷新会话失败: %w", err)
+		}
+
+		now := time.Now()
+		if old.IsRevoked && now.Before(old.ExpiresAt) {
+			if err := tx.Model(&model.RefreshTokenSession{}).
+				Where("user_id = ?", old.UserID).
+				Update("is_revoked", true).Error; err != nil {
+				return fmt.Errorf("撤销重放用户会话失败: %w", err)
+			}
+			reuseDetected = true
+			return nil
+		}
+		if old.IsRevoked || !now.Before(old.ExpiresAt) || old.DeviceFingerprint != fingerprint {
+			return ErrRefreshTokenInvalid
+		}
+
+		state, err := loadUserAuthState(ctx, tx, old.UserID)
+		if errors.Is(err, gorm.ErrRecordNotFound) || state == nil || (err == nil && !state.IsEnabled) {
+			return ErrRefreshTokenInvalid
+		}
+		if err != nil {
+			return err
+		}
+
+		updateResult := tx.Model(&model.RefreshTokenSession{}).
+			Where("id = ? AND is_revoked = ?", old.ID, false).
+			Updates(map[string]interface{}{
+				"is_revoked":   true,
+				"last_used_at": now,
+			})
+		if updateResult.Error != nil {
+			return fmt.Errorf("撤销旧刷新会话失败: %w", updateResult.Error)
+		}
+		if updateResult.RowsAffected != 1 {
+			if err := tx.Model(&model.RefreshTokenSession{}).
+				Where("user_id = ?", old.UserID).
+				Update("is_revoked", true).Error; err != nil {
+				return fmt.Errorf("撤销并发重放用户会话失败: %w", err)
+			}
+			reuseDetected = true
+			return nil
+		}
+
+		issued, err := s.issueWithDB(ctx, tx, old.UserID, fingerprint, ttl)
+		if err != nil {
+			return err
+		}
+		rotation = &RefreshRotation{RawToken: issued.RawToken, State: *state}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if reuseDetected {
 		return nil, ErrRefreshTokenReuse
 	}
-
-	// 检查令牌是否有效（其余失效情形，如已过期）
-	if !token.IsValid() {
-		return nil, errors.New("令牌已失效")
-	}
-
-	// 验证设备指纹
-	if token.DeviceFingerprint != deviceFingerprint {
-		return nil, errors.New("设备指纹不匹配")
-	}
-
-	// 更新最后使用时间
-	now := time.Now()
-	token.LastUsedAt = &now
-
-	// 根据存储类型更新
-	if s.storageType == StorageTypeDatabase {
-		// 数据库模式：更新数据库
-		if err := s.db.Model(token).Update("last_used_at", now).Error; err != nil {
-			return nil, err
-		}
-	} else {
-		// 文件模式：持久化
-		s.mu.Lock()
-		err := s.save()
-		s.mu.Unlock()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return token, nil
-}
-
-// RevokeToken 撤销刷新令牌
-func (s *RefreshTokenService) RevokeToken(tokenStr string) error {
-	if s.storageType == StorageTypeDatabase {
-		// 数据库模式：更新数据库
-		result := s.db.Model(&model.RefreshToken{}).
-			Where("token = ?", tokenStr).
-			Update("is_revoked", true)
-		if result.Error != nil {
-			return result.Error
-		}
-		if result.RowsAffected == 0 {
-			return errors.New("令牌不存在")
-		}
-		return nil
-	}
-
-	// 文件模式：更新内存并持久化
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	token, exists := s.tokens[tokenStr]
-	if !exists {
-		return errors.New("令牌不存在")
-	}
-
-	token.IsRevoked = true
-	return s.save()
-}
-
-// RevokeUserTokens 撤销用户的所有刷新令牌
-func (s *RefreshTokenService) RevokeUserTokens(username string) error {
-	if s.storageType == StorageTypeDatabase {
-		// 数据库模式：批量更新
-		return s.db.Model(&model.RefreshToken{}).
-			Where("username = ?", username).
-			Update("is_revoked", true).Error
-	}
-
-	// 文件模式：遍历更新
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for _, token := range s.tokens {
-		if token.Username == username {
-			token.IsRevoked = true
-		}
-	}
-
-	return s.save()
-}
-
-// cleanupExpiredTokens 定期清理过期令牌（文件模式）
-func (s *RefreshTokenService) cleanupExpiredTokens() {
-	ticker := time.NewTicker(1 * time.Hour)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		s.mu.Lock()
-		for tokenStr, token := range s.tokens {
-			if token.IsExpired() || token.IsRevoked {
-				delete(s.tokens, tokenStr)
-			}
-		}
-		_ = s.save()
-		s.mu.Unlock()
-	}
-}
-
-// cleanupExpiredTokensDB 定期清理过期令牌（数据库模式）
-func (s *RefreshTokenService) cleanupExpiredTokensDB() {
-	ticker := time.NewTicker(1 * time.Hour)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		// 删除过期或已撤销的令牌
-		s.db.Where("expires_at < ? OR is_revoked = ?", time.Now(), true).
-			Delete(&model.RefreshToken{})
-	}
-}
-
-// save 持久化令牌到磁盘（加密存储）- 仅文件模式
-func (s *RefreshTokenService) save() error {
-	// 序列化
-	data, err := json.Marshal(s.tokens)
-	if err != nil {
-		return err
-	}
-
-	// 加密
-	encryptedData, err := s.encrypt(data)
-	if err != nil {
-		return err
-	}
-
-	// 写入文件
-	return os.WriteFile(s.storePath, encryptedData, 0600)
-}
-
-// load 从磁盘加载令牌（解密）- 仅文件模式
-func (s *RefreshTokenService) load() error {
-	// 检查文件是否存在
-	if _, err := os.Stat(s.storePath); os.IsNotExist(err) {
-		return nil // 文件不存在，跳过加载
-	}
-
-	// 读取文件
-	encryptedData, err := os.ReadFile(s.storePath)
-	if err != nil {
-		return err
-	}
-
-	// 解密
-	data, err := s.decrypt(encryptedData)
-	if err != nil {
-		return err
-	}
-
-	// 反序列化
-	return json.Unmarshal(data, &s.tokens)
-}
-
-// encrypt 使用 AES-256-GCM 加密数据
-func (s *RefreshTokenService) encrypt(plaintext []byte) ([]byte, error) {
-	block, err := aes.NewCipher(s.encryptKey)
-	if err != nil {
-		return nil, err
-	}
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
-
-	// 生成随机 nonce
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, err
-	}
-
-	// 加密并附加 nonce
-	ciphertext := gcm.Seal(nonce, nonce, plaintext, nil)
-	return ciphertext, nil
-}
-
-// decrypt 使用 AES-256-GCM 解密数据
-func (s *RefreshTokenService) decrypt(ciphertext []byte) ([]byte, error) {
-	block, err := aes.NewCipher(s.encryptKey)
-	if err != nil {
-		return nil, err
-	}
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
-
-	nonceSize := gcm.NonceSize()
-	if len(ciphertext) < nonceSize {
-		return nil, errors.New("密文太短")
-	}
-
-	// 提取 nonce 和密文
-	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
-
-	// 解密
-	return gcm.Open(nil, nonce, ciphertext, nil)
-}
-
-// EncryptForClient 为客户端加密刷新令牌（Base64编码）
-func (s *RefreshTokenService) EncryptForClient(token string) (string, error) {
-	encrypted, err := s.encrypt([]byte(token))
-	if err != nil {
-		return "", err
-	}
-	return base64.StdEncoding.EncodeToString(encrypted), nil
-}
-
-// DecryptFromClient 解密客户端发送的刷新令牌
-func (s *RefreshTokenService) DecryptFromClient(encryptedToken string) (string, error) {
-	ciphertext, err := base64.StdEncoding.DecodeString(encryptedToken)
-	if err != nil {
-		return "", err
-	}
-
-	plaintext, err := s.decrypt(ciphertext)
-	if err != nil {
-		return "", err
-	}
-
-	return string(plaintext), nil
+	return rotation, nil
 }

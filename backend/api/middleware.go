@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"unisearch/config"
+	"unisearch/service"
 	"unisearch/util"
 	"unisearch/util/logger"
 )
@@ -55,7 +56,7 @@ func isRequestBodyTooLargeError(err error) bool {
 	return errors.As(err, &maxBytesErr)
 }
 
-func recordAuthenticatedRequestActivity(c *gin.Context) {
+func recordAuthenticatedRequestActivity(c *gin.Context, authService *service.AuthService) {
 	if authService == nil {
 		return
 	}
@@ -92,22 +93,15 @@ func recordAuthenticatedRequestActivity(c *gin.Context) {
 }
 
 // SecurityHeadersMiddleware 设置全站安全响应头，降低点击劫持、MIME 嗅探与降级攻击面。
-// 这些头对 API 与页面响应均无副作用，仅生产环境（HTTPS）追加 HSTS。
+// API 只返回不允许加载页面资源的最小 CSP；HSTS 由确认 TLS 终止的外部代理负责。
 func SecurityHeadersMiddleware() gin.HandlerFunc {
-	isProduction := config.AppConfig != nil && config.AppConfig.IsProduction()
 	return func(c *gin.Context) {
 		h := c.Writer.Header()
-		// 阻止 MIME 嗅探。
 		h.Set("X-Content-Type-Options", "nosniff")
-		// 禁止被 iframe 嵌套，防点击劫持（等价于 CSP frame-ancestors 'none'）。
 		h.Set("X-Frame-Options", "DENY")
-		h.Set("Content-Security-Policy", "frame-ancestors 'none'")
-		// 限制 Referer 泄漏。
-		h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
-		// 仅生产（HTTPS）启用 HSTS，避免开发环境 HTTP 被强制升级导致无法访问。
-		if isProduction {
-			h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-		}
+		h.Set("Content-Security-Policy", "default-src 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'")
+		h.Set("Referrer-Policy", "no-referrer")
+		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
 		c.Next()
 	}
 }
@@ -186,48 +180,39 @@ func EnforceSameOriginMiddleware() gin.HandlerFunc {
 // LoggerMiddleware 日志中间件
 func LoggerMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		startTime := time.Now()
+		startedAt := time.Now()
 		requestID := c.GetHeader("X-Request-ID")
 		if requestID == "" {
-			requestID = fmt.Sprintf("%x", startTime.UnixNano())
+			requestID = fmt.Sprintf("%x", startedAt.UnixNano())
 		}
 		c.Set("request_id", requestID)
 		c.Writer.Header().Set("X-Request-ID", requestID)
 
 		c.Next()
 
-		latencyTime := time.Since(startTime)
-		reqMethod := c.Request.Method
-		reqURI := c.Request.RequestURI
-
-		displayURI := reqURI
-		if strings.Contains(reqURI, "/api/search") && strings.Contains(reqURI, "kw=") {
-			if parsedURL, err := url.Parse(reqURI); err == nil {
-				if keyword := parsedURL.Query().Get("kw"); keyword != "" {
-					if decodedKeyword, err := url.QueryUnescape(keyword); err == nil {
-						displayURI = strings.Replace(reqURI, "kw="+keyword, "kw="+decodedKeyword, 1)
-					}
-				}
-			}
-		}
-
-		statusCode := c.Writer.Status()
-		clientIP := c.ClientIP()
-
 		logger.Info(
 			"http_request",
-			logger.String("client_ip", clientIP),
-			logger.String("method", reqMethod),
-			logger.String("path", displayURI),
+			logger.String("method", c.Request.Method),
+			logger.String("path", requestLogPath(c)),
 			logger.String("request_id", requestID),
-			logger.Int("status", statusCode),
-			logger.Int64("latency_ms", latencyTime.Milliseconds()),
+			logger.Int("status", c.Writer.Status()),
+			logger.Int64("duration_ms", time.Since(startedAt).Milliseconds()),
 		)
 	}
 }
 
+func requestLogPath(c *gin.Context) string {
+	if route := c.FullPath(); route != "" {
+		return route
+	}
+	if c.Request == nil || c.Request.URL == nil {
+		return ""
+	}
+	return c.Request.URL.Path
+}
+
 // AuthMiddleware 基础认证中间件，仅接受 JWT。
-func AuthMiddleware() gin.HandlerFunc {
+func AuthMiddleware(authService *service.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !config.AppConfig.AuthEnabled {
 			c.Next()
@@ -241,13 +226,14 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		if token := extractBearerToken(c); token != "" {
 			if claims, err := util.ValidateJWTToken(token, config.AppConfig.AuthJWTSecret); err == nil {
-				if !enforceTokenState(c, claims) {
+				state, ok := enforceTokenState(c, authService, claims)
+				if !ok {
 					return
 				}
-				c.Set("user_id", claims.UserID)
-				c.Set("username", claims.Username)
-				c.Set("role", claims.Role)
-				recordAuthenticatedRequestActivity(c)
+				c.Set("user_id", state.ID)
+				c.Set("username", state.Username)
+				c.Set("role", state.Role)
+				recordAuthenticatedRequestActivity(c, authService)
 				c.Next()
 				return
 			}
@@ -264,9 +250,8 @@ func AuthMiddleware() gin.HandlerFunc {
 // AdminMiddleware 管理员专用中间件（仅允许JWT）
 func AdminMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 1. 必须包含 JWT
-		token := extractBearerToken(c)
-		if token == "" {
+		role, exists := c.Get("role")
+		if !exists {
 			c.JSON(401, gin.H{
 				"error": "未授权：需要管理员令牌",
 				"code":  "ADMIN_TOKEN_REQUIRED",
@@ -275,19 +260,7 @@ func AdminMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 2. 验证 JWT（使用新版本的 ValidateJWTToken）
-		claims, err := util.ValidateJWTToken(token, config.AppConfig.AuthJWTSecret)
-		if err != nil {
-			c.JSON(401, gin.H{
-				"error": "未授权：令牌无效或已过期",
-				"code":  "ADMIN_TOKEN_INVALID",
-			})
-			c.Abort()
-			return
-		}
-
-		// 3. 检查管理员权限（使用 Role 字段）
-		if claims.Role != "admin" {
+		if role != "admin" {
 			c.JSON(403, gin.H{
 				"error": "禁止访问：需要管理员权限",
 				"code":  "ADMIN_PERMISSION_REQUIRED",
@@ -296,19 +269,12 @@ func AdminMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		if !enforceTokenState(c, claims) {
-			return
-		}
-
-		c.Set("user_id", claims.UserID)
-		c.Set("username", claims.Username)
-		c.Set("role", claims.Role)
 		c.Next()
 	}
 }
 
 // JWTMiddleware JWT 专用中间件（仅验证 JWT Token）
-func JWTMiddleware() gin.HandlerFunc {
+func JWTMiddleware(authService *service.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 1. 提取 JWT Token
 		token := extractBearerToken(c)
@@ -332,20 +298,21 @@ func JWTMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		if !enforceTokenState(c, claims) {
+		state, ok := enforceTokenState(c, authService, claims)
+		if !ok {
 			return
 		}
 
-		c.Set("user_id", claims.UserID)
-		c.Set("username", claims.Username)
-		c.Set("role", claims.Role)
-		recordAuthenticatedRequestActivity(c)
+		c.Set("user_id", state.ID)
+		c.Set("username", state.Username)
+		c.Set("role", state.Role)
+		recordAuthenticatedRequestActivity(c, authService)
 		c.Next()
 	}
 }
 
 // SearchJWTMiddleware 为搜索接口提供专用登录提示。
-func SearchJWTMiddleware() gin.HandlerFunc {
+func SearchJWTMiddleware(authService *service.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := extractBearerToken(c)
 		if token == "" {
@@ -367,14 +334,15 @@ func SearchJWTMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		if !enforceTokenState(c, claims) {
+		state, ok := enforceTokenState(c, authService, claims)
+		if !ok {
 			return
 		}
 
-		c.Set("user_id", claims.UserID)
-		c.Set("username", claims.Username)
-		c.Set("role", claims.Role)
-		recordAuthenticatedRequestActivity(c)
+		c.Set("user_id", state.ID)
+		c.Set("username", state.Username)
+		c.Set("role", state.Role)
+		recordAuthenticatedRequestActivity(c, authService)
 		c.Next()
 	}
 }

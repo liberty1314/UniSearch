@@ -52,6 +52,9 @@ func Initialize() (*App, error) {
 	if err := database.AutoMigrate(); err != nil {
 		return nil, fmt.Errorf("数据库结构迁移失败: %w", err)
 	}
+	if err := database.EnsureLegacyRefreshTokensEmpty(database.GetDB()); err != nil {
+		return nil, fmt.Errorf("刷新会话迁移未完成: %w", err)
+	}
 	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	secretManager := initializeSecretManager()
@@ -69,16 +72,6 @@ func Initialize() (*App, error) {
 	pluginManager.RegisterGlobalPluginsWithFilter(config.AppConfig.EnabledPlugins)
 	config.UpdateDefaultConcurrency(len(pluginManager.GetPlugins()))
 
-	refreshTokenService := initializeRefreshTokenService()
-	authService := service.NewAuthService()
-	fmt.Println("Auth 服务已启动（用户认证功能已启用）")
-
-	tokenRevocationService := service.NewTokenRevocationService(redisCache)
-	fmt.Println("TokenRevocation 服务已启动（登出/改密 Token 精确失效已启用）")
-
-	userService := service.NewUserService(database.GetDB())
-	fmt.Println("User 服务已启动（用户管理功能已启用）")
-
 	systemSettingsService := service.NewSystemSettingsService(database.GetDB())
 	if runtimeSettings, err := systemSettingsService.GetRuntimeSettings(); err != nil {
 		log.Printf("⚠️  读取运行配置失败，将继续使用启动配置: %v", err)
@@ -88,8 +81,18 @@ func Initialize() (*App, error) {
 		util.ReloadHTTPClient()
 	}
 	service.SetGlobalCacheSettingsService(systemSettingsService)
-	authService.SetSystemSettingsService(systemSettingsService)
 	fmt.Println("SystemSettings 服务已启动（系统设置功能已启用）")
+
+	refreshTokenService := initializeRefreshTokenService()
+	authService := service.NewAuthService(database.GetDB(), systemSettingsService)
+	fmt.Println("Auth 服务已启动（用户认证功能已启用）")
+
+	tokenRevocationService := service.NewTokenRevocationService(redisCache)
+	fmt.Println("TokenRevocation 服务已启动（登出/改密 Token 精确失效已启用）")
+
+	accountSessionService := service.NewAccountSessionService()
+	userService := service.NewUserService(database.GetDB(), accountSessionService)
+	fmt.Println("User 服务已启动（用户管理功能已启用）")
 
 	announcementService := service.NewAnnouncementService(database.GetDB())
 	fmt.Println("Announcement 服务已启动（公告功能已启用）")
@@ -232,35 +235,13 @@ func initializeRefreshTokenService() *service.RefreshTokenService {
 		return nil
 	}
 
-	storageType := service.StorageType(config.AppConfig.RefreshTokenStorage)
-	if storageType == service.StorageTypeDatabase {
-		refreshTokenService, err := service.NewRefreshTokenService(
-			storageType,
-			database.GetDB(),
-			"",
-			config.AppConfig.RefreshTokenEncryptKey,
-		)
-		if err != nil {
-			log.Printf("警告: Refresh Token 服务初始化失败: %v", err)
-			log.Println("记住密码功能将不可用")
-			return nil
-		}
-		fmt.Println("Refresh Token 服务已启动（数据库存储模式）")
-		return refreshTokenService
-	}
-
-	refreshTokenService, err := service.NewRefreshTokenService(
-		storageType,
-		nil,
-		config.AppConfig.RefreshTokenStorePath,
-		config.AppConfig.RefreshTokenEncryptKey,
-	)
+	refreshTokenService, err := service.NewRefreshTokenService(database.GetDB())
 	if err != nil {
 		log.Printf("警告: Refresh Token 服务初始化失败: %v", err)
 		log.Println("记住密码功能将不可用")
 		return nil
 	}
-	fmt.Println("Refresh Token 服务已启动（文件存储模式）")
+	fmt.Println("Refresh Token 服务已启动（数据库摘要会话）")
 	return refreshTokenService
 }
 
@@ -279,24 +260,6 @@ func initializeDefaultSecrets(secretManager service.SecretManager) error {
 				log.Printf("⚠️  初始化 JWT 密钥失败: %v", err)
 			} else {
 				log.Println("✓ JWT 密钥已从环境变量迁移到数据库")
-			}
-		}
-	}
-
-	_, err = secretManager.GetSecret("refresh_token_key")
-	if err != nil {
-		refreshTokenKey := config.AppConfig.RefreshTokenEncryptKey
-		if refreshTokenKey != "" {
-			err = secretManager.SetSecret(
-				"refresh_token_key",
-				refreshTokenKey,
-				model.SecretTypeRefreshToken,
-				"刷新令牌加密密钥（从环境变量迁移）",
-			)
-			if err != nil {
-				log.Printf("⚠️  初始化刷新令牌密钥失败: %v", err)
-			} else {
-				log.Println("✓ 刷新令牌密钥已从环境变量迁移到数据库")
 			}
 		}
 	}

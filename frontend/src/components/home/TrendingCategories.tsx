@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, BookOpen, Film, Flame, MonitorPlay, Zap } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { cn } from '@/lib/utils';
 import HomeSectionHeader from '@/components/home/HomeSectionHeader';
 import { homeCardHoverState, homeCardHoverTransition } from '@/components/home/homeCardHoverMotion';

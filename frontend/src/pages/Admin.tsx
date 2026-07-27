@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bell, LogOut, Menu, User } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 import { Sidebar } from "@/components/admin/Sidebar";
 import { useAdminPageController } from "@/hooks/useAdminPageController";
 import { useAdminStore } from "@/stores/adminStore";
