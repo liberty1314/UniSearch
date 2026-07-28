@@ -17,6 +17,10 @@ MYSQL_ROOT_PASSWORD=""
 MYSQL_MIGRATION_PASSWORD=""
 MYSQL_RUNTIME_PASSWORD=""
 REDIS_PASSWORD=""
+OLD_SECRET_MASTER_KEY=""
+NEW_SECRET_MASTER_KEY=""
+THIRD_SECRET_MASTER_KEY=""
+TMDB_TEST_SECRET=""
 UNMIGRATED_DB="unisearch_unmigrated"
 DEVICE_FINGERPRINT="integration-device-${RUN_ID}"
 LEGACY_REFRESH_TOKEN="legacy-plaintext-token-${RUN_ID}"
@@ -32,6 +36,10 @@ REFRESH_BODY="$TMP_DIR/refresh.json"
 REFRESH_COOKIES="$TMP_DIR/refresh.cookies"
 REPLAY_BODY="$TMP_DIR/replay.json"
 LEGACY_BODY="$TMP_DIR/legacy.json"
+TMDB_UPDATE_BODY="$TMP_DIR/tmdb-update.json"
+TMDB_GET_BODY="$TMP_DIR/tmdb-get.json"
+ROTATION_STDERR="$TMP_DIR/rotation.stderr"
+WRONG_ROTATION_STDERR="$TMP_DIR/wrong-rotation.stderr"
 APP_PID=""
 
 if [[ ! "$RUN_ID" =~ ^[A-Za-z0-9_.-]+$ ]]; then
@@ -74,6 +82,8 @@ require_command() {
 run_backend_command_as() {
   local db_user="$1"
   local db_password="$2"
+  local secret_master_key="${SECRET_MASTER_KEY_OVERRIDE:-$OLD_SECRET_MASTER_KEY}"
+  local new_secret_master_key="${NEW_SECRET_MASTER_KEY_OVERRIDE:-}"
   shift 2
 
   (
@@ -92,7 +102,9 @@ run_backend_command_as() {
     REDIS_TTL=3600 \
     AUTH_JWT_SECRET=integration-jwt-secret-value-at-least-32-chars \
     RESOURCE_PUBLIC_ID_SECRET=integration-resource-id-secret-at-least-32-chars \
-    SECRET_MASTER_KEY=integration-master-secret-value-at-least-32-chars \
+    SECRET_BACKEND=database \
+    SECRET_MASTER_KEY="$secret_master_key" \
+    NEW_SECRET_MASTER_KEY="$new_secret_master_key" \
     INITIAL_ADMIN_USERNAME="$INITIAL_ADMIN_USERNAME" \
     INITIAL_ADMIN_PASSWORD="$INITIAL_ADMIN_PASSWORD" \
     HOT_RANKING_PRELOAD_ENABLED=false \
@@ -156,6 +168,19 @@ assert_equals() {
   fi
 }
 
+assert_text_excludes_values() {
+  local content="$1"
+  local message="$2"
+  shift 2
+  local sensitive_value
+  for sensitive_value in "$@"; do
+    if [ -n "$sensitive_value" ] && [[ "$content" == *"$sensitive_value"* ]]; then
+      echo "$message" >&2
+      exit 1
+    fi
+  done
+}
+
 request_status() {
   local output_file="$1"
   shift
@@ -168,6 +193,35 @@ extract_refresh_cookie() {
   awk '$6 == "refresh_token" { print $7 }' "$cookie_file" | tail -n 1
 }
 
+stop_backend() {
+  if [ -n "$APP_PID" ] && kill -0 "$APP_PID" >/dev/null 2>&1; then
+    kill "$APP_PID" >/dev/null 2>&1
+    wait "$APP_PID" >/dev/null 2>&1 || true
+  fi
+  APP_PID=""
+}
+
+start_backend_with_master_key() {
+  local master_key="$1"
+  : >"$APP_LOG"
+  SECRET_MASTER_KEY_OVERRIDE="$master_key" run_backend_command_as \
+    "$MYSQL_RUNTIME_USER" "$MYSQL_RUNTIME_PASSWORD" \
+    "$APP_BINARY" >"$APP_LOG" 2>&1 &
+  APP_PID=$!
+
+  for _ in {1..60}; do
+    if curl --silent --show-error --fail --max-time 2 "$API_BASE_URL/api/health" >/dev/null 2>&1; then
+      break
+    fi
+    if ! kill -0 "$APP_PID" >/dev/null 2>&1; then
+      echo "后端在健康检查前退出" >&2
+      exit 1
+    fi
+    sleep 1
+  done
+  curl --silent --show-error --fail --max-time 5 "$API_BASE_URL/api/health" >/dev/null
+}
+
 require_command curl
 require_command go
 require_command jq
@@ -177,6 +231,10 @@ MYSQL_ROOT_PASSWORD="$(openssl rand -hex 24)"
 MYSQL_MIGRATION_PASSWORD="$(openssl rand -hex 24)"
 MYSQL_RUNTIME_PASSWORD="$(openssl rand -hex 24)"
 REDIS_PASSWORD="$(openssl rand -hex 24)"
+OLD_SECRET_MASTER_KEY="$(openssl rand -hex 32)"
+NEW_SECRET_MASTER_KEY="$(openssl rand -hex 32)"
+THIRD_SECRET_MASTER_KEY="$(openssl rand -hex 32)"
+TMDB_TEST_SECRET="$(openssl rand -hex 24)"
 
 echo "== 集成环境: 启动 MySQL 与 Redis =="
 docker run -d \
@@ -295,21 +353,7 @@ fi
 assert_equals "0" "$(mysql_scalar_as "$MYSQL_RUNTIME_USER" "$MYSQL_RUNTIME_PASSWORD" "$UNMIGRATED_DB" \
   "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE();")" "缺迁移启动不得创建业务表"
 
-run_backend_command_as "$MYSQL_RUNTIME_USER" "$MYSQL_RUNTIME_PASSWORD" \
-  "$APP_BINARY" >"$APP_LOG" 2>&1 &
-APP_PID=$!
-
-for _ in {1..60}; do
-  if curl --silent --show-error --fail --max-time 2 "$API_BASE_URL/api/health" >/dev/null 2>&1; then
-    break
-  fi
-  if ! kill -0 "$APP_PID" >/dev/null 2>&1; then
-    echo "后端在健康检查前退出" >&2
-    exit 1
-  fi
-  sleep 1
-done
-curl --silent --show-error --fail --max-time 5 "$API_BASE_URL/api/health" >/dev/null
+start_backend_with_master_key "$OLD_SECRET_MASTER_KEY"
 
 echo "== 集成环境: 验证旧 Cookie 已失效 =="
 legacy_status="$(request_status "$LEGACY_BODY" \
@@ -336,6 +380,69 @@ if jq -e 'has("refresh_token") or (.data | type == "object" and has("refresh_tok
 fi
 if ! grep -qi '^Set-Cookie: refresh_token=.*HttpOnly.*SameSite=Strict' "$LOGIN_HEADERS"; then
   echo "登录响应缺少 HttpOnly、SameSite=Strict 刷新 Cookie" >&2
+  exit 1
+fi
+ACCESS_TOKEN="$(jq -r '.data.access_token' "$LOGIN_BODY")"
+
+echo "== 集成环境: 写入第二条数据库密钥 =="
+tmdb_update_status="$(request_status "$TMDB_UPDATE_BODY" \
+  --request PUT \
+  --header "Authorization: Bearer ${ACCESS_TOKEN}" \
+  --header "Content-Type: application/json" \
+  --data "{\"tmdb_read_access_token\":\"${TMDB_TEST_SECRET}\"}" \
+  "$API_BASE_URL/api/admin/system-settings/tmdb")"
+assert_equals "200" "$tmdb_update_status" "写入 TMDB 测试密钥失败"
+jq -e '.configured == true and .source == "secret_manager"' "$TMDB_UPDATE_BODY" >/dev/null
+if grep -Fq "$TMDB_TEST_SECRET" "$TMDB_UPDATE_BODY"; then
+  echo "TMDB 更新响应不得包含完整密钥" >&2
+  exit 1
+fi
+
+echo "== 集成环境: 停止旧主密钥后端并执行原子轮换 =="
+stop_backend
+assert_equals "2" "$(mysql_scalar "SELECT COUNT(*) FROM secrets;")" "主密钥轮换前密钥记录数异常"
+rotation_output="$(
+  SECRET_MASTER_KEY_OVERRIDE="$OLD_SECRET_MASTER_KEY" \
+  NEW_SECRET_MASTER_KEY_OVERRIDE="$NEW_SECRET_MASTER_KEY" \
+    run_backend_command_as "$MYSQL_RUNTIME_USER" "$MYSQL_RUNTIME_PASSWORD" \
+    go run ./cmd/rotate-master-key -confirm=rotate-database-master-key \
+    2>"$ROTATION_STDERR"
+)"
+if [[ "$rotation_output" != *"主密钥重加密完成，已更新 2 条密钥记录"* ]]; then
+  echo "主密钥轮换输出缺少更新数量" >&2
+  exit 1
+fi
+assert_text_excludes_values "$rotation_output" "主密钥轮换输出包含敏感测试材料" \
+  "$OLD_SECRET_MASTER_KEY" "$NEW_SECRET_MASTER_KEY" "$THIRD_SECRET_MASTER_KEY" "$TMDB_TEST_SECRET"
+rotated_first_ciphertext="$(mysql_scalar "SELECT value FROM secrets ORDER BY id LIMIT 1;")"
+rotated_second_ciphertext="$(mysql_scalar "SELECT value FROM secrets ORDER BY id LIMIT 1 OFFSET 1;")"
+rotation_stderr="$(<"$ROTATION_STDERR")"
+assert_text_excludes_values "$rotation_stderr" "主密钥轮换 stderr 包含敏感材料或密文 SQL" \
+  "$OLD_SECRET_MASTER_KEY" "$NEW_SECRET_MASTER_KEY" "$THIRD_SECRET_MASTER_KEY" "$TMDB_TEST_SECRET" \
+  "$rotated_first_ciphertext" "$rotated_second_ciphertext" 'UPDATE `secrets`' 'FROM `secrets`'
+
+echo "== 集成环境: 使用新主密钥重启并读取 TMDB 状态 =="
+start_backend_with_master_key "$NEW_SECRET_MASTER_KEY"
+: >"$LOGIN_HEADERS"
+: >"$LOGIN_BODY"
+: >"$LOGIN_COOKIES"
+login_status="$(request_status "$LOGIN_BODY" \
+  --dump-header "$LOGIN_HEADERS" \
+  --cookie-jar "$LOGIN_COOKIES" \
+  --request POST \
+  --header "Content-Type: application/json" \
+  --data "{\"username\":\"${INITIAL_ADMIN_USERNAME}\",\"password\":\"${INITIAL_ADMIN_PASSWORD}\",\"remember_me\":true,\"device_fingerprint\":\"${DEVICE_FINGERPRINT}\"}" \
+  "$API_BASE_URL/api/auth/login")"
+assert_equals "200" "$login_status" "新主密钥重启后登录失败"
+ACCESS_TOKEN="$(jq -r '.data.access_token' "$LOGIN_BODY")"
+tmdb_get_status="$(request_status "$TMDB_GET_BODY" \
+  --request GET \
+  --header "Authorization: Bearer ${ACCESS_TOKEN}" \
+  "$API_BASE_URL/api/admin/system-settings/tmdb")"
+assert_equals "200" "$tmdb_get_status" "新主密钥读取 TMDB 状态失败"
+jq -e '.configured == true and .source == "secret_manager"' "$TMDB_GET_BODY" >/dev/null
+if grep -Fq "$TMDB_TEST_SECRET" "$TMDB_GET_BODY"; then
+  echo "TMDB 查询响应不得包含完整密钥" >&2
   exit 1
 fi
 LOGIN_REFRESH_TOKEN="$(extract_refresh_cookie "$LOGIN_COOKIES")"
@@ -371,6 +478,36 @@ replay_status="$(request_status "$REPLAY_BODY" \
   "$API_BASE_URL/api/auth/refresh")"
 assert_equals "401" "$replay_status" "旧轮转 Cookie 重放应被拒绝"
 jq -e '.code == "REFRESH_TOKEN_REUSE_DETECTED"' "$REPLAY_BODY" >/dev/null
+
+echo "== 集成环境: 验证旧主密钥失败且密文不变 =="
+stop_backend
+rotated_ciphertext_digest="$(mysql_scalar "SELECT SHA2(GROUP_CONCAT(CONCAT(id, ':', value) ORDER BY id SEPARATOR '|'), 256) FROM secrets;")"
+set +e
+wrong_rotation_output="$(
+  SECRET_MASTER_KEY_OVERRIDE="$OLD_SECRET_MASTER_KEY" \
+  NEW_SECRET_MASTER_KEY_OVERRIDE="$THIRD_SECRET_MASTER_KEY" \
+    run_backend_command_as "$MYSQL_RUNTIME_USER" "$MYSQL_RUNTIME_PASSWORD" \
+    go run ./cmd/rotate-master-key -confirm=rotate-database-master-key \
+    2>"$WRONG_ROTATION_STDERR"
+)"
+wrong_rotation_status=$?
+set -e
+wrong_rotation_stderr="$(<"$WRONG_ROTATION_STDERR")"
+wrong_rotation_combined="${wrong_rotation_output}${wrong_rotation_stderr}"
+if [ "$wrong_rotation_status" -eq 0 ]; then
+  echo "旧主密钥不得再次轮换已更新密文" >&2
+  exit 1
+fi
+if [[ "$wrong_rotation_combined" != *"密钥记录"* || "$wrong_rotation_combined" != *"解密失败"* ]]; then
+  echo "旧主密钥失败输出缺少记录 ID 和错误类别" >&2
+  exit 1
+fi
+assert_text_excludes_values "$wrong_rotation_combined" "旧主密钥失败输出包含敏感材料或密文 SQL" \
+  "$OLD_SECRET_MASTER_KEY" "$NEW_SECRET_MASTER_KEY" "$THIRD_SECRET_MASTER_KEY" "$TMDB_TEST_SECRET" \
+  "$rotated_first_ciphertext" "$rotated_second_ciphertext" 'UPDATE `secrets`' 'FROM `secrets`'
+assert_equals "$rotated_ciphertext_digest" \
+  "$(mysql_scalar "SELECT SHA2(GROUP_CONCAT(CONCAT(id, ':', value) ORDER BY id SEPARATOR '|'), 256) FROM secrets;")" \
+  "旧主密钥失败后密文发生变化"
 
 echo "== 集成环境: 删除已清空的旧刷新令牌表 =="
 run_backend_command_as "$MYSQL_MIGRATION_USER" "$MYSQL_MIGRATION_PASSWORD" \
