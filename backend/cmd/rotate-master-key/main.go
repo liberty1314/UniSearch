@@ -11,6 +11,8 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"gorm.io/gorm"
+	gormLogger "gorm.io/gorm/logger"
 
 	"unisearch/config"
 	"unisearch/database"
@@ -91,10 +93,19 @@ func executeRotation(
 
 	return service.ReencryptDatabaseSecrets(
 		ctx,
-		database.GetDB(),
+		silentMasterKeyRotationSession(database.GetDB()),
 		oldMasterKey,
 		newMasterKey,
 	)
+}
+
+func silentMasterKeyRotationSession(db *gorm.DB) *gorm.DB {
+	if db == nil {
+		return nil
+	}
+	return db.Session(&gorm.Session{
+		Logger: db.Logger.LogMode(gormLogger.Silent),
+	})
 }
 
 func main() {

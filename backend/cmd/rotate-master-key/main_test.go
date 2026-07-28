@@ -6,9 +6,15 @@ import (
 	"encoding/hex"
 	"errors"
 	"flag"
+	"log"
 	"strings"
 	"testing"
 
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	gormLogger "gorm.io/gorm/logger"
+
+	"unisearch/model"
 	"unisearch/service"
 )
 
@@ -161,6 +167,65 @@ func TestRunHelpDoesNotRotate(t *testing.T) {
 	}
 	if rotateCalls != 0 {
 		t.Fatal("帮助参数不得执行轮换")
+	}
+}
+
+func TestSilentMasterKeyRotationSessionDoesNotLogCiphertextSQL(t *testing.T) {
+	var logOutput strings.Builder
+	dbLogger := gormLogger.New(
+		log.New(&logOutput, "", 0),
+		gormLogger.Config{LogLevel: gormLogger.Info, Colorful: false},
+	)
+	db, err := gorm.Open(
+		sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"),
+		&gorm.Config{Logger: dbLogger},
+	)
+	if err != nil {
+		t.Fatalf("打开轮换日志测试数据库失败: %v", err)
+	}
+	if err := db.AutoMigrate(&model.Secret{}); err != nil {
+		t.Fatalf("迁移轮换日志测试表失败: %v", err)
+	}
+
+	oldKey := rotateMasterKeyTestValue("日志测试旧主密钥")
+	newKey := rotateMasterKeyTestValue("日志测试新主密钥")
+	plaintext := rotateMasterKeyTestValue("日志测试明文")
+	oldManager := service.NewBaseSecretManager(oldKey, 0)
+	ciphertext, err := oldManager.EncryptSecret(plaintext)
+	if err != nil {
+		t.Fatalf("加密轮换日志测试密钥失败: %v", err)
+	}
+	if err := db.Create(&model.Secret{
+		Name:     "rotation-log-test",
+		Type:     model.SecretTypeCustom,
+		Value:    ciphertext,
+		IsActive: true,
+	}).Error; err != nil {
+		t.Fatalf("写入轮换日志测试密钥失败: %v", err)
+	}
+
+	logOutput.Reset()
+	result, err := service.ReencryptDatabaseSecrets(
+		t.Context(),
+		silentMasterKeyRotationSession(db),
+		oldKey,
+		newKey,
+	)
+	if err != nil {
+		t.Fatalf("轮换日志测试失败: %v", err)
+	}
+	if result.Rotated != 1 {
+		t.Fatalf("应轮换 1 条日志测试密钥，实际为 %d", result.Rotated)
+	}
+	if logOutput.Len() != 0 {
+		t.Fatal("轮换专用数据库会话不得输出包含密文的 SQL 日志")
+	}
+
+	if err := db.Exec("SELECT 1").Error; err != nil {
+		t.Fatalf("验证原始数据库日志器失败: %v", err)
+	}
+	if !strings.Contains(logOutput.String(), "SELECT 1") {
+		t.Fatal("轮换专用静默会话不得修改原始数据库日志器")
 	}
 }
 
