@@ -1,16 +1,19 @@
 package service
 
 import (
+	"context"
+	"database/sql"
+	"errors"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"unisearch/model"
-
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+
+	"unisearch/model"
 )
 
 func TestReencryptDatabaseSecretsRotatesEveryRow(t *testing.T) {
@@ -185,6 +188,99 @@ func TestReencryptDatabaseSecretsRollsBackOnUnexpectedRowsAffected(t *testing.T)
 	if !reflect.DeepEqual(before, after) {
 		t.Fatalf("更新行数异常后全部密文必须回滚")
 	}
+}
+
+func TestReencryptDatabaseSecretsRedactsTransactionBoundaryErrors(t *testing.T) {
+	sensitiveMarker := "user:password@tcp(database.internal:3306)/unisearch"
+	tests := []struct {
+		name string
+		db   func(t *testing.T, injectedErr error) *gorm.DB
+	}{
+		{name: "事务开始失败", db: newMasterKeyRotationBeginErrorDB},
+		{name: "事务提交失败", db: newMasterKeyRotationCommitErrorDB},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			injectedErr := errors.New("事务边界错误: " + sensitiveMarker)
+			db := tt.db(t, injectedErr)
+			result, err := ReencryptDatabaseSecrets(
+				t.Context(),
+				db,
+				masterKeyRotationTestKey("a", "-旧"),
+				masterKeyRotationTestKey("b", "-新"),
+			)
+			if err == nil || !strings.Contains(err.Error(), "数据库密钥重加密事务失败") {
+				t.Fatalf("事务边界错误必须返回固定类别，实际为 %v", err)
+			}
+			if strings.Contains(err.Error(), sensitiveMarker) {
+				t.Fatal("事务边界错误不得包含底层敏感信息")
+			}
+			if result != (MasterKeyRotationResult{}) {
+				t.Fatalf("事务边界失败结果必须为零值，实际为 %#v", result)
+			}
+		})
+	}
+}
+
+type masterKeyRotationBoundaryPool struct {
+	gorm.ConnPool
+	beginErr  error
+	commitErr error
+}
+
+func (p *masterKeyRotationBoundaryPool) BeginTx(ctx context.Context, opts *sql.TxOptions) (gorm.ConnPool, error) {
+	if p.beginErr != nil {
+		return nil, p.beginErr
+	}
+	beginner, ok := p.ConnPool.(gorm.TxBeginner)
+	if !ok {
+		return nil, errors.New("测试连接不支持事务")
+	}
+	tx, err := beginner.BeginTx(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return &masterKeyRotationCommitErrorTx{
+		ConnPool:  tx,
+		committer: tx,
+		commitErr: p.commitErr,
+	}, nil
+}
+
+type masterKeyRotationCommitErrorTx struct {
+	gorm.ConnPool
+	committer gorm.TxCommitter
+	commitErr error
+}
+
+func (tx *masterKeyRotationCommitErrorTx) Commit() error {
+	return tx.commitErr
+}
+
+func (tx *masterKeyRotationCommitErrorTx) Rollback() error {
+	return tx.committer.Rollback()
+}
+
+func newMasterKeyRotationBeginErrorDB(t *testing.T, injectedErr error) *gorm.DB {
+	t.Helper()
+	return newMasterKeyRotationBoundaryDB(t, injectedErr, nil)
+}
+
+func newMasterKeyRotationCommitErrorDB(t *testing.T, injectedErr error) *gorm.DB {
+	t.Helper()
+	return newMasterKeyRotationBoundaryDB(t, nil, injectedErr)
+}
+
+func newMasterKeyRotationBoundaryDB(t *testing.T, beginErr error, commitErr error) *gorm.DB {
+	t.Helper()
+	db := newMasterKeyRotationTestDB(t).Session(&gorm.Session{NewDB: true})
+	db.Statement.ConnPool = &masterKeyRotationBoundaryPool{
+		ConnPool:  db.Statement.ConnPool,
+		beginErr:  beginErr,
+		commitErr: commitErr,
+	}
+	return db
 }
 
 func newMasterKeyRotationTestDB(t *testing.T) *gorm.DB {

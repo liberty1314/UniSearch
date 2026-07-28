@@ -6,15 +6,27 @@ import (
 	"errors"
 	"fmt"
 
-	"unisearch/model"
-
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+
+	"unisearch/model"
 )
 
 // MasterKeyRotationResult 描述数据库密钥记录的重加密数量。
 type MasterKeyRotationResult struct {
 	Rotated int
+}
+
+type masterKeyRotationOperationError struct {
+	message string
+}
+
+func (e *masterKeyRotationOperationError) Error() string {
+	return e.message
+}
+
+func newMasterKeyRotationOperationError(format string, args ...any) error {
+	return &masterKeyRotationOperationError{message: fmt.Sprintf(format, args...)}
 }
 
 // ReencryptDatabaseSecrets 在单个事务中使用新主密钥重加密全部数据库密钥记录。
@@ -40,7 +52,7 @@ func ReencryptDatabaseSecrets(
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var secrets []model.Secret
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Order("id ASC").Find(&secrets).Error; err != nil {
-			return errors.New("锁定数据库密钥失败")
+			return newMasterKeyRotationOperationError("锁定数据库密钥失败")
 		}
 
 		oldManager := NewBaseSecretManager(oldMasterKey, 0)
@@ -48,25 +60,29 @@ func ReencryptDatabaseSecrets(
 		for _, secret := range secrets {
 			plaintext, err := oldManager.DecryptSecret(secret.Value)
 			if err != nil {
-				return fmt.Errorf("密钥记录 %d 解密失败", secret.ID)
+				return newMasterKeyRotationOperationError("密钥记录 %d 解密失败", secret.ID)
 			}
 			encrypted, err := newManager.EncryptSecret(plaintext)
 			if err != nil {
-				return fmt.Errorf("密钥记录 %d 重加密失败", secret.ID)
+				return newMasterKeyRotationOperationError("密钥记录 %d 重加密失败", secret.ID)
 			}
 			update := tx.Model(&model.Secret{}).Where("id = ?", secret.ID).Update("value", encrypted)
 			if update.Error != nil {
-				return fmt.Errorf("密钥记录 %d 更新失败", secret.ID)
+				return newMasterKeyRotationOperationError("密钥记录 %d 更新失败", secret.ID)
 			}
 			if update.RowsAffected != 1 {
-				return fmt.Errorf("密钥记录 %d 更新行数异常: %d", secret.ID, update.RowsAffected)
+				return newMasterKeyRotationOperationError("密钥记录 %d 更新行数异常: %d", secret.ID, update.RowsAffected)
 			}
 			result.Rotated++
 		}
 		return nil
 	})
 	if err != nil {
-		return MasterKeyRotationResult{}, err
+		var operationError *masterKeyRotationOperationError
+		if errors.As(err, &operationError) {
+			return MasterKeyRotationResult{}, operationError
+		}
+		return MasterKeyRotationResult{}, errors.New("数据库密钥重加密事务失败")
 	}
 	return result, nil
 }
