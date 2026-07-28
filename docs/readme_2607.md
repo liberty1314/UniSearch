@@ -1027,3 +1027,9 @@
     - scripts/tests/security-gate.sh
     - scripts/tests/tls-proxy-smoke.sh
     - supervisord.conf
+
+- [2026-07-28 22:18] fix(scripts): 修正 local.sh 中刷新令牌会话表名定义
+  - Body: 将 local.sh 中 CORE_SCHEMA_TABLES 的 refresh_tokens 表名修正为 refresh_token_sessions，保持与最新数据库 Schema 一致。
+  - Files:
+    - scripts/local.sh
+    - docs/readme_2607.md

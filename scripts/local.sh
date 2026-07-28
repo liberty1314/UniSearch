@@ -40,7 +40,7 @@ BACKEND_PID_FILE="${PID_DIR}/backend.pid"
 FRONTEND_PID_FILE="${PID_DIR}/frontend.pid"
 BACKEND_PORT_FILE="${PID_DIR}/backend.port"
 FRONTEND_PORT_FILE="${PID_DIR}/frontend.port"
-CORE_SCHEMA_TABLES="users secrets refresh_tokens tg_channels user_login_daily_stats"
+CORE_SCHEMA_TABLES="users secrets refresh_token_sessions tg_channels user_login_daily_stats"
 
 # ==============================================================================
 # 基础工具函数
