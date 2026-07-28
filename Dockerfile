@@ -16,6 +16,7 @@ COPY backend/ ./
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -ldflags="-s -w -extldflags '-static'" -o unisearch .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -ldflags="-s -w -extldflags '-static'" -o unisearch-migrate ./cmd/migrate
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -ldflags="-s -w -extldflags '-static'" -o unisearch-rotate-master-key ./cmd/rotate-master-key
 
 # ============================================
 # 阶段 2: 构建前端 (Node.js + pnpm)
@@ -48,13 +49,14 @@ RUN apk add --no-cache ca-certificates tzdata curl supervisor \
 # 从构建阶段复制产物
 COPY --from=backend-builder --chown=unisearch:unisearch /app/backend/unisearch /app/backend/unisearch
 COPY --from=backend-builder --chown=unisearch:unisearch /app/backend/unisearch-migrate /app/backend/unisearch-migrate
+COPY --from=backend-builder --chown=unisearch:unisearch /app/backend/unisearch-rotate-master-key /app/backend/unisearch-rotate-master-key
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
 
 # 复制配置文件
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY supervisord.conf /etc/supervisord.conf
 
-RUN chmod 0555 /app/backend/unisearch /app/backend/unisearch-migrate
+RUN chmod 0555 /app/backend/unisearch /app/backend/unisearch-migrate /app/backend/unisearch-rotate-master-key
 
 # 设置环境变量
 ENV PORT=8888 \

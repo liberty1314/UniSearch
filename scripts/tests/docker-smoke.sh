@@ -60,6 +60,7 @@ docker run --rm --entrypoint /bin/sh "$IMAGE_NAME" -c '
   test -w /tmp/supervisor
   test ! -w /app/backend/unisearch
   test ! -w /app/backend/unisearch-migrate
+  test ! -w /app/backend/unisearch-rotate-master-key
   test ! -w /usr/share/nginx/html/index.html
 '
 
@@ -68,6 +69,9 @@ docker run --rm --entrypoint /bin/sh "$IMAGE_NAME" -c 'test -x /app/backend/unis
 
 echo "== Docker smoke: 验证迁移二进制 =="
 docker run --rm --entrypoint /bin/sh "$IMAGE_NAME" -c 'test -x /app/backend/unisearch-migrate && /app/backend/unisearch-migrate -help >/dev/null'
+
+echo "== Docker smoke: 验证主密钥轮换二进制 =="
+docker run --rm --entrypoint /bin/sh "$IMAGE_NAME" -c 'test -x /app/backend/unisearch-rotate-master-key && /app/backend/unisearch-rotate-master-key -help >/dev/null'
 
 echo "== Docker smoke: 验证 Nginx 配置和镜像端口 =="
 docker run --rm --entrypoint nginx "$IMAGE_NAME" -t
