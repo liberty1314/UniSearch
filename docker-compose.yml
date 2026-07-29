@@ -13,11 +13,14 @@ services:
     env_file:
       - .env
     environment:
+      AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USER: ${MYSQL_APP_USER:-unisearch_dev}
       DB_PASSWORD: ${MYSQL_APP_PASSWORD:?必须设置 MYSQL_APP_PASSWORD}
       DB_NAME: ${MYSQL_DATABASE:-unisearch}
+      MIGRATION_DB_USER: ${MIGRATION_DB_USER:-root}
+      MIGRATION_DB_PASSWORD: ${MIGRATION_DB_PASSWORD:-${MYSQL_ROOT_PASSWORD:?必须设置 MYSQL_ROOT_PASSWORD}}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?必须设置 REDIS_PASSWORD}

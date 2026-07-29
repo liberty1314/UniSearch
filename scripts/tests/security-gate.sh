@@ -93,6 +93,9 @@ require_command govulncheck
 require_command openssl
 require_command pnpm
 
+echo "== 安全门禁: 容器自动迁移入口测试 =="
+"$ROOT_DIR/scripts/tests/docker-entrypoint-test.sh"
+
 echo "== 安全门禁: 后端全量测试 =="
 (cd "$ROOT_DIR/backend" && go test ./... -count=1)
 

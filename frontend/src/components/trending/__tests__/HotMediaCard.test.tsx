@@ -98,11 +98,11 @@ describe("HotMediaCard", () => {
     const upcomingItem: HotRankingItem = {
       ...item,
       title: "蜘蛛侠：崭新之日",
-      release_date: "2026-07-29",
+      release_date: "2099-07-29",
       availability_status: "upcoming",
       search_available: false,
       days_until_release: 40,
-      search_hint: "预计 2026-07-29 上映，当前站内资源可能不可用",
+      search_hint: "预计 2099-07-29 上映，当前站内资源可能不可用",
     };
 
     render(<HotMediaCard item={upcomingItem} rank={15} category="movie" onSearch={onSearch} />);
@@ -110,9 +110,9 @@ describe("HotMediaCard", () => {
     const button = screen.getByRole("button", { name: "未上映" });
     const releaseDate = screen.getByTestId("hot-media-release-date");
     expect(button).toBeDisabled();
-    expect(releaseDate).toHaveTextContent("预计 2026-07-29 上映，当前站内资源可能不可用");
-    expect(screen.queryByText("上映/首播：2026-07-29")).not.toBeInTheDocument();
-    expect(screen.getAllByText("预计 2026-07-29 上映，当前站内资源可能不可用")).toHaveLength(1);
+    expect(releaseDate).toHaveTextContent("预计 2099-07-29 上映，当前站内资源可能不可用");
+    expect(screen.queryByText("上映/首播：2099-07-29")).not.toBeInTheDocument();
+    expect(screen.getAllByText("预计 2099-07-29 上映，当前站内资源可能不可用")).toHaveLength(1);
     expect(screen.queryByRole("button", { name: "搜原名" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "搜 4K" })).not.toBeInTheDocument();
 
@@ -125,7 +125,7 @@ describe("HotMediaCard", () => {
     const inconsistentItem: HotRankingItem = {
       ...item,
       title: "蜘蛛侠：崭新之日",
-      release_date: "2026-07-29",
+      release_date: "2099-07-29",
       availability_status: "released",
       search_available: true,
       search_hint: "",
@@ -135,8 +135,8 @@ describe("HotMediaCard", () => {
 
     const releaseDate = screen.getByTestId("hot-media-release-date");
     expect(screen.getByRole("button", { name: "未上映" })).toBeDisabled();
-    expect(releaseDate).toHaveTextContent("预计 2026-07-29 上映，当前站内资源可能不可用");
-    expect(screen.queryByText("上映/首播：2026-07-29")).not.toBeInTheDocument();
+    expect(releaseDate).toHaveTextContent("预计 2099-07-29 上映，当前站内资源可能不可用");
+    expect(screen.queryByText("上映/首播：2099-07-29")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "搜原名" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "搜 4K" })).not.toBeInTheDocument();
   });

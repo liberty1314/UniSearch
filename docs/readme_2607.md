@@ -1033,3 +1033,23 @@
   - Files:
     - scripts/local.sh
     - docs/readme_2607.md
+
+- [2026-07-29 14:34] feat(deployment): 新增容器启动前自动数据库迁移
+  - Body: 容器在启动 Supervisor 前自动执行刷新会话迁移，迁移失败时终止启动并隔离迁移凭据；同步补充部署配置、冒烟测试和前端稳定性回归。
+  - Footer: 破坏性变更: 首次自动迁移会清空旧刷新令牌记录，现有用户会话失效并需要重新登录
+  - Footer: Migration: 部署前配置迁移账号，备份数据库并预留重新登录维护窗口
+  - Files:
+    - .env.example
+    - Dockerfile
+    - README.md
+    - docker-compose.prod.example.yml
+    - docker-compose.yml
+    - frontend/src/components/trending/__tests__/HotMediaCard.test.tsx
+    - frontend/src/pages/__tests__/AdminNavigation.test.tsx
+    - frontend/src/pages/__tests__/HotPage.test.tsx
+    - frontend/src/services/__tests__/hotRankingService.test.ts
+    - scripts/docker-entrypoint.sh
+    - scripts/tests/docker-entrypoint-test.sh
+    - scripts/tests/docker-smoke.sh
+    - scripts/tests/security-gate.sh
+    - docs/readme_2607.md

@@ -58,8 +58,8 @@ vi.mock('@/components/admin/PluginManagementView', () => ({
   PluginManagementView: () => <div>PluginManagementView</div>,
 }));
 
-vi.mock('@/components/admin/PluginPerformanceDashboard', () => ({
-  PluginPerformanceDashboard: () => <div>PluginPerformanceDashboard</div>,
+vi.mock('@/components/admin/PerformanceObservabilityView', () => ({
+  PerformanceObservabilityView: () => <div>PerformanceObservabilityView</div>,
 }));
 
 vi.mock('@/components/admin/AdminUsersView', () => ({
@@ -274,11 +274,13 @@ describe('Admin 导航集成', () => {
       </MemoryRouter>
     );
 
-    await user.click(screen.getAllByRole('button', { name: '性能监控' })[0]);
+    expect(await screen.findByText('PluginManagementView')).toBeInTheDocument();
+    const desktopNav = screen.getAllByRole('navigation', { name: '后台模块导航' })[0];
+    await user.click(within(desktopNav).getByRole('button', { name: '性能监控' }));
 
     await waitFor(() => {
       expect(screen.getByTestId('location')).toHaveTextContent('/admin?view=plugin_observability');
     });
-    expect(await screen.findByText('PluginPerformanceDashboard')).toBeInTheDocument();
+    expect(await screen.findByText('PerformanceObservabilityView')).toBeInTheDocument();
   });
 });

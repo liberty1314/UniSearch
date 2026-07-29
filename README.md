@@ -72,6 +72,9 @@ scripts/tests/backend-race.sh
 
 # 前端核心慢测和性能相关路径，适合修改路由、搜索、管理页交互后先跑
 scripts/tests/frontend-focused.sh
+
+# 容器启动入口快速回归，验证自动迁移、失败阻断和凭据清理
+scripts/tests/docker-entrypoint-test.sh
 ```
 
 提交前先执行基础安全门禁。它覆盖后端全量测试、race、vet、可达漏洞、前端生产依赖审计、单测、类型、lint、构建、Git 历史/工作区秘密扫描和差异检查：
@@ -93,6 +96,7 @@ scripts/tests/local-quality.sh
 | 入口 | 默认是否触网 | 用途 | 前置条件 |
 | --- | --- | --- | --- |
 | `scripts/tests/security-gate.sh` | 否 | 不可跳过的测试、漏洞、依赖、秘密与差异基础门禁 | Go、pnpm、govulncheck、Gitleaks |
+| `scripts/tests/docker-entrypoint-test.sh` | 否 | 快速验证容器启动前自动迁移及失败阻断行为 | Bash、基础 Unix 命令 |
 | `scripts/tests/local-quality.sh` | 是 | 复用安全门禁后执行真实登录态搜索 smoke | 基础门禁依赖、本地后端、数据库、外部插件站点可访问 |
 | `scripts/tests/real-search-smoke.sh` | 是 | 单独验证 `/api/search` 真实链路不会卡死 | 本地后端监听 `UNISEARCH_API_BASE_URL`，数据库可写 |
 | `scripts/tests/release-candidate.sh` | 是 | 发布候选门禁，固定执行安全门禁、mock/真实 E2E、真实搜索、Docker、TLS 和迁移演练 | 本地 Docker、真实后端地址、数据库配置、外部插件站点可访问 |
@@ -213,7 +217,7 @@ docker build -t unisearch:latest .
 
 #### 4. 执行数据库迁移
 
-生产数据库必须拆分为两个身份：迁移账号只用于 `unisearch-migrate`，可执行目标库的 DDL 和 DML；运行账号只授予 `SELECT`、`INSERT`、`UPDATE`、`DELETE`。主应用不会创建数据库、表或列，缺少迁移时会提示 `数据库结构未完成迁移` 并退出。
+生产数据库必须拆分为两个身份：迁移账号只用于启动前的 `unisearch-migrate`，可执行目标库的 DDL 和 DML；运行账号只授予 `SELECT`、`INSERT`、`UPDATE`、`DELETE`。镜像入口默认在 Supervisor 和 Nginx 启动前自动执行 `unisearch-migrate -migrate-refresh-token-sessions`，迁移失败时容器退出，主应用仍会在缺少迁移时拒绝启动。
 
 先由数据库管理员创建两个账号。密码必须来自密码管理器或平台 Secret，不要直接写入仓库中的 SQL 文件：
 
@@ -227,17 +231,17 @@ GRANT SELECT, INSERT, UPDATE, DELETE
 ON `unisearch`.* TO 'unisearch_runtime'@'%';
 ```
 
-将 `.env` 中的 `DB_USER`、`DB_PASSWORD` 固定为运行账号。迁移时从当前终端环境临时传入迁移账号，命令完成后立即清理：
+将 `.env` 中的 `DB_USER`、`DB_PASSWORD` 固定为运行账号，并在平台 Secret 中配置 `MIGRATION_DB_USER`、`MIGRATION_DB_PASSWORD`。容器入口只把迁移账号传给迁移子进程，迁移完成后会从长期运行的 Supervisor 环境中清除这两个变量：
 
-```bash
-export DB_USER=unisearch_migrate
-read -rsp "迁移账号密码: " DB_PASSWORD && echo
-export DB_PASSWORD
-docker compose run --rm --no-deps \
-  --entrypoint /app/backend/unisearch-migrate \
-  -e DB_USER -e DB_PASSWORD app
-unset DB_USER DB_PASSWORD
+```env
+AUTO_MIGRATE=true
+DB_USER=unisearch_runtime
+DB_PASSWORD=<运行账号密码>
+MIGRATION_DB_USER=unisearch_migrate
+MIGRATION_DB_PASSWORD=<迁移账号密码>
 ```
+
+如暂时没有独立迁移账号，入口会回退使用 `DB_USER`、`DB_PASSWORD`；生产环境不建议依赖此回退。设置 `AUTO_MIGRATE=false` 可在受控回滚或维护窗口中跳过入口迁移，但缺少结构时应用仍会退出。
 
 迁移后使用运行账号验证 DML 可用，并确认 DDL 被 MySQL 拒绝：
 
@@ -250,21 +254,15 @@ mysql -h "$DB_HOST" -P "$DB_PORT" -u unisearch_runtime -p "$DB_NAME" \
   -e "CREATE TABLE runtime_ddl_probe (id BIGINT PRIMARY KEY)"
 ```
 
-从仍使用 `refresh_tokens` 原文表的旧版本升级时，这是一次强制全部用户重新登录的破坏性迁移。必须按以下顺序执行：
+从仍使用 `refresh_tokens` 原文表的旧版本升级时，自动迁移会执行一次强制全部用户重新登录的破坏性迁移。必须按以下顺序执行：
 
-以下所有迁移和清理命令都必须重新按上文方式交互读取并导出迁移账号到 `DB_USER`、`DB_PASSWORD`，完成后立即 `unset`。
+以下所有手工迁移和清理命令都必须使用迁移账号，完成后立即清理临时环境变量；正常部署不再需要手动执行首次迁移。
 
 1. 提前公告维护窗口和重新登录要求。
 2. 备份业务数据库，停止所有旧版本应用实例，避免迁移期间继续写入旧会话。
-3. 显式创建摘要会话表并清空旧原文记录：
+3. 部署新镜像。容器入口会在启动 Supervisor/Nginx 前自动执行 `-migrate-refresh-token-sessions`；观察日志中的“数据库迁移完成”。
 
-   ```bash
-   docker compose run --rm --no-deps \
-     --entrypoint /app/backend/unisearch-migrate \
-     -e DB_USER -e DB_PASSWORD app -migrate-refresh-token-sessions
-   ```
-
-4. 部署并启动新版本，确认旧 Cookie 请求 `POST /api/auth/refresh` 返回 401。
+4. 等待入口迁移成功并启动新版本，确认旧 Cookie 请求 `POST /api/auth/refresh` 返回 401。
 5. 使用新登录取得的 Cookie 完成一次刷新，确认登录和首次轮转均返回 200，旧轮转 Cookie 重放返回 401。
 6. 验证窗口结束且所有实例均为新版本后，显式删除已清空的旧表：
 
@@ -433,13 +431,16 @@ server {
    | `SECRET_MASTER_KEY` | `你的随机主密钥` | `openssl rand -base64 32` |
    | `INITIAL_ADMIN_USERNAME` | `自定义首次管理员用户名` | 不得为 `admin` 或占位值 |
    | `INITIAL_ADMIN_PASSWORD` | `随机强密码` | `openssl rand -base64 24` |
+   | `AUTO_MIGRATE` | `true` | 容器启动前自动执行迁移；受控回滚时可设为 `false` |
+   | `MIGRATION_DB_USER` | `独立迁移账号` | 生产环境建议与运行账号分离 |
+   | `MIGRATION_DB_PASSWORD` | `迁移账号密码` | 仅存放在平台 Secret，不写入仓库 |
 
 4. 在「网络」中配置容器端口 `8080` 并生成 HTTPS 域名
 5. 确认平台 HTTPS 入口传递 `X-Forwarded-Proto=https`，再使用实际域名更新 `ALLOWED_ORIGINS`
 
 > **⚠️ 重要提示：** 不要设置 `PORT` 变量。本项目架构为 Nginx(8080) + 后端(8888) 内部代理，`PORT` 会覆盖后端端口导致代理失败。
 
-> **数据库迁移：** 主应用只使用运行账号连接已迁移数据库，不会自动建库或改表。首次部署和每次模型变更都必须先创建一次性迁移任务，使用迁移账号运行 `/app/backend/unisearch-migrate`；任务成功后才能发布主应用。
+> **数据库迁移：** 镜像入口默认在主应用启动前执行 `/app/backend/unisearch-migrate -migrate-refresh-token-sessions`。请为 `MIGRATION_DB_USER`、`MIGRATION_DB_PASSWORD` 配置具备目标库 DDL/DML 权限的独立账号；迁移成功后才会启动 Supervisor 和 Nginx。若迁移失败，容器会退出并在 Runtime Logs 中保留失败原因。
 
 #### Zeabur 环境变量模板
 
@@ -453,6 +454,9 @@ DB_PORT=${MYSQL_PORT}
 DB_USER=${MYSQL_USERNAME}
 DB_PASSWORD=${MYSQL_PASSWORD}
 DB_NAME=unisearch
+AUTO_MIGRATE=true
+MIGRATION_DB_USER=${MYSQL_USERNAME}
+MIGRATION_DB_PASSWORD=${MYSQL_PASSWORD}
 REDIS_HOST=${REDIS_HOST}
 REDIS_PORT=${REDIS_PORT}
 REDIS_PASSWORD=${REDIS_PASSWORD}
@@ -690,10 +694,10 @@ Redis 为可选依赖，连接失败时系统自动降级运行（无缓存）�
 ### Zeabur 部署问题
 
 **`Unknown database 'unisearch'`：**
-主应用不会自动创建数据库。请确认 MySQL 已就绪，并使用迁移账号运行 `unisearch-migrate`；迁移成功后再以运行账号启动主应用。
+入口迁移不会创建数据库本身。请确认 Zeabur MySQL 服务已就绪，并配置 `MIGRATION_DB_USER`、`MIGRATION_DB_PASSWORD`；入口会在数据库存在后自动运行 `unisearch-migrate`。
 
 **提示表不存在或首次管理员缺失：**
-先配置 `INITIAL_ADMIN_USERNAME` 和 `INITIAL_ADMIN_PASSWORD`，再使用迁移账号执行数据库迁移并以运行账号启动主应用。Docker 环境按“执行数据库迁移”章节交互导出迁移账号后运行迁移容器；本地开发使用迁移账号设置 `DB_USER`、`DB_PASSWORD` 后执行 `cd backend && go run ./cmd/migrate`。数据库已有管理员时不需要保留首次管理员变量。
+先配置 `INITIAL_ADMIN_USERNAME` 和 `INITIAL_ADMIN_PASSWORD`，并确认 `AUTO_MIGRATE=true`。重新部署后，入口会自动执行迁移并在成功后启动应用；数据库已有管理员时不需要保留首次管理员变量。若日志仍提示缺表，检查迁移账号是否具有目标库 DDL/DML 权限及数据库服务是否已就绪。
 
 **后端反复重启（exit status 1）：**
 检查 Zeabur 控制台的 Runtime Logs，常见原因：

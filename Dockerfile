@@ -55,11 +55,13 @@ COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
 # 复制配置文件
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY supervisord.conf /etc/supervisord.conf
+COPY --chown=unisearch:unisearch scripts/docker-entrypoint.sh /usr/local/bin/unisearch-entrypoint
 
-RUN chmod 0555 /app/backend/unisearch /app/backend/unisearch-migrate /app/backend/unisearch-rotate-master-key
+RUN chmod 0555 /app/backend/unisearch /app/backend/unisearch-migrate /app/backend/unisearch-rotate-master-key /usr/local/bin/unisearch-entrypoint
 
 # 设置环境变量
 ENV PORT=8888 \
+    AUTO_MIGRATE=true \
     TZ=Asia/Shanghai \
     ASYNC_PLUGIN_ENABLED=true \
     ASYNC_RESPONSE_TIMEOUT=4 \
@@ -75,4 +77,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://127.0.0.1:8080/health || exit 1
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+CMD ["/usr/local/bin/unisearch-entrypoint"]

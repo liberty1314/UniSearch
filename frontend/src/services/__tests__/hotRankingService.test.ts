@@ -172,7 +172,7 @@ describe("hotRankingService", () => {
               vote_average: 0,
               vote_count: 0,
               popularity: 77,
-              release_date: "2026-07-29",
+              release_date: "2099-07-29",
               availability_status: "released",
               search_available: true,
               search_hint: "",
@@ -187,7 +187,7 @@ describe("hotRankingService", () => {
     expect(response.sections[0].items[0]).toMatchObject({
       availability_status: "upcoming",
       search_available: false,
-      search_hint: "预计 2026-07-29 上映，当前站内资源可能不可用",
+      search_hint: "预计 2099-07-29 上映，当前站内资源可能不可用",
     });
   });
 });

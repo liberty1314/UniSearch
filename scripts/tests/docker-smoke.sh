@@ -70,6 +70,12 @@ docker run --rm --entrypoint /bin/sh "$IMAGE_NAME" -c 'test -x /app/backend/unis
 echo "== Docker smoke: 验证迁移二进制 =="
 docker run --rm --entrypoint /bin/sh "$IMAGE_NAME" -c 'test -x /app/backend/unisearch-migrate && /app/backend/unisearch-migrate -help >/dev/null'
 
+echo "== Docker smoke: 验证自动迁移入口 =="
+docker run --rm --entrypoint /bin/sh "$IMAGE_NAME" -c '
+  test -x /usr/local/bin/unisearch-entrypoint
+  grep -q "migrate-refresh-token-sessions" /usr/local/bin/unisearch-entrypoint
+'
+
 echo "== Docker smoke: 验证主密钥轮换二进制 =="
 docker run --rm --entrypoint /bin/sh "$IMAGE_NAME" -c 'test -x /app/backend/unisearch-rotate-master-key && /app/backend/unisearch-rotate-master-key -help >/dev/null'
 
@@ -111,6 +117,16 @@ docker exec "$MYSQL_CONTAINER" mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROO
 
 echo "== Docker smoke: 创建迁移账号与运行账号 =="
 docker exec -i "$MYSQL_CONTAINER" mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" >/dev/null 2>&1 <<SQL
+CREATE DATABASE IF NOT EXISTS \`unisearch\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE TABLE \`unisearch\`.\`refresh_tokens\` (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  token VARCHAR(512) NOT NULL,
+  username VARCHAR(255) NOT NULL,
+  expires_at DATETIME(3) NOT NULL,
+  is_revoked BOOLEAN NOT NULL DEFAULT FALSE
+);
+INSERT INTO \`unisearch\`.\`refresh_tokens\` (token, username, expires_at, is_revoked)
+VALUES ('legacy-smoke-token', 'legacy-smoke-user', DATE_ADD(NOW(), INTERVAL 1 HOUR), FALSE);
 CREATE USER '${MYSQL_MIGRATION_USER}'@'%' IDENTIFIED BY '${MYSQL_MIGRATION_PASSWORD}';
 GRANT CREATE, ALTER, DROP, INDEX, REFERENCES, SELECT, INSERT, UPDATE, DELETE
 ON \`unisearch\`.* TO '${MYSQL_MIGRATION_USER}'@'%';
@@ -127,41 +143,21 @@ for _ in {1..30}; do
 done
 docker exec "$REDIS_CONTAINER" redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG
 
-echo "== Docker smoke: 使用迁移账号显式执行数据库迁移 =="
-docker run --rm \
-  --network "$NETWORK_NAME" \
-  --entrypoint /app/backend/unisearch-migrate \
-  -e APP_ENV=production \
-  -e ALLOWED_ORIGINS=https://search.example.com \
-  -e DB_HOST=mysql \
-  -e DB_PORT=3306 \
-  -e DB_USER="$MYSQL_MIGRATION_USER" \
-  -e DB_PASSWORD="$MYSQL_MIGRATION_PASSWORD" \
-  -e DB_NAME=unisearch \
-  -e REDIS_HOST=redis \
-  -e REDIS_PORT=6379 \
-  -e REDIS_PASSWORD="$REDIS_PASSWORD" \
-  -e AUTH_JWT_SECRET="$AUTH_JWT_SECRET" \
-  -e RESOURCE_PUBLIC_ID_SECRET="$RESOURCE_PUBLIC_ID_SECRET" \
-  -e SECRET_MASTER_KEY="$SECRET_MASTER_KEY" \
-  -e SECRET_BACKEND=environment \
-  -e INITIAL_ADMIN_USERNAME=docker_smoke_admin \
-  -e INITIAL_ADMIN_PASSWORD="$INITIAL_ADMIN_PASSWORD" \
-  -e ENABLED_PLUGINS= \
-  "$IMAGE_NAME" >/dev/null
-
-echo "== Docker smoke: 启动非 root 应用容器 =="
+echo "== Docker smoke: 通过容器入口自动执行数据库迁移并启动非 root 应用容器 =="
 docker run -d \
   --name "$APP_CONTAINER" \
   --network "$NETWORK_NAME" \
   -p "127.0.0.1::8080" \
   -e APP_ENV=production \
+  -e AUTO_MIGRATE=true \
   -e ALLOWED_ORIGINS=https://search.example.com \
   -e DB_HOST=mysql \
   -e DB_PORT=3306 \
   -e DB_USER="$MYSQL_RUNTIME_USER" \
   -e DB_PASSWORD="$MYSQL_RUNTIME_PASSWORD" \
   -e DB_NAME=unisearch \
+  -e MIGRATION_DB_USER="$MYSQL_MIGRATION_USER" \
+  -e MIGRATION_DB_PASSWORD="$MYSQL_MIGRATION_PASSWORD" \
   -e REDIS_HOST=redis \
   -e REDIS_PORT=6379 \
   -e REDIS_PASSWORD="$REDIS_PASSWORD" \
@@ -196,6 +192,23 @@ for _ in {1..60}; do
 done
 curl --silent --show-error --fail --max-time 5 "$base_url/health" >/dev/null
 curl --silent --show-error --fail --max-time 5 "$base_url/api/health" >/dev/null
+
+echo "== Docker smoke: 验证自动迁移结果和凭据清理 =="
+refresh_sessions_table_count="$(docker exec "$MYSQL_CONTAINER" mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'unisearch' AND table_name = 'refresh_token_sessions';")"
+if [ "$refresh_sessions_table_count" != "1" ]; then
+  echo "自动迁移未创建 refresh_token_sessions 表" >&2
+  docker logs "$APP_CONTAINER" >&2
+  exit 1
+fi
+legacy_refresh_rows="$(docker exec "$MYSQL_CONTAINER" mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -N -B -e "SELECT COUNT(*) FROM unisearch.refresh_tokens;")"
+if [ "$legacy_refresh_rows" != "0" ]; then
+  echo "自动迁移后旧刷新令牌记录必须为 0，实际为 $legacy_refresh_rows" >&2
+  exit 1
+fi
+if docker exec "$APP_CONTAINER" /bin/sh -c 'tr "\0" "\n" </proc/1/environ | grep -q "^MIGRATION_DB_"'; then
+  echo "迁移凭据不应保留在长期运行的应用环境中" >&2
+  exit 1
+fi
 
 echo "== Docker smoke: 验证运行进程和日志权限 =="
 docker exec "$APP_CONTAINER" /bin/sh -c '
