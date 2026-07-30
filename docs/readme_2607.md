@@ -1063,3 +1063,10 @@
     - frontend/src/components/ui/__tests__/animated-theme-toggler.test.tsx
     - frontend/src/components/ui/animated-theme-toggler.tsx
     - docs/readme_2607.md
+
+- [2026-07-30 14:10] fix(search): 修复直达搜索页刷新首屏空态
+  - Body: 搜索页从 URL 查询参数解析首屏关键词，避免刷新直达结果页时在 Store 同步前误挂载空态共享查询框；同步补充直达搜索结果页的回归测试。
+  - Files:
+    - frontend/src/pages/SearchPage.tsx
+    - frontend/src/pages/__tests__/SearchPage.test.tsx
+    - docs/readme_2607.md

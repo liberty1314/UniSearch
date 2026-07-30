@@ -209,6 +209,27 @@ describe("SearchPage", () => {
     );
   });
 
+  it("刷新直达搜索结果页时首屏不挂载空态共享查询框", async () => {
+    renderSearchPage("/search?q=%E7%94%B5%E5%BD%B1&types=quark");
+
+    expect(screen.getByTestId("search-query-dock")).toBeInTheDocument();
+    expect(screen.queryByTestId("search-stage")).not.toBeInTheDocument();
+
+    const queryLayout = screen
+      .getByTestId("search-query-dock")
+      .querySelector("[data-shared-query-layout]");
+    expect(queryLayout).toHaveAttribute("data-shared-query-layout", "false");
+
+    await waitFor(() => {
+      expect(setSearchParamsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          keyword: "电影",
+          cloudTypes: ["quark"],
+        }),
+      );
+    });
+  });
+
   it("URL 未指定来源时使用账户默认来源", async () => {
     localStorage.setItem(
       "unisearch_account_preferences",

@@ -9,6 +9,7 @@ import SearchTransition from "@/components/search/SearchTransition";
 import { deriveSearchTransitionState } from "@/components/search/searchTransitionModel";
 import SEO from "@/components/SEO";
 import { useSearchUrlSync } from "@/hooks/useSearchUrlSync";
+import { SearchService } from "@/services/searchService";
 import { useSearchAccessStatus } from "@/stores/searchAccessStore";
 import { useSearchStore } from "@/stores/searchStore";
 
@@ -31,7 +32,12 @@ const SearchPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const showSearchAccessHint = searchAccessStatus === "anonymous";
-  const hasKeyword = Boolean(searchParams.keyword?.trim());
+  const urlSearchKeyword = useMemo(
+    () => SearchService.parseSearchUrl(location.search).keyword?.trim() || "",
+    [location.search],
+  );
+  const visibleKeyword = urlSearchKeyword || searchParams.keyword?.trim() || "";
+  const hasKeyword = Boolean(visibleKeyword);
   const fromTrending = (
     location.state as {
       fromTrending?: {
@@ -43,7 +49,7 @@ const SearchPage: React.FC = () => {
 
   const viewState = useMemo(
     () => deriveSearchTransitionState({
-      keyword: searchParams.keyword,
+      keyword: visibleKeyword,
       isLoading,
       isRefreshing,
       progressiveStatus,
@@ -60,7 +66,7 @@ const SearchPage: React.FC = () => {
       isRefreshing,
       progressiveStatus,
       receivedBatches,
-      searchParams.keyword,
+      visibleKeyword,
       searchResults?.resources.length,
       totalSources,
     ],
@@ -99,7 +105,7 @@ const SearchPage: React.FC = () => {
     >
       <SEO
         title={hasKeyword
-          ? `${searchParams.keyword} 的搜索结果 | UniSearch`
+          ? `${visibleKeyword} 的搜索结果 | UniSearch`
           : "搜索 | UniSearch"}
         description="在 UniSearch 中聚合搜索网盘资源，并按来源与关键词筛选结果。"
       />
