@@ -141,7 +141,7 @@ func isCORSOriginAllowed(origin string) bool {
 
 // EnforceSameOriginMiddleware 对 Cookie 驱动的写端点（refresh/revoke/logout）强制校验请求来源。
 // httpOnly Cookie 会被浏览器自动携带，SameSite=Strict 是主要防线；此中间件作为 CSRF 的第二道防线：
-// 校验 Origin（缺失时回退 Referer）必须落在 ALLOWED_ORIGINS 白名单内，否则 403。
+// 当前请求同源可直接通过；跨域来源必须落在 ALLOWED_ORIGINS 白名单内，否则 403。
 // 说明：非浏览器客户端（无 Origin/Referer）默认放行，避免破坏合法的服务端到服务端调用；
 // 真正的 CSRF 依赖浏览器发起并自动带 Cookie，浏览器必定附带 Origin/Referer。
 func EnforceSameOriginMiddleware() gin.HandlerFunc {
@@ -166,7 +166,7 @@ func EnforceSameOriginMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		if !isCORSOriginAllowed(origin) {
+		if !isCookieRequestOriginAllowed(c, origin) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"error": "请求来源非法",
 				"code":  "INVALID_ORIGIN",
@@ -175,6 +175,75 @@ func EnforceSameOriginMiddleware() gin.HandlerFunc {
 		}
 		c.Next()
 	}
+}
+
+func isCookieRequestOriginAllowed(c *gin.Context, origin string) bool {
+	return isRequestSameOrigin(c, origin) || isCORSOriginAllowed(origin)
+}
+
+func isRequestSameOrigin(c *gin.Context, origin string) bool {
+	normalizedOrigin := normalizeOrigin(origin)
+	if normalizedOrigin == "" {
+		return false
+	}
+
+	currentOrigin := currentRequestOrigin(c)
+	return currentOrigin != "" && currentOrigin == normalizedOrigin
+}
+
+func currentRequestOrigin(c *gin.Context) string {
+	if c == nil || c.Request == nil {
+		return ""
+	}
+
+	host := strings.TrimSpace(c.Request.Host)
+	if host == "" {
+		return ""
+	}
+
+	scheme := currentRequestScheme(c)
+	if scheme == "" {
+		return ""
+	}
+
+	return scheme + "://" + strings.ToLower(host)
+}
+
+func currentRequestScheme(c *gin.Context) string {
+	if c == nil || c.Request == nil {
+		return ""
+	}
+
+	if forwardedProto := firstHeaderValue(c.GetHeader("X-Forwarded-Proto")); forwardedProto == "http" || forwardedProto == "https" {
+		return forwardedProto
+	}
+
+	if c.Request.TLS != nil {
+		return "https"
+	}
+	return "http"
+}
+
+func firstHeaderValue(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	parts := strings.Split(raw, ",")
+	return strings.ToLower(strings.TrimSpace(parts[0]))
+}
+
+func normalizeOrigin(origin string) string {
+	parsed, err := url.Parse(strings.TrimSpace(origin))
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return ""
+	}
+
+	scheme := strings.ToLower(parsed.Scheme)
+	if scheme != "http" && scheme != "https" {
+		return ""
+	}
+
+	return scheme + "://" + strings.ToLower(parsed.Host)
 }
 
 // LoggerMiddleware 日志中间件

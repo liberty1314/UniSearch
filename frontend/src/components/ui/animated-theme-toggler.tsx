@@ -21,6 +21,29 @@ type DocumentWithViewTransition = Document & {
   startViewTransition?: (callback: () => void) => ViewTransitionHandle
 }
 
+type ThemeTransitionOrigin = {
+  x: number
+  y: number
+  maxRadius: number
+}
+
+const resolveThemeTransitionOrigin = (
+  button: HTMLButtonElement,
+  event: React.MouseEvent<HTMLButtonElement>
+): ThemeTransitionOrigin => {
+  const { top, left, width, height } = button.getBoundingClientRect()
+  const hasPointerCoordinates =
+    event.detail > 0 && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)
+  const x = hasPointerCoordinates ? event.clientX : left + width / 2
+  const y = hasPointerCoordinates ? event.clientY : top + height / 2
+  const maxRadius = Math.hypot(
+    Math.max(x, window.innerWidth - x),
+    Math.max(y, window.innerHeight - y)
+  )
+
+  return { x, y, maxRadius }
+}
+
 export const AnimatedThemeToggler = ({
   className,
   duration = 400,
@@ -46,8 +69,9 @@ export const AnimatedThemeToggler = ({
     return () => observer.disconnect()
   }, [])
 
-  const toggleTheme = useCallback(async () => {
+  const toggleTheme = useCallback(async (event: React.MouseEvent<HTMLButtonElement>) => {
     if (!buttonRef.current) return
+    const { x, y, maxRadius } = resolveThemeTransitionOrigin(buttonRef.current, event)
     const doc = document as DocumentWithViewTransition
 
     const performToggle = () => {
@@ -64,14 +88,6 @@ export const AnimatedThemeToggler = ({
 
     if (doc.startViewTransition) {
       await doc.startViewTransition(performToggle).ready
-
-      const { top, left, width, height } = buttonRef.current.getBoundingClientRect()
-      const x = left + width / 2
-      const y = top + height / 2
-      const maxRadius = Math.hypot(
-        Math.max(left, window.innerWidth - left),
-        Math.max(top, window.innerHeight - top)
-      )
 
       document.documentElement.animate(
         {

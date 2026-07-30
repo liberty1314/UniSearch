@@ -1053,3 +1053,13 @@
     - scripts/tests/docker-smoke.sh
     - scripts/tests/security-gate.sh
     - docs/readme_2607.md
+
+- [2026-07-30 11:34] fix(app): 修复同源校验与主题切换动画圆心偏移
+  - Body: 允许 Cookie 写端点在当前请求同源时绕过 CORS 白名单限制，并继续拒绝未列入白名单的跨域来源。主题切换视图过渡改为使用点击瞬间坐标或键盘触发时的按钮中心，避免主题切换后布局重算导致动画圆心偏移。
+  - Files:
+    - README.md
+    - backend/api/middleware.go
+    - backend/api/middleware_test.go
+    - frontend/src/components/ui/__tests__/animated-theme-toggler.test.tsx
+    - frontend/src/components/ui/animated-theme-toggler.tsx
+    - docs/readme_2607.md

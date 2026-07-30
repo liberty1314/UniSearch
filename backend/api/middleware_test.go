@@ -151,6 +151,41 @@ func TestCORSMiddlewareHandlesPreflight(t *testing.T) {
 	}
 }
 
+func TestEnforceSameOriginMiddlewareAllowsCurrentRequestOriginOutsideCORSList(t *testing.T) {
+	router := newSameOriginRouterForTest(t, []string{"https://unisearch.zeabur.app"})
+
+	req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
+	req.Host = "unisearchso.shop"
+	req.Header.Set("Origin", "https://unisearchso.shop")
+	req.Header.Set("X-Forwarded-Proto", "https")
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("当前请求同源不应因缺少 CORS 白名单被拒绝，状态码 %d，响应 %s", resp.Code, resp.Body.String())
+	}
+}
+
+func TestEnforceSameOriginMiddlewareRejectsUnlistedCrossOrigin(t *testing.T) {
+	router := newSameOriginRouterForTest(t, []string{"https://unisearch.zeabur.app"})
+
+	req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
+	req.Host = "unisearchso.shop"
+	req.Header.Set("Origin", "https://evil.example.com")
+	req.Header.Set("X-Forwarded-Proto", "https")
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusForbidden {
+		t.Fatalf("非白名单跨域请求应被拒绝，状态码 %d", resp.Code)
+	}
+	if !strings.Contains(resp.Body.String(), "INVALID_ORIGIN") {
+		t.Fatalf("拒绝响应应包含稳定错误码，实际为 %s", resp.Body.String())
+	}
+}
+
 func TestBodySizeLimitMiddlewareAllowsSmallBody(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -233,6 +268,24 @@ func newCORSRouterForTest(t *testing.T, allowedOrigins []string) *gin.Engine {
 	router.Use(CORSMiddleware())
 	router.GET("/ping", func(c *gin.Context) {
 		c.String(http.StatusOK, "pong")
+	})
+	return router
+}
+
+func newSameOriginRouterForTest(t *testing.T, allowedOrigins []string) *gin.Engine {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+
+	oldConfig := config.AppConfig
+	t.Cleanup(func() {
+		config.AppConfig = oldConfig
+	})
+	config.AppConfig = &config.Config{AllowedOrigins: allowedOrigins}
+
+	router := gin.New()
+	router.Use(EnforceSameOriginMiddleware())
+	router.POST("/refresh", func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
 	})
 	return router
 }

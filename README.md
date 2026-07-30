@@ -417,7 +417,7 @@ server {
    | Key | Value | 说明 |
    |-----|-------|------|
    | `APP_ENV` | `production` | 启用生产配置强校验和 Secure Cookie |
-   | `ALLOWED_ORIGINS` | `https://实际生成的域名` | 只允许实际 HTTPS 来源 |
+   | `ALLOWED_ORIGINS` | `https://实际生成的域名` | 只允许实际 HTTPS 来源；同时启用 Zeabur 默认域和自定义域时用英文逗号填写全部域名 |
    | `DB_HOST` | `${MYSQL_HOST}` | 引用 Zeabur MySQL 变量 |
    | `DB_PORT` | `${MYSQL_PORT}` | 引用 Zeabur MySQL 变量 |
    | `DB_USER` | `${MYSQL_USERNAME}` | 运行账号，仅授予 DML 权限 |
@@ -436,7 +436,7 @@ server {
    | `MIGRATION_DB_PASSWORD` | `迁移账号密码` | 仅存放在平台 Secret，不写入仓库 |
 
 4. 在「网络」中配置容器端口 `8080` 并生成 HTTPS 域名
-5. 确认平台 HTTPS 入口传递 `X-Forwarded-Proto=https`，再使用实际域名更新 `ALLOWED_ORIGINS`
+5. 确认平台 HTTPS 入口传递 `X-Forwarded-Proto=https`，再使用实际访问域名更新 `ALLOWED_ORIGINS`；例如同时保留默认域和自定义域时写成 `https://unisearch.zeabur.app,https://unisearchso.shop`
 
 > **⚠️ 重要提示：** 不要设置 `PORT` 变量。本项目架构为 Nginx(8080) + 后端(8888) 内部代理，`PORT` 会覆盖后端端口导致代理失败。
 
