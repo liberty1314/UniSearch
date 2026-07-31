@@ -5,32 +5,32 @@ export type SearchProgressiveStatus =
   | "fallback"
   | "error";
 
-export const SEARCH_QUERY_LAYOUT_ID = "search-query-surface";
-
 export type SearchTransitionView = "idle" | "results";
-export type SearchTransitionDirection = "forward" | "backward" | "steady";
 
-export const resolveSearchTransitionDirection = (
-  previousView: SearchTransitionView,
-  nextView: SearchTransitionView,
-): SearchTransitionDirection => {
-  if (previousView === "idle" && nextView === "results") {
-    return "forward";
-  }
-
-  if (previousView === "results" && nextView === "idle") {
-    return "backward";
-  }
-
-  return "steady";
-};
-
-export const shouldShareSearchQueryLayout = (
+export const resolveSearchTransitionMotion = (
   view: SearchTransitionView,
-  direction: SearchTransitionDirection,
-): boolean => view === "idle"
-  ? direction !== "backward"
-  : direction === "forward";
+  shouldReduceMotion: boolean,
+) => {
+  if (shouldReduceMotion) {
+    return {
+      initial: { opacity: 0 },
+      animate: { opacity: 1 },
+      transition: {
+        duration: 0.12,
+        ease: "linear" as const,
+      },
+    };
+  }
+
+  return {
+    initial: { opacity: 0, y: view === "results" ? 6 : -4 },
+    animate: { opacity: 1, y: 0 },
+    transition: {
+      duration: view === "results" ? 0.22 : 0.18,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  };
+};
 
 export type SearchVisualPhase =
   | "idle"

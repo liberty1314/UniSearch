@@ -1070,3 +1070,27 @@
     - frontend/src/pages/SearchPage.tsx
     - frontend/src/pages/__tests__/SearchPage.test.tsx
     - docs/readme_2607.md
+
+- [2026-07-31 10:53] fix(frontend): 修复搜索与主题切换交互稳定性
+  - Body: 移除搜索页查询框共享布局过渡，改用低幅淡入动效，避免清空后首次搜索按钮失效和结果态布局残留。重构主题切换与 StatefulButton 状态控制，补充主题切换、搜索画布和按钮状态的单元与 E2E 回归测试。
+  - Files:
+    - frontend/e2e/search-canvas.spec.ts
+    - frontend/e2e/theme-toggle.spec.ts
+    - frontend/src/components/SearchBox.tsx
+    - frontend/src/components/magicui/animated-theme-toggler.tsx
+    - frontend/src/components/search-box/SearchBoxActions.tsx
+    - frontend/src/components/search/SearchQueryDock.tsx
+    - frontend/src/components/search/SearchStage.tsx
+    - frontend/src/components/search/SearchTransition.tsx
+    - frontend/src/components/search/__tests__/SearchExperienceComponents.test.tsx
+    - frontend/src/components/search/__tests__/searchTransitionModel.test.ts
+    - frontend/src/components/search/searchTransitionContext.ts
+    - frontend/src/components/search/searchTransitionModel.ts
+    - frontend/src/components/ui/__tests__/animated-theme-toggler.test.tsx
+    - frontend/src/components/ui/__tests__/stateful-button.test.tsx
+    - frontend/src/components/ui/animated-theme-toggler.tsx
+    - frontend/src/components/ui/stateful-button.tsx
+    - frontend/src/hooks/useSearchBoxController.ts
+    - frontend/src/index.css
+    - frontend/src/pages/__tests__/SearchPage.test.tsx
+    - docs/readme_2607.md

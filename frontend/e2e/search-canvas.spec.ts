@@ -49,6 +49,31 @@ test('提交搜索后查询条接管并展示结果', async ({ page }, testInfo)
   });
 });
 
+test('清空首次搜索后可以通过按钮再次搜索', async ({ page }) => {
+  await mockPublicApis(page);
+  await signIn(page);
+  await page.goto('/search');
+
+  const searchButton = page
+    .getByTestId('search-box-surface')
+    .getByRole('button', { name: '搜索', exact: true });
+
+  await page.getByPlaceholder('搜索电影、课程、软件或资料...').fill('流浪地球');
+  await searchButton.click();
+
+  await expect(page).toHaveURL(/\/search\?q=/);
+  await expect(page.getByText('流浪地球 资源合集')).toBeVisible();
+
+  await page.getByRole('button', { name: '清空输入' }).click();
+  await expect(page).toHaveURL('/search');
+
+  await page.getByPlaceholder('搜索电影、课程、软件或资料...').fill('你的名字');
+  await searchButton.click();
+
+  await expect(page).toHaveURL(/\/search\?q=/);
+  await expect(page.getByText('你的名字 资源合集')).toBeVisible();
+});
+
 test('结果态筛选卡片在内容轨道内居中且移动端不溢出', async ({ page }) => {
   await mockPublicApis(page);
   await signIn(page);

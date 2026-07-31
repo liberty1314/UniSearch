@@ -1,7 +1,8 @@
 "use client";
-import { cn } from "@/lib/utils";
+
 import React, { useImperativeHandle } from "react";
-import { motion, useAnimate } from "framer-motion";
+import { CheckCircle2, LoaderCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   className?: string;
@@ -13,199 +14,106 @@ export interface StatefulButtonHandle {
   reset: () => void;
 }
 
+type ButtonStatus = "idle" | "loading" | "success";
+
+const SUCCESS_FEEDBACK_DURATION_MS = 1200;
+
 export const Button = React.forwardRef<StatefulButtonHandle, ButtonProps>(
-  ({ className, children, ...props }, ref) => {
-    const [scope, animate] = useAnimate();
-    const cancelledRef = React.useRef(false);
+  ({ className, children, disabled, onClick, ...buttonProps }, ref) => {
+    const [status, setStatus] = React.useState<ButtonStatus>("idle");
+    const runIdRef = React.useRef(0);
+    const successTimeoutRef = React.useRef<number | null>(null);
+    const mountedRef = React.useRef(true);
 
-    const animateLoading = React.useCallback(async () => {
-      await animate(
-        ".loader",
-        {
-          width: "20px",
-          scale: 1,
-          display: "block",
-        },
-        {
-          duration: 0.2,
-        },
-      );
-    }, [animate]);
+    const clearSuccessTimeout = React.useCallback(() => {
+      if (successTimeoutRef.current !== null) {
+        window.clearTimeout(successTimeoutRef.current);
+        successTimeoutRef.current = null;
+      }
+    }, []);
 
-    const animateSuccess = React.useCallback(async () => {
-      await animate(
-        ".loader",
-        {
-          width: "0px",
-          scale: 0,
-          display: "none",
-        },
-        {
-          duration: 0.2,
-        },
-      );
-      await animate(
-        ".check",
-        {
-          width: "20px",
-          scale: 1,
-          display: "block",
-        },
-        {
-          duration: 0.2,
-        },
-      );
+    React.useEffect(() => {
+      mountedRef.current = true;
 
-      await animate(
-        ".check",
-        {
-          width: "0px",
-          scale: 0,
-          display: "none",
-        },
-        {
-          delay: 2,
-          duration: 0.2,
-        },
-      );
-    }, [animate]);
+      return () => {
+        mountedRef.current = false;
+        clearSuccessTimeout();
+      };
+    }, [clearSuccessTimeout]);
+
+    const reset = React.useCallback(() => {
+      runIdRef.current += 1;
+      clearSuccessTimeout();
+      if (mountedRef.current) {
+        setStatus("idle");
+      }
+    }, [clearSuccessTimeout]);
 
     const run = React.useCallback(
       async (fn?: () => void | Promise<void>) => {
-        cancelledRef.current = false;
-        await animateLoading();
-        if (fn) {
-          await fn();
+        const runId = runIdRef.current + 1;
+        runIdRef.current = runId;
+        clearSuccessTimeout();
+        setStatus("loading");
+
+        try {
+          await fn?.();
+        } catch (error) {
+          if (mountedRef.current && runIdRef.current === runId) {
+            setStatus("idle");
+          }
+          throw error;
         }
-        if (cancelledRef.current) {
-          // 如果在执行期间被重置，确保视觉状态回到初始
-          await animate([
-            [
-              ".loader",
-              { width: "0px", scale: 0, display: "none" },
-              { duration: 0.01 },
-            ],
-            [
-              ".check",
-              { width: "0px", scale: 0, display: "none" },
-              { duration: 0.01 },
-            ],
-          ]);
+
+        if (!mountedRef.current || runIdRef.current !== runId) {
           return;
         }
-        await animateSuccess();
-      },
-      [animateLoading, animateSuccess, animate],
-    );
 
-    const reset = React.useCallback(() => {
-      cancelledRef.current = true;
-      // 立即复位到初始状态
-      animate([
-        [
-          ".loader",
-          { width: "0px", scale: 0, display: "none" },
-          { duration: 0.01 },
-        ],
-        [
-          ".check",
-          { width: "0px", scale: 0, display: "none" },
-          { duration: 0.01 },
-        ],
-      ]);
-    }, [animate]);
+        setStatus("success");
+        successTimeoutRef.current = window.setTimeout(() => {
+          if (mountedRef.current && runIdRef.current === runId) {
+            setStatus("idle");
+          }
+        }, SUCCESS_FEEDBACK_DURATION_MS);
+      },
+      [clearSuccessTimeout],
+    );
 
     useImperativeHandle(ref, () => ({ run, reset }), [run, reset]);
 
     const handleClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
-      await run(() => props.onClick?.(event));
+      await run(() => onClick?.(event));
     };
 
-    const buttonProps = {
-      ...props,
-      onClick: undefined,
-      onDrag: undefined,
-      onDragStart: undefined,
-      onDragEnd: undefined,
-      onAnimationStart: undefined,
-      onAnimationEnd: undefined,
-    };
+    const isLoading = status === "loading";
 
     return (
-      <motion.button
-        ref={scope}
+      <button
         className={cn(
-          "flex min-w-[120px] cursor-pointer items-center justify-center gap-2 rounded-full bg-apple-blue px-4 py-2 font-medium text-white transition duration-200 hover:bg-apple-blue/90",
+          "flex min-w-[120px] cursor-pointer items-center justify-center gap-2 rounded-full bg-apple-blue px-4 py-2 font-medium text-white transition duration-200 hover:bg-apple-blue/90 disabled:cursor-not-allowed disabled:opacity-70",
           className,
         )}
         {...buttonProps}
+        type={buttonProps.type ?? "button"}
+        disabled={disabled || isLoading}
+        aria-busy={isLoading}
         onClick={handleClick}
       >
-        <motion.div className="flex items-center gap-2">
-          <Loader />
-          <CheckIcon />
-          <motion.span>{children}</motion.span>
-        </motion.div>
-      </motion.button>
+        <span className="flex items-center gap-2">
+          {status === "loading" ? (
+            <LoaderCircle
+              aria-hidden="true"
+              className="h-5 w-5 shrink-0 animate-spin motion-reduce:animate-none"
+            />
+          ) : null}
+          {status === "success" ? (
+            <CheckCircle2 aria-hidden="true" className="h-5 w-5 shrink-0" />
+          ) : null}
+          <span>{children}</span>
+        </span>
+      </button>
     );
   },
 );
 
-const Loader = () => {
-  return (
-    <motion.svg
-      animate={{
-        rotate: [0, 360],
-      }}
-      initial={{
-        scale: 0,
-        width: 0,
-        display: "none",
-      }}
-      transition={{
-        duration: 0.3,
-        repeat: Infinity,
-        ease: "linear",
-      }}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="loader text-white hidden"
-    >
-      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-      <path d="M12 3a9 9 0 1 0 9 9" />
-    </motion.svg>
-  );
-};
-
-const CheckIcon = () => {
-  return (
-    <motion.svg
-      initial={{
-        scale: 0,
-        width: 0,
-        display: "none",
-      }}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="check text-white hidden"
-    >
-      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-      <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
-      <path d="M9 12l2 2l4 -4" />
-    </motion.svg>
-  );
-};
+Button.displayName = "StatefulButton";

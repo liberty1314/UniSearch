@@ -215,10 +215,11 @@ describe("SearchPage", () => {
     expect(screen.getByTestId("search-query-dock")).toBeInTheDocument();
     expect(screen.queryByTestId("search-stage")).not.toBeInTheDocument();
 
-    const queryLayout = screen
-      .getByTestId("search-query-dock")
-      .querySelector("[data-shared-query-layout]");
-    expect(queryLayout).toHaveAttribute("data-shared-query-layout", "false");
+    expect(
+      screen
+        .getByTestId("search-query-dock")
+        .querySelector("[data-shared-query-layout]"),
+    ).not.toBeInTheDocument();
 
     await waitFor(() => {
       expect(setSearchParamsMock).toHaveBeenCalledWith(

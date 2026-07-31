@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   deriveSearchTransitionState,
-  resolveSearchTransitionDirection,
-  shouldShareSearchQueryLayout,
+  resolveSearchTransitionMotion,
   type SearchTransitionSnapshot,
 } from "@/components/search/searchTransitionModel";
 
@@ -105,17 +104,34 @@ describe("deriveSearchTransitionState", () => {
   });
 });
 
-describe("搜索过渡方向", () => {
-  it("按视图变化区分正向、反向和静置状态", () => {
-    expect(resolveSearchTransitionDirection("idle", "results")).toBe("forward");
-    expect(resolveSearchTransitionDirection("results", "idle")).toBe("backward");
-    expect(resolveSearchTransitionDirection("idle", "idle")).toBe("steady");
+describe("搜索视图过渡", () => {
+  it("结果与空态只使用低幅位移和短时淡入", () => {
+    expect(resolveSearchTransitionMotion("results", false)).toEqual({
+      initial: { opacity: 0, y: 6 },
+      animate: { opacity: 1, y: 0 },
+      transition: {
+        duration: 0.22,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    });
+    expect(resolveSearchTransitionMotion("idle", false)).toEqual({
+      initial: { opacity: 0, y: -4 },
+      animate: { opacity: 1, y: 0 },
+      transition: {
+        duration: 0.18,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    });
   });
 
-  it("只在正向接管时启用查询框共享布局", () => {
-    expect(shouldShareSearchQueryLayout("idle", "steady")).toBe(true);
-    expect(shouldShareSearchQueryLayout("results", "forward")).toBe(true);
-    expect(shouldShareSearchQueryLayout("idle", "backward")).toBe(false);
-    expect(shouldShareSearchQueryLayout("results", "steady")).toBe(false);
+  it("减少动态效果时只保留快速淡入", () => {
+    expect(resolveSearchTransitionMotion("results", true)).toEqual({
+      initial: { opacity: 0 },
+      animate: { opacity: 1 },
+      transition: {
+        duration: 0.12,
+        ease: "linear",
+      },
+    });
   });
 });

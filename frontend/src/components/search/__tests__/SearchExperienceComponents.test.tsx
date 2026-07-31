@@ -86,7 +86,7 @@ describe("搜索体验组件", () => {
     expect(screen.queryByText("结果内容")).not.toBeInTheDocument();
     expect(screen.getByTestId("search-transition-shell")).toHaveAttribute(
       "data-presence-mode",
-      "popLayout",
+      "replace",
     );
 
     rerender(

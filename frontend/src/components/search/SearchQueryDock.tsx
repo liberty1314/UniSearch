@@ -1,9 +1,6 @@
 import React from "react";
-import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import SearchBox from "@/components/SearchBox";
-import { useSearchTransitionLayout } from "@/components/search/searchTransitionContext";
-import { SEARCH_QUERY_LAYOUT_ID } from "@/components/search/searchTransitionModel";
 import { Button } from "@/components/ui/button";
 
 interface SearchQueryDockProps {
@@ -15,8 +12,6 @@ const SearchQueryDock: React.FC<SearchQueryDockProps> = ({
   fromTrendingLabel,
   onBack,
 }) => {
-  const { shouldShareQueryLayout } = useSearchTransitionLayout();
-
   return (
     <header
       data-testid="search-query-dock"
@@ -34,17 +29,13 @@ const SearchQueryDock: React.FC<SearchQueryDockProps> = ({
           <ArrowLeft className="h-4 w-4" />
         </Button>
 
-        <motion.div
-          layoutId={shouldShareQueryLayout ? SEARCH_QUERY_LAYOUT_ID : undefined}
-          data-shared-query-layout={shouldShareQueryLayout}
-          className="min-w-0 flex-1"
-        >
+        <div className="min-w-0 flex-1">
           <SearchBox
             className="max-w-none"
             placeholder="继续搜索资源..."
             appearance="canvas"
           />
-        </motion.div>
+        </div>
       </div>
 
       {fromTrendingLabel ? (

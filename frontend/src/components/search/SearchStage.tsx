@@ -1,13 +1,8 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import SearchBox from "@/components/SearchBox";
 import SearchFragmentField from "@/components/search/SearchFragmentField";
-import { useSearchTransitionLayout } from "@/components/search/searchTransitionContext";
-import {
-  SEARCH_QUERY_LAYOUT_ID,
-  type SearchTransitionViewState,
-} from "@/components/search/searchTransitionModel";
+import { type SearchTransitionViewState } from "@/components/search/searchTransitionModel";
 import { Button } from "@/components/ui/button";
 
 interface SearchStageProps {
@@ -29,7 +24,6 @@ const SearchStage: React.FC<SearchStageProps> = ({
 }) => {
   const [focused, setFocused] = useState(false);
   const [inputSignal, setInputSignal] = useState(0);
-  const { shouldShareQueryLayout } = useSearchTransitionLayout();
 
   return (
     <section
@@ -57,9 +51,7 @@ const SearchStage: React.FC<SearchStageProps> = ({
       />
 
       <div className="relative z-20 w-full max-w-4xl text-center">
-        <motion.div
-          layoutId={shouldShareQueryLayout ? SEARCH_QUERY_LAYOUT_ID : undefined}
-          data-shared-query-layout={shouldShareQueryLayout}
+        <div
           className="relative z-30 mx-auto w-full max-w-3xl"
         >
           <SearchBox
@@ -71,7 +63,7 @@ const SearchStage: React.FC<SearchStageProps> = ({
             onFocusChange={setFocused}
             onInputCommitted={() => setInputSignal((value) => value + 1)}
           />
-        </motion.div>
+        </div>
       </div>
     </section>
   );

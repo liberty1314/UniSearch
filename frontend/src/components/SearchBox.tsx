@@ -32,9 +32,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
 }) => {
   const controller = useSearchBoxController({ autoFocus, onSearch });
 
-  const handleSearch = () => {
-    void controller.submitKeyword(controller.inputValue);
-  };
+  const handleSearch = () => controller.submitKeyword(controller.inputValue);
 
   return (
     <div

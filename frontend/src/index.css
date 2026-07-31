@@ -1489,6 +1489,15 @@ body {
   mix-blend-mode: normal;
 }
 
+/* 仅在主题切换期间同步快照时长，不影响路由等其他视图过渡。 */
+html[data-magicui-theme-vt="active"]::view-transition-group(root) {
+  animation-duration: var(--magicui-theme-toggle-vt-duration);
+}
+
+html[data-magicui-theme-vt="active"]::view-transition-new(root) {
+  clip-path: var(--magicui-theme-vt-clip-from);
+}
+
 /* 3D glass/neumorphic helpers */
 .glass-card-3d {
   background: rgba(255, 255, 255, 0.88);

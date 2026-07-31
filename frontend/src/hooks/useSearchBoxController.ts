@@ -385,10 +385,8 @@ export function useSearchBoxController({
         navigate(nextUrl, {
           state: { skipSearchSync: true },
         });
-        await performSearch(nextParams, { preserveResults: false });
-      } else {
-        await buttonRef.current?.run(() => performSearch(nextParams, { preserveResults: false }));
       }
+      await performSearch(nextParams, { preserveResults: false });
       onSearch?.(keyword);
       setShowHistory(false);
     } catch (error) {

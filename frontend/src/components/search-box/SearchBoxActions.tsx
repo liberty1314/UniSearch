@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 interface SearchBoxActionsProps {
   buttonRef: React.RefObject<StatefulButtonHandle>;
   disabled: boolean;
-  onSearch: () => void;
+  onSearch: () => void | Promise<void>;
   appearance?: "default" | "canvas";
 }
 
