@@ -57,7 +57,7 @@ const ADMIN_AUDIT_TABLE_GRID_TEMPLATE_COLUMNS = [
   'minmax(150px,1fr)',
 ].join(' ');
 
-const CLEANUP_DAYS = 90;
+const DEFAULT_CLEANUP_DAYS = 30;
 
 const formatDateTime = (value: string | null): string => {
   if (!value) {
@@ -100,6 +100,10 @@ const AdminAuditView: React.FC = () => {
 
   const [isCleanupOpen, setIsCleanupOpen] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
+  const [cleanupDaysInput, setCleanupDaysInput] = useState(String(DEFAULT_CLEANUP_DAYS));
+
+  const cleanupDays = Number.parseInt(cleanupDaysInput, 10);
+  const isCleanupDaysValid = Number.isInteger(cleanupDays) && cleanupDays >= 1;
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const hasFilters = activeOperator.trim().length > 0 || activeAction.trim().length > 0;
@@ -184,10 +188,13 @@ const AdminAuditView: React.FC = () => {
   };
 
   const handleCleanupConfirm = async () => {
+    if (!isCleanupDaysValid) {
+      return;
+    }
     setIsCleaning(true);
     try {
-      const response = await AdminAuditService.cleanup(CLEANUP_DAYS);
-      toast.success(`已清理 ${response.deleted} 条 ${CLEANUP_DAYS} 天前的记录`);
+      const response = await AdminAuditService.cleanup(cleanupDays);
+      toast.success(`已清理 ${response.deleted} 条 ${cleanupDays} 天前的记录`);
       setIsCleanupOpen(false);
       setCurrentPage(1);
       void loadLogs(1);
@@ -298,7 +305,7 @@ const AdminAuditView: React.FC = () => {
             <AdminMetricCard label="记录总数" value={total} hint="符合条件的操作审计记录" />
             <AdminMetricCard label="本页写操作" value={writeCount} hint="POST/PUT/DELETE/PATCH" />
             <AdminMetricCard label="当前页码" value={`${currentPage} / ${totalPages}`} hint="列表分页信息" />
-            <AdminMetricCard label="留存天数" value={CLEANUP_DAYS} hint="默认审计留存周期" />
+            <AdminMetricCard label="留存天数" value={DEFAULT_CLEANUP_DAYS} hint="清理默认留存周期" />
           </AdminMetricGrid>
         </motion.div>
 
@@ -435,12 +442,31 @@ const AdminAuditView: React.FC = () => {
         open={isCleanupOpen}
         onOpenChange={(open) => !open && setIsCleanupOpen(false)}
         title="清理操作审计记录"
-        description={`确定要删除 ${CLEANUP_DAYS} 天前的操作审计记录吗？此操作无法撤销。`}
+        description={`将删除 ${isCleanupDaysValid ? cleanupDays : '—'} 天前的操作审计记录，此操作无法撤销。`}
         confirmText={isCleaning ? '清理中...' : '确认清理'}
         variant="destructive"
+        confirmDisabled={!isCleanupDaysValid}
         onConfirm={() => void handleCleanupConfirm()}
         isLoading={isCleaning}
-      />
+      >
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="admin-audit-cleanup-days" className="text-sm font-medium text-slate-700 dark:text-slate-200">
+            留存天数
+          </label>
+          <Input
+            id="admin-audit-cleanup-days"
+            type="number"
+            min={1}
+            value={cleanupDaysInput}
+            onChange={(e) => setCleanupDaysInput(e.target.value)}
+            placeholder={`默认 ${DEFAULT_CLEANUP_DAYS} 天`}
+            className="h-9 border-[0.5px] border-slate-200/70 bg-white/60 text-sm shadow-sm dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52]"
+          />
+          {!isCleanupDaysValid && (
+            <p className="text-xs text-red-500 dark:text-red-400">请输入大于 0 的整数天数</p>
+          )}
+        </div>
+      </ConfirmDialog>
     </>
   );
 };

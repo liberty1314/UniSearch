@@ -1,0 +1,16 @@
+[2026-09-16 18:00] feat(audit): 新增审计记录可配置留存天数
+  - Body: 为操作审计与搜索审计清理增加可配置留存天数输入，并扩展确认弹窗以支持校验和禁用确认操作。补充后端清理服务与前端交互测试，删除过时的设计及实施说明文档。
+  - Files:
+    - DESIGN.md
+    - IMPLEMENTATION_SUMMARY.md
+    - PRODUCT.md
+    - QUICK_REFERENCE.md
+    - backend/service/admin_audit_service_test.go
+    - backend/service/search_audit_service_test.go
+    - frontend/src/components/admin/AdminAuditView.tsx
+    - frontend/src/components/admin/SearchAuditView.tsx
+    - frontend/src/components/admin/__tests__/AdminAuditView.test.tsx
+    - frontend/src/components/admin/__tests__/SearchAuditView.test.tsx
+    - frontend/src/components/ui/__tests__/ConfirmDialog.test.tsx
+    - frontend/src/components/ui/confirm-dialog.tsx
+    - docs/readme_2609.md

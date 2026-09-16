@@ -20,6 +20,8 @@ interface ConfirmDialogProps {
     variant?: 'default' | 'destructive';
     onConfirm: () => void;
     isLoading?: boolean;
+    confirmDisabled?: boolean;
+    children?: React.ReactNode;
 }
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -32,6 +34,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     variant = 'default',
     onConfirm,
     isLoading = false,
+    confirmDisabled = false,
+    children,
 }) => {
     const handleConfirm = () => {
         onConfirm();
@@ -44,13 +48,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                     <AlertDialogTitle>{title}</AlertDialogTitle>
                     <AlertDialogDescription>{description}</AlertDialogDescription>
                 </AlertDialogHeader>
+                {children}
                 <AlertDialogFooter>
                     <AlertDialogCancel disabled={isLoading}>
                         {cancelText}
                     </AlertDialogCancel>
                     <AlertDialogAction
                         onClick={handleConfirm}
-                        disabled={isLoading}
+                        disabled={isLoading || confirmDisabled}
                         className={variant === 'destructive' ? 'bg-red-500 hover:bg-red-600' : ''}
                     >
                         {isLoading ? '处理中...' : confirmText}

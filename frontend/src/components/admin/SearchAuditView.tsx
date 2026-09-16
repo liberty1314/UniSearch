@@ -32,7 +32,7 @@ import { getErrorDataError, getErrorMessage, getErrorStatus } from '@/lib/error'
 const countPillClassName =
   'inline-flex items-center gap-2 rounded-full border-[0.5px] border-slate-200/50 bg-white/40 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-md dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.48] dark:text-slate-200';
 
-const CLEANUP_RETENTION_DAYS = 30;
+const DEFAULT_CLEANUP_RETENTION_DAYS = 30;
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -90,6 +90,12 @@ const SearchAuditView: React.FC = () => {
 
   const [isCleanupOpen, setIsCleanupOpen] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
+  const [cleanupDaysInput, setCleanupDaysInput] = useState(
+    String(DEFAULT_CLEANUP_RETENTION_DAYS),
+  );
+
+  const cleanupDays = Number.parseInt(cleanupDaysInput, 10);
+  const isCleanupDaysValid = Number.isInteger(cleanupDays) && cleanupDays >= 1;
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const hasFilters = activeKeyword.trim().length > 0;
@@ -162,10 +168,13 @@ const SearchAuditView: React.FC = () => {
   };
 
   const handleCleanupConfirm = async () => {
+    if (!isCleanupDaysValid) {
+      return;
+    }
     setIsCleaning(true);
     try {
-      const response = await SearchAuditService.cleanup(CLEANUP_RETENTION_DAYS);
-      toast.success(`已清理 ${response.deleted} 条 ${CLEANUP_RETENTION_DAYS} 天前的记录`);
+      const response = await SearchAuditService.cleanup(cleanupDays);
+      toast.success(`已清理 ${response.deleted} 条 ${cleanupDays} 天前的记录`);
       setIsCleanupOpen(false);
       setCurrentPage(1);
       void loadAuditLogs(1);
@@ -334,7 +343,7 @@ const SearchAuditView: React.FC = () => {
                     className="border-[0.5px] border-red-200/60 text-red-600 hover:bg-red-50/80 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-950/30"
                   >
                     <Trash2 className="w-4 h-4 sm:mr-1" />
-                    <span className="hidden sm:inline">清理 {CLEANUP_RETENTION_DAYS} 天前</span>
+                    <span className="hidden sm:inline">清理旧记录</span>
                   </Button>
                 </motion.div>
               </div>
@@ -397,12 +406,31 @@ const SearchAuditView: React.FC = () => {
         open={isCleanupOpen}
         onOpenChange={(open) => !open && setIsCleanupOpen(false)}
         title="确认清理搜索审计"
-        description={`您确定要清理 ${CLEANUP_RETENTION_DAYS} 天前的搜索审计记录吗？此操作无法撤销。`}
+        description={`将删除 ${isCleanupDaysValid ? cleanupDays : '—'} 天前的搜索审计记录，此操作无法撤销。`}
         confirmText={isCleaning ? '清理中...' : '确认清理'}
         variant="destructive"
+        confirmDisabled={!isCleanupDaysValid}
         onConfirm={() => void handleCleanupConfirm()}
         isLoading={isCleaning}
-      />
+      >
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="search-audit-cleanup-days" className="text-sm font-medium text-slate-700 dark:text-slate-200">
+            留存天数
+          </label>
+          <Input
+            id="search-audit-cleanup-days"
+            type="number"
+            min={1}
+            value={cleanupDaysInput}
+            onChange={(e) => setCleanupDaysInput(e.target.value)}
+            placeholder={`默认 ${DEFAULT_CLEANUP_RETENTION_DAYS} 天`}
+            className="h-9 border-[0.5px] border-slate-200/70 bg-white/60 text-sm shadow-sm dark:border-cyan-300/[0.14] dark:bg-slate-950/[0.52]"
+          />
+          {!isCleanupDaysValid && (
+            <p className="text-xs text-red-500 dark:text-red-400">请输入大于 0 的整数天数</p>
+          )}
+        </div>
+      </ConfirmDialog>
     </>
   );
 };

@@ -81,7 +81,7 @@ func CleanupAdminAuditHandler(c *gin.Context) {
 		return
 	}
 
-	days, _ := strconv.Atoi(c.DefaultQuery("days", "90"))
+	days, _ := strconv.Atoi(c.DefaultQuery("days", "30"))
 	deleted, err := adminAuditService.Cleanup(days)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
