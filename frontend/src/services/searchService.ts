@@ -5,8 +5,12 @@ import type { ResourceResolveRequest, ResourceResolveResponse, ScanTransferRefre
 import type { HotRankingItem } from '@/types/hotRanking';
 import { normalizeFilterConfig } from '@/utils/searchFilters';
 import { useAuthStore } from '@/stores/authStore';
+import { refreshAuthTokenSingleFlight } from '@/lib/authRefreshManager';
 
 const HEALTH_CACHE_TTL_MS = 5000;
+// 渐进式搜索的空闲超时：与普通搜索的 30s 超时策略对齐，
+// 但按「无新数据到达」计时，避免误杀仍在正常推流的长搜索。
+const PROGRESSIVE_SEARCH_IDLE_TIMEOUT_MS = 30000;
 let healthCache:
   | {
       value: HealthResponse;
@@ -24,6 +28,11 @@ export interface TrendingSearchAction {
 
 interface ProgressiveSearchHandlers {
   onEvent?: (event: SearchProgressiveEvent) => void;
+  /**
+   * 外部取消信号：新搜索发起或结果被清空时中止仍在传输的旧流，
+   * 避免旧请求继续占用带宽（结果仍由 store 层 requestId 守卫丢弃）。
+   */
+  signal?: AbortSignal;
 }
 
 interface RefreshScanTransferOptions {
@@ -64,7 +73,26 @@ export class SearchService {
     params: SearchParams,
     handlers: ProgressiveSearchHandlers = {},
   ): Promise<SearchResponse> {
-    const cleanedData = this.buildSearchRequestPayload(params);
+    return this.executeProgressiveRequest(
+      this.buildSearchRequestPayload(params),
+      handlers,
+      false,
+    );
+  }
+
+  /**
+   * 渐进式搜索请求执行体。
+   *
+   * 与 apiClient 的对齐点：
+   * - 401 时走单飞刷新令牌并重试一次（仅 rememberMe 会话，与拦截器条件一致）；
+   * - 空闲超时与普通搜索 30s 策略对齐，按「无新数据到达」计时。
+   * NDJSON 流必须用原生 fetch 读取，无法复用 axios 实例本身。
+   */
+  private static async executeProgressiveRequest(
+    cleanedData: Record<string, unknown>,
+    handlers: ProgressiveSearchHandlers,
+    isRetry: boolean,
+  ): Promise<SearchResponse> {
     const token = useAuthStore.getState().token;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -74,60 +102,104 @@ export class SearchService {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch('/api/search/progressive', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(cleanedData),
-    });
-
-    if (!response.ok) {
-      throw {
-        code: response.status,
-        message: await response.text() || '渐进式搜索失败',
-      };
-    }
-    if (!response.body) {
-      throw new Error('浏览器不支持渐进式响应读取');
+    const controller = new AbortController();
+    const abortOnExternalSignal = () => controller.abort();
+    if (handlers.signal) {
+      if (handlers.signal.aborted) {
+        controller.abort();
+      } else {
+        handlers.signal.addEventListener('abort', abortOnExternalSignal);
+      }
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let finalResponse: SearchResponse | null = null;
-
-    const handleLine = (line: string) => {
-      const trimmed = line.trim();
-      if (!trimmed) {
-        return;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    const armIdleTimer = () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer);
       }
-      const event = JSON.parse(trimmed) as SearchProgressiveEvent;
-      handlers.onEvent?.(event);
-      if (event.type === 'error') {
-        throw new Error(event.message || '渐进式搜索失败');
-      }
-      if (event.type === 'complete' && event.response) {
-        finalResponse = event.response;
-      }
+      idleTimer = setTimeout(
+        () => controller.abort(),
+        PROGRESSIVE_SEARCH_IDLE_TIMEOUT_MS,
+      );
     };
+    armIdleTimer();
 
-    while (true) {
-      const { value, done } = await reader.read();
-      buffer += decoder.decode(value, { stream: !done });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-      for (const line of lines) {
-        handleLine(line);
-      }
-      if (done) {
-        break;
-      }
-    }
-    handleLine(buffer);
+    try {
+      const response = await fetch('/api/search/progressive', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(cleanedData),
+        signal: controller.signal,
+      });
 
-    if (!finalResponse) {
-      throw new Error('渐进式搜索未返回最终结果');
+      if (
+        response.status === 401 &&
+        !isRetry &&
+        useAuthStore.getState().rememberMe
+      ) {
+        try {
+          await refreshAuthTokenSingleFlight();
+          return await this.executeProgressiveRequest(cleanedData, handlers, true);
+        } catch {
+          // 刷新失败则继续走下方错误分支，由 store 层决定是否引导登录
+        }
+      }
+
+      if (!response.ok) {
+        throw {
+          code: response.status,
+          message: await response.text() || '渐进式搜索失败',
+        };
+      }
+      if (!response.body) {
+        throw new Error('浏览器不支持渐进式响应读取');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let finalResponse: SearchResponse | null = null;
+
+      const handleLine = (line: string) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return;
+        }
+        const event = JSON.parse(trimmed) as SearchProgressiveEvent;
+        handlers.onEvent?.(event);
+        if (event.type === 'error') {
+          throw new Error(event.message || '渐进式搜索失败');
+        }
+        if (event.type === 'complete' && event.response) {
+          finalResponse = event.response;
+        }
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        armIdleTimer();
+        buffer += decoder.decode(value, { stream: !done });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          handleLine(line);
+        }
+        if (done) {
+          break;
+        }
+      }
+      handleLine(buffer);
+
+      if (!finalResponse) {
+        throw new Error('渐进式搜索未返回最终结果');
+      }
+      return finalResponse;
+    } finally {
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+      }
+      handlers.signal?.removeEventListener('abort', abortOnExternalSignal);
     }
-    return finalResponse;
   }
 
   private static buildSearchRequestPayload(params: SearchParams): Record<string, unknown> {

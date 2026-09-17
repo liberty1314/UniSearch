@@ -1,10 +1,17 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { SearchService } from '@/services/searchService';
 
-const { postMock, getMock } = vi.hoisted(() => ({
+const { postMock, getMock, refreshSingleFlightMock } = vi.hoisted(() => ({
   postMock: vi.fn(),
   getMock: vi.fn(),
+  refreshSingleFlightMock: vi.fn(),
 }));
+
+// 渐进式搜索的认证状态可变快照，供 401 刷新链路测试控制
+const authState = {
+  token: null as string | null,
+  rememberMe: false,
+};
 
 vi.mock('@/lib/api', () => ({
   apiClient: {
@@ -13,12 +20,65 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: {
+    getState: () => authState,
+  },
+}));
+
+vi.mock('@/lib/authRefreshManager', () => ({
+  refreshAuthTokenSingleFlight: (...args: unknown[]) => refreshSingleFlightMock(...args),
+}));
+
+const buildSearchParams = () => ({
+  keyword: '仙逆',
+  source: 'all' as const,
+  resultType: 'merge' as const,
+  cloudTypes: [],
+  channels: [],
+  plugins: [],
+  concurrency: 5,
+  refresh: false,
+  ext: {},
+});
+
+// 构造可分块读取的 NDJSON 响应体
+const buildNdjsonResponse = (lines: unknown[], status = 200) => ({
+  ok: status >= 200 && status < 300,
+  status,
+  text: async () => (lines[0] ? JSON.stringify(lines[0]) : ''),
+  body: {
+    getReader: () => {
+      let index = 0;
+      return {
+        read: async () => {
+          if (index < lines.length) {
+            const value = new TextEncoder().encode(
+              `${JSON.stringify(lines[index])}\n`,
+            );
+            index += 1;
+            return { done: false, value };
+          }
+          return { done: true, value: undefined };
+        },
+      };
+    },
+  },
+});
+
 describe('SearchService', () => {
   beforeEach(() => {
     postMock.mockReset();
     getMock.mockReset();
+    refreshSingleFlightMock.mockReset();
+    authState.token = null;
+    authState.rememberMe = false;
     SearchService.clearHealthCacheForTest();
     vi.useRealTimers();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('forwards search API errors without dropping the status code', async () => {
@@ -327,5 +387,131 @@ describe('SearchService', () => {
       plugins: ['second'],
     });
     expect(getMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('渐进式搜索解析 NDJSON 事件并透传外部取消信号', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const abortController = new AbortController();
+    fetchMock.mockResolvedValue(
+      buildNdjsonResponse([
+        { type: 'started', completed_sources: 0, total_sources: 1, received_batches: 0 },
+        { type: 'batch', resources: [], warnings: [], completed_sources: 1, total_sources: 1, received_batches: 1 },
+        {
+          type: 'complete',
+          response: { total: 0, resources: [], facets: {}, warnings: [] },
+        },
+      ]),
+    );
+
+    const events: Array<{ type: string }> = [];
+    const result = await SearchService.searchProgressive(buildSearchParams(), {
+      signal: abortController.signal,
+      onEvent: (event) => events.push({ type: event.type }),
+    });
+
+    expect(result.total).toBe(0);
+    expect(events.map((event) => event.type)).toEqual([
+      'started',
+      'batch',
+      'complete',
+    ]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/search/progressive',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('外部取消信号中止渐进式搜索流', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    // 流读取挂起，直到收到取消信号才以 AbortError 拒绝
+    fetchMock.mockImplementation(
+      (_url: string, init: { signal: AbortSignal }) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          body: {
+            getReader: () => ({
+              read: () =>
+                new Promise((_resolve, reject) => {
+                  init.signal.addEventListener('abort', () => {
+                    reject(new DOMException('已中止', 'AbortError'));
+                  });
+                }),
+            }),
+          },
+        }),
+    );
+
+    const controller = new AbortController();
+    const pending = SearchService.searchProgressive(buildSearchParams(), {
+      signal: controller.signal,
+    });
+
+    await vi.waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    controller.abort();
+
+    await expect(pending).rejects.toThrow();
+  });
+
+  it('渐进式搜索 401 时刷新令牌并重试一次', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    authState.token = 'expired-token';
+    authState.rememberMe = true;
+    refreshSingleFlightMock.mockResolvedValue({});
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: async () => 'unauthorized',
+        body: null,
+      })
+      .mockResolvedValueOnce(
+        buildNdjsonResponse([
+          {
+            type: 'complete',
+            response: { total: 1, resources: [], facets: {}, warnings: [] },
+          },
+        ]),
+      );
+
+    await expect(
+      SearchService.searchProgressive(buildSearchParams()),
+    ).resolves.toMatchObject({ total: 1 });
+
+    expect(refreshSingleFlightMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('渐进式搜索流空闲超过 30 秒后中止', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    fetchMock.mockImplementation(
+      (_url: string, init: { signal: AbortSignal }) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          body: {
+            getReader: () => ({
+              read: () =>
+                new Promise((_resolve, reject) => {
+                  init.signal.addEventListener('abort', () => {
+                    reject(new DOMException('已中止', 'AbortError'));
+                  });
+                }),
+            }),
+          },
+        }),
+    );
+
+    const pending = SearchService.searchProgressive(buildSearchParams());
+    const pendingExpectation = expect(pending).rejects.toThrow();
+    await vi.advanceTimersByTimeAsync(31000);
+    await pendingExpectation;
   });
 });

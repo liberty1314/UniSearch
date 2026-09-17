@@ -26,6 +26,15 @@ export const MAX_SEARCH_HISTORY = 8;
 const initialDisplayCount = 48;
 const loadMoreIncrement = 24;
 
+// 当前渐进搜索流的取消控制器：新搜索发起或结果被清空时中止旧流，
+// 避免旧 NDJSON 连接继续占用带宽；结果仍由 requestId 守卫兜底丢弃。
+let activeSearchAbortController: AbortController | null = null;
+
+const abortActiveSearchStream = () => {
+  activeSearchAbortController?.abort();
+  activeSearchAbortController = null;
+};
+
 /**
  * 搜索状态接口
  */
@@ -212,6 +221,15 @@ export const useSearchStore = create<SearchState>()(
        * 执行搜索
        */
       performSearch: async (params, options) => {
+        abortActiveSearchStream();
+        const searchAbortController = new AbortController();
+        activeSearchAbortController = searchAbortController;
+        const releaseSearchStream = () => {
+          if (activeSearchAbortController === searchAbortController) {
+            activeSearchAbortController = null;
+          }
+        };
+
         const requestId = createSearchRequestId();
         const state = get();
         const finalParams = { ...state.searchParams, ...params };
@@ -224,6 +242,7 @@ export const useSearchStore = create<SearchState>()(
         // 验证搜索参数
         const validation = SearchService.validateSearchParams(finalParams);
         if (!validation.valid) {
+          releaseSearchStream();
           set({ activeSearchParams: null, error: validation.error });
           return;
         }
@@ -280,6 +299,7 @@ export const useSearchStore = create<SearchState>()(
           }
 
           const results = await SearchService.searchProgressive(finalParams, {
+            signal: searchAbortController.signal,
             onEvent: (event) => {
               if (!isLatestSearchRequest(requestId)) {
                 return;
@@ -363,6 +383,8 @@ export const useSearchStore = create<SearchState>()(
               activeSearchParams: null,
             });
           }
+        } finally {
+          releaseSearchStream();
         }
       },
 
@@ -410,6 +432,7 @@ export const useSearchStore = create<SearchState>()(
         }
 
         invalidateSearchRequests();
+        abortActiveSearchStream();
         set({
           searchResults: null,
           error: null,
@@ -633,6 +656,7 @@ export const useSearchStore = create<SearchState>()(
        */
       reset: () => {
         invalidateSearchRequests();
+        abortActiveSearchStream();
         set({
           searchParams: buildDefaultSearchParams(),
           searchResults: null,

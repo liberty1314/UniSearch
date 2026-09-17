@@ -499,4 +499,69 @@ describe("searchStore", () => {
     expect(nextState.lastCompletedSearchParams).toBeNull();
     expect(nextState.searchParams.keyword).toBe("");
   });
+
+  it("清空结果会中止进行中的渐进搜索流", async () => {
+    const { useSearchStore } = await import("@/stores/searchStore");
+
+    searchProgressiveMock.mockImplementationOnce(
+      (_params: unknown, handlers: { signal?: AbortSignal }) =>
+        new Promise<SearchResponse>((_resolve, reject) => {
+          handlers.signal?.addEventListener("abort", () => {
+            reject(new DOMException("已中止", "AbortError"));
+          });
+        }),
+    );
+
+    const searchPromise = useSearchStore
+      .getState()
+      .performSearch({ keyword: "中止流" });
+
+    await vi.waitFor(() => {
+      expect(searchProgressiveMock).toHaveBeenCalled();
+    });
+
+    useSearchStore.getState().clearResults();
+
+    const handler = searchProgressiveMock.mock.calls[0][1] as {
+      signal?: AbortSignal;
+    };
+    expect(handler.signal?.aborted).toBe(true);
+    await searchPromise;
+  });
+
+  it("新一轮搜索会中止上一次未完成的渐进搜索流", async () => {
+    const { useSearchStore } = await import("@/stores/searchStore");
+
+    searchProgressiveMock.mockImplementation(
+      (_params: unknown, handlers: { signal?: AbortSignal }) =>
+        new Promise<SearchResponse>((_resolve, reject) => {
+          handlers.signal?.addEventListener("abort", () => {
+            reject(new DOMException("已中止", "AbortError"));
+          });
+        }),
+    );
+
+    const firstPromise = useSearchStore
+      .getState()
+      .performSearch({ keyword: "第一次" });
+    await vi.waitFor(() => {
+      expect(searchProgressiveMock).toHaveBeenCalledTimes(1);
+    });
+
+    const firstSignal = searchProgressiveMock.mock.calls[0][1] as {
+      signal?: AbortSignal;
+    };
+
+    const secondPromise = useSearchStore
+      .getState()
+      .performSearch({ keyword: "第二次" });
+    await vi.waitFor(() => {
+      expect(searchProgressiveMock).toHaveBeenCalledTimes(2);
+    });
+
+    expect(firstSignal.signal?.aborted).toBe(true);
+
+    useSearchStore.getState().clearResults();
+    await Promise.allSettled([firstPromise, secondPromise]);
+  });
 });
