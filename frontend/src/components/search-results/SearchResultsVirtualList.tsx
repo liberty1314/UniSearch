@@ -1,14 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "@/lib/utils";
-import { SearchResultGridCard } from "@/components/home/SearchResultGridCard";
-import { SearchResultListItem } from "@/components/home/SearchResultListItem";
+import SearchResultItemView from "@/components/search-results/SearchResultItemView";
 import type { ResultItem } from "@/utils/cloudTypeUtils";
-import {
-  resolveDeferredResourceLinks,
-  resolveResourceOpenTarget,
-} from "@/utils/resourceDisplay";
-import { resolveSearchResultEntranceDelay } from "@/components/search-results/searchResultReveal";
 
 type ViewMode = "list" | "grid";
 
@@ -154,48 +148,21 @@ const SearchResultsVirtualList: React.FC<SearchResultsVirtualListProps> = ({
               }px)`,
             }}
           >
-            {row.map((item, columnIndex) => {
-              const flatIndex = virtualRow.index * columns + columnIndex;
-              const entranceDelay = resolveSearchResultEntranceDelay(
-                flatIndex,
-                revealActive,
-              );
-              const canOpenResource =
-                Boolean(resolveResourceOpenTarget(item)) ||
-                resolveDeferredResourceLinks(item.resource).length > 0;
-
-              return viewMode === "grid" ? (
-                <SearchResultGridCard
-                  key={item.resource.id}
-                  item={item}
-                  entranceDelay={entranceDelay}
-                  canOpenResource={canOpenResource}
-                  isResolvingResource={resolvingResourceId === item.resource.id}
-                  showDetailEntry={enableResourceDetailPage}
-                  showSourceBadge={enableResourceSourceBadges}
-                  onOpenResource={onOpenResource}
-                  onCancelResolveResource={onCancelResolveResource}
-                  onOpenDetail={
-                    enableResourceDetailPage ? onOpenDetail : () => undefined
-                  }
-                />
-              ) : (
-                <SearchResultListItem
-                  key={item.resource.id}
-                  item={item}
-                  entranceDelay={entranceDelay}
-                  canOpenResource={canOpenResource}
-                  isResolvingResource={resolvingResourceId === item.resource.id}
-                  onOpenResource={onOpenResource}
-                  onCancelResolveResource={onCancelResolveResource}
-                  onOpenDetail={
-                    enableResourceDetailPage ? onOpenDetail : () => undefined
-                  }
-                  showDetailEntry={enableResourceDetailPage}
-                  showSourceBadge={enableResourceSourceBadges}
-                />
-              );
-            })}
+            {row.map((item, columnIndex) => (
+              <SearchResultItemView
+                key={item.resource.id}
+                item={item}
+                index={virtualRow.index * columns + columnIndex}
+                viewMode={viewMode}
+                revealActive={revealActive}
+                enableResourceDetailPage={enableResourceDetailPage}
+                enableResourceSourceBadges={enableResourceSourceBadges}
+                resolvingResourceId={resolvingResourceId}
+                onOpenResource={onOpenResource}
+                onCancelResolveResource={onCancelResolveResource}
+                onOpenDetail={onOpenDetail}
+              />
+            ))}
           </div>
         );
       })}

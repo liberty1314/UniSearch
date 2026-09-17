@@ -1,14 +1,8 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { SearchResultGridCard } from "@/components/home/SearchResultGridCard";
-import { SearchResultListItem } from "@/components/home/SearchResultListItem";
 import SearchResultsVirtualList from "@/components/search-results/SearchResultsVirtualList";
+import SearchResultItemView from "@/components/search-results/SearchResultItemView";
 import type { ResultItem } from "@/utils/cloudTypeUtils";
-import {
-  resolveDeferredResourceLinks,
-  resolveResourceOpenTarget,
-} from "@/utils/resourceDisplay";
-import { resolveSearchResultEntranceDelay } from "@/components/search-results/searchResultReveal";
 
 type ViewMode = "list" | "grid";
 
@@ -56,52 +50,31 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
   }
 
   return (
-  <div
-    data-testid="search-results-stage"
-    className={cn(
-      "relative z-10 w-full",
-      viewMode === "grid"
-        ? "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-        : "flex flex-col gap-4",
-    )}
-  >
-    {resources.map((item, index) => {
-      const entranceDelay = resolveSearchResultEntranceDelay(
-        index,
-        revealActive,
-      );
-      const canOpenResource = Boolean(resolveResourceOpenTarget(item)) ||
-        resolveDeferredResourceLinks(item.resource).length > 0;
-
-      return viewMode === "grid" ? (
-        <SearchResultGridCard
+    <div
+      data-testid="search-results-stage"
+      className={cn(
+        "relative z-10 w-full",
+        viewMode === "grid"
+          ? "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+          : "flex flex-col gap-4",
+      )}
+    >
+      {resources.map((item, index) => (
+        <SearchResultItemView
           key={item.resource.id}
           item={item}
-          entranceDelay={entranceDelay}
-          canOpenResource={canOpenResource}
-          isResolvingResource={resolvingResourceId === item.resource.id}
-          showDetailEntry={enableResourceDetailPage}
-          showSourceBadge={enableResourceSourceBadges}
+          index={index}
+          viewMode={viewMode}
+          revealActive={revealActive}
+          enableResourceDetailPage={enableResourceDetailPage}
+          enableResourceSourceBadges={enableResourceSourceBadges}
+          resolvingResourceId={resolvingResourceId}
           onOpenResource={onOpenResource}
           onCancelResolveResource={onCancelResolveResource}
-          onOpenDetail={enableResourceDetailPage ? onOpenDetail : () => undefined}
+          onOpenDetail={onOpenDetail}
         />
-      ) : (
-        <SearchResultListItem
-          key={item.resource.id}
-          item={item}
-          entranceDelay={entranceDelay}
-          canOpenResource={canOpenResource}
-          isResolvingResource={resolvingResourceId === item.resource.id}
-          onOpenResource={onOpenResource}
-          onCancelResolveResource={onCancelResolveResource}
-          onOpenDetail={enableResourceDetailPage ? onOpenDetail : () => undefined}
-          showDetailEntry={enableResourceDetailPage}
-          showSourceBadge={enableResourceSourceBadges}
-        />
-      );
-    })}
-  </div>
+      ))}
+    </div>
   );
 };
 
