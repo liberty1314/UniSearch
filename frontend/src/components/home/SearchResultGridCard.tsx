@@ -12,6 +12,7 @@ import {
   resolveResourceDisplayTitle,
   resolveResourceSourcePresentation,
 } from "@/utils/resourceDisplay";
+import HighlightedText from "@/components/search-results/HighlightedText";
 
 // ─── 属性 ─────────────────────────────────────────────────────────────────────
 
@@ -22,6 +23,8 @@ interface SearchResultGridCardProps {
   isResolvingResource?: boolean;
   showDetailEntry: boolean;
   showSourceBadge: boolean;
+  /** 搜索关键词，用于标题命中片段高亮；缺省时不高亮 */
+  highlightKeyword?: string;
   onOpenResource: (item: ResultItem) => void;
   onCancelResolveResource: () => void;
   onOpenDetail: (item: ResultItem) => void;
@@ -35,7 +38,7 @@ interface SearchResultGridCardProps {
  * 入场延迟由结果列表显式传入，减少动态效果时不执行位移动画。
  */
 export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
-  ({ item, entranceDelay = 0, canOpenResource, isResolvingResource = false, showDetailEntry, showSourceBadge, onOpenResource, onCancelResolveResource, onOpenDetail }) => {
+  ({ item, entranceDelay = 0, canOpenResource, isResolvingResource = false, showDetailEntry, showSourceBadge, highlightKeyword, onOpenResource, onCancelResolveResource, onOpenDetail }) => {
     const shouldReduceMotion = useReducedMotion();
     const resolvedEntranceDelay = shouldReduceMotion ? 0 : entranceDelay;
     const { resource, primaryLink, cloudType, datetime } = item;
@@ -120,7 +123,14 @@ export const SearchResultGridCard = React.memo<SearchResultGridCardProps>(
               省略号裁剪冲突（透明渐变叠加多行截断时省略号可能消失）。 */}
           <div className="pointer-events-none relative z-0 flex-1 mb-4 min-h-[3.5rem]">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg line-clamp-2 leading-snug transition-colors duration-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-              {displayTitle || "未命名资源"}
+              {displayTitle ? (
+                <HighlightedText
+                  text={displayTitle}
+                  keyword={highlightKeyword}
+                />
+              ) : (
+                "未命名资源"
+              )}
             </h3>
           </div>
 

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDownUp, Check, ChevronDown, Grid2X2, List } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NumberTicker } from "@/components/ui/number-ticker";
 import {
   type SearchSortMode,
 } from "@/utils/searchResultSorter";
@@ -178,14 +179,23 @@ export const SearchResultsToolbar: React.FC<SearchResultsToolbarProps> =
               <div className="flex min-w-0 flex-col gap-2">
                 <div className="flex shrink-0 flex-wrap items-center gap-2 text-[14px] font-medium text-slate-600 dark:text-slate-400">
                   <span className="flex items-center justify-center min-w-6 h-6 px-1.5 rounded-full bg-blue-50/80 text-blue-600 text-xs font-bold border border-blue-200/50 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-300 shadow-sm">
-                    {totalCount}
+                    <NumberTicker value={totalCount} className="text-xs font-bold" />
                   </span>
                   <span>个结果</span>
-                  {isRefreshing && (
-                    <span className="text-[13px] text-cyan-600 dark:text-cyan-400">
-                      加载中
-                    </span>
-                  )}
+                  <AnimatePresence initial={false}>
+                    {isRefreshing && (
+                      <motion.span
+                        key="refreshing-hint"
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.2 }}
+                        className="text-[13px] text-cyan-600 dark:text-cyan-400"
+                      >
+                        加载中
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
 

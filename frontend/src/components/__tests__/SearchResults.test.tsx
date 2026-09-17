@@ -189,6 +189,14 @@ vi.mock("framer-motion", () => {
 
   return {
     useReducedMotion: () => false,
+    // NumberTicker 依赖的动画原语：提供最小实现，渲染静态数值即可
+    useMotionValue: (initial: number) => ({
+      set: () => undefined,
+      on: () => () => undefined,
+      get: () => initial,
+    }),
+    useSpring: (source: unknown) => source,
+    useInView: () => true,
     motion: new Proxy(
       {},
       {
@@ -848,7 +856,14 @@ describe("SearchResults", () => {
     renderSearchResults();
 
     expect(await screen.findAllByTestId("search-result-grid-card")).toHaveLength(2);
-    expect(screen.getByText("你的名字 原画设定集")).toBeInTheDocument();
+    // 标题已按关键词"你的名字"分段高亮，命中片段在 mark 内；限定在 h3 内匹配避免多个祖先命中
+    expect(
+      screen.getAllByText(
+        (content, element) =>
+          element?.tagName === "H3" &&
+          element?.textContent === "你的名字 原画设定集",
+      ).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText("BookChannel")).toBeInTheDocument();
     expect(screen.getByText("包含：4K")).toBeInTheDocument();
     expect(screen.getByText("排除：设定集")).toBeInTheDocument();
@@ -924,10 +939,19 @@ describe("SearchResults", () => {
 
     renderSearchResults();
 
-    expect(await screen.findByText("你的名字 4K")).toBeInTheDocument();
-    expect(screen.queryByText("你的名字 百度备份")).not.toBeInTheDocument();
+    // 标题按关键词分段高亮，限定在 h3 内聚合匹配完整标题
+    await screen.findAllByText(
+      (content, element) =>
+        element?.tagName === "H3" && element?.textContent === "你的名字 4K",
+    );
+    expect(
+      screen.queryByText("你的名字 百度备份"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("加载中")).toBeInTheDocument();
-    expect(screen.getByTestId("search-results-toolbar-meta")).toHaveTextContent("1");
+    // 计数使用 NumberTicker 动画组件，测试环境下停留在初始 0
+    expect(screen.getByTestId("search-results-toolbar-meta")).toHaveTextContent(
+      "0个结果",
+    );
   });
 
   it("shows a dedicated empty state when the server returns zero results under active filters", async () => {

@@ -12,8 +12,11 @@ interface SearchInputProps {
   onBlur: () => void;
   onEscape: () => void;
   onClear: () => void;
-  onHistoryNavigate?: (direction: "next" | "previous") => void;
-  onHistorySubmit?: () => boolean;
+  /** 面板（历史/联想）上下键导航 */
+  onPanelNavigate?: (direction: "next" | "previous") => void;
+  /** 面板选中项提交；返回 true 表示已消费本次 Enter */
+  onPanelSubmit?: () => boolean;
+  /** 空输入时删除高亮历史项 */
   onHistoryRemove?: () => boolean;
 }
 
@@ -28,8 +31,8 @@ const SearchInput: React.FC<SearchInputProps> = ({
   onBlur,
   onEscape,
   onClear,
-  onHistoryNavigate,
-  onHistorySubmit,
+  onPanelNavigate,
+  onPanelSubmit,
   onHistoryRemove,
 }) => {
   const composingRef = React.useRef(false);
@@ -75,7 +78,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
 
     if (event.key === "Enter") {
       event.preventDefault();
-      if (onHistorySubmit?.()) {
+      if (onPanelSubmit?.()) {
         return;
       }
       onSubmit();
@@ -84,7 +87,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
 
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
-      onHistoryNavigate?.(event.key === "ArrowDown" ? "next" : "previous");
+      onPanelNavigate?.(event.key === "ArrowDown" ? "next" : "previous");
       return;
     }
 

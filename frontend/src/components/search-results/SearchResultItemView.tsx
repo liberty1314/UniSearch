@@ -19,6 +19,7 @@ interface SearchResultItemViewProps {
   enableResourceDetailPage: boolean;
   enableResourceSourceBadges: boolean;
   resolvingResourceId?: string | null;
+  highlightKeyword?: string;
   onOpenResource: (item: ResultItem) => void;
   onCancelResolveResource: () => void;
   onOpenDetail: (item: ResultItem) => void;
@@ -36,6 +37,7 @@ const SearchResultItemView: React.FC<SearchResultItemViewProps> = ({
   enableResourceDetailPage,
   enableResourceSourceBadges,
   resolvingResourceId,
+  highlightKeyword,
   onOpenResource,
   onCancelResolveResource,
   onOpenDetail,
@@ -54,6 +56,7 @@ const SearchResultItemView: React.FC<SearchResultItemViewProps> = ({
       isResolvingResource={resolvingResourceId === item.resource.id}
       showDetailEntry={enableResourceDetailPage}
       showSourceBadge={enableResourceSourceBadges}
+      highlightKeyword={highlightKeyword}
       onOpenResource={onOpenResource}
       onCancelResolveResource={onCancelResolveResource}
       onOpenDetail={detailHandler}
@@ -64,6 +67,7 @@ const SearchResultItemView: React.FC<SearchResultItemViewProps> = ({
       entranceDelay={entranceDelay}
       canOpenResource={canOpenResource}
       isResolvingResource={resolvingResourceId === item.resource.id}
+      highlightKeyword={highlightKeyword}
       onOpenResource={onOpenResource}
       onCancelResolveResource={onCancelResolveResource}
       onOpenDetail={detailHandler}

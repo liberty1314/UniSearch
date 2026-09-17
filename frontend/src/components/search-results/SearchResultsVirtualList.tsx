@@ -13,6 +13,7 @@ interface SearchResultsVirtualListProps {
   enableResourceDetailPage: boolean;
   enableResourceSourceBadges: boolean;
   resolvingResourceId?: string | null;
+  highlightKeyword?: string;
   onOpenResource: (item: ResultItem) => void;
   onCancelResolveResource: () => void;
   onOpenDetail: (item: ResultItem) => void;
@@ -71,6 +72,7 @@ const SearchResultsVirtualList: React.FC<SearchResultsVirtualListProps> = ({
   enableResourceDetailPage,
   enableResourceSourceBadges,
   resolvingResourceId,
+  highlightKeyword,
   onOpenResource,
   onCancelResolveResource,
   onOpenDetail,
@@ -158,6 +160,7 @@ const SearchResultsVirtualList: React.FC<SearchResultsVirtualListProps> = ({
                 enableResourceDetailPage={enableResourceDetailPage}
                 enableResourceSourceBadges={enableResourceSourceBadges}
                 resolvingResourceId={resolvingResourceId}
+                highlightKeyword={highlightKeyword}
                 onOpenResource={onOpenResource}
                 onCancelResolveResource={onCancelResolveResource}
                 onOpenDetail={onOpenDetail}

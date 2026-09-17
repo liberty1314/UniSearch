@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import {
@@ -10,6 +10,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useSearchAccessStatus } from "@/stores/searchAccessStore";
 import { SearchService } from "@/services/searchService";
 import { hotRankingService } from "@/services/hotRankingService";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import type { StatefulButtonHandle } from "@/components/ui/stateful-button";
 import type { HotRankingItem } from "@/types/hotRanking";
 import { getErrorCode, getErrorMessage } from "@/lib/error";
@@ -17,6 +18,8 @@ import { readAccountSearchDefaults } from "@/lib/accountPreferences";
 
 const HOME_QUICK_KEYWORD_LIMIT = 4;
 const HOME_HOT_KEYWORDS_CACHE_TTL = 5 * 60 * 1000;
+const SUGGESTION_LIMIT = 6;
+const SUGGESTION_DEBOUNCE_MS = 200;
 const FALLBACK_HOME_QUICK_KEYWORDS = [
   "电影",
   "纪录片",
@@ -176,6 +179,12 @@ export function useSearchBoxController({
   const [isHomeQuickKeywordsLoading, setIsHomeQuickKeywordsLoading] = useState(
     false,
   );
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const [suggestionHotKeywords, setSuggestionHotKeywords] = useState<string[]>(
+    [],
+  );
+  const suggestionPoolLoadedRef = useRef(false);
 
   const {
     searchParams,
@@ -204,6 +213,79 @@ export function useSearchBoxController({
   useEffect(() => {
     setInputValue(searchParams.keyword || "");
   }, [searchParams.keyword]);
+
+  // 输入变化时重置联想面板的选中与关闭标记
+  useEffect(() => {
+    setActiveSuggestionIndex(-1);
+    setShowSuggestions(true);
+  }, [inputValue]);
+
+  const debouncedInputValue = useDebouncedValue(
+    inputValue,
+    SUGGESTION_DEBOUNCE_MS,
+  );
+
+  // 非首页联想池：热词缓存按需加载一次（模块级 TTL 缓存，失败静默降级为纯历史联想）
+  useEffect(() => {
+    if (suggestionPoolLoadedRef.current || !debouncedInputValue.trim()) {
+      return;
+    }
+    suggestionPoolLoadedRef.current = true;
+    let isMounted = true;
+    void loadHomeHotKeywords()
+      .then((keywords) => {
+        if (isMounted) {
+          setSuggestionHotKeywords(keywords);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      isMounted = false;
+    };
+  }, [debouncedInputValue]);
+
+  const suggestions = useMemo(() => {
+    const query = debouncedInputValue.trim().toLowerCase();
+    if (!query) {
+      return [];
+    }
+
+    const pool = isHomePage
+      ? homeQuickKeywords
+      : suggestionHotKeywords;
+    const seen = new Set<string>();
+    const prefixed: string[] = [];
+    const contained: string[] = [];
+    for (const source of [...visibleSearchHistory, ...pool]) {
+      const keyword = source.trim();
+      if (!keyword) {
+        continue;
+      }
+      const normalized = keyword.toLowerCase();
+      if (normalized === query || seen.has(normalized)) {
+        continue;
+      }
+      seen.add(normalized);
+      if (normalized.startsWith(query)) {
+        prefixed.push(keyword);
+      } else if (normalized.includes(query)) {
+        contained.push(keyword);
+      }
+    }
+    return [...prefixed, ...contained].slice(0, SUGGESTION_LIMIT);
+  }, [
+    debouncedInputValue,
+    homeQuickKeywords,
+    isHomePage,
+    suggestionHotKeywords,
+    visibleSearchHistory,
+  ]);
+
+  // 输入非空且有候选时展示联想面板，并与历史面板互斥
+  const isSuggestionPanelOpen =
+    showSuggestions &&
+    inputValue.trim().length > 0 &&
+    suggestions.length > 0;
 
   useEffect(() => {
     if (!isHomePage || !shouldResetFromHomeBack) {
@@ -270,7 +352,7 @@ export function useSearchBoxController({
   }, [isHomePage]);
 
   useEffect(() => {
-    if (!showHistory) {
+    if (!showHistory && !isSuggestionPanelOpen) {
       setActiveHistoryIndex(-1);
       return;
     }
@@ -278,12 +360,14 @@ export function useSearchBoxController({
     const handlePointerDown = (event: PointerEvent) => {
       if (!wrapperRef.current?.contains(event.target as Node)) {
         setShowHistory(false);
+        setShowSuggestions(false);
       }
     };
 
     const handleFocusIn = (event: FocusEvent) => {
       if (!wrapperRef.current?.contains(event.target as Node)) {
         setShowHistory(false);
+        setShowSuggestions(false);
       }
     };
 
@@ -294,7 +378,7 @@ export function useSearchBoxController({
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("focusin", handleFocusIn);
     };
-  }, [showHistory]);
+  }, [showHistory, isSuggestionPanelOpen]);
 
   useEffect(() => {
     if (visibleSearchHistory.length === 0) {
@@ -377,6 +461,7 @@ export function useSearchBoxController({
       }
       onSearch?.(keyword);
       setShowHistory(false);
+      setShowSuggestions(false);
       return undefined;
     }
 
@@ -389,6 +474,7 @@ export function useSearchBoxController({
       await performSearch(nextParams, { preserveResults: false });
       onSearch?.(keyword);
       setShowHistory(false);
+      setShowSuggestions(false);
     } catch (error) {
       await handleSearchError(error, keyword);
     }
@@ -447,11 +533,59 @@ export function useSearchBoxController({
       return false;
     }
 
+    // 与直接提交共用 submitKeyword，确保匿名登录拦截路径一致
     void (async () => {
       setInputValue(keyword);
-      await executeSearch(keyword);
+      await submitKeyword(keyword);
     })();
     return true;
+  };
+
+  /**
+   * 面板键盘导航统一入口：联想面板打开时导航候选，否则保持历史面板行为。
+   */
+  const movePanelSelection = (direction: "next" | "previous") => {
+    if (isSuggestionPanelOpen) {
+      setActiveSuggestionIndex((current) => {
+        if (current < 0) {
+          return direction === "next" ? 0 : suggestions.length - 1;
+        }
+        if (direction === "next") {
+          return (current + 1) % suggestions.length;
+        }
+        return (
+          (current - 1 + suggestions.length) % suggestions.length
+        );
+      });
+      return;
+    }
+
+    moveHistorySelection(direction);
+  };
+
+  /**
+   * 面板 Enter 提交统一入口：联想面板有选中项时提交候选词，
+   * 否则回落到历史面板提交；两者都未消费时返回 false 让输入框按原样提交。
+   */
+  const submitActivePanelItem = (): boolean => {
+    if (isSuggestionPanelOpen) {
+      const keyword = suggestions[activeSuggestionIndex];
+      if (activeSuggestionIndex >= 0 && keyword) {
+        setShowSuggestions(false);
+        setInputValue(keyword);
+        void submitKeyword(keyword);
+        return true;
+      }
+      return false;
+    }
+
+    return submitActiveHistory();
+  };
+
+  const dismissPanels = () => {
+    setShowHistory(false);
+    setShowSuggestions(false);
+    setActiveSuggestionIndex(-1);
   };
 
   const removeActiveHistory = () => {
@@ -502,6 +636,13 @@ export function useSearchBoxController({
     setShowHistory,
     activeHistoryIndex,
     setActiveHistoryIndex,
+    suggestions,
+    isSuggestionPanelOpen,
+    activeSuggestionIndex,
+    setActiveSuggestionIndex,
+    movePanelSelection,
+    submitActivePanelItem,
+    dismissPanels,
     moveHistorySelection,
     submitActiveHistory,
     removeActiveHistory,
@@ -515,7 +656,8 @@ export function useSearchBoxController({
       suppressHistoryOnFocusRef.current = true;
       setInputValue("");
       setShowHistory(false);
-      setActiveHistoryIndex(-1);
+      setShowSuggestions(false);
+      setActiveSuggestionIndex(-1);
       clearResults();
       if (location.pathname === "/" && location.search) {
         navigate("/", { replace: true, state: { skipSearchSync: true } });
@@ -528,7 +670,8 @@ export function useSearchBoxController({
     },
     selectHistory: async (keyword: string) => {
       setInputValue(keyword);
-      await executeSearch(keyword);
+      // 与直接提交共用 submitKeyword，确保匿名登录拦截路径一致
+      await submitKeyword(keyword);
     },
     clearHistory: () => {
       clearHistory();

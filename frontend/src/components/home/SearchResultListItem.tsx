@@ -12,6 +12,7 @@ import {
   resolveResourceDisplayTitle,
   resolveResourceSourcePresentation,
 } from "@/utils/resourceDisplay";
+import HighlightedText from "@/components/search-results/HighlightedText";
 
 interface SearchResultListItemProps {
   item: ResultItem;
@@ -20,6 +21,8 @@ interface SearchResultListItemProps {
   isResolvingResource?: boolean;
   showDetailEntry?: boolean;
   showSourceBadge: boolean;
+  /** 搜索关键词，用于标题命中片段高亮；缺省时不高亮 */
+  highlightKeyword?: string;
   onOpenResource: (item: ResultItem) => void;
   onCancelResolveResource: () => void;
   onOpenDetail: (item: ResultItem) => void;
@@ -33,6 +36,7 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
     isResolvingResource = false,
     showDetailEntry = true,
     showSourceBadge,
+    highlightKeyword,
     onOpenResource,
     onCancelResolveResource,
     onOpenDetail,
@@ -112,7 +116,14 @@ export const SearchResultListItem = React.memo<SearchResultListItemProps>(
           {/* 中间：标题 + 元数据 */}
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg line-clamp-1 mb-1 group-hover:text-apple-blue transition-colors">
-              {displayTitle || "未命名资源"}
+              {displayTitle ? (
+                <HighlightedText
+                  text={displayTitle}
+                  keyword={highlightKeyword}
+                />
+              ) : (
+                "未命名资源"
+              )}
             </h3>
             <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-slate-400 flex-wrap">
               <span

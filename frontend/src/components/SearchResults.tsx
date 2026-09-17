@@ -523,6 +523,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         enableResourceDetailPage={enableResourceDetailPage}
         enableResourceSourceBadges={enableResourceSourceBadges}
         resolvingResourceId={resolvingResourceId}
+        highlightKeyword={searchParams.keyword}
         onOpenResource={handleOpenResource}
         onCancelResolveResource={cancelResolveResource}
         onOpenDetail={handleOpenDetail}

@@ -17,6 +17,7 @@ interface SearchResultsListProps {
   enableResourceDetailPage: boolean;
   enableResourceSourceBadges: boolean;
   resolvingResourceId?: string | null;
+  highlightKeyword?: string;
   onOpenResource: (item: ResultItem) => void;
   onCancelResolveResource: () => void;
   onOpenDetail: (item: ResultItem) => void;
@@ -29,6 +30,7 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
   enableResourceDetailPage,
   enableResourceSourceBadges,
   resolvingResourceId,
+  highlightKeyword,
   onOpenResource,
   onCancelResolveResource,
   onOpenDetail,
@@ -42,6 +44,7 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
         enableResourceDetailPage={enableResourceDetailPage}
         enableResourceSourceBadges={enableResourceSourceBadges}
         resolvingResourceId={resolvingResourceId}
+        highlightKeyword={highlightKeyword}
         onOpenResource={onOpenResource}
         onCancelResolveResource={onCancelResolveResource}
         onOpenDetail={onOpenDetail}
@@ -69,6 +72,7 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
           enableResourceDetailPage={enableResourceDetailPage}
           enableResourceSourceBadges={enableResourceSourceBadges}
           resolvingResourceId={resolvingResourceId}
+          highlightKeyword={highlightKeyword}
           onOpenResource={onOpenResource}
           onCancelResolveResource={onCancelResolveResource}
           onOpenDetail={onOpenDetail}
