@@ -54,7 +54,7 @@ describe('searchAccessStore', () => {
     };
 
     const { useSearchAccessStore } = await import('@/stores/searchAccessStore');
-    const status = await useSearchAccessStore.getState().refresh({ force: true });
+    const status = await useSearchAccessStore.getState().refresh();
 
     expect(status).toBe('authenticated');
     expect(useSearchAccessStore.getState().status).toBe('authenticated');
@@ -70,7 +70,7 @@ describe('searchAccessStore', () => {
     };
 
     const { useSearchAccessStore } = await import('@/stores/searchAccessStore');
-    const firstStatus = await useSearchAccessStore.getState().refresh({ force: false });
+    const firstStatus = await useSearchAccessStore.getState().refresh();
     expect(firstStatus).toBe('authenticated');
 
     authState = {
@@ -81,7 +81,7 @@ describe('searchAccessStore', () => {
       username: 'other-user',
     };
 
-    const secondStatus = await useSearchAccessStore.getState().refresh({ force: false });
+    const secondStatus = await useSearchAccessStore.getState().refresh();
 
     expect(secondStatus).toBe('authenticated');
     expect(getMock).not.toHaveBeenCalled();
@@ -97,7 +97,7 @@ describe('searchAccessStore', () => {
     };
 
     const { useSearchAccessStore } = await import('@/stores/searchAccessStore');
-    const status = await useSearchAccessStore.getState().refresh({ force: true });
+    const status = await useSearchAccessStore.getState().refresh();
 
     expect(status).toBe('authenticated');
     expect(useSearchAccessStore.getState().status).toBe('authenticated');

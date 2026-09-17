@@ -143,26 +143,20 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         : "grid",
     [],
   );
-  const initialViewModeRef = useRef<{
-    mode: SearchResultsViewMode;
-    hasStoredPreference: boolean;
-  } | null>(null);
-
-  if (!initialViewModeRef.current) {
+  // 首次视图偏好只在挂载时读取一次（useState 惰性初始化，避免 render 期写 ref）。
+  const [initialViewMode] = useState(() => {
     const storedViewMode = readStoredViewMode();
-    initialViewModeRef.current = {
+    return {
       mode: storedViewMode || getResponsiveViewMode(),
       hasStoredPreference: Boolean(storedViewMode),
     };
-  }
+  });
 
-  const hasManualViewPreferenceRef = useRef(
-    initialViewModeRef.current.hasStoredPreference,
-  );
+  const hasManualViewPreferenceRef = useRef(initialViewMode.hasStoredPreference);
 
   // 移动端（< 640px）默认使用列表视图，桌面端默认网格视图
   const [viewMode, setViewMode] = useState<SearchResultsViewMode>(
-    initialViewModeRef.current.mode,
+    initialViewMode.mode,
   );
   const [sortMode, setSortMode] = useState<SearchSortMode>(readStoredSortMode);
   const [passwordModalTarget, setPasswordModalTarget] = useState<ResourceOpenTarget | null>(null);
@@ -179,7 +173,59 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 
   // ── 无限滚动观察器 ─────────────────────────────────────────────────────────
 
-  const observerTarget = useRef<HTMLDivElement>(null);
+  // 观察器只创建一次；isLoading/hasMore 变化仅同步到 ref，避免加载期间反复销毁重建。
+  const hasMoreRef = useRef(hasMore);
+  const isLoadingRef = useRef(isLoading);
+  const loadMoreRef = useRef(loadMore);
+
+  useEffect(() => {
+    hasMoreRef.current = hasMore;
+    isLoadingRef.current = isLoading;
+    loadMoreRef.current = loadMore;
+  }, [hasMore, isLoading, loadMore]);
+
+  const loadMoreObserverRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreTargetRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          hasMoreRef.current &&
+          !isLoadingRef.current
+        ) {
+          loadMoreRef.current();
+        }
+      },
+      { root: null, rootMargin: "200px", threshold: 0.1 },
+    );
+    loadMoreObserverRef.current = observer;
+    // 目标节点可能在观察器创建前已通过回调 ref 挂载，此处补挂一次。
+    if (loadMoreTargetRef.current) {
+      observer.observe(loadMoreTargetRef.current);
+    }
+    return () => {
+      observer.disconnect();
+      loadMoreObserverRef.current = null;
+    };
+  }, []);
+
+  // 回调 ref：加载区随 hasMore 条件挂载/卸载，动态观察/取消观察当前节点。
+  const setLoadMoreObserverTarget = useCallback(
+    (node: HTMLDivElement | null) => {
+      const observer = loadMoreObserverRef.current;
+      const previousNode = loadMoreTargetRef.current;
+      if (previousNode && previousNode !== node) {
+        observer?.unobserve(previousNode);
+      }
+      loadMoreTargetRef.current = node;
+      if (node) {
+        observer?.observe(node);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const handleResize = () => {
@@ -195,23 +241,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({
       window.removeEventListener("resize", handleResize);
     };
   }, [getResponsiveViewMode]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoading) {
-          loadMore();
-        }
-      },
-      { root: null, rootMargin: "200px", threshold: 0.1 },
-    );
-
-    const currentTarget = observerTarget.current;
-    if (currentTarget) observer.observe(currentTarget);
-    return () => {
-      if (currentTarget) observer.unobserve(currentTarget);
-    };
-  }, [hasMore, isLoading, loadMore]);
 
   useEffect(() => {
     let isMounted = true;
@@ -502,7 +531,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
       {/* 无限滚动触发点 + 手动兜底：观察器未触发时用户仍可点击加载 */}
       {hasMore && (
         <div
-          ref={observerTarget}
+          ref={setLoadMoreObserverTarget}
           className="flex flex-col items-center gap-3 py-8"
         >
           <LoadingState

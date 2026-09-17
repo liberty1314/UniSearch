@@ -311,6 +311,66 @@ describe("searchStore", () => {
     expect(state.searchResults?.resources[0]?.title).toBe("最终结果");
   });
 
+  it("渐进搜索新批次到达时保留用户已展开的条数", async () => {
+    const { useSearchStore } = await import("@/stores/searchStore");
+
+    searchProgressiveMock.mockImplementationOnce(async (_params, handlers) => {
+      handlers.onEvent({
+        type: "started",
+        completed_sources: 0,
+        total_sources: 2,
+        received_batches: 0,
+      });
+      handlers.onEvent({
+        type: "batch",
+        resources: buildManySearchResults(60).resources,
+        warnings: [],
+        completed_sources: 1,
+        total_sources: 2,
+        received_batches: 1,
+      });
+
+      expect(useSearchStore.getState().displayedCount).toBe(48);
+      useSearchStore.getState().loadMore();
+      expect(useSearchStore.getState().displayedCount).toBe(72);
+
+      handlers.onEvent({
+        type: "batch",
+        resources: buildManySearchResults(80).resources,
+        warnings: [],
+        completed_sources: 2,
+        total_sources: 2,
+        received_batches: 2,
+      });
+
+      expect(useSearchStore.getState().displayedCount).toBe(72);
+      expect(useSearchStore.getState().hasMore).toBe(true);
+      return buildManySearchResults(80);
+    });
+
+    await useSearchStore.getState().performSearch({ keyword: "批量" });
+
+    expect(useSearchStore.getState().progressiveStatus).toBe("complete");
+  });
+
+  it("参数比较不受 ext 对象键序影响", async () => {
+    const { useSearchStore } = await import("@/stores/searchStore");
+
+    searchMock.mockResolvedValueOnce(buildSearchResults("键序结果"));
+
+    await useSearchStore.getState().performSearch({
+      keyword: "键序",
+      ext: { zeta: "末尾", alpha: "开头", nested: { b: 1, a: [2, 1] } },
+    });
+
+    expect(
+      useSearchStore.getState().canReuseCurrentSearch({
+        keyword: "键序",
+        ext: { alpha: "开头", nested: { a: [2, 1], b: 1 }, zeta: "末尾" },
+      }),
+    ).toBe(true);
+  });
+
   it("渐进式搜索运行中同一参数可复用当前搜索", async () => {
     const { useSearchStore } = await import("@/stores/searchStore");
 

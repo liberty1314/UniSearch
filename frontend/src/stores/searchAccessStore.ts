@@ -10,7 +10,7 @@ interface SearchAccessState {
   status: SearchAccessStatus;
   isLoading: boolean;
   initialized: boolean;
-  refresh: (options?: { force?: boolean; silent?: boolean }) => Promise<SearchAccessStatus>;
+  refresh: () => Promise<SearchAccessStatus>;
   overrideStatus: (status: SearchAccessStatus) => void;
   reset: () => void;
 }
@@ -28,7 +28,7 @@ function readAuthSnapshot(): AuthSnapshot {
   return { isAuthenticated, isAdmin, token, rememberMe, username };
 }
 
-function getImmediateStatus(snapshot: AuthSnapshot): SearchAccessStatus | null {
+function getImmediateStatus(snapshot: AuthSnapshot): SearchAccessStatus {
   if (!snapshot.isAuthenticated || (!snapshot.token && !snapshot.rememberMe)) {
     return 'anonymous';
   }
@@ -40,13 +40,8 @@ export const useSearchAccessStore = create<SearchAccessState>((set) => ({
   isLoading: false,
   initialized: false,
 
-  refresh: async ({ force = false, silent = false } = {}) => {
-    void force;
-    void silent;
-    const snapshot = readAuthSnapshot();
-    const immediateStatus = getImmediateStatus(snapshot);
-
-    const nextStatus = immediateStatus ?? 'anonymous';
+  refresh: async () => {
+    const nextStatus = getImmediateStatus(readAuthSnapshot());
     set({
       status: nextStatus,
       isLoading: false,

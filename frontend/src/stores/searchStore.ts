@@ -124,6 +124,25 @@ const normalizeSearchParams = (params: SearchParams): SearchParams => ({
   })(),
 });
 
+/**
+ * 递归按键名排序后再序列化。
+ * JSON.stringify 直接比较时，ext 等嵌套对象会因插入顺序不同产生不同字符串，
+ * 导致语义相同的参数被误判为“已变化”而触发重搜。
+ */
+const stableStringify = (value: unknown): string => {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, item]) => item !== undefined)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+      .map(([key, item]) => `${JSON.stringify(key)}:${stableStringify(item)}`);
+    return `{${entries.join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+};
+
 const areSearchParamsEqual = (
   left: SearchParams | null,
   right: SearchParams,
@@ -132,8 +151,8 @@ const areSearchParamsEqual = (
     return false;
   }
 
-  return JSON.stringify(normalizeSearchParams(left)) ===
-    JSON.stringify(normalizeSearchParams(right));
+  return stableStringify(normalizeSearchParams(left)) ===
+    stableStringify(normalizeSearchParams(right));
 };
 
 const emptyFacets = {
@@ -275,6 +294,12 @@ export const useSearchStore = create<SearchState>()(
               }
               if (event.type === "batch" || event.type === "warning") {
                 const partial = buildPartialSearchResponse(event);
+                const totalReceived = partial.resources.length;
+                // 保留用户已通过“加载更多”展开的条数，避免新批次到达时把列表收回首屏数量。
+                const nextDisplayCount = Math.max(
+                  get().displayedCount,
+                  initialDisplayCount,
+                );
                 set({
                   searchResults:
                     partial.resources.length > 0 || partial.warnings?.length
@@ -286,8 +311,8 @@ export const useSearchStore = create<SearchState>()(
                   completedSources: event.completed_sources || 0,
                   totalSources: event.total_sources || 0,
                   receivedBatches: event.received_batches || 0,
-                  displayedCount: initialDisplayCount,
-                  hasMore: partial.resources.length > initialDisplayCount,
+                  displayedCount: nextDisplayCount,
+                  hasMore: totalReceived > nextDisplayCount,
                 });
               }
             },
@@ -369,36 +394,36 @@ export const useSearchStore = create<SearchState>()(
        * 清空搜索结果
        */
       clearResults: () => {
+        const state = get();
+        const keyword = state.searchParams.keyword?.trim() || "";
+        const isAlreadyCleared =
+          !state.searchResults &&
+          !state.error &&
+          !state.isLoading &&
+          !state.isRefreshing &&
+          keyword.length === 0;
+
+        // 空状态下直接返回：既避免无意义的重复渲染，
+        // 也避免误作废正在进行的搜索请求（URL 无关的 effect 触发不应中断在途请求）。
+        if (isAlreadyCleared) {
+          return;
+        }
+
         invalidateSearchRequests();
-        set((state) => {
-          const keyword = state.searchParams.keyword?.trim() || "";
-          const isAlreadyCleared =
-            !state.searchResults &&
-            !state.error &&
-            !state.isLoading &&
-            !state.isRefreshing &&
-            keyword.length === 0;
-
-          // 空状态下直接复用旧引用，避免结果页无关键词时触发无意义的重复渲染。
-          if (isAlreadyCleared) {
-            return state;
-          }
-
-          return {
-            searchResults: null,
-            error: null,
-            isLoading: false,
-            isRefreshing: false,
-            progressiveStatus: "idle",
-            completedSources: 0,
-            totalSources: 0,
-            receivedBatches: 0,
-            lastCompletedSearchParams: null,
-            activeSearchParams: null,
-            displayedCount: initialDisplayCount,
-            hasMore: false,
-            searchParams: { ...state.searchParams, keyword: "" },
-          };
+        set({
+          searchResults: null,
+          error: null,
+          isLoading: false,
+          isRefreshing: false,
+          progressiveStatus: "idle",
+          completedSources: 0,
+          totalSources: 0,
+          receivedBatches: 0,
+          lastCompletedSearchParams: null,
+          activeSearchParams: null,
+          displayedCount: initialDisplayCount,
+          hasMore: false,
+          searchParams: { ...state.searchParams, keyword: "" },
         });
       },
 
@@ -641,8 +666,3 @@ export const useSearchLoading = () =>
 export const useSearchError = () => useSearchStore((state) => state.error);
 export const useSearchHistory = () =>
   useSearchStore((state) => state.searchHistory);
-export const useAvailableOptions = () =>
-  useSearchStore((state) => ({
-    channels: state.availableChannels,
-    plugins: state.availablePlugins,
-  }));
