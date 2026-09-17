@@ -137,3 +137,4 @@ railway.json
 scratch/
 /test_urls.py
 /sidhub-search-response-*.json
+.zcode/
