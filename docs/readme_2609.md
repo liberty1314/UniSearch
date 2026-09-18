@@ -14,3 +14,12 @@
     - frontend/src/components/ui/__tests__/ConfirmDialog.test.tsx
     - frontend/src/components/ui/confirm-dialog.tsx
     - docs/readme_2609.md
+- [2026-09-18 15:07] refactor(search): 移除搜索联想功能
+  - Body: 下线搜索联想输入：移除联想面板组件、候选计算与键盘导航逻辑，历史面板恢复独立行为；关键词高亮与首页快捷词不受影响。
+  - Footer: 破坏性变更: 搜索输入不再展示联想候选（功能按需求整体下线），无接口/数据迁移影响。
+  - Files:
+    - frontend/src/components/SearchBox.tsx
+    - frontend/src/components/search-box/SearchInput.tsx
+    - frontend/src/components/search-box/SearchSuggestionPanel.tsx
+    - frontend/src/hooks/useSearchBoxController.ts
+    - docs/readme_2609.md

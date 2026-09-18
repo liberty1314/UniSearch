@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 import SkeletonLoader from "@/components/SkeletonLoader";
 import SearchBoxActions from "@/components/search-box/SearchBoxActions";
 import SearchHistoryPanel from "@/components/search-box/SearchHistoryPanel";
-import SearchSuggestionPanel from "@/components/search-box/SearchSuggestionPanel";
 import SearchInput from "@/components/search-box/SearchInput";
 import {
   HOME_QUICK_KEYWORD_LIMIT,
@@ -73,10 +72,12 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
               controller.handleInputBlur();
               onFocusChange?.(false);
             }}
-            onEscape={controller.dismissPanels}
+            onEscape={() => {
+              controller.setShowHistory(false);
+            }}
             onClear={controller.clearInput}
-            onPanelNavigate={controller.movePanelSelection}
-            onPanelSubmit={controller.submitActivePanelItem}
+            onHistoryNavigate={controller.moveHistorySelection}
+            onHistorySubmit={controller.submitActiveHistory}
             onHistoryRemove={controller.removeActiveHistory}
           />
 
@@ -88,20 +89,8 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           />
         </div>
 
-        {controller.isSuggestionPanelOpen ? (
-          <SearchSuggestionPanel
-            suggestions={controller.suggestions}
-            keyword={controller.inputValue}
-            activeIndex={controller.activeSuggestionIndex}
-            onActiveIndexChange={controller.setActiveSuggestionIndex}
-            onSelect={(keyword) => {
-              controller.dismissPanels();
-              controller.setInputValue(keyword);
-              void controller.submitKeyword(keyword);
-            }}
-          />
-        ) : controller.showHistory &&
-          controller.visibleSearchHistory.length > 0 ? (
+        {controller.showHistory &&
+        controller.visibleSearchHistory.length > 0 ? (
           <SearchHistoryPanel
             history={controller.visibleSearchHistory}
             activeIndex={controller.activeHistoryIndex}
