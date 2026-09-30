@@ -271,3 +271,13 @@
 - 必须引用其他层的资料而非复制粘贴，保持信息唯一来源
 - 每一层级必须站在对应视角描述系统，避免越位细节
 - 禁止在高层文档中堆叠实现细节，确保架构与实现边界清晰
+
+### 🧭 UniSearch 重构任务启动协议（重构期间执行）
+
+- 任务以 `~/workspace/your_files/unisearch-v2/unisearch-dev-plan-v2.0.md` 中的任务卡为准；开工前读取任务编号、工作内容、验收标准与依赖。
+- 按任务类型路由阅读参考文档（只读相关章节，不全文通读），文档目录：`~/workspace/your_files/unisearch-v2/`：
+  - 后端任务 → `unisearch-api-spec-v2.0.md` 对应端点节 ＋ `unisearch-architecture-design-v2.0.md` 对应模块节 ＋ `unisearch-requirements-v2.0.md` 对应需求条目；
+  - 前端任务 → `unisearch-requirements-v2.0.md` UI 相关章节 ＋ `unisearch-architecture-design-v2.0.md` §6.9–§6.11（设计系统 / AdminShell / 页面视觉语言）；
+  - 所有任务 → `unisearch-git-workflow-v2.0.md`（分支与提交规范，首次读透、之后按需查阅）。
+- 编码前先输出"本次任务约束清单"（需求条目、接口契约、架构约束、验收标准），确认后再进入实施。
+- 完工后按 git-workflow 规范提交；详细流程见 skill `unisearch-task-startup`。
