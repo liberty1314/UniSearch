@@ -23,3 +23,21 @@
     - frontend/src/components/search-box/SearchSuggestionPanel.tsx
     - frontend/src/hooks/useSearchBoxController.ts
     - docs/readme_2609.md
+
+[2026-09-30 10:04] chore(repo): 更新项目架构文档并清理旧部署脚本
+  - Body: 补充 UniSearch v2.0 API、架构、需求、开发计划、Git 流程及 UI 原型文档，并同步更新仓库开发规范。移除已不再维护的备份、构建、部署、入口、密钥生成和优化验证脚本，收敛维护面。
+  - Files:
+    - AGENTS.md
+    - docs/architecture/unisearch-api-spec-v2.0.md
+    - docs/architecture/unisearch-architecture-design-v2.0.md
+    - docs/architecture/unisearch-dev-plan-v2.0.md
+    - docs/architecture/unisearch-git-workflow-v2.0.md
+    - docs/architecture/unisearch-requirements-v2.0.md
+    - docs/architecture/unisearch-ui-prototype.html
+    - scripts/backup-manager.sh
+    - scripts/build.sh
+    - scripts/deploy-update.sh
+    - scripts/docker-entrypoint.sh
+    - scripts/gen-production-secrets.sh
+    - scripts/verify-optimization.sh
+    - docs/readme_2609.md
